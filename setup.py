@@ -19,6 +19,11 @@ _current_version = '0.0.1'
 with open('README.md', encoding='utf-8') as f:
     _long_description = f.read()
 
+keywords = [
+    'jax', 'astronomy', 'astrophysics', 'machine-learning', 'deep-learning', 'bayesian-inference',
+    'probabilistic-programming'
+]
+
 setup(
     name='jaxtro',
     version=_current_version,
@@ -28,15 +33,15 @@ setup(
         'examples',
         'examples.*',
     ]),
-    url='https://github.com/Qazalbash/jastro',
+    url='https://github.com/Qazalbash/jaxtro',
     license='Apache 2.0',
     author='Meesum Qazalbash and Muhammad Zeeshan',
     author_email='meesumqazalbash@gmail.com',
     maintainer='Meesum Qazalbash',
     maintainer_email='meesumqazalbash@gmail.com',
-    # description='',
-    # long_description=_long_description,
-    # long_description_content_type='text/markdown',
+    description='A JAX-based gravitational-wave population inference',
+    long_description=_long_description,
+    long_description_content_type='text/markdown',
     python_requires='>=3.10',
     install_requires=['jaxampler', 'numpy'],
     classifiers=[
@@ -46,4 +51,5 @@ setup(
         "Operating System :: POSIX :: Linux",
     ],
     zip_safe=False,
+    keywords=keywords,
 )
