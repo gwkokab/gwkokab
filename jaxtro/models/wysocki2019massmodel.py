@@ -136,7 +136,7 @@ class Wysocki2019MassModel(ContinuousRV):
         """
         return (mmin <= m2) & (m2 <= m1) & (m1 <= mmax) & (m1 + m2 <= Mmax)
 
-    def rvs(self, N: int = 1) -> Array:
+    def rvs(self, N: int = 1, key: Array = None) -> Array:
         """Random variates from the distribution
 
 
@@ -150,9 +150,9 @@ class Wysocki2019MassModel(ContinuousRV):
         Array
             Random variates from the distribution
         """
-        m2 = Uniform(low=self._mmin, high=self._mmax).rvs(N)
-        m1 = TruncPowerLaw(alpha=-(self._k + self._alpha), low=m2, high=self._mmax).rvs(N)
-        return jnp.column_stack((m1, m2))
+        m2 = Uniform(low=self._mmin, high=self._mmax).rvs(N, key)
+        m1 = TruncPowerLaw(alpha=-(self._k + self._alpha), low=m2, high=self._mmax).rvs(N, key)
+        return jnp.column_stack([m1, m2])
 
     def __repr__(self) -> str:
         """string representation of the object
