@@ -39,6 +39,7 @@ Jaxtro requires Python 3.10 or higher. It also requires the following packages:
 ```
 jaxampler
 numpy
+tqdm
 ```
 
 The test suite is based on pytest. To run the tests, one needs to install pytest and run `pytest` at the root directory of this repo.

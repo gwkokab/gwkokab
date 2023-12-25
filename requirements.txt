@@ -1,2 +1,3 @@
 jaxampler
 numpy
+tqdm
