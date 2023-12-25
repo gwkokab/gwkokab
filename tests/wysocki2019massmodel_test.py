@@ -14,6 +14,8 @@
 
 import sys
 
+import jax
+
 sys.path.append("../jaxtro")
 
 from jaxtro.models import Wysocki2019MassModel
@@ -34,3 +36,21 @@ def test_init() -> None:
     assert model._mmin == 5.0
     assert model._mmax == 40.0
     assert model._Mmax == 80.0
+
+
+def test_rvs() -> None:
+    model = Wysocki2019MassModel(
+        alpha=0.8,
+        k=0,
+        mmin=5.0,
+        mmax=40.0,
+        Mmax=80.0,
+        name="test",
+    )
+    key = jax.random.PRNGKey(0)
+    rvs = model.rvs(N=1000, key=key)
+    assert rvs.shape == (1000, 2)
+    assert rvs.min() >= 5.0
+    assert rvs.max() <= 40.0
+    assert rvs.sum(axis=1).min() >= 10.0
+    assert rvs.sum(axis=1).max() <= 80.0
