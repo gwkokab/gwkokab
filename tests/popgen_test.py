@@ -13,6 +13,9 @@
 # limitations under the License.
 
 import os
+import sys
+
+sys.path.append("../jaxtro")
 
 from jaxtro.models import Wysocki2019MassModel
 from jaxtro.utils import PopulationGenerator
@@ -62,7 +65,7 @@ def test():
             "name": "Wysocki2019MassModel2",
         }]
     }
-    # check if the data directory exists
+
     assert not os.path.exists(CONFIGS["root_container"])
     pg = PopulationGenerator(CONFIGS)
     pg.generate()
