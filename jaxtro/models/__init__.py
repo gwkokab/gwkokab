@@ -13,3 +13,4 @@
 # limitations under the License.
 
 from .wysocki2019massmodel import Wysocki2019MassModel
+from .wysocki2019spinmodel import Wysocki2019SpinModel

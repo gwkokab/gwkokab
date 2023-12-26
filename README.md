@@ -53,7 +53,7 @@ If you use Jaxtro in your research, please cite the following paper:
     author  = {Meesum Qazalbash, Muhammad Zeeshan},
     title   = {{jaxtro}: A JAX-based gravitational-wave population inference},
     url     = {http://github.com/Qazalbash/jaxtro},
-    version = {0.0.1},
+    version = {0.0.2},
     year    = {2023}
 }
 ```

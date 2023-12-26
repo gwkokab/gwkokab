@@ -14,7 +14,7 @@
 
 from setuptools import find_packages, setup
 
-_current_version = '0.0.1'
+_current_version = '0.0.2'
 
 with open('README.md', encoding='utf-8') as f:
     _long_description = f.read()

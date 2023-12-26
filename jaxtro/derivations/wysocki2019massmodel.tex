@@ -1,0 +1,75 @@
+\documentclass{article}
+
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{empheq}
+\usepackage{mdframed}
+\usepackage{color}
+\usepackage{hyperref}
+
+\geometry{a4paper,total={6in, 8in}, margin=0.25in}
+
+\newcommand{\mmin}{m_\text{min}}
+\newcommand{\mmax}{m_\text{max}}
+\newcommand{\Mmax}{M_\text{max}}
+\newcommand{\Z}{\mathcal{Z}}
+\newcommand{\diff}[1]{\mathrm{d}{#1}}
+
+\title{Wysocki2019MassModel Normalizing Constant Derivation}
+\author{Meesum Qazalbash}
+
+\begin{document}
+\maketitle
+
+Power law in \href{https://arxiv.org/abs/1805.06442}{paper} is defined as:
+
+\begin{equation}
+    \label{eq:powerlaw}
+    p(m_1,m_2\mid\alpha,k,\mmin,\mmax,\Mmax)=\frac{m_1^{-\alpha-k}m_2^k}{m_1-\mmin}\frac{1}{\Z}
+\end{equation}
+where, \(\mmin\le m_2\le m_1\le \mmax\), \(m_1+m_2\le\Mmax\) and \(k\in\mathbb{W}\). Lets find the normalizing constant \(\Z\). First we will find the marginal distribution of \(m_1\).
+
+\begin{align}
+    p(m_1\mid\alpha,k,\mmin,\mmax,\Mmax) & = \int\limits_{m_2=\mmin}^{m_1}\frac{m_1^{-\alpha-k}m_2^k}{m_1-\mmin}\frac{1}{\Z}\diff{m_2}         \\
+                                         & = \frac{1}{\Z}\frac{m_1^{-\alpha-k}}{m_1-\mmin}\int\limits_{m_2=\mmin}^{m_1}m_2^k\diff{m_2}         \\
+                                         & = \frac{1}{\Z}\frac{m_1^{-\alpha-k}}{m_1-\mmin}\frac{{m_1}^{k+1}-{\mmin}^{k+1}}{k+1}                \\
+                                         & = \frac{m_1^{-\alpha-k}}{(k+1)\Z}\frac{{m_1}^{k+1}-{\mmin}^{k+1}}{m_1-\mmin} \label{eq:marginal_m1}
+\end{align}
+As \(k\) is a positive integer we will open the fraction in \ref{eq:marginal_m1} using the Geometric series.
+\begin{align}
+    p(m_1\mid\alpha,k,\mmin,\mmax,\Mmax) & = \frac{m_1^{-\alpha-k}}{(k+1)\Z}\frac{{m_1}^{k+1}-{\mmin}^{k+1}}{m_1-\mmin}                                                    \\
+                                         & = \frac{m_1^{-\alpha}}{(k+1)\Z}\frac{1-{\left(\displaystyle\frac{\mmin}{m_1}\right)}^{k+1}}{1-{\displaystyle\frac{\mmin}{m_1}}} \\
+                                         & = \frac{m_1^{-\alpha}}{(k+1)\Z}\sum\limits_{i=0}^{k}{\left(\frac{\mmin}{m_1}\right)}^{i}                                        \\
+                                         & = \frac{1}{(k+1)\Z}\sum\limits_{i=0}^{k}{\mmin^{i}{m_1}^{-\alpha-i}}
+\end{align}
+
+Depending on the value of \(\alpha\) summation would contain \(\displaystyle\frac{1}{m_1}\). Lets device conditions for \(\alpha\). If \(\alpha\) is not an integer then summation would not contain any \(\displaystyle\frac{1}{m_1}\). If \(\alpha\) is an integer then summation would contain \(\displaystyle\frac{1}{m_1}\) if \(\alpha+i=1\). Now we know that \(0\le i\le k\), therefore \(\alpha\le \alpha+i\le \alpha+k\) which makes it, \(\alpha\le 1\le \alpha+k\). From here we can see that the bounds on \(\alpha\) are \(1-k\le \alpha\le 1\). Lets consider the case when \(\alpha\) follows the bounds and conditions we have just derived.
+
+\begin{align}
+    p(m_1\mid\alpha,k,\mmin,\mmax,\Mmax) & = \frac{1}{(k+1)\Z}\left(\frac{\mmin^{1-\alpha}}{m_1}+\sum\limits_{i=0,i\neq 1-\alpha}^{k}{\mmin^{i}{m_1}^{-\alpha-i}}\right)                                                                                                                      \\
+    \implies \Z                          & = \int\limits_{m_1=\mmin}^{\mmax} \frac{1}{k+1}\left(\frac{\mmin^{1-\alpha}}{m_1}+\sum\limits_{i=0,i\neq 1-\alpha}^{k}{\mmin^{i}{m_1}^{-\alpha-i}}\right)\diff{m_1}                                                                                \\
+                                         & = \frac{1}{k+1}\int\limits_{m_1=\mmin}^{\mmax}\frac{\mmin^{1-\alpha}}{m_1}\diff{m_1}+\frac{1}{k+1}\sum\limits_{i=0,i\neq 1-\alpha}^{k}\int\limits_{m_1=\mmin}^{\mmax}{\mmin^{i}{m_1}^{-\alpha-i}}\diff{m_1}                                        \\
+                                         & = \frac{\mmin^{1-\alpha}}{k+1}\log{\left(\frac{\mmax}{\mmin}\right)}+\frac{1}{k+1}\sum\limits_{i=0,i\neq 1-\alpha}^{k}{\frac{\mmin^{i}}{1-\alpha-i}\left({\mmax}^{1-\alpha-i}-{\mmin}^{1-\alpha-i}\right)}                                         \\
+                                         & = \frac{\mmin^{1-\alpha}}{k+1}\log{\left(\frac{\mmax}{\mmin}\right)}+\frac{1}{k+1}\sum\limits_{i=0,i\neq 1-\alpha}^{k}{\left({\left(\frac{\mmin}{\mmax}\right)}^{i}\frac{\mmax^{1-\alpha}}{1-\alpha-i}-\frac{\mmin^{1-\alpha}}{1-\alpha-i}\right)} \\
+                                         & = \frac{\mmin^{1-\alpha}}{k+1}\log{\left(\frac{\mmax}{\mmin}\right)}+\frac{\mmin^{1-\alpha}}{k+1}\sum\limits_{i=0,i\neq 1-\alpha}^{k}\frac{\displaystyle{\left(\frac{\mmin}{\mmax}\right)}^{i+\alpha-1}-1}{1-\alpha-i}
+\end{align}
+
+And when \(\alpha\) does not follow the bounds and conditions we have derived, then the summation would not contain \(\displaystyle\frac{1}{m_1}\) and the normalizing constant would be:
+
+\begin{equation}
+    \Z = \frac{\mmin^{1-\alpha}}{k+1}\sum\limits_{i=0}^{k}\frac{\displaystyle{\left(\frac{\mmin}{\mmax}\right)}^{i+\alpha-1}-1}{1-\alpha-i}
+\end{equation}
+
+We can write the normalizing constant as a piecewise function,
+
+\begin{equation}
+    \Z(\alpha,k,\mmin,\mmax,\Mmax) = \begin{cases}
+        \displaystyle\frac{\mmin^{1-\alpha}}{k+1}\log{\left(\frac{\mmax}{\mmin}\right)}+\frac{\mmin^{1-\alpha}}{k+1}\sum\limits_{i=0,i\neq 1-\alpha}^{k}\frac{\displaystyle{\left(\frac{\mmin}{\mmax}\right)}^{i+\alpha-1}-1}{1-\alpha-i} & \text{if } 1-k\le \alpha\le 1 \text{ and } \alpha\in\mathbb{W} \\
+        \displaystyle\frac{\mmin^{1-\alpha}}{k+1}\sum\limits_{i=0}^{k}\frac{\displaystyle{\left(\frac{\mmin}{\mmax}\right)}^{i+\alpha-1}-1}{1-\alpha-i}                                                                                   & \text{otherwise}
+    \end{cases}
+\end{equation}
+
+\end{document}

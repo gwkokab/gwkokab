@@ -139,7 +139,6 @@ class Wysocki2019MassModel(ContinuousRV):
     def rvs(self, N: int = 1, key: Array = None) -> Array:
         """Random variates from the distribution
 
-
         Parameters
         ----------
         N : int, optional
