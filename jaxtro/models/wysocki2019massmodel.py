@@ -149,8 +149,9 @@ class Wysocki2019MassModel(jx.rvs.ContinuousRV):
         Array
             Random variates from the distribution
         """
-        m2 = jx.rvs.Uniform(low=self._mmin, high=self._mmax).rvs(N, key)
-        m1 = jx.rvs.TruncPowerLaw(alpha=-(self._k + self._alpha), low=m2, high=self._mmax).rvs(N, key)
+        m2 = jx.rvs.Uniform(low=self._mmin, high=self._mmax).rvs(N, key).flatten()
+        key = jx.utils.new_prn_key(key)
+        m1 = jx.rvs.TruncPowerLaw(alpha=-(self._k + self._alpha), low=m2, high=self._mmax).rvs(1, key).flatten()
         return jnp.column_stack([m1, m2])
 
     def __repr__(self) -> str:

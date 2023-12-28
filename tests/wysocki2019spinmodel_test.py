@@ -15,6 +15,7 @@
 import sys
 
 import jax
+from jax import numpy as jnp
 
 sys.path.append("../jaxtro")
 from jaxtro.models import Wysocki2019SpinModel
@@ -22,26 +23,29 @@ from jaxtro.models import Wysocki2019SpinModel
 
 def test_init() -> None:
     model = Wysocki2019SpinModel(
-        alpha=1.1,
-        beta=5.5,
+        alpha_1=1.1,
+        beta_1=5.5,
+        alpha_2=2.1,
+        beta_2=2.5,
         chimax=1.0,
         name="test",
     )
     assert model._name == "test"
-    assert model._alpha == 1.1
-    assert model._beta == 5.5
-    assert model._chimax == 1.0
+    assert jnp.all(model._alpha - jnp.array([1.1, 2.1])) < 1e-6
+    assert jnp.all(model._beta - jnp.array([5.5, 2.5])) < 1e-6
+    assert jnp.all(model._chimax == 1.0)
 
 
 def test_rvs() -> None:
     model = Wysocki2019SpinModel(
-        alpha=1.1,
-        beta=5.5,
+        alpha_1=1.1,
+        beta_1=5.5,
+        alpha_2=2.1,
+        beta_2=2.5,
         chimax=1.0,
         name="test",
     )
     key = jax.random.PRNGKey(0)
     N = 100000
     rvs = model.rvs(N=N, key=key)
-    assert rvs.shape == (N, 1)
-    assert rvs.max(axis=0) <= 1.0
+    assert rvs.shape == (N, 2)

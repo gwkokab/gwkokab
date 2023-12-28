@@ -43,7 +43,7 @@ setup(
     long_description=_long_description,
     long_description_content_type='text/markdown',
     python_requires='>=3.10',
-    install_requires=['jaxampler', 'numpy', 'tqdm'],
+    install_requires=['jaxampler', 'numpy', 'tqdm', 'configargparse'],
     classifiers=[
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
