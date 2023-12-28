@@ -1,6 +1,7 @@
 # Jaxtro 🔭 - A JAX-based gravitational-wave population inference
 
 [![Python package](https://github.com/Qazalbash/jaxtro/actions/workflows/python-package.yml/badge.svg)](https://github.com/Qazalbash/jaxtro/actions/workflows/python-package.yml)
+[![Upload Python Package](https://github.com/Qazalbash/jaxtro/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Qazalbash/jaxtro/actions/workflows/python-publish.yml)
 [![Versions](https://img.shields.io/pypi/pyversions/jaxtro.svg)](https://pypi.org/project/jaxtro/)
 
 Jaxtro is a JAX-based gravitational-wave population inference package. It is built on top of [JAXampler](https://github.com/Qazalbash/jaxampler) and provides a high-level interface for sampling from a wide range of gravitational-wave population models.
