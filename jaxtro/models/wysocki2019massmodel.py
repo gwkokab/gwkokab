@@ -14,16 +14,16 @@
 
 from functools import partial
 
+import jaxampler as jx
 from jax import Array, jit
 from jax import numpy as jnp
 from jax.typing import ArrayLike
-from jaxampler.rvs import ContinuousRV, TruncPowerLaw, Uniform
 
 
-class Wysocki2019MassModel(ContinuousRV):
+class Wysocki2019MassModel(jx.rvs.ContinuousRV):
     """Power law distribution with a lower and upper mass limit
 
-    Wysocki2019MassModel is a subclass of ContinuousRV and implements
+    Wysocki2019MassModel is a subclass of jx.rvs.ContinuousRV and implements
     the power law distribution with a lower and upper mass limit as
     described in https://arxiv.org/abs/1805.06442
     """
@@ -108,7 +108,7 @@ class Wysocki2019MassModel(ContinuousRV):
         logpdf_val = jnp.where(
             self.mask(m1, m2, self._mmin, self._mmax, self._Mmax),
             self._k * jnp.log(m2) - (self._k + self._alpha) * jnp.log(m1) - jnp.log(m1 - self._mmin) - jnp.log(self._Z),
-            jnp.nan,
+            -jnp.inf,
         )
         return logpdf_val
 
@@ -149,8 +149,8 @@ class Wysocki2019MassModel(ContinuousRV):
         Array
             Random variates from the distribution
         """
-        m2 = Uniform(low=self._mmin, high=self._mmax).rvs(N, key)
-        m1 = TruncPowerLaw(alpha=-(self._k + self._alpha), low=m2, high=self._mmax).rvs(N, key)
+        m2 = jx.rvs.Uniform(low=self._mmin, high=self._mmax).rvs(N, key)
+        m1 = jx.rvs.TruncPowerLaw(alpha=-(self._k + self._alpha), low=m2, high=self._mmax).rvs(N, key)
         return jnp.column_stack([m1, m2])
 
     def __repr__(self) -> str:

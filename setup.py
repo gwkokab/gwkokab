@@ -52,4 +52,5 @@ setup(
     ],
     zip_safe=False,
     keywords=keywords,
+    entry_points={"console_scripts": ["jaxtro_genie=jaxtro.main:main"]},
 )

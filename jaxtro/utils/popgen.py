@@ -38,8 +38,7 @@ class PopulationGenerator:
         self._error_scale: float = config.get("error_scale", None)
         self._error_size: int = config.get("error_size", None)
         self._root_container: str = config.get("root_container", None)
-        self._container: str = config.get("container", None)
-        self._point_filename: str = config.get("point_filename", None)
+        self._event_filename: str = config.get("event_filename", None)
         self._config_filename: str = config.get("config_filename", None)
         self._config_vars: list[str] = config.get("config_vars", None)
         self._col_names: list[str] = config.get("col_names", None)
@@ -53,8 +52,7 @@ class PopulationGenerator:
         assert self._error_scale is not None
         assert self._error_size is not None
         assert self._root_container is not None
-        assert self._container is not None
-        assert self._point_filename is not None
+        assert self._event_filename is not None
         assert self._config_filename is not None
         assert self._config_vars is not None
         assert self._col_names is not None
@@ -64,36 +62,34 @@ class PopulationGenerator:
         """Generate population and save them to disk."""
         os.makedirs(self._root_container, exist_ok=True)
 
-        for config_num, config in enumerate(self._params):
+        container = f"{self._root_container}"
 
-            container = f"{self._root_container}/{self._container.format(config_num)}"
+        os.makedirs(container, exist_ok=True)
 
-            os.makedirs(container, exist_ok=True)
+        model_instance: ContinuousRV = self._model(**self._params)
+        realisations = model_instance.rvs(self._size)
 
-            model_instance: ContinuousRV = self._model(**config)
-            realisations = model_instance.rvs(self._size)
+        dump_configurations(
+            f"{container}/{self._config_filename}",
+            *list(map(lambda x: (x, self._params[x]), self._config_vars)),
+        )
 
-            dump_configurations(
-                f"{container}/{self._config_filename}",
-                *list(map(lambda x: (x, config[x]), self._config_vars)),
+        for event_num, realisation in tqdm(enumerate(realisations),
+                                           desc=f"Generating events",
+                                           total=self._size,
+                                           unit=" events",
+                                           unit_scale=True):
+
+            filename = f"{container}/{self._event_filename.format(event_num)}"
+
+            realisation_err = add_normal_error(
+                *realisation,
+                scale=self._error_scale,
+                size=self._error_size,
             )
 
-            for event_num, realisation in tqdm(enumerate(realisations),
-                                               desc=f"Generating events {config_num}",
-                                               total=self._size,
-                                               unit=" events",
-                                               unit_scale=True):
-
-                filename = f"{container}/{self._point_filename.format(event_num)}"
-
-                realisation_err = add_normal_error(
-                    *realisation,
-                    scale=self._error_scale,
-                    size=self._error_size,
-                )
-
-                np.savetxt(
-                    filename,
-                    realisation_err,
-                    header="\t".join(self._col_names),
-                )
+            np.savetxt(
+                filename,
+                realisation_err,
+                header="\t".join(self._col_names),
+            )

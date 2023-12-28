@@ -14,14 +14,14 @@
 
 from functools import partial
 
+import jaxampler as jx
 from jax import Array, jit
 from jax import numpy as jnp
 from jax.scipy.special import betaln
 from jax.typing import ArrayLike
-from jaxampler.rvs import Beta, ContinuousRV
 
 
-class Wysocki2019SpinModel(ContinuousRV):
+class Wysocki2019SpinModel(jx.rvs.ContinuousRV):
     """Beta distribution for the spin magnitude
 
     Wysocki2019SpinModel is a subclass of ContinuousRV and implements
@@ -29,7 +29,15 @@ class Wysocki2019SpinModel(ContinuousRV):
     https://arxiv.org/abs/1805.06442
     """
 
-    def __init__(self, alpha: ArrayLike, beta: ArrayLike, chimax: ArrayLike, name: str = None) -> None:
+    def __init__(
+        self,
+        alpha_1: ArrayLike,
+        beta_1: ArrayLike,
+        alpha_2: ArrayLike,
+        beta_2: ArrayLike,
+        chimax: ArrayLike,
+        name: str = None,
+    ) -> None:
         """__init__ method for Wysocki2019SpinModel
 
         Parameters
@@ -43,8 +51,7 @@ class Wysocki2019SpinModel(ContinuousRV):
         name : str, optional
             Name of the object, by default None
         """
-        self._alpha = alpha
-        self._beta = beta
+        self._alpha, self._beta = jx.utils.jx_cast([alpha_1, alpha_2], [beta_1, beta_2])
         self._chimax = chimax
         self.check_params()
         self._name = name
@@ -89,7 +96,7 @@ class Wysocki2019SpinModel(ContinuousRV):
         Array
             Random variates from the distribution
         """
-        return Beta(alpha=self._alpha, beta=self._beta).rvs(N=N, key=key) * self._chimax
+        return jx.rvs.Beta(alpha=self._alpha, beta=self._beta).rvs(N=N, key=key) * self._chimax
 
     def __repr__(self) -> str:
         """string representation of the object
