@@ -66,7 +66,7 @@ Jaxtro is designed to be used as a library. It provides a high-level interface f
     model=Wysocki2019MassModel
     config_vars=['alpha','mmin','mmax']
     col_names=['m1_source','m2_source']
-    params={'alpha':0.8,'k':0,'mmin':5.0,'mmax':40.0,'Mmax':80.0,'name':'Wysocki2019MassModel_test'}
+    params={'alpha_m':0.8,'k':0,'mmin':5.0,'mmax':40.0,'Mmax':80.0,'name':'Wysocki2019MassModel_test'}
 
     [spin_model]
     model=Wysocki2019SpinModel
@@ -103,7 +103,7 @@ If you use Jaxtro in your research, please cite the following paper:
     author  = {Meesum Qazalbash, Muhammad Zeeshan},
     title   = {{jaxtro}: A JAX-based gravitational-wave population inference},
     url     = {http://github.com/Qazalbash/jaxtro},
-    version = {0.0.2},
+    version = {0.0.3},
     year    = {2023}
 }
 ```

@@ -29,7 +29,7 @@ class Wysocki2019MassModel(jx.rvs.ContinuousRV):
     """
 
     def __init__(self,
-                 alpha: ArrayLike,
+                 alpha_m: ArrayLike,
                  k: ArrayLike,
                  mmin: ArrayLike,
                  mmax: ArrayLike,
@@ -39,7 +39,7 @@ class Wysocki2019MassModel(jx.rvs.ContinuousRV):
 
         Parameters
         ----------
-        alpha : ArrayLike
+        alpha_m : ArrayLike
             Alpha parameter of the power law
         k : ArrayLike
             k parameter of the power law
@@ -52,7 +52,7 @@ class Wysocki2019MassModel(jx.rvs.ContinuousRV):
         name : str, optional
             name of the object, by default None
         """
-        self._alpha = alpha
+        self._alpha_m = alpha_m
         self._k = k
         self._mmin = mmin
         self._mmax = mmax
@@ -77,7 +77,7 @@ class Wysocki2019MassModel(jx.rvs.ContinuousRV):
             Normalization constant
         """
         q_m = self._mmin / self._mmax
-        beta = 1.0 - self._alpha
+        beta = 1.0 - self._alpha_m
         factor = jnp.power(self._mmin, beta) / (self._k + 1)
         _Z = 0
         frac = lambda ii: (jnp.power(q_m, ii - beta) - 1) / (beta - ii)
@@ -107,7 +107,8 @@ class Wysocki2019MassModel(jx.rvs.ContinuousRV):
         """
         logpdf_val = jnp.where(
             self.mask(m1, m2, self._mmin, self._mmax, self._Mmax),
-            self._k * jnp.log(m2) - (self._k + self._alpha) * jnp.log(m1) - jnp.log(m1 - self._mmin) - jnp.log(self._Z),
+            self._k * jnp.log(m2) - (self._k + self._alpha_m) * jnp.log(m1) - jnp.log(m1 - self._mmin) -
+            jnp.log(self._Z),
             -jnp.inf,
         )
         return logpdf_val
@@ -151,7 +152,7 @@ class Wysocki2019MassModel(jx.rvs.ContinuousRV):
         """
         m2 = jx.rvs.Uniform(low=self._mmin, high=self._mmax).rvs(N, key).flatten()
         key = jx.utils.new_prn_key(key)
-        m1 = jx.rvs.TruncPowerLaw(alpha=-(self._k + self._alpha), low=m2, high=self._mmax).rvs(1, key).flatten()
+        m1 = jx.rvs.TruncPowerLaw(alpha=-(self._k + self._alpha_m), low=m2, high=self._mmax).rvs(1, key).flatten()
         return jnp.column_stack([m1, m2])
 
     def __repr__(self) -> str:
@@ -162,7 +163,7 @@ class Wysocki2019MassModel(jx.rvs.ContinuousRV):
         str
             string representation of the object
         """
-        string = f"Wysocki2019MassModel(alpha={self._alpha}, k={self._k}, "
+        string = f"Wysocki2019MassModel(alpha_m={self._alpha_m}, k={self._k}, "
         string += f"mmin={self._mmin}, mmax={self._mmax}, Mmax={self._Mmax})"
         if self._name is not None:
             string += f", {self._name}"

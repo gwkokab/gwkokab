@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from models import *
-from utils import PopulationGenerator, parser
+from .utils import PopulationGenerator, parser
 
 
 def main():
@@ -23,9 +22,5 @@ def main():
     general = configuration_dict['general']
     models = [configuration_dict.get('mass_model', None), configuration_dict.get('spin_model', None)]
 
-    for model in models:
-        if model is not None:
-            model['model'] = eval(model['model'])
-            model.update(general)
-            pg = PopulationGenerator(config=model)
-            pg.generate()
+    pg = PopulationGenerator(general=general, models=models)
+    pg.generate()

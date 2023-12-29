@@ -23,7 +23,7 @@ from jaxtro.models import Wysocki2019MassModel
 
 def test_init() -> None:
     model = Wysocki2019MassModel(
-        alpha=0.8,
+        alpha_m=0.8,
         k=0,
         mmin=5.0,
         mmax=40.0,
@@ -31,7 +31,7 @@ def test_init() -> None:
         name="test",
     )
     assert model._name == "test"
-    assert model._alpha == 0.8
+    assert model._alpha_m == 0.8
     assert model._k == 0
     assert model._mmin == 5.0
     assert model._mmax == 40.0
@@ -40,7 +40,7 @@ def test_init() -> None:
 
 def test_rvs() -> None:
     model = Wysocki2019MassModel(
-        alpha=0.8,
+        alpha_m=0.8,
         k=0,
         mmin=5.0,
         mmax=40.0,

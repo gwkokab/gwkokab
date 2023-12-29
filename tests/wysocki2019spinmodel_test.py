@@ -23,10 +23,10 @@ from jaxtro.models import Wysocki2019SpinModel
 
 def test_init() -> None:
     model = Wysocki2019SpinModel(
-        alpha_1=1.1,
-        beta_1=5.5,
-        alpha_2=2.1,
-        beta_2=2.5,
+        alpha_chi_1=1.1,
+        beta_chi_1=5.5,
+        alpha_chi_2=2.1,
+        beta_chi_2=2.5,
         chimax=1.0,
         name="test",
     )
@@ -38,10 +38,10 @@ def test_init() -> None:
 
 def test_rvs() -> None:
     model = Wysocki2019SpinModel(
-        alpha_1=1.1,
-        beta_1=5.5,
-        alpha_2=2.1,
-        beta_2=2.5,
+        alpha_chi_1=1.1,
+        beta_chi_1=5.5,
+        alpha_chi_2=2.1,
+        beta_chi_2=2.5,
         chimax=1.0,
         name="test",
     )

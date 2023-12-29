@@ -13,19 +13,20 @@
 # limitations under the License.
 
 import os
-from typing import Any
 
 import numpy as np
+from jax import numpy as jnp
 from jaxampler.rvs import ContinuousRV
 from tqdm import tqdm
 
+from ..models import *
 from .misc import add_normal_error, dump_configurations
 
 
 class PopulationGenerator:
     """Class to generate population and save them to disk."""
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, general: dict, models: dict) -> None:
         """__init__ method for PopulationGenerator.
 
         Parameters
@@ -33,30 +34,35 @@ class PopulationGenerator:
         config : dict
             Configuration dictionary for PopulationGenerator.
         """
-        self._model: ContinuousRV = config.get("model", None)
-        self._size: int = config.get("size", None)
-        self._error_scale: float = config.get("error_scale", None)
-        self._error_size: int = config.get("error_size", None)
-        self._root_container: str = config.get("root_container", None)
-        self._event_filename: str = config.get("event_filename", None)
-        self._config_filename: str = config.get("config_filename", None)
-        self._config_vars: list[str] = config.get("config_vars", None)
-        self._col_names: list[str] = config.get("col_names", None)
-        self._params: list[dict[str, Any]] = config.get("params", None)
-        self.check_configs()
+        self.check_general(general)
+        for model in models:
+            self.check_models(model)
 
-    def check_configs(self) -> None:
+        self._size: int = general["size"]
+        self._error_scale: float = general["error_scale"]
+        self._error_size: int = general["error_size"]
+        self._root_container: str = general["root_container"]
+        self._event_filename: str = general["event_filename"]
+        self._config_filename: str = general["config_filename"]
+        self._models: list[ContinuousRV] = models
+
+    @staticmethod
+    def check_general(general: dict) -> None:
         """Check if all the required configs are present."""
-        assert self._model is not None
-        assert self._size is not None
-        assert self._error_scale is not None
-        assert self._error_size is not None
-        assert self._root_container is not None
-        assert self._event_filename is not None
-        assert self._config_filename is not None
-        assert self._config_vars is not None
-        assert self._col_names is not None
-        assert self._params is not None
+        assert general.get("size", None) is not None
+        assert general.get("error_scale", None) is not None
+        assert general.get("error_size", None) is not None
+        assert general.get("root_container", None) is not None
+        assert general.get("event_filename", None) is not None
+        assert general.get("config_filename", None) is not None
+
+    @staticmethod
+    def check_models(model: dict) -> None:
+        """Check if all the required configs are present."""
+        assert model.get("model", None) is not None
+        assert model.get("config_vars", None) is not None
+        assert model.get("col_names", None) is not None
+        assert model.get("params", None) is not None
 
     def generate(self):
         """Generate population and save them to disk."""
@@ -66,12 +72,22 @@ class PopulationGenerator:
 
         os.makedirs(container, exist_ok=True)
 
-        model_instance: ContinuousRV = self._model(**self._params)
-        realisations = model_instance.rvs(self._size)
+        config_vals = []
+        col_names = []
+        realisations = np.empty((self._size, 0))
+
+        for model in self._models:
+
+            model_instance: ContinuousRV = eval(model["model"])(**model["params"])
+            rvs = model_instance.rvs(self._size)
+            realisations = jnp.concatenate((realisations, rvs), axis=1)
+
+            config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
+            col_names.extend(model["col_names"])
 
         dump_configurations(
             f"{container}/{self._config_filename}",
-            *list(map(lambda x: (x, self._params[x]), self._config_vars)),
+            *config_vals,
         )
 
         for event_num, realisation in tqdm(enumerate(realisations),
@@ -91,5 +107,5 @@ class PopulationGenerator:
             np.savetxt(
                 filename,
                 realisation_err,
-                header="\t".join(self._col_names),
+                header="\t".join(col_names),
             )

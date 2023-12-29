@@ -31,10 +31,10 @@ class Wysocki2019SpinModel(jx.rvs.ContinuousRV):
 
     def __init__(
         self,
-        alpha_1: ArrayLike,
-        beta_1: ArrayLike,
-        alpha_2: ArrayLike,
-        beta_2: ArrayLike,
+        alpha_chi_1: ArrayLike,
+        beta_chi_1: ArrayLike,
+        alpha_chi_2: ArrayLike,
+        beta_chi_2: ArrayLike,
         chimax: ArrayLike,
         name: str = None,
     ) -> None:
@@ -51,7 +51,7 @@ class Wysocki2019SpinModel(jx.rvs.ContinuousRV):
         name : str, optional
             Name of the object, by default None
         """
-        self._alpha, self._beta = jx.utils.jx_cast([alpha_1, alpha_2], [beta_1, beta_2])
+        self._alpha, self._beta = jx.utils.jx_cast([alpha_chi_1, alpha_chi_2], [beta_chi_1, beta_chi_2])
         self._chimax = chimax
         self.check_params()
         self._name = name
@@ -106,8 +106,8 @@ class Wysocki2019SpinModel(jx.rvs.ContinuousRV):
         str
             string representation of the object
         """
-        string = f"Wysocki2019SpinModel(alpha={self._alpha}, "
-        string += f"beta={self._beta}, chimax={self._chimax}"
+        string = f"Wysocki2019SpinModel(alpha_chi={self._alpha}, "
+        string += f"beta_chi={self._beta}, chimax={self._chimax}"
         if self._name is not None:
             string += f", {self._name}"
         string += ")"
