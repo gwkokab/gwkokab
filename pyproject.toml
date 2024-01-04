@@ -30,7 +30,19 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: POSIX :: Linux",
 ]
-dependencies = ["configargparse", "jaxampler", "numpy", "tqdm"]
+dependencies = [
+    "configargparse",
+    "jax>=0.4.0",
+    "jaxampler",
+    "jaxlib>=0.4.0",
+    "matplotlib>=3.8.0",
+    "numpy",
+    "setuptools",
+    "tfp-nightly",
+    "tqdm",
+    "twine",
+    "wheel",
+]
 keywords = [
     "jax",
     "statistics",
