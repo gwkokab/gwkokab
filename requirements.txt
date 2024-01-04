@@ -1,4 +1,0 @@
-configargparse
-jaxampler
-numpy
-tqdm
