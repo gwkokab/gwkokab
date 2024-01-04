@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+py-modules = ["jaxtro"]
+
+[tool.setuptools.dynamic]
+version = { attr = "jaxtro.__version__" }
+
+[project]
+authors = [
+    { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
+    { name = "Muhammad Zeeshan" },
+]
+name = "jaxtro"
+dynamic = ["version"]
+maintainers = [
+    { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
+]
+description = "A JAX-based gravitational-wave population inference"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: POSIX :: Linux",
+]
+dependencies = ["configargparse", "jaxampler", "numpy", "tqdm"]
+keywords = [
+    "jax",
+    "statistics",
+    "monte-carlo",
+    "markov-chain",
+    "scientific",
+    "astronomy",
+    "astrophysics",
+    "machine-learning",
+    "deep-learning",
+    "bayesian-inference",
+    "probabilistic-programming",
+]
+
+[project.urls]
+Homepage = "https://github.com/Qazalbash/jaxtro"
+Issues = "https://github.com/Qazalbash/jaxtro/issues"
+Discussion = "https://github.com/Qazalbash/jaxtro/discussions"
+Changelog = "https://github.com/Qazalbash/jaxtro/blob/master/CHANGELOG.md"
+
+[project.scripts]
+jaxtro_genie = "jaxtro.main:main"
