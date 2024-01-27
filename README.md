@@ -27,13 +27,13 @@ source jvenv/bin/activate
 Now, you may install the latest released version of Jaxtro through pip by doing
 
 ```bash
-pip3 install --upgrade jaxtro
+pip install --upgrade jaxtro
 ```
 
 You may install the bleeding edge version by cloning this repo, or doing
 
 ```bash
-pip3 install --upgrade git+https://github.com/Qazalbash/jaxtro
+pip install --upgrade git+https://github.com/Qazalbash/jaxtro
 ```
 
 If you would like to take advantage of CUDA, you will additionally need to install a specific version of JAX by doing
