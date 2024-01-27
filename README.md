@@ -15,8 +15,16 @@ It is currently under active development and is not ready for production use. If
 - [x] 🔗 Easy Integration: Seamlessly integrates with existing JAX workflows. -->
 
 ## Installation
+First, create the virutal environment by doing
+```bash
+python -m venv jvenv
+```
+Activate it to install the required packges into it.
+```bash
+source jvenv/bin/activate
+```
 
-You may install the latest released version of Jaxtro through pip by doing
+Now, you may install the latest released version of Jaxtro through pip by doing
 
 ```bash
 pip3 install --upgrade jaxtro
