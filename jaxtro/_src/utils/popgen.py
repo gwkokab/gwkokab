@@ -19,9 +19,9 @@ from typing import Optional
 
 import numpy as np
 from jax import numpy as jnp
-from jaxampler.rvs import RandomVariable
 from tqdm import tqdm
 
+from ..models import *
 from .misc import add_normal_error, dump_configurations
 
 
@@ -80,9 +80,9 @@ class PopulationGenerator:
         realisations = np.empty((self._size, 0))
 
         for model in self._models:
-            model_instance: RandomVariable = eval(model["model"])(**model["params"])
-            rvs = model_instance.rvs(shape=(self._size,))
-            realisations = jnp.concatenate((realisations, rvs), axis=1)
+            model_instance = eval(model["model"])(**model["params"])
+            rvs = model_instance.samples(self._size).reshape((self._size, -1))
+            realisations = jnp.concatenate((realisations, rvs), axis=-1)
 
             config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
             col_names.extend(model["col_names"])

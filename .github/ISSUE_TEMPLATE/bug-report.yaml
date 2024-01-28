@@ -2,65 +2,65 @@
 ---
 name: Bug report
 description: >-
-    Report a bug or unexpected behavior to help us improve the package
+  Report a bug or unexpected behavior to help us improve the package
 labels:
-    - bug
+  - bug
 
 body:
-    - type: markdown
-      attributes:
-          value: >
-              ## Thank you for helping us improve Jaxtro!
-
-              * Please first verify that your issue is not already reported using the
-              [Issue search][issue search].
-
-              * If you are asking a question or seeking support, please
-              consider [starting a discussion][Discussions].
-
-              * If you prefer a non-templated issue report, click [here][Raw report].
-
-
-              [Discussions]: https://github.com/Qazalbash/jaxtro/discussions
-
-              [issue search]: https://github.com/Qazalbash/jaxtro/search?q=is%3Aissue&type=issues
-
-              [Raw report]: http://github.com/Qazalbash/jaxtro/issues/new
-    - type: textarea
-      attributes:
-          label: Description
-          description: >-
-              A concise description of the bug, preferably including self-contained
-              code to reproduce the issue.
-          placeholder: |
-              Text may use markdown formatting.
-              ```python
-              # for codeblocks, use triple backticks
-              ```
-      validations:
-          required: true
-    - type: input
-      attributes:
-          label: What jaxtro version are you using?
-          description: >
-              Include the output of `import jaxtro; print(jaxtro.__version__)`
-          placeholder: For example jaxtro v0.0.2
-    - type: input
-      attributes:
-          label: Which accelerator(s) are you using?
-          placeholder: CPU/GPU/TPU
-    - type: input
-      attributes:
-          label: Additional system info?
-          description: >
-              Include the output of `import platform, sys, numpy; print(numpy.__version__); print(sys.version); print(platform.uname())`
-          placeholder: Python version, OS (Linux/Mac/Windows/WSL), etc.
-    - type: textarea
-      attributes:
-          label: NVIDIA GPU info
-          description: >-
-              If you are using an NVIDIA GPU, what is the output of the `nvidia-smi` command?
-          placeholder: |
-              ```
-              ...
-              ```
+  - type: markdown
+    attributes:
+      value: >
+        ## Thank you for helping us improve Jaxtro!
+        
+        * Please first verify that your issue is not already reported using the
+        [Issue search][issue search].
+        
+        * If you are asking a question or seeking support, please
+        consider [starting a discussion][Discussions].
+        
+        * If you prefer a non-templated issue report, click [here][Raw report].
+        
+        
+        [Discussions]: https://github.com/Qazalbash/jaxtro/discussions
+        
+        [issue search]: https://github.com/Qazalbash/jaxtro/search?q=is%3Aissue&type=issues
+        
+        [Raw report]: http://github.com/Qazalbash/jaxtro/issues/new
+  - type: textarea
+    attributes:
+      label: Description
+      description: >-
+        A concise description of the bug, preferably including self-contained
+        code to reproduce the issue.
+      placeholder: |
+        Text may use markdown formatting.
+        ```python
+        # for codeblocks, use triple backticks
+        ```
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: What jaxtro version are you using?
+      description: >
+        Include the output of `import jaxtro; print(jaxtro.__version__)`
+      placeholder: For example jaxtro v0.0.2
+  - type: input
+    attributes:
+      label: Which accelerator(s) are you using?
+      placeholder: CPU/GPU/TPU
+  - type: input
+    attributes:
+      label: Additional system info?
+      description: >
+        Include the output of `import platform, sys, numpy; print(numpy.__version__); print(sys.version); print(platform.uname())`
+      placeholder: Python version, OS (Linux/Mac/Windows/WSL), etc.
+  - type: textarea
+    attributes:
+      label: NVIDIA GPU info
+      description: >-
+        If you are using an NVIDIA GPU, what is the output of the `nvidia-smi` command?
+      placeholder: |
+        ```
+        ...
+        ```

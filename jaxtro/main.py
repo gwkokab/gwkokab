@@ -22,10 +22,7 @@ def main():
     configuration_dict = parse_config(args.my_config)
 
     general = configuration_dict["general"]
-    models = [
-        configuration_dict.get("mass_model", None),
-        configuration_dict.get("spin_model", None),
-    ]
+    models = [configuration_dict[section_name] for section_name in configuration_dict.keys() if "model" in section_name]
 
     pg = PopulationGenerator(general=general, models=models)
     pg.generate()
