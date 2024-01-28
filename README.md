@@ -81,6 +81,7 @@ process:
    root_container = data
    event_filename = event_{}.dat
    config_filename = configuration.csv
+   save_injections = True
    
    [mass_model]
    model = Wysocki2019MassModel
