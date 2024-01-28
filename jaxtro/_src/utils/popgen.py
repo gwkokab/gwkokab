@@ -47,6 +47,7 @@ class PopulationGenerator:
         self._root_container: str = general["root_container"]
         self._event_filename: str = general["event_filename"]
         self._config_filename: str = general["config_filename"]
+        self._save_injections: bool = general["save_injections"]
         self._models: list = models
 
     @staticmethod
@@ -91,6 +92,13 @@ class PopulationGenerator:
             f"{container}/{self._config_filename}",
             *config_vals,
         )
+
+        if self._save_injections:
+            np.savetxt(
+                f"{container}/injections.dat",
+                realisations,
+                header="\t".join(col_names),
+            )
 
         for event_num, realisation in tqdm(
             enumerate(realisations),

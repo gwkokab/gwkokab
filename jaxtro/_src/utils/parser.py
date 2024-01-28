@@ -19,11 +19,9 @@ from configparser import ConfigParser
 import configargparse
 
 
-cmd_parser: configargparse.ArguementParser = configargparse.ArgParser(
-    config_file_parser_class=configargparse.ConfigparserConfigFileParser
-)
+cmd_parser = configargparse.ArgParser(config_file_parser_class=configargparse.ConfigparserConfigFileParser)
 
-cmd_parser.add(
+cmd_parser.add_argument(
     "-c",
     "--my-config",
     help="config file path",
@@ -47,5 +45,6 @@ def parse_config(config_path: str) -> dict:
     config_dict["general"]["size"] = int(config["general"]["size"])
     config_dict["general"]["error_scale"] = float(config["general"]["error_scale"])
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])
+    config_dict["general"]["save_injections"] = bool(config["general"]["save_injections"])
 
     return config_dict
