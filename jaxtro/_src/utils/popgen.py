@@ -15,10 +15,11 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
+from typing_extensions import Any
 
 import numpy as np
 from jax import numpy as jnp
+from jaxtyping import Array
 from tqdm import tqdm
 
 from ..models import *
@@ -28,7 +29,7 @@ from .misc import add_normal_error, dump_configurations
 class PopulationGenerator:
     """Class to generate population and save them to disk."""
 
-    def __init__(self, general: dict, models: list[Optional[dict]]) -> None:
+    def __init__(self, general: dict, models: list[dict]) -> None:
         """__init__ method for PopulationGenerator.
 
         Parameters
@@ -38,8 +39,7 @@ class PopulationGenerator:
         """
         self.check_general(general)
         for model in models:
-            if model is not None:
-                self.check_models(model)
+            self.check_models(model)
 
         self._size: int = general["size"]
         self._error_scale: float = general["error_scale"]
@@ -48,6 +48,7 @@ class PopulationGenerator:
         self._event_filename: str = general["event_filename"]
         self._config_filename: str = general["config_filename"]
         self._save_injections: bool = general["save_injections"]
+        self._num_realizations: int = general["num_realizations"]
         self._models: list = models
 
     @staticmethod
@@ -68,18 +69,10 @@ class PopulationGenerator:
         assert model.get("col_names", None) is not None
         assert model.get("params", None) is not None
 
-    def generate(self):
-        """Generate population and save them to disk."""
-        os.makedirs(self._root_container, exist_ok=True)
-
-        container = f"{self._root_container}"
-
-        os.makedirs(container, exist_ok=True)
-
+    def model_sampler(self) -> tuple[list[str], list[tuple[Any, Any]], Array]:
         config_vals = []
         col_names = []
-        realisations = np.empty((self._size, 0))
-
+        realisations = jnp.empty((self._size, 0))
         for model in self._models:
             model_instance = eval(model["model"])(**model["params"])
             rvs = model_instance.samples(self._size).reshape((self._size, -1))
@@ -87,26 +80,10 @@ class PopulationGenerator:
 
             config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
             col_names.extend(model["col_names"])
+        return col_names, config_vals, realisations
 
-        dump_configurations(
-            f"{container}/{self._config_filename}",
-            *config_vals,
-        )
-
-        if self._save_injections:
-            np.savetxt(
-                f"{container}/injections.dat",
-                realisations,
-                header="\t".join(col_names),
-            )
-
-        for event_num, realisation in tqdm(
-            enumerate(realisations),
-            desc="Generating events",
-            total=self._size,
-            unit=" events",
-            unit_scale=True,
-        ):
+    def add_error(self, col_names: list[str], container: str, realisations: Array, index: int) -> None:
+        for event_num, realisation in enumerate(realisations):
             filename = f"{container}/{self._event_filename.format(event_num)}"
 
             realisation_err = add_normal_error(
@@ -120,3 +97,29 @@ class PopulationGenerator:
                 realisation_err,
                 header="\t".join(col_names),
             )
+
+    def generate(self):
+        """Generate population and save them to disk."""
+        os.makedirs(self._root_container, exist_ok=True)
+
+        for i in tqdm(
+            range(self._num_realizations),
+            desc="Realizations",
+            total=self._num_realizations,
+            unit=" realization",
+            unit_scale=True,
+        ):
+            container = f"{self._root_container}/realization_{i}/"
+            config_filename = f"{container}/{self._config_filename}"
+            injection_filename = f"{container}/injections.dat"
+
+            os.makedirs(container, exist_ok=True)
+
+            col_names, config_vals, realisations = self.model_sampler()
+
+            dump_configurations(config_filename, *config_vals)
+
+            if self._save_injections:
+                np.savetxt(injection_filename, realisations, header="\t".join(col_names))
+
+            self.add_error(col_names, container, realisations, i)

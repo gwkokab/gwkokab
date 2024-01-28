@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from jax import Array, numpy as jnp
+from jax import Array
 from jaxampler.rvs import Normal
 
 
@@ -39,10 +39,11 @@ def add_normal_error(*x: tuple[float], scale: float = 0.01, size: int = 10) -> A
     Array
         array of shape (size, len(x)) with error added to each value in x
     """
-    return jnp.column_stack([Normal(loc=xi, scale=scale).rvs(shape=(size,)) for xi in x])
+    # return jnp.column_stack([Normal(loc=xi, scale=scale).rvs(shape=(size,)) for xi in x])
+    return Normal(loc=x, scale=scale).rvs(shape=(size,))
 
 
-def dump_configurations(filename: str, *args: list[tuple[str, Any]]) -> None:
+def dump_configurations(filename: str, *args: tuple[str, Any]) -> None:
     """Dump configurations to a csv file
 
     Parameters

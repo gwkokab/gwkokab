@@ -73,7 +73,7 @@ class Wysocki2019MassModel(RandomVariable):
         return _Z
 
     @partial(jit, static_argnums=(0,))
-    def _logpdf_x(self, m1: Numeric, m2: Numeric) -> Numeric:
+    def _logpdf_x(self, m1: Numeric, m2: Numeric) -> Numeric | tuple[Numeric, ...]:
         logpdf_val = jnp.where(
             self.mask(m1, m2, self._mmin, self._mmax, self._Mmax),
             self._k * jnp.log(m2)
