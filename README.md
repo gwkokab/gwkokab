@@ -58,6 +58,7 @@ configargparse
 jaxampler
 numpy
 tqdm
+RIFT
 ```
 
 The test suite is based on pytest. To run the tests, one needs to install pytest and run `pytest` at the root directory
@@ -133,7 +134,7 @@ If you use Jaxtro in your research, please cite the following paper:
 
 ```bibtex
 @software{jaxtro2023github,
-    author  = {Meesum Qazalbash, Muhammad Zeeshan},
+    author  = {Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy},
     title   = {{Jaxtro}: A JAX-based gravitational-wave population inference},
     url     = {http://github.com/Qazalbash/jaxtro},
     version = {0.0.3},
