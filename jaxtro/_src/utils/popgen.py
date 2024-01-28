@@ -82,9 +82,12 @@ class PopulationGenerator:
             col_names.extend(model["col_names"])
         return col_names, config_vals, realisations
 
-    def add_error(self, col_names: list[str], container: str, realisations: Array, index: int) -> None:
+    def add_error(self, col_names: list[str], container: str, realisations: Array) -> None:
         for event_num, realisation in enumerate(realisations):
-            filename = f"{container}/{self._event_filename.format(event_num)}"
+            filename_event = f"{container}/posteriors/{self._event_filename.format(event_num)}"
+            filename_inj = f"{container}/injections/inj_{event_num}.dat"
+
+            os.makedirs(f"{container}/posteriors", exist_ok=True)
 
             realisation_err = add_normal_error(
                 *realisation,
@@ -93,7 +96,13 @@ class PopulationGenerator:
             )
 
             np.savetxt(
-                filename,
+                filename_inj,
+                realisation.reshape((1, -1)),
+                header="\t".join(col_names),
+            )
+
+            np.savetxt(
+                filename_event,
                 realisation_err,
                 header="\t".join(col_names),
             )
@@ -109,9 +118,9 @@ class PopulationGenerator:
             unit=" realization",
             unit_scale=True,
         ):
-            container = f"{self._root_container}/realization_{i}/"
+            container = f"{self._root_container}/realization_{i}"
             config_filename = f"{container}/{self._config_filename}"
-            injection_filename = f"{container}/injections.dat"
+            injection_filename = f"{container}/injections/population.dat"
 
             os.makedirs(container, exist_ok=True)
 
@@ -119,7 +128,8 @@ class PopulationGenerator:
 
             dump_configurations(config_filename, *config_vals)
 
+            os.makedirs(f"{container}/injections", exist_ok=True)
             if self._save_injections:
                 np.savetxt(injection_filename, realisations, header="\t".join(col_names))
 
-            self.add_error(col_names, container, realisations, i)
+            self.add_error(col_names, container, realisations)

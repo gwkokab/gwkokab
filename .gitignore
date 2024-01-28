@@ -6,6 +6,9 @@
 *.out
 *.synctex.gz
 
+# data ignore
+*realization*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
