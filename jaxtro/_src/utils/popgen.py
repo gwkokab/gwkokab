@@ -1,32 +1,34 @@
-# Copyright 2023 The Jaxtro Authors
+#  Copyright 2023 The Jaxtro Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
 
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-
-#     http://www.apache.org/licenses/LICENSE-2.0
-
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+from __future__ import annotations
 
 import os
+from typing import Optional
 
 import numpy as np
 from jax import numpy as jnp
-from jaxampler.rvs import ContinuousRV
+from jaxampler.rvs import RandomVariable
 from tqdm import tqdm
 
-from ..models import *
 from .misc import add_normal_error, dump_configurations
 
 
 class PopulationGenerator:
     """Class to generate population and save them to disk."""
 
-    def __init__(self, general: dict, models: dict) -> None:
+    def __init__(self, general: dict, models: list[Optional[dict]]) -> None:
         """__init__ method for PopulationGenerator.
 
         Parameters
@@ -36,7 +38,8 @@ class PopulationGenerator:
         """
         self.check_general(general)
         for model in models:
-            self.check_models(model)
+            if model is not None:
+                self.check_models(model)
 
         self._size: int = general["size"]
         self._error_scale: float = general["error_scale"]
@@ -44,7 +47,7 @@ class PopulationGenerator:
         self._root_container: str = general["root_container"]
         self._event_filename: str = general["event_filename"]
         self._config_filename: str = general["config_filename"]
-        self._models: list[ContinuousRV] = models
+        self._models: list = models
 
     @staticmethod
     def check_general(general: dict) -> None:
@@ -77,9 +80,8 @@ class PopulationGenerator:
         realisations = np.empty((self._size, 0))
 
         for model in self._models:
-
-            model_instance: ContinuousRV = eval(model["model"])(**model["params"])
-            rvs = model_instance.rvs(self._size)
+            model_instance: RandomVariable = eval(model["model"])(**model["params"])
+            rvs = model_instance.rvs(shape=(self._size,))
             realisations = jnp.concatenate((realisations, rvs), axis=1)
 
             config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
@@ -90,12 +92,13 @@ class PopulationGenerator:
             *config_vals,
         )
 
-        for event_num, realisation in tqdm(enumerate(realisations),
-                                           desc=f"Generating events",
-                                           total=self._size,
-                                           unit=" events",
-                                           unit_scale=True):
-
+        for event_num, realisation in tqdm(
+            enumerate(realisations),
+            desc="Generating events",
+            total=self._size,
+            unit=" events",
+            unit_scale=True,
+        ):
             filename = f"{container}/{self._event_filename.format(event_num)}"
 
             realisation_err = add_normal_error(

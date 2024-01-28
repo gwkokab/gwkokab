@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import importlib.metadata
-
-
-__version__ = importlib.metadata.version("jaxtro")
+from .misc import add_normal_error as add_normal_error, dump_configurations as dump_configurations
+from .parser import cmd_parser as cmd_parser, parse_config as parse_config
+from .popgen import PopulationGenerator as PopulationGenerator

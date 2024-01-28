@@ -4,7 +4,7 @@
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
-import importlib.metadata
-
-
-__version__ = importlib.metadata.version("jaxtro")
+from ._src.utils import (
+    add_normal_error as add_normal_error,
+    cmd_parser as cmd_parser,
+    dump_configurations as dump_configurations,
+    parse_config as parse_config,
+    PopulationGenerator as PopulationGenerator,
+)

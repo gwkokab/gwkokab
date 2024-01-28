@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 py-modules = ["jaxtro"]
 
-[tool.setuptools.dynamic]
-version = { attr = "jaxtro.__version__" }
+[tool.setuptools.packages]
+find = { }
 
 [project]
 authors = [
@@ -14,7 +14,7 @@ authors = [
     { name = "Muhammad Zeeshan" },
 ]
 name = "jaxtro"
-dynamic = ["version"]
+version = "0.0.3.dev"
 maintainers = [
     { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
 ]
@@ -65,3 +65,20 @@ Changelog = "https://github.com/Qazalbash/jaxtro/blob/master/CHANGELOG.md"
 
 [project.scripts]
 jaxtro_genie = "jaxtro.main:main"
+
+[tool.ruff]
+ignore-init-module-imports = true
+line-length = 120
+fixable = ["I001", "F401"]
+ignore = ["E402", "E721", "E731", "E741", "F722"]
+select = ["E", "F", "I001"]
+
+[tool.ruff.isort]
+combine-as-imports = true
+extra-standard-library = ["typing_extensions"]
+lines-after-imports = 2
+order-by-type = false
+
+[tool.pyright]
+reportIncompatibleMethodOverride = true
+include = ["jaxtro", "tests"]
