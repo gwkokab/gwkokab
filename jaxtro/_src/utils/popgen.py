@@ -191,29 +191,3 @@ class PopulationGenerator:
                 y_label="$m_2$",
                 z_label="$\epsilon$",
             )
-
-        posteriors = glob.glob(event_regex)
-        for filename in tqdm(
-            posteriors,
-            desc="Generating 2d individual plots",
-            total=self._num_realizations * self._size,
-            unit="event",
-            unit_scale=True,
-        ):
-            output_filename = filename.replace("posteriors", "plots")
-            scatter2d_plot(
-                input_filename=filename,
-                output_filename=output_filename.replace(".dat", "_mass_scatter.png"),
-                x_index=0,
-                y_index=1,
-                x_label="$m_1 [M_\odot]$",
-                y_label="$m_2 [M_\odot]$",
-            )
-            scatter2d_plot(
-                input_filename=filename,
-                output_filename=output_filename.replace(".dat", "_spin_scatter.png"),
-                x_index=2,
-                y_index=3,
-                x_label="$a_1$",
-                y_label="$a_2$",
-            )
