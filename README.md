@@ -19,15 +19,11 @@ see the [contributing guidelines](CONTRIBUTING.md).
 
 ## Installation
 
-First, create the virutal environment by doing
+First, setup the virtual environment,
 
 ```bash
+pip install --upgrade venv
 python -m venv jvenv
-```
-
-Activate it to install the required packges into it.
-
-```bash
 source jvenv/bin/activate
 ```
 
@@ -40,7 +36,7 @@ pip install --upgrade jaxtro
 You may install the bleeding edge version by cloning this repo, or doing
 
 ```bash
-pip install --upgrade git+https://github.com/Qazalbash/jaxtro
+pip install --upgrade git+https://github.com/gwkokab/jaxtro
 ```
 
 If you would like to take advantage of CUDA, you will additionally need to install a specific version of JAX by doing

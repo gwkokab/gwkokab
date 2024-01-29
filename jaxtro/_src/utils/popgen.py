@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import glob
 import os
 from typing_extensions import Any
 
@@ -24,6 +25,7 @@ from tqdm import tqdm
 
 from ..models import *
 from .misc import add_normal_error, dump_configurations
+from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 
 
 class PopulationGenerator:
@@ -82,12 +84,12 @@ class PopulationGenerator:
             col_names.extend(model["col_names"])
         return col_names, config_vals, realisations
 
-    def add_error(self, col_names: list[str], container: str, realisations: Array) -> None:
+    def _add_error(self, col_names: list[str], container: str, realisations: Array) -> None:
+        os.makedirs(f"{container}/posteriors", exist_ok=True)
+        os.makedirs(f"{container}/plots", exist_ok=True)
         for event_num, realisation in enumerate(realisations):
             filename_event = f"{container}/posteriors/{self._event_filename.format(event_num)}"
             filename_inj = f"{container}/injections/inj_{event_num}.dat"
-
-            os.makedirs(f"{container}/posteriors", exist_ok=True)
 
             realisation_err = add_normal_error(
                 *realisation,
@@ -115,7 +117,7 @@ class PopulationGenerator:
             range(self._num_realizations),
             desc="Realizations",
             total=self._num_realizations,
-            unit=" realization",
+            unit="realization",
             unit_scale=True,
         ):
             container = f"{self._root_container}/realization_{i}"
@@ -132,4 +134,86 @@ class PopulationGenerator:
             if self._save_injections:
                 np.savetxt(injection_filename, realisations, header="\t".join(col_names))
 
-            self.add_error(col_names, container, realisations)
+            self._add_error(col_names, container, realisations)
+
+        event_regex = f"{self._root_container}/realization_*/posteriors/{self._event_filename.format('*')}"
+        realization_regex = f"{self._root_container}/realization_*"
+
+        for realization in tqdm(
+            glob.glob(realization_regex),
+            desc="Generating 2d batch plots",
+            total=self._num_realizations,
+            unit="event",
+            unit_scale=True,
+        ):
+            scatter2d_batch_plot(
+                file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
+                output_filename=f"{realization}/plots/mass_scatter.png",
+                x_index=0,
+                y_index=1,
+                x_label="$m_1 [M_\odot]$",
+                y_label="$m_2 [M_\odot]$",
+            )
+            scatter2d_batch_plot(
+                file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
+                output_filename=f"{realization}/plots/spin_scatter.png",
+                x_index=2,
+                y_index=3,
+                x_label="$a_1$",
+                y_label="$a_2$",
+            )
+
+        populations = glob.glob(f"{self._root_container}/realization_*/injections/population.dat")
+        for filename in tqdm(
+            populations,
+            desc="Generating population plots",
+            total=self._num_realizations,
+            unit="realization",
+            unit_scale=True,
+        ):
+            output_filename = filename.replace("injections", "plots")
+            scatter2d_plot(
+                input_filename=filename,
+                output_filename=output_filename.replace("population.dat", "mass_scatter_2d.png"),
+                x_index=0,
+                y_index=1,
+                x_label="$m_1$",
+                y_label="$m_2$",
+            )
+
+            scatter3d_plot(
+                input_filename=filename,
+                output_filename=output_filename.replace("population.dat", "mass_ecc_scatter_3d.png"),
+                x_index=0,
+                y_index=1,
+                z_index=4,
+                x_label="$m_1$",
+                y_label="$m_2$",
+                z_label="$\epsilon$",
+            )
+
+        posteriors = glob.glob(event_regex)
+        for filename in tqdm(
+            posteriors,
+            desc="Generating 2d individual plots",
+            total=self._num_realizations * self._size,
+            unit="event",
+            unit_scale=True,
+        ):
+            output_filename = filename.replace("posteriors", "plots")
+            scatter2d_plot(
+                input_filename=filename,
+                output_filename=output_filename.replace(".dat", "_mass_scatter.png"),
+                x_index=0,
+                y_index=1,
+                x_label="$m_1 [M_\odot]$",
+                y_label="$m_2 [M_\odot]$",
+            )
+            scatter2d_plot(
+                input_filename=filename,
+                output_filename=output_filename.replace(".dat", "_spin_scatter.png"),
+                x_index=2,
+                y_index=3,
+                x_label="$a_1$",
+                y_label="$a_2$",
+            )

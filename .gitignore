@@ -5,6 +5,7 @@
 *.log
 *.out
 *.synctex.gz
+playground.py
 
 # data ignore
 *realization*
