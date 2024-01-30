@@ -136,7 +136,6 @@ class PopulationGenerator:
 
             self._add_error(col_names, container, realisations)
 
-        event_regex = f"{self._root_container}/realization_*/posteriors/{self._event_filename.format('*')}"
         realization_regex = f"{self._root_container}/realization_*"
 
         for realization in tqdm(

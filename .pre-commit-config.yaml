@@ -17,4 +17,4 @@ repos:
     hooks:
       - id: pyright
         additional_dependencies:
-          [ jax, jaxlib, jaxtyping, tfp-nightly, tqdm, jaxampler, configargparse, mplcursors ]
+          [ jax, jaxlib, jaxtyping, tfp-nightly, tqdm, jaxampler, configargparse, mplcursors, rift ]
