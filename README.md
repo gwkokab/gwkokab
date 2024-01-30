@@ -1,7 +1,7 @@
 # Jaxtro 🔭 - A JAX-based gravitational-wave population inference
 
-[![Python package](https://github.com/Qazalbash/jaxtro/actions/workflows/python-package.yml/badge.svg)](https://github.com/Qazalbash/jaxtro/actions/workflows/python-package.yml)
-[![Upload Python Package](https://github.com/Qazalbash/jaxtro/actions/workflows/python-publish.yml/badge.svg)](https://github.com/Qazalbash/jaxtro/actions/workflows/python-publish.yml)
+[![Python package](https://github.com/gwkokab/jaxtro/actions/workflows/python-package.yml/badge.svg)](https://github.com/gwkokab/jaxtro/actions/workflows/python-package.yml)
+[![Upload Python Package](https://github.com/gwkokab/jaxtro/actions/workflows/python-publish.yml/badge.svg)](https://github.com/gwkokab/jaxtro/actions/workflows/python-publish.yml)
 [![Versions](https://img.shields.io/pypi/pyversions/jaxtro.svg)](https://pypi.org/project/jaxtro/)
 
 Jaxtro is a JAX-based gravitational-wave population inference package. It is built on top
@@ -132,7 +132,7 @@ If you use Jaxtro in your research, please cite the following paper:
 @software{jaxtro2023github,
     author  = {Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy},
     title   = {{Jaxtro}: A JAX-based gravitational-wave population inference},
-    url     = {http://github.com/Qazalbash/jaxtro},
+    url     = {http://github.com/gwkokab/jaxtro},
     version = {0.0.3},
     year    = {2023}
 }

@@ -21,11 +21,11 @@ body:
         * If you prefer a non-templated issue report, click [here][Raw report].
         
         
-        [Discussions]: https://github.com/Qazalbash/jaxtro/discussions
+        [Discussions]: https://github.com/gwkokab/jaxtro/discussions
         
-        [issue search]: https://github.com/Qazalbash/jaxtro/search?q=is%3Aissue&type=issues
+        [issue search]: https://github.com/gwkokab/jaxtro/search?q=is%3Aissue&type=issues
         
-        [Raw report]: http://github.com/Qazalbash/jaxtro/issues/new
+        [Raw report]: http://github.com/gwkokab/jaxtro/issues/new
   - type: textarea
     attributes:
       label: Description

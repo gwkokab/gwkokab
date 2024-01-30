@@ -113,6 +113,8 @@ class PopulationGenerator:
         """Generate population and save them to disk."""
         os.makedirs(self._root_container, exist_ok=True)
 
+        col_names = []
+
         for i in tqdm(
             range(self._num_realizations),
             desc="Realizations",
@@ -137,6 +139,7 @@ class PopulationGenerator:
             self._add_error(col_names, container, realisations)
 
         realization_regex = f"{self._root_container}/realization_*"
+        indexes = {var: i for i, var in enumerate(col_names)}
 
         for realization in tqdm(
             glob.glob(realization_regex),
@@ -148,16 +151,16 @@ class PopulationGenerator:
             scatter2d_batch_plot(
                 file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
                 output_filename=f"{realization}/plots/mass_scatter.png",
-                x_index=0,
-                y_index=1,
+                x_index=indexes["m1_source"],
+                y_index=indexes["m2_source"],
                 x_label="$m_1 [M_\odot]$",
                 y_label="$m_2 [M_\odot]$",
             )
             scatter2d_batch_plot(
                 file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
                 output_filename=f"{realization}/plots/spin_scatter.png",
-                x_index=2,
-                y_index=3,
+                x_index=indexes["a1"],
+                y_index=indexes["a2"],
                 x_label="$a_1$",
                 y_label="$a_2$",
             )
@@ -174,8 +177,8 @@ class PopulationGenerator:
             scatter2d_plot(
                 input_filename=filename,
                 output_filename=output_filename.replace("population.dat", "mass_scatter_2d.png"),
-                x_index=0,
-                y_index=1,
+                x_index=indexes["m1_source"],
+                y_index=indexes["m2_source"],
                 x_label="$m_1$",
                 y_label="$m_2$",
             )
@@ -183,9 +186,9 @@ class PopulationGenerator:
             scatter3d_plot(
                 input_filename=filename,
                 output_filename=output_filename.replace("population.dat", "mass_ecc_scatter_3d.png"),
-                x_index=0,
-                y_index=1,
-                z_index=4,
+                x_index=indexes["m1_source"],
+                y_index=indexes["m2_source"],
+                z_index=indexes["ecc"],
                 x_label="$m_1$",
                 y_label="$m_2$",
                 z_label="$\epsilon$",

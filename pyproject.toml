@@ -59,10 +59,10 @@ keywords = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Qazalbash/jaxtro"
-Issues = "https://github.com/Qazalbash/jaxtro/issues"
-Discussion = "https://github.com/Qazalbash/jaxtro/discussions"
-Changelog = "https://github.com/Qazalbash/jaxtro/blob/master/CHANGELOG.md"
+Homepage = "https://github.com/gwkokab/jaxtro"
+Issues = "https://github.com/gwkokab/jaxtro/issues"
+Discussion = "https://github.com/gwkokab/jaxtro/discussions"
+Changelog = "https://github.com/gwkokab/jaxtro/blob/master/CHANGELOG.md"
 
 [project.scripts]
 jaxtro_genie = "jaxtro.main:main"
