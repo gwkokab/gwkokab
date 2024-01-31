@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from ._src.models import (
+from jaxtro._src.models import (
     AbstractEccentricityModel as AbstractEccentricityModel,
     AbstractMassModel as AbstractMassModel,
     AbstractModel as AbstractModel,

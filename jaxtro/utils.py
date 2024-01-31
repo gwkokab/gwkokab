@@ -14,10 +14,13 @@
 
 from __future__ import annotations
 
-from ._src.utils import (
-    add_normal_error as add_normal_error,
+from jaxtro._src.utils import (
+    chirp_mass as chirp_mass,
     cmd_parser as cmd_parser,
     dump_configurations as dump_configurations,
+    mass_ratio as mass_ratio,
     parse_config as parse_config,
     PopulationGenerator as PopulationGenerator,
+    reduced_mass as reduced_mass,
+    symmetric_mass_ratio as symmetric_mass_ratio,
 )

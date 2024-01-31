@@ -22,7 +22,6 @@ from jax import numpy as jnp, vmap
 from tqdm import tqdm
 
 from ..models import *
-from ..typing import JaxtroModel
 from .misc import dump_configurations
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 
@@ -48,7 +47,6 @@ class PopulationGenerator:
         self._root_container: str = general["root_container"]
         self._event_filename: str = general["event_filename"]
         self._config_filename: str = general["config_filename"]
-        self._save_injections: bool = general["save_injections"]
         self._num_realizations: int = general["num_realizations"]
         self._models: list = models
 
@@ -97,7 +95,7 @@ class PopulationGenerator:
             realisations = jnp.empty((self._size, 0))
             realisations_err = jnp.empty((self._size, self._error_size, 0))
             for model in self._models:
-                model_instance: JaxtroModel = eval(model["model"])(**model["params"])
+                model_instance = eval(model["model"])(**model["params"])
                 rvs = model_instance.samples(self._size).reshape((self._size, -1))
                 err_rvs = vmap(
                     lambda x: model_instance.add_error(
@@ -115,22 +113,20 @@ class PopulationGenerator:
 
             dump_configurations(config_filename, *config_vals)
 
-            if self._save_injections:
-                np.savetxt(injection_filename, realisations, header="\t".join(col_names))
+            np.savetxt(injection_filename, realisations, header="\t".join(col_names))
 
             for event_num, realisation in enumerate(realisations):
                 filename_event = f"{container}/posteriors/{self._event_filename.format(event_num)}"
-                filename_inj = f"{container}/injections/inj_{event_num}.dat"
-
-                np.savetxt(
-                    filename_inj,
-                    realisation.reshape((1, -1)),
-                    header="\t".join(col_names),
-                )
-
                 np.savetxt(
                     filename_event,
                     realisations_err[event_num, :, :],
+                    header="\t".join(col_names),
+                )
+
+                filename_inj = f"{container}/injections/inj_{event_num}.dat"
+                np.savetxt(
+                    filename_inj,
+                    realisation.reshape((1, -1)),
                     header="\t".join(col_names),
                 )
 
