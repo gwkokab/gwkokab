@@ -42,7 +42,6 @@ def add_normal_error(*x: tuple[float], scale: float = 0.01, size: int = 10) -> A
     Array
         array of shape (size, len(x)) with error added to each value in x
     """
-    # return jnp.column_stack([Normal(loc=xi, scale=scale).rvs(shape=(size,)) for xi in x])
     return Normal(loc=x, scale=scale).rvs(shape=(size,))
 
 
@@ -128,8 +127,8 @@ def add_mass_error(x: Numeric, y: Numeric, size: int = 4000) -> tuple[Numeric, N
         etaV_sqrt[indx_ok] = jnp.sqrt(etaV[indx_ok])
         etaV_sqrt = jnp.where(indx_ok, jnp.sqrt(etaV), 0)
 
-    m1 = 0.5 * Mc * eta ** (-3.0 / 5.0) * (1.0 + etaV_sqrt)
-    m2 = 0.5 * Mc * eta ** (-3.0 / 5.0) * (1.0 - etaV_sqrt)
+    m1 = 0.5 * Mc * (eta**-0.6) * (1.0 + etaV_sqrt)
+    m2 = 0.5 * Mc * (eta**-0.6) * (1.0 - etaV_sqrt)
 
     return m1, m2
 

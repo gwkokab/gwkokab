@@ -31,7 +31,7 @@ def scatter2d_batch_plot(
         y = data[:, y_index]
 
         # Scatter plot with different colors for each file
-        plt.scatter(x, y, s=5)
+        plt.scatter(x, y)
 
     # Set plot title and labels
     plt.title("Scatter Plot")
@@ -97,7 +97,7 @@ def scatter2d_plot(
     y = data[:, y_index]
 
     # Scatter plot with different colors for each file
-    plt.scatter(x, y, s=5)
+    plt.scatter(x, y)
 
     # Set plot title and labels
     plt.title("Scatter Plot")

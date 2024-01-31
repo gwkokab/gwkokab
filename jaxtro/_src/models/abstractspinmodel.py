@@ -15,13 +15,13 @@
 
 from __future__ import annotations
 
-from ._src.models import (
-    AbstractEccentricityModel as AbstractEccentricityModel,
-    AbstractMassModel as AbstractMassModel,
-    AbstractModel as AbstractModel,
-    AbstractRedShiftModel as AbstractRedShiftModel,
-    AbstractSpinModel as AbstractSpinModel,
-    EccentricityModel as EccentricityModel,
-    Wysocki2019MassModel as Wysocki2019MassModel,
-    Wysocki2019SpinModel as Wysocki2019SpinModel,
-)
+from jaxampler.rvs import TruncNormal
+from jaxtyping import Array
+
+from .abstractmodel import AbstractModel
+
+
+class AbstractSpinModel(AbstractModel):
+    @staticmethod
+    def add_error(x: Array, scale: float = 0.5, size: int = 10) -> Array:
+        return TruncNormal(loc=x, scale=scale, low=0.0, high=0.5).rvs(shape=(size,))

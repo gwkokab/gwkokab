@@ -13,15 +13,9 @@
 #  limitations under the License.
 
 
-from __future__ import annotations
+from typing_extensions import Union
 
-from ._src.models import (
-    AbstractEccentricityModel as AbstractEccentricityModel,
-    AbstractMassModel as AbstractMassModel,
-    AbstractModel as AbstractModel,
-    AbstractRedShiftModel as AbstractRedShiftModel,
-    AbstractSpinModel as AbstractSpinModel,
-    EccentricityModel as EccentricityModel,
-    Wysocki2019MassModel as Wysocki2019MassModel,
-    Wysocki2019SpinModel as Wysocki2019SpinModel,
-)
+from .models import AbstractEccentricityModel, AbstractMassModel, AbstractRedShiftModel, AbstractSpinModel
+
+
+JaxtroModel = Union[AbstractEccentricityModel, AbstractMassModel, AbstractRedShiftModel, AbstractSpinModel]

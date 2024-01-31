@@ -39,14 +39,14 @@ dependencies = [
     "jaxampler",
     "jaxlib>=0.4.0",
     "matplotlib>=3.8.0",
+    "mplcursors",
     "numpy",
+    "rift",
     "setuptools",
     "tfp-nightly",
     "tqdm",
     "twine",
     "wheel",
-    "mplcursors"
-    "rift"
 ]
 keywords = [
     "jax",
