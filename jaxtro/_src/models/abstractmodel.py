@@ -15,13 +15,10 @@
 
 from __future__ import annotations
 
-from ._src.models import (
-    AbstractEccentricityModel as AbstractEccentricityModel,
-    AbstractMassModel as AbstractMassModel,
-    AbstractModel as AbstractModel,
-    AbstractRedShiftModel as AbstractRedShiftModel,
-    AbstractSpinModel as AbstractSpinModel,
-    EccentricityModel as EccentricityModel,
-    Wysocki2019MassModel as Wysocki2019MassModel,
-    Wysocki2019SpinModel as Wysocki2019SpinModel,
-)
+from jaxampler.rvs import RandomVariable
+from jaxtyping import Array
+
+
+class AbstractModel(RandomVariable):
+    def samples(self, num_of_samples: int) -> Array:
+        raise NotImplementedError

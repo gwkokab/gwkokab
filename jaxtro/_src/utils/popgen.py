@@ -16,15 +16,14 @@ from __future__ import annotations
 
 import glob
 import os
-from typing_extensions import Any
 
 import numpy as np
-from jax import numpy as jnp
-from jaxtyping import Array
+from jax import numpy as jnp, vmap
 from tqdm import tqdm
 
 from ..models import *
-from .misc import add_normal_error, dump_configurations
+from ..typing import JaxtroModel
+from .misc import dump_configurations
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 
 
@@ -71,44 +70,6 @@ class PopulationGenerator:
         assert model.get("col_names", None) is not None
         assert model.get("params", None) is not None
 
-    def model_sampler(self) -> tuple[list[str], list[tuple[Any, Any]], Array]:
-        config_vals = []
-        col_names = []
-        realisations = jnp.empty((self._size, 0))
-        for model in self._models:
-            model_instance = eval(model["model"])(**model["params"])
-            rvs = model_instance.samples(self._size).reshape((self._size, -1))
-            realisations = jnp.concatenate((realisations, rvs), axis=-1)
-
-            config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
-            col_names.extend(model["col_names"])
-        return col_names, config_vals, realisations
-
-    def _add_error(self, col_names: list[str], container: str, realisations: Array) -> None:
-        os.makedirs(f"{container}/posteriors", exist_ok=True)
-        os.makedirs(f"{container}/plots", exist_ok=True)
-        for event_num, realisation in enumerate(realisations):
-            filename_event = f"{container}/posteriors/{self._event_filename.format(event_num)}"
-            filename_inj = f"{container}/injections/inj_{event_num}.dat"
-
-            realisation_err = add_normal_error(
-                *realisation,
-                scale=self._error_scale,
-                size=self._error_size,
-            )
-
-            np.savetxt(
-                filename_inj,
-                realisation.reshape((1, -1)),
-                header="\t".join(col_names),
-            )
-
-            np.savetxt(
-                filename_event,
-                realisation_err,
-                header="\t".join(col_names),
-            )
-
     def generate(self):
         """Generate population and save them to disk."""
         os.makedirs(self._root_container, exist_ok=True)
@@ -127,16 +88,51 @@ class PopulationGenerator:
             injection_filename = f"{container}/injections/population.dat"
 
             os.makedirs(container, exist_ok=True)
+            os.makedirs(f"{container}/injections", exist_ok=True)
+            os.makedirs(f"{container}/posteriors", exist_ok=True)
+            os.makedirs(f"{container}/plots", exist_ok=True)
 
-            col_names, config_vals, realisations = self.model_sampler()
+            config_vals = []
+            col_names = []
+            realisations = jnp.empty((self._size, 0))
+            realisations_err = jnp.empty((self._size, self._error_size, 0))
+            for model in self._models:
+                model_instance: JaxtroModel = eval(model["model"])(**model["params"])
+                rvs = model_instance.samples(self._size).reshape((self._size, -1))
+                err_rvs = vmap(
+                    lambda x: model_instance.add_error(
+                        x=x,
+                        scale=self._error_scale,
+                        size=self._error_size,
+                    ),
+                    in_axes=(0,),
+                )(rvs)
+                realisations = jnp.concatenate((realisations, rvs), axis=-1)
+                realisations_err = jnp.concatenate((realisations_err, err_rvs), axis=-1)
+
+                config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
+                col_names.extend(model["col_names"])
 
             dump_configurations(config_filename, *config_vals)
 
-            os.makedirs(f"{container}/injections", exist_ok=True)
             if self._save_injections:
                 np.savetxt(injection_filename, realisations, header="\t".join(col_names))
 
-            self._add_error(col_names, container, realisations)
+            for event_num, realisation in enumerate(realisations):
+                filename_event = f"{container}/posteriors/{self._event_filename.format(event_num)}"
+                filename_inj = f"{container}/injections/inj_{event_num}.dat"
+
+                np.savetxt(
+                    filename_inj,
+                    realisation.reshape((1, -1)),
+                    header="\t".join(col_names),
+                )
+
+                np.savetxt(
+                    filename_event,
+                    realisations_err[event_num, :, :],
+                    header="\t".join(col_names),
+                )
 
         realization_regex = f"{self._root_container}/realization_*"
         indexes = {var: i for i, var in enumerate(col_names)}
@@ -153,16 +149,16 @@ class PopulationGenerator:
                 output_filename=f"{realization}/plots/mass_scatter.png",
                 x_index=indexes["m1_source"],
                 y_index=indexes["m2_source"],
-                x_label="$m_1 [M_\odot]$",
-                y_label="$m_2 [M_\odot]$",
+                x_label=r"$m_1 [M_\odot]$",
+                y_label=r"$m_2 [M_\odot]$",
             )
             scatter2d_batch_plot(
                 file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
                 output_filename=f"{realization}/plots/spin_scatter.png",
                 x_index=indexes["a1"],
                 y_index=indexes["a2"],
-                x_label="$a_1$",
-                y_label="$a_2$",
+                x_label=r"$a_1$",
+                y_label=r"$a_2$",
             )
 
         populations = glob.glob(f"{self._root_container}/realization_*/injections/population.dat")
@@ -179,8 +175,8 @@ class PopulationGenerator:
                 output_filename=output_filename.replace("population.dat", "mass_scatter_2d.png"),
                 x_index=indexes["m1_source"],
                 y_index=indexes["m2_source"],
-                x_label="$m_1$",
-                y_label="$m_2$",
+                x_label=r"$m_1$",
+                y_label=r"$m_2$",
             )
 
             scatter3d_plot(
@@ -189,7 +185,7 @@ class PopulationGenerator:
                 x_index=indexes["m1_source"],
                 y_index=indexes["m2_source"],
                 z_index=indexes["ecc"],
-                x_label="$m_1$",
-                y_label="$m_2$",
-                z_label="$\epsilon$",
+                x_label=r"$m_1$",
+                y_label=r"$m_2$",
+                z_label=r"$\epsilon$",
             )

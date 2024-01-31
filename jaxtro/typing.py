@@ -13,15 +13,4 @@
 #  limitations under the License.
 
 
-from __future__ import annotations
-
-from ._src.models import (
-    AbstractEccentricityModel as AbstractEccentricityModel,
-    AbstractMassModel as AbstractMassModel,
-    AbstractModel as AbstractModel,
-    AbstractRedShiftModel as AbstractRedShiftModel,
-    AbstractSpinModel as AbstractSpinModel,
-    EccentricityModel as EccentricityModel,
-    Wysocki2019MassModel as Wysocki2019MassModel,
-    Wysocki2019SpinModel as Wysocki2019SpinModel,
-)
+from jaxtro._src.typing import JaxtroModel as JaxtroModel

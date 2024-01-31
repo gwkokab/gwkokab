@@ -18,13 +18,16 @@ from typing import Optional
 
 from jaxampler.rvs import TruncNormal
 from jaxampler.typing import Numeric
+from jaxtyping import Array
+
+from .abstracteccentricitymodel import AbstractEccentricityModel
 
 
-class EccentricityModel(TruncNormal):
+class EccentricityModel(TruncNormal, AbstractEccentricityModel):
     def __init__(self, sigma_ecc: Numeric, name: Optional[str] = None) -> None:
         super().__init__(loc=0.0, scale=sigma_ecc, low=0.0, high=1.0, name=name)
 
-    def samples(self, num_of_samples: int) -> Numeric:
+    def samples(self, num_of_samples: int) -> Array:
         return super().rvs(shape=(num_of_samples,), key=None)
 
     def __repr__(self) -> str:

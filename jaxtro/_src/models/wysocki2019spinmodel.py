@@ -18,9 +18,12 @@ from typing import Optional
 
 from jaxampler.rvs import Beta
 from jaxampler.typing import Numeric
+from jaxtyping import Array
+
+from .abstractspinmodel import AbstractSpinModel
 
 
-class Wysocki2019SpinModel(Beta):
+class Wysocki2019SpinModel(Beta, AbstractSpinModel):
     """Beta distribution for the spin magnitude
 
     Wysocki2019SpinModel is a subclass of ContinuousRV and implements
@@ -37,7 +40,7 @@ class Wysocki2019SpinModel(Beta):
     ) -> None:
         super().__init__(alpha=alpha, beta=beta, scale=chimax, name=name)
 
-    def samples(self, num_of_samples: int) -> Numeric:
+    def samples(self, num_of_samples: int) -> Array:
         return super().rvs(shape=(num_of_samples,), key=None)
 
     def __repr__(self) -> str:

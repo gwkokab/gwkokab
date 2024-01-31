@@ -15,13 +15,13 @@
 
 from __future__ import annotations
 
-from ._src.models import (
-    AbstractEccentricityModel as AbstractEccentricityModel,
-    AbstractMassModel as AbstractMassModel,
-    AbstractModel as AbstractModel,
-    AbstractRedShiftModel as AbstractRedShiftModel,
-    AbstractSpinModel as AbstractSpinModel,
-    EccentricityModel as EccentricityModel,
-    Wysocki2019MassModel as Wysocki2019MassModel,
-    Wysocki2019SpinModel as Wysocki2019SpinModel,
-)
+from jaxampler.rvs import Normal
+from jaxtyping import Array
+
+from .abstractmodel import AbstractModel
+
+
+class AbstractRedShiftModel(AbstractModel):
+    @staticmethod
+    def add_error(x: Array, scale: float = 0.01, size: int = 10) -> Array:
+        return Normal(loc=x, scale=scale).rvs(shape=(size,))

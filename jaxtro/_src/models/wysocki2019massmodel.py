@@ -18,12 +18,15 @@ from functools import partial
 from typing import Optional
 
 from jax import jit, numpy as jnp
-from jaxampler.rvs import RandomVariable, TruncPowerLaw, Uniform
+from jaxampler.rvs import TruncPowerLaw, Uniform
 from jaxampler.typing import Numeric
 from jaxampler.utils import jxam_array_cast
+from jaxtyping import Array
+
+from .abstractmassmodel import AbstractMassModel
 
 
-class Wysocki2019MassModel(RandomVariable):
+class Wysocki2019MassModel(AbstractMassModel):
     """Power law distribution with a lower and upper mass limit
 
     Wysocki2019MassModel is a subclass of jx.rvs.ContinuousRV and implements
@@ -89,9 +92,13 @@ class Wysocki2019MassModel(RandomVariable):
     def mask(m1: Numeric, m2: Numeric, mmin: Numeric, mmax: Numeric, Mmax: Numeric) -> Numeric:
         return (mmin <= m2) & (m2 <= m1) & (m1 <= mmax) & (m1 + m2 <= Mmax)
 
-    def samples(self, num_of_samples: int) -> Numeric:
+    def samples(self, num_of_samples: int) -> Array:
         m2 = Uniform(low=self._mmin, high=self._mmax).rvs(shape=(num_of_samples,))
-        m1 = TruncPowerLaw(alpha=-(self._k + self._alpha_m), low=m2, high=self._mmax).rvs(shape=(1,)).flatten()
+        m1 = (
+            TruncPowerLaw(alpha=-(self._k + self._alpha_m), low=m2, high=self._mmax)
+            .rvs(shape=(1,))
+            .reshape((num_of_samples,))
+        )
         return jnp.stack([m1, m2], axis=1)
 
     def __repr__(self) -> str:
