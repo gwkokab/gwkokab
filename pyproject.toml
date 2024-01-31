@@ -11,12 +11,15 @@ find = { }
 [project]
 authors = [
     { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
-    { name = "Muhammad Zeeshan" },
+    { name = "Muhammad Zeeshan", email = "m.zeeshan5885@gmail.com" },
+    { name = "Richard O'Shaughnessy", email = "richardoshaughnessyrossma@gmail.com" },
 ]
 name = "jaxtro"
 version = "0.0.3.dev"
 maintainers = [
     { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
+    { name = "Muhammad Zeeshan", email = "m.zeeshan5885@gmail.com" },
+    { name = "Richard O'Shaughnessy", email = "richardoshaughnessyrossma@gmail.com" },
 ]
 description = "A JAX-based gravitational-wave population inference"
 readme = "README.md"
