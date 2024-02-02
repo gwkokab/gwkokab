@@ -13,7 +13,9 @@
 #  limitations under the License.
 
 
-from typing_extensions import Optional
+from __future__ import annotations
+
+from typing_extensions import Callable, Optional
 
 import astropy.cosmology as cosmo
 import astropy.units as u
@@ -24,7 +26,11 @@ from jax import numpy as jnp
 
 
 def next_pow_two(x: int) -> int:
-    # """Return the next (integer) power of two above `x`."""
+    """
+    Calculate the next power of two
+    :param x: input number
+    :return: next power of two
+    """
     x2 = 1
     while x2 < x:
         x2 = x2 << 1
@@ -41,30 +47,25 @@ def optimal_snr(
     dfmin: float = 0.0,
     fref: float = 40.0,
     psdstart: float = 20.0,
-    psd_fn: Optional[int] = None,
+    psd_fn: Optional[Callable[..., int]] = None,
     approximant: Optional[int] = None,
 ) -> float:
-    """Return the optimal SNR of a signal.
-
+    r"""
+    Return the optimal SNR of a signal.
     :param m1: The source-frame mass 1.
-
     :param m2: The source-frame mass 2.
-
     :param a1z: The z-component of spin 1.
-
     :param a2z: The z-component of spin 2.
-
-    :param z: The redshift.
-
+    :param z: The redshift
     :param fmin: The starting frequency for waveform generation.
-
-    :param psd_fn: A function that returns the detector PSD at a given
-    frequency, you can choose any given in lalsimulation.
-    https://lscsoft.docs.ligo.org/lalsuite/lalsimulation/group___l_a_l_sim_noise_p_s_d__c.html
+    :param dfmin:
+    :param fref:
+    :param psdstart:
+    :param psd_fn: A function that returns the detector PSD at a given frequency, you can choose any given in
+    lalsimulation. https://lscsoft.docs.ligo.org/lalsuite/lalsimulation/group___l_a_l_sim_noise_p_s_d__c.html
     #ga02d7e9443530dbd0957dff1a08a0ab3c
-
+    :param approximant:
     :return: The SNR of a face-on, overhead source.
-
     """
 
     if psd_fn is None:
@@ -130,9 +131,28 @@ def fraction_above_threshold(
     dfmin: float = 0.0,
     fref: float = 40.0,
     psdstart: float = 20.0,
-    psd_fn: Optional[int] = None,
+    psd_fn: Optional[Callable[..., int]] = None,
     approximant: Optional[int] = None,
 ) -> float:
+    r"""
+    Computes
+    .. math::
+        p_{det}
+
+    :param m1: Source-frame mass 1.
+    :param m2: Source-frame mass 2.
+    :param a1z: The z-component of spin 1.
+    :param a2z: The z-component of spin 2.
+    :param z: Redshift
+    :param snr_thresh: The detection threshold in SNR
+    :param fmin: The starting frequency for waveform generation
+    :param dfmin: The minimum frequency spacing
+    :param fref: The reference frequency
+    :param psdstart: The starting frequency for the PSD
+    :param psd_fn: Function giving the assumed single-detector PSD
+    :param approximant: Approximant
+    :return: Fraction of time above threshold
+    """
     if z == 0.0:
         return 1.0
 
@@ -153,9 +173,8 @@ def fraction_above_threshold(
         approximant=approximant,
     )
 
-    # w = (jnp.asarray(snr_thresh) / rho_max)[()]
     w = snr_thresh / rho_max
-    if w > 1:  # no detection
+    if w > 1.0:  # no detection
         return 0.0
     a2, a4, a8 = 0.374222, 2.04216, -2.63948
     # slightly higher than Dan's value
@@ -176,29 +195,25 @@ def vt_from_mass_spin(
     fref: float = 40.0,
     psdstart: float = 20.0,
     zmax: float = 1.5,
-    psd_fn: Optional[int] = None,
+    psd_fn: Optional[Callable[..., int]] = None,
     approximant: Optional[int] = None,
 ) -> float:
-    """Returns the sensitive time-volume for a given system: A float.
-
+    r"""
+    Volume time calculations from mass and spin
     :param m1: Source-frame mass 1.
-
     :param m2: Source-frame mass 2.
-
     :param a1z: The z-component of spin 1.
-
     :param a2z: The z-component of spin 2.
-
-    :param analysis_time: The total detector-frame searched time.
-
-    :param fmin: The starting frequency for waveform generation.
-
+    :param thresh: The detection threshold in SNR
+    :param analysis_time: The total detector-frame searched time
+    :param fmin: The starting frequency for waveform generation
+    :param dfmin: The minimum frequency spacing
+    :param fref: The reference frequency
+    :param psdstart: The starting frequency for the PSD
+    :param zmax: The maximum redshift
     :param psd_fn: Function giving the assumed single-detector PSD
-      (see :func:`optimal_snr`).
-
-    :return: The sensitive time-volume in comoving Gpc^3-yr (assuming
-      analysis_time is given in years).
-
+    :param approximant: Approximant
+    :return: The sensitive time-volume in comoving Gpc^3-yr (assuming analysis_time is given in years).
     """
 
     if psd_fn is None:
@@ -207,35 +222,12 @@ def vt_from_mass_spin(
     def integrand(z) -> float:
         if z == 0.0:
             return 0.0
-        return (
-            4
-            * jnp.pi
-            * cosmo.Planck15.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value
-            / (1 + z)
-            * fraction_above_threshold(
-                m1,
-                m2,
-                a1z,
-                a2z,
-                z,
-                thresh,
-                fmin=fmin,
-                dfmin=dfmin,
-                fref=fref,
-                psdstart=psdstart,
-                psd_fn=psd_fn,
-                approximant=approximant,
-            )
-        )
-
-    zmin = 0.001
-    assert (
-        fraction_above_threshold(
+        p_det = fraction_above_threshold(
             m1,
             m2,
             a1z,
             a2z,
-            zmax,
+            z,
             thresh,
             fmin=fmin,
             dfmin=dfmin,
@@ -244,8 +236,26 @@ def vt_from_mass_spin(
             psd_fn=psd_fn,
             approximant=approximant,
         )
-        == 0.0
-    )
+        return 4 * jnp.pi * cosmo.Planck15.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value / (1 + z) * p_det
+
+    zmin = 0.001
+    # assert (
+    #     fraction_above_threshold(
+    #         m1,
+    #         m2,
+    #         a1z,
+    #         a2z,
+    #         zmax,
+    #         thresh,
+    #         fmin=fmin,
+    #         dfmin=dfmin,
+    #         fref=fref,
+    #         psdstart=psdstart,
+    #         psd_fn=psd_fn,
+    #         approximant=approximant,
+    #     )
+    #     == 0.0
+    # )
 
     while zmax - zmin > 1e-3:
         zhalf = 0.5 * (zmax + zmin)

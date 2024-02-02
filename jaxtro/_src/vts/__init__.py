@@ -12,10 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from __future__ import annotations
 
-from typing_extensions import Union
-
-from .models import AbstractEccentricityModel, AbstractMassModel, AbstractRedShiftModel, AbstractSpinModel
-
-
-JaxtroModel = Union[AbstractEccentricityModel, AbstractMassModel, AbstractRedShiftModel, AbstractSpinModel]
+from .vtjax import vt_from_mass_spin as vt_from_mass_spin
