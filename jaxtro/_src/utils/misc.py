@@ -16,6 +16,33 @@ from __future__ import annotations
 
 from typing import Any
 
+from jax import jit, lax
+from jaxampler.typing import Numeric
+
+
+@jit
+def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
+    # return jnp.power(m1 * m2, 0.6) / jnp.power(m1 + m2, 0.2)
+    return lax.div(lax.pow(lax.mul(m1, m2), 0.6), lax.pow(lax.add(m1, m2), 0.2))
+
+
+@jit
+def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
+    # return (m1 * m2) / jnp.power(m1 + m2, 2)
+    return lax.div(lax.mul(m1, m2), lax.pow(lax.add(m1, m2), 2))
+
+
+@jit
+def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
+    # return (m1 * m2) / (m1 + m2)
+    return lax.div(lax.mul(m1, m2), lax.add(m1, m2))
+
+
+@jit
+def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
+    # return m1 / m2
+    return lax.div(m1, m2)
+
 
 def dump_configurations(filename: str, *args: tuple[str, Any]) -> None:
     """Dump configurations to a csv file

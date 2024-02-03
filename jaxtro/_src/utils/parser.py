@@ -45,7 +45,6 @@ def parse_config(config_path: str) -> dict:
     config_dict["general"]["size"] = int(config["general"]["size"])
     config_dict["general"]["error_scale"] = float(config["general"]["error_scale"])
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])
-    config_dict["general"]["save_injections"] = bool(config["general"].get("save_injections", "True"))
     config_dict["general"]["num_realizations"] = int(config["general"]["num_realizations"])
 
     return config_dict
