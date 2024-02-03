@@ -144,7 +144,6 @@ def scatter3d_plot(
     if z_label is not None:
         # ax.set_zlabel(z_label)
         cbar.set_label(z_label)
-    
 
     # Add interactivity with mplcursors
     cursors = mplcursors.cursor(sc, hover=True)

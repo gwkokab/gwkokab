@@ -18,7 +18,6 @@ import argparse
 from configparser import ConfigParser
 
 import h5py
-import lalsimulation as ls
 from jax import numpy as jnp
 from tqdm import tqdm
 

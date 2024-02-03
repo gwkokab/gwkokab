@@ -19,7 +19,7 @@ from .utils import cmd_parser, parse_config, PopulationGenerator
 
 def main():
     args = cmd_parser.parse_args()
-    configuration_dict = parse_config(args.my_config)
+    configuration_dict = parse_config(args.config)
 
     general = configuration_dict["general"]
     models = [configuration_dict[section_name] for section_name in configuration_dict.keys() if "model" in section_name]

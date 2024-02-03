@@ -14,4 +14,4 @@
 
 from __future__ import annotations
 
-from .vtjax import vt_from_mass_spin as vt_from_mass_spin
+from .vtjax import fraction_above_threshold as fraction_above_threshold, vt_from_mass_spin as vt_from_mass_spin

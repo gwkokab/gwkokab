@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 from jaxampler.rvs import TruncNormal
-from jaxampler.rvs import Normal
 from jaxtyping import Array
 
 from .abstractmodel import AbstractModel
@@ -26,4 +25,3 @@ class AbstractSpinModel(AbstractModel):
     @staticmethod
     def add_error(x: Array, scale: float = 0.5, size: int = 10) -> Array:
         return TruncNormal(loc=x, scale=scale, low=0.0, high=0.5).rvs(shape=(size,))
-        #return Normal(loc=x, scale=scale).rvs(shape=(size,))

@@ -22,25 +22,53 @@ from jaxampler.typing import Numeric
 
 @jit
 def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
-    # return jnp.power(m1 * m2, 0.6) / jnp.power(m1 + m2, 0.2)
+    r"""
+    .. math::
+
+        M_c = \frac{(m_1 m_2)^{\frac{3}{5}}}{(m_1 + m_2)^{\frac{1}{5}}}
+    :param m1: mass 1
+    :param m2: mass 2
+    :return:
+    """
     return lax.div(lax.pow(lax.mul(m1, m2), 0.6), lax.pow(lax.add(m1, m2), 0.2))
 
 
 @jit
 def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
-    # return (m1 * m2) / jnp.power(m1 + m2, 2)
+    r"""
+    .. math::
+
+        \eta = \frac{m_1 m_2}{(m_1 + m_2)^2}
+    :param m1: mass 1
+    :param m2: mass 2
+    :return:
+    """
     return lax.div(lax.mul(m1, m2), lax.pow(lax.add(m1, m2), 2))
 
 
 @jit
 def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
-    # return (m1 * m2) / (m1 + m2)
+    """
+    .. math::
+
+        M_r = \frac{m_1 m_2}{m_1 + m_2}
+    :param m1: mass 1
+    :param m2: mass 2
+    :return:
+    """
     return lax.div(lax.mul(m1, m2), lax.add(m1, m2))
 
 
 @jit
 def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
-    # return m1 / m2
+    r"""
+    .. math::
+
+        q=\frac{m_1}{m_2}
+    :param m1: mass 1
+    :param m2: mass 2
+    :return:
+    """
     return lax.div(m1, m2)
 
 
