@@ -135,32 +135,34 @@ class PopulationGenerator:
 
         for realization in tqdm(
             glob.glob(realization_regex),
-            desc="Generating 2d batch plots",
+            desc="Ploting 2D Posterior",
             total=self._num_realizations,
             unit="event",
             unit_scale=True,
         ):
             scatter2d_batch_plot(
                 file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
-                output_filename=f"{realization}/plots/mass_scatter.png",
+                output_filename=f"{realization}/plots/mass_posterior.png",
                 x_index=indexes["m1_source"],
                 y_index=indexes["m2_source"],
                 x_label=r"$m_1 [M_\odot]$",
                 y_label=r"$m_2 [M_\odot]$",
+                plt_title="Mass Posteriors",
             )
             scatter2d_batch_plot(
                 file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
-                output_filename=f"{realization}/plots/spin_scatter.png",
+                output_filename=f"{realization}/plots/spin_posterior.png",
                 x_index=indexes["a1"],
                 y_index=indexes["a2"],
                 x_label=r"$a_1$",
                 y_label=r"$a_2$",
+                plt_title="Spin Posteriors",
             )
 
         populations = glob.glob(f"{self._root_container}/realization_*/injections/population.dat")
         for filename in tqdm(
             populations,
-            desc="Generating population plots",
+            desc="Ploting Injections",
             total=self._num_realizations,
             unit="realization",
             unit_scale=True,
@@ -168,20 +170,22 @@ class PopulationGenerator:
             output_filename = filename.replace("injections", "plots")
             scatter2d_plot(
                 input_filename=filename,
-                output_filename=output_filename.replace("population.dat", "mass_scatter_2d.png"),
+                output_filename=output_filename.replace("population.dat", "mass_injs.png"),
                 x_index=indexes["m1_source"],
                 y_index=indexes["m2_source"],
-                x_label=r"$m_1$",
-                y_label=r"$m_2$",
+                x_label=r"$m_1 [M_\odot]$",
+                y_label=r"$m_2 [M_\odot]$",
+                plt_title="Injections",
             )
 
             scatter3d_plot(
                 input_filename=filename,
-                output_filename=output_filename.replace("population.dat", "mass_ecc_scatter_3d.png"),
+                output_filename=output_filename.replace("population.dat", "mass_ecc_injs.png"),
                 x_index=indexes["m1_source"],
                 y_index=indexes["m2_source"],
                 z_index=indexes["ecc"],
-                x_label=r"$m_1$",
-                y_label=r"$m_2$",
+                x_label=r"$m_1 [M_\odot]$",
+                y_label=r"$m_2 [M_\odot]$",
                 z_label=r"$\epsilon$",
+                plt_title="Injections",
             )

@@ -27,8 +27,9 @@ from .abstractmodel import AbstractModel
 
 class AbstractMassModel(AbstractModel):
     @staticmethod
-    def add_error(x: Array, scale: float = 0.2, size: int = 4000) -> Numeric:
-        """Adds error to the masses of the binaries according to the section 3 of the following paper.
+    def add_error(x: Array, scale: float = 1, size: int = 5000) -> Numeric:
+        """
+        Adds error to the masses of the binaries according to the section 3 of the following paper.
         https://doi.org/10.1093/mnras/stw2883
 
         Converts the masses(m1,m2) to chirp mass and adds error to it. Then converts back to masses.
