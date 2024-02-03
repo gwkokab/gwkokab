@@ -95,7 +95,7 @@ class PopulationGenerator:
             realisations = jnp.empty((self._size, 0))
             realisations_err = jnp.empty((self._size, self._error_size, 0))
             for model in self._models:
-                model_instance = eval(model["model"])(**model["params"])
+                model_instance: AbstractModel = eval(model["model"])(**model["params"])
                 rvs = model_instance.samples(self._size).reshape((self._size, -1))
                 err_rvs = vmap(
                     lambda x: model_instance.add_error(

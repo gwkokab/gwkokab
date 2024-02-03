@@ -23,7 +23,7 @@ cmd_parser = configargparse.ArgParser(config_file_parser_class=configargparse.Co
 
 cmd_parser.add_argument(
     "-c",
-    "--my-config",
+    "--config",
     help="config file path",
 )
 

@@ -70,13 +70,14 @@ Changelog = "https://github.com/gwkokab/jaxtro/blob/master/CHANGELOG.md"
 
 [project.scripts]
 jaxtro_genie = "jaxtro.main:main"
+vt_mass_spin = "jaxtro.vt_cli:vt_mass_spin"
 
 [tool.ruff]
-ignore-init-module-imports = true
+lint.ignore-init-module-imports = true
 line-length = 120
-fixable = ["I001", "F401"]
-ignore = ["E402", "E721", "E731", "E741", "F722", "F403"]
-select = ["E", "F", "I001"]
+lint.fixable = ["I001", "F401"]
+lint.ignore = ["E402", "E721", "E731", "E741", "F722", "F403"]
+lint.select = ["E", "F", "I001"]
 
 [tool.ruff.isort]
 combine-as-imports = true
