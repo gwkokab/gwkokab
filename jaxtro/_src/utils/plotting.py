@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun 15 21:33:41 2023
+Created on Thu Jan 15 21:33:41 2024
 
 @author: mzeeshan
 """
@@ -20,6 +20,7 @@ def scatter2d_batch_plot(
     y_index: int,
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
+    plt_title: Optional[str] = None,
 ) -> None:
     file_list = glob.glob(file_pattern)
 
@@ -31,10 +32,11 @@ def scatter2d_batch_plot(
         y = data[:, y_index]
 
         # Scatter plot with different colors for each file
-        plt.scatter(x, y)
+        plt.scatter(x, y, s=5)
 
     # Set plot title and labels
-    plt.title("Scatter Plot")
+    if plt_title is not None:
+        plt.title(plt_title)
     if x_label is not None:
         plt.xlabel(x_label)
     if y_label is not None:
@@ -52,6 +54,7 @@ def scatter3d_batch_plot(
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
     z_label: Optional[str] = None,
+    plt_title: Optional[str] = None,
 ) -> None:
     file_list = glob.glob(file_pattern)
     fig = plt.figure()
@@ -66,18 +69,14 @@ def scatter3d_batch_plot(
         # Scatter plot with different colors for each file
         ax.scatter(x, y, z, c=z, cmap="plasma", marker="o")
 
-    # Set labels for the axes
+    # Set labels for title and axes
+    if plt_title is not None:
+        ax.set_title(plt_title)
     if x_label is not None:
         ax.set_xlabel(x_label)
     if y_label is not None:
         ax.set_ylabel(y_label)
-    # if z_label is not None:
-    #     ax.set_zlabel(z_label)
 
-    # Set a title for the plot
-    ax.set_title("3D Scatter Plot")
-
-    # Add a colorbar
     plt.savefig(output_filename, bbox_inches="tight")
     # Display the plot
     plt.close("all")
@@ -90,6 +89,7 @@ def scatter2d_plot(
     y_index: int,
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
+    plt_title: Optional[str] = None,
 ) -> None:
     # Load data from the file
     data = np.loadtxt(input_filename)
@@ -100,7 +100,8 @@ def scatter2d_plot(
     plt.scatter(x, y)
 
     # Set plot title and labels
-    plt.title("Scatter Plot")
+    if plt_title is not None:
+        plt.title(plt_title)
     if x_label is not None:
         plt.xlabel(x_label)
     if y_label is not None:
@@ -118,6 +119,7 @@ def scatter3d_plot(
     x_label: Optional[str] = None,
     y_label: Optional[str] = None,
     z_label: Optional[str] = None,
+    plt_title: Optional[str] = None,
 ) -> None:
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -131,6 +133,9 @@ def scatter3d_plot(
     sc = ax.scatter(x, y, z, c=z, cmap="plasma", marker="o")
     cbar = fig.colorbar(sc)
 
+    # Set a title for the plot
+    if plt_title is not None:
+        ax.set_title(plt_title)
     # Set labels for the axes
     if x_label is not None:
         ax.set_xlabel(x_label)
@@ -139,9 +144,7 @@ def scatter3d_plot(
     if z_label is not None:
         # ax.set_zlabel(z_label)
         cbar.set_label(z_label)
-
-    # Set a title for the plot
-    ax.set_title("3D Scatter Plot")
+    
 
     # Add interactivity with mplcursors
     cursors = mplcursors.cursor(sc, hover=True)

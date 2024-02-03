@@ -16,9 +16,14 @@
 from __future__ import annotations
 
 from jaxampler.rvs import RandomVariable
+from jaxampler.typing import Numeric
 from jaxtyping import Array
 
 
 class AbstractModel(RandomVariable):
     def samples(self, num_of_samples: int) -> Array:
+        raise NotImplementedError
+
+    @staticmethod
+    def add_error(x: Array, scale: float, size: int) -> Numeric:
         raise NotImplementedError
