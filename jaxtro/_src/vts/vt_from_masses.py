@@ -42,7 +42,7 @@ waveform = ls.IMRPhenomA
 def optimal_snr(
     m1: float,
     m2: float,
-    z: float,
+    z: float = 1.0,
     fmin: float = 19.0,
     dfmin: float = 0.0,
     fref: float = 40.0,
@@ -123,7 +123,7 @@ def optimal_snr(
 def fraction_above_threshold(
     m1: float,
     m2: float,
-    z: float,
+    z: float = 1.0,
     snr_thresh: float = 8.0,
     fmin: float = 19.0,
     dfmin: float = 0.0,
@@ -180,8 +180,8 @@ def fraction_above_threshold(
 def vt_from_mass(
     m1: float,
     m2: float,
-    thresh: float,
-    analysis_time: float,
+    thresh: float = 8.0,
+    analysis_time: float = 1.0,
     fmin: float = 19.0,
     dfmin: float = 0.0,
     fref: float = 40.0,
@@ -211,7 +211,7 @@ def vt_from_mass(
 
     def integrand(z) -> float:
         if z == 0.0:
-            return 0.0
+            return 1.0
         p_det = fraction_above_threshold(
             m1,
             m2,
