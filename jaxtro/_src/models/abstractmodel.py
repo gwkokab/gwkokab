@@ -24,6 +24,5 @@ class AbstractModel(RandomVariable):
     def samples(self, num_of_samples: int) -> Array:
         raise NotImplementedError
 
-    @staticmethod
-    def add_error(x: Array, scale: float, size: int) -> Numeric:
+    def add_error(self, x: Array, scale: float, size: int) -> Numeric:
         raise NotImplementedError
