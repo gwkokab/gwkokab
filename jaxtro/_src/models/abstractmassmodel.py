@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from jax import numpy as jnp
-from jaxampler.rvs import Normal, TruncPowerLaw
+from jaxampler.rvs import Normal, TruncPowerLaw, Uniform
 from jaxampler.typing import Numeric
 
 from ..utils.misc import chirp_mass, symmetric_mass_ratio
@@ -51,7 +51,12 @@ class AbstractMassModel(AbstractModel):
         r = self.std_norm.rvs(shape=(size,))
         rp = self.std_norm.rvs(shape=(size,))
 
-        rho = self.rho_dist.rvs(shape=(size,))
+        # rho = self.rho_dist.rvs(shape=(size,))
+        rho = jnp.power(
+            Uniform(low=0.0, high=1.0, name="Uniform_Distribution_for_SNR").rvs(shape=(size,)) * (-(8 ** (-3)))
+            + 8 ** (-3),
+            -1.0 / 3.0,
+        )
 
         Mc_true = chirp_mass(m1, m2)
         eta_true = symmetric_mass_ratio(m1, m2)
@@ -66,11 +71,11 @@ class AbstractMassModel(AbstractModel):
         Mc = Mc_true * (1.0 + alpha * twelve_over_rho * (r0 + r))
         eta = eta_true * (1.0 + 0.03 * twelve_over_rho * (r0p + rp))
 
-        mtot = Mc * (eta ** -0.6)
-        m1m2 = eta * (mtot ** 2)
+        mtot = Mc * (eta**-0.6)
+        m1m2 = eta * (mtot**2)
 
-        m2_final = 0.5 * (mtot - jnp.sqrt(mtot ** 2 - 4 * m1m2))
-        m1_final = 0.5 * (mtot + jnp.sqrt(mtot ** 2 - 4 * m1m2))
+        m2_final = 0.5 * (mtot - jnp.sqrt(mtot**2 - 4 * m1m2))
+        m1_final = 0.5 * (mtot + jnp.sqrt(mtot**2 - 4 * m1m2))
 
         mask = 0.25 >= eta
         mask &= eta >= 0.01
