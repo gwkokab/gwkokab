@@ -103,7 +103,7 @@ class Wysocki2019MassModel(AbstractMassModel):
 
     def __repr__(self) -> str:
         string = f"Wysocki2019MassModel(alpha_m={self._alpha_m}, k={self._k}, "
-        string += f"mmin={self._mmin}, mmax={self._mmax}, Mmax={self._Mmax})"
+        string += f"mmin={self._mmin}, mmax={self._mmax}, Mmax={self._Mmax}"
         if self._name is not None:
             string += f", name={self._name}"
         string += ")"

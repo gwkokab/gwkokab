@@ -16,99 +16,83 @@
 from __future__ import annotations
 
 from jax import numpy as jnp
-from jaxampler.rvs import Normal, Uniform
+from jaxampler.rvs import Normal, TruncNormal, TruncPowerLaw
 from jaxampler.typing import Numeric
-from jaxtyping import Array
-from RIFT import lalsimutils
 
 from ..utils.misc import chirp_mass, symmetric_mass_ratio
 from .abstractmodel import AbstractModel
 
 
 class AbstractMassModel(AbstractModel):
-    @staticmethod
-    def add_error(x: Array, scale: float = 1, size: int = 5000) -> Numeric:
+    std_norm = Normal(
+        loc=0.0,
+        scale=1.0,
+        name="Standard_Normal_Distribution",
+    )
+    rho_dist = TruncPowerLaw(
+        alpha=-4.0,
+        low=10.0,
+        high=jnp.inf,
+        name="SNR_Distribution",
+    )
+
+    def add_error(self, x: Numeric, scale: float, size: int) -> Numeric:
         """
         Adds error to the masses of the binaries according to the section 3 of the following paper.
         https://doi.org/10.1093/mnras/stw2883
 
         Converts the masses(m1,m2) to chirp mass and adds error to it. Then converts back to masses.
         """
+        m1 = x[0]
+        m2 = x[1]
 
-        m2 = x[1]  # m2
-        m1 = x[0]  # m1
-        # Compute the M_chirp from component masses
+        r0 = self.std_norm.rvs(shape=())
+        r0p = self.std_norm.rvs(shape=())
+        r = self.std_norm.rvs(shape=(size,))
+        rp = self.std_norm.rvs(shape=(size,))
+
+        rho = self.rho_dist.rvs(shape=(size,))
+
         Mc_true = chirp_mass(m1, m2)
-        # Compute symmetric mass ratio (Eta) from component masses
+        Mc_true = Normal(
+            loc=Mc_true,
+            scale=0.1,
+            name="Mc_true_Error_Distribution",
+        ).rvs(shape=(size,))
+
         eta_true = symmetric_mass_ratio(m1, m2)
+        eta_true = TruncNormal(
+            loc=eta_true,
+            scale=0.3,
+            low=0.0,
+            high=0.25,
+            name="eta_true_Error_Distribution",
+        ).rvs(shape=(size,))
 
-        # Adding Errors in True M chirp and Eta according to paper
-        U = Uniform(low=0, high=1)
-        rho = 9 / jnp.power(U.rvs(shape=()), 1.0 / 3.0)  # SNR
+        alpha = jnp.zeros_like(r)
+        alpha = jnp.where(eta_true >= 0.1, 0.01, alpha)
+        alpha = jnp.where((1 > eta_true) & (eta_true >= 0.05), 0.03, alpha)
+        alpha = jnp.where(0.05 > eta_true, 0.1, alpha)
 
-        # TODO: Post Newtonian paramters?
-        v_PN_param = (jnp.pi * Mc_true * 20.0 * lalsimutils.MsunInSec) ** (1.0 / 3.0)  # 'v' parameter
-        v_PN_param_max = jnp.asarray(0.2)
+        twelve_over_rho = 12.0 / rho
 
-        v_PN_param, v_PN_param_max = jnp.broadcast_arrays(v_PN_param, v_PN_param_max)
-        v_PN_param = jnp.min(jnp.array([v_PN_param, v_PN_param_max]), axis=0)
-        snr_fac = rho / 15.0
+        Mc = Mc_true * (1.0 + alpha * twelve_over_rho * (r0 + r))
+        eta = eta_true * (1.0 + 0.03 * twelve_over_rho * (r0p + rp))
 
-        # this ignores range due to redshift / distance, based on a low-order esti
-        ln_mc_error_pseudo_fisher = 1.5 * 0.3 * (v_PN_param / v_PN_param_max) ** 7.0 / snr_fac
+        mtot = Mc * (eta**-0.6)
+        m1m2 = eta * (mtot**2)
 
-        snr_fac, ln_mc_error_pseudo_fisher = jnp.broadcast_arrays(snr_fac, ln_mc_error_pseudo_fisher)
-        # Percentage error, we are adding 10%. Note already accounts for SNR effects
-        alpha = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
+        m2_final = 0.5 * (mtot - jnp.sqrt(mtot**2 - 4 * m1m2))
+        m1_final = 0.5 * (mtot + jnp.sqrt(mtot**2 - 4 * m1m2))
 
-        # Shifting the mean using standard normal distribution
-        std_norm = Normal(loc=0, scale=1)
-        ro = std_norm.rvs(shape=())
-        rop = std_norm.rvs(shape=())
+        q = jnp.exp(jnp.log(m2_final) - jnp.log(m1_final))
 
-        r = std_norm.rvs(shape=(size,))
-        rp = std_norm.rvs(shape=(size,))
+        # mask = m1_final + m2_final <= self._Mmax
+        mask = q >= 0.1
+        mask &= 0.25 >= eta
+        mask &= eta >= 0.01
 
-        alpha = jnp.where(
-            eta_true >= 0.1,
-            0.01,
-            alpha,
-        )
+        m1_final = jnp.where(mask, m1_final, jnp.nan)
+        m2_final = jnp.where(mask, m2_final, jnp.nan)
 
-        alpha = jnp.where(
-            eta_true >= 0.05,
-            0.03,
-            alpha,
-        )
-
-        alpha = jnp.where(
-            0.05 > eta_true,
-            0.1,
-            alpha,
-        )
-
-        # Defining the relation
-        Mc = Mc_true * (1.0 + alpha * (12 / rho) * (ro + r))
-        eta = eta_true * (1.0 + 0.03 * (12 / rho) * (rop + rp))
-
-        # Compute component masses from Mc, eta. Returns m1 >= m2
-        etaV = 1.0 - (4.0 * eta)
-        if isinstance(eta, float):
-            if etaV < 0:
-                etaV_sqrt = 0
-            else:
-                etaV_sqrt = jnp.sqrt(etaV)
-        else:
-            indx_ok = etaV >= 0
-            # etaV_sqrt = jnp.zeros(len(etaV), dtype=float)
-            # etaV_sqrt[indx_ok] = jnp.sqrt(etaV[indx_ok])
-            etaV_sqrt = jnp.where(indx_ok, jnp.sqrt(etaV), 0)
-
-        m1_final = 0.5 * Mc * (eta**-0.6) * (1.0 + etaV_sqrt)
-        m2_final = 0.5 * Mc * (eta**-0.6) * (1.0 - etaV_sqrt)
-        m1_final: Array = jnp.where((0.25 >= eta) & (eta >= 0.01), m1_final, jnp.zeros_like(m1_final))
-        m2_final: Array = jnp.where((0.25 >= eta) & (eta >= 0.01), m2_final, jnp.zeros_like(m2_final))
-
-        m1m2 = jnp.column_stack([m1_final, m2_final])
-
-        return m1m2
+        return jnp.column_stack([m1_final, m2_final])

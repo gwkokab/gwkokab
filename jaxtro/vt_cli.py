@@ -67,7 +67,7 @@ def vt_mass_spin():
             m2,
             a1,
             a2,
-            8.0,
+            25.0,
             analysis_time,
             psd_fn=psd_fn,
             approximant=approximant,
@@ -89,4 +89,4 @@ def vt_mass_spin():
         f.create_dataset("a1", data=a1)
         f.create_dataset("a2", data=a2)
         f.create_dataset("vts", data=vts)
-        f.create_dataset("m1m2a1a2vts", data=grid)
+        # f.create_dataset("m1m2a1a2vts", data=grid)

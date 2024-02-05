@@ -18,8 +18,10 @@ import glob
 import os
 
 import numpy as np
+import jax
 from jax import numpy as jnp, vmap
 from tqdm import tqdm
+from ..vts.vt_from_masses import vt_from_mass
 
 from ..models import *
 from .misc import dump_configurations
@@ -97,6 +99,11 @@ class PopulationGenerator:
             for model in self._models:
                 model_instance: AbstractModel = eval(model["model"])(**model["params"])
                 rvs = model_instance.samples(self._size).reshape((self._size, -1))
+                if isinstance(model_instance, AbstractMassModel):
+                    for i in range(self._size):
+                        if vt_from_mass(float(rvs[i, 0]), float(rvs[i, 1]), 8.0, 1.0) == 0.0:
+                            rvs = rvs.at[i, :].set(jnp.nan)
+
                 err_rvs = vmap(
                     lambda x: model_instance.add_error(
                         x=x,
@@ -105,6 +112,7 @@ class PopulationGenerator:
                     ),
                     in_axes=(0,),
                 )(rvs)
+                err_rvs = jnp.nan_to_num(err_rvs, nan=0.0)
                 realisations = jnp.concatenate((realisations, rvs), axis=-1)
                 realisations_err = jnp.concatenate((realisations_err, err_rvs), axis=-1)
 

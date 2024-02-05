@@ -36,8 +36,10 @@ def next_pow_two(x: int) -> int:
         x2 = x2 << 1
     return x2
 
+
 senstivity = ls.SimNoisePSDAdVEarlyHighSensitivityP1200087
 waveform = ls.IMRPhenomA
+
 
 def optimal_snr(
     m1: float,
@@ -79,7 +81,7 @@ def optimal_snr(
     # Get dL, Gpc
     dL = cosmo.Planck15.luminosity_distance(z).to(u.Gpc).value
 
-    tmax = ls.SimInspiralChirpTimeBound(fmin, m1 * (1 + z) * lal.MSUN_SI, m2 * (1 + z) * lal.MSUN_SI,0.0,0.0) + 2.0
+    tmax = ls.SimInspiralChirpTimeBound(fmin, m1 * (1 + z) * lal.MSUN_SI, m2 * (1 + z) * lal.MSUN_SI, 0.0, 0.0) + 2.0
 
     df = max(1.0 / next_pow_two(tmax), dfmin)
     fmax = 2048.0  # Hz --- based on max freq of 5-5 inspiral
