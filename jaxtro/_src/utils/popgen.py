@@ -18,12 +18,11 @@ import glob
 import os
 
 import numpy as np
-import jax
 from jax import numpy as jnp, vmap
 from tqdm import tqdm
-from ..vts.vt_from_masses import vt_from_mass
 
 from ..models import *
+from ..vts.vt_from_mass import vt_from_mass
 from .misc import dump_configurations
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 

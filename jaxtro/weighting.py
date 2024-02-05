@@ -4,7 +4,7 @@ import os
 
 import h5py
 import numpy as np
-import vt
+from ._src.vts import interpolate_hdf5
 
 
 def main():
@@ -19,7 +19,7 @@ def main():
 
     # load in VT file
     with h5py.File(opts.vt, "r") as VTs:
-        raw_interpolator = vt.interpolate_hdf5(VTs)
+        raw_interpolator = interpolate_hdf5(VTs)
 
     # load in data
     dat = np.genfromtxt(opts.dat, names=True)  # should work

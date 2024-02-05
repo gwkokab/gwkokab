@@ -14,5 +14,6 @@
 
 from __future__ import annotations
 
-from .vt_from_masses import vt_from_mass as vt_from_mass
-from .vtjax import vt_from_mass_spin as vt_from_mass_spin
+from .utils import interpolate as interpolate, interpolate_hdf5 as interpolate_hdf5, load_hdf5 as load_hdf5
+from .vt_from_mass import vt_from_mass as vt_from_mass
+from .vt_from_mass_spin import vt_from_mass_spin as vt_from_mass_spin
