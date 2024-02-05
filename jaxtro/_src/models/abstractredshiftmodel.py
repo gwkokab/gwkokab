@@ -22,6 +22,5 @@ from .abstractmodel import AbstractModel
 
 
 class AbstractRedShiftModel(AbstractModel):
-    @staticmethod
-    def add_error(x: Array, scale: float = 0.01, size: int = 10) -> Array:
+    def add_error(self, x: Array, scale: float = 0.01, size: int = 10) -> Array:
         return Normal(loc=x, scale=scale).rvs(shape=(size,))

@@ -22,6 +22,5 @@ from .abstractmodel import AbstractModel
 
 
 class AbstractSpinModel(AbstractModel):
-    @staticmethod
-    def add_error(x: Array, scale: float = 0.5, size: int = 10) -> Array:
+    def add_error(self, x: Array, scale: float = 0.5, size: int = 10) -> Array:
         return TruncNormal(loc=x, scale=scale, low=0.0, high=0.5).rvs(shape=(size,))
