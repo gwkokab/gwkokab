@@ -35,6 +35,7 @@ classifiers = [
 ]
 dependencies = [
     "configargparse",
+    "h5py",
     "jax>=0.4.0",
     "jaxampler",
     "jaxlib>=0.4.0",
@@ -71,6 +72,8 @@ Changelog = "https://github.com/gwkokab/jaxtro/blob/master/CHANGELOG.md"
 [project.scripts]
 jaxtro_genie = "jaxtro.main:main"
 vt_mass_spin = "jaxtro.vt_cli:vt_mass_spin"
+vt_mass = "jaxtro.vt_cli:vt_mass"
+vt_mass_grid = "jaxtro.vt_grid:vt_mass_grid"
 
 [tool.ruff]
 lint.ignore-init-module-imports = true
@@ -79,7 +82,7 @@ lint.fixable = ["I001", "F401"]
 lint.ignore = ["E402", "E721", "E731", "E741", "F722", "F403", "F405"]
 lint.select = ["E", "F", "I001"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
 extra-standard-library = ["typing_extensions"]
 lines-after-imports = 2
