@@ -169,13 +169,13 @@ def fraction_above_threshold(
         approximant=approximant,
     )
 
-    w = snr_thresh / rho_max
-    if w > 1.0:  # no detection
-        return 0.0
     a2, a4, a8 = 0.374222, 2.04216, -2.63948
-    # slightly higher than Dan's value
+    w = snr_thresh / rho_max
     P_det = a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
-    return P_det
+    if w > 1.0:  
+        return 0.0 # no detection
+    else:
+        return P_det # detection
 
 
 # Computing VT
