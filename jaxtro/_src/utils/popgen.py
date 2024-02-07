@@ -16,13 +16,19 @@ from __future__ import annotations
 
 import glob
 import os
+import sys
+from typing_extensions import Optional
 
+import h5py
+import jax
 import numpy as np
 from jax import numpy as jnp, vmap
+from jaxampler._src.jobj import JObj
+from jaxtyping import Array
 from tqdm import tqdm
 
 from ..models import *
-from ..vts.vt_from_mass import vt_from_mass
+from ..vts import interpolate_hdf5
 from .misc import dump_configurations
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 
@@ -30,7 +36,7 @@ from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 class PopulationGenerator:
     """Class to generate population and save them to disk."""
 
-    def __init__(self, general: dict, models: list[dict]) -> None:
+    def __init__(self, general: dict, models: list[dict], selection_effect: Optional[dict] = None) -> None:
         """__init__ method for PopulationGenerator.
 
         Parameters
@@ -50,6 +56,10 @@ class PopulationGenerator:
         self._config_filename: str = general["config_filename"]
         self._num_realizations: int = general["num_realizations"]
         self._models: list = models
+        self._extra_size = 1500
+        self._extra_error_size = 15000
+        self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
+        self._vt_columns = selection_effect.get("vt_columns", None) if selection_effect else None
 
     @staticmethod
     def check_general(general: dict) -> None:
@@ -69,19 +79,57 @@ class PopulationGenerator:
         assert model.get("col_names", None) is not None
         assert model.get("params", None) is not None
 
+    def weight_over_m1m2(
+        self,
+        realizations: Array,
+        raw_interpolator_filename: str,
+        n_out: int,
+        m1_col_index: int,
+        m2_col_index: int,
+        return_array: bool = False,
+        return_index: bool = False,
+    ) -> tuple[Array, Array] | Array:
+        dat_mass = realizations[:, [m1_col_index, m2_col_index]]
+
+        with h5py.File(raw_interpolator_filename, "r") as VTs:
+            raw_interpolator = interpolate_hdf5(VTs)
+
+        index_zero_m1 = dat_mass[:, 0] == 0.0
+        index_zero_m2 = dat_mass[:, 1] == 0.0
+
+        weights = raw_interpolator(dat_mass)
+        weights = jnp.where(index_zero_m1, 0.0, weights)
+        weights = jnp.where(index_zero_m2, 0.0, weights)
+        weights /= jnp.sum(weights)  # normalizes
+
+        indexes_all = jnp.arange(len(dat_mass))
+        downselected = jax.random.choice(JObj.get_key(None), indexes_all, p=weights, shape=(n_out,))
+
+        downselected_pop = realizations[downselected]
+        if return_index and return_array:
+            return downselected_pop, downselected
+        if return_index:
+            return downselected
+        return downselected_pop
+
     def generate(self):
         """Generate population and save them to disk."""
         os.makedirs(self._root_container, exist_ok=True)
 
         col_names = []
 
-        for i in tqdm(
-            range(self._num_realizations),
-            desc="Realizations",
-            total=self._num_realizations,
-            unit="realization",
+        size = self._size + self._extra_size
+        error_size = self._error_size + self._extra_error_size
+
+        bar = tqdm(
+            total=self._num_realizations * self._size,
+            desc="Generating Population",
+            unit="posteriors",
             unit_scale=True,
-        ):
+            file=sys.stdout,
+        )
+
+        for i in range(self._num_realizations):
             container = f"{self._root_container}/realization_{i}"
             config_filename = f"{container}/{self._config_filename}"
             injection_filename = f"{container}/injections/population.dat"
@@ -93,25 +141,21 @@ class PopulationGenerator:
 
             config_vals = []
             col_names = []
-            realisations = jnp.empty((self._size, 0))
-            realisations_err = jnp.empty((self._size, self._error_size, 0))
+            realisations = jnp.empty((size, 0))
+            realisations_err = jnp.empty((size, error_size, 0))
             for model in self._models:
                 model_instance: AbstractModel = eval(model["model"])(**model["params"])
-                rvs = model_instance.samples(self._size).reshape((self._size, -1))
-                if isinstance(model_instance, AbstractMassModel):
-                    for i in range(self._size):
-                        if vt_from_mass(float(rvs[i, 0]), float(rvs[i, 1]), 8.0, 1.0) == 0.0:
-                            rvs = rvs.at[i, :].set(jnp.nan)
+                rvs = model_instance.samples(size).reshape((size, -1))
 
                 err_rvs = vmap(
                     lambda x: model_instance.add_error(
                         x=x,
                         scale=self._error_scale,
-                        size=self._error_size,
+                        size=error_size,
                     ),
                     in_axes=(0,),
                 )(rvs)
-                err_rvs = jnp.nan_to_num(err_rvs, nan=0.0)
+                err_rvs = jnp.nan_to_num(err_rvs, nan=0.0, posinf=jnp.inf, neginf=-jnp.inf)
                 realisations = jnp.concatenate((realisations, rvs), axis=-1)
                 realisations_err = jnp.concatenate((realisations_err, err_rvs), axis=-1)
 
@@ -120,10 +164,35 @@ class PopulationGenerator:
 
             dump_configurations(config_filename, *config_vals)
 
-            np.savetxt(injection_filename, realisations, header="\t".join(col_names))
+            indexes = {var: i for i, var in enumerate(col_names)}
+            realisations, index = self.weight_over_m1m2(
+                realisations,
+                self._vt_filename,
+                self._size,
+                indexes["m1_source"],
+                indexes["m2_source"],
+                return_array=True,
+                return_index=True,
+            )
 
-            for event_num, realisation in enumerate(realisations):
+            realisations_err = realisations_err[index]
+
+            realisations_err = vmap(
+                lambda x: self.weight_over_m1m2(
+                    x,
+                    self._vt_filename,
+                    self._error_size,
+                    indexes["m1_source"],
+                    indexes["m2_source"],
+                    return_array=True,
+                    return_index=False,
+                ),
+            )(realisations_err)
+
+            np.savetxt(injection_filename, realisations, header="\t".join(col_names))
+            for event_num in range(self._size):  # enumerate(realisations):
                 filename_event = f"{container}/posteriors/{self._event_filename.format(event_num)}"
+
                 np.savetxt(
                     filename_event,
                     realisations_err[event_num, :, :],
@@ -133,12 +202,17 @@ class PopulationGenerator:
                 filename_inj = f"{container}/injections/inj_{event_num}.dat"
                 np.savetxt(
                     filename_inj,
-                    realisation.reshape((1, -1)),
+                    realisations[event_num, :].reshape(1, -1),
                     header="\t".join(col_names),
                 )
+                bar.update(1)
+            bar.refresh()
+
+            del realisations
+        bar.colour = "green"
+        bar.close()
 
         realization_regex = f"{self._root_container}/realization_*"
-        indexes = {var: i for i, var in enumerate(col_names)}
 
         for realization in tqdm(
             glob.glob(realization_regex),

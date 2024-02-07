@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from jax import numpy as jnp
-from jaxampler.rvs import Normal, TruncPowerLaw, Uniform
+from jaxampler.rvs import Normal, Uniform
 from jaxampler.typing import Numeric
 
 from ..utils.misc import chirp_mass, symmetric_mass_ratio
@@ -29,11 +29,10 @@ class AbstractMassModel(AbstractModel):
         scale=1.0,
         name="Standard_Normal_Distribution",
     )
-    rho_dist = TruncPowerLaw(
-        alpha=-4.0,
-        low=8.0,
-        high=jnp.inf,
-        name="SNR_Distribution",
+    std_unif = Uniform(
+        low=0.0,
+        high=1.0,
+        name="Standard_Uniform_Distribution",
     )
 
     def add_error(self, x: Numeric, scale: float, size: int) -> Numeric:
@@ -51,10 +50,8 @@ class AbstractMassModel(AbstractModel):
         r = self.std_norm.rvs(shape=(size,))
         rp = self.std_norm.rvs(shape=(size,))
 
-        # rho = self.rho_dist.rvs(shape=(size,))
         rho = jnp.power(
-            Uniform(low=0.0, high=1.0, name="Uniform_Distribution_for_SNR").rvs(shape=(size,)) * (-(8 ** (-3)))
-            + 8 ** (-3),
+            self.std_unif.rvs(shape=(size,)) * (-(8 ** (-3))) + 8 ** (-3),
             -1.0 / 3.0,
         )
 

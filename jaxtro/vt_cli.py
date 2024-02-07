@@ -20,9 +20,8 @@ from configparser import ConfigParser
 import h5py
 from jax import numpy as jnp
 from tqdm import tqdm
-import lalsimulation as ls
 
-from ._src.vts import vt_from_mass_spin, vt_from_mass
+from ._src.vts import vt_from_mass, vt_from_mass_spin
 from .models import *
 
 
