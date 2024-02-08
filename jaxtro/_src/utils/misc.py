@@ -30,7 +30,7 @@ def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
     :param m2: mass 2
     :return:
     """
-    return lax.div(lax.pow(lax.mul(m1, m2), 0.6), lax.pow(lax.add(m1, m2), 0.2))
+    return lax.mul(lax.pow(lax.mul(m1, m2), 0.6), lax.pow(lax.add(m1, m2), -0.2))
 
 
 @jit
