@@ -1,4 +1,4 @@
-#  Copyright 2023 The Jaxtro Authors
+#  Copyright 2023 The GWKokab Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,13 +15,12 @@
 
 from __future__ import annotations
 
-from jaxtro._src.models import (
-    AbstractEccentricityModel as AbstractEccentricityModel,
-    AbstractMassModel as AbstractMassModel,
-    AbstractModel as AbstractModel,
-    AbstractRedShiftModel as AbstractRedShiftModel,
-    AbstractSpinModel as AbstractSpinModel,
-    EccentricityModel as EccentricityModel,
-    Wysocki2019MassModel as Wysocki2019MassModel,
-    Wysocki2019SpinModel as Wysocki2019SpinModel,
-)
+from jaxampler.rvs import Normal
+from jaxtyping import Array
+
+from .abstractmodel import AbstractModel
+
+
+class AbstractRedShiftModel(AbstractModel):
+    def add_error(self, x: Array, scale: float = 0.01, size: int = 10) -> Array:
+        return Normal(loc=x, scale=scale).rvs(shape=(size,))

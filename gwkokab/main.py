@@ -1,4 +1,4 @@
-#  Copyright 2023 The Jaxtro Authors
+#  Copyright 2023 The GWKokab Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -14,7 +14,16 @@
 
 from __future__ import annotations
 
-import importlib.metadata
+from .utils import cmd_parser, parse_config, PopulationGenerator
 
 
-__version__ = importlib.metadata.version("jaxtro")
+def main():
+    args = cmd_parser.parse_args()
+    configuration_dict = parse_config(args.config)
+
+    general = configuration_dict["general"]
+    models = [configuration_dict[section_name] for section_name in configuration_dict.keys() if "model" in section_name]
+    selection_effect = configuration_dict.get("selection_effect", None)
+
+    pg = PopulationGenerator(general=general, models=models, selection_effect=selection_effect)
+    pg.generate()

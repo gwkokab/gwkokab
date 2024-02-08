@@ -1,13 +1,13 @@
-# Contributing to Jaxtro
+# Contributing to GWKokab
 
-First of all, thank you for considering contributing to Jaxtro! 🌟 Your help is essential for making it a better project.
+First of all, thank you for considering contributing to GWKokab! 🌟 Your help is essential for making it a better project.
 
 ## How to Contribute
 
 ### Issues
 
 - **Report issues or bugs** you've discovered. Be as specific as possible about how to reproduce the problem.
-- **Suggest enhancements** or new features you would like to see in Jaxtro.
+- **Suggest enhancements** or new features you would like to see in GWKokab.
 
 ### Pull Requests
 

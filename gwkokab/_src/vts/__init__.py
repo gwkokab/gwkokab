@@ -12,23 +12,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from __future__ import annotations
 
-import sys
-
-sys.path.append("../gwkokab")
-
-from gwkokab.models import EccentricityModel
-
-
-class TestEccentricityModel:
-    def test_init(self):
-        model = EccentricityModel(sigma_ecc=0.1)
-        assert model._scale == 0.1
-        assert model._name is None
-
-    def test_rvs(self):
-        model = EccentricityModel(sigma_ecc=0.1)
-        rvs = model.samples(1000)
-        assert rvs.shape == (1000,)
-        assert rvs.min() >= 0
-        assert rvs.max() <= 1
+from .utils import interpolate as interpolate, interpolate_hdf5 as interpolate_hdf5, load_hdf5 as load_hdf5
+from .vt_from_mass import vt_from_mass as vt_from_mass
+from .vt_from_mass_spin import vt_from_mass_spin as vt_from_mass_spin

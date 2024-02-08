@@ -1,4 +1,4 @@
-#  Copyright 2023 The Jaxtro Authors
+#  Copyright 2023 The GWKokab Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -12,15 +12,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+
 from __future__ import annotations
 
-from jaxtro._src.utils import (
-    chirp_mass as chirp_mass,
-    cmd_parser as cmd_parser,
-    dump_configurations as dump_configurations,
-    mass_ratio as mass_ratio,
-    parse_config as parse_config,
-    PopulationGenerator as PopulationGenerator,
-    reduced_mass as reduced_mass,
-    symmetric_mass_ratio as symmetric_mass_ratio,
+from gwkokab._src.models import (
+    AbstractEccentricityModel as AbstractEccentricityModel,
+    AbstractMassModel as AbstractMassModel,
+    AbstractModel as AbstractModel,
+    AbstractRedShiftModel as AbstractRedShiftModel,
+    AbstractSpinModel as AbstractSpinModel,
+    EccentricityModel as EccentricityModel,
+    Wysocki2019MassModel as Wysocki2019MassModel,
+    Wysocki2019SpinModel as Wysocki2019SpinModel,
 )

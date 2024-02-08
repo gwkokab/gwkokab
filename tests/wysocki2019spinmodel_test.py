@@ -1,4 +1,4 @@
-#  Copyright 2023 The Jaxtro Authors
+#  Copyright 2023 The GWKokab Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ import sys
 
 from jax import numpy as jnp
 
-sys.path.append("../jaxtro")
-from jaxtro.models import Wysocki2019SpinModel
+sys.path.append("../gwkokab")
+from gwkokab.models import Wysocki2019SpinModel
 
 
 class TestWysocki2019SpinModel:
