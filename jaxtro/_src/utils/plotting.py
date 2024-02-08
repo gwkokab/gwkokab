@@ -11,6 +11,7 @@ from typing_extensions import Optional
 import matplotlib.pyplot as plt
 import mplcursors
 import numpy as np
+from tqdm import tqdm
 
 
 def scatter2d_batch_plot(
@@ -25,14 +26,21 @@ def scatter2d_batch_plot(
     file_list = glob.glob(file_pattern)
 
     # Iterate over each file to make the scatter plots of each event in a figure.
-    for i, file_path in enumerate(file_list):
+    for file_path in tqdm(
+        file_list,
+        desc=output_filename,
+        total=len(file_list),
+        unit="event",
+        unit_scale=True,
+        leave=False,
+    ):
         # Load data from the file
         data = np.loadtxt(file_path)
         x = data[:, x_index]
         y = data[:, y_index]
 
         # Scatter plot with different colors for each file
-        plt.scatter(x, y, s=5)
+        plt.scatter(x, y, s=5, alpha=0.3)
 
     # Set plot title and labels
     if plt_title is not None:
@@ -59,7 +67,14 @@ def scatter3d_batch_plot(
     file_list = glob.glob(file_pattern)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
-    for i, file_path in enumerate(file_list):
+    for file_path in tqdm(
+        file_list,
+        desc=output_filename,
+        total=len(file_list),
+        unit="event",
+        unit_scale=True,
+        leave=False,
+    ):
         # Load data from the file
         data = np.loadtxt(file_path)
         x = data[:, x_index]
@@ -67,7 +82,7 @@ def scatter3d_batch_plot(
         z = data[:, z_index]
 
         # Scatter plot with different colors for each file
-        ax.scatter(x, y, z, c=z, cmap="plasma", marker="o")
+        ax.scatter(x, y, z, c=z, cmap="plasma", marker="o", alpha=0.3)
 
     # Set labels for title and axes
     if plt_title is not None:
@@ -97,7 +112,7 @@ def scatter2d_plot(
     y = data[:, y_index]
 
     # Scatter plot with different colors for each file
-    plt.scatter(x, y)
+    plt.scatter(x, y, alpha=0.3)
 
     # Set plot title and labels
     if plt_title is not None:
@@ -130,7 +145,7 @@ def scatter3d_plot(
     z = data[:, z_index]
 
     # Plot the data points as dots with colors
-    sc = ax.scatter(x, y, z, c=z, cmap="plasma", marker="o")
+    sc = ax.scatter(x, y, z, c=z, cmap="plasma", marker="o", alpha=0.3)
     cbar = fig.colorbar(sc)
 
     # Set a title for the plot

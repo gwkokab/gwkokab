@@ -77,13 +77,13 @@ def vt_mass_grid():
     m1 = jnp.linspace(mmin, mmax, n)
     m2 = jnp.linspace(mmin, mmax, n)
 
-    m1 = jnp.repeat(m1, n)
-    m2 = jnp.tile(m2, n)
+    m1_grid = jnp.repeat(m1, n)
+    m2_grid = jnp.tile(m2, n)
 
-    def vt(m1, m2):
+    def vt(m1_, m2_):
         return vt_from_mass(
-            m1,
-            m2,
+            m1_,
+            m2_,
             threshold_snr,
             analysis_time,
         )
@@ -109,6 +109,6 @@ def vt_mass_grid():
     nbar.close()
 
     with h5py.File(filename, "w") as f:
-        f.create_dataset("m1", data=m1, shape=(n, n))
-        f.create_dataset("m2", data=m2, shape=(n, n))
+        f.create_dataset("m1", data=m1_grid, shape=(n, n))
+        f.create_dataset("m2", data=m2_grid, shape=(n, n))
         f.create_dataset("VT", data=vts, shape=(n, n))

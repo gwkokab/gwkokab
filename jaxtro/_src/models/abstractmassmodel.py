@@ -29,11 +29,10 @@ class AbstractMassModel(AbstractModel):
         scale=1.0,
         name="Standard_Normal_Distribution",
     )
-    rho_dist = TruncPowerLaw(
-        alpha=-4.0,
-        low=8.0,
-        high=jnp.inf,
-        name="SNR_Distribution",
+    std_unif = Uniform(
+        low=0.0,
+        high=1.0,
+        name="Standard_Uniform_Distribution",
     )
 
     def add_error(self, x: Numeric, scale: float, size: int) -> Numeric:
@@ -51,12 +50,8 @@ class AbstractMassModel(AbstractModel):
         r = self.std_norm.rvs(shape=(size,))
         rp = self.std_norm.rvs(shape=(size,))
 
-        # rho = self.rho_dist.rvs(shape=(size,))
-        rho = jnp.power(
-            Uniform(low=0.0, high=1.0, name="Uniform_Distribution_for_SNR").rvs(shape=(size,)) * (-(8 ** (-3)))
-            + 8 ** (-3),
-            -1.0 / 3.0,
-        )
+        # rho = 8.0 * jnp.power(self.std_unif.rvs(shape=(size,)), -1.0 / 3.0)
+        rho = TruncPowerLaw(alpha=-4.0, low=8.0, high=jnp.inf, name="rho").rvs(shape=(size,))
 
         Mc_true = chirp_mass(m1, m2)
         eta_true = symmetric_mass_ratio(m1, m2)
@@ -71,14 +66,20 @@ class AbstractMassModel(AbstractModel):
         Mc = Mc_true * (1.0 + alpha * twelve_over_rho * (r0 + r))
         eta = eta_true * (1.0 + 0.03 * twelve_over_rho * (r0p + rp))
 
-        mtot = Mc * (eta**-0.6)
-        m1m2 = eta * (mtot**2)
+        mask = 0.25 >= eta
+        mask &= eta >= 0.01
 
-        m2_final = 0.5 * (mtot - jnp.sqrt(mtot**2 - 4 * m1m2))
-        m1_final = 0.5 * (mtot + jnp.sqrt(mtot**2 - 4 * m1m2))
+        # count_false = jnp.sum(~mask)
+        # print(count_false)
 
         mask = 0.25 >= eta
         mask &= eta >= 0.01
+
+        mtot = Mc * jnp.power(eta, -0.6)
+        m1m2 = eta * jnp.power(mtot, 2)
+
+        m2_final = 0.5 * (mtot - jnp.sqrt(mtot**2 - 4 * m1m2))
+        m1_final = 0.5 * (mtot + jnp.sqrt(mtot**2 - 4 * m1m2))
 
         m1_final = jnp.where(mask, m1_final, jnp.nan)
         m2_final = jnp.where(mask, m2_final, jnp.nan)

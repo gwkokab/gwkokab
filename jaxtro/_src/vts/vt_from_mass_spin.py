@@ -175,10 +175,10 @@ def fraction_above_threshold(
     a2, a4, a8 = 0.374222, 2.04216, -2.63948
     w = snr_thresh / rho_max
     P_det = a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
-    if w > 1.0:  
-        return 0.0 # no detection
+    if w > 1.0:
+        return 0.0  # no detection
     else:
-        return P_det # detection
+        return P_det  # detection
 
 
 # Computing VT

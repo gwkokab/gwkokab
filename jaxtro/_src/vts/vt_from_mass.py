@@ -37,7 +37,11 @@ def next_pow_two(x: int) -> int:
     return x2
 
 
-senstivity = ls.SimNoisePSDAdVEarlyHighSensitivityP1200087
+# senstivity = ls.SimNoisePSDAdVEarlyHighSensitivityP1200087
+# waveform = ls.IMRPhenomA
+
+# sensitivity = ls.SimNoisePSDAdVEarlyHighSensitivityP1200087
+sensitivity = ls.SimNoisePSDAdVO4T1800545
 waveform = ls.IMRPhenomA
 
 
@@ -71,7 +75,7 @@ def optimal_snr(
     """
 
     if psd_fn is None:
-        psd_fn = senstivity  # psd of single detector for O4
+        psd_fn = sensitivity  # psd of single detector for O4
 
     if approximant is None:
         approximant = waveform  # No spin approximant
@@ -81,7 +85,16 @@ def optimal_snr(
     # Get dL, Gpc
     dL = cosmo.Planck15.luminosity_distance(z).to(u.Gpc).value
 
-    tmax = ls.SimInspiralChirpTimeBound(fmin, m1 * (1 + z) * lal.MSUN_SI, m2 * (1 + z) * lal.MSUN_SI, 0.0, 0.0) + 2.0
+    tmax = (
+        ls.SimInspiralChirpTimeBound(
+            fmin,
+            m1 * (1 + z) * lal.MSUN_SI,
+            m2 * (1 + z) * lal.MSUN_SI,
+            0.0,
+            0.0,
+        )
+        + 2.0
+    )
 
     df = max(1.0 / next_pow_two(tmax), dfmin)
     fmax = 2048.0  # Hz --- based on max freq of 5-5 inspiral
@@ -155,7 +168,7 @@ def fraction_above_threshold(
         return 1.0
 
     if psd_fn is None:
-        psd_fn = senstivity
+        psd_fn = sensitivity
 
     rho_max = optimal_snr(
         m1,
@@ -171,11 +184,12 @@ def fraction_above_threshold(
 
     a2, a4, a8 = 0.374222, 2.04216, -2.63948
     w = snr_thresh / rho_max
+    print("w =", w)
+    print("rho_max =", rho_max)
+    if w > 1.0:
+        return 0.0  # no detection
     P_det = a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
-    if w > 1.0:  
-        return 0.0 # no detection
-    else:
-        return P_det # detection
+    return P_det  # detection
 
 
 # Computing VT
@@ -209,11 +223,11 @@ def vt_from_mass(
     """
 
     if psd_fn is None:
-        psd_fn = senstivity
+        psd_fn = sensitivity
 
     def integrand(z) -> float:
         if z == 0.0:
-            return 1.0
+            return 0.0
         p_det = fraction_above_threshold(
             m1,
             m2,

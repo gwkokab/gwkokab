@@ -75,6 +75,7 @@ vt_mass_spin = "jaxtro.vt_cli:vt_mass_spin"
 vt_mass = "jaxtro.vt_cli:vt_mass"
 vt_mass_grid = "jaxtro.vt_grid:vt_mass_grid"
 
+
 [tool.ruff]
 lint.ignore-init-module-imports = true
 line-length = 120
