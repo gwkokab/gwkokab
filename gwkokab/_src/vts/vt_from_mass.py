@@ -1,4 +1,4 @@
-#  Copyright 2023 The Jaxtro Authors
+#  Copyright 2023 The GWKokab Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -37,12 +37,18 @@ def next_pow_two(x: int) -> int:
     return x2
 
 
+# senstivity = ls.SimNoisePSDAdVEarlyHighSensitivityP1200087
+# waveform = ls.IMRPhenomA
+
+# sensitivity = ls.SimNoisePSDAdVEarlyHighSensitivityP1200087
+sensitivity = ls.SimNoisePSDAdVO4T1800545
+waveform = ls.IMRPhenomA
+
+
 def optimal_snr(
     m1: float,
     m2: float,
-    a1z: float,
-    a2z: float,
-    z: float,
+    z: float = 1.0,
     fmin: float = 19.0,
     dfmin: float = 0.0,
     fref: float = 40.0,
@@ -69,17 +75,26 @@ def optimal_snr(
     """
 
     if psd_fn is None:
-        psd_fn = ls.SimNoisePSDAdVO4T1800545  # psd of single detector for O4
+        psd_fn = sensitivity  # psd of single detector for O4
 
     if approximant is None:
-        approximant = ls.IMRPhenomB  # alligned spin approximant
+        approximant = waveform  # No spin approximant
     # https://lscsoft.docs.ligo.org/lalsuite/lalsimulation/group___l_a_l_sim_i_m_r_phenom__c.html
     # #ga9117e5a155732b9922eab602930377d7
 
     # Get dL, Gpc
     dL = cosmo.Planck15.luminosity_distance(z).to(u.Gpc).value
 
-    tmax = ls.SimInspiralChirpTimeBound(fmin, m1 * (1 + z) * lal.MSUN_SI, m2 * (1 + z) * lal.MSUN_SI, a1z, a2z) + 2.0
+    tmax = (
+        ls.SimInspiralChirpTimeBound(
+            fmin,
+            m1 * (1 + z) * lal.MSUN_SI,
+            m2 * (1 + z) * lal.MSUN_SI,
+            0.0,
+            0.0,
+        )
+        + 2.0
+    )
 
     df = max(1.0 / next_pow_two(tmax), dfmin)
     fmax = 2048.0  # Hz --- based on max freq of 5-5 inspiral
@@ -91,10 +106,10 @@ def optimal_snr(
         ((1 + z) * m2 * lal.MSUN_SI),  # REAL8_const_m2
         0.0,  # REAL8_const_S1x
         0.0,  # REAL8_const_S1y
-        a1z,  # REAL8_const_S1z
+        0.0,  # REAL8_const_S1z
         0.0,  # REAL8_const_S2x
         0.0,  # REAL8_const_S2y
-        a2z,  # REAL8_const_S2z
+        0.0,  # REAL8_const_S2z
         dL * 1e9 * lal.PC_SI,  # REAL8_const_distance
         0.0,  # REAL8_const_inclination
         0.0,  # REAL8_const_phiRef
@@ -123,10 +138,8 @@ def optimal_snr(
 def fraction_above_threshold(
     m1: float,
     m2: float,
-    a1z: float,
-    a2z: float,
-    z: float,
-    snr_thresh: float,
+    z: float = 1.0,
+    snr_thresh: float = 8.0,
     fmin: float = 19.0,
     dfmin: float = 0.0,
     fref: float = 40.0,
@@ -141,8 +154,6 @@ def fraction_above_threshold(
 
     :param m1: Source-frame mass 1.
     :param m2: Source-frame mass 2.
-    :param a1z: The z-component of spin 1.
-    :param a2z: The z-component of spin 2.
     :param z: Redshift
     :param snr_thresh: The detection threshold in SNR
     :param fmin: The starting frequency for waveform generation
@@ -157,13 +168,11 @@ def fraction_above_threshold(
         return 1.0
 
     if psd_fn is None:
-        psd_fn = ls.SimNoisePSDAdVO4T1800545
+        psd_fn = sensitivity
 
     rho_max = optimal_snr(
         m1,
         m2,
-        a1z,
-        a2z,
         z,
         fmin=fmin,
         dfmin=dfmin,
@@ -172,23 +181,23 @@ def fraction_above_threshold(
         psd_fn=psd_fn,
         approximant=approximant,
     )
+
     a2, a4, a8 = 0.374222, 2.04216, -2.63948
     w = snr_thresh / rho_max
-    P_det = a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
+    print("w =", w)
+    print("rho_max =", rho_max)
     if w > 1.0:
         return 0.0  # no detection
-    else:
-        return P_det  # detection
+    P_det = a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
+    return P_det  # detection
 
 
 # Computing VT
-def vt_from_mass_spin(
+def vt_from_mass(
     m1: float,
     m2: float,
-    a1z: float,
-    a2z: float,
-    thresh: float,
-    analysis_time: float,
+    thresh: float = 8.0,
+    analysis_time: float = 1.0,
     fmin: float = 19.0,
     dfmin: float = 0.0,
     fref: float = 40.0,
@@ -201,8 +210,6 @@ def vt_from_mass_spin(
     Volume time calculations from mass and spin
     :param m1: Source-frame mass 1.
     :param m2: Source-frame mass 2.
-    :param a1z: The z-component of spin 1.
-    :param a2z: The z-component of spin 2.
     :param thresh: The detection threshold in SNR
     :param analysis_time: The total detector-frame searched time
     :param fmin: The starting frequency for waveform generation
@@ -216,7 +223,7 @@ def vt_from_mass_spin(
     """
 
     if psd_fn is None:
-        psd_fn = ls.SimNoisePSDAdVO4T1800545
+        psd_fn = sensitivity
 
     def integrand(z) -> float:
         if z == 0.0:
@@ -224,8 +231,6 @@ def vt_from_mass_spin(
         p_det = fraction_above_threshold(
             m1,
             m2,
-            a1z,
-            a2z,
             z,
             thresh,
             fmin=fmin,
@@ -238,31 +243,12 @@ def vt_from_mass_spin(
         return 4 * jnp.pi * cosmo.Planck15.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value / (1 + z) * p_det
 
     zmin = 0.001
-    # assert (
-    #     fraction_above_threshold(
-    #         m1,
-    #         m2,
-    #         a1z,
-    #         a2z,
-    #         zmax,
-    #         thresh,
-    #         fmin=fmin,
-    #         dfmin=dfmin,
-    #         fref=fref,
-    #         psdstart=psdstart,
-    #         psd_fn=psd_fn,
-    #         approximant=approximant,
-    #     )
-    #     == 0.0
-    # )
 
     while zmax - zmin > 1e-3:
         zhalf = 0.5 * (zmax + zmin)
         fhalf = fraction_above_threshold(
             m1,
             m2,
-            a1z,
-            a2z,
             zhalf,
             thresh,
             fmin=fmin,

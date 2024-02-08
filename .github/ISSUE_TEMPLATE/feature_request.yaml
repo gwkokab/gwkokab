@@ -2,63 +2,63 @@
 ---
 name: Feature request
 description: >-
-  Suggest a new feature or enhancement for Jaxtro.
+    Suggest a new feature or enhancement for GWKokab.
 labels:
-  - enhancement
+    - enhancement
 
 body:
-  - type: markdown
-    attributes:
-      value: >
-        ## Thank you for helping us improve Jaxtro!
-        
-        * Please first verify that your feature request has not already been reported using the
-        [Issue search][issue search].
-        
-        * If you are asking a question or seeking support, please
-        consider [starting a discussion][Discussions].
-        
-        * If you prefer a non-templated issue report, click [here][Raw report].
-        
-        
-        [Discussions]: https://github.com/gwkokab/jaxtro/discussions
-        
-        [issue search]: https://github.com/gwkokab/jaxtro/search?q=is%3Aissue&type=issues
-        
-        [Raw report]: http://github.com/gwkokab/jaxtro/issues/new
-  - type: textarea
-    attributes:
-      label: Description
-      description: >-
-        A concise description of the feature.
-      placeholder: |
-        Text may use markdown formatting.
-        ```python
-        # for codeblocks, use triple backticks
-        ```
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: Code
-      description: >-
-        Code to demonstrate the use case.
-      placeholder: |
-        Text may use markdown formatting.
-        ```python
-        # for codeblocks, use triple backticks
-        ```
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: Output
-      description: >-
-        Output of the code.
-      placeholder: |
-        Text may use markdown formatting.
-        ```python
-        # for codeblocks, use triple backticks
-        ```
-    validations:
-      required: true
+    - type: markdown
+      attributes:
+          value: >
+              ## Thank you for helping us improve GWKokab!
+
+              * Please first verify that your feature request has not already been reported using the
+              [Issue search][issue search].
+
+              * If you are asking a question or seeking support, please
+              consider [starting a discussion][Discussions].
+
+              * If you prefer a non-templated issue report, click [here][Raw report].
+
+
+              [Discussions]: https://github.com/gwkokab/gwkokab/discussions
+
+              [issue search]: https://github.com/gwkokab/gwkokab/search?q=is%3Aissue&type=issues
+
+              [Raw report]: http://github.com/gwkokab/gwkokab/issues/new
+    - type: textarea
+      attributes:
+          label: Description
+          description: >-
+              A concise description of the feature.
+          placeholder: |
+              Text may use markdown formatting.
+              ```python
+              # for codeblocks, use triple backticks
+              ```
+      validations:
+          required: true
+    - type: textarea
+      attributes:
+          label: Code
+          description: >-
+              Code to demonstrate the use case.
+          placeholder: |
+              Text may use markdown formatting.
+              ```python
+              # for codeblocks, use triple backticks
+              ```
+      validations:
+          required: true
+    - type: textarea
+      attributes:
+          label: Output
+          description: >-
+              Output of the code.
+          placeholder: |
+              Text may use markdown formatting.
+              ```python
+              # for codeblocks, use triple backticks
+              ```
+      validations:
+          required: true

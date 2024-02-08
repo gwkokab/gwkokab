@@ -1,4 +1,4 @@
-#  Copyright 2023 The Jaxtro Authors
+#  Copyright 2023 The GWKokab Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
 
 import sys
 
-sys.path.append("../jaxtro")
+sys.path.append("../gwkokab")
 
-from jaxtro.models import Wysocki2019MassModel
+from gwkokab.models import Wysocki2019MassModel
 
 
 class TestWysocki2019MassModel:

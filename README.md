@@ -1,10 +1,10 @@
-# Jaxtro 🔭 - A JAX-based gravitational-wave population inference
+# GWKokab 🔭 - A JAX-based gravitational-wave population inference
 
-[![Python package](https://github.com/gwkokab/jaxtro/actions/workflows/python-package.yml/badge.svg)](https://github.com/gwkokab/jaxtro/actions/workflows/python-package.yml)
-[![Upload Python Package](https://github.com/gwkokab/jaxtro/actions/workflows/python-publish.yml/badge.svg)](https://github.com/gwkokab/jaxtro/actions/workflows/python-publish.yml)
-[![Versions](https://img.shields.io/pypi/pyversions/jaxtro.svg)](https://pypi.org/project/jaxtro/)
+[![Python package](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml)
+[![Upload Python Package](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml)
+[![Versions](https://img.shields.io/pypi/pyversions/gwkokab.svg)](https://pypi.org/project/gwkokab/)
 
-Jaxtro is a JAX-based gravitational-wave population inference package. It is built on top
+GWKokab is a JAX-based gravitational-wave population inference package. It is built on top
 of [Jaxampler](https://github.com/Qazalbash/jaxampler) and provides a high-level interface for sampling from a wide
 range of gravitational-wave population models.
 
@@ -27,16 +27,16 @@ python -m venv jvenv
 source jvenv/bin/activate
 ```
 
-Now, you may install the latest released version of Jaxtro through pip by doing
+Now, you may install the latest released version of GWKokab through pip by doing
 
 ```bash
-pip install --upgrade jaxtro
+pip install --upgrade gwkokab
 ```
 
 You may install the bleeding edge version by cloning this repo, or doing
 
 ```bash
-pip install --upgrade git+https://github.com/gwkokab/jaxtro
+pip install --upgrade git+https://github.com/gwkokab/gwkokab
 ```
 
 If you would like to take advantage of CUDA, you will additionally need to install a specific version of JAX by doing
@@ -47,7 +47,7 @@ pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-re
 
 ## Requirements
 
-Jaxtro requires Python 3.10 or higher. It also requires the following packages:
+GWKokab requires Python 3.10 or higher. It also requires the following packages:
 
 ```bash
 configargparse
@@ -62,7 +62,7 @@ of this repo.
 
 ## Usage
 
-Jaxtro is designed to be used as a library. It provides a high-level interface for sampling from a wide range of
+GWKokab is designed to be used as a library. It provides a high-level interface for sampling from a wide range of
 gravitational-wave population models. Following example shows how to generate mock population data. It is a two step
 process:
 
@@ -108,7 +108,7 @@ process:
 2. **Generate mock population data** by running the following command,
 
     ```bash
-    jaxtro_genie -c <path_to_config_file>
+    gwkokab_genie -c <path_to_config_file>
     ```
 
 For this example the output directory will look like this,
@@ -124,16 +124,16 @@ data
 
 **Note** this will only work for one model. Multiple models are not supported yet.
 
-## Citing Jaxtro
+## Citing GWKokab
 
-If you use Jaxtro in your research, please cite the following paper:
+If you use GWKokab in your research, please cite the following paper:
 
 ```bibtex
-@software{jaxtro2023github,
+@software{gwkokab2023github,
     author  = {Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy},
-    title   = {{Jaxtro}: A JAX-based gravitational-wave population inference},
-    url     = {http://github.com/gwkokab/jaxtro},
-    version = {0.0.3},
-    year    = {2023}
+    title   = {{GWKokab}: A JAX-based gravitational-wave population inference},
+    url     = {http://github.com/gwkokab/gwkokab},
+    version = {0.0.1},
+    year    = {2024}
 }
 ```

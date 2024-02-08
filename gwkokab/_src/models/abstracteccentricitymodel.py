@@ -1,4 +1,4 @@
-#  Copyright 2023 The Jaxtro Authors
+#  Copyright 2023 The GWKokab Authors
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 
 from __future__ import annotations
 
-from jaxampler.rvs import Normal
+from jaxampler.rvs import TruncNormal
 from jaxtyping import Array
 
 from .abstractmodel import AbstractModel
 
 
-class AbstractRedShiftModel(AbstractModel):
-    def add_error(self, x: Array, scale: float = 0.01, size: int = 10) -> Array:
-        return Normal(loc=x, scale=scale).rvs(shape=(size,))
+class AbstractEccentricityModel(AbstractModel):
+    def add_error(self, x: Array, scale: float = 0.5, size: int = 10) -> Array:
+        return TruncNormal(loc=x, scale=scale, low=0.0, high=0.5).rvs(shape=(size,))
