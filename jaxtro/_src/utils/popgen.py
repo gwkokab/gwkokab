@@ -57,7 +57,7 @@ class PopulationGenerator:
         self._num_realizations: int = general["num_realizations"]
         self._models: list = models
         self._extra_size = 1500
-        self._extra_error_size = 15000
+        self._extra_error_size = 10000
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
         self._vt_columns = selection_effect.get("vt_columns", None) if selection_effect else None
 
@@ -94,22 +94,18 @@ class PopulationGenerator:
         with h5py.File(raw_interpolator_filename, "r") as VTs:
             raw_interpolator = interpolate_hdf5(VTs)
 
-        index_zero_m1 = dat_mass[:, 0] == 0.0
-        index_zero_m2 = dat_mass[:, 1] == 0.0
-
         weights = raw_interpolator(dat_mass)
-        weights = jnp.where(index_zero_m1, 0.0, weights)
-        weights = jnp.where(index_zero_m2, 0.0, weights)
         weights /= jnp.sum(weights)  # normalizes
 
-        indexes_all = jnp.arange(len(dat_mass))
+        indexes_all = np.arange(len(dat_mass))
         downselected = jax.random.choice(JObj.get_key(None), indexes_all, p=weights, shape=(n_out,))
 
-        downselected_pop = realizations[downselected]
-        if return_index and return_array:
-            return downselected_pop, downselected
-        if return_index:
+        if return_index and not return_array:
             return downselected
+
+        downselected_pop = realizations[downselected]
+        if return_index:
+            return downselected_pop, downselected
         return downselected_pop
 
     def generate(self):
@@ -152,10 +148,9 @@ class PopulationGenerator:
                         x=x,
                         scale=self._error_scale,
                         size=error_size,
-                    ),
-                    in_axes=(0,),
+                    )
                 )(rvs)
-                err_rvs = jnp.nan_to_num(err_rvs, nan=0.0, posinf=jnp.inf, neginf=-jnp.inf)
+                err_rvs = jnp.nan_to_num(err_rvs, nan=-jnp.inf, posinf=jnp.inf, neginf=-jnp.inf, copy=False)
                 realisations = jnp.concatenate((realisations, rvs), axis=-1)
                 realisations_err = jnp.concatenate((realisations_err, err_rvs), axis=-1)
 
