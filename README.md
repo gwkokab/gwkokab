@@ -45,6 +45,13 @@ If you would like to take advantage of CUDA, you will additionally need to insta
 pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 ```
 
+#Warning: 
+We are in the development phase, so when you git pull new updates, please reinstall it as follows.
+```
+pip install build
+python -m build
+pip install --force-reinstall dist/gwkokab-0.0.1.dev0-py3-none-any.whl
+```
 ## Requirements
 
 GWKokab requires Python 3.10 or higher. It also requires the following packages:
