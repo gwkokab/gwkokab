@@ -45,7 +45,7 @@ If you would like to take advantage of CUDA, you will additionally need to insta
 pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 ```
 
-#Warning: 
+### Warning
 We are in the development phase, so when you git pull new updates, please reinstall it as follows.
 ```
 pip install build
