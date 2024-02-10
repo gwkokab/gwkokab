@@ -47,7 +47,4 @@ def parse_config(config_path: str) -> dict:
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])
     config_dict["general"]["num_realizations"] = int(config["general"]["num_realizations"])
 
-    if "selection_effect" in config:
-        config_dict["selection_effect"]["vt_columns"] = eval(config["selection_effect"]["vt_columns"])
-
     return config_dict
