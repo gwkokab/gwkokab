@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import h5py
+from jax import numpy as jnp
 from jax.scipy.interpolate import RegularGridInterpolator
 
 
@@ -38,9 +39,9 @@ def interpolate_hdf5(hdf5_file):
     (``m1``, ``m2``, ``VT``), which should be arrays appropriate to pass as the
     (``m1_grid``, ``m2_grid``, ``VT_grid``) arguments to :py:func:`interpolate`.
     """
-    m1_grid = hdf5_file["m1"][:]
-    m2_grid = hdf5_file["m2"][:]
-    VT_grid = hdf5_file["VT"][:]
+    m1_grid = jnp.exp(jnp.asarray(hdf5_file["logM"]))
+    m2_grid = jnp.exp(jnp.asarray(hdf5_file["logM"]))
+    VT_grid = jnp.asarray(hdf5_file["VT"][0, 0, :, :])
 
     return interpolate(m1_grid, m2_grid, VT_grid)
 
@@ -60,10 +61,8 @@ def interpolate(m1_grid, m2_grid, VT_grid):
     :return: A function ``VT(m_1, m_2)``.
     """
 
-    #    print(m1_grid,m2_grid)
-    points = (m1_grid[0], m2_grid[:, 0])
-    #    values = VT_grid.flatten()
-    #    print(points)
+    points = (m1_grid, m2_grid)
+
     interpolator = RegularGridInterpolator(  # scipy.interpolate.interp2d(
         points,
         VT_grid,
