@@ -22,7 +22,7 @@ from typing_extensions import Optional
 import h5py
 import jax
 import numpy as np
-from jax import numpy as jnp
+from jax import numpy as jnp, vmap
 from jaxampler._src.jobj import JObj
 from jaxtyping import Array
 from tqdm import tqdm
@@ -30,7 +30,7 @@ from tqdm import tqdm
 from ..models import *
 from ..vts import interpolate_hdf5
 from .misc import dump_configurations
-from .plotting import scatter2d_plot, scatter3d_plot
+from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 
 
 class PopulationGenerator:
@@ -57,7 +57,7 @@ class PopulationGenerator:
         self._num_realizations: int = general["num_realizations"]
         self._models: list = models
         self._extra_size = 1_500
-        self._extra_error_size = 10_000
+        self._extra_error_size = 10_00
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
 
     @staticmethod
@@ -122,7 +122,37 @@ class PopulationGenerator:
                 m2_col_index=self._col_names.index("m2_source"),
             )
 
-    def generate_injections(self) -> dict[str, int]:
+    def weighted_posteriors(self, raw_interpolator_filename: str):
+        with h5py.File(raw_interpolator_filename, "r") as VTs:
+            self._raw_interpolator = interpolate_hdf5(VTs)
+
+        bar = tqdm(
+            total=self._num_realizations * self._size,
+            desc="Weighting posteriors",
+            unit="events",
+            unit_scale=True,
+            file=sys.stdout,
+        )
+
+        for i in range(self._num_realizations):
+            container = f"{self._root_container}/realization_{i}"
+            for j in range(self._size):
+                posterior_filename = f"{container}/posteriors/{self._event_filename.format(j)}"
+                weighted_posterior_filename = f"{container}/posteriors/weighted_{self._event_filename.format(j)}"
+
+                self.weight_over_m1m2(
+                    input_filename=posterior_filename,
+                    output_filename=weighted_posterior_filename,
+                    n_out=self._size,
+                    m1_col_index=self._col_names.index("m1_source"),
+                    m2_col_index=self._col_names.index("m2_source"),
+                )
+                bar.update(1)
+
+        bar.colour = "green"
+        bar.close()
+
+    def generate_injections(self) -> None:
         os.makedirs(self._root_container, exist_ok=True)
 
         size = self._size + self._extra_size
@@ -136,8 +166,6 @@ class PopulationGenerator:
             dynamic_ncols=True,
         )
 
-        col_names = None
-
         for i in range(self._num_realizations):
             container = f"{self._root_container}/realization_{i}"
             config_filename = f"{container}/{self._config_filename}"
@@ -146,40 +174,27 @@ class PopulationGenerator:
             os.makedirs(container, exist_ok=True)
             os.makedirs(f"{container}/plots", exist_ok=True)
 
-            config_vals = []
-            col_names = []
             realisations = jnp.empty((size, 0))
-            for model in self._models:
-                model_instance: AbstractModel = eval(model["model"])(**model["params"])
+            for model_instance in self._model_instances:
                 rvs = model_instance.samples(size).reshape((size, -1))
                 realisations = jnp.concatenate((realisations, rvs), axis=-1)
-
-                config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
-                col_names.extend(model["col_names"])
 
                 bar.update(1)
             bar.refresh()
 
-            dump_configurations(config_filename, *config_vals)
+            dump_configurations(config_filename, *self._config_vals)
 
-            indexes = {var: i for i, var in enumerate(col_names)}
-
-            np.savetxt(injection_filename, realisations, header="\t".join(col_names))
+            np.savetxt(injection_filename, realisations, header="\t".join(self._col_names))
 
             del realisations
         bar.colour = "green"
         bar.close()
 
-        self._col_names = col_names
-
-        return indexes
-
     def generate_injections_plots(
         self,
-        indexes,
         filename: str,
         suffix: str,
-        bar_title: str = "Ploting Injections",
+        bar_title: str = "Plotting Injections",
     ) -> None:
         populations = glob.glob(f"{self._root_container}/realization_*/{filename}")
         for pop_filename in tqdm(
@@ -193,8 +208,8 @@ class PopulationGenerator:
             scatter2d_plot(
                 input_filename=pop_filename,
                 output_filename=output_filename + f"/{suffix}_mass_injs.png",
-                x_index=indexes["m1_source"],
-                y_index=indexes["m2_source"],
+                x_index=self._indexes["m1_source"],
+                y_index=self._indexes["m2_source"],
                 x_label=r"$m_1 [M_\odot]$",
                 y_label=r"$m_2 [M_\odot]$",
                 plt_title="Injections",
@@ -203,21 +218,119 @@ class PopulationGenerator:
             scatter3d_plot(
                 input_filename=pop_filename,
                 output_filename=output_filename + f"/{suffix}_mass_ecc_injs.png",
-                x_index=indexes["m1_source"],
-                y_index=indexes["m2_source"],
-                z_index=indexes["ecc"],
+                x_index=self._indexes["m1_source"],
+                y_index=self._indexes["m2_source"],
+                z_index=self._indexes["ecc"],
                 x_label=r"$m_1 [M_\odot]$",
                 y_label=r"$m_2 [M_\odot]$",
                 z_label=r"$\epsilon$",
                 plt_title="Injections",
             )
 
+    def add_error(self):
+        error_size = self._error_size + self._extra_error_size
+        bar = tqdm(
+            total=self._num_realizations * self._size,
+            desc="Adding error",
+            unit="events",
+            unit_scale=True,
+            file=sys.stdout,
+        )
+        for i in range(self._num_realizations):
+            container = f"{self._root_container}/realization_{i}"
+            injection_filename = f"{container}/weighted_injections.dat"
+            realizations = np.loadtxt(injection_filename)
+            err_realizations = np.empty((self._size, error_size, 0))
+
+            os.makedirs(f"{container}/posteriors", exist_ok=True)
+
+            k = 0
+            for c, model in zip(self._col_count, self._model_instances):
+                rvs = vmap(
+                    lambda x: model.add_error(
+                        x=x,
+                        scale=self._error_scale,
+                        size=error_size,
+                    )
+                )(realizations[:, k : k + c])
+                err_realizations = np.concatenate((err_realizations, rvs), axis=-1)
+                err_realizations = jnp.nan_to_num(
+                    err_realizations,
+                    nan=-jnp.inf,
+                    posinf=jnp.inf,
+                    neginf=-jnp.inf,
+                    copy=False,
+                )
+                k += c
+
+            for j in range(self._size):
+                np.savetxt(
+                    f"{container}/posteriors/{self._event_filename.format(j)}",
+                    err_realizations[j, :, :],
+                    header="\t".join(self._col_names),
+                )
+                bar.update(1)
+        bar.colour = "green"
+        bar.close()
+
+    def generate_posteriors_plots(self):
+        realization_regex = f"{self._root_container}/realization_*"
+
+        for realization in tqdm(
+            glob.glob(realization_regex),
+            desc="Ploting 2D Posterior",
+            total=self._num_realizations,
+            unit="event",
+            unit_scale=True,
+        ):
+            scatter2d_batch_plot(
+                file_pattern=realization + f"/posteriors/weighted_{self._event_filename.format('*')}",
+                output_filename=f"{realization}/plots/mass_posterior.png",
+                x_index=self._indexes["m1_source"],
+                y_index=self._indexes["m2_source"],
+                x_label=r"$m_1 [M_\odot]$",
+                y_label=r"$m_2 [M_\odot]$",
+                plt_title="Mass Posteriors",
+            )
+            scatter2d_batch_plot(
+                file_pattern=realization + f"/posteriors/weighted_{self._event_filename.format('*')}",
+                output_filename=f"{realization}/plots/spin_posterior.png",
+                x_index=self._indexes["a1"],
+                y_index=self._indexes["a2"],
+                x_label=r"$a_1$",
+                y_label=r"$a_2$",
+                plt_title="Spin Posteriors",
+            )
+
     def generate(self):
         """Generate population and save them to disk."""
-        indexes = self.generate_injections()
-        self.generate_injections_plots(indexes, "injections.dat", "unweighted", "Ploting Unweighted Injections")
+        self._col_names = []
+        self._col_count = []
+        self._config_vals = []
+        self._model_instances: list[AbstractModel] = []
+
+        for model in self._models:
+            model_instance: AbstractModel = eval(model["model"])(**model["params"])
+            self._model_instances.append(model_instance)
+            self._config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
+            self._col_names.extend(model["col_names"])
+            self._col_count.append(len(model["col_names"]))
+
+        self._indexes = {var: i for i, var in enumerate(self._col_names)}
+
+        self.generate_injections()
+        self.generate_injections_plots(
+            "injections.dat",
+            "unweighted",
+            "Plotting Unweighted Injections",
+        )
         if self._vt_filename:
             self.weighted_injection(self._vt_filename)
             self.generate_injections_plots(
-                indexes, "weighted_injections.dat", "weighted", "Ploting Weighted Injections"
+                "weighted_injections.dat",
+                "weighted",
+                "Plotting Weighted Injections",
             )
+        self.add_error()
+        self.weighted_posteriors(self._vt_filename)
+        self.generate_posteriors_plots()
