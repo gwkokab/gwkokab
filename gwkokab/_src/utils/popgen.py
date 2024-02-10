@@ -56,10 +56,9 @@ class PopulationGenerator:
         self._config_filename: str = general["config_filename"]
         self._num_realizations: int = general["num_realizations"]
         self._models: list = models
-        self._extra_size = 1500
-        self._extra_error_size = 10000
+        self._extra_size = 1_500
+        self._extra_error_size = 10_000
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
-        self._vt_columns = selection_effect.get("vt_columns", None) if selection_effect else None
 
     @staticmethod
     def check_general(general: dict) -> None:
@@ -81,32 +80,47 @@ class PopulationGenerator:
 
     def weight_over_m1m2(
         self,
-        realizations: Array,
-        raw_interpolator_filename: str,
+        input_filename: str,
+        output_filename: str,
         n_out: int,
         m1_col_index: int,
         m2_col_index: int,
-        return_array: bool = False,
-        return_index: bool = False,
     ) -> tuple[Array, Array] | Array:
+        realizations = np.loadtxt(input_filename)
         dat_mass = realizations[:, [m1_col_index, m2_col_index]]
 
-        with h5py.File(raw_interpolator_filename, "r") as VTs:
-            raw_interpolator = interpolate_hdf5(VTs)
-
-        weights = raw_interpolator(dat_mass)
+        weights = self._raw_interpolator(dat_mass)
         weights /= jnp.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(dat_mass))
         downselected = jax.random.choice(JObj.get_key(None), indexes_all, p=weights, shape=(n_out,))
 
-        if return_index and not return_array:
-            return downselected
+        realizations = realizations[downselected]
 
-        downselected_pop = realizations[downselected]
-        if return_index:
-            return downselected_pop, downselected
-        return downselected_pop
+        np.savetxt(output_filename, realizations, header="\t".join(self._col_names))
+
+    def weighted_injection(self, raw_interpolator_filename: str):
+        with h5py.File(raw_interpolator_filename, "r") as VTs:
+            self._raw_interpolator = interpolate_hdf5(VTs)
+
+        for i in tqdm(
+            range(self._num_realizations),
+            desc="Weighting injections",
+            unit="realization",
+            unit_scale=True,
+            file=sys.stdout,
+        ):
+            container = f"{self._root_container}/realization_{i}"
+            injection_filename = f"{container}/injections.dat"
+            weighted_injection_filename = f"{container}/weighted_injections.dat"
+
+            self.weight_over_m1m2(
+                input_filename=injection_filename,
+                output_filename=weighted_injection_filename,
+                n_out=self._size,
+                m1_col_index=self._col_names.index("m1_source"),
+                m2_col_index=self._col_names.index("m2_source"),
+            )
 
     def generate_injections(self) -> dict[str, int]:
         os.makedirs(self._root_container, exist_ok=True)
@@ -121,6 +135,8 @@ class PopulationGenerator:
             file=sys.stdout,
             dynamic_ncols=True,
         )
+
+        col_names = None
 
         for i in range(self._num_realizations):
             container = f"{self._root_container}/realization_{i}"
@@ -154,20 +170,28 @@ class PopulationGenerator:
         bar.colour = "green"
         bar.close()
 
+        self._col_names = col_names
+
         return indexes
 
-    def generate_injections_plots(self, indexes, suffix: str) -> None:
-        populations = glob.glob(f"{self._root_container}/realization_*/injections.dat")
-        for filename in tqdm(
+    def generate_injections_plots(
+        self,
+        indexes,
+        filename: str,
+        suffix: str,
+        bar_title: str = "Ploting Injections",
+    ) -> None:
+        populations = glob.glob(f"{self._root_container}/realization_*/{filename}")
+        for pop_filename in tqdm(
             populations,
-            desc="Ploting Injections",
+            desc=bar_title,
             total=self._num_realizations,
             unit="realization",
             unit_scale=True,
         ):
-            output_filename = filename.replace("injections.dat", "plots")
+            output_filename = pop_filename.replace(filename, "plots")
             scatter2d_plot(
-                input_filename=filename,
+                input_filename=pop_filename,
                 output_filename=output_filename + f"/{suffix}_mass_injs.png",
                 x_index=indexes["m1_source"],
                 y_index=indexes["m2_source"],
@@ -177,7 +201,7 @@ class PopulationGenerator:
             )
 
             scatter3d_plot(
-                input_filename=filename,
+                input_filename=pop_filename,
                 output_filename=output_filename + f"/{suffix}_mass_ecc_injs.png",
                 x_index=indexes["m1_source"],
                 y_index=indexes["m2_source"],
@@ -191,4 +215,9 @@ class PopulationGenerator:
     def generate(self):
         """Generate population and save them to disk."""
         indexes = self.generate_injections()
-        self.generate_injections_plots(indexes, "unweighted")
+        self.generate_injections_plots(indexes, "injections.dat", "unweighted", "Ploting Unweighted Injections")
+        if self._vt_filename:
+            self.weighted_injection(self._vt_filename)
+            self.generate_injections_plots(
+                indexes, "weighted_injections.dat", "weighted", "Ploting Weighted Injections"
+            )

@@ -41,7 +41,8 @@ def interpolate_hdf5(hdf5_file):
     """
     m1_grid = jnp.exp(jnp.asarray(hdf5_file["logM"]))
     m2_grid = jnp.exp(jnp.asarray(hdf5_file["logM"]))
-    VT_grid = jnp.asarray(hdf5_file["VT"][0, 0, :, :])
+    # VT_grid = jnp.asarray(hdf5_file["VT"][0, 0, :, :])
+    VT_grid = jnp.asarray(hdf5_file["VT"][:])
 
     return interpolate(m1_grid, m2_grid, VT_grid)
 
