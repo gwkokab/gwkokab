@@ -1,4 +1,6 @@
-# GWKokab 🔭 - A JAX-based gravitational-wave population inference
+# <center>GWKokab</center>
+
+## <center>A JAX-based gravitational-wave population inference</center>
 
 [![Python package](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml)
 [![Upload Python Package](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml)
@@ -46,22 +48,34 @@ pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-re
 ```
 
 ### Warning
+
 We are in the development phase, so when you git pull new updates, please reinstall it as follows.
-```
+
+```bash
 pip install build
 python -m build
 pip install --force-reinstall dist/gwkokab-0.0.1.dev0-py3-none-any.whl
 ```
+
 ## Requirements
 
 GWKokab requires Python 3.10 or higher. It also requires the following packages:
 
 ```bash
 configargparse
+h5py
+jax>=0.4.0
 jaxampler
+jaxlib>=0.4.0
+matplotlib>=3.8.0
+mplcursors
 numpy
+rift
+setuptools
+tfp-nightly
 tqdm
-RIFT
+twine
+wheel
 ```
 
 The test suite is based on pytest. To run the tests, one needs to install pytest and run `pytest` at the root directory
@@ -79,37 +93,40 @@ process:
 
    ```ini
    [general]
-   size = 100
-   error_scale = 1.0
-   error_size = 4000
-   root_container = data
-   event_filename = event_{}.dat
-   config_filename = configuration.csv
-   save_injections = True
-   
-   [mass_model]
-   model = Wysocki2019MassModel
-   config_vars = ['alpha_m','mmin','mmax']
-   col_names = ['m1_source','m2_source']
-   params = {'alpha_m':0.8,'k':0,'mmin':5.0,'mmax':40.0,'Mmax':80.0,'name':'Wysocki2019MassModel_test'}
-   
-   [spin1_model]
-   model = Wysocki2019SpinModel
-   config_vars = ['alpha','beta']
-   col_names = ['chi1_source']
-   params = {'alpha':1.8,'beta':0.9,'chimax':1.0,'name':'Wysocki2019SpinModel_test'}
-   
-   [spin2_model]
-   model = Wysocki2019SpinModel
-   config_vars = ['alpha','beta']
-   col_names = ['chi2_source']
-   params = {'alpha':0.8,'beta':1.9,'chimax':1.0,'name':'Wysocki2019SpinModel_test'}
-   
-   [ecc_model]
-   model = EccentricityModel
-   config_vars = ['sigma_ecc']
-   col_names = ['sigma_ecc']
-   params = {'sigma_ecc':0.8,'name':'EccModel_test'}
+    size = 400
+    error_scale = 0.5
+    error_size = 2000
+    root_container = syn_data
+    event_filename = event_{}.dat
+    config_filename = configuration.csv
+    num_realizations = 10
+
+    [selection_effect]
+    vt_filename = mass_vt.hdf5
+
+    [mass_model]
+    model = Wysocki2019MassModel
+    config_vars = ['alpha_m','mmin','mmax']
+    col_names = ['m1_source','m2_source']
+    params = {'alpha_m':0.8,'k':0,'mmin':10.0,'mmax':50.0,'Mmax':100.0,'name':'Wysocki2019MassModel_test'}
+
+    [spin1_model]
+    model = Wysocki2019SpinModel
+    config_vars = ['alpha','beta']
+    col_names = ['a1']
+    params = {'alpha':1.8,'beta':0.9,'chimax':1.0,'name':'Wysocki2019SpinModel_test'}
+
+    [spin2_model]
+    model = Wysocki2019SpinModel
+    config_vars = ['alpha','beta']
+    col_names = ['a2']
+    params = {'alpha':0.8,'beta':1.9,'chimax':1.0,'name':'Wysocki2019SpinModel_test'}
+
+    [ecc_model]
+    model = EccentricityModel
+    config_vars = ['sigma_ecc']
+    col_names = ['ecc']
+    params = {'sigma_ecc':0.05,'name':'EccModel_test'}
    ```
 
 2. **Generate mock population data** by running the following command,
@@ -117,19 +134,6 @@ process:
     ```bash
     gwkokab_genie -c <path_to_config_file>
     ```
-
-For this example the output directory will look like this,
-
-```bash
-data
-├── configuration.csv
-├── event_0.dat
-├── event_1.dat
-...
-└── event_99.dat
-```
-
-**Note** this will only work for one model. Multiple models are not supported yet.
 
 ## Citing GWKokab
 

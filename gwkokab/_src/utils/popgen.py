@@ -122,6 +122,15 @@ class PopulationGenerator:
                 m2_col_index=self._col_names.index("m2_source"),
             )
 
+            weighted_injections = np.loadtxt(weighted_injection_filename)
+            os.makedirs(f"{container}/injections", exist_ok=True)
+            for j in range(self._size):
+                np.savetxt(
+                    f"{container}/injections/{self._event_filename.format(j)}",
+                    weighted_injections[j, :].reshape(1, -1),
+                    header="\t".join(self._col_names),
+                )
+
     def weighted_posteriors(self, raw_interpolator_filename: str):
         with h5py.File(raw_interpolator_filename, "r") as VTs:
             self._raw_interpolator = interpolate_hdf5(VTs)
@@ -331,5 +340,6 @@ class PopulationGenerator:
                 "Plotting Weighted Injections",
             )
         self.add_error()
-        self.weighted_posteriors(self._vt_filename)
+        if self._vt_filename:
+            self.weighted_posteriors(self._vt_filename)
         self.generate_posteriors_plots()
