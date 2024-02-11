@@ -138,11 +138,10 @@ class PopulationGenerator:
             container = f"{self._root_container}/realization_{i}"
             for j in range(self._size):
                 posterior_filename = f"{container}/posteriors/{self._event_filename.format(j)}"
-                weighted_posterior_filename = f"{container}/posteriors/weighted_{self._event_filename.format(j)}"
 
                 self.weight_over_m1m2(
                     input_filename=posterior_filename,
-                    output_filename=weighted_posterior_filename,
+                    output_filename=posterior_filename,
                     n_out=self._size,
                     m1_col_index=self._col_names.index("m1_source"),
                     m2_col_index=self._col_names.index("m2_source"),
@@ -284,7 +283,7 @@ class PopulationGenerator:
             unit_scale=True,
         ):
             scatter2d_batch_plot(
-                file_pattern=realization + f"/posteriors/weighted_{self._event_filename.format('*')}",
+                file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
                 output_filename=f"{realization}/plots/mass_posterior.png",
                 x_index=self._indexes["m1_source"],
                 y_index=self._indexes["m2_source"],
@@ -293,7 +292,7 @@ class PopulationGenerator:
                 plt_title="Mass Posteriors",
             )
             scatter2d_batch_plot(
-                file_pattern=realization + f"/posteriors/weighted_{self._event_filename.format('*')}",
+                file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
                 output_filename=f"{realization}/plots/spin_posterior.png",
                 x_index=self._indexes["a1"],
                 y_index=self._indexes["a2"],
