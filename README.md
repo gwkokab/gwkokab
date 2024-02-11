@@ -1,6 +1,6 @@
-# <center>GWKokab</center>
+# <p align="center">GWKokab</p>
 
-## <center>A JAX-based gravitational-wave population inference</center>
+## <p align="center">A JAX-based gravitational-wave population inference</p>
 
 [![Python package](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml)
 [![Upload Python Package](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml)

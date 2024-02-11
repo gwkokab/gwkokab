@@ -208,7 +208,6 @@ class PopulationGenerator:
         for pop_filename in tqdm(
             populations,
             desc=bar_title,
-            total=self._num_realizations,
             unit="realization",
             unit_scale=True,
         ):
