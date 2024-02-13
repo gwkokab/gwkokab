@@ -15,12 +15,13 @@
 
 from __future__ import annotations
 
-from jaxampler.rvs import Normal
+from jax.random import normal
 from jaxtyping import Array
 
+from ..utils.misc import get_key
 from .abstractmodel import AbstractModel
 
 
 class AbstractRedShiftModel(AbstractModel):
     def add_error(self, x: Array, scale: float = 0.01, size: int = 10) -> Array:
-        return Normal(loc=x, scale=scale).rvs(shape=(size,))
+        return normal(key=get_key(), shape=(size,), dtype=x.dtype) * scale + x

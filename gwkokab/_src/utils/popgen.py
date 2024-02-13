@@ -23,11 +23,11 @@ import h5py
 import jax
 import numpy as np
 from jax import numpy as jnp, vmap
-from jaxampler._src.jobj import JObj
 from jaxtyping import Array
 from tqdm import tqdm
 
 from ..models import *
+from ..utils.misc import get_key
 from ..vts import interpolate_hdf5
 from .misc import dump_configurations
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
@@ -93,7 +93,7 @@ class PopulationGenerator:
         weights /= jnp.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(dat_mass))
-        downselected = jax.random.choice(JObj.get_key(None), indexes_all, p=weights, shape=(n_out,))
+        downselected = jax.random.choice(get_key(None), indexes_all, p=weights, shape=(n_out,))
 
         realizations = realizations[downselected]
 
@@ -259,7 +259,7 @@ class PopulationGenerator:
                         scale=self._error_scale,
                         size=error_size,
                     )
-                )(realizations[:, k : k + c])
+                )(realizations[:, k : k + c]).reshape((self._size, error_size, -1))
                 err_realizations = np.concatenate((err_realizations, rvs), axis=-1)
                 err_realizations = jnp.nan_to_num(
                     err_realizations,

@@ -15,12 +15,24 @@
 
 from __future__ import annotations
 
-from jaxampler.rvs import TruncNormal
+from jax import vmap
+from jax.random import truncated_normal
 from jaxtyping import Array
 
+from ..utils.misc import get_key
 from .abstractmodel import AbstractModel
 
 
 class AbstractEccentricityModel(AbstractModel):
     def add_error(self, x: Array, scale: float = 0.5, size: int = 10) -> Array:
-        return TruncNormal(loc=x, scale=scale, low=0.0, high=0.5).rvs(shape=(size,))
+        return vmap(
+            lambda x_: truncated_normal(
+                key=get_key(),
+                lower=0.0,
+                upper=0.5,
+                shape=(size,),
+                dtype=x.dtype,
+            )
+            * scale
+            + x_
+        )(x)

@@ -14,15 +14,13 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing import Optional
 
-from jax import jit, numpy as jnp
-from jaxampler.rvs import TruncPowerLaw, Uniform
-from jaxampler.typing import Numeric
-from jaxampler.utils import jxam_array_cast
+from jax import numpy as jnp
+from jax.random import uniform
 from jaxtyping import Array
 
+from ..utils.misc import get_key
 from .abstractmassmodel import AbstractMassModel
 
 
@@ -36,24 +34,19 @@ class Wysocki2019MassModel(AbstractMassModel):
 
     def __init__(
         self,
-        alpha_m: Numeric,
-        k: Numeric,
-        mmin: Numeric,
-        mmax: Numeric,
-        Mmax: Numeric,
+        alpha_m: float,
+        k: int,
+        mmin: float,
+        mmax: float,
+        Mmax: float,
         name: Optional[str] = None,
     ) -> None:
-        (
-            shape,
-            self._alpha_m,
-            self._k,
-            self._mmin,
-            self._mmax,
-            self._Mmax,
-        ) = jxam_array_cast(alpha_m, k, mmin, mmax, Mmax)
+        self._alpha_m = alpha_m
+        self._k = k
+        self._mmin = mmin
+        self._mmax = mmax
+        self._Mmax = Mmax
         self.check_params()
-        self._Z = self.Z()
-        super().__init__(shape=shape, name=name)
 
     def check_params(self) -> None:
         assert jnp.all(self._k % 1 == 0), f"k must be a positive integer, got {self._k}"
@@ -61,44 +54,16 @@ class Wysocki2019MassModel(AbstractMassModel):
         assert jnp.all(self._mmin <= self._mmax), f"mmin must be less than mmax, got {self._mmin} and {self._mmax}"
         assert jnp.all(self._mmax <= self._Mmax), f"mmax must be less than Mmax, got {self._mmax} and {self._Mmax}"
 
-    def Z(self) -> Numeric:
-        q_m = self._mmin / self._mmax
-        beta = 1.0 - self._alpha_m
-        factor = jnp.power(self._mmin, beta) / (self._k + 1)
-        _Z = 0
-        frac = lambda ii: (jnp.power(q_m, ii - beta) - 1) / (beta - ii)
-        for i in range(0, self._k + 1):
-            if i == beta:
-                _Z -= jnp.log(q_m)
-            else:
-                _Z += frac(i)
-        _Z *= factor
-        return _Z
-
-    @partial(jit, static_argnums=(0,))
-    def _logpdf_x(self, m1: Numeric, m2: Numeric) -> Numeric | tuple[Numeric, ...]:
-        logpdf_val = jnp.where(
-            self.mask(m1, m2, self._mmin, self._mmax, self._Mmax),
-            self._k * jnp.log(m2)
-            - (self._k + self._alpha_m) * jnp.log(m1)
-            - jnp.log(m1 - self._mmin)
-            - jnp.log(self._Z),
-            -jnp.inf,
-        )
-        return logpdf_val
-
-    @staticmethod
-    @jit
-    def mask(m1: Numeric, m2: Numeric, mmin: Numeric, mmax: Numeric, Mmax: Numeric) -> Numeric:
-        return (mmin <= m2) & (m2 <= m1) & (m1 <= mmax) & (m1 + m2 <= Mmax)
-
     def samples(self, num_of_samples: int) -> Array:
-        m2 = Uniform(low=self._mmin, high=self._mmax).rvs(shape=(num_of_samples,))
-        m1 = (
-            TruncPowerLaw(alpha=-(self._k + self._alpha_m), low=m2, high=self._mmax)
-            .rvs(shape=(1,))
-            .reshape((num_of_samples,))
-        )
+        m2 = uniform(key=get_key(), minval=self._mmin, maxval=self._mmax, shape=(num_of_samples,))
+        U = uniform(key=get_key(), minval=0.0, maxval=1.0, shape=(num_of_samples,))
+        beta = 1 - (self._k + self._alpha_m)
+        conditions = [beta == 0.0, beta != 0.0]
+        choices = [
+            jnp.exp(U * jnp.log(self._mmax) + (1.0 - U) * jnp.log(m2)),
+            jnp.exp(jnp.power(beta, -1) * jnp.log(U * jnp.power(self._mmax, beta) + (1.0 - U) * jnp.power(m2, beta))),
+        ]
+        m1 = jnp.select(conditions, choices)
         return jnp.stack([m1, m2], axis=1)
 
     def __repr__(self) -> str:

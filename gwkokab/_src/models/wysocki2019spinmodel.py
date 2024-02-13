@@ -16,14 +16,15 @@ from __future__ import annotations
 
 from typing import Optional
 
-from jaxampler.rvs import Beta
-from jaxampler.typing import Numeric
+from jax.random import beta
 from jaxtyping import Array
 
+from ..typing import Numeric
+from ..utils.misc import get_key
 from .abstractspinmodel import AbstractSpinModel
 
 
-class Wysocki2019SpinModel(Beta, AbstractSpinModel):
+class Wysocki2019SpinModel(AbstractSpinModel):
     """Beta distribution for the spin magnitude
 
     Wysocki2019SpinModel is a subclass of ContinuousRV and implements
@@ -38,10 +39,18 @@ class Wysocki2019SpinModel(Beta, AbstractSpinModel):
         chimax: Numeric = 1.0,
         name: Optional[str] = None,
     ) -> None:
-        super().__init__(alpha=alpha, beta=beta, scale=chimax, name=name)
+        self._alpha = alpha
+        self._beta = beta
+        self._chimax = chimax
 
     def samples(self, num_of_samples: int) -> Array:
-        return super().rvs(shape=(num_of_samples,), key=None)
+        # return super().rvs(shape=(num_of_samples,), key=None)
+        return beta(
+            key=get_key(),
+            a=self._alpha,
+            b=self._beta,
+            shape=(num_of_samples,),
+        )
 
     def __repr__(self) -> str:
         string = f"Wysocki2019SpinModel(alpha_chi={self._alpha}, "

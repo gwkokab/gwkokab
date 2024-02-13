@@ -16,25 +16,14 @@
 from __future__ import annotations
 
 from jax import numpy as jnp
-from jaxampler.rvs import Normal, TruncPowerLaw, Uniform
-from jaxampler.typing import Numeric
+from jax.random import normal, uniform
 
-from ..utils.misc import chirp_mass, symmetric_mass_ratio
+from ..typing import Numeric
+from ..utils.misc import chirp_mass, get_key, symmetric_mass_ratio
 from .abstractmodel import AbstractModel
 
 
 class AbstractMassModel(AbstractModel):
-    std_norm = Normal(
-        loc=0.0,
-        scale=1.0,
-        name="Standard_Normal_Distribution",
-    )
-    std_unif = Uniform(
-        low=0.0,
-        high=1.0,
-        name="Standard_Uniform_Distribution",
-    )
-
     def add_error(self, x: Numeric, scale: float, size: int) -> Numeric:
         """
         Adds error to the masses of the binaries according to the section 3 of the following paper.
@@ -45,13 +34,21 @@ class AbstractMassModel(AbstractModel):
         m1 = x[0]
         m2 = x[1]
 
-        r0 = self.std_norm.rvs(shape=())
-        r0p = self.std_norm.rvs(shape=())
-        r = self.std_norm.rvs(shape=(size,))
-        rp = self.std_norm.rvs(shape=(size,))
+        r0 = normal(key=get_key(), shape=(), dtype=x.dtype)
+        r0p = normal(key=get_key(), shape=(), dtype=x.dtype)
+        r = normal(key=get_key(), shape=(size,), dtype=x.dtype)
+        rp = normal(key=get_key(), shape=(size,), dtype=x.dtype)
 
-        # rho = 8.0 * jnp.power(self.std_unif.rvs(shape=(size,)), -1.0 / 3.0)
-        rho = TruncPowerLaw(alpha=-4.0, low=8.0, high=jnp.inf, name="rho").rvs(shape=(size,))
+        rho = 8.0 * jnp.power(
+            uniform(
+                key=get_key(),
+                shape=(size,),
+                dtype=x.dtype,
+                minval=0.0,
+                maxval=1.0,
+            ),
+            -1.0 / 3.0,
+        )
 
         Mc_true = chirp_mass(m1, m2)
         eta_true = symmetric_mass_ratio(m1, m2)
@@ -65,12 +62,6 @@ class AbstractMassModel(AbstractModel):
 
         Mc = Mc_true * (1.0 + alpha * twelve_over_rho * (r0 + r))
         eta = eta_true * (1.0 + 0.03 * twelve_over_rho * (r0p + rp))
-
-        mask = 0.25 >= eta
-        mask &= eta >= 0.01
-
-        # count_false = jnp.sum(~mask)
-        # print(count_false)
 
         mask = 0.25 >= eta
         mask &= eta >= 0.01

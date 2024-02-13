@@ -23,7 +23,6 @@ repos:
                     jaxtyping,
                     tfp-nightly,
                     tqdm,
-                    jaxampler,
                     configargparse,
                     mplcursors,
                     rift,
