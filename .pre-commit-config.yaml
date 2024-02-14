@@ -21,6 +21,8 @@ repos:
                     jax,
                     jaxlib,
                     jaxtyping,
+                    numpy,
+                    numpyro,
                     tfp-nightly,
                     tqdm,
                     configargparse,

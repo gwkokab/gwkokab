@@ -6,11 +6,7 @@
 [![Upload Python Package](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml)
 [![Versions](https://img.shields.io/pypi/pyversions/gwkokab.svg)](https://pypi.org/project/gwkokab/)
 
-GWKokab is a JAX-based gravitational-wave population inference package. It is built on top
-of [Jaxampler](https://github.com/Qazalbash/jaxampler) and provides a high-level interface for sampling from a wide
-range of gravitational-wave population models.
-
-It is currently under active development and is not ready for production use. If you would like to contribute, please
+GWKokab is a JAX-based gravitational-wave population inference package. It is currently under active development and is not ready for production use. If you would like to contribute, please
 see the [contributing guidelines](CONTRIBUTING.md).
 
 <!-- ## Features
@@ -65,7 +61,6 @@ GWKokab requires Python 3.10 or higher. It also requires the following packages:
 configargparse
 h5py
 jax>=0.4.0
-jaxampler
 jaxlib>=0.4.0
 matplotlib>=3.8.0
 mplcursors
@@ -74,8 +69,6 @@ rift
 setuptools
 tfp-nightly
 tqdm
-twine
-wheel
 ```
 
 The test suite is based on pytest. To run the tests, one needs to install pytest and run `pytest` at the root directory

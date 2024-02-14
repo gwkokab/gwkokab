@@ -18,7 +18,7 @@ from __future__ import annotations
 from jax.random import normal
 from jaxtyping import Array
 
-from ..utils.misc import get_key
+from ..utils import get_key
 from .abstractmodel import AbstractModel
 
 

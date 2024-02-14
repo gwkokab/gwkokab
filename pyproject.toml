@@ -42,6 +42,7 @@ dependencies = [
     "matplotlib>=3.8.0",
     "mplcursors",
     "numpy",
+    "numpyro",
     "rift",
     "setuptools",
     "tfp-nightly",
@@ -70,10 +71,10 @@ Discussion = "https://github.com/gwkokab/gwkokab/discussions"
 Changelog = "https://github.com/gwkokab/gwkokab/blob/master/CHANGELOG.md"
 
 [project.scripts]
-gwkokab_genie = "gwkokab.main:main"
-vt_mass_spin = "gwkokab.vt_cli:vt_mass_spin"
-vt_mass = "gwkokab.vt_cli:vt_mass"
-vt_mass_grid = "gwkokab.vt_grid:vt_mass_grid"
+gwk_genie = "gwkokab.main:main"
+# vt_mass_spin = "gwkokab.vt_cli:vt_mass_spin"
+# vt_mass = "gwkokab.vt_cli:vt_mass"
+# vt_mass_grid = "gwkokab.vt_grid:vt_mass_grid"
 
 
 [tool.ruff]

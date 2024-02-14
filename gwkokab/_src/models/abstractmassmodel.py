@@ -19,7 +19,7 @@ from jax import numpy as jnp
 from jax.random import normal, uniform
 
 from ..typing import Numeric
-from ..utils.misc import chirp_mass, get_key, symmetric_mass_ratio
+from ..utils import chirp_mass, get_key, symmetric_mass_ratio
 from .abstractmodel import AbstractModel
 
 

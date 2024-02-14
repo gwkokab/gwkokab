@@ -19,7 +19,7 @@ from jax import vmap
 from jax.random import truncated_normal
 from jaxtyping import Array
 
-from ..utils.misc import get_key
+from ..utils import get_key
 from .abstractmodel import AbstractModel
 
 

@@ -14,12 +14,17 @@
 
 from __future__ import annotations
 
-from .misc import (
+from .mass_relations import (
     chirp_mass as chirp_mass,
-    dump_configurations as dump_configurations,
     mass_ratio as mass_ratio,
     reduced_mass as reduced_mass,
     symmetric_mass_ratio as symmetric_mass_ratio,
+)
+from .misc import (
+    dump_configurations as dump_configurations,
+    get_key as get_key,
+    gwk_array_cast as gwk_array_cast,
+    gwk_shape_cast as gwk_shape_cast,
 )
 from .parser import cmd_parser as cmd_parser, parse_config as parse_config
 from .popgen import PopulationGenerator as PopulationGenerator

@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
+from typing_extensions import Union
+
 import numpy as np
 from jaxtyping import Array
-from typing_extensions import Union
+
 
 Numeric = Union[Array, np.ndarray, np.bool_, np.number, bool, int, float]

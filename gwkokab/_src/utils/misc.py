@@ -15,66 +15,93 @@
 from __future__ import annotations
 
 from typing import Any
-from typing_extensions import Optional
+from typing_extensions import Any, Optional, Unpack
 
 import jax
 import numpy as np
-from jax import jit, lax
-from jaxtyping import Array
+from jax import lax, numpy as jnp
+from jax._src import core
+from jaxtyping import Array, Integer
 
-from ..typing import Numeric
+
+def gwk_shape_cast(
+    *args: Any,
+) -> tuple[int, ...]:
+    # partially taken from the implementation of `jnp.broadcast_arrays`
+    shapes = [np.shape(arg) for arg in args]
+    if not shapes or all(core.definitely_equal_shape(shapes[0], s) for s in shapes):
+        result_shape = shapes[0]
+    else:
+        result_shape: tuple[int, ...] = lax.broadcast_shapes(*shapes)
+    return result_shape
 
 
-@jit
-def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
-    r"""
-    .. math::
+def gwk_array_cast(
+    *args: Any,
+) -> tuple[tuple[int, ...], Unpack[tuple[Any, ...]]]:
+    """Cast provided arguments to `jnp.array` and checks if they can be
+    broadcast.
 
-        M_c = \frac{(m_1 m_2)^{\frac{3}{5}}}{(m_1 + m_2)^{\frac{1}{5}}}
-    :param m1: mass 1
-    :param m2: mass 2
-    :return:
+    Parameters
+    ----------
+    *args:
+        Arguments to cast and check.
+
+    Returns
+    -------
+    list[Array]
+        List of cast arguments.
     """
-    return lax.mul(lax.pow(lax.mul(m1, m2), 0.6), lax.pow(lax.add(m1, m2), -0.2))
+    return gwk_shape_cast(*args), *tuple(jnp.asarray(arg) for arg in args)
 
 
-@jit
-def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
-    r"""
-    .. math::
+fact = [1, 1, 2, 6, 24, 120, 720, 5_040, 40_320, 362_880, 3_628_800]
 
-        \eta = \frac{m_1 m_2}{(m_1 + m_2)^2}
-    :param m1: mass 1
-    :param m2: mass 2
-    :return:
+
+def nPr(n: Integer, r: Integer) -> Integer:
+    """Calculates the number of permutations of `r` objects out of `n`
+
+    Parameters
+    ----------
+    n : Integer
+        total objects
+    r : Integer
+        selected objects
+
+    Returns
+    -------
+    Integer
+        number of permutations of `r` objects out of `n`
     """
-    return lax.mul(lax.mul(m1, m2), lax.pow(lax.add(m1, m2), -2))
+    assert 0 <= r <= n
+    if n <= len(fact):
+        return fact[n] // fact[n - r]
+    for i in range(len(fact), n + 1):
+        fact.append(fact[i - 1] * i)
+    return fact[n] // fact[n - r]
 
 
-@jit
-def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
+def nCr(n: Integer, r: Integer) -> Integer:
+    """Calculates the number of combinations of `r` objects out of `n`
+
+    Parameters
+    ----------
+    n : Integer
+        total objects
+    r : Integer
+        selected objects
+
+    Returns
+    -------
+    Integer
+        number of combinations of `r` objects out of `n`
     """
-    .. math::
-
-        M_r = \frac{m_1 m_2}{m_1 + m_2}
-    :param m1: mass 1
-    :param m2: mass 2
-    :return:
-    """
-    return lax.div(lax.mul(m1, m2), lax.add(m1, m2))
-
-
-@jit
-def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
-    r"""
-    .. math::
-
-        q=\frac{m_1}{m_2}
-    :param m1: mass 1
-    :param m2: mass 2
-    :return:
-    """
-    return lax.div(m1, m2)
+    assert 0 <= r <= n
+    if n <= len(fact):
+        return (fact[n] // fact[r]) // fact[n - r]
+    for i in range(len(fact), n + 1):
+        fact.append(fact[i - 1] * i)
+    return fact[n] // (fact[r] * fact[n - r])
 
 
 def dump_configurations(filename: str, *args: tuple[str, Any]) -> None:
