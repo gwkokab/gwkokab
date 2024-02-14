@@ -26,11 +26,14 @@ from ..utils.misc import get_key
 
 
 class Wysocki2019MassModel(Distribution):
-    """Power law distribution with a lower and upper mass limit
+    r"""Power law distribution with a lower and upper mass limit
 
-    Wysocki2019MassModel is a subclass of jx.rvs.ContinuousRV and implements
+    `Wysocki2019MassModel` is a subclass of `numpyro.distributions.Distribution` and implements
     the power law distribution with a lower and upper mass limit as
     described in https://arxiv.org/abs/1805.06442
+
+    .. math::
+        p(m_1,m_2\mid\alpha,k,\mmin,\mmax,\Mmax)\propto\frac{m_1^{-\alpha-k}m_2^k}{m_1-\mmin}
     """
 
     arg_constraints = {
@@ -41,23 +44,17 @@ class Wysocki2019MassModel(Distribution):
         "Mmax": constraints.positive,
     }
 
-    def __init__(
-        self,
-        alpha_m: float,
-        k: int,
-        mmin: float,
-        mmax: float,
-        Mmax: float,
-        *,
-        valid_args=None,
-    ) -> None:
-        self.alpha_m, self.k, self.mmin, self.mmax, self.Mmax = promote_shapes(
-            alpha_m,
-            k,
-            mmin,
-            mmax,
-            Mmax,
-        )
+    def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, Mmax: float, *, valid_args=None) -> None:
+        r"""Initialize the power law distribution with a lower and upper mass limit.
+
+        :param alpha_m: index of the power law distribution
+        :param k: mass ratio power law index
+        :param mmin: lower mass limit
+        :param mmax: upper mass limit
+        :param Mmax: maximum mass
+        :param valid_args: _description_, defaults to `None`
+        """
+        self.alpha_m, self.k, self.mmin, self.mmax, self.Mmax = promote_shapes(alpha_m, k, mmin, mmax, Mmax)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha_m),
             jnp.shape(k),

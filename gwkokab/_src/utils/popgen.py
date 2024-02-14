@@ -35,15 +35,14 @@ from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 
 
 class PopulationGenerator:
-    """Class to generate population and save them to disk."""
+    """This class is used to generate population and save them to disk."""
 
     def __init__(self, general: dict, models: list[dict], selection_effect: Optional[dict] = None) -> None:
-        """__init__ method for PopulationGenerator.
+        """Initialize the PopulationGenerator class.
 
-        Parameters
-        ----------
-        config : dict
-            Configuration dictionary for PopulationGenerator.
+        :param general: general configurations
+        :param models: list of models
+        :param selection_effect: selection effect configurations, defaults to `None`
         """
         self.check_general(general)
         for model in models:
@@ -62,7 +61,10 @@ class PopulationGenerator:
 
     @staticmethod
     def check_general(general: dict) -> None:
-        """Check if all the required configs are present."""
+        """Check the general configurations.
+
+        :param general: general configurations
+        """
         assert general.get("size", None) is not None
         assert general.get("error_size", None) is not None
         assert general.get("root_container", None) is not None
@@ -71,11 +73,15 @@ class PopulationGenerator:
 
     @staticmethod
     def check_models(model: dict) -> None:
-        """Check if all the required configs are present."""
+        """Check the model configurations.
+
+        :param model: model configurations
+        """
         assert model.get("model", None) is not None
         assert model.get("config_vars", None) is not None
         assert model.get("col_names", None) is not None
         assert model.get("params", None) is not None
+        assert model.get("error_type", None) is not None
 
     def weight_over_m1m2(
         self,
@@ -85,6 +91,14 @@ class PopulationGenerator:
         m1_col_index: int,
         m2_col_index: int,
     ) -> None:
+        """Weighting masses by VTs.
+
+        :param input_filename: input file name
+        :param output_filename: output file name
+        :param n_out: number of output
+        :param m1_col_index: index of m1 column
+        :param m2_col_index: index of m2 column
+        """
         realizations = np.loadtxt(input_filename)
         dat_mass = realizations[:, [m1_col_index, m2_col_index]]
 
@@ -98,7 +112,11 @@ class PopulationGenerator:
 
         np.savetxt(output_filename, realizations, header="\t".join(self._col_names))
 
-    def weighted_injection(self, raw_interpolator_filename: str):
+    def weighted_injection(self, raw_interpolator_filename: str) -> None:
+        """Weighting injections by VTs.
+
+        :param raw_interpolator_filename: raw interpolator file name
+        """
         with h5py.File(raw_interpolator_filename, "r") as VTs:
             self._raw_interpolator = interpolate_hdf5(VTs)
 
@@ -130,7 +148,11 @@ class PopulationGenerator:
                     header="\t".join(self._col_names),
                 )
 
-    def weighted_posteriors(self, raw_interpolator_filename: str):
+    def weighted_posteriors(self, raw_interpolator_filename: str) -> None:
+        """Weighting posteriors by VTs.
+
+        :param raw_interpolator_filename: raw interpolator file name
+        """
         with h5py.File(raw_interpolator_filename, "r") as VTs:
             self._raw_interpolator = interpolate_hdf5(VTs)
 
@@ -160,6 +182,7 @@ class PopulationGenerator:
         bar.close()
 
     def generate_injections(self) -> None:
+        """Generate injections and save them to disk."""
         os.makedirs(self._root_container, exist_ok=True)
 
         size = self._size + self._extra_size
@@ -203,6 +226,12 @@ class PopulationGenerator:
         suffix: str,
         bar_title: str = "Plotting Injections",
     ) -> None:
+        """Generate injections plots.
+
+        :param filename: name of the file
+        :param suffix: suffix for the output file
+        :param bar_title: title for the progress bar, defaults to "Plotting Injections"
+        """
         populations = glob.glob(f"{self._root_container}/realization_*/{filename}")
         for pop_filename in tqdm(
             populations,
@@ -233,7 +262,8 @@ class PopulationGenerator:
                 plt_title="Injections",
             )
 
-    def add_error(self):
+    def add_error(self) -> None:
+        """Add error to the injections."""
         error_size = self._error_size + self._extra_error_size
         bar = tqdm(
             total=self._num_realizations * self._size,
@@ -251,16 +281,7 @@ class PopulationGenerator:
             os.makedirs(f"{container}/posteriors", exist_ok=True)
 
             k = 0
-            t = 0
-            for c, model in zip(self._col_count, self._model_instances):
-                # rvs = vmap(
-                #     lambda x: model.add_error(
-                #         x=x,
-                #         size=error_size,
-                #     )
-                # )(
-                #     realizations[:, k : k + c]
-                # ).reshape((self._size, error_size, -1))
+            for t, c in enumerate(self._col_count):
                 rvs = vmap(
                     lambda x: error_factory(
                         error_type=self._error_type[t],
@@ -278,7 +299,6 @@ class PopulationGenerator:
                     copy=False,
                 )
                 k += c
-                t += 1
 
             for j in range(self._size):
                 np.savetxt(
@@ -290,7 +310,7 @@ class PopulationGenerator:
         bar.colour = "green"
         bar.close()
 
-    def generate_posteriors_plots(self):
+    def generate_posteriors_plots(self) -> None:
         realization_regex = f"{self._root_container}/realization_*"
 
         for realization in tqdm(
@@ -319,7 +339,7 @@ class PopulationGenerator:
                 plt_title="Spin Posteriors",
             )
 
-    def generate(self):
+    def generate(self) -> None:
         """Generate population and save them to disk."""
         self._col_names: list[str] = []
         self._col_count: list[int] = []

@@ -23,6 +23,19 @@ def scatter2d_batch_plot(
     y_label: Optional[str] = None,
     plt_title: Optional[str] = None,
 ) -> None:
+    """Plot a batch of 2D scatter plots.
+
+    This function plots a batch of 2D scatter plots from the given files
+    and saves the plot to the given output file.
+
+    :param file_pattern: regex pattern for the files
+    :param output_filename: name of the output file
+    :param x_index: index of the x-axis data
+    :param y_index: index of the y-axis data
+    :param x_label: label for the x-axis, defaults to `None`
+    :param y_label: label for the y-axis, defaults to `None`
+    :param plt_title: title for the plot, defaults to `None`
+    """
     file_list = glob.glob(file_pattern)
 
     # Iterate over each file to make the scatter plots of each event in a figure.
@@ -64,6 +77,21 @@ def scatter3d_batch_plot(
     z_label: Optional[str] = None,
     plt_title: Optional[str] = None,
 ) -> None:
+    """Create a 3D scatter plot from a batch of files.
+
+    This function creates a 3D scatter plot from a batch of files and
+    saves the plot to the given output file.
+
+    :param file_pattern: regex pattern for the files
+    :param output_filename: name of the output file
+    :param x_index: index of the x-axis data
+    :param y_index: index of the y-axis data
+    :param z_index: index of the z-axis data
+    :param x_label: label for the x-axis, defaults to `None`
+    :param y_label: label for the y-axis, defaults to `None`
+    :param z_label: label for the z-axis, defaults to `None`
+    :param plt_title: title for the plot, defaults to `None`
+    """
     file_list = glob.glob(file_pattern)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -106,6 +134,19 @@ def scatter2d_plot(
     y_label: Optional[str] = None,
     plt_title: Optional[str] = None,
 ) -> None:
+    """Create a 2D scatter plot from a file.
+
+    This function creates a 2D scatter plot from the given file and
+    saves the plot to the given output file.
+
+    :param input_filename: name of the input file
+    :param output_filename: name of the output file
+    :param x_index: index of the x-axis data
+    :param y_index: index of the y-axis data
+    :param x_label: label for the x-axis, defaults to `None`
+    :param y_label: label for the y-axis, defaults to `None`
+    :param plt_title: title for the plot, defaults to `None`
+    """
     # Load data from the file
     data = np.loadtxt(input_filename)
     x = data[:, x_index]
@@ -136,6 +177,21 @@ def scatter3d_plot(
     z_label: Optional[str] = None,
     plt_title: Optional[str] = None,
 ) -> None:
+    """Create a 3D scatter plot from a file.
+
+    This function creates a 3D scatter plot from the given file and
+    saves the plot to the given output file.
+
+    :param input_filename: name of the input file
+    :param output_filename: name of the output file
+    :param x_index: index of the x-axis data
+    :param y_index: index of the y-axis data
+    :param z_index: index of the z-axis data
+    :param x_label: label for the x-axis, defaults to `None`
+    :param y_label: label for the y-axis, defaults to `None`
+    :param z_label: label for the z-axis, defaults to `None`
+    :param plt_title: title for the plot, defaults to `None`
+    """
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
 

@@ -23,8 +23,8 @@ from ..typing import Numeric
 def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
-
         M_c = \frac{(m_1 m_2)^{\frac{3}{5}}}{(m_1 + m_2)^{\frac{1}{5}}}
+
     :param m1: mass 1
     :param m2: mass 2
     :return:
@@ -36,8 +36,8 @@ def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
 def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
-
         \eta = \frac{m_1 m_2}{(m_1 + m_2)^2}
+
     :param m1: mass 1
     :param m2: mass 2
     :return:
@@ -49,8 +49,8 @@ def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
 def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
     """
     .. math::
-
         M_r = \frac{m_1 m_2}{m_1 + m_2}
+
     :param m1: mass 1
     :param m2: mass 2
     :return:
@@ -62,8 +62,8 @@ def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
 def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
-
         q=\frac{m_1}{m_2}
+
     :param m1: mass 1
     :param m2: mass 2
     :return:

@@ -18,65 +18,17 @@ from typing_extensions import Any, Optional
 
 import jax
 import numpy as np
-from jaxtyping import Array, Integer
-
-
-fact = [1, 1, 2, 6, 24, 120, 720, 5_040, 40_320, 362_880, 3_628_800]
-
-
-def nPr(n: Integer, r: Integer) -> Integer:
-    """Calculates the number of permutations of `r` objects out of `n`
-
-    Parameters
-    ----------
-    n : Integer
-        total objects
-    r : Integer
-        selected objects
-
-    Returns
-    -------
-    Integer
-        number of permutations of `r` objects out of `n`
-    """
-    assert 0 <= r <= n
-    if n <= len(fact):
-        return fact[n] // fact[n - r]
-    for i in range(len(fact), n + 1):
-        fact.append(fact[i - 1] * i)
-    return fact[n] // fact[n - r]
-
-
-def nCr(n: Integer, r: Integer) -> Integer:
-    """Calculates the number of combinations of `r` objects out of `n`
-
-    Parameters
-    ----------
-    n : Integer
-        total objects
-    r : Integer
-        selected objects
-
-    Returns
-    -------
-    Integer
-        number of combinations of `r` objects out of `n`
-    """
-    assert 0 <= r <= n
-    if n <= len(fact):
-        return (fact[n] // fact[r]) // fact[n - r]
-    for i in range(len(fact), n + 1):
-        fact.append(fact[i - 1] * i)
-    return fact[n] // (fact[r] * fact[n - r])
+from jaxtyping import Array
 
 
 def dump_configurations(filename: str, *args: tuple[str, Any]) -> None:
-    """Dump configurations to a csv file
+    """Write the given configurations to a file.
 
-    Parameters
-    ----------
-    filename : str
-        filename to dump the configurations
+    This function writes the given configurations to a file. The
+    configurations are written as a CSV file. The first row contains
+    the header and the second row contains the content.
+
+    :param filename: name of the file
     """
     with open(filename, "w") as f:
         header = ""
@@ -94,19 +46,12 @@ def get_key(key: Optional[Array | int] = None) -> Array:
 
     This function is used to generate a new JAX random key if
     the user does not provide one. The key is generated using
-    the JAX random.PRNGKey function. The key is split into
+    the `jax.random.PRNGKey` function. The key is split into
     two keys, the first of which is returned. The second key
     is discarded.
 
-    Parameters
-    ----------
-    key : Array, optional
-        JAX random key, by default None
-
-    Returns
-    -------
-    Array
-        New JAX random key.
+    :param key: JAX random key or seed value, defaults to `None`
+    :return: New JAX random key
     """
     if isinstance(key, int):
         return jax.random.PRNGKey(key)

@@ -29,7 +29,14 @@ cmd_parser.add_argument(
 
 
 def parse_config(config_path: str) -> dict:
-    """Parse config file and return config object."""
+    """Parse the configuration file.
+
+    This function parses the configuration file and returns the
+    configurations as a dictionary.
+
+    :param config_path: path to the configuration file
+    :return: dictionary containing the configurations
+    """
     config = ConfigParser()
     config.read(config_path)
     config_dict = {}
