@@ -12,6 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from .eccmodel import EccentricityModel as EccentricityModel
+from __future__ import annotations
+
 from .wysocki2019massmodel import Wysocki2019MassModel as Wysocki2019MassModel
-from .wysocki2019spinmodel import Wysocki2019SpinModel as Wysocki2019SpinModel

@@ -15,8 +15,4 @@
 
 from __future__ import annotations
 
-from gwkokab._src.models import (
-    EccentricityModel as EccentricityModel,
-    Wysocki2019MassModel as Wysocki2019MassModel,
-    Wysocki2019SpinModel as Wysocki2019SpinModel,
-)
+from gwkokab._src.models import Wysocki2019MassModel as Wysocki2019MassModel
