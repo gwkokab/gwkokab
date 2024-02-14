@@ -23,6 +23,12 @@ from ..utils import chirp_mass, get_key, symmetric_mass_ratio
 
 
 def error_factory(error_type: str, **kwargs) -> Array:
+    """Factory function to create different types of errors.
+
+    :param error_type: name of the error
+    :raises ValueError: if the error type is unknown
+    :return: error values for the given error type
+    """
     if error_type == "normal":
         return normal_error(**kwargs)
     elif error_type == "truncated_normal":
@@ -36,6 +42,16 @@ def error_factory(error_type: str, **kwargs) -> Array:
 
 
 def normal_error(x: Array, size: int, *, scale: float) -> Array:
+    r"""Add normal error to the given values.
+
+    .. math::
+        x' = \mathcal{N}(\mu=x, \sigma=scale)
+
+    :param x: given values
+    :param size: number of samples
+    :param scale: standard deviation of the normal distribution
+    :return: error values
+    """
     return vmap(
         lambda x_: normal(
             key=get_key(),
@@ -48,6 +64,18 @@ def normal_error(x: Array, size: int, *, scale: float) -> Array:
 
 
 def truncated_normal_error(x: Array, size: int, *, scale: float, lower: float, upper: float) -> Array:
+    r"""Add truncated normal error to the given values.
+
+    .. math::
+        x' = \mathcal{N}(\mu=x, \sigma=scale) \cap [lower, upper]
+
+    :param x: given values
+    :param size: number of samples
+    :param scale: standard deviation of the normal distribution
+    :param lower: lower bound of the truncated normal distribution
+    :param upper: upper bound of the truncated normal distribution
+    :return: error values
+    """
     return vmap(
         lambda x_: truncated_normal(
             key=get_key(),
@@ -61,7 +89,19 @@ def truncated_normal_error(x: Array, size: int, *, scale: float, lower: float, u
     )(x)
 
 
-def uniform_error(x: Array, size: int, *, scale: float, lower: float, upper: float) -> Array:
+def uniform_error(x: Array, size: int, *, lower: float, upper: float) -> Array:
+    r"""Add uniform error to the given values.
+
+    .. math::
+        x' = x+\mathcal{U}(a=lower, b=upper)
+
+    :param x: given values
+    :param size: number of samples
+    :param scale:
+    :param lower: _description_
+    :param upper: _description_
+    :return: _description_
+    """
     return vmap(
         lambda x_: uniform(
             key=get_key(),
@@ -70,17 +110,23 @@ def uniform_error(x: Array, size: int, *, scale: float, lower: float, upper: flo
             minval=lower,
             maxval=upper,
         )
-        * scale
         + x_
     )(x)
 
 
 def banana_error(x: Array, size: int) -> Array:
-    """
-    Adds error to the masses of the binaries according to the section 3 of the following paper.
-    https://doi.org/10.1093/mnras/stw2883
+    r"""Add banana error to the given values. Section 3 of the following paper
+    https://doi.org/10.1093/mnras/stw2883 discusses the banana error.
 
-    Converts the masses(m1,m2) to chirp mass and adds error to it. Then converts back to masses.
+    It adds errors in the chirp mass and symmetric mass ratio and then converts back to masses.
+
+    .. math::
+        \mathbf{M}_{c} = M_{c}^{T}\left[1+\alpha\frac{12}{\rho}\left(r_{0}+r\right)\right]
+        \mathbf{\eta} = \eta^{T}\left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
+
+    :param x: given values as m1 and m2
+    :param size: number of samples
+    :return: error values
     """
     m1 = x[0]
     m2 = x[1]
