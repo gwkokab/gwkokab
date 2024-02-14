@@ -1,12 +1,14 @@
 # <p align="center">GWKokab</p>
 
-## <p align="center">A JAX-based gravitational-wave population inference</p>
+## <p align="center">A JAX-based gravitational-wave population inference toolkit</p>
 
 [![Python package](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml)
 [![Upload Python Package](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml)
 [![Versions](https://img.shields.io/pypi/pyversions/gwkokab.svg)](https://pypi.org/project/gwkokab/)
 
-GWKokab is a JAX-based gravitational-wave population inference package. It is currently under active development and is not ready for production use. If you would like to contribute, please
+GWKokab is a JAX-based gravitational-wave population inference toolkit. It is designed to be a high-performance, flexible and easy-to-use library for sampling from a wide range of gravitational-wave population models. It is built on top of JAX, a high-performance numerical computing library, and is designed to be easily integrated into existing JAX workflows.
+
+It is currently under active development and is not ready for production use. If you would like to contribute, please
 see the [contributing guidelines](CONTRIBUTING.md).
 
 <!-- ## Features
@@ -41,16 +43,6 @@ If you would like to take advantage of CUDA, you will additionally need to insta
 
 ```bash
 pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-```
-
-### Warning
-
-We are in the development phase, so when you git pull new updates, please reinstall it as follows.
-
-```bash
-pip install build
-python -m build
-pip install --force-reinstall dist/gwkokab-0.0.10-py3-none-any.whl
 ```
 
 ## Requirements
