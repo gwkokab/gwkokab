@@ -43,8 +43,9 @@ def parse_config(config_path: str) -> dict:
             config_dict[section]["col_names"] = eval(config[section]["col_names"])
 
     config_dict["general"]["size"] = int(config["general"]["size"])
-    config_dict["general"]["error_scale"] = float(config["general"]["error_scale"])
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])
     config_dict["general"]["num_realizations"] = int(config["general"]["num_realizations"])
+    config_dict["general"]["extra_size"] = int(config["general"].get("extra_size", 1500))
+    config_dict["general"]["extra_error_size"] = int(config["general"].get("extra_error_size", 1000))
 
     return config_dict

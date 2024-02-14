@@ -49,22 +49,20 @@ class PopulationGenerator:
             self.check_models(model)
 
         self._size: int = general["size"]
-        self._error_scale: float = general["error_scale"]
         self._error_size: int = general["error_size"]
         self._root_container: str = general["root_container"]
         self._event_filename: str = general["event_filename"]
         self._config_filename: str = general["config_filename"]
         self._num_realizations: int = general["num_realizations"]
         self._models: list = models
-        self._extra_size = 1_500
-        self._extra_error_size = 10_00
+        self._extra_size = general["extra_size"]
+        self._extra_error_size = general["extra_error_size"]
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
 
     @staticmethod
     def check_general(general: dict) -> None:
         """Check if all the required configs are present."""
         assert general.get("size", None) is not None
-        assert general.get("error_scale", None) is not None
         assert general.get("error_size", None) is not None
         assert general.get("root_container", None) is not None
         assert general.get("event_filename", None) is not None
@@ -256,7 +254,6 @@ class PopulationGenerator:
                 rvs = vmap(
                     lambda x: model.add_error(
                         x=x,
-                        scale=self._error_scale,
                         size=error_size,
                     )
                 )(realizations[:, k : k + c]).reshape((self._size, error_size, -1))

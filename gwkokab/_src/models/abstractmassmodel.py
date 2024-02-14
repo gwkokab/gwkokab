@@ -24,7 +24,7 @@ from ..utils import chirp_mass, get_key, symmetric_mass_ratio
 
 
 class AbstractMassModel(Distribution):
-    def add_error(self, x: Numeric, scale: float, size: int) -> Numeric:
+    def add_error(self, x: Numeric, size: int) -> Numeric:
         """
         Adds error to the masses of the binaries according to the section 3 of the following paper.
         https://doi.org/10.1093/mnras/stw2883

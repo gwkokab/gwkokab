@@ -23,5 +23,5 @@ from ..utils import get_key
 
 
 class AbstractRedShiftModel(Distribution):
-    def add_error(self, x: Array, scale: float = 0.01, size: int = 10) -> Array:
-        return normal(key=get_key(), shape=(size,), dtype=x.dtype) * scale + x
+    def add_error(self, x: Array, size: int = 10) -> Array:
+        return normal(key=get_key(), shape=(size,), dtype=x.dtype) * self.error_scale + x

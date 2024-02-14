@@ -15,7 +15,7 @@ authors = [
     { name = "Richard O'Shaughnessy", email = "richardoshaughnessyrossma@gmail.com" },
 ]
 name = "gwkokab"
-version = "0.0.1.dev"
+version = "0.0.1"
 maintainers = [
     { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
     { name = "Muhammad Zeeshan", email = "m.zeeshan5885@gmail.com" },
@@ -37,7 +37,6 @@ dependencies = [
     "configargparse",
     "h5py",
     "jax>=0.4.0",
-    "jaxampler",
     "jaxlib>=0.4.0",
     "matplotlib>=3.8.0",
     "mplcursors",

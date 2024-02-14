@@ -24,7 +24,7 @@ from ..utils import get_key
 
 
 class AbstractEccentricityModel(Distribution):
-    def add_error(self, x: Array, scale: float = 0.5, size: int = 10) -> Array:
+    def add_error(self, x: Array, size: int = 10) -> Array:
         return vmap(
             lambda x_: truncated_normal(
                 key=get_key(),
@@ -33,6 +33,6 @@ class AbstractEccentricityModel(Distribution):
                 shape=(size,),
                 dtype=x.dtype,
             )
-            * scale
+            * self.error_scale
             + x_
         )(x)

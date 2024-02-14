@@ -40,9 +40,14 @@ class Wysocki2019SpinModel(AbstractSpinModel):
         "chimax": constraints.interval(0.0, 1.0),
     }
 
-    def __init__(self, alpha: float, beta: float, chimax: float = 1.0, *, valid_args=None) -> None:
-        self.alpha, self.beta, self.chimax = promote_shapes(alpha, beta, chimax)
-        batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(beta), jnp.shape(chimax))
+    def __init__(self, alpha: float, beta: float, chimax: float = 1.0, *, error_scale: float, valid_args=None) -> None:
+        self.alpha, self.beta, self.chimax, self.error_scale = promote_shapes(alpha, beta, chimax, error_scale)
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha),
+            jnp.shape(beta),
+            jnp.shape(chimax),
+            jnp.shape(error_scale),
+        )
         super(Wysocki2019SpinModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:

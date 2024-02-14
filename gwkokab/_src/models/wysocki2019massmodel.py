@@ -40,6 +40,7 @@ class Wysocki2019MassModel(AbstractMassModel):
         "mmin": constraints.positive,
         "mmax": constraints.positive,
         "Mmax": constraints.positive,
+        "error_scale": constraints.positive,
     }
 
     def __init__(
@@ -50,17 +51,24 @@ class Wysocki2019MassModel(AbstractMassModel):
         mmax: float,
         Mmax: float,
         *,
+        error_scale: float,
         valid_args=None,
     ) -> None:
-        self.alpha_m, self.k, self.mmin, self.mmax, self.Mmax = promote_shapes(
+        self.alpha_m, self.k, self.mmin, self.mmax, self.Mmax, self.error_scale = promote_shapes(
             alpha_m,
             k,
             mmin,
             mmax,
             Mmax,
+            error_scale,
         )
         batch_shape = lax.broadcast_shapes(
-            jnp.shape(alpha_m), jnp.shape(k), jnp.shape(mmin), jnp.shape(mmax), jnp.shape(Mmax)
+            jnp.shape(alpha_m),
+            jnp.shape(k),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(Mmax),
+            jnp.shape(error_scale),
         )
         super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
 
