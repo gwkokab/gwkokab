@@ -316,7 +316,7 @@ class PopulationGenerator:
         for model in self._models:
             model_instance: Distribution = eval(model["model"])(**model["params"])
             self._model_instances.append(model_instance)
-            self._config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
+            self._config_vals.extend([(x[1], model["params"][x[0]]) for x in model["config_vars"]])
             self._col_names.extend(model["col_names"])
             self._col_count.append(len(model["col_names"]))
 

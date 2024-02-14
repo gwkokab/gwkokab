@@ -92,3 +92,21 @@ order-by-type = false
 [tool.pyright]
 reportIncompatibleMethodOverride = true
 include = ["gwkokab", "tests"]
+
+[tool.pytest.ini_options]
+addopts = ["-v", "--color=yes"]
+filterwarnings = [
+    "error",
+    "ignore:numpy.ufunc size changed,:RuntimeWarning",
+    "ignore:Using a non-tuple sequence:FutureWarning",
+    "ignore:jax.tree_structure is deprecated:FutureWarning",
+    "ignore:numpy.linalg support is experimental:UserWarning",
+    "ignore:scipy.linalg support is experimental:UserWarning",
+    "once:No GPU:UserWarning",
+    "once::DeprecationWarning",
+]
+doctest_optionflags = [
+    "ELLIPSIS",
+    "NORMALIZE_WHITESPACE",
+    "IGNORE_EXCEPTION_DETAIL",
+]
