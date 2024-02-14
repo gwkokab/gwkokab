@@ -14,24 +14,37 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing_extensions import Optional
 
+from jax import numpy as jnp
 from jax.random import truncated_normal
 from jaxtyping import Array
+from numpyro.distributions import constraints
 
 from ..utils.misc import get_key
 from .abstracteccentricitymodel import AbstractEccentricityModel
 
 
 class EccentricityModel(AbstractEccentricityModel):
-    def __init__(self, sigma_ecc: float, name: Optional[str] = None) -> None:
-        self._sigma_ecc = sigma_ecc
+    arg_constraints = {"sigma_ecc": constraints.positive}
 
-    def samples(self, num_of_samples: int) -> Array:
-        return truncated_normal(key=get_key(), lower=0.0, upper=1.0, shape=(num_of_samples,)) * self._sigma_ecc
+    def __init__(self, sigma_ecc: float, *, valid_args=None) -> None:
+        self.sigma_ecc = sigma_ecc
+        super(EccentricityModel, self).__init__(batch_shape=jnp.shape(sigma_ecc), validate_args=valid_args)
+
+    def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
+        if key is None or isinstance(key, int):
+            key = get_key(key)
+        return (
+            truncated_normal(
+                key=key,
+                lower=0.0,
+                upper=1.0,
+                shape=sample_shape + self.batch_shape,
+            )
+            * self.sigma_ecc
+        )
 
     def __repr__(self) -> str:
-        string = f"EccentricityModel(sigma_ecc={self._scale}"
-        if self._name is not None:
-            string += f", name={self._name})"
+        string = f"EccentricityModel(sigma_ecc={self._scale})"
         return string

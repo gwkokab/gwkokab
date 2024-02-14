@@ -14,45 +14,11 @@
 
 from __future__ import annotations
 
-from typing import Any
-from typing_extensions import Any, Optional, Unpack
+from typing_extensions import Any, Optional
 
 import jax
 import numpy as np
-from jax import lax, numpy as jnp
-from jax._src import core
 from jaxtyping import Array, Integer
-
-
-def gwk_shape_cast(
-    *args: Any,
-) -> tuple[int, ...]:
-    # partially taken from the implementation of `jnp.broadcast_arrays`
-    shapes = [np.shape(arg) for arg in args]
-    if not shapes or all(core.definitely_equal_shape(shapes[0], s) for s in shapes):
-        result_shape = shapes[0]
-    else:
-        result_shape: tuple[int, ...] = lax.broadcast_shapes(*shapes)
-    return result_shape
-
-
-def gwk_array_cast(
-    *args: Any,
-) -> tuple[tuple[int, ...], Unpack[tuple[Any, ...]]]:
-    """Cast provided arguments to `jnp.array` and checks if they can be
-    broadcast.
-
-    Parameters
-    ----------
-    *args:
-        Arguments to cast and check.
-
-    Returns
-    -------
-    list[Array]
-        List of cast arguments.
-    """
-    return gwk_shape_cast(*args), *tuple(jnp.asarray(arg) for arg in args)
 
 
 fact = [1, 1, 2, 6, 24, 120, 720, 5_040, 40_320, 362_880, 3_628_800]

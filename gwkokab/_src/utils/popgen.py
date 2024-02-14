@@ -23,7 +23,7 @@ import h5py
 import jax
 import numpy as np
 from jax import numpy as jnp, vmap
-from jaxtyping import Array
+from numpyro.distributions import Distribution
 from tqdm import tqdm
 
 from ..models import *
@@ -85,7 +85,7 @@ class PopulationGenerator:
         n_out: int,
         m1_col_index: int,
         m2_col_index: int,
-    ) -> tuple[Array, Array] | Array:
+    ) -> None:
         realizations = np.loadtxt(input_filename)
         dat_mass = realizations[:, [m1_col_index, m2_col_index]]
 
@@ -184,7 +184,7 @@ class PopulationGenerator:
 
             realisations = jnp.empty((size, 0))
             for model_instance in self._model_instances:
-                rvs = model_instance.samples(size).reshape((size, -1))
+                rvs = model_instance.sample(get_key(), sample_shape=(size,)).reshape((size, -1))
                 realisations = jnp.concatenate((realisations, rvs), axis=-1)
 
                 bar.update(1)
@@ -314,10 +314,10 @@ class PopulationGenerator:
         self._col_names = []
         self._col_count = []
         self._config_vals = []
-        self._model_instances: list[AbstractModel] = []
+        self._model_instances: list[Distribution] = []
 
         for model in self._models:
-            model_instance: AbstractModel = eval(model["model"])(**model["params"])
+            model_instance: Distribution = eval(model["model"])(**model["params"])
             self._model_instances.append(model_instance)
             self._config_vals.extend([(x, model["params"][x]) for x in model["config_vars"]])
             self._col_names.extend(model["col_names"])

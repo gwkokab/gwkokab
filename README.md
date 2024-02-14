@@ -125,7 +125,7 @@ process:
 2. **Generate mock population data** by running the following command,
 
     ```bash
-    gwkokab_genie -c <path_to_config_file>
+    gwk_genie -c <path_to_config_file>
     ```
 
 ## Citing GWKokab
