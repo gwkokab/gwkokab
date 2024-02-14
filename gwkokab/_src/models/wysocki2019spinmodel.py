@@ -19,14 +19,13 @@ from typing_extensions import Optional
 from jax import lax, numpy as jnp
 from jax.random import beta
 from jaxtyping import Array
-from numpyro.distributions import constraints
+from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes
 
 from ..utils.misc import get_key
-from .abstractspinmodel import AbstractSpinModel
 
 
-class Wysocki2019SpinModel(AbstractSpinModel):
+class Wysocki2019SpinModel(Distribution):
     """Beta distribution for the spin magnitude
 
     Wysocki2019SpinModel is a subclass of ContinuousRV and implements
@@ -40,13 +39,16 @@ class Wysocki2019SpinModel(AbstractSpinModel):
         "chimax": constraints.interval(0.0, 1.0),
     }
 
-    def __init__(self, alpha: float, beta: float, chimax: float = 1.0, *, error_scale: float, valid_args=None) -> None:
-        self.alpha, self.beta, self.chimax, self.error_scale = promote_shapes(alpha, beta, chimax, error_scale)
+    def __init__(self, alpha: float, beta: float, chimax: float = 1.0, *, valid_args=None) -> None:
+        (
+            self.alpha,
+            self.beta,
+            self.chimax,
+        ) = promote_shapes(alpha, beta, chimax)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
             jnp.shape(beta),
             jnp.shape(chimax),
-            jnp.shape(error_scale),
         )
         super(Wysocki2019SpinModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
 

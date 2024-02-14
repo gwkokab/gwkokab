@@ -16,26 +16,24 @@ from __future__ import annotations
 
 from typing_extensions import Optional
 
-from jax import lax, numpy as jnp
+from jax import numpy as jnp
 from jax.random import truncated_normal
 from jaxtyping import Array
-from numpyro.distributions import constraints
-from numpyro.distributions.util import promote_shapes
+from numpyro.distributions import constraints, Distribution
 
 from ..utils.misc import get_key
-from .abstracteccentricitymodel import AbstractEccentricityModel
 
 
-class EccentricityModel(AbstractEccentricityModel):
+class EccentricityModel(Distribution):
     arg_constraints = {
         "sigma_ecc": constraints.positive,
         "error_scale": constraints.positive,
     }
     support = constraints.interval(0.0, 1.0)
 
-    def __init__(self, sigma_ecc: float, *, error_scale: float, valid_args=None) -> None:
-        self.sigma_ecc, self.error_scale = promote_shapes(sigma_ecc, error_scale)
-        batch_shape = lax.broadcast_shapes(jnp.shape(sigma_ecc), jnp.shape(error_scale))
+    def __init__(self, sigma_ecc: float, *, valid_args=None) -> None:
+        self.sigma_ecc = sigma_ecc
+        batch_shape = jnp.shape(sigma_ecc)
         super(EccentricityModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:

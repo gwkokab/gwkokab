@@ -41,6 +41,8 @@ def parse_config(config_path: str) -> dict:
             config_dict[section]["params"] = eval(config[section]["params"])
             config_dict[section]["config_vars"] = eval(config[section]["config_vars"])
             config_dict[section]["col_names"] = eval(config[section]["col_names"])
+            config_dict[section]["error_type"] = config[section]["error_type"]
+            config_dict[section]["error_params"] = eval(config[section].get("error_params", r"{}"))
 
     config_dict["general"]["size"] = int(config["general"]["size"])
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])

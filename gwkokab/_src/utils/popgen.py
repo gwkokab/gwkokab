@@ -23,9 +23,10 @@ import h5py
 import jax
 import numpy as np
 from jax import numpy as jnp, vmap
-from numpyro.distributions import Distribution
+from numpyro.distributions import *
 from tqdm import tqdm
 
+from ..errors import error_factory
 from ..models import *
 from ..utils.misc import get_key
 from ..vts import interpolate_hdf5
@@ -250,11 +251,22 @@ class PopulationGenerator:
             os.makedirs(f"{container}/posteriors", exist_ok=True)
 
             k = 0
+            t = 0
             for c, model in zip(self._col_count, self._model_instances):
+                # rvs = vmap(
+                #     lambda x: model.add_error(
+                #         x=x,
+                #         size=error_size,
+                #     )
+                # )(
+                #     realizations[:, k : k + c]
+                # ).reshape((self._size, error_size, -1))
                 rvs = vmap(
-                    lambda x: model.add_error(
+                    lambda x: error_factory(
+                        error_type=self._error_type[t],
                         x=x,
                         size=error_size,
+                        **self._error_params[t],
                     )
                 )(realizations[:, k : k + c]).reshape((self._size, error_size, -1))
                 err_realizations = np.concatenate((err_realizations, rvs), axis=-1)
@@ -266,6 +278,7 @@ class PopulationGenerator:
                     copy=False,
                 )
                 k += c
+                t += 1
 
             for j in range(self._size):
                 np.savetxt(
@@ -308,10 +321,12 @@ class PopulationGenerator:
 
     def generate(self):
         """Generate population and save them to disk."""
-        self._col_names = []
-        self._col_count = []
-        self._config_vals = []
+        self._col_names: list[str] = []
+        self._col_count: list[int] = []
+        self._config_vals: list[tuple[str, int]] = []
         self._model_instances: list[Distribution] = []
+        self._error_type: list[str] = []
+        self._error_params: list[dict] = []
 
         for model in self._models:
             model_instance: Distribution = eval(model["model"])(**model["params"])
@@ -319,6 +334,8 @@ class PopulationGenerator:
             self._config_vals.extend([(x[1], model["params"][x[0]]) for x in model["config_vars"]])
             self._col_names.extend(model["col_names"])
             self._col_count.append(len(model["col_names"]))
+            self._error_type.append(model["error_type"])
+            self._error_params.append(model.get("error_params", {}))
 
         self._indexes = {var: i for i, var in enumerate(self._col_names)}
 

@@ -4,7 +4,7 @@
 #  you may not use this file except in compliance with the License.
 #  You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
 #  Unless required by applicable law or agreed to in writing, software
 #  distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,13 +15,10 @@
 
 from __future__ import annotations
 
-from jax.random import normal
-from jaxtyping import Array
-from numpyro.distributions import Distribution
-
-from ..utils import get_key
-
-
-class AbstractRedShiftModel(Distribution):
-    def add_error(self, x: Array, size: int = 10) -> Array:
-        return normal(key=get_key(), shape=(size,), dtype=x.dtype) * self.error_scale + x
+from .errors import (
+    banana_error as banana_error,
+    error_factory as error_factory,
+    normal_error as normal_error,
+    truncated_normal_error as truncated_normal_error,
+    uniform_error as uniform_error,
+)
