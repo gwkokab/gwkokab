@@ -14,7 +14,6 @@
 
 from .abstracteccentricitymodel import AbstractEccentricityModel as AbstractEccentricityModel
 from .abstractmassmodel import AbstractMassModel as AbstractMassModel
-from .abstractmodel import AbstractModel as AbstractModel
 from .abstractredshiftmodel import AbstractRedShiftModel as AbstractRedShiftModel
 from .abstractspinmodel import AbstractSpinModel as AbstractSpinModel
 from .eccmodel import EccentricityModel as EccentricityModel

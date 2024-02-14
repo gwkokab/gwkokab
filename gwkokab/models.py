@@ -18,7 +18,6 @@ from __future__ import annotations
 from gwkokab._src.models import (
     AbstractEccentricityModel as AbstractEccentricityModel,
     AbstractMassModel as AbstractMassModel,
-    AbstractModel as AbstractModel,
     AbstractRedShiftModel as AbstractRedShiftModel,
     AbstractSpinModel as AbstractSpinModel,
     EccentricityModel as EccentricityModel,

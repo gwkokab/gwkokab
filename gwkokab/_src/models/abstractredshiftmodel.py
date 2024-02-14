@@ -17,11 +17,11 @@ from __future__ import annotations
 
 from jax.random import normal
 from jaxtyping import Array
+from numpyro.distributions import Distribution
 
 from ..utils import get_key
-from .abstractmodel import AbstractModel
 
 
-class AbstractRedShiftModel(AbstractModel):
+class AbstractRedShiftModel(Distribution):
     def add_error(self, x: Array, scale: float = 0.01, size: int = 10) -> Array:
         return normal(key=get_key(), shape=(size,), dtype=x.dtype) * scale + x

@@ -17,13 +17,13 @@ from __future__ import annotations
 
 from jax import numpy as jnp
 from jax.random import normal, uniform
+from numpyro.distributions import Distribution
 
 from ..typing import Numeric
 from ..utils import chirp_mass, get_key, symmetric_mass_ratio
-from .abstractmodel import AbstractModel
 
 
-class AbstractMassModel(AbstractModel):
+class AbstractMassModel(Distribution):
     def add_error(self, x: Numeric, scale: float, size: int) -> Numeric:
         """
         Adds error to the masses of the binaries according to the section 3 of the following paper.

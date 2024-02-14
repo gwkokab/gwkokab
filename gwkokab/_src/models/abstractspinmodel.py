@@ -18,12 +18,12 @@ from __future__ import annotations
 from jax import vmap
 from jax.random import truncated_normal
 from jaxtyping import Array
+from numpyro.distributions import Distribution
 
 from ..utils import get_key
-from .abstractmodel import AbstractModel
 
 
-class AbstractSpinModel(AbstractModel):
+class AbstractSpinModel(Distribution):
     def add_error(self, x: Array, scale: float = 0.5, size: int = 10) -> Array:
         return vmap(
             lambda x_: truncated_normal(
