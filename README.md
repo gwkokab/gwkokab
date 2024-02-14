@@ -95,27 +95,34 @@ process:
 
     [mass_model]
     model = Wysocki2019MassModel
-    config_vars = ['alpha_m', 'mmin', 'mmax']
+    params = {'alpha_m': 0.8, 'k': 0, 'mmin': 10.0, 'mmax': 50.0, 'Mmax': 100.0,}
+    config_vars = [('alpha_m', 'alpha'), ('mmin', 'mass_min'), ('mmax', 'mass_max')]
     col_names = ['m1_source', 'm2_source']
-    params = {'alpha_m': 0.8, 'k': 0, 'mmin': 10.0, 'mmax': 50.0, 'Mmax': 100.0, 'error_scale': 1.0,}
+    error_type = banana
 
     [spin1_model]
     model = Wysocki2019SpinModel
-    config_vars = ['alpha', 'beta']
+    config_vars = [('alpha', 'alpha_1'), ('beta', 'beta_1')]
     col_names = ['a1']
-    params = {'alpha': 1.8, 'beta': 0.9, 'chimax': 1.0, 'error_scale': 0.5,}
+    params = {'alpha': 1.8, 'beta': 0.9, 'chimax': 1.0,}
+    error_type = truncated_normal
+    error_params = {'scale': 0.5, 'lower': 0.0, 'upper': 1.0, }
 
     [spin2_model]
     model = Wysocki2019SpinModel
-    config_vars = ['alpha', 'beta']
+    config_vars = [('alpha', 'alpha_1'), ('beta', 'beta_1')]
     col_names = ['a2']
-    params = {'alpha': 0.8, 'beta': 1.9, 'chimax': 1.0, 'error_scale': 0.5,}
+    params = {'alpha': 1.8, 'beta': 0.9, 'chimax': 1.0,}
+    error_type = truncated_normal
+    error_params = {'scale': 0.5, 'lower': 0.0, 'upper': 1.0, }
 
     [ecc_model]
-    model = EccentricityModel
-    config_vars = ['sigma_ecc']
+    model = Normal
+    config_vars = [('loc', 'loc')]
     col_names = ['ecc']
-    params = {'sigma_ecc': 0.05, 'error_scale': 0.01,}
+    params = {'loc': 0.0, 'scale': 1.0, }
+    error_type = truncated_normal
+    error_params = {'scale': 0.01, 'lower': 0.0, 'upper': 0.5,}
     ```
 
 2. **Generate mock population data** by running the following command,
