@@ -32,15 +32,16 @@ extensions = [
     "sphinx_rtd_theme",
     "sphinx.ext.autosummary",
     "sphinx.ext.todo",
-    # "nbsphinx",
-    # "sphinxcontrib.jquery",
-    # "sphinx.ext.doctest",
-    # "sphinx.ext.imgconverter",
-    # "sphinx.ext.intersphinx",
-    # "sphinx.ext.mathjax",
+    "nbsphinx",
+    "sphinxcontrib.jquery",
+    "sphinx.ext.doctest",
+    "sphinx.ext.imgconverter",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
     # "sphinx_gallery.gen_gallery",
-    # "sphinx_search.extension",
+    "sphinx_search.extension",
 ]
+
 
 templates_path = ["_templates"]
 

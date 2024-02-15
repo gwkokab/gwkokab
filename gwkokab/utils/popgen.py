@@ -34,7 +34,7 @@ from .misc import dump_configurations
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
 
 
-class PopulationGenerator:
+class PopulationGenerator(object):
     """This class is used to generate population and save them to disk."""
 
     def __init__(self, general: dict, models: list[dict], selection_effect: Optional[dict] = None) -> None:

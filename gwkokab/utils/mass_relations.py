@@ -28,6 +28,9 @@ def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
     :param m1: mass 1 of the binary system
     :param m2: mass 2 of the binary system
     :return: chirp mass of the binary system
+
+    >>> chirp_mass(1, 1)
+    0.25
     """
     return lax.mul(lax.pow(lax.mul(m1, m2), 0.6), lax.pow(lax.add(m1, m2), -0.2))
 
@@ -41,19 +44,25 @@ def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     :param m1: mass 1 of the binary system
     :param m2: mass 2 of the binary system
     :return: symmetric mass ratio of the binary system
+
+    >>> symmetric_mass_ratio(1, 1)
+    0.25
     """
     return lax.mul(lax.mul(m1, m2), lax.pow(lax.add(m1, m2), -2))
 
 
 @jit
 def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
-    """
+    r"""
     .. math::
         M_r = \frac{m_1 m_2}{m_1 + m_2}
 
     :param m1: mass 1 of the binary system
     :param m2: mass 2 of the binary system
     :return: reduced mass of the binary system
+
+    >>> reduced_mass(1, 1)
+    0.5
     """
     return lax.div(lax.mul(m1, m2), lax.add(m1, m2))
 
@@ -67,5 +76,12 @@ def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     :param m1: mass 1 of the binary system
     :param m2: mass 2 of the binary system
     :return: mass ratio of the binary system
+
+    >>> mass_ratio(1, 1)
+    1.0
+    >>> mass_ratio(1, 2)
+    0.5
+    >>> mass_ratio(2, 1)
+    2.0
     """
     return lax.div(m1, m2)

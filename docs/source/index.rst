@@ -11,9 +11,15 @@ GWKokab documentation
 
 .. toctree::
    :maxdepth: 2
-   :caption: Models:
+   :caption: Models
 
    models
+
+.. toctree::
+   :maxdepth: 3
+   :caption: Utils
+
+   utils
 
 
 Indices and tables
