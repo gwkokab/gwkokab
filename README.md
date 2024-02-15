@@ -78,17 +78,17 @@ process:
 
     ```ini
     [general]
-    size = 400
-    error_size = 2000
+    size = 100
+    error_size = 5000
     root_container = syn_data
     event_filename = event_{}.dat
-    config_filename = configuration.csv
+    config_filename = configuration.dat
     num_realizations = 5
 
     ; optional params
 
-    extra_size = 1500
-    extra_error_size = 1000
+    extra_size = 15000
+    extra_error_size = 10000
 
     [selection_effect]
     vt_filename = mass_vt.hdf5
@@ -101,28 +101,28 @@ process:
     error_type = banana
 
     [spin1_model]
-    model = Wysocki2019SpinModel
-    config_vars = [('alpha', 'alpha_1'), ('beta', 'beta_1')]
+    model = Beta
+    config_vars = [('concentration1', 'alpha_1'), ('concentration0', 'beta_1')]
     col_names = ['a1']
-    params = {'alpha': 1.8, 'beta': 0.9, 'chimax': 1.0,}
+    params = {'concentration1': 1.8, 'concentration0': 0.9}
     error_type = truncated_normal
     error_params = {'scale': 0.5, 'lower': 0.0, 'upper': 1.0, }
 
     [spin2_model]
-    model = Wysocki2019SpinModel
-    config_vars = [('alpha', 'alpha_1'), ('beta', 'beta_1')]
+    model = Beta
+    config_vars = [('concentration1', 'alpha_2'), ('concentration0', 'beta_2')]
     col_names = ['a2']
-    params = {'alpha': 1.8, 'beta': 0.9, 'chimax': 1.0,}
+    params = {'concentration1': 1.8, 'concentration0': 0.9}
     error_type = truncated_normal
     error_params = {'scale': 0.5, 'lower': 0.0, 'upper': 1.0, }
 
     [ecc_model]
-    model = Normal
-    config_vars = [('loc', 'loc')]
+    model = TruncatedNormal
+    config_vars = [('scale', 'sigma_ecc')]
     col_names = ['ecc']
-    params = {'loc': 0.0, 'scale': 1.0, }
+    params = {'loc': 0.0, 'scale': 0.05, 'low': 0.0, 'high': 1.0, }
     error_type = truncated_normal
-    error_params = {'scale': 0.01, 'lower': 0.0, 'upper': 0.5,}
+    error_params = {'scale': 0.1, 'lower': 0.0, 'upper': 1.0,}
     ```
 
 2. **Generate mock population data** by running the following command,

@@ -42,13 +42,10 @@ def dump_configurations(filename: str, *args: tuple[str, Any]) -> None:
 
 
 def get_key(key: Optional[Array | int] = None) -> Array:
-    """Get a new JAX random key.
-
-    This function is used to generate a new JAX random key if
-    the user does not provide one. The key is generated using
-    the `jax.random.PRNGKey` function. The key is split into
-    two keys, the first of which is returned. The second key
-    is discarded.
+    r"""Get a new JAX random key if not provide. The key is
+    generated using the `jax.random.PRNGKey` function. It is
+    split into two keys, the first of which is returned. The
+    second key is discarded.
 
     :param key: JAX random key or seed value, defaults to `None`
     :return: New JAX random key

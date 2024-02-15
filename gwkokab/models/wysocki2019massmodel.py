@@ -26,14 +26,11 @@ from ..utils.misc import get_key
 
 
 class Wysocki2019MassModel(Distribution):
-    r"""Power law distribution with a lower and upper mass limit
-
-    `Wysocki2019MassModel` is a subclass of `numpyro.distributions.Distribution` and implements
-    the power law distribution with a lower and upper mass limit as
-    described in https://arxiv.org/abs/1805.06442
+    r"""It is a double side truncated power law distribution, as
+    described in equation 7 of the `paper <https://arxiv.org/abs/1805.06442>`__.
 
     .. math::
-        p(m_1,m_2\mid\alpha,k,\mmin,\mmax,\Mmax)\propto\frac{m_1^{-\alpha-k}m_2^k}{m_1-\mmin}
+        p(m_1,m_2\mid\alpha,k,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto\frac{m_1^{-\alpha-k}m_2^k}{m_1-m_{\text{min}}}
     """
 
     arg_constraints = {
