@@ -54,7 +54,12 @@ def parse_config(config_path: str) -> dict:
     config_dict["general"]["size"] = int(config["general"]["size"])
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])
     config_dict["general"]["num_realizations"] = int(config["general"]["num_realizations"])
-    config_dict["general"]["extra_size"] = int(config["general"].get("extra_size", 1500))
-    config_dict["general"]["extra_error_size"] = int(config["general"].get("extra_error_size", 1000))
+    config_dict["general"]["extra_size"] = int(config["general"].get("extra_size", "1500"))
+    config_dict["general"]["extra_error_size"] = int(config["general"].get("extra_error_size", "1000"))
+
+    if "plots" in config:
+        config_dict["plots"] = {}
+        config_dict["plots"]["injs"] = eval(config["plots"].get("injs", "None"))
+        config_dict["plots"]["posts"] = eval(config["plots"].get("posts", "None"))
 
     return config_dict

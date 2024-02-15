@@ -1,10 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Jan 15 21:33:41 2024
-
-@author: mzeeshan
-"""
 import glob
 from typing_extensions import Optional
 
@@ -119,6 +112,11 @@ def scatter3d_batch_plot(
         ax.set_xlabel(x_label)
     if y_label is not None:
         ax.set_ylabel(y_label)
+
+    cursors = mplcursors.cursor(ax, hover=True)
+    cursors.connect(
+        "add", lambda sel: sel.annotation.set_text(f"({sel.target[0]:.2f}, {sel.target[1]:.2f}, {sel.target[2]:.2f})")
+    )
 
     plt.savefig(output_filename, bbox_inches="tight")
     # Display the plot

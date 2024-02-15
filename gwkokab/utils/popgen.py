@@ -31,13 +31,19 @@ from ..models import *
 from ..utils.misc import get_key
 from ..vts import interpolate_hdf5
 from .misc import dump_configurations
-from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_plot
+from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
 class PopulationGenerator(object):
     """This class is used to generate population and save them to disk."""
 
-    def __init__(self, general: dict, models: list[dict], selection_effect: Optional[dict] = None) -> None:
+    def __init__(
+        self,
+        general: dict,
+        models: list[dict],
+        selection_effect: Optional[dict] = None,
+        plots: Optional[dict] = None,
+    ) -> None:
         """Initialize the PopulationGenerator class.
 
         :param general: general configurations
@@ -58,6 +64,7 @@ class PopulationGenerator(object):
         self._extra_size = general["extra_size"]
         self._extra_error_size = general["extra_error_size"]
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
+        self._plots = plots
 
     @staticmethod
     def check_general(general: dict) -> None:
@@ -202,7 +209,6 @@ class PopulationGenerator(object):
             injection_filename = f"{container}/injections.dat"
 
             os.makedirs(container, exist_ok=True)
-            os.makedirs(f"{container}/plots", exist_ok=True)
 
             realisations = jnp.empty((size, 0))
             for model_instance in self._model_instances:
@@ -223,8 +229,6 @@ class PopulationGenerator(object):
     def generate_injections_plots(
         self,
         filename: str,
-        suffix: str,
-        bar_title: str = "Plotting Injections",
     ) -> None:
         """Generate injections plots.
 
@@ -233,34 +237,39 @@ class PopulationGenerator(object):
         :param bar_title: title for the progress bar, defaults to "Plotting Injections"
         """
         populations = glob.glob(f"{self._root_container}/realization_*/{filename}")
+        for realization in glob.glob(f"{self._root_container}/realization_*"):
+            os.makedirs(f"{realization}/plots", exist_ok=True)
         for pop_filename in tqdm(
             populations,
-            desc=bar_title,
+            desc="Plotting Injections",
             unit="realization",
             unit_scale=True,
+            file=sys.stdout,
         ):
             output_filename = pop_filename.replace(filename, "plots")
-            scatter2d_plot(
-                input_filename=pop_filename,
-                output_filename=output_filename + f"/{suffix}_mass_injs.png",
-                x_index=self._indexes["m1_source"],
-                y_index=self._indexes["m2_source"],
-                x_label=r"$m_1 [M_\odot]$",
-                y_label=r"$m_2 [M_\odot]$",
-                plt_title="Injections",
-            )
-
-            scatter3d_plot(
-                input_filename=pop_filename,
-                output_filename=output_filename + f"/{suffix}_mass_ecc_injs.png",
-                x_index=self._indexes["m1_source"],
-                y_index=self._indexes["m2_source"],
-                z_index=self._indexes["ecc"],
-                x_label=r"$m_1 [M_\odot]$",
-                y_label=r"$m_2 [M_\odot]$",
-                z_label=r"$\epsilon$",
-                plt_title="Injections",
-            )
+            for ins in self._plots["injs"]:
+                if len(ins) == 2:
+                    scatter2d_plot(
+                        input_filename=pop_filename,
+                        output_filename=output_filename + f"/{ins[0]}_{ins[1]}_injs.png",
+                        x_index=self._indexes[ins[0]],
+                        y_index=self._indexes[ins[1]],
+                        x_label=ins[0],
+                        y_label=ins[1],
+                        plt_title="Injections",
+                    )
+                elif len(ins) == 3:
+                    scatter3d_plot(
+                        input_filename=pop_filename,
+                        output_filename=output_filename + f"/{ins[0]}_{ins[1]}_{ins[2]}_injs.png",
+                        x_index=self._indexes[ins[0]],
+                        y_index=self._indexes[ins[1]],
+                        z_index=self._indexes[ins[2]],
+                        x_label=ins[0],
+                        y_label=ins[1],
+                        z_label=ins[2],
+                        plt_title="Injections",
+                    )
 
     def add_error(self) -> None:
         """Add error to the injections."""
@@ -310,34 +319,42 @@ class PopulationGenerator(object):
         bar.colour = "green"
         bar.close()
 
-    def generate_posteriors_plots(self) -> None:
+    def generate_batch_plots(self) -> None:
         realization_regex = f"{self._root_container}/realization_*"
 
         for realization in tqdm(
             glob.glob(realization_regex),
-            desc="Ploting 2D Posterior",
+            desc="Ploting Posterior",
             total=self._num_realizations,
             unit="event",
             unit_scale=True,
+            file=sys.stdout,
         ):
-            scatter2d_batch_plot(
-                file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
-                output_filename=f"{realization}/plots/mass_posterior.png",
-                x_index=self._indexes["m1_source"],
-                y_index=self._indexes["m2_source"],
-                x_label=r"$m_1 [M_\odot]$",
-                y_label=r"$m_2 [M_\odot]$",
-                plt_title="Mass Posteriors",
-            )
-            scatter2d_batch_plot(
-                file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
-                output_filename=f"{realization}/plots/spin_posterior.png",
-                x_index=self._indexes["a1"],
-                y_index=self._indexes["a2"],
-                x_label=r"$a_1$",
-                y_label=r"$a_2$",
-                plt_title="Spin Posteriors",
-            )
+            os.makedirs(f"{realization}/plots", exist_ok=True)
+
+            for pin in self._plots["posts"]:
+                if len(pin) == 2:
+                    scatter2d_batch_plot(
+                        file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
+                        output_filename=f"{realization}/plots/{pin[0]}_{pin[1]}_posts.png",
+                        x_index=self._indexes[pin[0]],
+                        y_index=self._indexes[pin[1]],
+                        x_label=pin[0],
+                        y_label=pin[1],
+                        plt_title=f"Posterior {pin[0]} vs {pin[1]}",
+                    )
+                elif len(pin) == 3:
+                    scatter3d_batch_plot(
+                        file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
+                        output_filename=f"{realization}/plots/{pin[0]}_{pin[1]}_{pin[2]}_posts.png",
+                        x_index=self._indexes[pin[0]],
+                        y_index=self._indexes[pin[1]],
+                        z_index=self._indexes[pin[2]],
+                        x_label=pin[0],
+                        y_label=pin[1],
+                        z_label=pin[2],
+                        plt_title=f"Posterior {pin[0]} vs {pin[1]} vs {pin[2]}",
+                    )
 
     def generate(self) -> None:
         """Generate population and save them to disk."""
@@ -360,19 +377,13 @@ class PopulationGenerator(object):
         self._indexes = {var: i for i, var in enumerate(self._col_names)}
 
         self.generate_injections()
-        self.generate_injections_plots(
-            "injections.dat",
-            "unweighted",
-            "Plotting Unweighted Injections",
-        )
         if self._vt_filename:
             self.weighted_injection(self._vt_filename)
-            self.generate_injections_plots(
-                "weighted_injections.dat",
-                "weighted",
-                "Plotting Weighted Injections",
-            )
         self.add_error()
         if self._vt_filename:
             self.weighted_posteriors(self._vt_filename)
-        self.generate_posteriors_plots()
+        if self._plots:
+            if self._plots.get("posts", None):
+                self.generate_batch_plots()
+            if self._plots.get("injs", None):
+                self.generate_injections_plots("weighted_injections.dat")
