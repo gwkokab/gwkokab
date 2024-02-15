@@ -5,6 +5,9 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
+
+from __future__ import annotations
+
 import glob
 import os
 import shutil
@@ -82,3 +85,9 @@ pygments_style = "sphinx"
 
 # do not prepend module name to functions
 add_module_names = False
+
+autodoc_type_aliases = {
+    "Iterable": "Iterable",
+    "ArrayLike": "ArrayLike",
+    "Numeric": "Numeric",
+}

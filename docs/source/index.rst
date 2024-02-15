@@ -21,6 +21,11 @@ GWKokab documentation
 
    utils
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Errors
+
+   errors
 
 Indices and tables
 ==================

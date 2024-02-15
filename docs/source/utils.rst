@@ -5,7 +5,7 @@ Mass Relations
     :members:
     :undoc-members:
     :show-inheritance:
-    :member-order: bysource
+    :member-order: alphabetical
 
 Miscellaneous
 =============
@@ -14,7 +14,7 @@ Miscellaneous
     :members:
     :undoc-members:
     :show-inheritance:
-    :member-order: bysource
+    :member-order: alphabetical
 
 Plotting
 ========
@@ -23,7 +23,7 @@ Plotting
     :members:
     :undoc-members:
     :show-inheritance:
-    :member-order: bysource
+    :member-order: alphabetical
 
 Population Generation
 =====================
@@ -31,5 +31,5 @@ Population Generation
     :members:
     :undoc-members:
     :show-inheritance:
-    :member-order: bysource
+    :member-order: alphabetical
 
