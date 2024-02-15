@@ -14,4 +14,10 @@
 
 from __future__ import annotations
 
-from gwkokab._src.typing import Numeric as Numeric
+from typing_extensions import Union
+
+import numpy as np
+from jaxtyping import Array
+
+
+Numeric = Union[Array, np.ndarray, np.bool_, np.number, bool, int, float]
