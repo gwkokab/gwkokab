@@ -3,12 +3,12 @@ Writing the configuration file
 GWKokab uses configuration files as an interface to the user. The configuration file is written in the :code:`ini` format. There are different types of configuration files for the different tasks that GWKokab can perform.
 
 Synthetic Data Generation
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 The configuration file is divided into the following sections:
 
 General
--------
+^^^^^^^
 This section contains the general configuration for the synthetic data generation. The following options are available:
 
 - :code:`size` : The size of the synthetic data. This is the number of events in the synthetic data.
@@ -38,7 +38,7 @@ An example of the general section is as follows:
 
 
 Selection effect
-----------------
+^^^^^^^^^^^^^^^^
 Synthetic data is just a sample of the provided distributions, to account it for the real physics VT selection effect is applied. This section contains the configuration for the selection effect. The following options are available:
 
 - :code:`vt_filename` : The name of the file that contains the weights for the selection effect. Supported file formats are :code:`.h5` and :code:`.hdf5`.
@@ -51,7 +51,7 @@ An example of the selection effect section is as follows:
     vt_filename = mass_vt.hdf5
 
 Models
-------
+^^^^^^
 
 This section contains the configuration for the models that will be used to generate the synthetic data. It is not a specific section but a class of section that is repeated for each model. The following options are available:
 
@@ -85,7 +85,7 @@ Available models can be found in `models <https://gwkokab.readthedocs.io/en/late
     error_params = {'scale': 0.1, 'lower': 0.0, 'upper': 1.0,}
 
 Plots
------
+^^^^^
 Sometimes people want to see the plots of the synthetic data. This section contains the configuration for the plots that will be generated. The following options are available:
 
 - :code:`injs` : This is a list of string. It contains the list of the names of quantities that will be plotted for the injected data. The names should be the same as in :code:`col_names` in the synthetic data.
@@ -102,7 +102,7 @@ An example of the plots section is as follows:
 
 
 Example
--------
+^^^^^^^
 Lets run the process of synthetic data generation for the following configuration file:
 
 .. code-block:: ini
@@ -158,7 +158,7 @@ Lets run the process of synthetic data generation for the following configuratio
 
 
 VT Generation
-^^^^^^^^^^^^^
+-------------
 
 Inference
-^^^^^^^^^
+---------

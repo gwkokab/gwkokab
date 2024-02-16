@@ -17,6 +17,7 @@ import nbsphinx
 import sphinx_rtd_theme
 
 sys.path.insert(0, os.path.abspath("../.."))
+# sys.path.insert(0, os.path.abspath("$HOME/anaconda3/lib/python3.11/site-packages/"))
 
 os.environ["SPHINX_BUILD"] = "1"
 
