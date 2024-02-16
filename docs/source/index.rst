@@ -11,6 +11,13 @@ GWKokab documentation
 
 .. toctree::
    :maxdepth: 2
+   :caption: Getting started
+
+   installation
+   config
+
+.. toctree::
+   :maxdepth: 2
    :caption: Models
 
    models

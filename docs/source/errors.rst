@@ -1,5 +1,3 @@
-.. .. autofunction:: gwkokab.errors.error_factory
-
 Public API
 ==========
 The following functions are the public API of the errors module.
