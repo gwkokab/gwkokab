@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from configparser import ConfigParser
+from typing_extensions import Any
 
 import configargparse
 
@@ -28,7 +29,7 @@ cmd_parser.add_argument(
 )
 
 
-def parse_config(config_path: str) -> dict:
+def parse_config(config_path: str) -> dict[str, Any]:
     """Parse the configuration file.
 
     This function parses the configuration file and returns the

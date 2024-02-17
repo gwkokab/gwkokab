@@ -30,7 +30,6 @@ from ..errors import error_factory
 from ..models import *
 from ..utils.misc import get_key
 from ..vts import interpolate_hdf5
-from .misc import dump_configurations
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
@@ -218,7 +217,14 @@ class PopulationGenerator(object):
                 bar.update(1)
             bar.refresh()
 
-            dump_configurations(config_filename, *self._config_vals)
+            # dump_configurations(config_filename, *self._config_vals)
+            np.savetxt(
+                config_filename,
+                np.array([list(zip(*self._config_vals))[1]]),
+                delimiter="\t",
+                fmt="%s",
+                header="\t".join(list(zip(*self._config_vals))[0]),
+            )
 
             np.savetxt(injection_filename, realisations, header="\t".join(self._col_names))
 

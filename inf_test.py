@@ -12,14 +12,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import corner
-import jax
-import numpy as np
-from jax.experimental import mesh_utils
-from jax.sharding import PositionalSharding
-from numpyro.infer import MCMC, NUTS
 
-from gwkokab.inference.model_test import model
+import numpy as np
+
+from gwkokab.inference.model_test import expval_mc
+from gwkokab.vts.utils import interpolate_hdf5, load_hdf5, mass_grid_coords
 
 total_events = 100
 posterior_size = 100
@@ -28,45 +25,13 @@ injection_regex = "realization_6/injections/event_{}.dat"
 true_values = np.loadtxt("realization_6/configuration.dat")[:3]
 
 
-X = np.zeros((total_events, posterior_size, 2))
-y = np.zeros((total_events, 2))
+def m1m2_raw_interpolator(m1m2):
+    m1 = m1m2[:, 0]
+    m2 = m1m2[:, 1]
+    logM, qtilde = mass_grid_coords(m1, m2, true_values[1])
+    raw = interpolate_hdf5(load_hdf5("mass_vt.hdf5"))
+    return raw(logM, qtilde)
 
 
-for i in range(total_events):
-    posterior = np.loadtxt(posterior_regex.format(i))
-    injection = np.loadtxt(injection_regex.format(i))
-    X[i] = posterior[:, :2]
-    y[i] = injection[:2]
-
-
-mcmc = MCMC(NUTS(model), num_warmup=1000, num_samples=10000)
-# See https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html
-sharding = PositionalSharding(mesh_utils.create_device_mesh((1,)))
-X_shard = jax.device_put(X, sharding.reshape(1, 1))
-y_shard = jax.device_put(y, sharding.reshape(1))
-mcmc.run(jax.random.PRNGKey(int(np.random.rand() * 100)), X_shard, y_shard)
-
-samples = mcmc.get_samples()
-
-try:
-    fig = corner.corner(
-        samples,
-        labels=[r"$\alpha$", r"$m_{\text{min}}$", r"$m_{\text{max}}$"],
-        show_titles=True,
-        truths=[true_values[0], true_values[1], true_values[2]],
-        title_kwargs={"fontsize": 12},
-        label_kwargs={"fontsize": 12},
-        hist_kwargs={"density": True},
-    )
-except:
-    fig = corner.corner(
-        samples,
-        labels=[r"$\alpha$", r"$m_{\text{min}}$", r"$m_{\text{max}}$"],
-        show_titles=True,
-        truths=[true_values[0], true_values[1], true_values[2]],
-        title_kwargs={"fontsize": 12},
-        label_kwargs={"fontsize": 12},
-        hist_kwargs={"density": True},
-        range=[0.99] * 3,
-    )
-fig.savefig("test.png")
+expval = expval_mc(*true_values, 1.0, m1m2_raw_interpolator)
+print(expval)

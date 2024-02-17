@@ -20,7 +20,7 @@ from jax import lax, numpy as jnp
 from jax.random import uniform
 from jaxtyping import Array
 from numpyro.distributions import constraints, Distribution
-from numpyro.distributions.util import promote_shapes
+from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..utils.misc import get_key
 
@@ -35,11 +35,13 @@ class Wysocki2019MassModel(Distribution):
 
     arg_constraints = {
         "alpha_m": constraints.real,
-        "k": constraints.positive_integer,
+        "k": constraints.nonnegative_integer,
         "mmin": constraints.positive,
         "mmax": constraints.positive,
         "Mmax": constraints.positive,
     }
+
+    support = constraints.real_vector
 
     def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, Mmax: float, *, valid_args=None) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
@@ -61,6 +63,11 @@ class Wysocki2019MassModel(Distribution):
         )
         super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
 
+    @validate_sample
+    def log_prob(self, value):
+        print(value)
+        return -(self.alpha_m + self.k) * jnp.log(value[0]) + self.k * jnp.log(value[1]) - jnp.log(value[0] - self.mmin)
+
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):
             key = get_key(key)
@@ -73,7 +80,7 @@ class Wysocki2019MassModel(Distribution):
             jnp.exp(jnp.power(beta, -1.0) * jnp.log(U * jnp.power(self.mmax, beta) + (1.0 - U) * jnp.power(m2, beta))),
         ]
         m1 = jnp.select(conditions, choices)
-        return jnp.stack([m1, m2], axis=1)
+        return jnp.stack([m1, m2], axis=-1)
 
     def __repr__(self) -> str:
         string = f"Wysocki2019MassModel(alpha_m={self.alpha_m}, k={self.k}, "

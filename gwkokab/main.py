@@ -22,7 +22,11 @@ def main():
     configuration_dict = parse_config(args.config)
 
     general = configuration_dict["general"]
-    models = [configuration_dict[section_name] for section_name in configuration_dict.keys() if "model" in section_name]
+    models = [
+        configuration_dict[section_name]
+        for section_name in configuration_dict.keys()
+        if "model" in section_name.lower()
+    ]
     selection_effect = configuration_dict.get("selection_effect", None)
     plots = configuration_dict.get("plots", None)
 
