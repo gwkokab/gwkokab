@@ -111,7 +111,7 @@ class PopulationGenerator(object):
         logM, qtilde = mass_grid_coords(realizations[:, m1_col_index], realizations[:, m2_col_index], 5)
 
         weights = self._raw_interpolator((logM, qtilde))
-        weights /= jnp.sum(weights)  # normalizes
+        weights /= np.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(logM))
         downselected = jax.random.choice(get_key(None), indexes_all, p=weights, shape=(n_out,))

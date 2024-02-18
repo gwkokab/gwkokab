@@ -57,11 +57,17 @@ def interpolate_hdf5(hdf5_file):
     (``m1``, ``m2``, ``VT``), which should be arrays appropriate to pass as the
     (``m1_grid``, ``m2_grid``, ``VT_grid``) arguments to :py:func:`interpolate`.
     """
-    logM = jnp.asarray(hdf5_file["logM"])
-    qtilde = jnp.asarray(hdf5_file["qtilde"])
+    # logM = jnp.asarray(hdf5_file["logM"])
+    # qtilde = jnp.asarray(hdf5_file["qtilde"])
+    # VT_grid = jnp.asarray(hdf5_file["VT"][:])
+
+    # return interpolate((logM, qtilde), VT_grid)
+
+    m1 = jnp.asarray(hdf5_file["m1"])
+    m2 = jnp.asarray(hdf5_file["m2"])
     VT_grid = jnp.asarray(hdf5_file["VT"][:])
 
-    return interpolate((logM, qtilde), VT_grid)
+    return interpolate((m1[0], m2[:, 0]), VT_grid)
 
 
 def interpolate(points, VT_grid):
@@ -81,7 +87,7 @@ def interpolate(points, VT_grid):
 
     interpolator = RegularGridInterpolator(  # scipy.interpolate.interp2d(
         points,
-        jnp.log(VT_grid),
+        VT_grid,
         method="linear",
         bounds_error=False,
         fill_value=0,
