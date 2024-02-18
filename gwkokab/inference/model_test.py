@@ -12,8 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from jax import numpy as jnp
-from jax import vmap
+from jax import numpy as jnp, vmap
 
 from ..models.wysocki2019massmodel import Wysocki2019MassModel
 from ..utils.misc import get_key
@@ -28,7 +27,6 @@ def integrate_adaptive(
     err_abs=None,
     err_rel=None,
 ):
-
     converged = lambda err_abs_current, err_rel_current: (err_rel_current < err_rel) and (err_abs_current < err_abs)
 
     samples = 0

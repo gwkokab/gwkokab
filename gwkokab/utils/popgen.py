@@ -17,20 +17,19 @@ from __future__ import annotations
 import glob
 import os
 import sys
+from typing_extensions import Optional
 
 import h5py
 import jax
 import numpy as np
-from jax import numpy as jnp
-from jax import vmap
+from jax import numpy as jnp, vmap
 from numpyro.distributions import *
 from tqdm import tqdm
-from typing_extensions import Optional
 
 from ..errors import error_factory
 from ..models import *
 from ..utils.misc import get_key
-from ..vts import interpolate_hdf5, mass_grid_coords
+from ..vts import interpolate_hdf5
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
@@ -108,12 +107,13 @@ class PopulationGenerator(object):
         """
         realizations = np.loadtxt(input_filename)
 
-        logM, qtilde = mass_grid_coords(realizations[:, m1_col_index], realizations[:, m2_col_index], 5)
+        # logM, qtilde = mass_grid_coords(realizations[:, m1_col_index], realizations[:, m2_col_index], 5)
 
-        weights = self._raw_interpolator((logM, qtilde))
+        # weights = self._raw_interpolator((logM, qtilde))
+        weights = self._raw_interpolator((realizations[:, m1_col_index], realizations[:, m2_col_index]))
         weights /= np.sum(weights)  # normalizes
 
-        indexes_all = np.arange(len(logM))
+        indexes_all = np.arange(len(weights))
         downselected = jax.random.choice(get_key(None), indexes_all, p=weights, shape=(n_out,))
 
         new_realizations = realizations[downselected]
@@ -313,7 +313,6 @@ class PopulationGenerator(object):
             mask = np.isnan(err_realizations).any(axis=2)
 
             for j in range(self._size):
-
                 masked_err_realizations = err_realizations[j, ~mask[j]]
 
                 np.savetxt(
