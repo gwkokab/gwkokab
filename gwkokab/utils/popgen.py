@@ -17,19 +17,20 @@ from __future__ import annotations
 import glob
 import os
 import sys
-from typing_extensions import Optional
 
 import h5py
 import jax
 import numpy as np
-from jax import numpy as jnp, vmap
+from jax import numpy as jnp
+from jax import vmap
 from numpyro.distributions import *
 from tqdm import tqdm
+from typing_extensions import Optional
 
 from ..errors import error_factory
 from ..models import *
 from ..utils.misc import get_key
-from ..vts import interpolate_hdf5
+from ..vts import interpolate_hdf5, mass_grid_coords
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
@@ -106,17 +107,18 @@ class PopulationGenerator(object):
         :param m2_col_index: index of m2 column
         """
         realizations = np.loadtxt(input_filename)
-        dat_mass = realizations[:, [m1_col_index, m2_col_index]]
 
-        weights = self._raw_interpolator(dat_mass)
+        logM, qtilde = mass_grid_coords(realizations[:, m1_col_index], realizations[:, m2_col_index], 5)
+
+        weights = self._raw_interpolator((logM, qtilde))
         weights /= jnp.sum(weights)  # normalizes
 
-        indexes_all = np.arange(len(dat_mass))
+        indexes_all = np.arange(len(logM))
         downselected = jax.random.choice(get_key(None), indexes_all, p=weights, shape=(n_out,))
 
-        realizations = realizations[downselected]
+        new_realizations = realizations[downselected]
 
-        np.savetxt(output_filename, realizations, header="\t".join(self._col_names))
+        np.savetxt(output_filename, new_realizations, header="\t".join(self._col_names))
 
     def weighted_injection(self, raw_interpolator_filename: str) -> None:
         """Weighting injections by VTs.
@@ -178,7 +180,7 @@ class PopulationGenerator(object):
                 self.weight_over_m1m2(
                     input_filename=posterior_filename,
                     output_filename=posterior_filename,
-                    n_out=self._size,
+                    n_out=self._error_size,
                     m1_col_index=self._col_names.index("m1_source"),
                     m2_col_index=self._col_names.index("m2_source"),
                 )
@@ -306,19 +308,17 @@ class PopulationGenerator(object):
                     )
                 )(realizations[:, k : k + c]).reshape((self._size, error_size, -1))
                 err_realizations = np.concatenate((err_realizations, rvs), axis=-1)
-                err_realizations = jnp.nan_to_num(
-                    err_realizations,
-                    nan=-jnp.inf,
-                    posinf=jnp.inf,
-                    neginf=-jnp.inf,
-                    copy=False,
-                )
                 k += c
 
+            mask = np.isnan(err_realizations).any(axis=2)
+
             for j in range(self._size):
+
+                masked_err_realizations = err_realizations[j, ~mask[j]]
+
                 np.savetxt(
                     f"{container}/posteriors/{self._event_filename.format(j)}",
-                    err_realizations[j, :, :],
+                    masked_err_realizations,
                     header="\t".join(self._col_names),
                 )
                 bar.update(1)

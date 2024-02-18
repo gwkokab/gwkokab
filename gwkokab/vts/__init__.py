@@ -14,6 +14,9 @@
 
 from __future__ import annotations
 
-from .utils import interpolate as interpolate, interpolate_hdf5 as interpolate_hdf5, load_hdf5 as load_hdf5
+from .utils import interpolate as interpolate
+from .utils import interpolate_hdf5 as interpolate_hdf5
+from .utils import load_hdf5 as load_hdf5
+from .utils import mass_grid_coords as mass_grid_coords
 from .vt_from_mass import vt_from_mass as vt_from_mass
 from .vt_from_mass_spin import vt_from_mass_spin as vt_from_mass_spin

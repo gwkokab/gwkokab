@@ -65,7 +65,6 @@ class Wysocki2019MassModel(Distribution):
 
     @validate_sample
     def log_prob(self, value):
-        print(value)
         return -(self.alpha_m + self.k) * jnp.log(value[0]) + self.k * jnp.log(value[1]) - jnp.log(value[0] - self.mmin)
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
