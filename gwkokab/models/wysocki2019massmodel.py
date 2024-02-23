@@ -38,28 +38,25 @@ class Wysocki2019MassModel(Distribution):
         "k": constraints.nonnegative_integer,
         "mmin": constraints.positive,
         "mmax": constraints.positive,
-        "Mmax": constraints.positive,
     }
 
     support = constraints.real_vector
 
-    def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, Mmax: float, *, valid_args=None) -> None:
+    def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, *, valid_args=None) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
 
         :param alpha_m: index of the power law distribution
         :param k: mass ratio power law index
         :param mmin: lower mass limit
         :param mmax: upper mass limit
-        :param Mmax: maximum mass
-        :param valid_args: _description_, defaults to `None`
+        :param valid_args: If `True`, validate the input arguments.
         """
-        self.alpha_m, self.k, self.mmin, self.mmax, self.Mmax = promote_shapes(alpha_m, k, mmin, mmax, Mmax)
+        self.alpha_m, self.k, self.mmin, self.mmax = promote_shapes(alpha_m, k, mmin, mmax)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha_m),
             jnp.shape(k),
             jnp.shape(mmin),
             jnp.shape(mmax),
-            jnp.shape(Mmax),
         )
         super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
 
@@ -83,5 +80,5 @@ class Wysocki2019MassModel(Distribution):
 
     def __repr__(self) -> str:
         string = f"Wysocki2019MassModel(alpha_m={self.alpha_m}, k={self.k}, "
-        string += f"mmin={self.mmin}, mmax={self.mmax}, Mmax={self.Mmax})"
+        string += f"mmin={self.mmin}, mmax={self.mmax})"
         return string

@@ -12,9 +12,11 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from jax import numpy as jnp, vmap
+import numpyro
+from jax import numpy as jnp
+from numpyro import distributions as dist
 
-from ..models.wysocki2019massmodel import Wysocki2019MassModel
+from ..models import *
 from ..utils.misc import get_key
 from ..vts import mass_grid_coords
 
@@ -60,7 +62,6 @@ def intensity(m1, m2, alpha, m_min, m_max, rate):
             k=0,
             mmin=m_min,
             mmax=m_max,
-            Mmax=2 * m_max,
         ).log_prob(jnp.stack([m1, m2]))
     )
 
@@ -71,7 +72,6 @@ def expval_mc(alpha, m_min, m_max, rate, raw_interpolator):
         k=0,
         mmin=m_min,
         mmax=m_max,
-        Mmax=2 * m_max,
     )
 
     def p(n):
@@ -86,28 +86,39 @@ def expval_mc(alpha, m_min, m_max, rate, raw_interpolator):
     return rate * integrate_adaptive(p, f, err_abs=1e-3, err_rel=1e-3)
 
 
-def log_prob(
-    alpha,
-    m_min,
-    m_max,
-    rate,
-    raw_interpolator,
-    data_samples,
-):
-    mean = expval_mc(alpha, m_min, m_max, rate, raw_interpolator)
-    log_likelihood = jnp.sum(
-        jnp.mean(
-            vmap(
-                lambda x: intensity(
-                    x[:, 0],
-                    x[:, 1],
-                    alpha,
-                    m_min,
-                    m_max,
-                    rate,
-                )
-            )
-        )(data_samples)
-    )
+def model(lambda_n):  # , raw_interpolator):
+    r"""
+    .. math::
+        \mathcal{L}(\mathcal{R},\Lambda)\propto\prod_{n=1}^{N}\frac{\mathcal{R}}{N_i}\sum_{i=1}^{N_i}\frac{p(\lambda_i/\Lambda)}{\pi(\lambda_i)}
+    """
+    event, _, _ = lambda_n.shape
+    alpha_prior = dist.Uniform(-5.0, 5.0)
+    mmin_prior = dist.Uniform(5.0, 15.0)
+    mmax_prior = dist.Uniform(30.0, 190.0)
+    rate_prior = dist.LogUniform(10**-1, 10**6)
+    alpha = numpyro.sample("alpha", alpha_prior)
+    mmin = numpyro.sample("mmin", mmin_prior)
+    mmax = numpyro.sample("mmax", mmax_prior)
+    rate = numpyro.sample("rate", rate_prior)
 
-    return log_likelihood - mean
+    ll = 0.0
+
+    ll = 0.0
+
+    with numpyro.plate("data", event) as n:
+        mass_model = Wysocki2019MassModel(
+            alpha_m=alpha,
+            k=0,
+            mmin=mmin,
+            mmax=mmax,
+        )
+        ll_i = 0.0
+        p = jnp.exp(mass_model.log_prob(lambda_n[n, :, :]))
+        ll_i = jnp.mean(p, axis=1)
+        ll_i *= rate
+        ll += jnp.log(ll_i)
+
+    # mean = expval_mc(alpha, mmin, mmax, rate, raw_interpolator)
+    # ll -= mean
+
+    return jnp.exp(ll)
