@@ -19,13 +19,13 @@ injection_regex = "events/event_*.dat"
 #true_values = np.loadtxt("syn_data/realization_0/configuration.dat")
 
 
-posteriors = [np.loadtxt(event) for event in glob.glob(posterior_regex)]
+data_set = [np.loadtxt(event) for event in glob.glob(posterior_regex)]
 
 
 mcmc = MCMC(NUTS(model), num_warmup=500, num_samples=2500, num_chains=20)
 # See https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html
 
-mcmc.run(get_key(), lambda_n=posteriors)
+mcmc.run(get_key(), lambda_n=data_set)
 
 samples = mcmc.get_samples(group_by_chain=True)
 

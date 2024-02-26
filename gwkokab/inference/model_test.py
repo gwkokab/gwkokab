@@ -108,16 +108,16 @@ def expval_mc(alpha, m_min, m_max, rate):
 def model(lambda_n):
 
     event = len(lambda_n)
-    alpha_prior = dist.Uniform(-5.0, 5.0)
-    mmin_prior = dist.Uniform(5.0, 15.0)
-    mmax_prior = dist.Uniform(30.0, 100.0)
-    rate_prior = dist.Uniform(1, 500)
-    alpha = numpyro.sample("alpha", alpha_prior)
-    mmin = numpyro.sample("mmin", mmin_prior)
-    mmax = numpyro.sample("mmax", mmax_prior)
-    rate = numpyro.sample("rate", rate_prior)
+    alpha_init = dist.Uniform(-5.0, 5.0)
+    mmin_init = dist.Uniform(5.0, 15.0)
+    mmax_init = dist.Uniform(30.0, 100.0)
+    rate_init = dist.Uniform(1, 500)
+    alpha = numpyro.sample("alpha", alpha_init)
+    mmin = numpyro.sample("mmin", mmin_init)
+    mmax = numpyro.sample("mmax", mmax_init)
+    rate = numpyro.sample("rate", rate_init)
 
-    ll = 0.0
+    ll_i = 0.0
 
     for n in range(event):
         mass_model = Wysocki2019MassModel(
@@ -126,12 +126,11 @@ def model(lambda_n):
             mmin=mmin,
             mmax=mmax,
         )
-        ll_i = 0.0
-        p = jnp.exp(mass_model.log_prob(lambda_n[n]))
-        ll_i = jnp.mean(p)
-        ll += jnp.log(ll_i)
+        p = jnp.exp(mass_model.log_prob(lambda_n[n]))*rate #probability
+        ll_i += jnp.log(jnp.mean(p))
 
     mean = expval_mc(alpha, mmin, mmax, rate)
-    pos = ll-mean #poisson log likelihood
+    log_prior = 0.0
+    log_pos = log_prior+ll_i-mean #log posterior
 
-    return jnp.exp(pos)
+    return log_pos
