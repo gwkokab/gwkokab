@@ -15,16 +15,16 @@
 
 from __future__ import annotations
 
-from typing_extensions import Callable, Optional
+import multiprocessing as multi
 
 import astropy.cosmology as cosmo
 import astropy.units as u
 import lal
 import lalsimulation as ls
-import scipy.integrate as si  # Optimizeed integral needed
-import multiprocessing as multi
-from jax import numpy as jnp
 import numpy as np
+import scipy.integrate as si  # Optimizeed integral needed
+from jax import numpy as jnp
+from typing_extensions import Callable, Optional
 
 
 def next_pow_two(x: int) -> int:
@@ -37,6 +37,7 @@ def next_pow_two(x: int) -> int:
     while x2 < x:
         x2 = x2 << 1
     return x2
+
 
 sensitivity = ls.SimNoisePSDAdVO4T1800545
 waveform = ls.IMRPhenomA
@@ -182,9 +183,7 @@ def fraction_above_threshold(
 
     if w > 1.0:
         return 0.0  # no detection
-    else:
-        P_det = a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
-    return P_det  # detection
+    return a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
 
 
 # Computing VT
@@ -236,7 +235,9 @@ def vt_from_mass(
                 psd_fn=psd_fn,
                 approximant=approximant,
             )
-            return 4 * jnp.pi * cosmo.Planck15.differential_comoving_volume(z).to(u.Gpc ** 3 / u.sr).value / (1 + z) * p_det
+            return (
+                4 * jnp.pi * cosmo.Planck15.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value / (1 + z) * p_det
+            )
 
     zmin = 0.001
 
@@ -264,56 +265,64 @@ def vt_from_mass(
 
     return analysis_time * vol_integral
 
-    
+
 def vts_from_masses(
-        m1s, m2s, thresh=8.0, analysis_time = 1.0/365,
-        psd_fn=None,
-        processes=None,
-    ):
-        """
-        Compute the sensitive volume-time for a grid of masses.
-        :param m1s: The first mass in the grid.
-        :param m2s: The second mass in the grid.
-        :param thresh: The detection threshold in SNR
-        :param analysis_time: The total detector-frame searched time in years
-        :param psd_fn: Function giving the assumed single-detector PSD
-        :param processes: The number of processes to use in parallel.
-        :return: The sensitive time-volume in comoving Gpc^3-yr (assuming analysis_time is given in years).
-        """
-        if psd_fn is None:
-            psd_fn = sensitivity
+    m1s,
+    m2s,
+    thresh=8.0,
+    analysis_time=1.0 / 365,
+    psd_fn=None,
+    processes=None,
+):
+    """
+    Compute the sensitive volume-time for a grid of masses.
+    :param m1s: The first mass in the grid.
+    :param m2s: The second mass in the grid.
+    :param thresh: The detection threshold in SNR
+    :param analysis_time: The total detector-frame searched time in years
+    :param psd_fn: Function giving the assumed single-detector PSD
+    :param processes: The number of processes to use in parallel.
+    :return: The sensitive time-volume in comoving Gpc^3-yr (assuming analysis_time is given in years).
+    """
+    if psd_fn is None:
+        psd_fn = sensitivity
 
-        if processes is None:
-            processes = multi.cpu_count()
+    if processes is None:
+        processes = multi.cpu_count()
 
-        pool = multi.Pool(processes)
+    pool = multi.Pool(processes)
 
-        vts = pool.starmap(
-            vt_from_mass,
-            [(m1, m2, thresh, analysis_time, 19.0, 0.0, 40.0, 20.0, 1.0, psd_fn, waveform) for m1, m2 in zip(m1s, m2s)],
-        )
+    vts = pool.starmap(
+        vt_from_mass,
+        [(m1, m2, thresh, analysis_time, 19.0, 0.0, 40.0, 20.0, 1.0, psd_fn, waveform) for m1, m2 in zip(m1s, m2s)],
+    )
 
-        pool.close()
-        pool.join()
+    pool.close()
+    pool.join()
 
-        return np.array(vts)
+    return np.array(vts)
+
 
 def main():
-    days =1.0 # take it from user as input
-    duration = days / 365.0 # convert days to years
+    days = 1.0  # take it from user as input
+    duration = days / 365.0  # convert days to years
     import h5py
-    output = "./masses_vt.hdf5" # take it from user as input
+
+    output = "./masses_vt.hdf5"  # take it from user as input
 
     with h5py.File(output, "w-") as f:
-        
-        masses = np.linspace(1, 200, 100) # take it from user as input, min and max mass and number of points
+
+        masses = np.linspace(1, 200, 100)  # take it from user as input, min and max mass and number of points
         # we can take the masses from injections generated from mass distribution
-        #sort them before creating the grids
+        # sort them before creating the grids
         m1_grid, m2_grid = np.meshgrid(masses, masses)
         m1s, m2s = m1_grid.ravel(), m2_grid.ravel()
-        #print("m1, :", m1s)
+        # print("m1, :", m1s)
         vts = vts_from_masses(
-            m1s, m2s, thresh=8.0, analysis_time=duration,
+            m1s,
+            m2s,
+            thresh=8.0,
+            analysis_time=duration,
         )
 
         VT_grid = vts.reshape(m1_grid.shape)
@@ -324,4 +333,4 @@ def main():
 
 
 if __name__ == "__main__":
-      main()
+    main()
