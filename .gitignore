@@ -9,6 +9,7 @@ playground.py
 
 # data ignore
 *realization*
+*.dat
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

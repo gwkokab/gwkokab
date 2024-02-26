@@ -16,8 +16,7 @@
 from __future__ import annotations
 
 import h5py
-from jax import jit
-from jax import numpy as jnp
+from jax import jit, numpy as jnp
 from jaxtyping import Array
 
 from ..typing import Numeric

@@ -12,11 +12,11 @@ sys.path.append("gwkokab")
 from gwkokab.inference.model_test import model
 from gwkokab.utils import get_key
 
-#total_events = 100
-#posterior_size = 5000
+# total_events = 100
+# posterior_size = 5000
 posterior_regex = "events/event_*.dat"
 injection_regex = "events/event_*.dat"
-#true_values = np.loadtxt("syn_data/realization_0/configuration.dat")
+# true_values = np.loadtxt("syn_data/realization_0/configuration.dat")
 
 
 data_set = [np.loadtxt(event) for event in glob.glob(posterior_regex)]
@@ -34,8 +34,8 @@ print(mcmc.print_summary())
 
 # make corner plots
 fig = corner.corner(
-    np.array([samples["alpha"], samples["mmin"], samples["mmax"]]).T,
-    labels=[r"alpha", r"$m_{min}$", r"$m_{max}$"],
+    np.array([samples["alpha"], samples["mmin"], samples["mmax"], samples["rate"]]).T,
+    labels=[r"alpha", r"$m_{min}$", r"$m_{max}$", r"$\mathcal{R}$"],
     show_titles=True,
     truth_color="r",
 )
@@ -46,7 +46,7 @@ fig.savefig("corner.png")
 fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 az.plot_trace(
     samples,
-    var_names=["alpha", "mmin", "mmax"],
+    var_names=["alpha", "mmin", "mmax", "rate"],
     kind="trace",
     combined=False,
     compact=False,

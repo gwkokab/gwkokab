@@ -26,10 +26,11 @@ from jax import numpy as jnp, vmap
 from numpyro.distributions import *
 from tqdm import tqdm
 
+from gwkokab.vts.utils import interpolate_hdf5
+
 from ..errors import error_factory
 from ..models import *
 from ..utils.misc import get_key
-from gwkokab.vts.utils import interpolate_hdf5
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 

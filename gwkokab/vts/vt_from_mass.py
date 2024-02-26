@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import multiprocessing as multi
+from typing_extensions import Callable, Optional
 
 import astropy.cosmology as cosmo
 import astropy.units as u
@@ -24,7 +25,6 @@ import lalsimulation as ls
 import numpy as np
 import scipy.integrate as si  # Optimizeed integral needed
 from jax import numpy as jnp
-from typing_extensions import Callable, Optional
 
 
 def next_pow_two(x: int) -> int:
@@ -311,7 +311,6 @@ def main():
     output = "./masses_vt.hdf5"  # take it from user as input
 
     with h5py.File(output, "w-") as f:
-
         masses = np.linspace(1, 200, 100)  # take it from user as input, min and max mass and number of points
         # we can take the masses from injections generated from mass distribution
         # sort them before creating the grids
