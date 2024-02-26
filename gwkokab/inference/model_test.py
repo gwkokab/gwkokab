@@ -18,7 +18,7 @@ from numpyro import distributions as dist
 
 from ..models import *
 from ..utils.misc import get_key
-from ..vts import mass_grid_coords
+from gwkokab.vts.utils import interpolate_hdf5
 
 
 def integrate_adaptive(
@@ -56,6 +56,20 @@ def integrate_adaptive(
 
 
 def intensity(m1, m2, alpha, m_min, m_max, rate):
+    """
+    Calculate the intensity: last two terms of equation 6 in Wysocki et al. (2019).
+
+    Parameters:
+    m1 (float): Mass 1.
+    m2 (float): Mass 2.
+    alpha (float): Alpha value.
+    m_min (float): Minimum mass value.
+    m_max (float): Maximum mass value.
+    rate (float): Rate value.
+
+    Returns:
+    float: The calculated intensity. Product of the rate and population model.
+    """
     return rate * jnp.exp(
         Wysocki2019MassModel(
             alpha_m=alpha,
@@ -65,8 +79,8 @@ def intensity(m1, m2, alpha, m_min, m_max, rate):
         ).log_prob(jnp.stack([m1, m2]))
     )
 
-
-def expval_mc(alpha, m_min, m_max, rate, raw_interpolator):
+#following is the equation 6 from Wysocki et al. (2019)
+def expval_mc(alpha, m_min, m_max, rate):
     model = Wysocki2019MassModel(
         alpha_m=alpha,
         k=0,
@@ -77,25 +91,27 @@ def expval_mc(alpha, m_min, m_max, rate, raw_interpolator):
     def p(n):
         return model.sample(get_key(), sample_shape=(n,))
 
-    def f(X):
+    def f(X): #effective volume-time
         m1 = X[:, 0]
         m2 = X[:, 1]
-        logM, qtilde = mass_grid_coords(m1, m2, m_min)
-        return jnp.exp(raw_interpolator((logM, qtilde)))
+        print("m1",m1)
+        print("m2",m2)
+        return jnp.exp(interpolate_hdf5(m1, m2))
+    
+    I = integrate_adaptive(p, f, 
+                        err_abs=1e-5, err_rel=1e-3)
+    
+    return rate*I
+    
 
-    return rate * integrate_adaptive(p, f, err_abs=1e-3, err_rel=1e-3)
 
+def model(lambda_n):
 
-def model(lambda_n):  # , raw_interpolator):
-    r"""
-    .. math::
-        \mathcal{L}(\mathcal{R},\Lambda)\propto\prod_{n=1}^{N}\frac{\mathcal{R}}{N_i}\sum_{i=1}^{N_i}\frac{p(\lambda_i/\Lambda)}{\pi(\lambda_i)}
-    """
-    event, _, _ = lambda_n.shape
+    event = len(lambda_n)
     alpha_prior = dist.Uniform(-5.0, 5.0)
     mmin_prior = dist.Uniform(5.0, 15.0)
-    mmax_prior = dist.Uniform(30.0, 190.0)
-    rate_prior = dist.LogUniform(10**-1, 10**6)
+    mmax_prior = dist.Uniform(30.0, 100.0)
+    rate_prior = dist.Uniform(1, 500)
     alpha = numpyro.sample("alpha", alpha_prior)
     mmin = numpyro.sample("mmin", mmin_prior)
     mmax = numpyro.sample("mmax", mmax_prior)
@@ -103,9 +119,7 @@ def model(lambda_n):  # , raw_interpolator):
 
     ll = 0.0
 
-    ll = 0.0
-
-    with numpyro.plate("data", event) as n:
+    for n in range(event):
         mass_model = Wysocki2019MassModel(
             alpha_m=alpha,
             k=0,
@@ -113,12 +127,11 @@ def model(lambda_n):  # , raw_interpolator):
             mmax=mmax,
         )
         ll_i = 0.0
-        p = jnp.exp(mass_model.log_prob(lambda_n[n, :, :]))
-        ll_i = jnp.mean(p, axis=1)
-        ll_i *= rate
+        p = jnp.exp(mass_model.log_prob(lambda_n[n]))
+        ll_i = jnp.mean(p)
         ll += jnp.log(ll_i)
 
-    # mean = expval_mc(alpha, mmin, mmax, rate, raw_interpolator)
-    # ll -= mean
+    mean = expval_mc(alpha, mmin, mmax, rate)
+    pos = ll-mean #poisson log likelihood
 
-    return jnp.exp(ll)
+    return jnp.exp(pos)

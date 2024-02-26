@@ -29,7 +29,7 @@ from tqdm import tqdm
 from ..errors import error_factory
 from ..models import *
 from ..utils.misc import get_key
-from ..vts import interpolate_hdf5
+from gwkokab.vts.utils import interpolate_hdf5
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
