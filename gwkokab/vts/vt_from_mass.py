@@ -266,7 +266,7 @@ def vt_from_mass(
 
     
 def vts_from_masses(
-        m1s, m2s, thresh=8.0, analysis_time,
+        m1s, m2s, thresh=8.0, analysis_time = 1.0/365,
         psd_fn=None,
         processes=None,
     ):
@@ -302,16 +302,16 @@ def main():
     days =1.0 # take it from user as input
     duration = days / 365.0 # convert days to years
     import h5py
-    output = "./output.hdf5" # take it from user as input
+    output = "./masses_vt.hdf5" # take it from user as input
 
     with h5py.File(output, "w-") as f:
         
-        masses = np.linspace(1, 200, 1000) # take it from user as input, min and max mass and number of points
+        masses = np.linspace(1, 200, 100) # take it from user as input, min and max mass and number of points
         # we can take the masses from injections generated from mass distribution
         #sort them before creating the grids
         m1_grid, m2_grid = np.meshgrid(masses, masses)
         m1s, m2s = m1_grid.ravel(), m2_grid.ravel()
-        print("m1, :", m1s)
+        #print("m1, :", m1s)
         vts = vts_from_masses(
             m1s, m2s, thresh=8.0, analysis_time=duration,
         )
