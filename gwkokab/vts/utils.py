@@ -22,7 +22,7 @@ from jaxtyping import Array
 from ..typing import Numeric
 
 
-@jit
+# @jit
 def interpolate_hdf5(m1: float, m2: float, file_path: str = "./vt_1_200_1000.hdf5") -> Array:
     """Interpolates the VT values from an HDF5 file based on given m1 and m2 coordinates.
 

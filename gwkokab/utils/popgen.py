@@ -19,7 +19,6 @@ import os
 import sys
 from typing_extensions import Optional
 
-import h5py
 import jax
 import numpy as np
 from jax import numpy as jnp, vmap
@@ -31,6 +30,7 @@ from gwkokab.vts.utils import interpolate_hdf5
 from ..errors import error_factory
 from ..models import *
 from ..utils.misc import get_key
+from ..vts.utils import interpolate_hdf5
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
@@ -111,7 +111,8 @@ class PopulationGenerator(object):
         # logM, qtilde = mass_grid_coords(realizations[:, m1_col_index], realizations[:, m2_col_index], 5)
 
         # weights = self._raw_interpolator((logM, qtilde))
-        weights = self._raw_interpolator((realizations[:, m1_col_index], realizations[:, m2_col_index]))
+        # weights = self._raw_interpolator((realizations[:, m1_col_index], realizations[:, m2_col_index]))
+        weights = interpolate_hdf5(realizations[:, m1_col_index], realizations[:, m2_col_index], self._vt_filename)
         weights /= np.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(weights))
@@ -126,8 +127,8 @@ class PopulationGenerator(object):
 
         :param raw_interpolator_filename: raw interpolator file name
         """
-        with h5py.File(raw_interpolator_filename, "r") as VTs:
-            self._raw_interpolator = interpolate_hdf5(VTs)
+        # with h5py.File(raw_interpolator_filename, "r") as VTs:
+        #     self._raw_interpolator = interpolate_hdf5(VTs)
 
         for i in tqdm(
             range(self._num_realizations),
@@ -162,8 +163,8 @@ class PopulationGenerator(object):
 
         :param raw_interpolator_filename: raw interpolator file name
         """
-        with h5py.File(raw_interpolator_filename, "r") as VTs:
-            self._raw_interpolator = interpolate_hdf5(VTs)
+        # with h5py.File(raw_interpolator_filename, "r") as VTs:
+        #     self._raw_interpolator = interpolate_hdf5(VTs)
 
         bar = tqdm(
             total=self._num_realizations * self._size,
