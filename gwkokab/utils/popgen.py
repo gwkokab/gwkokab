@@ -25,8 +25,6 @@ from jax import numpy as jnp, vmap
 from numpyro.distributions import *
 from tqdm import tqdm
 
-from gwkokab.vts.utils import interpolate_hdf5
-
 from ..errors import error_factory
 from ..models import *
 from ..utils.misc import get_key
@@ -36,6 +34,8 @@ from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot
 
 class PopulationGenerator(object):
     """This class is used to generate population and save them to disk."""
+
+    key = None
 
     def __init__(
         self,
@@ -108,15 +108,12 @@ class PopulationGenerator(object):
         """
         realizations = np.loadtxt(input_filename)
 
-        # logM, qtilde = mass_grid_coords(realizations[:, m1_col_index], realizations[:, m2_col_index], 5)
-
-        # weights = self._raw_interpolator((logM, qtilde))
-        # weights = self._raw_interpolator((realizations[:, m1_col_index], realizations[:, m2_col_index]))
         weights = interpolate_hdf5(realizations[:, m1_col_index], realizations[:, m2_col_index], self._vt_filename)
         weights /= np.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(weights))
-        downselected = jax.random.choice(get_key(None), indexes_all, p=weights, shape=(n_out,))
+        self.key = get_key(self.key)
+        downselected = jax.random.choice(self.key, indexes_all, p=weights, shape=(n_out,))
 
         new_realizations = realizations[downselected]
 
@@ -215,7 +212,8 @@ class PopulationGenerator(object):
 
             realisations = jnp.empty((size, 0))
             for model_instance in self._model_instances:
-                rvs = model_instance.sample(get_key(), sample_shape=(size,)).reshape((size, -1))
+                self.key = get_key(self.key)
+                rvs = model_instance.sample(self.key, sample_shape=(size,)).reshape((size, -1))
                 realisations = jnp.concatenate((realisations, rvs), axis=-1)
 
                 bar.update(1)
@@ -387,8 +385,6 @@ class PopulationGenerator(object):
         if self._vt_filename:
             self.weighted_injection(self._vt_filename)
         self.add_error()
-        if self._vt_filename:
-            self.weighted_posteriors(self._vt_filename)
         if self._plots:
             if self._plots.get("posts", None):
                 self.generate_batch_plots()

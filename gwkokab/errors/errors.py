@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, vmap
 from jax.random import normal, truncated_normal, uniform
 from jaxtyping import Array
@@ -115,10 +116,10 @@ def uniform_error(x: Array, size: int, *, lower: float, upper: float) -> Array:
 
 
 def banana_error(x: Array, size: int) -> Array:
-    r"""Add banana error to the given values. Section 3 of the following paper
-    https://doi.org/10.1093/mnras/stw2883 discusses the banana error. It adds
-    errors in the chirp mass and symmetric mass ratio and then converts back to
-    masses.
+    r"""Add banana error to the given values. Section 3 of the
+    `paper <https://doi.org/10.1093/mnras/stw2883>`__ discusses the banana
+    error. It adds errors in the chirp mass and symmetric mass ratio and then
+    converts back to masses.
 
     .. math::
         M_{c} = M_{c}^{T}\left[1+\alpha\frac{12}{\rho}\left(r_{0}+r\right)\right]
@@ -132,45 +133,43 @@ def banana_error(x: Array, size: int) -> Array:
     m1 = x[0]
     m2 = x[1]
 
-    r0 = normal(key=get_key(), shape=(), dtype=x.dtype)
-    r0p = normal(key=get_key(), shape=(), dtype=x.dtype)
-    r = normal(key=get_key(), shape=(size,), dtype=x.dtype)
-    rp = normal(key=get_key(), shape=(size,), dtype=x.dtype)
+    key = get_key(None)
+    r0 = normal(key=key)
 
-    rho = 8.0 * jnp.power(
-        uniform(
-            key=get_key(),
-            shape=(size,),
-            dtype=x.dtype,
-            minval=0.0,
-            maxval=1.0,
-        ),
-        -1.0 / 3.0,
-    )
+    key = get_key(key)
+    r0p = normal(key=key)
+
+    key = get_key(key)
+    r = normal(key=key, shape=(size,)) * 0.15
+
+    key = get_key(key)
+    rp = normal(key=key, shape=(size,)) * 1.5
+
+    key = get_key(key)
+    rho = 9.0 * jnp.power(uniform(key=key), -1.0 / 3.0)
 
     Mc_true = chirp_mass(m1, m2)
     eta_true = symmetric_mass_ratio(m1, m2)
 
-    alpha = jnp.zeros_like(r)
-    alpha = jnp.where(eta_true >= 0.1, 0.01, alpha)
-    alpha = jnp.where((0.1 > eta_true) & (eta_true >= 0.05), 0.03, alpha)
-    alpha = jnp.where(0.05 > eta_true, 0.1, alpha)
+    v_PN_param = (jnp.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (1.0 / 3.0)  # 'v' parameter
+    v_PN_param_max = 0.2
+    v_PN_param = jnp.min(jnp.array([v_PN_param, v_PN_param_max]))
+    snr_fac = rho / 15.0
+    # this ignores range due to redshift / distance, based on a low-order est
+    ln_mc_error_pseudo_fisher = 1.5 * 0.3 * (v_PN_param / v_PN_param_max) ** (7.0) / snr_fac
+
+    alpha = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
 
     twelve_over_rho = 12.0 / rho
 
     Mc = Mc_true * (1.0 + alpha * twelve_over_rho * (r0 + r))
     eta = eta_true * (1.0 + 0.03 * twelve_over_rho * (r0p + rp))
 
-    mask = 0.25 >= eta
-    mask &= eta >= 0.01
+    etaV = 1.0 - 4.0 * eta
+    etaV_sqrt = jnp.where(etaV >= 0, jnp.sqrt(etaV), jnp.nan)
 
-    mtot = Mc * jnp.power(eta, -0.6)
-    m1m2 = eta * jnp.power(mtot, 2)
-
-    m2_final = 0.5 * (mtot - jnp.sqrt(mtot**2 - 4 * m1m2))
-    m1_final = 0.5 * (mtot + jnp.sqrt(mtot**2 - 4 * m1m2))
-
-    m1_final = jnp.where(mask, m1_final, jnp.nan)
-    m2_final = jnp.where(mask, m2_final, jnp.nan)
+    factor = 0.5 * Mc * jnp.power(eta, -0.6)
+    m1_final = factor * (1.0 + etaV_sqrt)
+    m2_final = factor * (1.0 - etaV_sqrt)
 
     return jnp.column_stack([m1_final, m2_final])
