@@ -120,7 +120,7 @@ def uniform_error(x: Array, size: int, key: Array, *, lower: float, upper: float
     )(x)
 
 
-def banana_error(x: Array, size: int, key: Array) -> Array:
+def banana_error(x: Array, size: int, key: Array, *, scale_Mc: float = 1.0, scale_eta: float = 1.0) -> Array:
     r"""Add banana error to the given values. Section 3 of the
     `paper <https://doi.org/10.1093/mnras/stw2883>`__ discusses the banana
     error. It adds errors in the chirp mass and symmetric mass ratio and then
@@ -145,10 +145,10 @@ def banana_error(x: Array, size: int, key: Array) -> Array:
     r0p = normal(key=key)
 
     key = get_key(key)
-    r = normal(key=key, shape=(size,)) * 0.15
+    r = normal(key=key, shape=(size,)) * scale_Mc
 
     key = get_key(key)
-    rp = normal(key=key, shape=(size,)) * 1.5
+    rp = normal(key=key, shape=(size,)) * scale_eta
 
     key = get_key(key)
     rho = 9.0 * jnp.power(uniform(key=key), -1.0 / 3.0)
@@ -165,10 +165,8 @@ def banana_error(x: Array, size: int, key: Array) -> Array:
 
     alpha = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
 
-    twelve_over_rho = 12.0 / rho
-
-    Mc = Mc_true * (1.0 + alpha * twelve_over_rho * (r0 + r))
-    eta = eta_true * (1.0 + 0.03 * twelve_over_rho * (r0p + rp))
+    Mc = Mc_true * (1.0 + alpha * (r0 + r))
+    eta = eta_true * (1.0 + (0.36 / rho) * (r0p + rp))
 
     etaV = 1.0 - 4.0 * eta
     etaV_sqrt = jnp.where(etaV >= 0, jnp.sqrt(etaV), jnp.nan)
