@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from typing_extensions import Optional
+
 import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, vmap
 from jax.random import normal, truncated_normal, uniform
@@ -23,30 +25,33 @@ from jaxtyping import Array
 from ..utils import chirp_mass, get_key, symmetric_mass_ratio
 
 
-def error_factory(error_type: str, **kwargs) -> Array:
+def error_factory(error_type: str, key: Optional[int | Array] = None, **kwargs) -> Array:
     """Factory function to create different types of errors.
 
     :param error_type: name of the error
     :raises ValueError: if the error type is unknown
     :return: error values for the given error type
     """
+    if key is None or isinstance(key, int):
+        key = get_key(key)
+
     if error_type == "normal":
-        return normal_error(**kwargs)
+        return normal_error(key=key, **kwargs)
     elif error_type == "truncated_normal":
-        return truncated_normal_error(**kwargs)
+        return truncated_normal_error(key=key, **kwargs)
     elif error_type == "uniform":
-        return uniform_error(**kwargs)
+        return uniform_error(key=key, **kwargs)
     elif error_type == "banana":
-        return banana_error(**kwargs)
+        return banana_error(key=key, **kwargs)
     else:
         raise ValueError(f"Unknown error type: {error_type}")
 
 
-def normal_error(x: Array, size: int, *, scale: float) -> Array:
+def normal_error(x: Array, size: int, key: Array, *, scale: float) -> Array:
     r"""Add normal error to the given values.
 
     .. math::
-        x' = \mathcal{N}(\mu=x, \sigma=scale)
+        x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale})
 
     :param x: given values
     :param size: number of samples
@@ -55,7 +60,7 @@ def normal_error(x: Array, size: int, *, scale: float) -> Array:
     """
     return vmap(
         lambda x_: normal(
-            key=get_key(),
+            key=key,
             shape=(size,),
             dtype=x.dtype,
         )
@@ -64,11 +69,11 @@ def normal_error(x: Array, size: int, *, scale: float) -> Array:
     )(x)
 
 
-def truncated_normal_error(x: Array, size: int, *, scale: float, lower: float, upper: float) -> Array:
+def truncated_normal_error(x: Array, size: int, key: Array, *, scale: float, lower: float, upper: float) -> Array:
     r"""Add truncated normal error to the given values.
 
     .. math::
-        x' = \mathcal{N}(\mu=x, \sigma=scale) \cap [lower, upper]
+        x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale}) \cap [lower, upper]
 
     :param x: given values
     :param size: number of samples
@@ -79,7 +84,7 @@ def truncated_normal_error(x: Array, size: int, *, scale: float, lower: float, u
     """
     return vmap(
         lambda x_: truncated_normal(
-            key=get_key(),
+            key=key,
             lower=lower,
             upper=upper,
             shape=(size,),
@@ -90,11 +95,11 @@ def truncated_normal_error(x: Array, size: int, *, scale: float, lower: float, u
     )(x)
 
 
-def uniform_error(x: Array, size: int, *, lower: float, upper: float) -> Array:
+def uniform_error(x: Array, size: int, key: Array, *, lower: float, upper: float) -> Array:
     r"""Add uniform error to the given values.
 
     .. math::
-        x' = x+\mathcal{U}(a=lower, b=upper)
+        x' \sim x+\mathcal{U}(a=lower, b=upper)
 
     :param x: given values
     :param size: number of samples
@@ -105,7 +110,7 @@ def uniform_error(x: Array, size: int, *, lower: float, upper: float) -> Array:
     """
     return vmap(
         lambda x_: uniform(
-            key=get_key(),
+            key=key,
             shape=(size,),
             dtype=x.dtype,
             minval=lower,
@@ -115,7 +120,7 @@ def uniform_error(x: Array, size: int, *, lower: float, upper: float) -> Array:
     )(x)
 
 
-def banana_error(x: Array, size: int) -> Array:
+def banana_error(x: Array, size: int, key: Array) -> Array:
     r"""Add banana error to the given values. Section 3 of the
     `paper <https://doi.org/10.1093/mnras/stw2883>`__ discusses the banana
     error. It adds errors in the chirp mass and symmetric mass ratio and then
@@ -130,10 +135,10 @@ def banana_error(x: Array, size: int) -> Array:
     :param size: number of samples
     :return: error values
     """
-    m1 = x[0]
-    m2 = x[1]
+    m1 = x[..., 0]
+    m2 = x[..., 1]
 
-    key = get_key(None)
+    key = get_key(key)
     r0 = normal(key=key)
 
     key = get_key(key)

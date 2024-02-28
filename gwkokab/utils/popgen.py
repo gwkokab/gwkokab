@@ -136,7 +136,7 @@ class PopulationGenerator(object):
         ):
             container = f"{self._root_container}/realization_{i}"
             injection_filename = f"{container}/injections.dat"
-            weighted_injection_filename = f"{container}/weighted_injections.dat"
+            weighted_injection_filename = f"{container}/injections.dat"
 
             self.weight_over_m1m2(
                 input_filename=injection_filename,
@@ -146,12 +146,12 @@ class PopulationGenerator(object):
                 m2_col_index=self._col_names.index("m2_source"),
             )
 
-            weighted_injections = np.loadtxt(weighted_injection_filename)
+            injections = np.loadtxt(weighted_injection_filename)
             os.makedirs(f"{container}/injections", exist_ok=True)
             for j in range(self._size):
                 np.savetxt(
                     f"{container}/injections/{self._event_filename.format(j)}",
-                    weighted_injections[j, :].reshape(1, -1),
+                    injections[j, :].reshape(1, -1),
                     header="\t".join(self._col_names),
                 )
 
@@ -291,7 +291,7 @@ class PopulationGenerator(object):
         )
         for i in range(self._num_realizations):
             container = f"{self._root_container}/realization_{i}"
-            injection_filename = f"{container}/weighted_injections.dat"
+            injection_filename = f"{container}/injections.dat"
             realizations = np.loadtxt(injection_filename)
             err_realizations = np.empty((self._size, error_size, 0))
 
@@ -299,14 +299,17 @@ class PopulationGenerator(object):
 
             k = 0
             for t, c in enumerate(self._col_count):
+                keys = jax.random.split(self.key, self._size)
+                self.key = get_key(self.key)
                 rvs = vmap(
-                    lambda x: error_factory(
+                    lambda x, pk: error_factory(
                         error_type=self._error_type[t],
                         x=x,
                         size=error_size,
+                        key=pk,
                         **self._error_params[t],
                     )
-                )(realizations[:, k : k + c]).reshape((self._size, error_size, -1))
+                )(realizations[:, k : k + c], keys).reshape((self._size, error_size, -1))
                 err_realizations = np.concatenate((err_realizations, rvs), axis=-1)
                 k += c
 
@@ -389,4 +392,4 @@ class PopulationGenerator(object):
             if self._plots.get("posts", None):
                 self.generate_batch_plots()
             if self._plots.get("injs", None):
-                self.generate_injections_plots("weighted_injections.dat")
+                self.generate_injections_plots("injections.dat")
