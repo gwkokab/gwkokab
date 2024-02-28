@@ -62,7 +62,6 @@ class PopulationGenerator(object):
         self._num_realizations: int = general["num_realizations"]
         self._models: list = models
         self._extra_size = general["extra_size"]
-        self._extra_error_size = general["extra_error_size"]
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
         self._plots = plots
 
@@ -281,7 +280,7 @@ class PopulationGenerator(object):
 
     def add_error(self) -> None:
         """Add error to the injections."""
-        error_size = self._error_size + self._extra_error_size
+        error_size = self._error_size
         bar = tqdm(
             total=self._num_realizations * self._size,
             desc="Adding error",

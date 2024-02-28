@@ -56,7 +56,6 @@ def parse_config(config_path: str) -> dict[str, Any]:
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])
     config_dict["general"]["num_realizations"] = int(config["general"]["num_realizations"])
     config_dict["general"]["extra_size"] = int(config["general"].get("extra_size", "1500"))
-    config_dict["general"]["extra_error_size"] = int(config["general"].get("extra_error_size", "1000"))
 
     if "plots" in config:
         config_dict["plots"] = {}

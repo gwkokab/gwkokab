@@ -18,7 +18,6 @@ This section contains the general configuration for the synthetic data generatio
 - :code:`config_filename` : The name of the file that contains the configuration for the models that will be used to generate the synthetic data.
 - :code:`num_realizations` : The number of realizations of the synthetic data that will be generated.
 - :code:`extra_size` : The size of the extra data. This is to over sample the data to account for the selection effect. Defaults to 1500.
-- :code:`extra_error_size` : The size of the error in the extra data. This is to over sample the data to account for the selection effect. Defaults to 1000.
 
 .. warning:: This section is mandatory.
 
@@ -34,7 +33,6 @@ An example of the general section is as follows:
     config_filename = configuration.dat
     num_realizations = 5
     extra_size = 15000
-    extra_error_size = 10000
 
 
 Selection effect
@@ -115,7 +113,6 @@ Lets run the process of synthetic data generation for the following configuratio
     config_filename = configuration.dat
     num_realizations = 5
     extra_size = 15000
-    extra_error_size = 10000
 
     [selection_effect]
     vt_filename = mass_vt.hdf5
