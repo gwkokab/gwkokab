@@ -14,13 +14,13 @@
 
 from __future__ import annotations
 
-from typing_extensions import Optional
-
-from jax import lax, numpy as jnp
+from jax import lax
+from jax import numpy as jnp
 from jax.random import uniform
 from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution
+from numpyro.distributions import Distribution, constraints
 from numpyro.distributions.util import promote_shapes, validate_sample
+from typing_extensions import Optional
 
 from ..utils.misc import get_key
 
@@ -41,6 +41,7 @@ class Wysocki2019MassModel(Distribution):
     }
 
     support = constraints.real_vector
+    reparametrized_params = ["m1", "m2"]
 
     def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, *, valid_args=None) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
@@ -58,7 +59,11 @@ class Wysocki2019MassModel(Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
         )
-        super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
+        super(Wysocki2019MassModel, self).__init__(
+            batch_shape=batch_shape,
+            validate_args=valid_args,
+            event_shape=(2,),
+        )
 
     @validate_sample
     def log_prob(self, value):
