@@ -14,13 +14,13 @@
 
 from __future__ import annotations
 
-from jax import lax
-from jax import numpy as jnp
+from typing_extensions import Optional
+
+from jax import lax, numpy as jnp
 from jax.random import uniform
 from jaxtyping import Array
-from numpyro.distributions import Distribution, constraints
+from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
-from typing_extensions import Optional
 
 from ..utils.misc import get_key
 

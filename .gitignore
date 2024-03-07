@@ -6,6 +6,7 @@
 *.out
 *.synctex.gz
 playground.py
+*.zip
 
 # data ignore
 *realization*
