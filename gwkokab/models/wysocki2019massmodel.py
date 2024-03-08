@@ -64,6 +64,18 @@ class Wysocki2019MassModel(Distribution):
             validate_args=valid_args,
             event_shape=(2,),
         )
+        q = self.mmin / self.mmax
+        Z = jnp.asarray([jnp.power(q, i + self.alpha_m - 1.0) for i in range(self.k + 1)])
+        d = 1 - self.alpha_m - jnp.arange(self.k + 1)
+
+        Z = jnp.where(
+            (d == 0) & (1.0 - self.k <= self.alpha_m) & (self.alpha_m <= 1.0),
+            -jnp.log(q),
+            Z / d,
+        )
+        Z = jnp.sum(Z)
+        Z *= jnp.power(self.mmin, 1.0 - self.alpha_m) / (self.k + 1.0)
+        self.logZ = jnp.log(Z)
 
     @validate_sample
     def log_prob(self, value):
@@ -71,6 +83,7 @@ class Wysocki2019MassModel(Distribution):
             -(self.alpha_m + self.k) * jnp.log(value[..., 0])
             + self.k * jnp.log(value[..., 1])
             - jnp.log(value[..., 0] - self.mmin)
+            - self.logZ
         )
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:

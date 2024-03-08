@@ -315,8 +315,7 @@ class PopulationGenerator(object):
             mask = np.isnan(err_realizations).any(axis=2)
 
             for j in range(self._size):
-                # masked_err_realizations = err_realizations[j, ~mask[j]]
-                masked_err_realizations = err_realizations[j, ...]
+                masked_err_realizations = err_realizations[j, ~mask[j]]
 
                 np.savetxt(
                     f"{container}/posteriors/{self._event_filename.format(j)}",
