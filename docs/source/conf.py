@@ -8,13 +8,11 @@
 
 from __future__ import annotations
 
-import glob
 import os
-import shutil
 import sys
 
-import nbsphinx
 import sphinx_rtd_theme
+
 
 sys.path.insert(0, os.path.abspath("../.."))
 # sys.path.insert(0, os.path.abspath("$HOME/anaconda3/lib/python3.11/site-packages/"))

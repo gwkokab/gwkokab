@@ -14,29 +14,22 @@
 
 from __future__ import annotations
 
+from functools import partial
 from typing_extensions import Optional
 
 import jax
 from jax import jit, numpy as jnp
 
+from gwkokab.models import *
+from gwkokab.utils.misc import get_key
 from gwkokab.vts.utils import interpolate_hdf5
-
-from ..models import *
-from ..utils.misc import get_key
 
 
 raw_interpolator = interpolate_hdf5()
 
 
-@jit
-def exp_rate(rate, *, pop_params) -> float:
-    N = 1 << 14  # 2 ** 14
-    lambdas = Wysocki2019MassModel(
-        alpha_m=pop_params["alpha_m"],
-        k=0,
-        mmin=pop_params["mmin"],
-        mmax=pop_params["mmax"],
-    ).sample(get_key(), sample_shape=(N,))
+@partial(jit, static_argnums=(0, 1))
+def exp_rate(rate, lambdas) -> float:
     m1 = lambdas[..., 0]
     m2 = lambdas[..., 1]
     value = raw_interpolator(m1, m2)
@@ -44,6 +37,7 @@ def exp_rate(rate, *, pop_params) -> float:
     return rate * I
 
 
+@partial(jit, static_argnums=(0,))
 def log_inhomogeneous_poisson_likelihood(x, data: Optional[dict] = None):
     alpha = x[..., 0]
     mmin = x[..., 1]
@@ -56,22 +50,19 @@ def log_inhomogeneous_poisson_likelihood(x, data: Optional[dict] = None):
         mmin=mmin,
         mmax=mmax,
     )
-
-    log_priors = data["log_priors"]
-
-    log_likelihood_individual = jax.tree_map(
-        lambda x: jnp.mean(jax.nn.logsumexp(mass_model.log_prob(x) + jnp.log(rate) - log_priors)),
+    log_rate = jnp.log(rate)
+    integral_individual = jax.tree_map(
+        lambda x: jax.nn.logsumexp(mass_model.log_prob(x)) + log_rate - jnp.log(x.shape[0]),
         data["data"],
     )
 
-    log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(log_likelihood_individual)))
+    log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(integral_individual)))
+
+    N = 1 << 14  # 2 ** 14
+    lambdas = mass_model.sample(get_key(), sample_shape=(N,))
 
     expected_rate = exp_rate(
         rate,
-        pop_params={
-            "alpha_m": alpha,
-            "mmin": mmin,
-            "mmax": mmax,
-        },
+        lambdas,
     )
     return log_likelihood - expected_rate

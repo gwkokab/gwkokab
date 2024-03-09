@@ -65,8 +65,9 @@ class Wysocki2019MassModel(Distribution):
             event_shape=(2,),
         )
         q = self.mmin / self.mmax
-        Z = jnp.asarray([jnp.power(q, i + self.alpha_m - 1.0) for i in range(self.k + 1)])
-        d = 1 - self.alpha_m - jnp.arange(self.k + 1)
+        K = jnp.arange(self.k + 1)
+        Z = jnp.asarray([jnp.power(q, i + self.alpha_m - 1.0) for i in K])
+        d = 1 - self.alpha_m - K
 
         Z = jnp.where(
             (d == 0) & (1.0 - self.k <= self.alpha_m) & (self.alpha_m <= 1.0),
