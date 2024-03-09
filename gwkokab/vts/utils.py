@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from typing_extensions import Callable
+
 import h5py
 from jax import jit, numpy as jnp
 from jaxtyping import Array
@@ -23,7 +25,7 @@ from ..typing import Numeric
 
 
 # @jit
-def interpolate_hdf5(m1: float, m2: float, file_path: str = "./vt_1_200_1000.hdf5") -> Array:
+def interpolate_hdf5(file_path: str = "./vt_1_200_1000.hdf5") -> Callable:
     """Interpolates the VT values from an HDF5 file based on given m1 and m2 coordinates.
 
     :param m1: The m1 coordinate.
@@ -37,8 +39,33 @@ def interpolate_hdf5(m1: float, m2: float, file_path: str = "./vt_1_200_1000.hdf
         VT_grid = hdf5_file["VT"][:]
         m1_coord = m1_grid[0]
         m2_coord = m2_grid[:, 0]
-        interpolator = bispline_interp(m1, m2, m1_coord, m2_coord, VT_grid)
+        interpolator = lambda m1, m2: bispline_interp(m1, m2, m1_coord, m2_coord, VT_grid)
     return interpolator
+
+
+M = 0.0625 * jnp.array(
+    [
+        [0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, -8, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 16, -40, 32, -8, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, -8, 24, -24, 8, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, -8, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0],
+        [4, 0, -4, 0, 0, 0, 0, 0, -4, 0, 4, 0, 0, 0, 0, 0],
+        [-8, 20, -16, 4, 0, 0, 0, 0, 8, -20, 16, -4, 0, 0, 0, 0],
+        [4, -12, 12, -4, 0, 0, 0, 0, -4, 12, -12, 4, 0, 0, 0, 0],
+        [0, 16, 0, 0, 0, -40, 0, 0, 0, 32, 0, 0, 0, -8, 0, 0],
+        [-8, 0, 8, 0, 20, 0, -20, 0, -16, 0, 16, 0, 4, 0, -4, 0],
+        [16, -40, 32, -8, -40, 100, -80, 20, 32, -80, 64, -16, -8, 20, -16, 4],
+        [-8, 24, -24, 8, 20, -60, 60, -20, -16, 48, -48, 16, 4, -12, 12, -4],
+        [0, -8, 0, 0, 0, 24, 0, 0, 0, -24, 0, 0, 0, 8, 0, 0],
+        [4, 0, -4, 0, -12, 0, 12, 0, 12, 0, -12, 0, -4, 0, 4, 0],
+        [-8, 20, -16, 4, 24, -60, 48, -12, -24, 60, -48, 12, 8, -20, 16, -4],
+        [4, -12, 12, -4, -12, 36, -36, 12, 12, -36, 36, -12, -4, 12, -12, 4],
+    ],
+    dtype=jnp.float32,
+)
+
+M1 = jnp.array([[1, 0, 0, 0], [-1, 1, 0, 0], [-1, 0, 1, 0], [1, -1, -1, 1]], dtype=jnp.float32)
 
 
 @jit
@@ -59,29 +86,6 @@ def bispline_interp(
     :param zp: 2D array of original values of functions, where zp[i,j] is the value at xp[i], yp[j].
     :return: Interpolated values at the specified coordinates (xnew, ynew).
     """
-    M = 0.0625 * jnp.array(
-        [
-            [0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, -8, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 16, -40, 32, -8, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, -8, 24, -24, 8, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, -8, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0],
-            [4, 0, -4, 0, 0, 0, 0, 0, -4, 0, 4, 0, 0, 0, 0, 0],
-            [-8, 20, -16, 4, 0, 0, 0, 0, 8, -20, 16, -4, 0, 0, 0, 0],
-            [4, -12, 12, -4, 0, 0, 0, 0, -4, 12, -12, 4, 0, 0, 0, 0],
-            [0, 16, 0, 0, 0, -40, 0, 0, 0, 32, 0, 0, 0, -8, 0, 0],
-            [-8, 0, 8, 0, 20, 0, -20, 0, -16, 0, 16, 0, 4, 0, -4, 0],
-            [16, -40, 32, -8, -40, 100, -80, 20, 32, -80, 64, -16, -8, 20, -16, 4],
-            [-8, 24, -24, 8, 20, -60, 60, -20, -16, 48, -48, 16, 4, -12, 12, -4],
-            [0, -8, 0, 0, 0, 24, 0, 0, 0, -24, 0, 0, 0, 8, 0, 0],
-            [4, 0, -4, 0, -12, 0, 12, 0, 12, 0, -12, 0, -4, 0, 4, 0],
-            [-8, 20, -16, 4, 24, -60, 48, -12, -24, 60, -48, 12, 8, -20, 16, -4],
-            [4, -12, 12, -4, -12, 36, -36, 12, 12, -36, 36, -12, -4, 12, -12, 4],
-        ],
-        dtype=jnp.float32,
-    )
-
-    M1 = jnp.array([[1, 0, 0, 0], [-1, 1, 0, 0], [-1, 0, 1, 0], [1, -1, -1, 1]], dtype=jnp.float32)
 
     def built_Ivec(zp: Array, ix: int, iy: int) -> Array:
         return jnp.array([zp[ix + i, iy + j] for j in range(-1, 3) for i in range(-1, 3)])
@@ -128,6 +132,3 @@ def bispline_interp(
 
     cond = jnp.logical_and(condx, condy)
     return jnp.where(cond, bispline_interp(ix, iy), bilinear_interp(ix, iy))
-
-
-# print(interpolate_hdf5(jnp.array([56.89,]),jnp.array([20.12,])))

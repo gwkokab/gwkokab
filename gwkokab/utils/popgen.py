@@ -107,7 +107,8 @@ class PopulationGenerator(object):
         """
         realizations = np.loadtxt(input_filename)
 
-        weights = interpolate_hdf5(realizations[:, m1_col_index], realizations[:, m2_col_index], self._vt_filename)
+        # weights = interpolate_hdf5(realizations[:, m1_col_index], realizations[:, m2_col_index], self._vt_filename)
+        weights = self._raw_interpolator(realizations[:, m1_col_index], realizations[:, m2_col_index])
         weights /= np.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(weights))
@@ -123,8 +124,8 @@ class PopulationGenerator(object):
 
         :param raw_interpolator_filename: raw interpolator file name
         """
-        # with h5py.File(raw_interpolator_filename, "r") as VTs:
-        #     self._raw_interpolator = interpolate_hdf5(VTs)
+
+        self._raw_interpolator = interpolate_hdf5(raw_interpolator_filename)
 
         for i in tqdm(
             range(self._num_realizations),

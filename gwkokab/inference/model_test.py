@@ -25,9 +25,12 @@ from ..models import *
 from ..utils.misc import get_key
 
 
+raw_interpolator = interpolate_hdf5()
+
+
 @jit
 def exp_rate(rate, *, pop_params) -> float:
-    N = 1 << 13  # 2 ** 13
+    N = 1 << 14  # 2 ** 14
     lambdas = Wysocki2019MassModel(
         alpha_m=pop_params["alpha_m"],
         k=0,
@@ -37,7 +40,7 @@ def exp_rate(rate, *, pop_params) -> float:
     I = 0
     m1 = lambdas[..., 0]
     m2 = lambdas[..., 1]
-    value = jnp.exp(interpolate_hdf5(m1, m2))
+    value = jnp.exp(raw_interpolator(m1, m2))
     F = jnp.sum(value)
     I_current = F / N
     I += rate * I_current
