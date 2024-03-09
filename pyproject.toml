@@ -44,10 +44,7 @@ dependencies = [
     "numpyro",
     "rift",
     "setuptools",
-    "tfp-nightly",
     "tqdm",
-    "twine",
-    "wheel",
 ]
 keywords = [
     "jax",
@@ -61,6 +58,33 @@ keywords = [
     "deep-learning",
     "bayesian-inference",
     "probabilistic-programming",
+    "importlib_metadata"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "isort",
+    "mypy",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "trio",
+    "twine",
+    "wheel",
+]
+
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+    "sphinxcontrib-bibtex",
+    "sphinxcontrib-napoleon",
+    "sphinxcontrib-programoutput",
+    "sphinxcontrib-spelling",
+    "sphinxcontrib-trio",
+    "sphinxcontrib-websupport",
 ]
 
 [project.urls]

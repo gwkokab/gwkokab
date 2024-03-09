@@ -37,14 +37,11 @@ def exp_rate(rate, *, pop_params) -> float:
         mmin=pop_params["mmin"],
         mmax=pop_params["mmax"],
     ).sample(get_key(), sample_shape=(N,))
-    I = 0
     m1 = lambdas[..., 0]
     m2 = lambdas[..., 1]
-    value = jnp.exp(raw_interpolator(m1, m2))
-    F = jnp.sum(value)
-    I_current = F / N
-    I += rate * I_current
-    return I
+    value = raw_interpolator(m1, m2)
+    I = jnp.mean(value)
+    return rate * I
 
 
 def log_inhomogeneous_poisson_likelihood(x, data: Optional[dict] = None):
@@ -62,14 +59,14 @@ def log_inhomogeneous_poisson_likelihood(x, data: Optional[dict] = None):
 
     log_priors = data["log_priors"]
 
-    ll = jax.tree_map(
-        lambda x: jnp.sum(jax.nn.logsumexp(mass_model.log_prob(x) - log_priors) - jnp.log(x.shape[0]) + jnp.log(rate)),
+    log_likelihood_individual = jax.tree_map(
+        lambda x: jnp.mean(jax.nn.logsumexp(mass_model.log_prob(x) + jnp.log(rate) - log_priors)),
         data["data"],
     )
 
-    ll = jnp.sum(jnp.asarray(jax.tree.leaves(ll)))
+    log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(log_likelihood_individual)))
 
-    expval = exp_rate(
+    expected_rate = exp_rate(
         rate,
         pop_params={
             "alpha_m": alpha,
@@ -77,4 +74,4 @@ def log_inhomogeneous_poisson_likelihood(x, data: Optional[dict] = None):
             "mmax": mmax,
         },
     )
-    return ll - expval + log_priors
+    return log_likelihood - expected_rate
