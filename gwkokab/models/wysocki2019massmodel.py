@@ -40,7 +40,6 @@ class Wysocki2019MassModel(Distribution):
         "mmax": constraints.positive,
     }
 
-    support = constraints.real_vector
     reparametrized_params = ["m1", "m2"]
 
     def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, *, valid_args=None) -> None:
@@ -59,6 +58,7 @@ class Wysocki2019MassModel(Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
         )
+        self.support = constraints.interval(self.mmin, self.mmax)
         super(Wysocki2019MassModel, self).__init__(
             batch_shape=batch_shape,
             validate_args=valid_args,

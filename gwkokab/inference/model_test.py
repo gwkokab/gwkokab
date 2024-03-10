@@ -19,6 +19,7 @@ from typing_extensions import Optional
 
 import jax
 from jax import jit, numpy as jnp
+from numpyro import distributions as dist
 
 from gwkokab.models import *
 from gwkokab.utils.misc import get_key
@@ -35,6 +36,12 @@ def exp_rate(rate, lambdas) -> float:
     value = raw_interpolator(m1, m2)
     I = jnp.mean(value)
     return rate * I
+
+
+alpha_prior_dist = dist.Uniform(-5.0, 5.0)
+mmin_prior_dist = dist.Uniform(1.0, 20.0)
+mmax_prior_dist = dist.Uniform(30.0, 100.0)
+rate_prior_dist = dist.Uniform(1, 500)
 
 
 @partial(jit, static_argnums=(0,))
@@ -65,4 +72,12 @@ def log_inhomogeneous_poisson_likelihood(x, data: Optional[dict] = None):
         rate,
         lambdas,
     )
-    return log_likelihood - expected_rate
+
+    return (
+        log_likelihood
+        - expected_rate
+        + alpha_prior_dist.log_prob(alpha)
+        + mmin_prior_dist.log_prob(mmin)
+        + mmax_prior_dist.log_prob(mmax)
+        + rate_prior_dist.log_prob(rate)
+    )
