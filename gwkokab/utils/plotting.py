@@ -4,7 +4,6 @@ from typing_extensions import Optional
 import matplotlib.pyplot as plt
 import mplcursors
 import numpy as np
-from tqdm import tqdm
 
 
 def scatter2d_batch_plot(
@@ -32,14 +31,7 @@ def scatter2d_batch_plot(
     file_list = glob.glob(file_pattern)
 
     # Iterate over each file to make the scatter plots of each event in a figure.
-    for file_path in tqdm(
-        file_list,
-        desc=output_filename,
-        total=len(file_list),
-        unit="event",
-        unit_scale=True,
-        leave=False,
-    ):
+    for file_path in file_list:
         # Load data from the file
         data = np.loadtxt(file_path)
         x = data[:, x_index]
@@ -88,14 +80,7 @@ def scatter3d_batch_plot(
     file_list = glob.glob(file_pattern)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
-    for file_path in tqdm(
-        file_list,
-        desc=output_filename,
-        total=len(file_list),
-        unit="event",
-        unit_scale=True,
-        leave=False,
-    ):
+    for file_path in file_list:
         # Load data from the file
         data = np.loadtxt(file_path)
         x = data[:, x_index]

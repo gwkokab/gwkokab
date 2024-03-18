@@ -44,7 +44,7 @@ dependencies = [
     "numpyro",
     "rift",
     "setuptools",
-    "tqdm",
+    "rich",
 ]
 keywords = [
     "jax",
