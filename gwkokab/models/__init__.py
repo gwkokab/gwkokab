@@ -14,4 +14,8 @@
 
 from __future__ import annotations
 
+from .gaussianchieff import GaussianChiEff as GaussianChiEff
+from .gaussianchip import GaussianChiP as GaussianChiP
+from .powerlawprimarymassratio import PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio
+from .truncpowerlaw import TruncatedPowerLaw as TruncatedPowerLaw
 from .wysocki2019massmodel import Wysocki2019MassModel as Wysocki2019MassModel

@@ -17,12 +17,13 @@ from __future__ import annotations
 from typing_extensions import Optional
 
 from jax import lax, numpy as jnp
-from jax.random import uniform
 from jaxtyping import Array
+from numpyro import distributions as dist
 from numpyro.distributions import constraints, Distribution
-from numpyro.distributions.util import promote_shapes, validate_sample
+from numpyro.distributions.util import promote_shapes
 
 from ..utils.misc import get_key
+from .truncpowerlaw import TruncatedPowerLaw
 
 
 class Wysocki2019MassModel(Distribution):
@@ -35,12 +36,10 @@ class Wysocki2019MassModel(Distribution):
 
     arg_constraints = {
         "alpha_m": constraints.real,
-        "k": constraints.nonnegative_integer,
+        "k": constraints.positive,
         "mmin": constraints.positive,
         "mmax": constraints.positive,
     }
-
-    reparametrized_params = ["m1", "m2"]
 
     def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, *, valid_args=None) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
@@ -49,7 +48,7 @@ class Wysocki2019MassModel(Distribution):
         :param k: mass ratio power law index
         :param mmin: lower mass limit
         :param mmax: upper mass limit
-        :param valid_args: If `True`, validate the input arguments.
+        :param valid_args: validate the input arguments or not, defaults to `None`
         """
         self.alpha_m, self.k, self.mmin, self.mmax = promote_shapes(alpha_m, k, mmin, mmax)
         batch_shape = lax.broadcast_shapes(
@@ -58,48 +57,22 @@ class Wysocki2019MassModel(Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
         )
-        self.support = constraints.interval(self.mmin, self.mmax)
-        super(Wysocki2019MassModel, self).__init__(
-            batch_shape=batch_shape,
-            validate_args=valid_args,
-            event_shape=(2,),
-        )
-        q = self.mmin / self.mmax
-        K = jnp.arange(self.k + 1)
-        Z = jnp.asarray([jnp.power(q, i + self.alpha_m - 1.0) for i in K])
-        d = 1 - self.alpha_m - K
-
-        Z = jnp.where(
-            (d == 0) & (1.0 - self.k <= self.alpha_m) & (self.alpha_m <= 1.0),
-            -jnp.log(q),
-            Z / d,
-        )
-        Z = jnp.sum(Z)
-        Z *= jnp.power(self.mmin, 1.0 - self.alpha_m) / (self.k + 1.0)
-        self.logZ = jnp.log(Z)
-
-    @validate_sample
-    def log_prob(self, value):
-        return (
-            -(self.alpha_m + self.k) * jnp.log(value[..., 0])
-            + self.k * jnp.log(value[..., 1])
-            - jnp.log(value[..., 0] - self.mmin)
-            - self.logZ
-        )
+        super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):
             key = get_key(key)
-        m2 = uniform(key=key, minval=self.mmin, maxval=self.mmax, shape=sample_shape + self.batch_shape)
-        U = uniform(key=get_key(key), minval=0.0, maxval=1.0, shape=sample_shape + self.batch_shape)
-        beta = 1 - (self.k + self.alpha_m)
-        conditions = [beta == 0.0, beta != 0.0]
-        choices = [
-            jnp.exp(U * jnp.log(self.mmax) + (1.0 - U) * jnp.log(m2)),
-            jnp.exp(jnp.power(beta, -1.0) * jnp.log(U * jnp.power(self.mmax, beta) + (1.0 - U) * jnp.power(m2, beta))),
-        ]
-        m1 = jnp.select(conditions, choices)
-        return jnp.stack([m1, m2], axis=-1)
+        m1 = TruncatedPowerLaw(
+            alpha=-(self.k + self.alpha_m),
+            xmin=self.mmin,
+            xmax=self.mmax,
+        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
+        key = get_key(key)
+        m2 = dist.Uniform(
+            low=self.mmin,
+            high=m1,
+        ).sample(key=key, sample_shape=())
+        return jnp.stack([m1, m2], axis=1)
 
     def __repr__(self) -> str:
         string = f"Wysocki2019MassModel(alpha_m={self.alpha_m}, k={self.k}, "
