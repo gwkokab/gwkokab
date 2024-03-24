@@ -299,6 +299,7 @@ class PopulationGenerator(object):
     def add_error(self) -> None:
         """Add error to the injections."""
         error_size = self._error_size
+        size = self._size if self._vt_filename is not None else self._size + self._extra_size
 
         with Progress(
             SpinnerColumn(),
@@ -313,19 +314,19 @@ class PopulationGenerator(object):
         ) as progress:
             task = progress.add_task(
                 "Adding error",
-                total=self._num_realizations * self._size,
+                total=self._num_realizations * size,
             )
             for i in range(self._num_realizations):
                 container = f"{self._root_container}/realization_{i}"
                 injection_filename = f"{container}/injections.dat"
                 realizations = np.loadtxt(injection_filename)
-                err_realizations = np.empty((self._size, error_size, 0))
+                err_realizations = np.empty((size, error_size, 0))
 
                 os.makedirs(f"{container}/posteriors", exist_ok=True)
 
                 k = 0
                 for t, c in enumerate(self._col_count):
-                    keys = jax.random.split(self.key, self._size)
+                    keys = jax.random.split(self.key, size)
                     self.key = get_key(self.key)
                     rvs = vmap(
                         lambda x, pk: error_factory(
@@ -335,13 +336,13 @@ class PopulationGenerator(object):
                             key=pk,
                             **self._error_params[t],
                         )
-                    )(realizations[:, k : k + c], keys).reshape((self._size, error_size, -1))
+                    )(realizations[:, k : k + c], keys).reshape((size, error_size, -1))
                     err_realizations = np.concatenate((err_realizations, rvs), axis=-1)
                     k += c
 
                 mask = np.isnan(err_realizations).any(axis=2)
 
-                for j in range(self._size):
+                for j in range(size):
                     masked_err_realizations = err_realizations[j, ~mask[j]]
 
                     np.savetxt(
