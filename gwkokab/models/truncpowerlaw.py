@@ -65,6 +65,7 @@ class TruncatedPowerLaw(Distribution):
             batch_shape=batch_shape,
             validate_args=validate_args,
         )
+        self._log_Z = self.log_Z()
 
     @partial(jit, static_argnums=(0,))
     def log_Z(self) -> Numeric:
@@ -79,10 +80,9 @@ class TruncatedPowerLaw(Distribution):
 
     @validate_sample
     def log_prob(self, value: Numeric) -> Numeric:
-        log_Z = self.log_Z()
         prob = jnp.where(
             (value >= self.xmin) & (value <= self.xmax),
-            self.alpha * jnp.log(value) - log_Z,
+            self.alpha * jnp.log(value) - self._log_Z,
             -jnp.inf,
         )
         return prob

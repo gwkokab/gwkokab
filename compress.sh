@@ -19,8 +19,6 @@ current_dir=$(pwd)
 for dir in $(ls -d $1/*); do
     cd $dir
     folder_name=$(basename $dir)
-    echo "Compressing $folder_name..."
-    tar -czf $folder_name.tar.gz * &
-    mv $folder_name.tar.gz ../
+    zip -rq $folder_name.zip *
     cd $current_dir
 done

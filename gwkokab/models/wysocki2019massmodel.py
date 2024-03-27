@@ -57,7 +57,11 @@ class Wysocki2019MassModel(Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
         )
-        super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
+        super(Wysocki2019MassModel, self).__init__(
+            batch_shape=batch_shape,
+            event_shape=(2,),
+            validate_args=valid_args,
+        )
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):
@@ -72,7 +76,7 @@ class Wysocki2019MassModel(Distribution):
             low=self.mmin,
             high=m1,
         ).sample(key=key, sample_shape=())
-        return jnp.stack([m1, m2], axis=1)
+        return jnp.column_stack((m1, m2))
 
     def __repr__(self) -> str:
         string = f"Wysocki2019MassModel(alpha_m={self.alpha_m}, k={self.k}, "

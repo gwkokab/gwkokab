@@ -14,15 +14,42 @@ Wysocki2019MassModel
     :show-inheritance:
     :member-order: alphabetical
 
+.. autoclass:: gwkokab.models.powerlawprimarymassratio.PowerLawPrimaryMassRatio
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
+
 
 Spin Models
 ===========
+
+.. autoclass:: gwkokab.models.gaussianchieff.GaussianChiEff
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
+
+.. autoclass:: gwkokab.models.gaussianchip.GaussianChiP
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
 
 Eccentricity Models
 ===================
 
 Redshift Models
 ===============
+
+Miscellaneous Models
+====================
+
+.. autoclass:: gwkokab.models.truncpowerlaw.TruncatedPowerLaw
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
 
 .. NumPyro Models
 .. ==============
