@@ -19,8 +19,9 @@ from typing_extensions import Optional
 
 import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, vmap
-from jax.random import normal, truncated_normal, uniform
+from jax.random import normal, uniform
 from jaxtyping import Array
+from numpyro import distributions as dist
 
 from ..utils import chirp_mass, get_key, symmetric_mass_ratio
 
@@ -69,7 +70,15 @@ def normal_error(x: Array, size: int, key: Array, *, scale: float) -> Array:
     )(x)
 
 
-def truncated_normal_error(x: Array, size: int, key: Array, *, scale: float, lower: float, upper: float) -> Array:
+def truncated_normal_error(
+    x: Array,
+    size: int,
+    key: Array,
+    *,
+    scale: float,
+    lower: Optional[float] = None,
+    upper: Optional[float] = None,
+) -> Array:
     r"""Add truncated normal error to the given values.
 
     .. math::
@@ -83,15 +92,12 @@ def truncated_normal_error(x: Array, size: int, key: Array, *, scale: float, low
     :return: error values
     """
     return vmap(
-        lambda x_: truncated_normal(
-            key=key,
-            lower=lower,
-            upper=upper,
-            shape=(size,),
-            dtype=x.dtype,
-        )
-        * scale
-        + x_
+        lambda x_: dist.TruncatedNormal(
+            loc=x_,
+            scale=scale,
+            low=lower,
+            high=upper,
+        ).sample(key=key, sample_shape=(size,))
     )(x)
 
 
@@ -108,16 +114,7 @@ def uniform_error(x: Array, size: int, key: Array, *, lower: float, upper: float
     :param upper: _description_
     :return: _description_
     """
-    return vmap(
-        lambda x_: uniform(
-            key=key,
-            shape=(size,),
-            dtype=x.dtype,
-            minval=lower,
-            maxval=upper,
-        )
-        + x_
-    )(x)
+    return vmap(lambda x_: dist.Uniform(low=lower, high=upper).sample(key=key, sample_shape=(size,)) + x_)(x)
 
 
 def banana_error(x: Array, size: int, key: Array, *, scale_Mc: float = 1.0, scale_eta: float = 1.0) -> Array:

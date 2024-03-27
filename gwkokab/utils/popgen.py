@@ -31,6 +31,9 @@ from ..vts.utils import interpolate_hdf5
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
+PROGRESS_BAR_TEXT_WITDH = 25
+
+
 class PopulationGenerator(object):
     """This class is used to generate population and save them to disk."""
 
@@ -129,13 +132,13 @@ class PopulationGenerator(object):
 
         with Progress(
             SpinnerColumn(),
-            TextColumn("[bold blue]Weighting injections", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "•",
-            MofNCompleteColumn(),
+            TextColumn("[bold blue]Weighting injections".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.2f}%",
             "•",
             TimeRemainingColumn(elapsed_when_finished=True),
+            "•",
+            MofNCompleteColumn(),
             disable=not self._verbose,
         ) as progress:
             task = progress.add_task("Weighting injections", total=self._num_realizations)
@@ -171,13 +174,13 @@ class PopulationGenerator(object):
 
         with Progress(
             SpinnerColumn(),
-            TextColumn("[bold blue]Plotting Posterior", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "•",
-            MofNCompleteColumn(),
+            TextColumn("[bold blue]Plotting Posterior".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.2f}%",
             "•",
             TimeRemainingColumn(elapsed_when_finished=True),
+            "•",
+            MofNCompleteColumn(),
             disable=not self._verbose,
         ) as progress:
             task1 = progress.add_task("Weighting posteriors", total=self._num_realizations * self._size)
@@ -203,13 +206,13 @@ class PopulationGenerator(object):
 
         with Progress(
             SpinnerColumn(),
-            TextColumn("[bold blue]Generating injections", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "•",
-            MofNCompleteColumn(),
+            TextColumn("[bold blue]Generating injections".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.2f}%",
             "•",
             TimeRemainingColumn(elapsed_when_finished=True),
+            "•",
+            MofNCompleteColumn(),
             disable=not self._verbose,
         ) as progress:
             task = progress.add_task("Generating injections", total=self._num_realizations * len(self._models))
@@ -258,13 +261,13 @@ class PopulationGenerator(object):
 
         with Progress(
             SpinnerColumn(),
-            TextColumn("[bold blue]Plotting injections", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "•",
-            MofNCompleteColumn(),
+            TextColumn("[bold blue]Plotting injections".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.2f}%",
             "•",
             TimeRemainingColumn(elapsed_when_finished=True),
+            "•",
+            MofNCompleteColumn(),
             disable=not self._verbose,
         ) as progress:
             task = progress.add_task("Plotting injections", total=len(populations))
@@ -303,13 +306,13 @@ class PopulationGenerator(object):
 
         with Progress(
             SpinnerColumn(),
-            TextColumn("[bold blue]Adding Error", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "•",
-            MofNCompleteColumn(),
+            TextColumn("[bold blue]Adding Error".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.2f}%",
             "•",
             TimeRemainingColumn(elapsed_when_finished=True),
+            "•",
+            MofNCompleteColumn(),
             disable=not self._verbose,
         ) as progress:
             task = progress.add_task(
@@ -357,13 +360,13 @@ class PopulationGenerator(object):
 
         with Progress(
             SpinnerColumn(),
-            TextColumn("[bold blue]Plotting Posterior", justify="right"),
-            BarColumn(bar_width=None),
-            "[progress.percentage]{task.percentage:>3.1f}%",
-            "•",
-            MofNCompleteColumn(),
+            TextColumn("[bold blue]Plotting Posterior".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.2f}%",
             "•",
             TimeRemainingColumn(elapsed_when_finished=True),
+            "•",
+            MofNCompleteColumn(),
             disable=not self._verbose,
         ) as progress:
             task = progress.add_task(
