@@ -15,14 +15,14 @@
 from __future__ import annotations
 
 from jax import lax, numpy as jnp
-from numpyro.distributions import constraints, Distribution
+from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes
 
 from ..utils.misc import get_key
 from .truncpowerlaw import TruncatedPowerLaw
 
 
-class PowerLawPrimaryMassRatio(Distribution):
+class PowerLawPrimaryMassRatio(dist.Distribution):
     r"""Power law model for two-dimensional mass distribution,
     modelling primary mass and conditional mass ratio
     distribution.
@@ -37,10 +37,10 @@ class PowerLawPrimaryMassRatio(Distribution):
     """
 
     arg_constraints = {
-        "alpha": constraints.real,
-        "beta": constraints.real,
-        "mmin": constraints.positive,
-        "mmax": constraints.positive,
+        "alpha": dist.constraints.real,
+        "beta": dist.constraints.real,
+        "mmin": dist.constraints.positive,
+        "mmax": dist.constraints.positive,
     }
 
     def __init__(
@@ -54,6 +54,7 @@ class PowerLawPrimaryMassRatio(Distribution):
     ) -> None:
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(alpha, beta, mmin, mmax)
         batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax))
+        self.support = dist.constraints.interval(self.mmin, self.mmax)
         super(PowerLawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),

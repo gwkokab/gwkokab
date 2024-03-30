@@ -20,15 +20,20 @@ from typing_extensions import Optional
 from jax import jit, lax, numpy as jnp
 from jax.random import uniform
 from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution
+from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
 from ..utils.misc import get_key
 
 
-class TruncatedPowerLaw(Distribution):
+class TruncatedPowerLaw(dist.Distribution):
     r"""A generic double side truncated power law distribution.
+    
+    .. warning::
+        There are many different definition of Power Law that include exponential cut-offs and
+        interval cut-offs.  They are just interchangeably. This class is the implementation of
+        power law that has been restricted over a closed interval.
 
     .. math::
         p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=\begin{cases}
@@ -49,9 +54,9 @@ class TruncatedPowerLaw(Distribution):
     """
 
     arg_constraints = {
-        "alpha": constraints.real,
-        "xmin": constraints.positive,
-        "xmax": constraints.positive,
+        "alpha": dist.constraints.real,
+        "xmin": dist.constraints.positive,
+        "xmax": dist.constraints.positive,
     }
 
     def __init__(self, alpha: float, xmin: float, xmax: float, *, validate_args=None):
@@ -65,6 +70,7 @@ class TruncatedPowerLaw(Distribution):
             batch_shape=batch_shape,
             validate_args=validate_args,
         )
+        self.support = dist.constraints.interval(self.xmin, self.xmax)
         self._log_Z = self.log_Z()
 
     @partial(jit, static_argnums=(0,))
