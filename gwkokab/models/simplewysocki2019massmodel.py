@@ -14,12 +14,12 @@
 
 from __future__ import annotations
 
-from jax import lax
-from jax import numpy as jnp
+from typing_extensions import Optional
+
+from jax import lax, numpy as jnp
 from jaxtyping import Array
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
-from typing_extensions import Optional
 
 from ..utils.misc import get_key
 from .truncpowerlaw import TruncatedPowerLaw

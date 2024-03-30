@@ -79,10 +79,11 @@ class TruncatedPowerLaw(dist.Distribution):
 
         :return: The logarithm of normalization constant.
         """
-        if self.alpha == -1.0:
-            return jnp.log(jnp.log(self.xmax) - jnp.log(self.xmin))
-        beta = 1.0 + self.alpha
-        return jnp.log(jnp.abs(self.xmax**beta - self.xmin**beta)) - jnp.log(jnp.abs(beta))
+        return jnp.where(
+            self.alpha == -1.0,
+            jnp.log(jnp.log(self.xmax) - jnp.log(self.xmin)),
+            jnp.log(jnp.abs(self.xmax**self.alpha - self.xmin**self.alpha)) - jnp.log(jnp.abs(1.0 + self.alpha)),
+        )
 
     @validate_sample
     def log_prob(self, value: Numeric) -> Numeric:
