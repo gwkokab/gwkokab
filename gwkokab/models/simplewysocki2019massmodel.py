@@ -62,7 +62,7 @@ class SimpleWysocki2019MassModel(dist.Distribution):
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
-        log_prob_m1 = -self.alpha_m * jnp.log(m1)
+        log_prob_m1 = TruncatedPowerLaw(alpha=-self.alpha_m, xmin=self.mmin, xmax=self.mmax).log_prob(m1)
         log_prob_m2 = -jnp.log(m1 - self.mmin)
         return log_prob_m1 + log_prob_m2
 
