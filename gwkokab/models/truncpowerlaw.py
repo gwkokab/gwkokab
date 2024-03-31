@@ -15,13 +15,14 @@
 from __future__ import annotations
 
 from functools import partial
-from typing_extensions import Optional
 
-from jax import jit, lax, numpy as jnp
+from jax import jit, lax
+from jax import numpy as jnp
 from jax.random import uniform
 from jaxtyping import Array
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
+from typing_extensions import Optional
 
 from ..typing import Numeric
 from ..utils.misc import get_key
@@ -98,10 +99,12 @@ class TruncatedPowerLaw(dist.Distribution):
         if key is None or isinstance(key, int):
             key = get_key(key)
         U = uniform(key, sample_shape + self.batch_shape)
-        if self.alpha == -1.0:
-            return jnp.exp(jnp.log(self.xmin) + U * jnp.log(self.xmax / self.xmin))
-        beta = 1.0 + self.alpha
-        return jnp.power(
-            jnp.power(self.xmin, beta) + U * (jnp.power(self.xmax, beta) - jnp.power(self.xmin, beta)),
-            jnp.reciprocal(beta),
+        return jnp.where(
+            self.alpha == -1.0,
+            jnp.exp(jnp.log(self.xmin) + U * (jnp.log(self.xmax) - jnp.log(self.xmin))),
+            jnp.power(
+                jnp.power(self.xmin, 1.0 + self.alpha)
+                + U * (jnp.power(self.xmax, 1.0 + self.alpha) - jnp.power(self.xmin, 1.0 + self.alpha)),
+                jnp.reciprocal(1.0 + self.alpha),
+            ),
         )
