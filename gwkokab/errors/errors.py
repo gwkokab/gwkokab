@@ -26,7 +26,11 @@ from numpyro import distributions as dist
 from ..utils import chirp_mass, get_key, symmetric_mass_ratio
 
 
-def error_factory(error_type: str, key: Optional[int | Array] = None, **kwargs) -> Array:
+def error_factory(
+    error_type: str,
+    key: Optional[int | Array] = None,
+    **kwargs,
+) -> Array:
     """Factory function to create different types of errors.
 
     :param error_type: name of the error
@@ -42,13 +46,21 @@ def error_factory(error_type: str, key: Optional[int | Array] = None, **kwargs) 
         return truncated_normal_error(key=key, **kwargs)
     elif error_type == "uniform":
         return uniform_error(key=key, **kwargs)
-    elif error_type == "banana":
-        return banana_error(key=key, **kwargs)
+    elif error_type == "banana_m1_m2":
+        return banana_error_m1_m2(key=key, **kwargs)
+    elif error_type == "banana_m1_q":
+        return banana_error_m1_q(key=key, **kwargs)
     else:
         raise ValueError(f"Unknown error type: {error_type}")
 
 
-def normal_error(x: Array, size: int, key: Array, *, scale: float) -> Array:
+def normal_error(
+    x: Array,
+    size: int,
+    key: Array,
+    *,
+    scale: float,
+) -> Array:
     r"""Add normal error to the given values.
 
     .. math::
@@ -117,7 +129,14 @@ def uniform_error(x: Array, size: int, key: Array, *, lower: float, upper: float
     return vmap(lambda x_: dist.Uniform(low=lower, high=upper).sample(key=key, sample_shape=(size,)) + x_)(x)
 
 
-def banana_error(x: Array, size: int, key: Array, *, scale_Mc: float = 1.0, scale_eta: float = 1.0) -> Array:
+def banana_error_m1_m2(
+    x: Array,
+    size: int,
+    key: Array,
+    *,
+    scale_Mc: float = 1.0,
+    scale_eta: float = 1.0,
+) -> Array:
     r"""Add banana error to the given values. Section 3 of the
     `paper <https://doi.org/10.1093/mnras/stw2883>`__ discusses the banana
     error. It adds errors in the chirp mass and symmetric mass ratio and then
@@ -173,3 +192,21 @@ def banana_error(x: Array, size: int, key: Array, *, scale_Mc: float = 1.0, scal
     m2_final = factor * (1.0 - etaV_sqrt)
 
     return jnp.column_stack([m1_final, m2_final])
+
+
+def banana_error_m1_q(
+    x: Array,
+    size: int,
+    key: Array,
+    *,
+    scale_Mc: float = 1.0,
+    scale_eta: float = 1.0,
+) -> Array:
+    m1 = x[..., 0]
+    m2 = m1 * x[..., 1]
+    m1m2 = banana_error_m1_m2(jnp.array([m1, m2]), size, key, scale_Mc=scale_Mc, scale_eta=scale_eta)
+    m1 = m1m2[..., 0]
+    q = m1m2[..., 1] / m1m2[..., 0]
+    mask = (q >= 1.0) | (q <= 0.0)
+    q = jnp.where(mask, jnp.nan, q)
+    return jnp.column_stack([m1, q])

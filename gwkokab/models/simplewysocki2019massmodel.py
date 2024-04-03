@@ -30,7 +30,7 @@ class SimpleWysocki2019MassModel(dist.Distribution):
     described in equation 7 of the `paper <https://arxiv.org/abs/1805.06442>`__.
 
     .. math::
-        p(m_1,m_2\mid\alpha,k,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto\frac{m_1^{-\alpha-k}m_2^k}{m_1-m_{\text{min}}}
+        p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto\frac{m_1^{-\alpha}}{m_1-m_{\text{min}}}
     """
 
     arg_constraints = {
@@ -39,7 +39,7 @@ class SimpleWysocki2019MassModel(dist.Distribution):
         "mmax": dist.constraints.positive,
     }
 
-    def __init__(self, alpha_m: float, mmin: float, mmax: float, *, valid_args=None) -> None:
+    def __init__(self, alpha_m: float, mmin: float, mmax: float, *, validate_args=None) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
 
         :param alpha_m: index of the power law distribution
@@ -53,10 +53,11 @@ class SimpleWysocki2019MassModel(dist.Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
         )
+        self.support = dist.constraints.interval(self.mmin, self.mmax)
         super(SimpleWysocki2019MassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
-            validate_args=valid_args,
+            validate_args=validate_args,
         )
 
     @validate_sample

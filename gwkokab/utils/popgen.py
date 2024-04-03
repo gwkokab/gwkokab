@@ -90,7 +90,6 @@ class PopulationGenerator(object):
         assert model.get("config_vars", None) is not None
         assert model.get("col_names", None) is not None
         assert model.get("params", None) is not None
-        assert model.get("error_type", None) is not None
 
     def weight_over_m1m2(
         self,
@@ -232,7 +231,6 @@ class PopulationGenerator(object):
 
                     progress.advance(task, 1)
 
-                # dump_configurations(config_filename, *self._config_vals)
                 np.savetxt(
                     config_filename,
                     np.array([list(zip(*self._config_vals))[1]]),
@@ -301,6 +299,8 @@ class PopulationGenerator(object):
 
     def add_error(self) -> None:
         """Add error to the injections."""
+        if all(err_type is None for err_type in self._error_type):
+            return
         error_size = self._error_size
         size = self._size if self._vt_filename is not None else self._size + self._extra_size
 
@@ -329,6 +329,8 @@ class PopulationGenerator(object):
 
                 k = 0
                 for t, c in enumerate(self._col_count):
+                    if self._error_type[t] is None:
+                        continue
                     keys = jax.random.split(self.key, size)
                     self.key = get_key(self.key)
                     rvs = vmap(
@@ -407,16 +409,17 @@ class PopulationGenerator(object):
         self._col_count: list[int] = []
         self._config_vals: list[tuple[str, int]] = []
         self._model_instances: list[Distribution] = []
-        self._error_type: list[str] = []
+        self._error_type: list[Optional[str]] = []
         self._error_params: list[dict] = []
 
         for model in self._models:
-            model_instance: Distribution = eval(model["model"])(**model["params"])
+            model_instance: Distribution = eval(model["model"])(**model["params"], validate_args=True)
             self._model_instances.append(model_instance)
             self._config_vals.extend([(x[1], model["params"][x[0]]) for x in model["config_vars"]])
-            self._col_names.extend(model["col_names"])
             self._col_count.append(len(model["col_names"]))
             self._error_type.append(model["error_type"])
+            if model["error_type"] is not None:
+                self._col_names.extend(model["col_names"])
             self._error_params.append(model.get("error_params", {}))
 
         self._indexes = {var: i for i, var in enumerate(self._col_names)}
