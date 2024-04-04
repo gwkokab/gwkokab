@@ -21,6 +21,7 @@ from typing_extensions import Optional
 import jax
 import numpy as np
 from jax import numpy as jnp, vmap
+from numpyro import distributions as dist
 from numpyro.distributions import *
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 
@@ -86,10 +87,18 @@ class PopulationGenerator(object):
 
         :param model: model configurations
         """
-        assert model.get("model", None) is not None
-        assert model.get("config_vars", None) is not None
+        assert model.get("model", None) is not None or model.get("models", None) is not None
         assert model.get("col_names", None) is not None
-        assert model.get("params", None) is not None
+        is_mixture_model = model.get("models", None) is not None
+        if is_mixture_model:
+            for comp_model in model["models"]:
+                assert comp_model.get("model", None) is not None
+                assert comp_model.get("params", None) is not None
+                assert comp_model.get("config_vars", None) is not None
+                assert comp_model.get("weight", None) is not None
+        else:
+            assert model.get("config_vars", None) is not None
+            assert model.get("params", None) is not None
 
     def weight_over_m1m2(
         self,
@@ -233,10 +242,10 @@ class PopulationGenerator(object):
 
                 np.savetxt(
                     config_filename,
-                    np.array([list(zip(*self._config_vals))[1]]),
+                    np.array([list(zip(*self._config_vars))[1]]),
                     delimiter="\t",
                     fmt="%s",
-                    header="\t".join(list(zip(*self._config_vals))[0]),
+                    header="\t".join(list(zip(*self._config_vars))[0]),
                 )
 
                 np.savetxt(injection_filename, realisations, header="\t".join(self._col_names))
@@ -407,15 +416,39 @@ class PopulationGenerator(object):
         """Generate population and save them to disk."""
         self._col_names: list[str] = []
         self._col_count: list[int] = []
-        self._config_vals: list[tuple[str, int]] = []
+        self._config_vars: list[tuple[str, int]] = []
         self._model_instances: list[Distribution] = []
         self._error_type: list[Optional[str]] = []
         self._error_params: list[dict] = []
 
         for model in self._models:
-            model_instance: Distribution = eval(model["model"])(**model["params"], validate_args=True)
+            if model.get("models", None) is not None:
+                component_models = []
+                weights = []
+
+                for comp_model in model["models"]:
+                    comp_model_instance: Distribution = eval(comp_model["model"])(
+                        **comp_model["params"],
+                        validate_args=True,
+                    )
+
+                    component_models.append(comp_model_instance)
+                    weights.append(comp_model["weight"])
+                    self._config_vars.extend([(x[1], comp_model["params"][x[0]]) for x in comp_model["config_vars"]])
+
+                weights = np.array(weights)
+                weights /= np.sum(weights)
+
+                model_instance = dist.MixtureGeneral(
+                    mixing_distribution=dist.Categorical(probs=weights, validate_args=True),
+                    component_distributions=component_models,
+                    validate_args=True,
+                )
+            else:
+                model_instance: Distribution = eval(model["model"])(**model["params"], validate_args=True)
+                self._config_vars.extend([(x[1], model["params"][x[0]]) for x in model["config_vars"]])
+
             self._model_instances.append(model_instance)
-            self._config_vals.extend([(x[1], model["params"][x[0]]) for x in model["config_vars"]])
             self._col_count.append(len(model["col_names"]))
             self._error_type.append(model["error_type"])
             if model["error_type"] is not None:
