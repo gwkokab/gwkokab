@@ -149,6 +149,9 @@ def banana_error_m1_m2(
 
     :param x: given values as m1 and m2
     :param size: number of samples
+    :param key: jax random key
+    :param scale_Mc: scale of the chirp mass error, defaults to 1.0
+    :param scale_eta: scale of the symmetric mass ratio error, defaults to 1.0
     :return: error values
     """
     m1 = x[..., 0]
@@ -202,6 +205,17 @@ def banana_error_m1_q(
     scale_Mc: float = 1.0,
     scale_eta: float = 1.0,
 ) -> Array:
+    """Add banana error to the given values. This function is similar to the
+    :func:`banana_error_m1_m2` function but returns the values as m1 and q
+    instead of m1 and m2.
+
+    :param x: given values as m1 and q
+    :param size: number of samples
+    :param key: jax random key
+    :param scale_Mc: scale of the chirp mass error, defaults to 1.0
+    :param scale_eta: scale of the symmetric mass ratio error, defaults to 1.0
+    :return: error values
+    """
     m1 = x[..., 0]
     m2 = m1 * x[..., 1]
     m1m2 = banana_error_m1_m2(jnp.array([m1, m2]), size, key, scale_Mc=scale_Mc, scale_eta=scale_eta)

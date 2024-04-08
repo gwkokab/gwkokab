@@ -45,11 +45,11 @@ Precessing Spin Gaussian Model
     :show-inheritance:
     :member-order: alphabetical
 
-Eccentricity Models
-===================
+.. Eccentricity Models
+.. ===================
 
-Redshift Models
-===============
+.. Redshift Models
+.. ===============
 
 Miscellaneous Models
 ====================

@@ -30,7 +30,8 @@ class Wysocki2019MassModel(dist.Distribution):
     described in equation 7 of the `paper <https://arxiv.org/abs/1805.06442>`__.
 
     .. math::
-        p(m_1,m_2\mid\alpha,k,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto\frac{m_1^{-\alpha-k}m_2^k}{m_1-m_{\text{min}}}
+        p(m_1,m_2\mid\alpha,k,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
+        \frac{m_1^{-\alpha-k}m_2^k}{m_1-m_{\text{min}}}\qquad m_{\text{min}}\leq m_2 \leq m_1 \leq m_{\text{max}}
     """
 
     arg_constraints = {
@@ -56,12 +57,15 @@ class Wysocki2019MassModel(dist.Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
         )
-        self.support = dist.constraints.interval(self.mmin, self.mmax)
         super(Wysocki2019MassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
             validate_args=validate_args,
         )
+
+    @dist.constraints.dependent_property(is_discrete=False, event_dim=2)
+    def support(self):
+        return dist.constraints.interval(self.mmin, self.mmax)
 
     @validate_sample
     def log_prob(self, value):

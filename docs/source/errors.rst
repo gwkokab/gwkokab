@@ -17,4 +17,6 @@ Non-unit errors
 ===============
 Non-unit errors adds error to more than one unit.
 
-.. autofunction:: gwkokab.errors.banana_error
+.. autofunction:: gwkokab.errors.banana_error_m1_m2
+
+.. autofunction:: gwkokab.errors.banana_error_m1_q
