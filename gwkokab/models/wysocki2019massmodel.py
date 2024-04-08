@@ -23,6 +23,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..utils.misc import get_key
 from .truncpowerlaw import TruncatedPowerLaw
+from .utils.constraints import mass_sandwich
 
 
 class Wysocki2019MassModel(dist.Distribution):
@@ -57,15 +58,12 @@ class Wysocki2019MassModel(dist.Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
         )
+        self.support = mass_sandwich(self.mmin, self.mmax)
         super(Wysocki2019MassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
             validate_args=validate_args,
         )
-
-    @dist.constraints.dependent_property(is_discrete=False, event_dim=2)
-    def support(self):
-        return dist.constraints.interval(self.mmin, self.mmax)
 
     @validate_sample
     def log_prob(self, value):
