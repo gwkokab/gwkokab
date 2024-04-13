@@ -77,14 +77,17 @@ dev = [
 ]
 
 docs = [
-    "sphinx",
-    "sphinx-rtd-theme",
-    "sphinxcontrib-bibtex",
-    "sphinxcontrib-napoleon",
-    "sphinxcontrib-programoutput",
-    "sphinxcontrib-spelling",
-    "sphinxcontrib-trio",
-    "sphinxcontrib-websupport",
+    'nbsphinx',
+    'readthedocs-sphinx-search',
+    'sphinx',
+    'sphinx-rtd-theme',
+    'sphinx_copybutton',
+    'sphinxcontrib-bibtex',
+    'sphinxcontrib-napoleon',
+    'sphinxcontrib-programoutput',
+    'sphinxcontrib-spelling',
+    'sphinxcontrib-trio',
+    'sphinxcontrib-websupport'
 ]
 
 [project.urls]
