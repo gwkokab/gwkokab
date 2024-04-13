@@ -16,10 +16,11 @@ from __future__ import annotations
 
 from jax import lax, numpy as jnp
 from numpyro import distributions as dist
-from numpyro.distributions.util import promote_shapes
+from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..utils.misc import get_key
 from .truncpowerlaw import TruncatedPowerLaw
+from .utils.constraints import mass_ratio_mass_sandwich
 
 
 class PowerLawPrimaryMassRatio(dist.Distribution):
@@ -57,13 +58,14 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     ) -> None:
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(alpha, beta, mmin, mmax)
         batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax))
-        self.support = dist.constraints.interval(self.mmin, self.mmax)
+        self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
         super(PowerLawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
             validate_args=validate_args,
         )
 
+    @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
         q = value[..., 1]
