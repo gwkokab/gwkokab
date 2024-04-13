@@ -61,17 +61,10 @@ class TruncatedPowerLaw(dist.Distribution):
         "xmax": dist.constraints.positive,
     }
 
-    def __init__(self, alpha: float, xmin: float, xmax: float, *, validate_args=None):
+    def __init__(self, alpha: float, xmin: float, xmax: float):
         self.alpha, self.xmin, self.xmax = promote_shapes(alpha, xmin, xmax)
-        batch_shape = lax.broadcast_shapes(
-            jnp.shape(alpha),
-            jnp.shape(xmin),
-            jnp.shape(xmax),
-        )
-        super(TruncatedPowerLaw, self).__init__(
-            batch_shape=batch_shape,
-            validate_args=validate_args,
-        )
+        batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(xmin), jnp.shape(xmax))
+        super(TruncatedPowerLaw, self).__init__(batch_shape=batch_shape, validate_args=True)
         self.support = dist.constraints.interval(self.xmin, self.xmax)
         self._log_Z = self.log_Z()
 

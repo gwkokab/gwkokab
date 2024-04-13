@@ -47,22 +47,14 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         "mmax": dist.constraints.positive,
     }
 
-    def __init__(
-        self,
-        alpha: float,
-        beta: float,
-        mmin: float,
-        mmax: float,
-        *,
-        validate_args=None,
-    ) -> None:
+    def __init__(self, alpha: float, beta: float, mmin: float, mmax: float) -> None:
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(alpha, beta, mmin, mmax)
         batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax))
         self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
         super(PowerLawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
-            validate_args=validate_args,
+            validate_args=True,
         )
 
     @validate_sample

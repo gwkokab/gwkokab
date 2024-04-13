@@ -23,7 +23,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..utils.misc import get_key
 from .truncpowerlaw import TruncatedPowerLaw
-from .utils.constraints import mass_sandwich
+from .utils.constraints import greater_than_equal_to, mass_sandwich
 
 
 class Wysocki2019MassModel(dist.Distribution):
@@ -37,12 +37,12 @@ class Wysocki2019MassModel(dist.Distribution):
 
     arg_constraints = {
         "alpha_m": dist.constraints.real,
-        "k": dist.constraints.greater_than(-1),
+        "k": greater_than_equal_to(0),
         "mmin": dist.constraints.positive,
         "mmax": dist.constraints.positive,
     }
 
-    def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, *, validate_args=None) -> None:
+    def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
 
         :param alpha_m: index of the power law distribution
@@ -52,23 +52,14 @@ class Wysocki2019MassModel(dist.Distribution):
         :param valid_args: validate the input arguments or not, defaults to `None`
         """
         self.alpha_m, self.k, self.mmin, self.mmax = promote_shapes(alpha_m, k, mmin, mmax)
-        batch_shape = lax.broadcast_shapes(
-            jnp.shape(alpha_m),
-            jnp.shape(k),
-            jnp.shape(mmin),
-            jnp.shape(mmax),
-        )
+        batch_shape = lax.broadcast_shapes(jnp.shape(alpha_m), jnp.shape(k), jnp.shape(mmin), jnp.shape(mmax))
+
         self.support = mass_sandwich(self.mmin, self.mmax)
-        super(Wysocki2019MassModel, self).__init__(
-            batch_shape=batch_shape,
-            event_shape=(2,),
-            validate_args=validate_args,
-        )
+
+        super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, event_shape=(2,), validate_args=True)
+
         self.marginal_m1 = TruncatedPowerLaw(
-            alpha=-(self.k + self.alpha_m),
-            xmin=self.mmin,
-            xmax=self.mmax,
-            validate_args=True,
+            alpha=-(self.k + self.alpha_m), xmin=self.mmin, xmax=self.mmax, validate_args=True
         )
 
     @validate_sample
@@ -83,7 +74,6 @@ class Wysocki2019MassModel(dist.Distribution):
             validate_args=True,
         ).log_prob(m2)
         return log_prob_m1 + log_prob_m2_given_m1
-        # return -(self.alpha_m + self.k) * jnp.log(m1) + self.k * jnp.log(m2) - jnp.log(m1 - self.mmin)
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):

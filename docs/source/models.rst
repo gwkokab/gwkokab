@@ -77,15 +77,7 @@ Constraints
 
 NumPyro uses constraints to ensure the samples provided to :func:`log_prob` are with in the valid range. NumPyro has pre-defined constraints as `numpyro.distributions.constraints <https://num.pyro.ai/en/stable/distributions.html#constraints>`__ module. GWKokab has implemented a few constraints which are not present in `NumPyro <https://num.pyro.ai/en/stable/index.html>`__. These constraints are listed below.
 
-.. autoclass:: gwkokab.models.utils.constraints._MassSandwichConstraint
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :member-order: alphabetical
-
-
-.. autoclass:: gwkokab.models.utils.constraints._MassRationMassSandwichConstraint
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :member-order: alphabetical
+.. autodata:: gwkokab.models.utils.constraints.greater_than_equal_to
+.. autodata:: gwkokab.models.utils.constraints.less_than_equal_to
+.. autodata:: gwkokab.models.utils.constraints.mass_sandwich
+.. autodata:: gwkokab.models.utils.constraints.mass_ratio_mass_sandwich

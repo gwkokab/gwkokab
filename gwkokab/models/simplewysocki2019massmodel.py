@@ -41,7 +41,7 @@ class SimpleWysocki2019MassModel(dist.Distribution):
         "mmax": dist.constraints.positive,
     }
 
-    def __init__(self, alpha_m: float, mmin: float, mmax: float, *, validate_args=None) -> None:
+    def __init__(self, alpha_m: float, mmin: float, mmax: float) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
 
         :param alpha_m: index of the power law distribution
@@ -59,7 +59,7 @@ class SimpleWysocki2019MassModel(dist.Distribution):
         super(SimpleWysocki2019MassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
-            validate_args=validate_args,
+            validate_args=True,
         )
 
     @validate_sample

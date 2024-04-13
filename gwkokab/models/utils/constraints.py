@@ -16,6 +16,40 @@
 from numpyro.distributions import constraints
 
 
+__all__ = [
+    "greater_than_equal_to",
+    "less_than_equal_to",
+    "mass_sandwich",
+    "mass_ratio_mass_sandwich",
+]
+
+
+class _GreaterThanEqualTo(constraints.Constraint):
+    r"""Constrain values to be greater than or equal to a given value."""
+
+    def __init__(self, lower_bound):
+        self.lower_bound = lower_bound
+
+    def __call__(self, x):
+        return x >= self.lower_bound
+
+    def tree_flatten(self):
+        return (self.lower_bound,), (("lower_bound",), dict())
+
+
+class _LessThanEqualTo(constraints.Constraint):
+    r"""Constrain values to be less than or equal to a given value."""
+
+    def __init__(self, upper_bound):
+        self.upper_bound = upper_bound
+
+    def __call__(self, x):
+        return x <= self.upper_bound
+
+    def tree_flatten(self):
+        return (self.upper_bound,), (("upper_bound",), dict())
+
+
 class _MassSandwichConstraint(constraints.Constraint):
     r"""Constrain mass values to lie within a sandwiched interval.
 
@@ -61,5 +95,7 @@ class _MassRationMassSandwichConstraint(constraints.Constraint):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
 
+greater_than_equal_to = _GreaterThanEqualTo
+less_than_equal_to = _LessThanEqualTo
 mass_sandwich = _MassSandwichConstraint
 mass_ratio_mass_sandwich = _MassRationMassSandwichConstraint

@@ -17,7 +17,7 @@ from __future__ import annotations
 from numpyro.distributions import TruncatedNormal
 
 
-def GaussianChiP(mu: float, sigma: float, *, validate_args=None) -> TruncatedNormal:
+def GaussianChiP(mu: float, sigma: float) -> TruncatedNormal:
     r"""Truncated normal distribution for the precessing spin. See Eq. (3)-(4) in
     `The Low Effective Spin of Binary Black Holes and Implications for Individual
     Gravitational-Wave Events <https://arxiv.org/abs/2001.06051>`__ and
@@ -41,10 +41,4 @@ def GaussianChiP(mu: float, sigma: float, *, validate_args=None) -> TruncatedNor
     :param sigma: standard deviation of the distribution
     :return: Truncated normal distribution for the precessing spin
     """
-    return TruncatedNormal(
-        mu,
-        sigma,
-        low=0.0,
-        high=1.0,
-        validate_args=validate_args,
-    )
+    return TruncatedNormal(mu, sigma, low=0.0, high=1.0, validate_args=True)
