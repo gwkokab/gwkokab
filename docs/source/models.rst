@@ -36,6 +36,15 @@ Effective Spin Gaussian Model
     :show-inheritance:
     :member-order: alphabetical
 
+Gaussain Spin Model
+-------------------
+
+.. autoclass:: gwkokab.models.gaussianspinmodel.GaussainSpinModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
+
 Precessing Spin Gaussian Model
 ------------------------------
 
