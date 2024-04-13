@@ -36,9 +36,11 @@ class TruncatedPowerLaw(dist.Distribution):
         power law that has been restricted over a closed interval.
 
     .. math::
-        p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=\begin{cases}
+        
+        p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=
+        \begin{cases}
             \displaystyle\frac{x^{\alpha}}{\mathcal{Z}} & 0<x_{\text{min}}\leq x\leq x_{\text{max}}\\
-            0 & \text{otherwise}
+            0                                           & \text{otherwise}
         \end{cases}
 
     where :math:`\mathcal{Z}` is the normalization constant and :math:`\alpha` is the power law index.
@@ -46,11 +48,11 @@ class TruncatedPowerLaw(dist.Distribution):
     respectively. The normalization constant is given by,
     
     .. math::
+    
         \mathcal{Z}:=\begin{cases}
-            \log{x_{\text{max}}}-\log{x_{\text{min}}} & \alpha = -1\\
+            \log{x_{\text{max}}}-\log{x_{\text{min}}}                                         & \alpha = -1 \\
             \displaystyle\frac{x_{\text{max}}^{1+\alpha}-x_{\text{min}}^{1+\alpha}}{1+\alpha} & \text{otherwise}
         \end{cases}
-
     """
 
     arg_constraints = {

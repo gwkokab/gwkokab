@@ -64,21 +64,31 @@ class Wysocki2019MassModel(dist.Distribution):
             event_shape=(2,),
             validate_args=validate_args,
         )
+        self.marginal_m1 = TruncatedPowerLaw(
+            alpha=-(self.k + self.alpha_m),
+            xmin=self.mmin,
+            xmax=self.mmax,
+            validate_args=True,
+        )
 
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
         m2 = value[..., 1]
-        return -(self.alpha_m + self.k) * jnp.log(m1) + self.k * jnp.log(m2) - jnp.log(m1 - self.mmin)
+        log_prob_m1 = self.marginal_m1.log_prob(m1)
+        log_prob_m2_given_m1 = TruncatedPowerLaw(
+            alpha=self.k,
+            xmin=self.mmin,
+            xmax=m1,
+            validate_args=True,
+        ).log_prob(m2)
+        return log_prob_m1 + log_prob_m2_given_m1
+        # return -(self.alpha_m + self.k) * jnp.log(m1) + self.k * jnp.log(m2) - jnp.log(m1 - self.mmin)
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):
             key = get_key(key)
-        m1 = TruncatedPowerLaw(
-            alpha=-(self.k + self.alpha_m),
-            xmin=self.mmin,
-            xmax=self.mmax,
-        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
+        m1 = self.marginal_m1.sample(key=key, sample_shape=sample_shape + self.batch_shape)
         key = get_key(key)
         m2 = TruncatedPowerLaw(
             alpha=self.k,

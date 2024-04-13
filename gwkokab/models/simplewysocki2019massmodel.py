@@ -31,7 +31,8 @@ class SimpleWysocki2019MassModel(dist.Distribution):
     described in equation 7 of the `paper <https://arxiv.org/abs/1805.06442>`__.
 
     .. math::
-        p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto\frac{m_1^{-\alpha}}{m_1-m_{\text{min}}}
+        p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
+        \frac{m_1^{-\alpha}}{m_1-m_{\text{min}}}
     """
 
     arg_constraints = {

@@ -17,14 +17,31 @@ from __future__ import annotations
 from numpyro.distributions import MultivariateNormal
 
 
-def GaussainSpinModel(
-    mu_eff: float, sigma_eff: float, mu_p: float, sigma_p: float, rho: float, *, validate_args=None
+def GaussianSpinModel(
+    mu_eff: float,
+    sigma_eff: float,
+    mu_p: float,
+    sigma_p: float,
+    rho: float,
+    *,
+    validate_args=None,
 ) -> MultivariateNormal:
-    r"""Bivariate normal distribution for the effective and precessing spins. See Eq. (D3) and (D4) in
-    `Population Properties of Compact Objects from the Second LIGO-Virgo Gravitational-Wave Transient Catalog <https://arxiv.org/abs/2010.14533>`__.
+    r"""Bivariate normal distribution for the effective and precessing spins.
+    See Eq. (D3) and (D4) in `Population Properties of Compact Objects from
+    the Second LIGO-Virgo Gravitational-Wave Transient Catalog
+    <https://arxiv.org/abs/2010.14533>`__.
 
     .. math::
-        \chi_{\text{eff}}, \chi_{p} \sim \mathcal{N}\left(\begin{bmatrix}\mu_{\text{eff}} \\ \mu_{p}\end{bmatrix}, \begin{bmatrix}\sigma_{\text{eff}}^2 & \rho \sigma_{\text{eff}} \sigma_{p} \\ \rho \sigma_{\text{eff}} \sigma_{p} & \sigma_{p}^2\end{bmatrix}\right)
+    
+        \left(\chi_{\text{eff}}, \chi_{p}\right) \sim \mathcal{N}\left(
+            \begin{bmatrix}
+                \mu_{\text{eff}} \\ \mu_{p}
+            \end{bmatrix},
+            \begin{bmatrix}
+                \sigma_{\text{eff}}^2 & \rho \sigma_{\text{eff}} \sigma_{p} \\
+                \rho \sigma_{\text{eff}} \sigma_{p} & \sigma_{p}^2
+            \end{bmatrix}
+        \right)
 
     where :math:`\chi_{\text{eff}}` is the effective spin and :math:`\chi_{\text{eff}}\in[-1,1]` and
     :math:`\chi_{p}` is the precessing spin and :math:`\chi_{p}\in[0,1]`.

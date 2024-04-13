@@ -21,13 +21,18 @@ def GaussianChiP(mu: float, sigma: float, *, validate_args=None) -> TruncatedNor
     r"""Truncated normal distribution for the precessing spin. See Eq. (3)-(4) in
     `The Low Effective Spin of Binary Black Holes and Implications for Individual
     Gravitational-Wave Events <https://arxiv.org/abs/2001.06051>`__ and
-    `Population Properties of Compact Objects from the Second LIGO-Virgo Gravitational-Wave Transient Catalog
-    <https://arxiv.org/abs/2010.14533>`__
+    `Population Properties of Compact Objects from the Second LIGO-Virgo
+    Gravitational-Wave Transient Catalog <https://arxiv.org/abs/2010.14533>`__
 
     .. math::
-        \displaystyle p(\chi_{p}\mid\mu,\sigma)=
-        \frac{\displaystyle\sqrt{\frac{2}{\pi\sigma^2}}}{\displaystyle\operatorname{erf}\left(\frac{1-\mu}{\sqrt{2}\sigma}\right)
-        +\operatorname{erf}\left(\frac{1+\mu}{\sqrt{2}\sigma}\right)}
+
+        p(\chi_{p}\mid\mu,\sigma)=\frac{
+            \displaystyle\sqrt{\frac{2}{\pi\sigma^2}}
+        }{
+            \displaystyle
+            \operatorname{erf}\left(\frac{1-\mu}{\sqrt{2}\sigma}\right)
+            +\operatorname{erf}\left(\frac{1+\mu}{\sqrt{2}\sigma}\right)
+        }
         \exp{\left(-\frac{1}{2}\left(\frac{\chi_{p}-\mu}{\sigma}\right)^2\right)}
 
     where :math:`\chi_{p}` is the precessing spin and :math:`\chi_{p}\in[0,1]`.

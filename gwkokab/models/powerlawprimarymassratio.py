@@ -28,11 +28,14 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     distribution.
 
     .. math::
-        p(m_1, q|\alpha,\beta) = p(m_1|\alpha) p(q | m_1, \beta)
+    
+        p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
+    
     .. math::
+    
         \begin{align*}
-            p(m_1|\alpha) & \propto m_1^{\alpha}, \qquad m_{\text{min}} \leq m_1 \leq m_{\max} \\
-            p(q | m_1, \beta) & \propto q^{\beta}, \qquad \frac{m_{\text{min}}}{m_1} \leq q \leq 1
+            p(m_1\mid\alpha)   & \propto m_1^{\alpha}, \qquad m_{\text{min}}             \leq m_1 \leq m_{\max} \\
+            p(q\mid m_1,\beta) & \propto q^{\beta},    \qquad \frac{m_{\text{min}}}{m_1} \leq q   \leq 1
         \end{align*}
     """
 

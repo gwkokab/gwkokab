@@ -25,9 +25,14 @@ def GaussianChiEff(mu: float, sigma: float, *, validate_args=None) -> TruncatedN
     <https://arxiv.org/abs/2010.14533>`__
 
     .. math::
-        \displaystyle p(\chi_{\text{eff}}\mid\mu,\sigma)=
-        \frac{\displaystyle\sqrt{\frac{2}{\pi\sigma^2}}}{\displaystyle\operatorname{erf}\left(\frac{1-\mu}{\sqrt{2}\sigma}\right)
-        +\operatorname{erf}\left(\frac{1+\mu}{\sqrt{2}\sigma}\right)}
+
+        p(\chi_{\text{eff}}\mid\mu,\sigma)=\frac{
+            \displaystyle\sqrt{\frac{2}{\pi\sigma^2}}
+        }{
+            \displaystyle
+            \operatorname{erf}\left(\frac{1-\mu}{\sqrt{2}\sigma}\right)
+            +\operatorname{erf}\left(\frac{1+\mu}{\sqrt{2}\sigma}\right)
+        }
         \exp{\left(-\frac{1}{2}\left(\frac{\chi_{\text{eff}}-\mu}{\sigma}\right)^2\right)}
 
     where :math:`\chi_{\text{eff}}` is the effective spin and :math:`\chi_{\text{eff}}\in[-1,1]`.

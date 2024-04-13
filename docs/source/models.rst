@@ -39,7 +39,7 @@ Effective Spin Gaussian Model
 Gaussain Spin Model
 -------------------
 
-.. autoclass:: gwkokab.models.gaussianspinmodel.GaussainSpinModel
+.. autoclass:: gwkokab.models.gaussianspinmodel.GaussianSpinModel
     :members:
     :undoc-members:
     :show-inheritance:
