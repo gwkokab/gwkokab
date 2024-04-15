@@ -427,10 +427,7 @@ class PopulationGenerator(object):
                 weights = []
 
                 for comp_model in model["models"]:
-                    comp_model_instance: Distribution = eval(comp_model["model"])(
-                        **comp_model["params"],
-                        validate_args=True,
-                    )
+                    comp_model_instance: Distribution = eval(comp_model["model"])(**comp_model["params"])
 
                     component_models.append(comp_model_instance)
                     weights.append(comp_model["weight"])
@@ -445,7 +442,7 @@ class PopulationGenerator(object):
                     validate_args=True,
                 )
             else:
-                model_instance: Distribution = eval(model["model"])(**model["params"], validate_args=True)
+                model_instance: Distribution = eval(model["model"])(**model["params"])
                 self._config_vars.extend([(x[1], model["params"][x[0]]) for x in model["config_vars"]])
 
             self._model_instances.append(model_instance)

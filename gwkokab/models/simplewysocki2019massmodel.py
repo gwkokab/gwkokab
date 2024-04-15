@@ -72,15 +72,15 @@ class SimpleWysocki2019MassModel(dist.Distribution):
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):
             key = get_key(key)
-        m1 = TruncatedPowerLaw(
-            alpha=-self.alpha_m,
-            xmin=self.mmin,
-            xmax=self.mmax,
-        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
-        key = get_key(key)
         m2 = dist.Uniform(
             low=self.mmin,
-            high=m1,
+            high=self.mmax,
+        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
+        key = get_key(key)
+        m1 = TruncatedPowerLaw(
+            alpha=-self.alpha_m,
+            xmin=m2,
+            xmax=self.mmax,
         ).sample(key=key, sample_shape=())
         return jnp.column_stack((m1, m2))
 
