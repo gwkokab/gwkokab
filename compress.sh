@@ -21,4 +21,6 @@ for dir in $(ls -d $1/*); do
     folder_name=$(basename $dir)
     zip -rq $folder_name.zip *
     cd $current_dir
+    folder_name=$(basename $dir)
+    mv $dir/$folder_name.zip $1
 done

@@ -5,6 +5,15 @@ Models in GWKokab are inherited from the `numpyro.distributions.Distribution <ht
 Mass Models
 ===========
 
+Broken Power Law Mass Model
+---------------------------
+
+.. autoclass:: gwkokab.models.brokenpowerlawmassmodel.BrokenPowerLawMassModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
+
 Wysocki2019MassModel
 --------------------
 
@@ -72,8 +81,12 @@ Truncated Power Law
     :show-inheritance:
     :member-order: alphabetical
 
+
+Utils
+=====
+
 Constraints
-===========
+-----------
 
 NumPyro uses constraints to ensure the samples provided to :func:`log_prob` are with in the valid range. NumPyro has pre-defined constraints as `numpyro.distributions.constraints <https://num.pyro.ai/en/stable/distributions.html#constraints>`__ module. GWKokab has implemented a few constraints which are not present in `NumPyro <https://num.pyro.ai/en/stable/index.html>`__. These constraints are listed below.
 
@@ -81,3 +94,17 @@ NumPyro uses constraints to ensure the samples provided to :func:`log_prob` are 
 .. autodata:: gwkokab.models.utils.constraints.less_than_equal_to
 .. autodata:: gwkokab.models.utils.constraints.mass_sandwich
 .. autodata:: gwkokab.models.utils.constraints.mass_ratio_mass_sandwich
+
+
+Joint Distribution
+------------------
+.. autoclass:: gwkokab.models.utils.jointdistribution.JointDistribution
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
+
+Smoothing Kernel
+----------------
+
+.. autofunction:: gwkokab.models.utils.smoothing.smoothing_kernel

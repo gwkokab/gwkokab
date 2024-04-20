@@ -16,6 +16,7 @@
 import jax
 from jax import numpy as jnp
 from numpyro import distributions as dist
+from numpyro.distributions.util import validate_sample
 
 from gwkokab.utils import get_key
 
@@ -23,7 +24,7 @@ from gwkokab.utils import get_key
 class JointDistribution(dist.Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
-    def __init__(self, *marginal_distributions: dist.Distribution, validate_args=None) -> None:
+    def __init__(self, *marginal_distributions: dist.Distribution) -> None:
         self.marginal_distributions = marginal_distributions
         self.shaped_values = tuple()
         k = 0
@@ -37,10 +38,10 @@ class JointDistribution(dist.Distribution):
         super(JointDistribution, self).__init__(
             batch_shape=(),
             event_shape=(k,),
-            validate_args=validate_args,
+            validate_args=True,
         )
 
-    # @partial(jit, static_argnums=(0,))
+    @validate_sample
     def log_prob(self, value):
         log_probs = jax.tree_util.tree_map(
             lambda d, v: d.log_prob(value[..., v]),
@@ -51,7 +52,6 @@ class JointDistribution(dist.Distribution):
         log_probs = jnp.sum(jnp.asarray(log_probs))
         return log_probs
 
-    # @partial(jit, static_argnums=(0, 2))
     def sample(self, key, sample_shape=()):
         if key is None or isinstance(key, int):
             key = get_key(key)
