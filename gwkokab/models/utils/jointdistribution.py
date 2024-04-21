@@ -16,7 +16,6 @@
 import jax
 from jax import numpy as jnp
 from numpyro import distributions as dist
-from numpyro.distributions.util import validate_sample
 
 from gwkokab.utils import get_key
 
@@ -41,7 +40,7 @@ class JointDistribution(dist.Distribution):
             validate_args=True,
         )
 
-    @validate_sample
+    # @validate_sample
     def log_prob(self, value):
         log_probs = jax.tree_util.tree_map(
             lambda d, v: d.log_prob(value[..., v]),
