@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+from .brokenpowerlawmassmodel import BrokenPowerLawMassModel as BrokenPowerLawMassModel
 from .gaussianchieff import GaussianChiEff as GaussianChiEff
 from .gaussianchip import GaussianChiP as GaussianChiP
 from .gaussianspinmodel import GaussianSpinModel as GaussianSpinModel
