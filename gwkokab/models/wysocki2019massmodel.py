@@ -23,7 +23,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..utils.misc import get_key
 from .truncpowerlaw import TruncatedPowerLaw
-from .utils.constraints import greater_than_equal_to, mass_sandwich
+from .utils.constraints import mass_sandwich
 
 
 class Wysocki2019MassModel(dist.Distribution):
@@ -31,63 +31,59 @@ class Wysocki2019MassModel(dist.Distribution):
     described in equation 7 of the `paper <https://arxiv.org/abs/1805.06442>`__.
 
     .. math::
-        p(m_1,m_2\mid\alpha,k,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
-        \frac{m_1^{-\alpha-k}m_2^k}{m_1-m_{\text{min}}}\qquad m_{\text{min}}\leq m_2 \leq m_1 \leq m_{\text{max}}
+        p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
+        \frac{m_1^{-\alpha}}{m_1-m_{\text{min}}}
     """
 
     arg_constraints = {
         "alpha_m": dist.constraints.real,
-        "k": greater_than_equal_to(0),
         "mmin": dist.constraints.positive,
         "mmax": dist.constraints.positive,
     }
 
-    def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float) -> None:
+    def __init__(self, alpha_m: float, mmin: float, mmax: float) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
 
         :param alpha_m: index of the power law distribution
-        :param k: mass ratio power law index
         :param mmin: lower mass limit
         :param mmax: upper mass limit
         :param valid_args: validate the input arguments or not, defaults to `None`
         """
-        self.alpha_m, self.k, self.mmin, self.mmax = promote_shapes(alpha_m, k, mmin, mmax)
-        batch_shape = lax.broadcast_shapes(jnp.shape(alpha_m), jnp.shape(k), jnp.shape(mmin), jnp.shape(mmax))
-
+        self.alpha_m, self.mmin, self.mmax = promote_shapes(alpha_m, mmin, mmax)
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha_m),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+        )
         self.support = mass_sandwich(self.mmin, self.mmax)
-
-        super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, event_shape=(2,), validate_args=True)
-
-        self.marginal_m1 = TruncatedPowerLaw(
-            alpha=-(self.k + self.alpha_m), xmin=self.mmin, xmax=self.mmax, validate_args=True
+        super(Wysocki2019MassModel, self).__init__(
+            batch_shape=batch_shape,
+            event_shape=(2,),
+            validate_args=True,
         )
 
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
-        m2 = value[..., 1]
-        log_prob_m1 = self.marginal_m1.log_prob(m1)
-        log_prob_m2_given_m1 = TruncatedPowerLaw(
-            alpha=self.k,
+        log_prob_m1 = TruncatedPowerLaw(
+            alpha=-self.alpha_m,
             xmin=self.mmin,
-            xmax=m1,
-            validate_args=True,
-        ).log_prob(m2)
+            xmax=self.mmax,
+        ).log_prob(m1)
+        log_prob_m2_given_m1 = -jnp.log(m1 - self.mmin)
         return log_prob_m1 + log_prob_m2_given_m1
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):
             key = get_key(key)
-        m1 = self.marginal_m1.sample(key=key, sample_shape=sample_shape + self.batch_shape)
+        m2 = dist.Uniform(
+            low=self.mmin,
+            high=self.mmax,
+        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
         key = get_key(key)
-        m2 = TruncatedPowerLaw(
-            alpha=self.k,
-            xmin=self.mmin,
-            xmax=m1,
+        m1 = TruncatedPowerLaw(
+            alpha=-self.alpha_m,
+            xmin=m2,
+            xmax=self.mmax,
         ).sample(key=key, sample_shape=())
         return jnp.column_stack((m1, m2))
-
-    def __repr__(self) -> str:
-        string = f"Wysocki2019MassModel(alpha_m={self.alpha_m}, k={self.k}, "
-        string += f"mmin={self.mmin}, mmax={self.mmax})"
-        return string
