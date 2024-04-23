@@ -59,6 +59,7 @@ def parse_config(config_path: str) -> dict[str, Any]:
                 config_dict[section]["col_names"] = eval(config[section]["col_names"])
                 config_dict[section]["error_type"] = config[section].get("error_type", None)
                 config_dict[section]["error_params"] = eval(config[section].get("error_params", r"{}"))
+                config_dict[section]["constraint"] = config[section].get("constraint", None)
         elif "model" in section:
             config_dict[section]["model"] = config[section]["model"]
             config_dict[section]["params"] = eval(config[section]["params"])
@@ -66,6 +67,7 @@ def parse_config(config_path: str) -> dict[str, Any]:
             config_dict[section]["col_names"] = eval(config[section]["col_names"])
             config_dict[section]["error_type"] = config[section].get("error_type", None)
             config_dict[section]["error_params"] = eval(config[section].get("error_params", r"{}"))
+            config_dict[section]["constraint"] = config[section].get("constraint", None)
         else:
             for key, value in config.items(section):
                 config_dict[section][key] = value

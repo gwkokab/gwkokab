@@ -21,12 +21,13 @@ from typing_extensions import Optional
 import jax
 import numpy as np
 from jax import numpy as jnp, vmap
-from numpyro import distributions as dist
 from numpyro.distributions import *
+from numpyro.distributions.constraints import *
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 
 from ..errors import error_factory
 from ..models import *
+from ..models.utils.constraints import *
 from ..utils.misc import get_key
 from ..vts.utils import interpolate_hdf5
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
@@ -173,38 +174,6 @@ class PopulationGenerator(object):
                         header="\t".join(self._col_names),
                     )
                 progress.advance(task, 1)
-
-    def weighted_posteriors(self, raw_interpolator_filename: str) -> None:
-        """Weighting posteriors by VTs.
-
-        :param raw_interpolator_filename: raw interpolator file name
-        """
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[bold blue]Plotting Posterior".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
-            BarColumn(bar_width=40),
-            "[progress.percentage]{task.percentage:>3.2f}%",
-            "•",
-            TimeRemainingColumn(elapsed_when_finished=True),
-            "•",
-            MofNCompleteColumn(),
-            disable=not self._verbose,
-        ) as progress:
-            task1 = progress.add_task("Weighting posteriors", total=self._num_realizations * self._size)
-            for i in range(self._num_realizations):
-                container = f"{self._root_container}/realization_{i}"
-                for j in range(self._size):
-                    posterior_filename = f"{container}/posteriors/{self._event_filename.format(j)}"
-
-                    self.weight_over_m1m2(
-                        input_filename=posterior_filename,
-                        output_filename=posterior_filename,
-                        n_out=self._error_size,
-                        m1_col_index=self._col_names.index("m1_source"),
-                        m2_col_index=self._col_names.index("m2_source"),
-                    )
-                    progress.advance(task1, 1)
 
     def generate_injections(self) -> None:
         """Generate injections and save them to disk."""
@@ -354,16 +323,35 @@ class PopulationGenerator(object):
                     err_realizations = np.concatenate((err_realizations, rvs), axis=-1)
                     k += c
 
-                mask = np.isnan(err_realizations).any(axis=2)
+                nan_mask = np.isnan(err_realizations).any(axis=2)
+                k = 0
+                constraint_mask = np.full((size, error_size), True, dtype=bool)
+                for t, c in enumerate(self._col_count):
+                    if self._constraints[t] is not None:
+                        if c == 1:
+                            constraint_mask = np.logical_and(
+                                constraint_mask,
+                                self._constraints[t](err_realizations[..., k : k + c]).reshape(size, error_size),
+                            )
+                        else:
+                            constraint_mask = np.logical_and(
+                                constraint_mask, self._constraints[t](err_realizations[..., k : k + c])
+                            )
+                    k += c
+
+                mask = np.logical_and(~nan_mask, constraint_mask)
 
                 for j in range(size):
-                    masked_err_realizations = err_realizations[j, ~mask[j]]
+                    masked_err_realizations = err_realizations[j, mask[j]]
 
-                    np.savetxt(
-                        f"{container}/posteriors/{self._event_filename.format(j)}",
-                        masked_err_realizations,
-                        header="\t".join(self._col_names),
-                    )
+                    # count trues in masked_err_realizations
+                    count = np.count_nonzero(masked_err_realizations)
+                    if count > 0:
+                        np.savetxt(
+                            f"{container}/posteriors/{self._event_filename.format(j)}",
+                            masked_err_realizations,
+                            header="\t".join(self._col_names),
+                        )
                     progress.advance(task, 1)
 
     def generate_batch_plots(self) -> None:
@@ -420,6 +408,7 @@ class PopulationGenerator(object):
         self._model_instances: list[Distribution] = []
         self._error_type: list[Optional[str]] = []
         self._error_params: list[dict] = []
+        self._constraints: list[Optional[Constraint]] = []
 
         for model in self._models:
             if model.get("models", None) is not None:
@@ -436,8 +425,8 @@ class PopulationGenerator(object):
                 weights = np.array(weights)
                 weights /= np.sum(weights)
 
-                model_instance = dist.MixtureGeneral(
-                    mixing_distribution=dist.Categorical(probs=weights, validate_args=True),
+                model_instance = MixtureGeneral(
+                    mixing_distribution=Categorical(probs=weights, validate_args=True),
                     component_distributions=component_models,
                     validate_args=True,
                 )
@@ -450,6 +439,10 @@ class PopulationGenerator(object):
             self._error_type.append(model["error_type"])
             if model["error_type"] is not None:
                 self._col_names.extend(model["col_names"])
+            if model.get("constraint") is None:
+                self._constraints.append(None)
+            else:
+                self._constraints.append(eval(model["constraint"]))
             self._error_params.append(model.get("error_params", {}))
 
         self._indexes = {var: i for i, var in enumerate(self._col_names)}
