@@ -67,6 +67,8 @@ class PopulationGenerator(object):
         self._models: list = models
         self._extra_size = general["extra_size"]
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
+        self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
+        self._m1q_selection = eval(selection_effect.get("m1q", "False"))
         self._plots = plots
         self._verbose = general.get("verbose", True)
 
@@ -118,9 +120,40 @@ class PopulationGenerator(object):
         :param m2_col_index: index of m2 column
         """
         realizations = np.loadtxt(input_filename)
+        m1 = realizations[..., m1_col_index]
+        m2 = realizations[..., m2_col_index]
+        weights = self._raw_interpolator(m1, m2)
+        weights /= np.sum(weights)  # normalizes
 
-        # weights = interpolate_hdf5(realizations[:, m1_col_index], realizations[:, m2_col_index], self._vt_filename)
-        weights = self._raw_interpolator(realizations[:, m1_col_index], realizations[:, m2_col_index])
+        indexes_all = np.arange(len(weights))
+        self.key = get_key(self.key)
+        downselected = jax.random.choice(self.key, indexes_all, p=weights, shape=(n_out,))
+
+        new_realizations = realizations[downselected]
+
+        np.savetxt(output_filename, new_realizations, header="\t".join(self._col_names))
+
+    def weight_over_m1q(
+        self,
+        input_filename: str,
+        output_filename: str,
+        n_out: int,
+        m1_col_index: int,
+        q_col_index: int,
+    ) -> None:
+        """Weighting masses by VTs.
+
+        :param input_filename: input file name
+        :param output_filename: output file name
+        :param n_out: number of output
+        :param m1_col_index: index of m1 column
+        :param q_col_index: index of q column
+        """
+        realizations = np.loadtxt(input_filename)
+
+        m1 = realizations[..., m1_col_index]
+        q = realizations[..., q_col_index]
+        weights = self._raw_interpolator(m1, q * m1)
         weights /= np.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(weights))
@@ -157,13 +190,22 @@ class PopulationGenerator(object):
                 injection_filename = f"{container}/injections.dat"
                 weighted_injection_filename = f"{container}/injections.dat"
 
-                self.weight_over_m1m2(
-                    input_filename=injection_filename,
-                    output_filename=weighted_injection_filename,
-                    n_out=self._size,
-                    m1_col_index=self._col_names.index("m1_source"),
-                    m2_col_index=self._col_names.index("m2_source"),
-                )
+                if self._m1m2_selection:
+                    self.weight_over_m1m2(
+                        input_filename=injection_filename,
+                        output_filename=weighted_injection_filename,
+                        n_out=self._size,
+                        m1_col_index=self._col_names.index("m1_source"),
+                        m2_col_index=self._col_names.index("m2_source"),
+                    )
+                elif self._m1q_selection:
+                    self.weight_over_m1q(
+                        input_filename=injection_filename,
+                        output_filename=weighted_injection_filename,
+                        n_out=self._size,
+                        m1_col_index=self._col_names.index("m1_source"),
+                        q_col_index=self._col_names.index("q"),
+                    )
 
                 injections = np.loadtxt(weighted_injection_filename)
                 os.makedirs(f"{container}/injections", exist_ok=True)
