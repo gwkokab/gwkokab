@@ -21,12 +21,13 @@ from typing_extensions import Optional
 import jax
 import numpy as np
 from jax import numpy as jnp, vmap
-from numpyro import distributions as dist
 from numpyro.distributions import *
+from numpyro.distributions.constraints import *
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 
 from ..errors import error_factory
 from ..models import *
+from ..models.utils.constraints import *
 from ..utils.misc import get_key
 from ..vts.utils import interpolate_hdf5
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
@@ -66,6 +67,8 @@ class PopulationGenerator(object):
         self._models: list = models
         self._extra_size = general["extra_size"]
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
+        self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
+        self._m1q_selection = eval(selection_effect.get("m1q", "False"))
         self._plots = plots
         self._verbose = general.get("verbose", True)
 
@@ -117,9 +120,40 @@ class PopulationGenerator(object):
         :param m2_col_index: index of m2 column
         """
         realizations = np.loadtxt(input_filename)
+        m1 = realizations[..., m1_col_index]
+        m2 = realizations[..., m2_col_index]
+        weights = self._raw_interpolator(m1, m2)
+        weights /= np.sum(weights)  # normalizes
 
-        # weights = interpolate_hdf5(realizations[:, m1_col_index], realizations[:, m2_col_index], self._vt_filename)
-        weights = self._raw_interpolator(realizations[:, m1_col_index], realizations[:, m2_col_index])
+        indexes_all = np.arange(len(weights))
+        self.key = get_key(self.key)
+        downselected = jax.random.choice(self.key, indexes_all, p=weights, shape=(n_out,))
+
+        new_realizations = realizations[downselected]
+
+        np.savetxt(output_filename, new_realizations, header="\t".join(self._col_names))
+
+    def weight_over_m1q(
+        self,
+        input_filename: str,
+        output_filename: str,
+        n_out: int,
+        m1_col_index: int,
+        q_col_index: int,
+    ) -> None:
+        """Weighting masses by VTs.
+
+        :param input_filename: input file name
+        :param output_filename: output file name
+        :param n_out: number of output
+        :param m1_col_index: index of m1 column
+        :param q_col_index: index of q column
+        """
+        realizations = np.loadtxt(input_filename)
+
+        m1 = realizations[..., m1_col_index]
+        q = realizations[..., q_col_index]
+        weights = self._raw_interpolator(m1, q * m1)
         weights /= np.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(weights))
@@ -156,13 +190,22 @@ class PopulationGenerator(object):
                 injection_filename = f"{container}/injections.dat"
                 weighted_injection_filename = f"{container}/injections.dat"
 
-                self.weight_over_m1m2(
-                    input_filename=injection_filename,
-                    output_filename=weighted_injection_filename,
-                    n_out=self._size,
-                    m1_col_index=self._col_names.index("m1_source"),
-                    m2_col_index=self._col_names.index("m2_source"),
-                )
+                if self._m1m2_selection:
+                    self.weight_over_m1m2(
+                        input_filename=injection_filename,
+                        output_filename=weighted_injection_filename,
+                        n_out=self._size,
+                        m1_col_index=self._col_names.index("m1_source"),
+                        m2_col_index=self._col_names.index("m2_source"),
+                    )
+                elif self._m1q_selection:
+                    self.weight_over_m1q(
+                        input_filename=injection_filename,
+                        output_filename=weighted_injection_filename,
+                        n_out=self._size,
+                        m1_col_index=self._col_names.index("m1_source"),
+                        q_col_index=self._col_names.index("q"),
+                    )
 
                 injections = np.loadtxt(weighted_injection_filename)
                 os.makedirs(f"{container}/injections", exist_ok=True)
@@ -173,38 +216,6 @@ class PopulationGenerator(object):
                         header="\t".join(self._col_names),
                     )
                 progress.advance(task, 1)
-
-    def weighted_posteriors(self, raw_interpolator_filename: str) -> None:
-        """Weighting posteriors by VTs.
-
-        :param raw_interpolator_filename: raw interpolator file name
-        """
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[bold blue]Plotting Posterior".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
-            BarColumn(bar_width=40),
-            "[progress.percentage]{task.percentage:>3.2f}%",
-            "•",
-            TimeRemainingColumn(elapsed_when_finished=True),
-            "•",
-            MofNCompleteColumn(),
-            disable=not self._verbose,
-        ) as progress:
-            task1 = progress.add_task("Weighting posteriors", total=self._num_realizations * self._size)
-            for i in range(self._num_realizations):
-                container = f"{self._root_container}/realization_{i}"
-                for j in range(self._size):
-                    posterior_filename = f"{container}/posteriors/{self._event_filename.format(j)}"
-
-                    self.weight_over_m1m2(
-                        input_filename=posterior_filename,
-                        output_filename=posterior_filename,
-                        n_out=self._error_size,
-                        m1_col_index=self._col_names.index("m1_source"),
-                        m2_col_index=self._col_names.index("m2_source"),
-                    )
-                    progress.advance(task1, 1)
 
     def generate_injections(self) -> None:
         """Generate injections and save them to disk."""
@@ -354,16 +365,35 @@ class PopulationGenerator(object):
                     err_realizations = np.concatenate((err_realizations, rvs), axis=-1)
                     k += c
 
-                mask = np.isnan(err_realizations).any(axis=2)
+                nan_mask = np.isnan(err_realizations).any(axis=2)
+                k = 0
+                constraint_mask = np.full((size, error_size), True, dtype=bool)
+                for t, c in enumerate(self._col_count):
+                    if self._constraints[t] is not None:
+                        if c == 1:
+                            constraint_mask = np.logical_and(
+                                constraint_mask,
+                                self._constraints[t](err_realizations[..., k : k + c]).reshape(size, error_size),
+                            )
+                        else:
+                            constraint_mask = np.logical_and(
+                                constraint_mask, self._constraints[t](err_realizations[..., k : k + c])
+                            )
+                    k += c
+
+                mask = np.logical_and(~nan_mask, constraint_mask)
 
                 for j in range(size):
-                    masked_err_realizations = err_realizations[j, ~mask[j]]
+                    masked_err_realizations = err_realizations[j, mask[j]]
 
-                    np.savetxt(
-                        f"{container}/posteriors/{self._event_filename.format(j)}",
-                        masked_err_realizations,
-                        header="\t".join(self._col_names),
-                    )
+                    # count trues in masked_err_realizations
+                    count = np.count_nonzero(masked_err_realizations)
+                    if count > 0:
+                        np.savetxt(
+                            f"{container}/posteriors/{self._event_filename.format(j)}",
+                            masked_err_realizations,
+                            header="\t".join(self._col_names),
+                        )
                     progress.advance(task, 1)
 
     def generate_batch_plots(self) -> None:
@@ -420,6 +450,7 @@ class PopulationGenerator(object):
         self._model_instances: list[Distribution] = []
         self._error_type: list[Optional[str]] = []
         self._error_params: list[dict] = []
+        self._constraints: list[Optional[Constraint]] = []
 
         for model in self._models:
             if model.get("models", None) is not None:
@@ -436,8 +467,8 @@ class PopulationGenerator(object):
                 weights = np.array(weights)
                 weights /= np.sum(weights)
 
-                model_instance = dist.MixtureGeneral(
-                    mixing_distribution=dist.Categorical(probs=weights, validate_args=True),
+                model_instance = MixtureGeneral(
+                    mixing_distribution=Categorical(probs=weights, validate_args=True),
                     component_distributions=component_models,
                     validate_args=True,
                 )
@@ -450,6 +481,10 @@ class PopulationGenerator(object):
             self._error_type.append(model["error_type"])
             if model["error_type"] is not None:
                 self._col_names.extend(model["col_names"])
+            if model.get("constraint") is None:
+                self._constraints.append(None)
+            else:
+                self._constraints.append(eval(model["constraint"]))
             self._error_params.append(model.get("error_params", {}))
 
         self._indexes = {var: i for i, var in enumerate(self._col_names)}
