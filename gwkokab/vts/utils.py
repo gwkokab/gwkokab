@@ -39,7 +39,9 @@ def interpolate_hdf5(file_path: str = "./vt_1_200_1000.hdf5") -> Callable:
         VT_grid = hdf5_file["VT"][:]
         m1_coord = m1_grid[0]
         m2_coord = m2_grid[:, 0]
-        interpolator = lambda m1, m2: bispline_interp(m1, m2, m1_coord, m2_coord, VT_grid)
+        
+    interpolator = lambda m1, m2: bispline_interp(m1, m2, m1_coord, m2_coord, VT_grid)
+    
     return interpolator
 
 
