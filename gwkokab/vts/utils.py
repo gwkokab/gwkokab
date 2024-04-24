@@ -24,27 +24,6 @@ from jaxtyping import Array
 from ..typing import Numeric
 
 
-# @jit
-def interpolate_hdf5(file_path: str = "./vt_1_200_1000.hdf5") -> Callable:
-    """Interpolates the VT values from an HDF5 file based on given m1 and m2 coordinates.
-
-    :param m1: The m1 coordinate.
-    :param m2: The m2 coordinate.
-    :param file_path: The path to the HDF5 file, defaults to "./vt_1_200_1000.hdf5"
-    :return: The interpolated VT value.
-    """
-    with h5py.File(file_path, "r") as hdf5_file:
-        m1_grid = hdf5_file["m1"][:]
-        m2_grid = hdf5_file["m2"][:]
-        VT_grid = hdf5_file["VT"][:]
-        m1_coord = m1_grid[0]
-        m2_coord = m2_grid[:, 0]
-        
-    interpolator = lambda m1, m2: bispline_interp(m1, m2, m1_coord, m2_coord, VT_grid)
-    
-    return interpolator
-
-
 M = 0.0625 * jnp.array(
     [
         [0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -67,7 +46,15 @@ M = 0.0625 * jnp.array(
     dtype=jnp.float32,
 )
 
-M1 = jnp.array([[1, 0, 0, 0], [-1, 1, 0, 0], [-1, 0, 1, 0], [1, -1, -1, 1]], dtype=jnp.float32)
+M1 = jnp.array(
+    [
+        [1, 0, 0, 0],
+        [-1, 1, 0, 0],
+        [-1, 0, 1, 0],
+        [1, -1, -1, 1],
+    ],
+    dtype=jnp.float32,
+)
 
 
 @jit
@@ -79,7 +66,7 @@ def bispline_interp(
     zp: Numeric,
 ) -> Array:
     """Perform bivariate spline interpolation.
-    Check `JAX discussion <https://github.com/google/jax/discussions/10689>`__.
+    Check `JAX discussion <https://github.com/google/jax/discussions/10689#discussioncomment-2805471>`__.
 
     :param xnew: 1D vector of x-coordinates where to perform predictions.
     :param ynew: 1D vector of y-coordinates where to perform predictions.
@@ -99,7 +86,7 @@ def bispline_interp(
         """
         x in [0,1]
         """
-        return jnp.array([x**i for i in jnp.arange(0, order + 1)])
+        return jnp.power(x, jnp.arange(0, order + 1))
 
     def tval(xnew: int, ix: Numeric, xp: Numeric) -> Numeric:
         return (xnew - xp[ix - 1]) / (xp[ix] - xp[ix - 1])
@@ -134,3 +121,22 @@ def bispline_interp(
 
     cond = jnp.logical_and(condx, condy)
     return jnp.where(cond, bispline_interp(ix, iy), bilinear_interp(ix, iy))
+
+
+def interpolate_hdf5(file_path: str = "./vt_1_200_1000.hdf5") -> Callable:
+    """Interpolates the VT values from an HDF5 file based on given m1 and m2 coordinates.
+
+    :param m1: The m1 coordinate.
+    :param m2: The m2 coordinate.
+    :param file_path: The path to the HDF5 file, defaults to "./vt_1_200_1000.hdf5"
+    :return: The interpolated VT value.
+    """
+    with h5py.File(file_path, "r") as hdf5_file:
+        m1_grid = hdf5_file["m1"][:]
+        m2_grid = hdf5_file["m2"][:]
+        VT_grid = hdf5_file["VT"][:]
+        m1_coord = m1_grid[0]
+        m2_coord = m2_grid[:, 0]
+
+    interpolator = lambda m1, m2: bispline_interp(m1, m2, m1_coord, m2_coord, VT_grid)
+    return interpolator
