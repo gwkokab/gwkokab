@@ -40,7 +40,7 @@ from gwkokab.utils import get_key
 current_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 os.makedirs(rf"results/{current_time}", exist_ok=True)
 
-posterior_regex = None  # set the path to the posterior files regex
+posterior_regex = "/home/muhammad.zeeshan/o4a-analysis/data/o*_lower_mass/*.dat"  # set the path to the posterior files regex
 posteriors = glob.glob(posterior_regex)
 data_set = {i: np.loadtxt(event) for i, event in enumerate(posteriors)}
 
@@ -59,13 +59,14 @@ labels = [
 ]
 
 
+
 N_CHAINS = 20
 
 
-mu_mass_1_prior_dist = dist.Uniform(low=1, high=100, validate_args=True)
-mu_mass_2_prior_dist = dist.Uniform(low=1, high=100, validate_args=True)
-sigma_mass_1_prior_dist = dist.Uniform(low=0.05, high=2, validate_args=True)
-sigma_mass_2_prior_dist = dist.Uniform(low=0.05, high=2, validate_args=True)
+mu_mass_1_prior_dist = dist.Uniform(low=1.0, high=100.0, validate_args=True)
+mu_mass_2_prior_dist = dist.Uniform(low=1.0, high=50.0, validate_args=True)
+sigma_mass_1_prior_dist = dist.Uniform(low=0.1, high=10.0, validate_args=True)
+sigma_mass_2_prior_dist = dist.Uniform(low=0.1, high=10.0, validate_args=True)
 E_chi_1_prior_dist = dist.Uniform(low=0, high=1, validate_args=True)
 E_chi_2_prior_dist = dist.Uniform(low=0, high=1, validate_args=True)
 sigma_chi_1_prior_dist = dist.Uniform(low=0, high=0.25, validate_args=True)
@@ -111,7 +112,7 @@ model = MaskedCouplingRQSpline(n_dim, n_layers, hidden_size, num_bins, get_key()
 
 @jit
 def get_alpha_beta(mu: Array, sigma: Array) -> Array:
-    """Transforms expectation and variance into alpha and
+    r"""Transforms expectation and variance into alpha and
     beta parameters of a Beta distribution.
 
     .. math::
