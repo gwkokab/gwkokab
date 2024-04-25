@@ -118,7 +118,7 @@ order-by-type = false
 
 [tool.pyright]
 reportIncompatibleMethodOverride = true
-include = ["gwkokab", "tests"]
+include = ["gwkokab", "tests", "examples"]
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]
