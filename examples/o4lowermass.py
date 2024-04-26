@@ -12,10 +12,8 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
 import glob
 import os
-import sys
 from datetime import datetime
 from typing import Optional
 
@@ -32,18 +30,45 @@ from jaxtyping import Array
 from matplotlib import pyplot as plt
 from numpyro import distributions as dist
 
-sys.path.append("gwkokab")
-
 from gwkokab.models import *
 from gwkokab.utils import get_key
 
-current_time = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-os.makedirs(rf"results/{current_time}", exist_ok=True)
+CURRENT_TIME = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")  # Year-Month-Day-Hour-Minute-Second
 
-posterior_regex = "/home/muhammad.zeeshan/o4a-analysis/data/o*_lower_mass/*.dat"  # set the path to the posterior files regex
+posterior_regex = (
+    "/home/muhammad.zeeshan/o4a-analysis/data/o*_lower_mass/*.dat"  # set the path to the posterior files regex
+)
 posteriors = glob.glob(posterior_regex)
 data_set = {i: np.loadtxt(event) for i, event in enumerate(posteriors)}
 
+
+N_CHAINS = 20
+
+# MaskedCouplingRQSpline parameters
+
+N_LAYERS = 5
+HIDDEN_SIZE = [32, 32]
+NUM_BINS = 5
+
+
+# MALA Sampler parameters
+
+STEP_SIZE = 1e-1
+
+# Sampler parameters
+
+N_LOOP_TRAINING = 500
+N_LOOP_PRODUCTION = 500
+N_LOCAL_STEPS = 150
+N_GLOBAL_STEPS = 20
+NUM_EPOCHS = 5
+
+LEARNING_RATE = 0.001
+MOMENTUM = 0.9
+BATCH_SIZE = 5000
+MAX_SAMPLES = 5000
+
+# Prior distributions
 
 labels = [
     r"$\mu_{m_1}$",
@@ -57,7 +82,6 @@ labels = [
     r"$\sigma_{\cos{(\theta_1)}}$",
     r"$\sigma_{\cos{(\theta_2)}}$",
 ]
-
 
 
 N_CHAINS = 20
@@ -97,17 +121,11 @@ initial_position = np.column_stack(
     )
 )
 
-print(initial_position)
 
-n_dim = initial_position.shape[1]
-
-
-n_layers = 5
-hidden_size = [32, 32]
-num_bins = 5
+N_DIM = initial_position.shape[1]
 
 
-model = MaskedCouplingRQSpline(n_dim, n_layers, hidden_size, num_bins, get_key())
+model = MaskedCouplingRQSpline(N_DIM, N_LAYERS, HIDDEN_SIZE, NUM_BINS, get_key())
 
 
 @jit
@@ -204,39 +222,27 @@ def likelihood_fn(x: Array, data: Optional[dict] = None):
     return log_likelihood + log_prior
 
 
-step_size = 1e-1
-MALA_Sampler = MALA(likelihood_fn, True, step_size)
+MALA_Sampler = MALA(likelihood_fn, True, STEP_SIZE)
 
-
-n_loop_training = 200
-n_loop_production = 200
-n_local_steps = 100
-n_global_steps = 10
-num_epochs = 5
-
-learning_rate = 0.001
-momentum = 0.9
-batch_size = 5000
-max_samples = 5000
 
 rng_key_set = get_key()
 
 
 nf_sampler = Sampler(
-    n_dim,
+    N_DIM,
     rng_key_set,
     None,
     MALA_Sampler,
     model,
-    n_loop_training=n_loop_training,
-    n_loop_production=n_loop_production,
-    n_local_steps=n_local_steps,
-    n_global_steps=n_global_steps,
+    n_loop_training=N_LOOP_TRAINING,
+    n_loop_production=N_LOOP_PRODUCTION,
+    n_local_steps=N_LOCAL_STEPS,
+    n_global_steps=N_GLOBAL_STEPS,
     n_chains=N_CHAINS,
-    n_epochs=num_epochs,
-    learning_rate=learning_rate,
-    momentum=momentum,
-    batch_size=batch_size,
+    n_epochs=NUM_EPOCHS,
+    learning_rate=LEARNING_RATE,
+    momentum=MOMENTUM,
+    batch_size=BATCH_SIZE,
     use_global=True,
 )
 
@@ -254,9 +260,7 @@ train_loss_vals = np.array(out_train["loss_vals"])
 train_log_prob = np.array(out_train["log_prob"])
 train_nf_samples = np.array(nf_sampler.sample_flow(n_samples=5000, rng_key=get_key()))
 
-
-np.savetxt(rf"results/{current_time}/nf_samples_train.dat", train_nf_samples, header=" ".join(labels))
-
+os.makedirs(rf"results/{CURRENT_TIME}", exist_ok=True)
 
 # Plot Nf samples
 figure = corner.corner(
@@ -270,7 +274,7 @@ figure = corner.corner(
 figure.set_size_inches(15, 15)
 figure.suptitle("Visualize NF samples (Training)")
 plt.show()
-figure.savefig(rf"results/{current_time}/nf_samples_train.png")
+figure.savefig(rf"results/{CURRENT_TIME}/nf_samples_train.png")
 plt.close()
 
 out_prod = nf_sampler.get_sampler_state(training=False)
@@ -281,7 +285,6 @@ prod_chains = np.array(out_prod["chains"])
 prod_global_accs = np.array(out_prod["global_accs"])
 prod_local_accs = np.array(out_prod["local_accs"])
 prod_log_prob = np.array(out_prod["log_prob"])
-prod_nf_samples = np.array(nf_sampler.sample_flow(n_samples=10000, rng_key=get_key()))
 
 
 # log_prob.shape
@@ -290,7 +293,7 @@ for i in range(N_CHAINS):
     axes[0].plot(train_log_prob[i, :])
     axes[1].plot(prod_log_prob[i, :])
 fig.suptitle("Log of Probability [Training (Up) Production (Down)]")
-fig.savefig(rf"results/{current_time}/log_prob.png")
+fig.savefig(rf"results/{CURRENT_TIME}/log_prob.png")
 plt.close()
 
 
@@ -299,7 +302,7 @@ for i in range(N_CHAINS):
     axes[0].plot(train_local_accs[i, :])
     axes[1].plot(prod_local_accs[i, :])
 fig.suptitle("Local Accs [Training (Up) Production (Down)]")
-fig.savefig(rf"results/{current_time}/local_accs.png")
+fig.savefig(rf"results/{CURRENT_TIME}/local_accs.png")
 plt.close()
 
 
@@ -308,18 +311,18 @@ for i in range(N_CHAINS):
     axes[0].plot(train_global_accs[i, :])
     axes[1].plot(prod_global_accs[i, :])
 fig.suptitle("Global Accs [Training (Up) Production (Down)]")
-fig.savefig(rf"results/{current_time}/global_accs.png")
+fig.savefig(rf"results/{CURRENT_TIME}/global_accs.png")
 plt.close()
 
 for i in range(N_CHAINS):
     plt.plot(train_loss_vals[i, :], label=f"chain {i}")
 plt.xlabel("num_epoch")
 plt.ylabel("loss")
-plt.savefig(rf"results/{current_time}/loss.png")
+plt.savefig(rf"results/{CURRENT_TIME}/loss.png")
 plt.close()
 
-fig, axes = plt.subplots(n_dim, 2, figsize=(20, 20), sharex=True)
-for j in range(n_dim):
+fig, axes = plt.subplots(N_DIM, 2, figsize=(20, 20), sharex=True)
+for j in range(N_DIM):
     for i in range(N_CHAINS):
         axes[j][0].plot(train_chains[i, :, j], alpha=0.5)
         axes[j][0].set_ylabel(labels[j])
@@ -329,8 +332,13 @@ for j in range(n_dim):
 axes[-1][0].set_xlabel("Iteration")
 axes[-1][1].set_xlabel("Iteration")
 plt.suptitle("Chains\n[Training (Left) Production (Right)]")
-fig.savefig(rf"results/{current_time}/chains.png")
+fig.savefig(rf"results/{CURRENT_TIME}/chains.png")
 plt.close()
 
 
-print("\n\n\n\n\nEverything is saved at: ", f"results/{current_time}")
+np.savetxt(rf"results/{CURRENT_TIME}/nf_samples_train.dat", train_nf_samples, header=" ".join(labels))
+np.savetxt(rf"results/{CURRENT_TIME}/initial_position.dat", initial_position, header=" ".join(labels))
+np.savetxt(rf"results/{CURRENT_TIME}/chains_prod.dat", prod_chains, header=" ".join(labels))
+np.savetxt(rf"results/{CURRENT_TIME}/chains_train.dat", train_chains, header=" ".join(labels))
+
+print("\n\n\n\n\nEverything is saved at: ", f"results/{CURRENT_TIME}")
