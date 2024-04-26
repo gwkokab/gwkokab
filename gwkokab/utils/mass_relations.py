@@ -71,7 +71,7 @@ def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
 def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
-        q=\frac{m_1}{m_2}
+        q=\frac{m_2}{m_1}
 
     :param m1: mass 1 of the binary system
     :param m2: mass 2 of the binary system
@@ -80,8 +80,8 @@ def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     >>> mass_ratio(1.0, 1.0)
     Array(1., dtype=float32, weak_type=True)
     >>> mass_ratio(1.0, 2.0)
-    Array(0.5, dtype=float32, weak_type=True)
-    >>> mass_ratio(2.0, 1.0)
     Array(2., dtype=float32, weak_type=True)
+    >>> mass_ratio(2.0, 1.0)
+    Array(0.5, dtype=float32, weak_type=True)
     """
-    return lax.div(m1, m2)
+    return lax.div(m2, m1)
