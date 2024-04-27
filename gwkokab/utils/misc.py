@@ -30,15 +30,7 @@ def dump_configurations(filename: str, *args: tuple[str, Any]) -> None:
 
     :param filename: name of the file
     """
-    with open(filename, "w") as f:
-        header = ""
-        content = ""
-        for h, c in args:
-            header += f"{h},"
-            content += f"{c},"
-
-        f.write(f"{header[:-1]}\n")
-        f.write(f"{content[:-1]}\n")
+    np.savetxt(filename, np.array([[arg[1] for arg in args]]), header="\t".join(arg[0] for arg in args))
 
 
 def get_key(key: Optional[Array | int] = None) -> Array:

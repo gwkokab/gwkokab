@@ -16,7 +16,8 @@
 from __future__ import annotations
 
 from .errors import (
-    banana_error as banana_error,
+    banana_error_m1_m2 as banana_error_m1_m2,
+    banana_error_m1_q as banana_error_m1_q,
     error_factory as error_factory,
     normal_error as normal_error,
     truncated_normal_error as truncated_normal_error,

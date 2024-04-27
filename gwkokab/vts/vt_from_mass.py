@@ -15,12 +15,14 @@
 
 from __future__ import annotations
 
+import multiprocessing as multi
 from typing_extensions import Callable, Optional
 
 import astropy.cosmology as cosmo
 import astropy.units as u
 import lal
 import lalsimulation as ls
+import numpy as np
 import scipy.integrate as si  # Optimizeed integral needed
 from jax import numpy as jnp
 
@@ -37,10 +39,6 @@ def next_pow_two(x: int) -> int:
     return x2
 
 
-# senstivity = ls.SimNoisePSDAdVEarlyHighSensitivityP1200087
-# waveform = ls.IMRPhenomA
-
-# sensitivity = ls.SimNoisePSDAdVEarlyHighSensitivityP1200087
 sensitivity = ls.SimNoisePSDAdVO4T1800545
 waveform = ls.IMRPhenomA
 
@@ -48,7 +46,7 @@ waveform = ls.IMRPhenomA
 def optimal_snr(
     m1: float,
     m2: float,
-    z: float = 1.0,
+    z: float,
     fmin: float = 19.0,
     dfmin: float = 0.0,
     fref: float = 40.0,
@@ -60,8 +58,6 @@ def optimal_snr(
     Return the optimal SNR of a signal.
     :param m1: The source-frame mass 1.
     :param m2: The source-frame mass 2.
-    :param a1z: The z-component of spin 1.
-    :param a2z: The z-component of spin 2.
     :param z: The redshift
     :param fmin: The starting frequency for waveform generation.
     :param dfmin:
@@ -138,7 +134,7 @@ def optimal_snr(
 def fraction_above_threshold(
     m1: float,
     m2: float,
-    z: float = 1.0,
+    z: float,
     snr_thresh: float = 8.0,
     fmin: float = 19.0,
     dfmin: float = 0.0,
@@ -184,12 +180,10 @@ def fraction_above_threshold(
 
     a2, a4, a8 = 0.374222, 2.04216, -2.63948
     w = snr_thresh / rho_max
-    print("w =", w)
-    print("rho_max =", rho_max)
+
     if w > 1.0:
         return 0.0  # no detection
-    P_det = a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
-    return P_det  # detection
+    return a2 * ((1 - w) ** 2) + a4 * ((1 - w) ** 4) + a8 * ((1 - w) ** 8) + (1 - a2 - a4 - a8) * ((1 - w) ** 10)
 
 
 # Computing VT
@@ -202,7 +196,7 @@ def vt_from_mass(
     dfmin: float = 0.0,
     fref: float = 40.0,
     psdstart: float = 20.0,
-    zmax: float = 1.5,
+    zmax: float = 1.0,
     psd_fn: Optional[Callable[..., int]] = None,
     approximant: Optional[int] = None,
 ) -> float:
@@ -211,7 +205,7 @@ def vt_from_mass(
     :param m1: Source-frame mass 1.
     :param m2: Source-frame mass 2.
     :param thresh: The detection threshold in SNR
-    :param analysis_time: The total detector-frame searched time
+    :param analysis_time: The total detector-frame searched time in years
     :param fmin: The starting frequency for waveform generation
     :param dfmin: The minimum frequency spacing
     :param fref: The reference frequency
@@ -228,19 +222,22 @@ def vt_from_mass(
     def integrand(z) -> float:
         if z == 0.0:
             return 0.0
-        p_det = fraction_above_threshold(
-            m1,
-            m2,
-            z,
-            thresh,
-            fmin=fmin,
-            dfmin=dfmin,
-            fref=fref,
-            psdstart=psdstart,
-            psd_fn=psd_fn,
-            approximant=approximant,
-        )
-        return 4 * jnp.pi * cosmo.Planck15.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value / (1 + z) * p_det
+        else:
+            p_det = fraction_above_threshold(
+                m1,
+                m2,
+                z,
+                thresh,
+                fmin=fmin,
+                dfmin=dfmin,
+                fref=fref,
+                psdstart=psdstart,
+                psd_fn=psd_fn,
+                approximant=approximant,
+            )
+            return (
+                4 * jnp.pi * cosmo.Planck15.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value / (1 + z) * p_det
+            )
 
     zmin = 0.001
 
@@ -267,3 +264,72 @@ def vt_from_mass(
     vol_integral, _ = si.quad(integrand, zmin, zmax)  # This is the sensitive volume. out is tuple(integral, error)
 
     return analysis_time * vol_integral
+
+
+def vts_from_masses(
+    m1s,
+    m2s,
+    thresh=8.0,
+    analysis_time=1.0 / 365,
+    psd_fn=None,
+    processes=None,
+):
+    """
+    Compute the sensitive volume-time for a grid of masses.
+    :param m1s: The first mass in the grid.
+    :param m2s: The second mass in the grid.
+    :param thresh: The detection threshold in SNR
+    :param analysis_time: The total detector-frame searched time in years
+    :param psd_fn: Function giving the assumed single-detector PSD
+    :param processes: The number of processes to use in parallel.
+    :return: The sensitive time-volume in comoving Gpc^3-yr (assuming analysis_time is given in years).
+    """
+    if psd_fn is None:
+        psd_fn = sensitivity
+
+    if processes is None:
+        processes = multi.cpu_count()
+
+    pool = multi.Pool(processes)
+
+    vts = pool.starmap(
+        vt_from_mass,
+        [(m1, m2, thresh, analysis_time, 19.0, 0.0, 40.0, 20.0, 1.0, psd_fn, waveform) for m1, m2 in zip(m1s, m2s)],
+    )
+
+    pool.close()
+    pool.join()
+
+    return np.array(vts)
+
+
+def main():
+    days = 1.0  # take it from user as input
+    duration = days / 365.0  # convert days to years
+    import h5py
+
+    output = "./masses_vt.hdf5"  # take it from user as input
+
+    with h5py.File(output, "w-") as f:
+        masses = np.linspace(1, 200, 100)  # take it from user as input, min and max mass and number of points
+        # we can take the masses from injections generated from mass distribution
+        # sort them before creating the grids
+        m1_grid, m2_grid = np.meshgrid(masses, masses)
+        m1s, m2s = m1_grid.ravel(), m2_grid.ravel()
+        # print("m1, :", m1s)
+        vts = vts_from_masses(
+            m1s,
+            m2s,
+            thresh=8.0,
+            analysis_time=duration,
+        )
+
+        VT_grid = vts.reshape(m1_grid.shape)
+
+        f.create_dataset("m1", data=m1_grid)
+        f.create_dataset("m2", data=m2_grid)
+        f.create_dataset("VT", data=VT_grid)
+
+
+if __name__ == "__main__":
+    main()

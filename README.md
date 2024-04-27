@@ -60,7 +60,7 @@ numpy
 rift
 setuptools
 tfp-nightly
-tqdm
+rich
 ```
 
 The test suite is based on pytest. To run the tests, one needs to install pytest and run `pytest` at the root directory

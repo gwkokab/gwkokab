@@ -44,10 +44,7 @@ dependencies = [
     "numpyro",
     "rift",
     "setuptools",
-    "tfp-nightly",
-    "tqdm",
-    "twine",
-    "wheel",
+    "rich",
 ]
 keywords = [
     "jax",
@@ -61,6 +58,36 @@ keywords = [
     "deep-learning",
     "bayesian-inference",
     "probabilistic-programming",
+    "importlib_metadata"
+]
+
+[project.optional-dependencies]
+dev = [
+    "black",
+    "flake8",
+    "isort",
+    "mypy",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "trio",
+    "twine",
+    "wheel",
+]
+
+docs = [
+    'nbsphinx',
+    'readthedocs-sphinx-search',
+    'sphinx',
+    'sphinx-rtd-theme',
+    'sphinx_copybutton',
+    'sphinxcontrib-bibtex',
+    'sphinxcontrib-napoleon',
+    'sphinxcontrib-programoutput',
+    'sphinxcontrib-spelling',
+    'sphinxcontrib-trio',
+    'sphinxcontrib-websupport'
 ]
 
 [project.urls]
@@ -91,7 +118,7 @@ order-by-type = false
 
 [tool.pyright]
 reportIncompatibleMethodOverride = true
-include = ["gwkokab", "tests"]
+include = ["gwkokab", "tests", "examples"]
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]

@@ -1,10 +1,23 @@
+#  Copyright 2023 The GWKokab Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 import glob
 from typing_extensions import Optional
 
 import matplotlib.pyplot as plt
 import mplcursors
 import numpy as np
-from tqdm import tqdm
 
 
 def scatter2d_batch_plot(
@@ -32,21 +45,14 @@ def scatter2d_batch_plot(
     file_list = glob.glob(file_pattern)
 
     # Iterate over each file to make the scatter plots of each event in a figure.
-    for file_path in tqdm(
-        file_list,
-        desc=output_filename,
-        total=len(file_list),
-        unit="event",
-        unit_scale=True,
-        leave=False,
-    ):
+    for file_path in file_list:
         # Load data from the file
         data = np.loadtxt(file_path)
-        x = data[:, x_index]
-        y = data[:, y_index]
+        x = data[..., x_index]
+        y = data[..., y_index]
 
         # Scatter plot with different colors for each file
-        plt.scatter(x, y, s=5, alpha=0.3)
+        plt.scatter(x, y, s=5, alpha=0.3, marker=".")
 
     # Set plot title and labels
     if plt_title is not None:
@@ -88,19 +94,12 @@ def scatter3d_batch_plot(
     file_list = glob.glob(file_pattern)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
-    for file_path in tqdm(
-        file_list,
-        desc=output_filename,
-        total=len(file_list),
-        unit="event",
-        unit_scale=True,
-        leave=False,
-    ):
+    for file_path in file_list:
         # Load data from the file
         data = np.loadtxt(file_path)
-        x = data[:, x_index]
-        y = data[:, y_index]
-        z = data[:, z_index]
+        x = data[..., x_index]
+        y = data[..., y_index]
+        z = data[..., z_index]
 
         # Scatter plot with different colors for each file
         ax.scatter(x, y, z, c=z, cmap="plasma", marker="o", alpha=0.3)
@@ -147,11 +146,11 @@ def scatter2d_plot(
     """
     # Load data from the file
     data = np.loadtxt(input_filename)
-    x = data[:, x_index]
-    y = data[:, y_index]
+    x = data[..., x_index]
+    y = data[..., y_index]
 
     # Scatter plot with different colors for each file
-    plt.scatter(x, y, alpha=0.3)
+    plt.scatter(x, y, alpha=0.3, marker=".")
 
     # Set plot title and labels
     if plt_title is not None:
@@ -194,9 +193,9 @@ def scatter3d_plot(
     ax = fig.add_subplot(111, projection="3d")
 
     data = np.loadtxt(input_filename)
-    x = data[:, x_index]
-    y = data[:, y_index]
-    z = data[:, z_index]
+    x = data[..., x_index]
+    y = data[..., y_index]
+    z = data[..., z_index]
 
     # Plot the data points as dots with colors
     sc = ax.scatter(x, y, z, c=z, cmap="plasma", marker="o", alpha=0.3)

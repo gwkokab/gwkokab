@@ -17,65 +17,73 @@ from __future__ import annotations
 from typing_extensions import Optional
 
 from jax import lax, numpy as jnp
-from jax.random import uniform
 from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution
-from numpyro.distributions.util import promote_shapes
+from numpyro import distributions as dist
+from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..utils.misc import get_key
+from .truncpowerlaw import TruncatedPowerLaw
+from .utils.constraints import mass_sandwich
 
 
-class Wysocki2019MassModel(Distribution):
+class Wysocki2019MassModel(dist.Distribution):
     r"""It is a double side truncated power law distribution, as
     described in equation 7 of the `paper <https://arxiv.org/abs/1805.06442>`__.
 
     .. math::
-        p(m_1,m_2\mid\alpha,k,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto\frac{m_1^{-\alpha-k}m_2^k}{m_1-m_{\text{min}}}
+        p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
+        \frac{m_1^{-\alpha}}{m_1-m_{\text{min}}}
     """
 
     arg_constraints = {
-        "alpha_m": constraints.real,
-        "k": constraints.positive_integer,
-        "mmin": constraints.positive,
-        "mmax": constraints.positive,
-        "Mmax": constraints.positive,
+        "alpha_m": dist.constraints.real,
+        "mmin": dist.constraints.positive,
+        "mmax": dist.constraints.positive,
     }
 
-    def __init__(self, alpha_m: float, k: int, mmin: float, mmax: float, Mmax: float, *, valid_args=None) -> None:
+    def __init__(self, alpha_m: float, mmin: float, mmax: float) -> None:
         r"""Initialize the power law distribution with a lower and upper mass limit.
 
         :param alpha_m: index of the power law distribution
-        :param k: mass ratio power law index
         :param mmin: lower mass limit
         :param mmax: upper mass limit
-        :param Mmax: maximum mass
-        :param valid_args: _description_, defaults to `None`
+        :param valid_args: validate the input arguments or not, defaults to `None`
         """
-        self.alpha_m, self.k, self.mmin, self.mmax, self.Mmax = promote_shapes(alpha_m, k, mmin, mmax, Mmax)
+        self.alpha_m, self.mmin, self.mmax = promote_shapes(alpha_m, mmin, mmax)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha_m),
-            jnp.shape(k),
             jnp.shape(mmin),
             jnp.shape(mmax),
-            jnp.shape(Mmax),
         )
-        super(Wysocki2019MassModel, self).__init__(batch_shape=batch_shape, validate_args=valid_args)
+        self.support = mass_sandwich(self.mmin, self.mmax)
+        super(Wysocki2019MassModel, self).__init__(
+            batch_shape=batch_shape,
+            event_shape=(2,),
+            validate_args=True,
+        )
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        log_prob_m1 = TruncatedPowerLaw(
+            alpha=-self.alpha_m,
+            xmin=self.mmin,
+            xmax=self.mmax,
+        ).log_prob(m1)
+        log_prob_m2_given_m1 = -jnp.log(m1 - self.mmin)
+        return log_prob_m1 + log_prob_m2_given_m1
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):
             key = get_key(key)
-        m2 = uniform(key=key, minval=self.mmin, maxval=self.mmax, shape=sample_shape + self.batch_shape)
-        U = uniform(key=get_key(key), minval=0.0, maxval=1.0, shape=sample_shape + self.batch_shape)
-        beta = 1 - (self.k + self.alpha_m)
-        conditions = [beta == 0.0, beta != 0.0]
-        choices = [
-            jnp.exp(U * jnp.log(self.mmax) + (1.0 - U) * jnp.log(m2)),
-            jnp.exp(jnp.power(beta, -1.0) * jnp.log(U * jnp.power(self.mmax, beta) + (1.0 - U) * jnp.power(m2, beta))),
-        ]
-        m1 = jnp.select(conditions, choices)
-        return jnp.stack([m1, m2], axis=1)
-
-    def __repr__(self) -> str:
-        string = f"Wysocki2019MassModel(alpha_m={self.alpha_m}, k={self.k}, "
-        string += f"mmin={self.mmin}, mmax={self.mmax}, Mmax={self.Mmax})"
-        return string
+        m2 = dist.Uniform(
+            low=self.mmin,
+            high=self.mmax,
+        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
+        key = get_key(key)
+        m1 = TruncatedPowerLaw(
+            alpha=-self.alpha_m,
+            xmin=m2,
+            xmax=self.mmax,
+        ).sample(key=key, sample_shape=())
+        return jnp.column_stack((m1, m2))

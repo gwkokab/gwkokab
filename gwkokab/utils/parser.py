@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from configparser import ConfigParser
+from typing_extensions import Any
 
 import configargparse
 
@@ -28,7 +29,7 @@ cmd_parser.add_argument(
 )
 
 
-def parse_config(config_path: str) -> dict:
+def parse_config(config_path: str) -> dict[str, Any]:
     """Parse the configuration file.
 
     This function parses the configuration file and returns the
@@ -40,26 +41,52 @@ def parse_config(config_path: str) -> dict:
     config = ConfigParser()
     config.read(config_path)
     config_dict = {}
+
     for section in config.sections():
         config_dict[section] = {}
-        for key in config[section]:
-            config_dict[section][key] = config[section][key]
-        if "model" in section:
+        if "mixture" in section:
+            if "." in section:
+                name, _ = section.split(".")
+                config_dict[name]["models"] = config_dict[name].get("models", []) + [
+                    {
+                        "model": config[section]["model"],
+                        "params": eval(config[section]["params"]),
+                        "config_vars": eval(config[section]["config_vars"]),
+                        "weight": float(config[section]["weight"]),
+                    }
+                ]
+            else:
+                config_dict[section]["col_names"] = eval(config[section]["col_names"])
+                config_dict[section]["error_type"] = config[section].get("error_type", None)
+                config_dict[section]["error_params"] = eval(config[section].get("error_params", r"{}"))
+                config_dict[section]["constraint"] = config[section].get("constraint", None)
+        elif "model" in section:
+            config_dict[section]["model"] = config[section]["model"]
             config_dict[section]["params"] = eval(config[section]["params"])
             config_dict[section]["config_vars"] = eval(config[section]["config_vars"])
             config_dict[section]["col_names"] = eval(config[section]["col_names"])
-            config_dict[section]["error_type"] = config[section]["error_type"]
+            config_dict[section]["error_type"] = config[section].get("error_type", None)
             config_dict[section]["error_params"] = eval(config[section].get("error_params", r"{}"))
+            config_dict[section]["constraint"] = config[section].get("constraint", None)
+        else:
+            for key, value in config.items(section):
+                config_dict[section][key] = value
 
     config_dict["general"]["size"] = int(config["general"]["size"])
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])
     config_dict["general"]["num_realizations"] = int(config["general"]["num_realizations"])
     config_dict["general"]["extra_size"] = int(config["general"].get("extra_size", "1500"))
-    config_dict["general"]["extra_error_size"] = int(config["general"].get("extra_error_size", "1000"))
+    config_dict["general"]["verbose"] = eval(config["general"].get("verbose", "True"))
 
     if "plots" in config:
-        config_dict["plots"] = {}
-        config_dict["plots"]["injs"] = eval(config["plots"].get("injs", "None"))
-        config_dict["plots"]["posts"] = eval(config["plots"].get("posts", "None"))
+        config_dict["plots"] = {
+            "injs": eval(config["plots"].get("injs", "None")),
+            "posts": eval(config["plots"].get("posts", "None")),
+        }
+
+    empty_sections = [key for key, value in config_dict.items() if value == {}]
+
+    for section in empty_sections:
+        del config_dict[section]
 
     return config_dict
