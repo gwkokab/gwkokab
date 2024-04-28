@@ -14,14 +14,6 @@ Broken Power Law Mass Model
     :show-inheritance:
     :member-order: alphabetical
 
-Wysocki2019MassModel
---------------------
-
-.. autoclass:: gwkokab.models.wysocki2019massmodel.Wysocki2019MassModel
-    :members:
-    :undoc-members:
-    :show-inheritance:
-    :member-order: alphabetical
 
 Power Law + Primary Mass Ratio
 ------------------------------
@@ -32,6 +24,14 @@ Power Law + Primary Mass Ratio
     :show-inheritance:
     :member-order: alphabetical
 
+Wysocki2019MassModel
+--------------------
+
+.. autoclass:: gwkokab.models.wysocki2019massmodel.Wysocki2019MassModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
 
 Spin Models
 ===========
