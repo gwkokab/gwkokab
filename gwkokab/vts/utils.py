@@ -86,7 +86,7 @@ def bispline_interp(
         """
         x in [0,1]
         """
-        return jnp.power(x, jnp.arange(0, order + 1))
+        return jnp.array([x**i for i in jnp.arange(0, order + 1)])
 
     def tval(xnew: int, ix: Numeric, xp: Numeric) -> Numeric:
         return (xnew - xp[ix - 1]) / (xp[ix] - xp[ix - 1])
