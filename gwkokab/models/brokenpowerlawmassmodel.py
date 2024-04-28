@@ -77,7 +77,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
         super(BrokenPowerLawMassModel, self).__init__(
             batch_shape=batch_shape,
-            event_shape=(),
+            event_shape=(2,),
             validate_args=True,
         )
         self.alpha1_powerlaw = TruncatedPowerLaw(
@@ -96,7 +96,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         """Precomputes the normalization constant for the primary mass model
         and mass ratio model using Monte Carlo integration.
         """
-        num_samples = 20000
+        num_samples = 20_000
 
         mm1 = jrd.uniform(  # mmin <= xx < mmax
             get_key(),
@@ -107,17 +107,18 @@ class BrokenPowerLawMassModel(dist.Distribution):
         qq = jrd.uniform(  # mmin / mm1 <= qq < 1
             get_key(),
             shape=(num_samples,),
-            minval=self.mmin / mm1,
+            minval=0,
             maxval=1,
         )
 
         value = jnp.column_stack([mm1, qq])
+        support = self.support(value)
 
         self._logZ = jnp.zeros_like(self.mmin)
         log_prob = self.log_prob(value)
         prob = jnp.exp(log_prob)
 
-        self._logZ = jnp.log(jnp.sum(prob))
+        self._logZ = jnp.log(jnp.mean(prob, where=support))
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_primary_mass_model(self, m1: Numeric) -> Numeric:
