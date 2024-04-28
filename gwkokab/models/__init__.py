@@ -18,6 +18,7 @@ from .brokenpowerlawmassmodel import BrokenPowerLawMassModel as BrokenPowerLawMa
 from .gaussianchieff import GaussianChiEff as GaussianChiEff
 from .gaussianchip import GaussianChiP as GaussianChiP
 from .gaussianspinmodel import GaussianSpinModel as GaussianSpinModel
+from .powerlawpeakmassmodel import PowerLawPeakMassModel as PowerLawPeakMassModel
 from .powerlawprimarymassratio import PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio
 from .truncpowerlaw import TruncatedPowerLaw as TruncatedPowerLaw
 from .wysocki2019massmodel import Wysocki2019MassModel as Wysocki2019MassModel

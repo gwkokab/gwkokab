@@ -14,6 +14,14 @@ Broken Power Law Mass Model
     :show-inheritance:
     :member-order: alphabetical
 
+Power Law + Peak Mass Model
+---------------------------
+
+.. autoclass:: gwkokab.models.powerlawpeakmassmodel.PowerLawPeakMassModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
 
 Power Law + Primary Mass Ratio
 ------------------------------
