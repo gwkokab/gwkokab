@@ -24,19 +24,8 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
 from ..utils import get_key
+from .utils.constraints import mass_ratio_mass_sandwich
 from .utils.smoothing import smoothing_kernel
-
-
-class _PowerLawPeakMassModelConstraint(dist.constraints.Constraint):
-    def __init__(self, mmin):
-        self.mmin = mmin
-
-    def __call__(self, x):
-        m1 = x[..., 0]
-        return self.mmin <= m1
-
-    def tree_flatten(self):
-        return (self.mmin,), (("mmin",), dict())
 
 
 class PowerLawPeakMassModel(dist.Distribution):
@@ -104,7 +93,7 @@ class PowerLawPeakMassModel(dist.Distribution):
             jnp.shape(mu),
             jnp.shape(sigma),
         )
-        self.support = _PowerLawPeakMassModelConstraint(mmin)
+        self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
         super(PowerLawPeakMassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -137,7 +126,6 @@ class PowerLawPeakMassModel(dist.Distribution):
         self._logZ = jnp.zeros_like(self.mmin)
         log_prob = self.log_prob(value)
         prob = jnp.exp(log_prob)
-
         self._logZ = jnp.log(jnp.mean(prob, axis=-1, where=support))
 
     @partial(jit, static_argnums=(0,))
