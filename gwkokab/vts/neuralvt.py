@@ -12,183 +12,131 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from typing import Sequence
+
+from __future__ import annotations
+
+import os
 
 import h5py
-import jax
-import jax.numpy as jnp
-import optax
-from clu import metrics
-from flax import linen as nn
-from flax import struct
-from flax.training import train_state
-from jax import numpy as jnp
-from jaxtyping import Array
+import numpy as np
+from matplotlib import pyplot as plt
 
 
-def read_vt_file(file_path: str = "./vt_1_200_1000.hdf5") -> Sequence[jnp.ndarray]:
-    """Interpolates the VT values from an HDF5 file based on given m1 and m2 coordinates.
+os.environ["KERAS_BACKEND"] = "jax"
 
-    :param m1: The m1 coordinate.
-    :param m2: The m2 coordinate.
-    :param file_path: The path to the HDF5 file, defaults to "./vt_1_200_1000.hdf5"
-    :return: The interpolated VT value.
+import keras
+
+
+class NeuralVT:
     """
-    with h5py.File(file_path, "r") as hdf5_file:
-        m1_grid = hdf5_file["m1"][:]
-        m2_grid = hdf5_file["m2"][:]
-        VT_grid = hdf5_file["VT"][:]
-        m1_coord = m1_grid[0]
-        m2_coord = m2_grid[:, 0]
+    A class to approximate the log of the VT function using a neural network.
 
-    return m1_coord, m2_coord, VT_grid
-
-
-@struct.dataclass
-class Metrics(metrics.Collection):
-    accuracy: metrics.Accuracy
-    loss: metrics.Average.from_output("loss")
-
-
-def create_train_state(
-    neural_vt: nn.Module,
-    rng: Array,
-    learning_rate: float = 1e-3,
-    momentum: float = 0.9,
-):
-    params = neural_vt.init(rng, jnp.ones((2,)))["params"]
-    tx = optax.adam(learning_rate)
-    return train_state.TrainState.create(
-        apply_fn=neural_vt.apply,
-        params=params,
-        tx=tx,
-        metric=Metrics.create(accuracy=metrics.Accuracy(), loss=metrics.Average()),
-    )
-
-
-class NeuralVT(nn.Module):
-    """A neural network that approximates the VT function.
-
-    Dense(2)->ReLU->Dense(128)->ReLU->Dense(128)->ReLU->Dense(1)
+    >>> from gwkokab.vts.neuralvt import NeuralVT
+    >>> neural_vt = NeuralVT(hidden_layers=[64, 64, 512, 512, 64, 64])
+    >>> neural_vt.train(plot_loss=True)
     """
 
-    @nn.compact
-    def __call__(self, *args, **kwargs):
-        x = args[0]
-        x = nn.Dense(2)(x)
-        x = nn.relu(x)
-        x = nn.Dense(128)(x)
-        x = nn.relu(x)
-        x = nn.Dense(128)(x)
-        x = nn.relu(x)
-        x = nn.Dense(1)(x)
-        return x
+    def __init__(
+        self,
+        hidden_layers: list[int] = [128],
+        optimizer: str = "adam",
+        loss: str = "mean_squared_error",
+        model_name: str = "log(VT) approximation model",
+        activation: str = "relu",
+        data_path: str = "./vt_1_200_1000.hdf5",
+        batch_size: int = 128,
+        epochs: int = 15,
+        validation_split: float = 0.2,
+        model_path: str = "model.keras",
+    ) -> None:
+        """Initialize the NeuralVT class.
 
+        :param hidden_layers: hidden layers of the neural network, defaults to [128]
+        :param optimizer: optimizer for the neural network, defaults to "adam"
+        :param loss: loss function for the neural network, defaults to "mean_squared_error"
+        :param model_name: name of the model, defaults to "log(VT) approximation model"
+        :param activation: activation function for the hidden layers, defaults to "relu"
+        :param data_path: path to the HDF5 file containing the data, defaults to "./vt_1_200_1000.hdf5"
+        :param batch_size: batch size for training the neural network, defaults to 128
+        :param epochs: number of epochs for training the neural network, defaults to 15
+        :param validation_split: validation split for training the neural network, defaults to 0.2
+        :param model_path: path to save the trained model, defaults to "model.keras"
+        """
+        self.hidden_layers = hidden_layers
+        self.optimizer = optimizer
+        self.loss = loss
+        self.model_name = model_name
+        self.activation = activation
+        self.data_path = data_path
+        self.batch_size = batch_size
+        self.epochs = epochs
+        self.validation_split = validation_split
+        self.model_path = model_path
 
-def create_train_state(
-    module: nn.Module,
-    rng: Array,
-    learning_rate: float,
-    momentum: float,
-):
-    """Creates an initial `TrainState`."""
-    params = module.init(
-        rng,
-        jnp.ones([2, 128, 128, 1]),
-    )["params"]
-    tx = optax.sgd(learning_rate, momentum)
-    return train_state.TrainState.create(
-        apply_fn=module.apply,
-        params=params,
-        tx=tx,
-        metric=Metrics.create(
-            accuracy=metrics.Accuracy(),
-            loss=metrics.Average(),
-        ),
-    )
+    def read_data(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Read the data from the HDF5 file.
 
+        :return: m1, m2, VT
+        """
+        with h5py.File(self.data_path, "r") as hdf5_file:
+            m1_grid = hdf5_file["m1"][:]
+            m2_grid = hdf5_file["m2"][:]
+            VT_grid = np.array(hdf5_file["VT"][:]).flatten()
+            m1_coord = np.array(m1_grid).flatten()
+            m2_coord = np.array(m2_grid).flatten()
+        return m1_coord, m2_coord, VT_grid
 
-def train_step(
-    state: train_state.TrainState,
-    batch: Array,
-    rng: Array,
-) -> train_state.TrainState:
-    """Train for a single step."""
+    def build_model(self):
+        model = keras.models.Sequential(name=self.model_name)
 
-    def loss_fn(params):
-        logits = state.apply_fn(
-            {"params": params},
-            batch["m1"],
-            batch["m2"],
+        model.add(keras.layers.InputLayer(shape=(2,), name="input"))
+        for hidden_layer in self.hidden_layers:
+            model.add(keras.layers.Dense(hidden_layer, activation=self.activation))
+        model.add(keras.layers.Dense(1, name="log(VT) Output Layer"))
+
+        model.compile(optimizer=self.optimizer, loss=self.loss)
+
+        return model
+
+    def train(self, *, plot_loss: bool = True):
+        """Train the neural network to approximate the log of the VT function.
+
+        :param plot_loss: plot the loss function of the model, defaults to True
+        """
+        m1_true, m2_true, VT_true = self.read_data()
+
+        log_VT_true = np.log(VT_true)
+
+        model = self.build_model()
+
+        model.summary()
+
+        history = model.fit(
+            x=np.column_stack([m1_true, m2_true]),
+            y=log_VT_true,
+            batch_size=self.batch_size,
+            epochs=self.epochs,
+            verbose=1,
+            validation_split=self.validation_split,
         )
-        loss = jnp.mean((logits - batch["VT"]) ** 2)
-        return loss
 
-    grad_fn = jax.value_and_grad(loss_fn)
-    loss, grad = grad_fn(state.params)
-    new_state = state.apply_gradients(grads=grad)
-    return new_state.replace(metric=state.metric.merge(loss=loss))
+        keras.saving.save_model(model, self.model_path)
 
+        if plot_loss:
+            self.plot_loss(history)
 
-def eval_step(
-    state: train_state.TrainState,
-    batch: Array,
-) -> train_state.TrainState:
-    """Evaluate for a single step."""
-    logits = state.apply_fn(
-        {"params": state.params},
-        batch["m1"],
-        batch["m2"],
-    )
-    loss = jnp.mean((logits - batch["VT"]) ** 2)
-    return state.replace(metric=state.metric.merge(loss=loss))
+    def plot_loss(self, history, save: bool = False, file_path: str = "loss.png"):
+        """Plot the loss function of the model.
 
-
-def compute_metrics(
-    state: train_state.TrainState,
-    batch: Array,
-) -> train_state.TrainState:
-    """Compute metrics for a single step."""
-    logits = state.apply_fn(
-        {"params": state.params},
-        batch["m1"],
-        batch["m2"],
-    )
-    loss = jnp.mean((logits - batch["VT"]) ** 2)
-    accuracy = jnp.mean(jnp.abs(logits - batch["VT"]))
-    return state.replace(metric=state.metric.merge(loss=loss, accuracy=accuracy))
-
-
-def train_epoch(
-    state: train_state.TrainState,
-    rng: Array,
-    train_ds: Array,
-    batch_size: int,
-) -> train_state.TrainState:
-    """Train for a single epoch."""
-    perms = jax.random.permutation(rng, len(train_ds))
-    perms = perms[: len(train_ds) - (len(train_ds) % batch_size)]
-    perms = perms.reshape(-1, batch_size)
-    for perm in perms:
-        batch = {k: v[perm] for k, v in train_ds.items()}
-        state = train_step(state, batch, rng)
-
-    loss = state.metric.loss.compute()
-    return state, loss
-
-
-def eval_epoch(
-    state: train_state.TrainState,
-    test_ds: Array,
-    batch_size: int,
-) -> train_state.TrainState:
-    """Evaluate for a single epoch."""
-    perms = jnp.arange(len(test_ds))
-    perms = perms[: len(test_ds) - (len(test_ds) % batch_size)]
-    perms = perms.reshape(-1, batch_size)
-    for perm in perms:
-        batch = {k: v[perm] for k, v in test_ds.items()}
-        state = eval_step(state, batch)
-
-    loss = state.metric.loss.compute()
-    return state, loss
+        :param history: history object from the model.fit method
+        :param save: save the plot to a file, defaults to False
+        :param file_path: path to save the plot, defaults to "loss.png"
+        """
+        plt.yscale("log")
+        plt.plot(history.history["loss"], label="train")
+        plt.plot(history.history["val_loss"], label="test")
+        plt.legend()
+        plt.tight_layout()
+        if save:
+            plt.savefig(file_path)
+        plt.show()
