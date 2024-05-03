@@ -71,6 +71,15 @@ Gaussain Spin Model
     :show-inheritance:
     :member-order: alphabetical
 
+Independent Spin Orientation Gaussian Isotropic
+-----------------------------------------------
+
+.. autoclass:: gwkokab.models.independentspinorientationgaussianisotropic.IndependentSpinOrientationGaussianIsotropic
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :member-order: alphabetical
+
 Precessing Spin Gaussian Model
 ------------------------------
 

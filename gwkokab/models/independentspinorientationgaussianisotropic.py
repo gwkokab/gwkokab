@@ -1,0 +1,71 @@
+#  Copyright 2023 The GWKokab Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+
+from __future__ import annotations
+
+from jax import numpy as jnp
+from numpyro import distributions as dist
+
+from .utils import JointDistribution
+
+
+def IndependentSpinOrientationGaussianIsotropic(
+    zeta: float,
+    sigma1: float,
+    sigma2: float,
+    *,
+    validate_args=None,
+):
+    r"""A mixture model of spin orientations with isotropic and normally
+    distributed components. See Eq. (4) of `Determining the population
+    properties of spinning black holes <https://arxiv.org/abs/1704.08370>`__
+
+    .. math::
+
+        p(z_1,z_2\mid\zeta,\sigma_1,\sigma_2) = \frac{1-\zeta}{4} +
+        \zeta\mathcal{N}(z_1\mid 1,\sigma_1)\mathcal{N}(z_2\mid 1,\sigma_2)
+
+    :param zeta: The mixing probability of the second component.
+    :param sigma1: The standard deviation of the first component.
+    :param sigma2: The standard deviation of the second component.
+    :return: A distribution instance.
+    """
+    mixing_probs = jnp.array([1 - zeta, zeta])
+    component_0_dist = JointDistribution(
+        dist.Uniform(low=-1, high=1, validate_args=False),
+        dist.Uniform(low=-1, high=1, validate_args=False),
+    )
+    component_1_dist = JointDistribution(
+        dist.TruncatedNormal(
+            loc=1.0,
+            scale=sigma1,
+            low=-1,
+            high=1,
+            validate_args=validate_args,
+        ),
+        dist.TruncatedNormal(
+            loc=1.0,
+            scale=sigma2,
+            low=-1,
+            high=1,
+            validate_args=validate_args,
+        ),
+    )
+
+    return dist.MixtureGeneral(
+        mixing_distribution=dist.Categorical(probs=mixing_probs),
+        component_distributions=[component_0_dist, component_1_dist],
+        validate_args=validate_args,
+    )
