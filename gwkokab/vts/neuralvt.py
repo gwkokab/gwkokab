@@ -19,6 +19,7 @@ import os
 
 import h5py
 import numpy as np
+import polars as pl
 from matplotlib import pyplot as plt
 
 
@@ -32,12 +33,20 @@ class NeuralVT:
     A class to approximate the log of the VT function using a neural network.
 
     >>> from gwkokab.vts.neuralvt import NeuralVT
-    >>> neural_vt = NeuralVT(hidden_layers=[64, 64, 512, 512, 64, 64])
+    >>> neural_vt = NeuralVT(
+    ...     input_keys=["m1", "m2"],
+    ...     output_keys=["VT"],
+    ...     hidden_layers=[64, 64, 512, 512, 64, 64],
+    ...     epochs=2,
+    ...     batch_size=128,
+    ... )
     >>> neural_vt.train(plot_loss=True)
     """
 
     def __init__(
         self,
+        input_keys: list[str] = ["m1", "m2"],
+        output_keys: list[str] = ["VT"],
         hidden_layers: list[int] = [128],
         optimizer: str = "adam",
         loss: str = "mean_squared_error",
@@ -51,6 +60,8 @@ class NeuralVT:
     ) -> None:
         """Initialize the NeuralVT class.
 
+        :param input_keys: keys of the input data, defaults to ["m1", "m2"]
+        :param output_key: key of the output data, defaults to ["VT"]
         :param hidden_layers: hidden layers of the neural network, defaults to [128]
         :param optimizer: optimizer for the neural network, defaults to "adam"
         :param loss: loss function for the neural network, defaults to "mean_squared_error"
@@ -62,6 +73,8 @@ class NeuralVT:
         :param validation_split: validation split for training the neural network, defaults to 0.2
         :param model_path: path to save the trained model, defaults to "model.keras"
         """
+        self.input_keys = input_keys
+        self.output_keys = output_keys
         self.hidden_layers = hidden_layers
         self.optimizer = optimizer
         self.loss = loss
@@ -73,26 +86,24 @@ class NeuralVT:
         self.validation_split = validation_split
         self.model_path = model_path
 
-    def read_data(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def read_data(self) -> pl.DataFrame:
         """Read the data from the HDF5 file.
 
-        :return: m1, m2, VT
+        :return: a polars DataFrame containing the data
         """
-        with h5py.File(self.data_path, "r") as hdf5_file:
-            m1_grid = hdf5_file["m1"][:]
-            m2_grid = hdf5_file["m2"][:]
-            VT_grid = np.array(hdf5_file["VT"][:]).flatten()
-            m1_coord = np.array(m1_grid).flatten()
-            m2_coord = np.array(m2_grid).flatten()
-        return m1_coord, m2_coord, VT_grid
+        with h5py.File(self.data_path, "r") as vt_file:
+            keys = list(vt_file.keys())
+            df = pl.DataFrame(
+                data={key: pl.Series(key, np.array(vt_file[key][:]).flatten()) for key in keys},
+            )
+        return df
 
     def build_model(self):
         model = keras.models.Sequential(name=self.model_name)
 
-        model.add(keras.layers.InputLayer(shape=(2,), name="input"))
         for hidden_layer in self.hidden_layers:
             model.add(keras.layers.Dense(hidden_layer, activation=self.activation))
-        model.add(keras.layers.Dense(1, name="log(VT) Output Layer"))
+        model.add(keras.layers.Dense(len(self.output_keys), name="log(VT) Output Layer"))
 
         model.compile(optimizer=self.optimizer, loss=self.loss)
 
@@ -103,22 +114,25 @@ class NeuralVT:
 
         :param plot_loss: plot the loss function of the model, defaults to True
         """
-        m1_true, m2_true, VT_true = self.read_data()
+        df = self.read_data()
 
-        log_VT_true = np.log(VT_true)
+        data_X = df[self.input_keys].to_numpy()
+        data_Y = df[self.output_keys].to_numpy()
+
+        log_data_Y = np.log(data_Y)
 
         model = self.build_model()
 
-        model.summary()
-
         history = model.fit(
-            x=np.column_stack([m1_true, m2_true]),
-            y=log_VT_true,
+            x=data_X,
+            y=log_data_Y,
             batch_size=self.batch_size,
             epochs=self.epochs,
             verbose=1,
             validation_split=self.validation_split,
         )
+
+        model.summary()
 
         keras.saving.save_model(model, self.model_path)
 
