@@ -29,12 +29,11 @@ from .utils.smoothing import smoothing_kernel
 
 
 class PowerLawPeakMassModel(dist.Distribution):
-    r"""See equation (B3) and (B6) in `Population Properties of Compact Objects
-    from the Second LIGO-Virgo Gravitational-Wave Transient Catalog
-    <https://arxiv.org/abs/2010.14533>`__.
+    r"""See equation (B3) and (B6) in [Population Properties of Compact
+    Objects from the Second LIGO-Virgo Gravitational-Wave Transient
+    Catalog](https://arxiv.org/abs/2010.14533).
 
-    .. math::
-
+    $$
         \begin{align*}
             p(m_1\mid\lambda,\alpha,\delta,m_{\text{min}},m_{\text{max}},\mu,\sigma)
             &\propto \left[(1-\lambda)m_1^{-\alpha}\Theta(m_\text{max}-m_1)
@@ -45,10 +44,12 @@ class PowerLawPeakMassModel(dist.Distribution):
             p(q\mid \beta, m_1,m_{\text{min}},\delta)
             &\propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
         \end{align*}
+    $$
         
-    Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
-    defined in :func:`gwkokab.models.utils.smoothing.smoothing_kernel`,
-    and :math:`\Theta` is the Heaviside step function.
+    Where $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel, defined
+    in [`gwkokab.models.utils.smoothing
+    .smoothing_kernel`](utils.html#gwkokab.models.utils.smoothing.smoothing_kernel),
+    and $\Theta$ is the Heaviside step function.
     """
 
     arg_constraints = {
@@ -73,6 +74,16 @@ class PowerLawPeakMassModel(dist.Distribution):
         mu: float,
         sigma: float,
     ):
+        r"""
+        :param alpha: Power-law index for primary mass model
+        :param beta: Power-law index for mass ratio model
+        :param lam: Fraction of Gaussian component
+        :param delta: Smoothing parameter
+        :param mmin: Minimum mass
+        :param mmax: Maximum mass
+        :param mu: Mean of Gaussian component
+        :param sigma: Standard deviation of Gaussian component
+        """
         (
             self.alpha,
             self.beta,

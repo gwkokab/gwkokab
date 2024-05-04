@@ -29,36 +29,33 @@ from .utils.smoothing import smoothing_kernel
 
 
 class MultiPeakMassModel(dist.Distribution):
-    r"""See equation (B9) and (B6) in `Population Properties of Compact Objects
-    from the Second LIGO-Virgo Gravitational-Wave Transient Catalog
-    <https://arxiv.org/abs/2010.14533>`__.
-
-    .. math::
+    r"""See equation (B9) and (B6) in [Population Properties of Compact
+    Objects from the Second LIGO-Virgo Gravitational-Wave Transient
+    Catalog](https://arxiv.org/abs/2010.14533).
     
-        \begin{multline*}
-            p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},m_{\text{max}},\mu,\sigma)\propto\\
-            \left[(1-\lambda)m_1^{-\alpha}\Theta(m_\text{max}-m_1)
-            +\lambda\lambda_1\varphi\left(\frac{m_1-\mu_1}{\sigma_1}\right)
-            +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}\right)
-            \right]S(m_1\mid m_{\text{min}},\delta)
-        \end{multline*}
-        
-    .. math::
-    
+    $$
+        p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},m_{\text{max}},\mu,\sigma)\propto
+        \left[(1-\lambda)m_1^{-\alpha}\Theta(m_\text{max}-m_1)
+        +\lambda\lambda_1\varphi\left(\frac{m_1-\mu_1}{\sigma_1}\right)
+        +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}\right)
+        \right]S(m_1\mid m_{\text{min}},\delta)
+    $$
+      
+    $$
         \begin{align*}
             p(q\mid \beta, m_1,m_{\text{min}},\delta)&\propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta)\\
         \end{align*}
-        
+    $$
+      
     Where,
     
-    .. math::
-    
-        \varphi(x)=\frac{1}{\sigma\sqrt{2\pi}}\exp{\left(\displaystyle-\frac{x^{2}}{2}\right)}
+    $$\varphi(x)=\frac{1}{\sigma\sqrt{2\pi}}\exp{\left(\displaystyle-\frac{x^{2}}{2}\right)}$$
     
     
-    :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
-    defined in :func:`gwkokab.models.utils.smoothing.smoothing_kernel`,
-    and :math:`\Theta` is the Heaviside step function.
+    $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel,
+    defined in [`gwkokab.models.utils.smoothing
+    .smoothing_kernel`](utils.html#gwkokab.models.utils.smoothing.smoothing_kernel),
+    and $\Theta$ is the Heaviside step function.
     """
 
     arg_constraints = {
@@ -89,6 +86,19 @@ class MultiPeakMassModel(dist.Distribution):
         mu2: float,
         sigma2: float,
     ):
+        r"""
+        :param alpha: Power-law index for primary mass model
+        :param beta: Power-law index for mass ratio model
+        :param lam: weight for power-law component
+        :param lam1: weight for first Gaussian component
+        :param delta: Smoothing parameter
+        :param mmin: Minimum mass
+        :param mmax: Maximum mass
+        :param mu1: Mean of first Gaussian component
+        :param sigma1: Standard deviation of first Gaussian component
+        :param mu2: Mean of second Gaussian component
+        :param sigma2: Standard deviation of second Gaussian component
+        """
         (
             self.alpha,
             self.beta,
@@ -154,8 +164,7 @@ class MultiPeakMassModel(dist.Distribution):
     def _log_prob_primary_mass_model(self, m1: Numeric) -> Numeric:
         r"""Log probability of primary mass model.
 
-        .. math::
-    
+        $$
             \begin{multline*}
                 p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},m_{\text{max}},\mu,\sigma)\propto\\
                 \left[(1-\lambda)m_1^{-\alpha}\Theta(m_\text{max}-m_1)
@@ -163,7 +172,8 @@ class MultiPeakMassModel(dist.Distribution):
                 +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}\right)
                 \right]S(m_1\mid m_{\text{min}},\delta)
             \end{multline*}
-
+        $$
+        
         :param m1: primary mass
         :return: log probability of primary mass
         """
@@ -180,9 +190,7 @@ class MultiPeakMassModel(dist.Distribution):
     def _log_prob_mass_ratio_model(self, m1: Numeric, q: Numeric) -> Numeric:
         r"""Log probability of mass ratio model
 
-        .. math::
-
-            \log p(q\mid m_1) = \beta \log q + \log S(m_1q\mid m_{\text{min}},\delta_m)
+        $$\log p(q\mid m_1) = \beta \log q + \log S(m_1q\mid m_{\text{min}},\delta_m)$$
 
         :param m1: primary mass
         :param q: mass ratio

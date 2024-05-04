@@ -30,29 +30,29 @@ from ..utils.misc import get_key
 class TruncatedPowerLaw(dist.Distribution):
     r"""A generic double side truncated power law distribution.
     
-    .. warning::
+    !!! note
         There are many different definition of Power Law that include exponential cut-offs and
         interval cut-offs.  They are just interchangeably. This class is the implementation of
         power law that has been restricted over a closed interval.
 
-    .. math::
-        
+    $$  
         p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=
         \begin{cases}
             \displaystyle\frac{x^{\alpha}}{\mathcal{Z}} & 0<x_{\text{min}}\leq x\leq x_{\text{max}}\\
             0                                           & \text{otherwise}
         \end{cases}
+    $$
 
-    where :math:`\mathcal{Z}` is the normalization constant and :math:`\alpha` is the power law index.
-    :math:`x_{\text{min}}` and :math:`x_{\text{max}}` are the lower and upper truncation limits,
+    where $\mathcal{Z}$ is the normalization constant and $\alpha$ is the power law index.
+    $x_{\text{min}}$ and $x_{\text{max}}$ are the lower and upper truncation limits,
     respectively. The normalization constant is given by,
     
-    .. math::
-    
+    $$
         \mathcal{Z}:=\begin{cases}
             \log{x_{\text{max}}}-\log{x_{\text{min}}}                                         & \alpha = -1 \\
             \displaystyle\frac{x_{\text{max}}^{1+\alpha}-x_{\text{min}}^{1+\alpha}}{1+\alpha} & \text{otherwise}
         \end{cases}
+    $$
     """
 
     arg_constraints = {
@@ -62,14 +62,19 @@ class TruncatedPowerLaw(dist.Distribution):
     }
 
     def __init__(self, alpha: float, xmin: float, xmax: float):
+        r"""
+        :param alpha: Index of the power law
+        :param xmin: Lower truncation limit
+        :param xmax: Upper truncation limit
+        """
         self.alpha, self.xmin, self.xmax = promote_shapes(alpha, xmin, xmax)
         batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(xmin), jnp.shape(xmax))
         super(TruncatedPowerLaw, self).__init__(batch_shape=batch_shape, validate_args=True)
         self.support = dist.constraints.interval(self.xmin, self.xmax)
-        self._log_Z = self.log_Z()
+        self._log_Z = self._log_Z()
 
     @partial(jit, static_argnums=(0,))
-    def log_Z(self) -> Numeric:
+    def _log_Z(self) -> Numeric:
         """Computes the logarithm of normalization constant.
 
         :return: The logarithm of normalization constant.

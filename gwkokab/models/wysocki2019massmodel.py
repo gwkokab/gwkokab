@@ -27,12 +27,14 @@ from .utils.constraints import mass_sandwich
 
 
 class Wysocki2019MassModel(dist.Distribution):
-    r"""It is a double side truncated power law distribution, as
-    described in equation 7 of the `paper <https://arxiv.org/abs/1805.06442>`__.
+    r"""It is a double side truncated power law distribution, as described in
+    equation 7 of the [Reconstructing phenomenological distributions of compact
+    binaries via gravitational wave observations](https://arxiv.org/abs/1805.06442).
 
-    .. math::
+    $$
         p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
         \frac{m_1^{-\alpha}}{m_1-m_{\text{min}}}
+    $$
     """
 
     arg_constraints = {
@@ -42,8 +44,7 @@ class Wysocki2019MassModel(dist.Distribution):
     }
 
     def __init__(self, alpha_m: float, mmin: float, mmax: float) -> None:
-        r"""Initialize the power law distribution with a lower and upper mass limit.
-
+        r"""
         :param alpha_m: index of the power law distribution
         :param mmin: lower mass limit
         :param mmax: upper mass limit

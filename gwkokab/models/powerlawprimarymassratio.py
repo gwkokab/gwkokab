@@ -28,16 +28,14 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     modelling primary mass and conditional mass ratio
     distribution.
 
-    .. math::
+    $$p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)$$
     
-        p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
-    
-    .. math::
-    
+    $$
         \begin{align*}
             p(m_1\mid\alpha)   & \propto m_1^{\alpha}, \qquad m_{\text{min}}             \leq m_1 \leq m_{\max} \\
             p(q\mid m_1,\beta) & \propto q^{\beta},    \qquad \frac{m_{\text{min}}}{m_1} \leq q   \leq 1
         \end{align*}
+    $$
     """
 
     arg_constraints = {
@@ -48,6 +46,12 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     }
 
     def __init__(self, alpha: float, beta: float, mmin: float, mmax: float) -> None:
+        """
+        :param alpha: Power law index for primary mass
+        :param beta: Power law index for mass ratio
+        :param mmin: Minimum mass
+        :param mmax: Maximum mass
+        """
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(alpha, beta, mmin, mmax)
         batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax))
         self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)

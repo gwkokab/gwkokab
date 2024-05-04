@@ -28,12 +28,11 @@ from .utils.smoothing import smoothing_kernel
 
 
 class BrokenPowerLawMassModel(dist.Distribution):
-    r"""See equation (B7) and (B6) in `Population Properties of Compact Objects
-    from the Second LIGO-Virgo Gravitational-Wave Transient Catalog
-    <https://arxiv.org/abs/2010.14533>`__.
+    r"""See equation (B7) and (B6) in [Population Properties of Compact Objects
+    from the Second LIGO-Virgo Gravitational-Wave Transient
+    Catalog](https://arxiv.org/abs/2010.14533).
 
-    .. math::
-
+    $$
         \begin{align*}
             p(m_1) &\propto \begin{cases}
                 m_1^{-\alpha_1}S(m_1\mid m_{\text{min}},\delta_m)
@@ -44,9 +43,11 @@ class BrokenPowerLawMassModel(dist.Distribution):
             \end{cases} \\
             p(q\mid m_1) &\propto q^{\beta_q}S(m_1q\mid m_{\text{min}},\delta_m)
         \end{align*}
-        
-    Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
-    defined in :func:`gwkokab.models.utils.smoothing.smoothing_kernel`.
+    $$
+      
+    Where $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel,
+    defined in [`gwkokab.models.utils.smoothing.
+    smoothing_kernel`](utils.html#gwkokab.models.utils.smoothing.smoothing_kernel).
     """
 
     arg_constraints = {
@@ -62,6 +63,15 @@ class BrokenPowerLawMassModel(dist.Distribution):
     def __init__(
         self, alpha1: float, alpha2: float, beta_q: float, mmin: float, mmax: float, mbreak: float, delta: float
     ):
+        r"""
+        :param alpha1: Power-law index for first component of primary mass model
+        :param alpha2: Power-law index for second component of primary mass model
+        :param beta_q: Power-law index for mass ratio model
+        :param mmin: Minimum mass
+        :param mmax: Maximum mass
+        :param mbreak: Break mass
+        :param delta: Smoothing parameter
+        """
         self.alpha1, self.alpha2, self.beta_q, self.mmin, self.mmax, self.mbreak, self.delta = promote_shapes(
             alpha1, alpha2, beta_q, mmin, mmax, mbreak, delta
         )

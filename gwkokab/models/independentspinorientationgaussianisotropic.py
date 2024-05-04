@@ -29,21 +29,21 @@ def IndependentSpinOrientationGaussianIsotropic(
     validate_args=None,
 ):
     r"""A mixture model of spin orientations with isotropic and normally
-    distributed components. See Eq. (4) of `Determining the population
-    properties of spinning black holes <https://arxiv.org/abs/1704.08370>`__
+    distributed components. See Eq. (4) of [Determining the population
+    properties of spinning black holes](https://arxiv.org/abs/1704.08370).
 
-    .. math::
-
+    $$
         p(z_1,z_2\mid\zeta,\sigma_1,\sigma_2) = \frac{1-\zeta}{4} +
         \zeta\mathbb{I}_{[-1,1]}(z_1)\mathbb{I}_{[-1,1]}(z_2)
         \mathcal{N}(z_1\mid 1,\sigma_1)\mathcal{N}(z_2\mid 1,\sigma_2)
+    $$
 
-    where :math:`\mathbb{I}(\cdot)` is the indicator function.
+    where $\mathbb{I}(\cdot)$ is the indicator function.
 
     :param zeta: The mixing probability of the second component.
     :param sigma1: The standard deviation of the first component.
     :param sigma2: The standard deviation of the second component.
-    :return: A distribution instance.
+    :return: Mixture model of spin orientations.
     """
     mixing_probs = jnp.array([1 - zeta, zeta])
     component_0_dist = JointDistribution(

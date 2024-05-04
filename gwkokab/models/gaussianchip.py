@@ -19,17 +19,17 @@ from numpyro.distributions import TruncatedNormal
 
 def GaussianChiP(mu: float, sigma: float) -> TruncatedNormal:
     r"""Truncated normal distribution for the precessing spin. See Eq. (3)-(4) in
-    `The Low Effective Spin of Binary Black Holes and Implications for Individual
-    Gravitational-Wave Events <https://arxiv.org/abs/2001.06051>`__ and
-    `Population Properties of Compact Objects from the Second LIGO-Virgo
-    Gravitational-Wave Transient Catalog <https://arxiv.org/abs/2010.14533>`__
+    [The Low Effective Spin of Binary Black Holes and Implications for Individual
+    Gravitational-Wave Events](https://arxiv.org/abs/2001.06051) and
+    [Population Properties of Compact Objects from the Second LIGO-Virgo
+    Gravitational-Wave Transient Catalog](https://arxiv.org/abs/2010.14533).
 
-    .. math::
-
+    $$
         p(\chi_{p}\mid\mu,\sigma)=\mathbb{I}_{[0,1]}(\chi_{p})
         \mathcal{N}(\chi_{p}\mid\mu,\sigma)
+    $$
 
-    where :math:`\chi_{p}` is the precessing spin and :math:`\mathbb{I}(\cdot)`
+    where $\chi_{p}$ is the precessing spin and $\mathbb{I}(\cdot)$
     is the indicator function.
 
     :param mu: mean of the distribution

@@ -26,34 +26,6 @@ from numpyro import distributions as dist
 from ..utils import chirp_mass, get_key, symmetric_mass_ratio
 
 
-def error_factory(
-    error_type: str,
-    key: Optional[int | Array] = None,
-    **kwargs,
-) -> Array:
-    """Factory function to create different types of errors.
-
-    :param error_type: name of the error
-    :raises ValueError: if the error type is unknown
-    :return: error values for the given error type
-    """
-    if key is None or isinstance(key, int):
-        key = get_key(key)
-
-    if error_type == "normal":
-        return normal_error(key=key, **kwargs)
-    elif error_type == "truncated_normal":
-        return truncated_normal_error(key=key, **kwargs)
-    elif error_type == "uniform":
-        return uniform_error(key=key, **kwargs)
-    elif error_type == "banana_m1_m2":
-        return banana_error_m1_m2(key=key, **kwargs)
-    elif error_type == "banana_m1_q":
-        return banana_error_m1_q(key=key, **kwargs)
-    else:
-        raise ValueError(f"Unknown error type: {error_type}")
-
-
 def normal_error(
     x: Array,
     size: int,
@@ -93,8 +65,7 @@ def truncated_normal_error(
 ) -> Array:
     r"""Add truncated normal error to the given values.
 
-    .. math::
-        x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale}) \cap [lower, upper]
+    $$x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale}) \cap [lower, upper]$$
 
     :param x: given values
     :param size: number of samples
@@ -116,8 +87,7 @@ def truncated_normal_error(
 def uniform_error(x: Array, size: int, key: Array, *, lower: float, upper: float) -> Array:
     r"""Add uniform error to the given values.
 
-    .. math::
-        x' \sim x+\mathcal{U}(a=lower, b=upper)
+    $$x' \sim x+\mathcal{U}(a=lower, b=upper)$$
 
     :param x: given values
     :param size: number of samples
@@ -142,10 +112,9 @@ def banana_error_m1_m2(
     error. It adds errors in the chirp mass and symmetric mass ratio and then
     converts back to masses.
 
-    .. math::
-        M_{c} = M_{c}^{T}\left[1+\alpha\frac{12}{\rho}\left(r_{0}+r\right)\right]
+    $$M_{c} = M_{c}^{T}\left[1+\alpha\frac{12}{\rho}\left(r_{0}+r\right)\right]$$
 
-        \eta = \eta^{T}\left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
+    $$\eta = \eta^{T}\left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]$$
 
     :param x: given values as m1 and m2
     :param size: number of samples
@@ -206,7 +175,7 @@ def banana_error_m1_q(
     scale_eta: float = 1.0,
 ) -> Array:
     """Add banana error to the given values. This function is similar to the
-    :func:`banana_error_m1_m2` function but returns the values as m1 and q
+    `banana_error_m1_m2` function but returns the values as m1 and q
     instead of m1 and m2.
 
     :param x: given values as m1 and q
