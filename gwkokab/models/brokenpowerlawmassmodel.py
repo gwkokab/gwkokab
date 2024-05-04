@@ -16,9 +16,7 @@ from __future__ import annotations
 
 from functools import partial
 
-from jax import jit, lax
-from jax import numpy as jnp
-from jax import random as jrd
+from jax import jit, lax, numpy as jnp, random as jrd
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 

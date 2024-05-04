@@ -1,19 +1,11 @@
-# Welcome to MkDocs
+<!-- # <p align="center">GWKokab</p> -->
+<!-- ## <p align="center">A JAX-based gravitational-wave population inference toolkit</p> -->
+# GWKokab: A JAX-based gravitational-wave population inference toolkit
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+<!-- [![Python package](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml)
+[![Upload Python Package](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/python-publish.yml)
+[![Versions](https://img.shields.io/pypi/pyversions/gwkokab.svg)](https://pypi.org/project/gwkokab/) -->
 
-## Commands
+GWKokab is a JAX-based gravitational-wave population inference toolkit. It is designed to be a high-performance, flexible and easy-to-use library for sampling from a wide range of gravitational-wave population models. It is built on top of JAX, a high-performance numerical computing library, and is designed to be easily integrated into existing JAX workflows.
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
-
-## Project layout
-
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
-
-::: gwkokab.models.brokenpowerlawmassmodel.BrokenPowerLawMassModel
+If you like to contribute, please see the [contributing guidelines](CONTRIBUTING.md).

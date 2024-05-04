@@ -4,6 +4,9 @@ site_url: https://squidfunk.github.io/mkdocs-material/
 site_author: Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy
 site_description: >-
 
+copyright: |
+    Copyright &copy; 2024 <a href="https://github.com/Qazalbash" target="_blank" rel="noopener">Meesum Qazalbash, <a href="https://github.com/zeeshan5885" target="_blank" rel="noopener">Muhammad Zeeshan, <a href="https://github.com/oshaughn" target="_blank" rel="noopener">Richard O'Shaughnessy</a>
+
 # Repository
 repo_name: gwkokab/gwkokab
 repo_url: https://github.com/gwkokab/gwkokab
@@ -12,79 +15,115 @@ theme:
     features:
         - navigation.tabs
         - navigation.sections
-        - toc.integrate
         - navigation.top
         - search.suggest
         - search.highlight
         - content.tabs.link
         - content.code.annotation
         - content.code.copy
+        - toc.follow
     palette:
-        - media: "(prefers-color-scheme)"
-          toggle:
-              icon: material/link
-              name: Switch to light mode
-        - media: "(prefers-color-scheme: light)"
-          scheme: default
-          primary: indigo
-          accent: indigo
-          toggle:
-              icon: material/toggle-switch
-              name: Switch to dark mode
-        - media: "(prefers-color-scheme: dark)"
-          scheme: slate
-          primary: black
-          accent: indigo
-          toggle:
-              icon: material/toggle-switch-off
-              name: Switch to system preference
+      - media: "(prefers-color-scheme)"
+        toggle:
+          icon: material/brightness-auto
+          name: Switch to light mode
+      - media: "(prefers-color-scheme: light)"
+        scheme: default
+        primary: teal # color ar the header https://squidfunk.github.io/mkdocs-material/setup/changing-the-colors/
+        accent: purple # highlight color
+        toggle:
+          icon: material/weather-sunny
+          name: Switch to dark mode
+      - media: "(prefers-color-scheme: dark)"
+        scheme: slate
+        primary: black # color ar the header
+        accent: pink # highlight color
+        toggle:
+          icon: material/weather-night
+          name: Switch to system preference
     font:
-        text: Roboto
-        code: Roboto Mono
+        text: Source Sans Pro
+        code: MonoLisa
 
 plugins:
     - search
     - offline
     - mkdocstrings:
           handlers:
-          python:
-              paths: [.] # search packages in the src folder
-              options:
-                  show_signature: true
-                  docstring_style: sphinx
-
-extra_javascript:
-    - javascripts/mathjax.js
-    - https://polyfill.io/v3/polyfill.min.js?features=es6
-    - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+              python:
+                  paths: [.] # search packages in the src folder
+                  options:
+                      docstring_style: sphinx
+                      show_docstring_attributes: true
+                      show_signature: true
+                      separate_signature: true
+                      show_signature_annotations: true
+                      show_root_toc_entry: false
+                      show_docstring_description: true
+                      parameter_headings: true
+                      show_symbol_type_heading: true
+                      show_symbol_type_toc: true
+                      docstring_section_style: list
+                      merge_init_into_class: true
+                      show_docstring_raises: true
+                      show_docstring_returns: true
+                      modernize_annotations: true
+                      show_source: false
 
 extra:
     social:
         - icon: fontawesome/brands/github-alt
           link: https://github.com/gwkokab/gwkokab
         # - icon: fontawesome/brands/twitter
-        #   link: https://twitter.com/TheJamesWillett
+        #   link:
         # - icon: fontawesome/brands/linkedin
-        #   link: https://www.linkedin.com/in/willettjames/
+        #   link:
+
+extra_javascript:
+#   - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 markdown_extensions:
-    - pymdownx.highlight:
-          anchor_linenums: true
-    - pymdownx.inlinehilite
-    - pymdownx.snippets
     - admonition
-    - pymdownx.arithmatex:
-          generic: true
+    - attr_list
     - footnotes
     - pymdownx.details
+    - pymdownx.inlinehilite
     - pymdownx.superfences
     - pymdownx.mark
-    - attr_list
-
+    - pymdownx.snippets
+    - pymdownx.superfences
+    - pymdownx.tabbed:
+        alternate_style: true
+    - pymdownx.tasklist:
+        custom_checkbox: true
+    - pymdownx.highlight:
+          anchor_linenums: true
+    - pymdownx.arithmatex:
+          generic: true
     - pymdownx.highlight:
           anchor_linenums: true
           line_spans: __span
           pygments_lang_class: true
-
-copyright: |
-    &copy; 2024 <a href="https://github.com/Qazalbash"  target="_blank" rel="noopener">Meesum Qazalbash, <a href="https://github.com/zeeshan5885"  target="_blank" rel="noopener">Muhammad Zeeshan, <a href="https://github.com/oshaughn"  target="_blank" rel="noopener">Richard O'Shaughnessy</a>
+   
+nav:
+    - Getting started:
+        - Installation: getting_started/installation.md
+        - Configuration: getting_started/config.md
+    - Models: 
+        - models/index.md
+        - Mass Models: models/mass_models.md
+        - Spin Models: models/spin_models.md
+        - Misc Models: models/misc_models.md 
+        - Utils: models/utils.md
+    - Utils: 
+        - Mass Relations: utils/mass_relations.md
+        - Plotting: utils/plotting.md
+        - Misc: utils/misc.md
+        - Population Generation: utils/popgen.md
+    - Errors:
+        - Public API: errors/public_api.md
+        - List of Errors: errors/errors.md
+    - FAQ:
+      - Citation: faq/citation.md
