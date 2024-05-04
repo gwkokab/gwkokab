@@ -16,7 +16,9 @@ from __future__ import annotations
 
 from functools import partial
 
-from jax import jit, lax, numpy as jnp, random as jrd
+from jax import jit, lax
+from jax import numpy as jnp
+from jax import random as jrd
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -32,8 +34,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
     from the Second LIGO-Virgo Gravitational-Wave Transient Catalog
     <https://arxiv.org/abs/2010.14533>`__.
 
-    .. math::
-
+    
+    $$
         \begin{align*}
             p(m_1) &\propto \begin{cases}
                 m_1^{-\alpha_1}S(m_1\mid m_{\text{min}},\delta_m)
@@ -44,6 +46,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
             \end{cases} \\
             p(q\mid m_1) &\propto q^{\beta_q}S(m_1q\mid m_{\text{min}},\delta_m)
         \end{align*}
+    $$
         
     Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
     defined in :func:`gwkokab.models.utils.smoothing.smoothing_kernel`.

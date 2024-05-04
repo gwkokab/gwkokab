@@ -77,6 +77,10 @@ dev = [
 ]
 
 docs = [
+    'mkdocs',
+    'mkdocs-material',
+    'mkdocstrings',
+    # 
     'nbsphinx',
     'readthedocs-sphinx-search',
     'sphinx',
