@@ -35,7 +35,10 @@ def IndependentSpinOrientationGaussianIsotropic(
     .. math::
 
         p(z_1,z_2\mid\zeta,\sigma_1,\sigma_2) = \frac{1-\zeta}{4} +
-        \zeta\mathcal{N}(z_1\mid 1,\sigma_1)\mathcal{N}(z_2\mid 1,\sigma_2)
+        \zeta\mathbb{I}_{[-1,1]}(z_1)\mathbb{I}_{[-1,1]}(z_2)
+        \mathcal{N}(z_1\mid 1,\sigma_1)\mathcal{N}(z_2\mid 1,\sigma_2)
+
+    where :math:`\mathbb{I}(\cdot)` is the indicator function.
 
     :param zeta: The mixing probability of the second component.
     :param sigma1: The standard deviation of the first component.

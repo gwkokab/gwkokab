@@ -26,16 +26,11 @@ def GaussianChiP(mu: float, sigma: float) -> TruncatedNormal:
 
     .. math::
 
-        p(\chi_{p}\mid\mu,\sigma)=\frac{
-            \displaystyle\sqrt{\frac{2}{\pi\sigma^2}}
-        }{
-            \displaystyle
-            \operatorname{erf}\left(\frac{1-\mu}{\sqrt{2}\sigma}\right)
-            +\operatorname{erf}\left(\frac{1+\mu}{\sqrt{2}\sigma}\right)
-        }
-        \exp{\left(-\frac{1}{2}\left(\frac{\chi_{p}-\mu}{\sigma}\right)^2\right)}
+        p(\chi_{p}\mid\mu,\sigma)=\mathbb{I}_{[0,1]}(\chi_{p})
+        \mathcal{N}(\chi_{p}\mid\mu,\sigma)
 
-    where :math:`\chi_{p}` is the precessing spin and :math:`\chi_{p}\in[0,1]`.
+    where :math:`\chi_{p}` is the precessing spin and :math:`\mathbb{I}(\cdot)`
+    is the indicator function.
 
     :param mu: mean of the distribution
     :param sigma: standard deviation of the distribution

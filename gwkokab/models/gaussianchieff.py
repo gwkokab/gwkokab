@@ -26,16 +26,11 @@ def GaussianChiEff(mu: float, sigma: float) -> TruncatedNormal:
 
     .. math::
 
-        p(\chi_{\text{eff}}\mid\mu,\sigma)=\frac{
-            \displaystyle\sqrt{\frac{2}{\pi\sigma^2}}
-        }{
-            \displaystyle
-            \operatorname{erf}\left(\frac{1-\mu}{\sqrt{2}\sigma}\right)
-            +\operatorname{erf}\left(\frac{1+\mu}{\sqrt{2}\sigma}\right)
-        }
-        \exp{\left(-\frac{1}{2}\left(\frac{\chi_{\text{eff}}-\mu}{\sigma}\right)^2\right)}
+        p(\chi_{\text{eff}}\mid\mu,\sigma)=\mathbb{I}_{[-1,1]}(\chi_{\text{eff}})
+        \mathcal{N}(\chi_{\text{eff}}\mid\mu,\sigma)
 
-    where :math:`\chi_{\text{eff}}` is the effective spin and :math:`\chi_{\text{eff}}\in[-1,1]`.
+    where :math:`\chi_{\text{eff}}` is the effective spin and :math:`\mathbb{I}(\cdot)`
+    is the indicator function.
 
     :param mu: mean of the distribution
     :param sigma: standard deviation of the distribution
