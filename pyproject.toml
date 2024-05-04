@@ -77,17 +77,9 @@ dev = [
 ]
 
 docs = [
-    'nbsphinx',
-    'readthedocs-sphinx-search',
-    'sphinx',
-    'sphinx-rtd-theme',
-    'sphinx_copybutton',
-    'sphinxcontrib-bibtex',
-    'sphinxcontrib-napoleon',
-    'sphinxcontrib-programoutput',
-    'sphinxcontrib-spelling',
-    'sphinxcontrib-trio',
-    'sphinxcontrib-websupport'
+    'mkdocs',
+    'mkdocs-material',
+    'mkdocstrings',
 ]
 
 [project.urls]

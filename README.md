@@ -11,34 +11,6 @@ GWKokab is a JAX-based gravitational-wave population inference toolkit. It is de
 It is currently under active development and is not ready for production use. If you would like to contribute, please
 see the [contributing guidelines](CONTRIBUTING.md).
 
-## Installation
-
-First, set the virtual environment,
-
-```bash
-pip install --upgrade venv
-python -m venv gwkenv
-source gwkenv/bin/activate
-```
-
-Now, you may install the latest released version of GWKokab through pip by doing
-
-```bash
-pip install --upgrade gwkokab
-```
-
-You may install the bleeding edge version by cloning this repo or doing
-
-```bash
-pip install --upgrade git+https://github.com/gwkokab/gwkokab
-```
-
-If you would like to take advantage of CUDA, you will additionally need to install a specific version of JAX by doing
-
-```bash
-pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-```
-
 ## Citing GWKokab
 
 If you use GWKokab in your research, please cite the following paper:
