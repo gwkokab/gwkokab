@@ -24,6 +24,9 @@ class JointDistribution(dist.Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
     def __init__(self, *marginal_distributions: dist.Distribution) -> None:
+        r"""
+        :param marginal_distributions: A sequence of marginal distributions.
+        """
         self.marginal_distributions = marginal_distributions
         self.shaped_values = tuple()
         k = 0
@@ -40,7 +43,6 @@ class JointDistribution(dist.Distribution):
             validate_args=True,
         )
 
-    # @validate_sample
     def log_prob(self, value):
         log_probs = jax.tree_util.tree_map(
             lambda d, v: d.log_prob(value[..., v]),

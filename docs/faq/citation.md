@@ -1,4 +1,4 @@
-If you use GWKokab in your research, please cite the following paper:
+If you use GWKokab in your research, please cite as follows:
 
 ```bibtex
 @software{gwkokab2024github,

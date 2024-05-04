@@ -22,11 +22,10 @@ from ...typing import Numeric
 
 @jax.jit
 def smoothing_kernel(mass: Numeric, mass_min: Numeric, delta: Numeric) -> Numeric:
-    r"""See equation B4 in `Population Properties of Compact Objects from the Second
-    LIGO-Virgo Gravitational-Wave Transient Catalog <https://arxiv.org/abs/2010.14533>`__.
+    r"""See equation B4 in [Population Properties of Compact Objects from the Second
+    LIGO-Virgo Gravitational-Wave Transient Catalog](https://arxiv.org/abs/2010.14533).
     
-    .. math:: 
-    
+    $$
         S(m\mid m_{\min}, \delta) = \begin{cases}
             0 & \text{if } m < m_{\min}, \\
             \left[\displaystyle 1 + \exp\left(\frac{\delta}{m}
@@ -34,16 +33,17 @@ def smoothing_kernel(mass: Numeric, mass_min: Numeric, delta: Numeric) -> Numeri
             & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
             1 & \text{if } m \geq m_{\min} + \delta
         \end{cases}
+    $$
 
     :param mass: mass of the primary black hole
     :param mass_min: minimum mass of the primary black hole
     :param delta: small mass difference
-    :return: smoothing kernel
+    :return: smoothing kernel value
     """
 
     @jax.jit
     def sub_kernel(mass_: Numeric, delta_m: Numeric) -> Numeric:
-        """See equation B5 in `Population Properties of Compact Objects from the Second
+        r"""See equation B5 in `Population Properties of Compact Objects from the Second
         LIGO-Virgo Gravitational-Wave Transient Catalog <https://arxiv.org/abs/2010.14533>__`.
 
         :param mass_: mass of the primary black hole

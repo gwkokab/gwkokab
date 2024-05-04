@@ -27,7 +27,10 @@ __all__ = [
 class _GreaterThanEqualTo(constraints.Constraint):
     r"""Constrain values to be greater than or equal to a given value."""
 
-    def __init__(self, lower_bound):
+    def __init__(self, lower_bound: float):
+        r"""
+        :param lower_bound: The lower bound.
+        """
         self.lower_bound = lower_bound
 
     def __call__(self, x):
@@ -40,7 +43,10 @@ class _GreaterThanEqualTo(constraints.Constraint):
 class _LessThanEqualTo(constraints.Constraint):
     r"""Constrain values to be less than or equal to a given value."""
 
-    def __init__(self, upper_bound):
+    def __init__(self, upper_bound: float):
+        """
+        :param upper_bound: The upper bound.
+        """
         self.upper_bound = upper_bound
 
     def __call__(self, x):
@@ -53,10 +59,14 @@ class _LessThanEqualTo(constraints.Constraint):
 class _MassSandwichConstraint(constraints.Constraint):
     r"""Constrain mass values to lie within a sandwiched interval.
 
-    .. math:: m_{\text{min}} \leq m_2 \leq m_1 \leq m_{\text{max}}
+    $$m_{\text{min}} \leq m_2 \leq m_1 \leq m_{\text{max}}$$
     """
 
-    def __init__(self, mmin, mmax):
+    def __init__(self, mmin: float, mmax: float):
+        """
+        :param mmin: Minimum mass.
+        :param mmax: Maximum mass.
+        """
         self.mmin = mmin
         self.mmax = mmax
 
@@ -73,16 +83,20 @@ class _MassRationMassSandwichConstraint(constraints.Constraint):
     r"""Constrain primary mass to lie within a sandwiched interval
     and the mass ratio to lie within a given interval. This is a
     transformed version of the :class:`_MassSandwichConstraint`.
-
-    .. math::
     
+    $$
         \begin{align*}
             m_{\text{min}}             & \leq m_1 \leq m_{\max} \\
             \frac{m_{\text{min}}}{m_1} & \leq q   \leq 1
         \end{align*}
+    $$
     """
 
-    def __init__(self, mmin, mmax):
+    def __init__(self, mmin: float, mmax: float):
+        r"""
+        :param mmin: Minimum mass.
+        :param mmax: Maximum mass.
+        """
         self.mmin = mmin
         self.mmax = mmax
 
