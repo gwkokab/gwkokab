@@ -33,7 +33,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
     <https://arxiv.org/abs/2010.14533>`__.
 
     .. math::
-    
+
         \begin{align*}
             p(m_1) &\propto \begin{cases}
                 m_1^{-\alpha_1}S(m_1\mid m_{\text{min}},\delta_m)
