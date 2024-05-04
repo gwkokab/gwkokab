@@ -80,18 +80,6 @@ docs = [
     'mkdocs',
     'mkdocs-material',
     'mkdocstrings',
-    # 
-    'nbsphinx',
-    'readthedocs-sphinx-search',
-    'sphinx',
-    'sphinx-rtd-theme',
-    'sphinx_copybutton',
-    'sphinxcontrib-bibtex',
-    'sphinxcontrib-napoleon',
-    'sphinxcontrib-programoutput',
-    'sphinxcontrib-spelling',
-    'sphinxcontrib-trio',
-    'sphinxcontrib-websupport'
 ]
 
 [project.urls]
