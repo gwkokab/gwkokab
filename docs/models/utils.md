@@ -7,4 +7,5 @@ NumPyro uses constraints to ensure the samples provided to `log_prob` are within
 
 ::: gwkokab.models.utils.constraints
     options:
-        filters: ["_*"]
+        show_if_no_docstring: true
+        filters: ["!__all__", "!_[A-Z]+"]

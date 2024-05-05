@@ -14,7 +14,7 @@
 
 # Project information
 site_name: GWKokab
-site_url: https://squidfunk.github.io/mkdocs-material/
+site_url: https://gwkokab.github.io/gwkokab
 site_author: Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy
 site_description: >-
     A JAX-based gravitational-wave population inference toolkit
@@ -28,15 +28,21 @@ repo_url: https://github.com/gwkokab/gwkokab
 theme:
     name: material
     features:
-        - navigation.tabs
         - navigation.sections
-        - navigation.top
+        - navigation.sticky
+        - navigation.indexes 
+        - navigation.path
+        - navigation.prune
         - search.suggest
         - search.highlight
+        - search.share
         - content.tabs.link
         - content.code.annotation
         - content.code.copy
         - toc.follow
+        - toc.accordion
+        - toc.sticky
+        - footer
     palette:
       - media: "(prefers-color-scheme)"
         toggle:
@@ -63,27 +69,42 @@ theme:
 plugins:
     - search
     - offline
+    - include-markdown:
+        opening_tag: "{!"
+        closing_tag: "!}"
     - mkdocstrings:
           handlers:
               python:
+                  import:
+                    - https://docs.python.org/3/objects.inv
                   paths: [.] # search packages in the src folder
                   options:
-                      docstring_style: sphinx
-                      show_docstring_attributes: true
+                      summary: true
+                      line_length: 70
+                      show_labels: true 
+                      show_source: false
                       show_signature: true
-                      separate_signature: true
-                      show_signature_annotations: true
-                      show_root_toc_entry: false
-                      show_docstring_description: true
+                      group_by_category: true
+                      docstring_style: sphinx  
+                      trim_doctest_flags: true
                       parameter_headings: true
-                      show_symbol_type_heading: true
+                      separate_signature: true
+                      signature_crossrefs: true
+                      preload_modules: [gwkokab]
+                      show_root_toc_entry: false
                       show_symbol_type_toc: true
-                      docstring_section_style: list
+                      members_order: alphabetical
                       merge_init_into_class: true
+                      modernize_annotations: true
                       show_docstring_raises: true
                       show_docstring_returns: true
-                      modernize_annotations: true
-                      show_source: false
+                      show_docstring_modules: true
+                      show_docstring_examples: true
+                      docstring_section_style: list
+                      show_symbol_type_heading: true
+                      show_docstring_attributes: true
+                      show_signature_annotations: true
+                      show_docstring_description: true
 
 extra:
     social:
@@ -95,19 +116,18 @@ extra:
         #   link:
 
 extra_javascript:
-#   - javascripts/mathjax.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 markdown_extensions:
-    - admonition
     - attr_list
     - footnotes
+    - admonition
+    - pymdownx.mark
     - pymdownx.details
+    - pymdownx.snippets
     - pymdownx.inlinehilite
     - pymdownx.superfences
-    - pymdownx.mark
-    - pymdownx.snippets
     - pymdownx.superfences
     - pymdownx.tabbed:
         alternate_style: true
@@ -118,8 +138,8 @@ markdown_extensions:
     - pymdownx.arithmatex:
           generic: true
     - pymdownx.highlight:
-          anchor_linenums: true
           line_spans: __span
+          anchor_linenums: true
           pygments_lang_class: true
    
 nav:
@@ -137,8 +157,9 @@ nav:
         - Plotting: utils/plotting.md
         - Misc: utils/misc.md
         - Population Generation: utils/popgen.md
-    - Errors:
-        - Public API: errors/public_api.md
-        - List of Errors: errors/errors.md
+    - List of Errors: errors/errors.md
+    - Contributing:
+        - Contributing Guide: contributing/contributing.md
+        - Code of Conduct: contributing/code_of_conduct.md
     - FAQ:
       - Citation: faq/citation.md

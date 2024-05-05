@@ -270,8 +270,6 @@ class PopulationGenerator(object):
         """Generate injections plots.
 
         :param filename: name of the file
-        :param suffix: suffix for the output file
-        :param bar_title: title for the progress bar, defaults to "Plotting Injections"
         """
         populations = glob.glob(f"{self._root_container}/realization_*/{filename}")
         for realization in glob.glob(f"{self._root_container}/realization_*"):

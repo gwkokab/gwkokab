@@ -35,8 +35,7 @@ def normal_error(
 ) -> Array:
     r"""Add normal error to the given values.
 
-    .. math::
-        x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale})
+    $$x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale})$$
 
     :param x: given values
     :param size: number of samples
@@ -92,9 +91,9 @@ def uniform_error(x: Array, size: int, key: Array, *, lower: float, upper: float
     :param x: given values
     :param size: number of samples
     :param scale:
-    :param lower: _description_
-    :param upper: _description_
-    :return: _description_
+    :param lower: lower bound of the uniform distribution
+    :param upper: upper bound of the uniform distribution
+    :return: error values
     """
     return vmap(lambda x_: dist.Uniform(low=lower, high=upper).sample(key=key, sample_shape=(size,)) + x_)(x)
 
@@ -107,10 +106,10 @@ def banana_error_m1_m2(
     scale_Mc: float = 1.0,
     scale_eta: float = 1.0,
 ) -> Array:
-    r"""Add banana error to the given values. Section 3 of the
-    `paper <https://doi.org/10.1093/mnras/stw2883>`__ discusses the banana
-    error. It adds errors in the chirp mass and symmetric mass ratio and then
-    converts back to masses.
+    r"""Add banana error to the given values. Section 3 of the [Model-independent
+    inference on compact-binary observations](https://doi.org/10.1093/mnras/stw2883)
+    discusses the banana error. It adds errors in the chirp mass and symmetric
+    mass ratio and then converts back to masses.
 
     $$M_{c} = M_{c}^{T}\left[1+\alpha\frac{12}{\rho}\left(r_{0}+r\right)\right]$$
 

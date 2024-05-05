@@ -48,7 +48,6 @@ class Wysocki2019MassModel(dist.Distribution):
         :param alpha_m: index of the power law distribution
         :param mmin: lower mass limit
         :param mmax: upper mass limit
-        :param valid_args: validate the input arguments or not, defaults to `None`
         """
         self.alpha_m, self.mmin, self.mmax = promote_shapes(alpha_m, mmin, mmax)
         batch_shape = lax.broadcast_shapes(

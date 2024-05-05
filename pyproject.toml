@@ -34,52 +34,53 @@ classifiers = [
     "Operating System :: POSIX :: Linux",
 ]
 dependencies = [
-    "configargparse",
+    "rich",
     "h5py",
-    "jax>=0.4.0",
-    "jaxlib>=0.4.0",
-    "matplotlib>=3.8.0",
-    "mplcursors",
+    "rift",
     "numpy",
     "numpyro",
-    "rift",
+    "jax>=0.4.0",
     "setuptools",
-    "rich",
+    "mplcursors",
+    "jaxlib>=0.4.0",
+    "configargparse",
+    "matplotlib>=3.8.0",
 ]
 keywords = [
     "jax",
+    "astronomy",
+    "scientific",
     "statistics",
     "monte-carlo",
-    "markov-chain",
-    "scientific",
-    "astronomy",
     "astrophysics",
-    "machine-learning",
+    "markov-chain",
     "deep-learning",
+    "machine-learning",
     "bayesian-inference",
+    "importlib_metadata",
     "probabilistic-programming",
-    "importlib_metadata"
 ]
 
 [project.optional-dependencies]
 dev = [
-    "black",
-    "flake8",
-    "isort",
     "mypy",
-    "pyright",
-    "pytest",
-    "pytest-cov",
     "ruff",
     "trio",
-    "twine",
     "wheel",
+    "twine",
+    "black",
+    "isort",
+    "flake8",
+    "pytest",
+    "pyright",
+    "pytest-cov",
 ]
 
 docs = [
     'mkdocs',
-    'mkdocs-material',
     'mkdocstrings',
+    'mkdocs-material',
+    'mkdocs-include-markdown-plugin',
 ]
 
 [project.urls]
