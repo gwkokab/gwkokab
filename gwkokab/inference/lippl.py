@@ -78,6 +78,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         k = 0
         self.rparams = []
         self.fparams = []
+        self.input_keys = []
         self.models = []
         self.labels = {}
         self.rate_model_id: Optional[int] = None
@@ -98,6 +99,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
                 }
             )
             self.fparams.append(model["fparams"])
+            self.input_keys.extend(model["input_keys"])
             self.models.append(model["name"])
         if self.frparams is not None:
             for rparam in self.frparams:

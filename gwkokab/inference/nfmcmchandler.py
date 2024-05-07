@@ -34,6 +34,7 @@ class NFMCMCHandler:
         self,
         *,
         posterior_regex: str,
+        headers: list[str],
         likelihood_obj: LogInhomogeneousPoissonProcessLikelihood,
         #
         n_chains: int = 4,
@@ -57,6 +58,7 @@ class NFMCMCHandler:
         results_dir: str = "results",
     ) -> None:
         self._posterior_regex = posterior_regex
+        self._headers = headers
         self._likelihood_obj = likelihood_obj
         self._n_chains = n_chains
         self._step_size = step_size
@@ -75,10 +77,14 @@ class NFMCMCHandler:
         self._use_global = True
         self._results_dir = results_dir
 
+    def get_column_from_keys(self, input_keys, headers):
+        return [headers.index(key) for key in input_keys]
+
     def load_dataset(self) -> dict[int, np.ndarray]:
+        columns = self.get_column_from_keys(self._likelihood_obj.input_keys, self._headers)
         posterior_files = glob.glob(self._posterior_regex)
         data_set = {
-            "data": {i: np.loadtxt(file) for i, file in enumerate(posterior_files)},
+            "data": {i: np.loadtxt(file)[..., columns] for i, file in enumerate(posterior_files)},
             "N": len(posterior_files),
         }
         return data_set
