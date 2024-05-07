@@ -187,6 +187,7 @@ class NFMCMCHandler:
             axes[1].plot(prod_global_accs[i, :])
         plt.suptitle("Global Accs [Training (Up) Production (Down)]")
         fig.savefig(rf"{self._results_dir}/global_accs.png")
+        plt.close("all")
 
         for i in range(self._n_chains):
             plt.plot(train_loss_vals[i, :], label=f"chain {i}")

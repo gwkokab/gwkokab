@@ -32,10 +32,46 @@ from ..models.utils.jointdistribution import JointDistribution
 
 
 class LogInhomogeneousPoissonProcessLikelihood:
-    def __init__(self, *model_config: dict, frparams: Optional[dict] = None) -> None:
+    r"""This class is used to provide a likelihood function for the inhomogeneous
+    Poisson process. The likelihood is given by,
+
+    $$
+        \log\mathcal{L}(\Lambda) \propto -\mu(\Lambda)
+        +\log\sum_{n=1}^N \int \ell_n(\lambda) \rho(\lambda\mid\Lambda)
+        \mathrm{d}\lambda
+    $$
+
+    where, $\displaystyle\rho(\lambda\mid\Lambda) = \frac{\mathrm{d}N}{\mathrm{d}V
+    \mathrm{d}t \mathrm{d}\lambda}$ is the merger rate density for a population
+    parameterized by $\Lambda$, $\mu(\Lambda)$ is the expected number of detected
+    mergers for that population, and $\ell_n(\lambda)$ is the likelihood for the
+    $n$th observed event's parameters. Using Bayes' theorem, we can obtain the
+    posterior $p(\Lambda\mid\text{data})$ by multiplying the likelihood by a prior
+    $\pi(\Lambda)$.
+
+    $$
+        p(\Lambda\mid\text{data}) \propto \pi(\Lambda) \mathcal{L}(\Lambda)
+    $$
+
+    The integral inside the main likelihood expression is then evaluated via Monte Carlo as
+
+    $$
+        \int \ell_n(\lambda) \rho(\lambda\mid\Lambda) \mathrm{d}\lambda \propto
+        \int \frac{p(\lambda | \mathrm{data}_n)}{\pi_n(\lambda)} \rho(\lambda\mid\Lambda) \mathrm{d}\lambda \approx
+        \frac{1}{N_{\mathrm{samples}}}
+        \sum_{i=1}^{N_{\mathrm{samples}}} \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
+    $$
+    """
+
+    def __init__(
+        self,
+        *model_config: dict,
+        frparams: Optional[dict] = None,
+        neural_vt_path: Optional[str] = None,
+    ) -> None:
         self.frparams = frparams
         self.model_configs = model_config
-        self.logVT: keras.Model = keras.models.load_model("./neural_vt_1_200_1000.keras")
+        self.logVT: keras.Model = keras.models.load_model(neural_vt_path)
         self.subroutine()
 
     def subroutine(self):
@@ -79,7 +115,6 @@ class LogInhomogeneousPoissonProcessLikelihood:
             for rparam in self.frparams:
                 self.priors[self.frparams[rparam]["id"]] = self.frparams[rparam]["prior"]
 
-    # @partial(jit, static_argnums=(0,))
     def get_model(self, model_id: int, rparams: Array) -> dist.Distribution:
         model = self.models[model_id]
         fparams = self.fparams[model_id]
