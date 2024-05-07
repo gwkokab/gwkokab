@@ -102,8 +102,8 @@ class _MassRationMassSandwichConstraint(constraints.Constraint):
 
     def __call__(self, x):
         m1 = x[..., 0]
-        q = x[..., 1]
-        return (self.mmin <= m1) & (m1 <= self.mmax) & (self.mmin / m1 <= q) & (q <= 1)
+        m2 = x[..., 1] * m1
+        return (self.mmin <= m2) & (m2 <= m1) & (m1 <= self.mmax)
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
