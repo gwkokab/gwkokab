@@ -22,6 +22,7 @@ from .independentspinorientationgaussianisotropic import (
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
 )
 from .multipeakmassmodel import MultiPeakMassModel as MultiPeakMassModel
+from .ngaussian import NGaussian as NGaussian
 from .powerlawpeakmassmodel import PowerLawPeakMassModel as PowerLawPeakMassModel
 from .powerlawprimarymassratio import PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio
 from .truncpowerlaw import TruncatedPowerLaw as TruncatedPowerLaw
