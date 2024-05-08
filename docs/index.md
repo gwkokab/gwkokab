@@ -1,3 +1,9 @@
+---
+hide:
+  - navigation
+  - toc
+---
+
 <!-- # <p align="center">GWKokab</p> -->
 <!-- ## <p align="center">A JAX-based gravitational-wave population inference toolkit</p> -->
 # GWKokab: A JAX-based gravitational-wave population inference toolkit
