@@ -153,6 +153,7 @@ nav:
         - Spin Models: models/spin_models.md
         - Misc Models: models/misc_models.md 
         - Utils: models/utils.md
+    - Inference: inference/index.md
     - Utils: 
         - Mass Relations: utils/mass_relations.md
         - Plotting: utils/plotting.md

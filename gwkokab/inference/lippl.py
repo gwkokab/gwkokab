@@ -29,6 +29,7 @@ from jaxtyping import Array
 from numpyro import distributions as dist
 
 from ..models.utils.jointdistribution import JointDistribution
+from ..utils import get_key
 
 
 class LogInhomogeneousPoissonProcessLikelihood:
@@ -64,10 +65,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
     """
 
     def __init__(
-        self,
-        *model_config: dict,
-        frparams: Optional[dict] = None,
-        neural_vt_path: Optional[str] = None,
+        self, *model_config: dict, frparams: Optional[dict] = None, neural_vt_path: Optional[str] = None
     ) -> None:
         self.frparams = frparams
         self.model_configs = model_config
@@ -118,41 +116,57 @@ class LogInhomogeneousPoissonProcessLikelihood:
                 self.priors[self.frparams[rparam]["id"]] = self.frparams[rparam]["prior"]
 
     def get_model(self, model_id: int, rparams: Array) -> dist.Distribution:
+        r"""Get the model for the given model_id and rparams.
+
+        :param model_id: Model ID.
+        :param rparams: Recovered parameters for the model.
+        :return: Model.
+        """
         model = self.models[model_id]
         fparams = self.fparams[model_id]
         rparam = jax.tree.map(lambda index: rparams[index], self.rparams[model_id])
         return model(**fparams, **rparam)
 
     @partial(jit, static_argnums=(0,))
-    def log_prob(self, rparams: Array, value: Array) -> JointDistribution:
-        mapped_rparams = jax.tree.map(lambda index: rparams[index], self.rparams)
-        mapped_models = jax.tree.map(
-            lambda model, fparams, rparam: model(**fparams, **rparam), self.models, self.fparams, mapped_rparams
-        )
-        joint_model = JointDistribution(*mapped_models)
-        return joint_model.log_prob(value)
-
-    @partial(jit, static_argnums=(0,))
     def sum_log_prior(self, value: Array) -> Array:
+        r"""Sum of log prior probabilities.
+
+        :param value: Value for which the prior probabilities are to be calculated.
+        :return: Sum of log prior probabilities.
+        """
         return jnp.sum(jnp.asarray([prior.log_prob(value[i]) for i, prior in enumerate(self.priors)]))
 
     @partial(jit, static_argnums=(0,))
     def exp_rate_integral(self, rparams: Array) -> Array:
+        r"""This function calculates the integral inside the term $\exp(\Lambda)$ in the
+        likelihood function. The integral is given by,
+
+        $$
+            \int \mathrm{VT}(\lambda)\rho(\lambda\mid\Lambda) \mathrm{d}\lambda
+        $$
+
+        :param rparams: Parameters for the model.
+        :return: Integral.
+        """
         N = int(1e4)
-        m1 = jrd.uniform(key=jax.random.PRNGKey(0), shape=(N,), minval=1, maxval=200)
-        m2 = jrd.uniform(key=jax.random.PRNGKey(1), shape=(N,), minval=1, maxval=200)
+        m1 = jrd.uniform(key=get_key(), shape=(N,), minval=1, maxval=200)
+        m2 = jrd.uniform(key=get_key(), shape=(N,), minval=1, maxval=200)
         m1q = jnp.column_stack((m1, m2 / m1))
         m1m2 = jnp.column_stack((m1, m2))
         mass_model = self.get_model(self.rate_model_id, rparams)
-        # where = mass_model.support(m1q)
         integral = jnp.mean(
             jnp.exp(mass_model.log_prob(m1q) + self.logVT(m1m2).flatten()),
-            # where=where,
         )
         return (200 - 1) * (200 - 1) * integral
 
     @partial(jit, static_argnums=(0,))
     def likelihood(self, rparams: Array, data: Optional[dict] = None):
+        """The likelihood function for the inhomogeneous Poisson process.
+
+        :param rparams: Recovered parameters.
+        :param data: Data provided by the user/sampler.
+        :return: Log likelihood value for the given parameters.
+        """
         log_prior = self.sum_log_prior(rparams)
         # jax.debug.print("log_prior {log_prior}", log_prior=log_prior)
 
