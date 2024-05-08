@@ -159,7 +159,10 @@ class NFMCMCHandler:
             quantiles=(0.25, 0.5, 0.75),
         )
 
-        figure.set_size_inches(15, 15)
+        figure.set_size_inches(
+            self._likelihood_obj.n_dim * 2,
+            self._likelihood_obj.n_dim * 2,
+        )
         figure.suptitle("Visualize NF samples (Training)")
 
         figure.savefig(rf"{self._results_dir}/nf_samples_train.png")
@@ -204,7 +207,10 @@ class NFMCMCHandler:
         fig, axes = plt.subplots(
             self._likelihood_obj.n_dim,
             2,
-            figsize=(20, 20),
+            figsize=(
+                self._likelihood_obj.n_dim * 2,
+                20,
+            ),
             sharex=True,
         )
         for j in range(self._likelihood_obj.n_dim):

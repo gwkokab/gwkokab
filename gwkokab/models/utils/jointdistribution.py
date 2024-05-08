@@ -14,7 +14,7 @@
 
 
 import jax
-from jax import numpy as jnp
+from jax import lax, numpy as jnp
 from numpyro import distributions as dist
 
 from gwkokab.utils import get_key
@@ -29,6 +29,7 @@ class JointDistribution(dist.Distribution):
         """
         self.marginal_distributions = marginal_distributions
         self.shaped_values = tuple()
+        batch_shape = lax.broadcast_shapes(*tuple(d.batch_shape for d in self.marginal_distributions))
         k = 0
         for d in self.marginal_distributions:
             if d.event_shape:
@@ -38,26 +39,26 @@ class JointDistribution(dist.Distribution):
                 self.shaped_values += (k,)
                 k += 1
         super(JointDistribution, self).__init__(
-            batch_shape=(),
+            batch_shape=batch_shape,
             event_shape=(k,),
             validate_args=True,
         )
 
     def log_prob(self, value):
-        log_probs = jax.tree_util.tree_map(
+        log_probs = jax.tree.map(
             lambda d, v: d.log_prob(value[..., v]),
             self.marginal_distributions,
             self.shaped_values,
             is_leaf=lambda x: isinstance(x, dist.Distribution),
         )
-        log_probs = jnp.sum(jnp.asarray(log_probs))
+        log_probs = jnp.sum(jnp.asarray(log_probs).T, axis=-1)
         return log_probs
 
     def sample(self, key, sample_shape=()):
         if key is None or isinstance(key, int):
             key = get_key(key)
         keys = tuple(jax.random.split(key, len(self.marginal_distributions)))
-        samples = jax.tree_util.tree_map(
+        samples = jax.tree.map(
             lambda d, k: d.sample(k, sample_shape).reshape(*sample_shape, -1),
             self.marginal_distributions,
             keys,

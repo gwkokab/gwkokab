@@ -155,7 +155,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         m1m2 = jnp.column_stack((m1, m2))
         mass_model = self.get_model(self.rate_model_id, rparams)
         integral = jnp.mean(
-            jnp.exp(mass_model.log_prob(m1q) + self.logVT(m1m2).flatten()),
+            jnp.exp(mass_model.log_prob(m1q).flatten() + self.logVT(m1m2).flatten()),
         )
         return (200 - 1) * (200 - 1) * integral
 
@@ -168,25 +168,21 @@ class LogInhomogeneousPoissonProcessLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.sum_log_prior(rparams)
-        # jax.debug.print("log_prior {log_prior}", log_prior=log_prior)
-
-        # logic from log_prob
 
         mapped_rparams = jax.tree.map(lambda index: rparams[index], self.rparams)
         mapped_models = jax.tree.map(
             lambda model, fparams, rparam: model(**fparams, **rparam), self.models, self.fparams, mapped_rparams
         )
+
         joint_model = JointDistribution(*mapped_models)
 
         integral_individual = jax.tree.map(
-            # lambda y: jax.scipy.special.logsumexp(self.log_prob(rparams, y)) - jnp.log(y.shape[0]),
             lambda y: jax.scipy.special.logsumexp(joint_model.log_prob(y)) - jnp.log(y.shape[0]),
             data["data"],
         )
-        # jax.debug.print("integral_individual {integral_individual}", integral_individual=integral_individual)
+
         rate = rparams[self.frparams["rate"]["id"]]
         log_rate = jnp.log(rate)
         log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(integral_individual))) + data["N"] * log_rate
-        # jax.debug.print("log_likelihood {log_likelihood}", log_likelihood=log_likelihood)
         exp_rate = rate * self.exp_rate_integral(rparams)
         return log_prior + log_likelihood - exp_rate
