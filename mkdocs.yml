@@ -152,6 +152,7 @@ nav:
         - Mass Models: models/mass_models.md
         - Spin Models: models/spin_models.md
         - Misc Models: models/misc_models.md 
+        - Constraints: models/constraints.md
         - Utils: models/utils.md
     - Inference: inference/index.md
     - Utils: 
