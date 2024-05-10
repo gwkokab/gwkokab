@@ -246,7 +246,7 @@ def get_issue_text(
 
     issue_text_lines.extend(
         [
-            "*For details on how this issue is generated, [see the script](https://github.com/gwkokab/gwkokab/blob/main/script/update_top_ranking_issues.py)*",
+            "*For details on how this issue is generated, [see the script](https://github.com/gwkokab/gwkokab/blob/main/scripts/update_top_ranking_issues.py)*",
         ]
     )
 
