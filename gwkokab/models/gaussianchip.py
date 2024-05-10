@@ -25,7 +25,7 @@ def GaussianChiP(mu: float, sigma: float) -> TruncatedNormal:
     Gravitational-Wave Transient Catalog](https://arxiv.org/abs/2010.14533).
 
     $$
-        p(\chi_{p}\mid\mu,\sigma)=\mathbb{I}_{[0,1]}(\chi_{p})
+        p(\chi_{p}\mid\mu,\sigma)\propto\mathbb{I}_{[0,1]}(\chi_{p})
         \mathcal{N}(\chi_{p}\mid\mu,\sigma)
     $$
 

@@ -25,7 +25,7 @@ def GaussianChiEff(mu: float, sigma: float) -> TruncatedNormal:
     Gravitational-Wave Transient Catalog](https://arxiv.org/abs/2010.14533)
 
     $$
-        p(\chi_{\text{eff}}\mid\mu,\sigma)=\mathbb{I}_{[-1,1]}(\chi_{\text{eff}})
+        p(\chi_{\text{eff}}\mid\mu,\sigma)\propto\mathbb{I}_{[-1,1]}(\chi_{\text{eff}})
         \mathcal{N}(\chi_{\text{eff}}\mid\mu,\sigma)
     $$
 

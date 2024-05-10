@@ -12,6 +12,7 @@ from github.Repository import Repository
 from pytz import timezone
 from typer import Typer
 
+
 app: Typer = typer.Typer()
 
 DATETIME_FORMAT: str = "%m/%d/%Y %I:%M %p"
@@ -148,7 +149,8 @@ def get_label_to_issues(
 
     for label in labels:
         query: str = (
-            f'repo:{repository.full_name} is:open is:issue {date_query} label:"{label}" {ignored_labels_text} sort:reactions-+1-desc'
+            f"repo:{repository.full_name} is:open is:issue {date_query} "
+            f'label:"{label}" {ignored_labels_text} sort:reactions-+1-desc'
         )
 
         issues = github.search_issues(query)
@@ -233,10 +235,13 @@ def get_issue_text(
         issue_text_lines.extend(
             [
                 "## errors with issues (this section only shows when there are errors with issues)\n",
-                f"This script expects every issue to have at least one of the following core labels: {core_labels_text}",
-                f"This script currently ignores issues that have one of the following labels: {ignored_labels_text}\n",
+                "This script expects every issue to have at least one"
+                f" of the following core labels: {core_labels_text}",
+                f"This script currently ignores issues that have one "
+                f"of the following labels: {ignored_labels_text}\n",
                 "### what to do?\n",
-                "- Adjust the core labels on an issue to put it into a correct state or add a currently-ignored label to the issue",
+                "- Adjust the core labels on an issue to put it into a "
+                "correct state or add a currently-ignored label to the issue",
                 "- Adjust the core and ignored labels registered in this script",
                 *erroneous_issues_lines,
                 "",
@@ -246,7 +251,8 @@ def get_issue_text(
 
     issue_text_lines.extend(
         [
-            "*For details on how this issue is generated, [see the script](https://github.com/gwkokab/gwkokab/blob/main/scripts/update_top_ranking_issues.py)*",
+            "*For details on how this issue is generated, "
+            "[see the script](https://github.com/gwkokab/gwkokab/blob/main/scripts/update_top_ranking_issues.py)*",
         ]
     )
 
