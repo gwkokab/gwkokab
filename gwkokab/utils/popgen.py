@@ -67,8 +67,9 @@ class PopulationGenerator(object):
         self._models: list = models
         self._extra_size = general["extra_size"]
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
-        self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
-        self._m1q_selection = eval(selection_effect.get("m1q", "False"))
+        if self._vt_filename is not None:
+            self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
+            self._m1q_selection = eval(selection_effect.get("m1q", "False"))
         self._plots = plots
         self._verbose = general.get("verbose", True)
 

@@ -38,13 +38,16 @@ dependencies = [
     "h5py",
     "rift",
     "numpy",
+    "polars",
     "numpyro",
+    "jaxtyping",
     "jax>=0.4.0",
     "setuptools",
     "mplcursors",
     "jaxlib>=0.4.0",
     "configargparse",
     "matplotlib>=3.8.0",
+    "typing_extensions",
 ]
 keywords = [
     "jax",
@@ -73,6 +76,7 @@ dev = [
     "flake8",
     "pytest",
     "pyright",
+    "pre-commit",
     "pytest-cov",
 ]
 

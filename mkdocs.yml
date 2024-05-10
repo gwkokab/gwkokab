@@ -13,7 +13,8 @@
 #  limitations under the License.
 
 # Project information
-site_name: GWKokab
+
+site_name: 💫 GWKokab
 site_url: https://gwkokab.github.io/gwkokab
 site_author: Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy
 site_description: >-
@@ -29,20 +30,26 @@ theme:
     name: material
     features:
         - navigation.sections
+        - navigation.top
+        - navigation.tabs.sticky
         - navigation.sticky
         - navigation.indexes 
         - navigation.path
+        - navigation.tabs
         - navigation.prune
         - search.suggest
         - search.highlight
         - search.share
+        - content.code.select
         - content.tabs.link
         - content.code.annotation
         - content.code.copy
         - toc.follow
         - toc.accordion
         - toc.sticky
+        # - toc.integrate
         - footer
+        - content.footnote.tooltips
     palette:
       - media: "(prefers-color-scheme)"
         toggle:
@@ -108,6 +115,8 @@ plugins:
                       show_docstring_description: true
 
 extra:
+    # version:
+    #     provider: mike
     social:
         - icon: fontawesome/brands/github-alt
           link: https://github.com/gwkokab/gwkokab
@@ -115,7 +124,7 @@ extra:
         #   link:
         # - icon: fontawesome/brands/linkedin
         #   link:
-
+ 
 extra_javascript:
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
@@ -129,7 +138,14 @@ markdown_extensions:
     - pymdownx.snippets
     - pymdownx.inlinehilite
     - pymdownx.superfences
-    - pymdownx.superfences
+    - toc:
+        permalink: true
+        title: On this page
+        permalink_title: Anchor link to this section for reference
+    - pymdownx.superfences:
+        custom_fences:
+            - name: mermaid
+              class: mermaid
     - pymdownx.tabbed:
         alternate_style: true
     - pymdownx.tasklist:
@@ -144,23 +160,20 @@ markdown_extensions:
           pygments_lang_class: true
    
 nav:
-    - Getting started:
-        - Installation: getting_started/installation.md
-        - Configuration: getting_started/config.md
-    - Models: 
-        - models/index.md
-        - Mass Models: models/mass_models.md
-        - Spin Models: models/spin_models.md
-        - Misc Models: models/misc_models.md 
-        - Utils: models/utils.md
-    - Utils: 
-        - Mass Relations: utils/mass_relations.md
-        - Plotting: utils/plotting.md
-        - Misc: utils/misc.md
-        - Population Generation: utils/popgen.md
-    - List of Errors: errors/errors.md
-    - Contributing:
-        - Contributing Guide: contributing/contributing.md
-        - Code of Conduct: contributing/code_of_conduct.md
-    - FAQ:
-      - Citation: faq/citation.md
+    - 📚 Getting started:
+        - ⏬ Installation: getting_started/installation.md
+        - ⚙️ Data Configuration: getting_started/config.md
+    - 🤖 Models: 
+        - 🫡 General Remarks: models/index.md
+        - ⚖️ Mass Models: models/mass_models.md
+        - 🔁 Spin Models: models/spin_models.md
+        - 🆓 Misc Models: models/misc_models.md 
+        - 🔐 Constraints: models/constraints.md
+        - 🛠️ Utils: models/utils.md
+    - 🔮 Inference: inference/index.md
+    # - ⚠️ List of Errors: errors/errors.md
+    - 🤝 Contributing:
+        - 📝 Contributing Guide: contributing/contributing.md
+        - 👮 Code of Conduct: contributing/code_of_conduct.md
+    - 🤔 FAQ:
+      - 📄 Citation: faq/citation.md
