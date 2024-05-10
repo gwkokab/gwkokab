@@ -164,31 +164,14 @@ class LogInhomogeneousPoissonProcessLikelihood:
         rate = rparams[self.frparams["rate"]["id"]]
         return (200 - 1) * (200 - 1) * rate * integral
 
-        # mass_model = self.get_model(self.rate_model_id, rparams)
-        # m1q = mass_model.sample(get_key(), (N,))
-        # m1m2 = jnp.column_stack((m1q[..., 0], m1q[..., 0] * m1q[..., 1]))
-        # integral = jnp.mean(jnp.exp(self.logVT(m1m2).flatten()))
-        # return integral
-
     @partial(jit, static_argnums=(0,))
-    def likelihood(self, rparams: Array, data: Optional[dict] = None):
-        """The likelihood function for the inhomogeneous Poisson process.
+    def log_likelihood(self, rparams: Array, data: Optional[dict] = None):
+        """The log likelihood function for the inhomogeneous Poisson process.
 
         :param rparams: Recovered parameters.
         :param data: Data provided by the user/sampler.
         :return: Log likelihood value for the given parameters.
         """
-        log_prior = self.sum_log_prior(rparams)
-        return log_prior + lax.cond(
-            jnp.isfinite(log_prior),
-            lambda r, d: self.log_likelihood(r, d),  # true function
-            lambda r, d: 0.0,  # false function
-            rparams,
-            data,
-        )
-
-    @partial(jit, static_argnums=(0,))
-    def log_likelihood(self, rparams: Array, data: Optional[dict] = None):
         mapped_rparams = jax.tree.map(lambda index: rparams[index], self.rparams)
         mapped_models = jax.tree.map(
             lambda model, fparams, rparam: model(**fparams, **rparam), self.models, self.fparams, mapped_rparams
@@ -208,8 +191,27 @@ class LogInhomogeneousPoissonProcessLikelihood:
         log_likelihood -= lax.cond(
             jnp.isfinite(log_likelihood),
             lambda r: self.exp_rate(r),  # true function
-            lambda r: 0.0,  # false
+            lambda r: 0.0,  # false function
             rparams,
         )
 
         return log_likelihood
+
+    @partial(jit, static_argnums=(0,))
+    def log_posterior(self, rparams: Array, data: Optional[dict] = None):
+        r"""The likelihood function for the inhomogeneous Poisson process.
+
+        $$p(\Lambda\mid\text{data})$$
+
+        :param rparams: Recovered parameters.
+        :param data: Data provided by the user/sampler.
+        :return: Log likelihood value for the given parameters.
+        """
+        log_prior = self.sum_log_prior(rparams)
+        return log_prior + lax.cond(
+            jnp.isfinite(log_prior),
+            lambda r, d: self.log_likelihood(r, d),  # true function
+            lambda r, d: 0.0,  # false function
+            rparams,
+            data,
+        )

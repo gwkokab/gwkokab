@@ -98,7 +98,7 @@ class NFMCMCHandler:
             get_key(),
         )
         MALA_Sampler = MALA(
-            self._likelihood_obj.likelihood,
+            self._likelihood_obj.log_posterior,
             True,
             self._step_size,
         )
