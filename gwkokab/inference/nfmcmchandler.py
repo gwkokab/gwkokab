@@ -175,6 +175,18 @@ class NFMCMCHandler:
         prod_local_accs = np.array(out_prod["local_accs"])
         prod_log_prob = np.array(out_prod["log_prob"])
 
+        for i in range(self._n_chains):
+            np.savetxt(
+                rf"{self._results_dir}/train_chains_{i}.dat",
+                train_chains[i, :, :],
+                header=" ".join(labels),
+            )
+            np.savetxt(
+                rf"{self._results_dir}/prod_chains_{i}.dat",
+                prod_chains[i, :, :],
+                header=" ".join(labels),
+            )
+
         # log_prob.shape
         fig, axes = plt.subplots(2, 1, figsize=(20, 7), sharex=True)
         for i in range(self._n_chains):
@@ -207,10 +219,7 @@ class NFMCMCHandler:
         fig, axes = plt.subplots(
             self._likelihood_obj.n_dim,
             2,
-            figsize=(
-                self._likelihood_obj.n_dim * 2,
-                20,
-            ),
+            figsize=(20, 2.5 * self._likelihood_obj.n_dim),
             sharex=True,
         )
         for j in range(self._likelihood_obj.n_dim):

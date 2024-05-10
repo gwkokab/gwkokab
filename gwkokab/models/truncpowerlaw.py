@@ -71,7 +71,7 @@ class TruncatedPowerLaw(dist.Distribution):
         batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(xmin), jnp.shape(xmax))
         super(TruncatedPowerLaw, self).__init__(batch_shape=batch_shape, validate_args=True)
         self.support = dist.constraints.interval(self.xmin, self.xmax)
-        self._log_Z = self._log_Z()
+        self._logZ = self._log_Z()
 
     @partial(jit, static_argnums=(0,))
     def _log_Z(self) -> Numeric:
@@ -88,7 +88,7 @@ class TruncatedPowerLaw(dist.Distribution):
 
     @validate_sample
     def log_prob(self, value: Numeric) -> Numeric:
-        return self.alpha * jnp.log(value) - self._log_Z
+        return self.alpha * jnp.log(value) - self._logZ
 
     def sample(self, key: Optional[Array | int], sample_shape: tuple = ()):
         if key is None or isinstance(key, int):
