@@ -24,7 +24,7 @@ from typing_extensions import Optional
 
 import jax
 import keras
-from jax import jit, numpy as jnp, random as jrd
+from jax import jit, lax, numpy as jnp, random as jrd
 from jaxtyping import Array
 from numpyro import distributions as dist
 
@@ -65,12 +65,21 @@ class LogInhomogeneousPoissonProcessLikelihood:
     """
 
     def __init__(
-        self, *model_config: dict, frparams: Optional[dict] = None, neural_vt_path: Optional[str] = None
+        self,
+        *model_config: dict,
+        frparams: Optional[dict] = None,
+        neural_vt_path: Optional[str] = None,
     ) -> None:
         self.frparams = frparams
         self.model_configs = model_config
-        self.logVT: keras.Model = keras.models.load_model(neural_vt_path)
         self.subroutine()
+        if neural_vt_path is not None:
+            self.logVT: keras.Model = keras.models.load_model(neural_vt_path)
+            N = int(1e4)
+            m1 = jrd.uniform(key=get_key(), shape=(N,), minval=1, maxval=200)
+            q = jrd.uniform(key=get_key(), shape=(N,), minval=0, maxval=1)
+            self.m1q = jnp.column_stack((m1, q))
+            self.m1m2 = jnp.column_stack((m1, m1 * q))
 
     def subroutine(self):
         k = 0
@@ -137,27 +146,29 @@ class LogInhomogeneousPoissonProcessLikelihood:
         return jnp.sum(jnp.asarray([prior.log_prob(value[i]) for i, prior in enumerate(self.priors)]))
 
     @partial(jit, static_argnums=(0,))
-    def exp_rate_integral(self, rparams: Array) -> Array:
+    def exp_rate(self, rparams: Array) -> Array:
         r"""This function calculates the integral inside the term $\exp(\Lambda)$ in the
         likelihood function. The integral is given by,
 
         $$
-            \int \mathrm{VT}(\lambda)\rho(\lambda\mid\Lambda) \mathrm{d}\lambda
+            \mu(\Lambda) = \int \mathrm{VT}(\lambda)\rho(\lambda\mid\Lambda) \mathrm{d}\lambda
         $$
 
         :param rparams: Parameters for the model.
         :return: Integral.
         """
-        N = int(1e4)
-        m1 = jrd.uniform(key=get_key(), shape=(N,), minval=1, maxval=200)
-        m2 = jrd.uniform(key=get_key(), shape=(N,), minval=1, maxval=200)
-        m1q = jnp.column_stack((m1, m2 / m1))
-        m1m2 = jnp.column_stack((m1, m2))
         mass_model = self.get_model(self.rate_model_id, rparams)
         integral = jnp.mean(
-            jnp.exp(mass_model.log_prob(m1q).flatten() + self.logVT(m1m2).flatten()),
+            jnp.exp(mass_model.log_prob(self.m1q).flatten() + self.logVT(self.m1m2).flatten()),
         )
-        return (200 - 1) * (200 - 1) * integral
+        rate = rparams[self.frparams["rate"]["id"]]
+        return (200 - 1) * (200 - 1) * rate * integral
+
+        # mass_model = self.get_model(self.rate_model_id, rparams)
+        # m1q = mass_model.sample(get_key(), (N,))
+        # m1m2 = jnp.column_stack((m1q[..., 0], m1q[..., 0] * m1q[..., 1]))
+        # integral = jnp.mean(jnp.exp(self.logVT(m1m2).flatten()))
+        # return integral
 
     @partial(jit, static_argnums=(0,))
     def likelihood(self, rparams: Array, data: Optional[dict] = None):
@@ -168,7 +179,16 @@ class LogInhomogeneousPoissonProcessLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.sum_log_prior(rparams)
+        return log_prior + lax.cond(
+            jnp.isfinite(log_prior),
+            lambda r, d: self.log_likelihood(r, d),  # true function
+            lambda r, d: 0.0,  # false function
+            rparams,
+            data,
+        )
 
+    @partial(jit, static_argnums=(0,))
+    def log_likelihood(self, rparams: Array, data: Optional[dict] = None):
         mapped_rparams = jax.tree.map(lambda index: rparams[index], self.rparams)
         mapped_models = jax.tree.map(
             lambda model, fparams, rparam: model(**fparams, **rparam), self.models, self.fparams, mapped_rparams
@@ -181,8 +201,15 @@ class LogInhomogeneousPoissonProcessLikelihood:
             data["data"],
         )
 
-        rate = rparams[self.frparams["rate"]["id"]]
-        log_rate = jnp.log(rate)
-        log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(integral_individual))) + data["N"] * log_rate
-        exp_rate = rate * self.exp_rate_integral(rparams)
-        return log_prior + log_likelihood - exp_rate
+        log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(integral_individual)))
+        log_rate = jnp.log(rparams[self.frparams["rate"]["id"]])
+        log_likelihood += data["N"] * log_rate
+
+        log_likelihood -= lax.cond(
+            jnp.isfinite(log_likelihood),
+            lambda r: self.exp_rate(r),  # true function
+            lambda r: 0.0,  # false
+            rparams,
+        )
+
+        return log_likelihood
