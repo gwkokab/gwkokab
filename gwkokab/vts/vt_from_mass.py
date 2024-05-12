@@ -39,8 +39,11 @@ def next_pow_two(x: int) -> int:
     return x2
 
 
-sensitivity = ls.SimNoisePSDAdVO4T1800545
-waveform = ls.IMRPhenomA
+# sensitivity = ls.SimNoisePSDAdVO4T1800545
+# waveform = ls.IMRPhenomA
+
+sensitivity = ls.XLALSimNoisePSDaLIGO175MpcT1800545
+waveform = ls.IMRPhenomPv2
 
 
 def optimal_snr(
@@ -75,8 +78,7 @@ def optimal_snr(
 
     if approximant is None:
         approximant = waveform  # No spin approximant
-    # https://lscsoft.docs.ligo.org/lalsuite/lalsimulation/group___l_a_l_sim_i_m_r_phenom__c.html
-    # #ga9117e5a155732b9922eab602930377d7
+    # https://lscsoft.docs.ligo.org/lalsuite/lalsimulation/group___l_a_l_sim_i_m_r_phenom__c.html#ga9117e5a155732b9922eab602930377d7
 
     # Get dL, Gpc
     dL = cosmo.Planck15.luminosity_distance(z).to(u.Gpc).value
@@ -310,8 +312,12 @@ def main():
 
     output = "./masses_vt.hdf5"  # take it from user as input
 
+    mmin = 0.5
+    mmax = 120
+    samples = 1000
+
     with h5py.File(output, "w-") as f:
-        masses = np.linspace(1, 200, 100)  # take it from user as input, min and max mass and number of points
+        masses = np.linspace(mmin, mmax, samples)  # take it from user as input, min and max mass and number of points
         # we can take the masses from injections generated from mass distribution
         # sort them before creating the grids
         m1_grid, m2_grid = np.meshgrid(masses, masses)

@@ -37,7 +37,6 @@ from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot
 
 
 PROGRESS_BAR_TEXT_WITDH = 25
-SECONDS_IN_YEAR = 365 * 24 * 60 * 60
 
 
 class PopulationGenerator(object):
@@ -500,7 +499,7 @@ class PopulationGenerator(object):
         self._error_params: list[dict] = []
         self._constraints: list[Optional[Constraint]] = []
 
-        exp_rate = self._rate * self.exp_rate() * SECONDS_IN_YEAR
+        exp_rate = self._rate * self.exp_rate()
         self._size: int = int(jrd.poisson(get_key(), exp_rate))
 
         for model in self._models:
