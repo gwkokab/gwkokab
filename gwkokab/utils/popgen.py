@@ -20,20 +20,24 @@ from typing_extensions import Optional
 
 import jax
 import numpy as np
-from jax import numpy as jnp, vmap
+from jax import numpy as jnp, random as jrd, vmap
 from numpyro.distributions import *
 from numpyro.distributions.constraints import *
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
+
+
+os.environ["KERAS_BACKEND"] = "jax"
+import keras
 
 from ..errors import error_factory
 from ..models import *
 from ..models.utils.constraints import *
 from ..utils.misc import get_key
-from ..vts.utils import interpolate_hdf5
 from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
 PROGRESS_BAR_TEXT_WITDH = 25
+SECONDS_IN_YEAR = 365 * 24 * 60 * 60
 
 
 class PopulationGenerator(object):
@@ -44,7 +48,7 @@ class PopulationGenerator(object):
     def __init__(
         self,
         general: dict,
-        models: list[dict],
+        models: dict[str, dict],
         selection_effect: Optional[dict] = None,
         plots: Optional[dict] = None,
     ) -> None:
@@ -55,21 +59,24 @@ class PopulationGenerator(object):
         :param selection_effect: selection effect configurations, defaults to `None`
         """
         self.check_general(general)
-        for model in models:
+        for _, model in models.items():
             self.check_models(model)
 
-        self._size: int = general["size"]
+        self._rate: float = general["rate"]
         self._error_size: int = general["error_size"]
         self._root_container: str = general["root_container"]
         self._event_filename: str = general["event_filename"]
         self._config_filename: str = general["config_filename"]
         self._num_realizations: int = general["num_realizations"]
-        self._models: list = models
+        self._models: list = models.values()
+        self._models_dict: dict = models
         self._extra_size = general["extra_size"]
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
         if self._vt_filename is not None:
+            self.logVT: keras.models.Model = keras.models.load_model(self._vt_filename)
             self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
             self._m1q_selection = eval(selection_effect.get("m1q", "False"))
+            self._selection_models: list[str] = eval(selection_effect.get("models", None))
         self._plots = plots
         self._verbose = general.get("verbose", True)
 
@@ -79,7 +86,7 @@ class PopulationGenerator(object):
 
         :param general: general configurations
         """
-        assert general.get("size", None) is not None
+        assert general.get("rate", None) is not None
         assert general.get("error_size", None) is not None
         assert general.get("root_container", None) is not None
         assert general.get("event_filename", None) is not None
@@ -104,6 +111,18 @@ class PopulationGenerator(object):
             assert model.get("config_vars", None) is not None
             assert model.get("params", None) is not None
 
+    def exp_rate(self) -> float:
+        N = int(1e4)
+        m1 = jrd.uniform(get_key(), (N,), minval=1, maxval=200)
+        if self._m1m2_selection:
+            m2 = jrd.uniform(get_key(), (N,), minval=1, maxval=200)
+            value = jnp.column_stack((m1, m2))
+        if self._m1q_selection:
+            q = jrd.uniform(get_key(), (N,))
+            value = jnp.column_stack((m1, q))
+        mass_model = self.get_model_instance(self._models_dict[self._selection_models[0]], update_config_vars=False)
+        return jnp.mean(jnp.exp(mass_model.log_prob(value) + self.logVT(value).flatten()))
+
     def weight_over_m1m2(
         self,
         input_filename: str,
@@ -123,7 +142,8 @@ class PopulationGenerator(object):
         realizations = np.loadtxt(input_filename)
         m1 = realizations[..., m1_col_index]
         m2 = realizations[..., m2_col_index]
-        weights = self._raw_interpolator(m1, m2)
+        # weights = self._raw_interpolator(m1, m2)
+        weights = jnp.exp(self.logVT(jnp.column_stack((m1, m2))).flatten())
         weights /= np.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(weights))
@@ -154,7 +174,8 @@ class PopulationGenerator(object):
 
         m1 = realizations[..., m1_col_index]
         q = realizations[..., q_col_index]
-        weights = self._raw_interpolator(m1, q * m1)
+        # weights = self._raw_interpolator(m1, q * m1)
+        weights = jnp.exp(self.logVT(jnp.column_stack((m1, q * m1))).flatten())
         weights /= np.sum(weights)  # normalizes
 
         indexes_all = np.arange(len(weights))
@@ -171,7 +192,7 @@ class PopulationGenerator(object):
         :param raw_interpolator_filename: raw interpolator file name
         """
 
-        self._raw_interpolator = interpolate_hdf5(raw_interpolator_filename)
+        # self._raw_interpolator = interpolate_hdf5(raw_interpolator_filename)
 
         with Progress(
             SpinnerColumn(),
@@ -213,7 +234,7 @@ class PopulationGenerator(object):
                 for j in range(self._size):
                     np.savetxt(
                         f"{container}/injections/{self._event_filename.format(j)}",
-                        injections[j, :].reshape(1, -1),
+                        injections[j, ...].reshape(1, -1),
                         header="\t".join(self._col_names),
                     )
                 progress.advance(task, 1)
@@ -441,6 +462,34 @@ class PopulationGenerator(object):
                         )
                 progress.advance(task, 1)
 
+    def get_model_instance(self, model: dict, update_config_vars: bool = True) -> Distribution:
+        if model.get("models", None) is not None:
+            component_models = []
+            weights = []
+
+            for comp_model in model["models"]:
+                comp_model_instance: Distribution = eval(comp_model["model"])(**comp_model["params"])
+
+                component_models.append(comp_model_instance)
+                weights.append(comp_model["weight"])
+                if update_config_vars:
+                    self._config_vars.extend([(x[1], comp_model["params"][x[0]]) for x in comp_model["config_vars"]])
+
+            weights = np.array(weights)
+            weights /= np.sum(weights)
+
+            model_instance = MixtureGeneral(
+                mixing_distribution=Categorical(probs=weights, validate_args=True),
+                component_distributions=component_models,
+                validate_args=True,
+            )
+        else:
+            model_instance: Distribution = eval(model["model"])(**model["params"])
+            if update_config_vars:
+                self._config_vars.extend([(x[1], model["params"][x[0]]) for x in model["config_vars"]])
+
+        return model_instance
+
     def generate(self) -> None:
         """Generate population and save them to disk."""
         self._col_names: list[str] = []
@@ -451,30 +500,11 @@ class PopulationGenerator(object):
         self._error_params: list[dict] = []
         self._constraints: list[Optional[Constraint]] = []
 
+        exp_rate = self._rate * self.exp_rate() * SECONDS_IN_YEAR
+        self._size: int = int(jrd.poisson(get_key(), exp_rate))
+
         for model in self._models:
-            if model.get("models", None) is not None:
-                component_models = []
-                weights = []
-
-                for comp_model in model["models"]:
-                    comp_model_instance: Distribution = eval(comp_model["model"])(**comp_model["params"])
-
-                    component_models.append(comp_model_instance)
-                    weights.append(comp_model["weight"])
-                    self._config_vars.extend([(x[1], comp_model["params"][x[0]]) for x in comp_model["config_vars"]])
-
-                weights = np.array(weights)
-                weights /= np.sum(weights)
-
-                model_instance = MixtureGeneral(
-                    mixing_distribution=Categorical(probs=weights, validate_args=True),
-                    component_distributions=component_models,
-                    validate_args=True,
-                )
-            else:
-                model_instance: Distribution = eval(model["model"])(**model["params"])
-                self._config_vars.extend([(x[1], model["params"][x[0]]) for x in model["config_vars"]])
-
+            model_instance = self.get_model_instance(model)
             self._model_instances.append(model_instance)
             self._col_count.append(len(model["col_names"]))
             self._error_type.append(model["error_type"])
@@ -485,6 +515,8 @@ class PopulationGenerator(object):
             else:
                 self._constraints.append(eval(model["constraint"]))
             self._error_params.append(model.get("error_params", {}))
+
+        self._config_vars.append(("rate", self._rate))
 
         self._indexes = {var: i for i, var in enumerate(self._col_names)}
 

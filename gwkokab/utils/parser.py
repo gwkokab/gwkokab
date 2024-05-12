@@ -72,7 +72,7 @@ def parse_config(config_path: str) -> dict[str, Any]:
             for key, value in config.items(section):
                 config_dict[section][key] = value
 
-    config_dict["general"]["size"] = int(config["general"]["size"])
+    config_dict["general"]["rate"] = eval(config["general"]["rate"])
     config_dict["general"]["error_size"] = int(config["general"]["error_size"])
     config_dict["general"]["num_realizations"] = int(config["general"]["num_realizations"])
     config_dict["general"]["extra_size"] = int(config["general"].get("extra_size", "1500"))
