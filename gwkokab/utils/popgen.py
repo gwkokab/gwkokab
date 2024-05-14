@@ -120,7 +120,8 @@ class PopulationGenerator(object):
             q = jrd.uniform(get_key(), (N,))
             value = jnp.column_stack((m1, q))
         mass_model = self.get_model_instance(self._models_dict[self._selection_models[0]], update_config_vars=False)
-        return jnp.mean(jnp.exp(mass_model.log_prob(value) + self.logVT(value).flatten()))
+        where = mass_model.support(value)
+        return jnp.mean(jnp.exp(mass_model.log_prob(value) + self.logVT(value).flatten()), where=where)
 
     def weight_over_m1m2(
         self,
