@@ -95,6 +95,7 @@ Changelog = "https://github.com/gwkokab/gwkokab/blob/master/CHANGELOG.md"
 
 [project.scripts]
 gwk_genie = "gwkokab.main:main"
+gwk_scatter2d = "gwkokab.scripts.scatter2d:main"
 # vt_mass_spin = "gwkokab.vt_cli:vt_mass_spin"
 # vt_mass = "gwkokab.vt_cli:vt_mass"
 # vt_mass_grid = "gwkokab.vt_grid:vt_mass_grid"
