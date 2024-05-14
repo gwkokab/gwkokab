@@ -12,15 +12,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
 from __future__ import annotations
 
+import multiprocessing as multi
 from typing_extensions import Callable, Optional
 
 import astropy.cosmology as cosmo
 import astropy.units as u
 import lal
 import lalsimulation as ls
+import numpy as np
 import scipy.integrate as si  # Optimizeed integral needed
 from jax import numpy as jnp
 
@@ -35,6 +36,11 @@ def next_pow_two(x: int) -> int:
     while x2 < x:
         x2 = x2 << 1
     return x2
+
+
+# Sensitivity of the detector
+sensitivity = ls.SimNoisePSDaLIGO175MpcT1800545
+waveform = ls.IMRPhenomD
 
 
 def optimal_snr(
@@ -69,18 +75,26 @@ def optimal_snr(
     """
 
     if psd_fn is None:
-        psd_fn = ls.SimNoisePSDAdVO4T1800545  # psd of single detector for O4
+        psd_fn = sensitivity  # psd of single detector for O4
 
     if approximant is None:
-        approximant = ls.IMRPhenomB  # alligned spin approximant
+        approximant = waveform  # alligned spin approximant
     # https://lscsoft.docs.ligo.org/lalsuite/lalsimulation/group___l_a_l_sim_i_m_r_phenom__c.html
     # #ga9117e5a155732b9922eab602930377d7
 
-    # Get dL, Gpc
+       # Get dL, Gpc
     dL = cosmo.Planck15.luminosity_distance(z).to(u.Gpc).value
 
-    tmax = ls.SimInspiralChirpTimeBound(fmin, m1 * (1 + z) * lal.MSUN_SI, m2 * (1 + z) * lal.MSUN_SI, a1z, a2z) + 2.0
-
+    tmax = (
+        ls.SimInspiralChirpTimeBound(
+            fmin,
+            m1 * (1 + z) * lal.MSUN_SI,
+            m2 * (1 + z) * lal.MSUN_SI,
+            a1z,
+            a2z,
+        )
+        + 2.0
+    )
     df = max(1.0 / next_pow_two(tmax), dfmin)
     fmax = 2048.0  # Hz --- based on max freq of 5-5 inspiral
 
@@ -157,7 +171,7 @@ def fraction_above_threshold(
         return 1.0
 
     if psd_fn is None:
-        psd_fn = ls.SimNoisePSDAdVO4T1800545
+        psd_fn = sensitivity
 
     rho_max = optimal_snr(
         m1,
@@ -216,7 +230,7 @@ def vt_from_mass_spin(
     """
 
     if psd_fn is None:
-        psd_fn = ls.SimNoisePSDAdVO4T1800545
+        psd_fn = sensitivity
 
     def integrand(z) -> float:
         if z == 0.0:
@@ -238,23 +252,6 @@ def vt_from_mass_spin(
         return 4 * jnp.pi * cosmo.Planck15.differential_comoving_volume(z).to(u.Gpc**3 / u.sr).value / (1 + z) * p_det
 
     zmin = 0.001
-    # assert (
-    #     fraction_above_threshold(
-    #         m1,
-    #         m2,
-    #         a1z,
-    #         a2z,
-    #         zmax,
-    #         thresh,
-    #         fmin=fmin,
-    #         dfmin=dfmin,
-    #         fref=fref,
-    #         psdstart=psdstart,
-    #         psd_fn=psd_fn,
-    #         approximant=approximant,
-    #     )
-    #     == 0.0
-    # )
 
     while zmax - zmin > 1e-3:
         zhalf = 0.5 * (zmax + zmin)
@@ -281,3 +278,77 @@ def vt_from_mass_spin(
     vol_integral, _ = si.quad(integrand, zmin, zmax)  # This is the sensitive volume. out is tuple(integral, error)
 
     return analysis_time * vol_integral
+
+def vts_from_masses_spins(
+    m1s,
+    m2s,
+    a1zs,
+    a2zs,
+    analysis_time,
+    thresh,
+    psd_fn=None,
+    processes=None,
+):
+    """
+    Compute the sensitive volume-time for a grid of masses.
+    :param m1s: The first mass in the grid.
+    :param m2s: The second mass in the grid.
+    :param thresh: The detection threshold in SNR
+    :param analysis_time: The total detector-frame searched time in years
+    :param psd_fn: Function giving the assumed single-detector PSD
+    :param processes: The number of processes to use in parallel.
+    :return: The sensitive time-volume in comoving Gpc^3-yr (assuming analysis_time is given in years).
+    """
+    if psd_fn is None:
+        psd_fn = sensitivity
+
+    if processes is None:
+        processes = multi.cpu_count()
+
+    pool = multi.Pool(processes)
+
+    vts = pool.starmap(
+        vt_from_mass_spin,
+        [(m1, m2, a1, a2, thresh, analysis_time, 19.0, 0.0, 40.0, 20.0, 1.0, psd_fn, waveform)
+        for m1, m2, a1 , a2 in zip(m1s, m2s, a1zs, a2zs)],
+    )
+
+    pool.close()
+    pool.join()
+
+    return np.array(vts)
+
+
+def main():
+    days = 365.0  # take it from user as input
+    duration = days / 365.0  # convert days to years
+    import h5py
+    import numpy as np
+    output = "./MS_vt_0.5_100_year.hdf5"  # take it from user as input
+
+    mmin = 0.5
+    mmax = 200.0
+    samples = 1000
+
+    with h5py.File(output, "w-") as f:
+        masses = np.linspace(mmin, mmax, samples)  # take it from user as input, min and max mass and number of points
+        spins = np.linspace(-1, 1, samples)
+        # sort them before creating the grids
+        m1_grid, m2_grid = np.meshgrid(masses, masses)
+        a1z_grid, a2z_grid = np.meshgrid(spins, spins)
+        m1s, m2s = m1_grid.ravel(), m2_grid.ravel()
+        a1zs, a2zs = a1z_grid.ravel(), a2z_grid.ravel()
+    
+        vts = vts_from_masses_spins(m1s, m2s, a1zs, a2zs, 8.0, duration)
+
+        VT_grid = vts.reshape(m1_grid.shape)
+
+        f.create_dataset("m1", data=m1_grid)
+        f.create_dataset("m2", data=m2_grid)
+        f.create_dataset("a1z", data=m1_grid)
+        f.create_dataset("a2z", data=m2_grid)
+        f.create_dataset("VT", data=VT_grid)
+
+
+if __name__ == "__main__":
+    main()

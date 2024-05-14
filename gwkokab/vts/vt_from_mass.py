@@ -39,11 +39,9 @@ def next_pow_two(x: int) -> int:
     return x2
 
 
-# sensitivity = ls.SimNoisePSDAdVO4T1800545
-# waveform = ls.IMRPhenomA
-
-sensitivity = ls.XLALSimNoisePSDaLIGO175MpcT1800545
-waveform = ls.IMRPhenomPv2
+# Sensitivity of the detector
+sensitivity = ls.SimNoisePSDaLIGO175MpcT1800545
+waveform = ls.IMRPhenomD
 
 
 def optimal_snr(
@@ -193,7 +191,7 @@ def vt_from_mass(
     m1: float,
     m2: float,
     thresh: float = 8.0,
-    analysis_time: float = 1.0,
+    analysis_time: float = 1.0 / 365.0,
     fmin: float = 19.0,
     dfmin: float = 0.0,
     fref: float = 40.0,
@@ -267,12 +265,11 @@ def vt_from_mass(
 
     return analysis_time * vol_integral
 
-
 def vts_from_masses(
     m1s,
     m2s,
-    thresh=8.0,
-    analysis_time=1.0 / 365,
+    analysis_time,
+    thresh,
     psd_fn=None,
     processes=None,
 ):
@@ -305,15 +302,18 @@ def vts_from_masses(
     return np.array(vts)
 
 
+
+
 def main():
-    days = 1.0  # take it from user as input
-    duration = days / 365.0  # convert days to years
+
+    days = 365.25  # take it from user as input
+    duration = days / 365.25  # convert days to years
     import h5py
 
-    output = "./masses_vt.hdf5"  # take it from user as input
+    output = "./masses_vt_0.5_200_year.hdf5"  # take it from user as input
 
     mmin = 0.5
-    mmax = 120
+    mmax = 200
     samples = 1000
 
     with h5py.File(output, "w-") as f:
@@ -326,8 +326,8 @@ def main():
         vts = vts_from_masses(
             m1s,
             m2s,
-            thresh=8.0,
             analysis_time=duration,
+            thresh=8.0,
         )
 
         VT_grid = vts.reshape(m1_grid.shape)
