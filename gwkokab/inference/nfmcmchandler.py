@@ -16,14 +16,14 @@ from __future__ import annotations
 
 import glob
 import os
+import time
+from typing_extensions import Self
 
-import corner
 import numpy as np
 from flowMC.nfmodel.rqSpline import MaskedCouplingRQSpline
 from flowMC.proposal.MALA import MALA
 from flowMC.Sampler import Sampler
 from jax import numpy as jnp
-from matplotlib import pyplot as plt
 
 from ..utils import get_key
 from .lippl import LogInhomogeneousPoissonProcessLikelihood
@@ -31,7 +31,7 @@ from .lippl import LogInhomogeneousPoissonProcessLikelihood
 
 class NFMCMCHandler:
     def __init__(
-        self,
+        self: Self,
         *,
         posterior_regex: str,
         headers: list[str],
@@ -75,12 +75,12 @@ class NFMCMCHandler:
         self._batch_size = batch_size
         self._max_samples = max_samples
         self._use_global = True
-        self._results_dir = results_dir
+        self._results_dir = results_dir + f"_{time.strftime('%Y%m%d_%H%M%S')}"
 
-    def get_column_from_keys(self, input_keys, headers):
+    def get_column_from_keys(self: Self, input_keys: list[str], headers: list[str]) -> list[int]:
         return [headers.index(key) for key in input_keys]
 
-    def load_dataset(self) -> dict[int, np.ndarray]:
+    def load_dataset(self: Self) -> dict[int, np.ndarray]:
         columns = self.get_column_from_keys(self._likelihood_obj.input_keys, self._headers)
         posterior_files = glob.glob(self._posterior_regex)
         data_set = {
@@ -89,7 +89,7 @@ class NFMCMCHandler:
         }
         return data_set
 
-    def run_sampler(self) -> Sampler:
+    def run_sampler(self: Self) -> Sampler:
         model = MaskedCouplingRQSpline(
             self._likelihood_obj.n_dim,
             self._n_layers,
@@ -132,48 +132,32 @@ class NFMCMCHandler:
 
         return nf_sampler
 
-    def generate_plots(self, nf_sampler: Sampler) -> None:
+    def save_data(self, nf_sampler: Sampler) -> None:
+        labels = [self._likelihood_obj.labels[i] for i in range(self._likelihood_obj.n_dim)]
+
         out_train = nf_sampler.get_sampler_state(training=True)
-        print("Logged during tuning:", out_train.keys())
+
         train_chains = np.array(out_train["chains"])
         train_global_accs = np.array(out_train["global_accs"])
         train_local_accs = np.array(out_train["local_accs"])
         train_loss_vals = np.array(out_train["loss_vals"])
         train_log_prob = np.array(out_train["log_prob"])
-        train_nf_samples = np.array(nf_sampler.sample_flow(n_samples=5000, rng_key=get_key()))
-        labels = [self._likelihood_obj.labels[i] for i in range(self._likelihood_obj.n_dim)]
-
-        os.makedirs(self._results_dir, exist_ok=True)
-        np.savetxt(
-            rf"{self._results_dir}/nf_samples_train.dat",
-            train_nf_samples,
-            header=" ".join(labels),
-        )
-
-        figure = corner.corner(
-            train_nf_samples,
-            labels=labels,
-            bins=50,
-            show_titles=True,
-            smooth=True,
-            quantiles=(0.25, 0.5, 0.75),
-        )
-
-        figure.set_size_inches(
-            self._likelihood_obj.n_dim * 2,
-            self._likelihood_obj.n_dim * 2,
-        )
-        figure.suptitle("Visualize NF samples (Training)")
-
-        figure.savefig(rf"{self._results_dir}/nf_samples_train.png")
 
         out_prod = nf_sampler.get_sampler_state(training=False)
-        print("Logged during tuning:", out_prod.keys())
 
         prod_chains = np.array(out_prod["chains"])
         prod_global_accs = np.array(out_prod["global_accs"])
         prod_local_accs = np.array(out_prod["local_accs"])
         prod_log_prob = np.array(out_prod["log_prob"])
+
+        os.makedirs(self._results_dir, exist_ok=True)
+
+        nf_samples = np.array(nf_sampler.sample_flow(n_samples=5000, rng_key=get_key()))
+        np.savetxt(
+            rf"{self._results_dir}/nf_samples.dat",
+            nf_samples,
+            header=" ".join(labels),
+        )
 
         for i in range(self._n_chains):
             np.savetxt(
@@ -186,54 +170,30 @@ class NFMCMCHandler:
                 prod_chains[i, :, :],
                 header=" ".join(labels),
             )
-
-        # log_prob.shape
-        fig, axes = plt.subplots(2, 1, figsize=(20, 7), sharex=True)
-        for i in range(self._n_chains):
-            axes[0].plot(train_log_prob[i, :])
-            axes[1].plot(prod_log_prob[i, :])
-        plt.suptitle("Log of Probability [Training (Up) Production (Down)]")
-        fig.savefig(rf"{self._results_dir}/log_prob.png")
-
-        fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
-        for i in range(self._n_chains):
-            axes[0].plot(train_local_accs[i, :])
-            axes[1].plot(prod_local_accs[i, :])
-        plt.suptitle("Local Accs [Training (Up) Production (Down)]")
-        fig.savefig(rf"{self._results_dir}/local_accs.png")
-
-        fig, axes = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
-        for i in range(self._n_chains):
-            axes[0].plot(train_global_accs[i, :])
-            axes[1].plot(prod_global_accs[i, :])
-        plt.suptitle("Global Accs [Training (Up) Production (Down)]")
-        fig.savefig(rf"{self._results_dir}/global_accs.png")
-        plt.close("all")
-
-        for i in range(self._n_chains):
-            plt.plot(train_loss_vals[i, :], label=f"chain {i}")
-        plt.xlabel("num_epoch")
-        plt.ylabel("loss")
-        plt.savefig(rf"{self._results_dir}/loss.png")
-
-        fig, axes = plt.subplots(
-            self._likelihood_obj.n_dim,
-            2,
-            figsize=(20, 2.5 * self._likelihood_obj.n_dim),
-            sharex=True,
-        )
-        for j in range(self._likelihood_obj.n_dim):
-            for i in range(self._n_chains):
-                axes[j][0].plot(train_chains[i, :, j], alpha=0.5)
-                axes[j][0].set_ylabel(labels[j])
-
-                axes[j][1].plot(prod_chains[i, :, j], alpha=0.5)
-                axes[j][1].set_ylabel(labels[j])
-        axes[-1][0].set_xlabel("Iteration")
-        axes[-1][1].set_xlabel("Iteration")
-        plt.suptitle("Chains\n[Training (Left) Production (Right)]")
-        fig.savefig(rf"{self._results_dir}/chains.png")
+            np.savetxt(
+                rf"{self._results_dir}/log_prob_{i}.dat",
+                np.column_stack((train_log_prob[i, :], prod_log_prob[i, :])),
+                header="train prod",
+                comments="#",
+            )
+            np.savetxt(
+                rf"{self._results_dir}/global_accs_{i}.dat",
+                np.column_stack((train_global_accs[i, :], prod_global_accs[i, :])),
+                header="train prod",
+                comments="#",
+            )
+            np.savetxt(
+                rf"{self._results_dir}/local_accs_{i}.dat",
+                np.column_stack((train_local_accs[i, :], prod_local_accs[i, :])),
+                header="train prod",
+                comments="#",
+            )
+            np.savetxt(
+                rf"{self._results_dir}/loss_{i}.dat",
+                train_loss_vals[i, :],
+                header="loss",
+            )
 
     def run(self) -> None:
         nf_sampler = self.run_sampler()
-        self.generate_plots(nf_sampler)
+        self.save_data(nf_sampler)

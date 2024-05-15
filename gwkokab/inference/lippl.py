@@ -20,7 +20,7 @@ os.environ["KERAS_BACKEND"] = "jax"
 
 
 from functools import partial
-from typing_extensions import Optional
+from typing_extensions import Optional, Self
 
 import jax
 import keras
@@ -65,7 +65,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
     """
 
     def __init__(
-        self,
+        self: Self,
         *model_config: dict,
         frparams: Optional[dict] = None,
         neural_vt_path: Optional[str] = None,
@@ -81,7 +81,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
             self.m1q = jnp.column_stack((m1, q))
             self.m1m2 = jnp.column_stack((m1, m1 * q))
 
-    def subroutine(self):
+    def subroutine(self: Self):
         k = 0
         self.rparams = []
         self.fparams = []
@@ -124,7 +124,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
             for rparam in self.frparams:
                 self.priors[self.frparams[rparam]["id"]] = self.frparams[rparam]["prior"]
 
-    def get_model(self, model_id: int, rparams: Array) -> dist.Distribution:
+    def get_model(self: Self, model_id: int, rparams: Array) -> dist.Distribution:
         r"""Get the model for the given model_id and rparams.
 
         :param model_id: Model ID.
@@ -137,7 +137,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         return model(**fparams, **rparam)
 
     @partial(jit, static_argnums=(0,))
-    def sum_log_prior(self, value: Array) -> Array:
+    def sum_log_prior(self: Self, value: Array) -> Array:
         r"""Sum of log prior probabilities.
 
         :param value: Value for which the prior probabilities are to be calculated.
@@ -146,7 +146,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         return jnp.sum(jnp.asarray([prior.log_prob(value[i]) for i, prior in enumerate(self.priors)]))
 
     @partial(jit, static_argnums=(0,))
-    def exp_rate(self, rparams: Array) -> Array:
+    def exp_rate(self: Self, rparams: Array) -> Array:
         r"""This function calculates the integral inside the term $\exp(\Lambda)$ in the
         likelihood function. The integral is given by,
 
@@ -165,7 +165,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         return (200 - 1) * (200 - 1) * rate * integral
 
     @partial(jit, static_argnums=(0,))
-    def log_likelihood(self, rparams: Array, data: Optional[dict] = None):
+    def log_likelihood(self: Self, rparams: Array, data: Optional[dict] = None):
         """The log likelihood function for the inhomogeneous Poisson process.
 
         :param rparams: Recovered parameters.
@@ -198,7 +198,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         return log_likelihood
 
     @partial(jit, static_argnums=(0,))
-    def log_posterior(self, rparams: Array, data: Optional[dict] = None):
+    def log_posterior(self: Self, rparams: Array, data: Optional[dict] = None):
         r"""The likelihood function for the inhomogeneous Poisson process.
 
         $$p(\Lambda\mid\text{data})$$
