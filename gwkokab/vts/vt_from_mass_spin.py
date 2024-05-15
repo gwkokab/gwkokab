@@ -349,8 +349,8 @@ def main():
 
         f.create_dataset("m1", data=m1_grid)
         f.create_dataset("m2", data=m2_grid)
-        f.create_dataset("a1z", data=m1_grid)
-        f.create_dataset("a2z", data=m2_grid)
+        f.create_dataset("a1z", data=a1z_grid)
+        f.create_dataset("a2z", data=a2z_grid)
         f.create_dataset("VT", data=VT_grid)
 
 
