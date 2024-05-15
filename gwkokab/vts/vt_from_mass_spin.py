@@ -82,7 +82,7 @@ def optimal_snr(
     # https://lscsoft.docs.ligo.org/lalsuite/lalsimulation/group___l_a_l_sim_i_m_r_phenom__c.html
     # #ga9117e5a155732b9922eab602930377d7
 
-       # Get dL, Gpc
+    # Get dL, Gpc
     dL = cosmo.Planck15.luminosity_distance(z).to(u.Gpc).value
 
     tmax = (
@@ -279,6 +279,7 @@ def vt_from_mass_spin(
 
     return analysis_time * vol_integral
 
+
 def vts_from_masses_spins(
     m1s,
     m2s,
@@ -309,8 +310,10 @@ def vts_from_masses_spins(
 
     vts = pool.starmap(
         vt_from_mass_spin,
-        [(m1, m2, a1, a2, thresh, analysis_time, 19.0, 0.0, 40.0, 20.0, 1.0, psd_fn, waveform)
-        for m1, m2, a1 , a2 in zip(m1s, m2s, a1zs, a2zs)],
+        [
+            (m1, m2, a1, a2, thresh, analysis_time, 19.0, 0.0, 40.0, 20.0, 1.0, psd_fn, waveform)
+            for m1, m2, a1, a2 in zip(m1s, m2s, a1zs, a2zs)
+        ],
     )
 
     pool.close()
@@ -324,6 +327,7 @@ def main():
     duration = days / 365.0  # convert days to years
     import h5py
     import numpy as np
+
     output = "./MS_vt_0.5_100_year.hdf5"  # take it from user as input
 
     mmin = 0.5
@@ -338,7 +342,7 @@ def main():
         a1z_grid, a2z_grid = np.meshgrid(spins, spins)
         m1s, m2s = m1_grid.ravel(), m2_grid.ravel()
         a1zs, a2zs = a1z_grid.ravel(), a2z_grid.ravel()
-    
+
         vts = vts_from_masses_spins(m1s, m2s, a1zs, a2zs, 8.0, duration)
 
         VT_grid = vts.reshape(m1_grid.shape)

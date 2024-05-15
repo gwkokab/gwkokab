@@ -265,6 +265,7 @@ def vt_from_mass(
 
     return analysis_time * vol_integral
 
+
 def vts_from_masses(
     m1s,
     m2s,
@@ -302,10 +303,7 @@ def vts_from_masses(
     return np.array(vts)
 
 
-
-
 def main():
-
     days = 365.25  # take it from user as input
     duration = days / 365.25  # convert days to years
     import h5py
