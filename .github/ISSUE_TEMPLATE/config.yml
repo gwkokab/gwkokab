@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
-    - name: Have questions or need support?
-      url: https://github.com/gwkokab/gwkokab/discussions
-      about: Please ask questions on the Discussions tab
+  - name: Have questions or need support?
+    url: https://github.com/gwkokab/gwkokab/discussions
+    about: Please ask questions on the Discussions tab
