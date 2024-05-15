@@ -24,12 +24,11 @@ from typing_extensions import Optional, Self
 
 import jax
 import keras
-from jax import jit, lax, numpy as jnp, random as jrd
+from jax import jit, lax, numpy as jnp
 from jaxtyping import Array
 from numpyro import distributions as dist
 
 from ..models.utils.jointdistribution import JointDistribution
-from ..utils import get_key
 
 
 class LogInhomogeneousPoissonProcessLikelihood:
@@ -75,11 +74,6 @@ class LogInhomogeneousPoissonProcessLikelihood:
         self.subroutine()
         if neural_vt_path is not None:
             self.logVT: keras.Model = keras.models.load_model(neural_vt_path)
-            N = int(1e4)
-            m1 = jrd.uniform(key=get_key(), shape=(N,), minval=1, maxval=200)
-            q = jrd.uniform(key=get_key(), shape=(N,), minval=0, maxval=1)
-            self.m1q = jnp.column_stack((m1, q))
-            self.m1m2 = jnp.column_stack((m1, m1 * q))
 
     def subroutine(self: Self):
         k = 0
@@ -93,6 +87,9 @@ class LogInhomogeneousPoissonProcessLikelihood:
             model["id"] = i
             if model.get("for_rate", False) is True:
                 self.rate_model_id = model["id"]
+                self.log_prob_input_value = model["log_prob_input_value"]
+                self.vt_input_value = model["vt_input_value"]
+                self.vt_space_volume = model["vt_space_volume"]
             if model.get("fparams") is None:
                 model["fparams"] = {}
             for rparam in model["rparams"]:
@@ -159,10 +156,12 @@ class LogInhomogeneousPoissonProcessLikelihood:
         """
         mass_model = self.get_model(self.rate_model_id, rparams)
         integral = jnp.mean(
-            jnp.exp(mass_model.log_prob(self.m1q).flatten() + self.logVT(self.m1m2).flatten()),
+            jnp.exp(
+                mass_model.log_prob(self.log_prob_input_value).flatten() + self.logVT(self.vt_input_value).flatten()
+            ),
         )
         rate = rparams[self.frparams["rate"]["id"]]
-        return (200 - 1) * (200 - 1) * rate * integral
+        return self.vt_space_volume * rate * integral
 
     @partial(jit, static_argnums=(0,))
     def log_likelihood(self: Self, rparams: Array, data: Optional[dict] = None):

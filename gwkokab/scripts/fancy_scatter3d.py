@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 
 import numpy as np
-import plotly.graph_objects as go
 from plotly import graph_objects as go
 
 
