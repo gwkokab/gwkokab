@@ -332,26 +332,20 @@ def main():
 
     mmin = 0.5
     mmax = 200.0
-    samples = 1000
+    samples = 10**6
 
     with h5py.File(output, "w-") as f:
-        masses = np.linspace(mmin, mmax, samples)  # take it from user as input, min and max mass and number of points
-        spins = np.linspace(-1, 1, samples)
-        # sort them before creating the grids
-        m1_grid, m2_grid = np.meshgrid(masses, masses)
-        a1z_grid, a2z_grid = np.meshgrid(spins, spins)
-        m1s, m2s = m1_grid.ravel(), m2_grid.ravel()
-        a1zs, a2zs = a1z_grid.ravel(), a2z_grid.ravel()
+        m1s = np.random.uniform(mmin, mmax, samples)
+        m2s = np.random.uniform(mmin, mmax, samples)
+        a1zs = np.random.uniform(-1, 1, samples)
+        a2zs = np.random.uniform(-1, 1, samples)
+        vts = vts_from_masses_spins(m1s, m2s, a1zs, a2zs, 10.0, duration)
 
-        vts = vts_from_masses_spins(m1s, m2s, a1zs, a2zs, 8.0, duration)
-
-        VT_grid = vts.reshape(m1_grid.shape)
-
-        f.create_dataset("m1", data=m1_grid)
-        f.create_dataset("m2", data=m2_grid)
-        f.create_dataset("a1z", data=a1z_grid)
-        f.create_dataset("a2z", data=a2z_grid)
-        f.create_dataset("VT", data=VT_grid)
+        f.create_dataset("m1", data=m1s)
+        f.create_dataset("m2", data=m2s)
+        f.create_dataset("a1z", data=a1zs)
+        f.create_dataset("a2z", data=a2zs)
+        f.create_dataset("VT", data=vts)
 
 
 if __name__ == "__main__":

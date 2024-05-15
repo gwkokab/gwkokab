@@ -312,14 +312,14 @@ def main():
 
     mmin = 0.5
     mmax = 200
-    samples = 1000
+    samples = 10
 
     with h5py.File(output, "w-") as f:
-        masses = np.linspace(mmin, mmax, samples)  # take it from user as input, min and max mass and number of points
+        # take it from user as input, min and max mass and number of points
         # we can take the masses from injections generated from mass distribution
         # sort them before creating the grids
-        m1_grid, m2_grid = np.meshgrid(masses, masses)
-        m1s, m2s = m1_grid.ravel(), m2_grid.ravel()
+        m1s = np.random.uniform(mmin, mmax, samples)
+        m2s = np.random.uniform(mmin, mmax, samples)
         # print("m1, :", m1s)
         vts = vts_from_masses(
             m1s,
@@ -328,11 +328,9 @@ def main():
             thresh=8.0,
         )
 
-        VT_grid = vts.reshape(m1_grid.shape)
-
-        f.create_dataset("m1", data=m1_grid)
-        f.create_dataset("m2", data=m2_grid)
-        f.create_dataset("VT", data=VT_grid)
+        f.create_dataset("m1", data=m1s)
+        f.create_dataset("m2", data=m2s)
+        f.create_dataset("VT", data=vts)
 
 
 if __name__ == "__main__":
