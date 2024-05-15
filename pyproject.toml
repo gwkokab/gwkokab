@@ -39,6 +39,7 @@ dependencies = [
     "rift",
     "numpy",
     "polars",
+    "plotly",
     "numpyro",
     "jaxtyping",
     "jax>=0.4.0",
@@ -102,6 +103,7 @@ gwk_batch_scatter3d = "gwkokab.scripts.batch_scatter3d:main"
 gwk_corner_plot = "gwkokab.scripts.corner_plot:main"
 gwk_chain_plot = "gwkokab.scripts.chain_plot:main"
 gwk_confidence_plot = "gwkokab.scripts.confidence_plot:main"
+gwk_fancy_scatter3d = "gwkokab.scripts.fancy_scatter3d:main"
 # vt_mass_spin = "gwkokab.vt_cli:vt_mass_spin"
 # vt_mass = "gwkokab.vt_cli:vt_mass"
 # vt_mass_grid = "gwkokab.vt_grid:vt_mass_grid"
