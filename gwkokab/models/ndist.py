@@ -15,16 +15,28 @@
 
 from __future__ import annotations
 
-from functools import partial
-
 import jax
-from jax import jit
 from jax import numpy as jnp
 from numpyro import distributions as dist
 
 
 def NDistribution(distribution: dist.Distribution, n: int, **params) -> dist.MixtureGeneral:
     """Mixture of any $n$ distributions.
+
+    ```python
+    >>> distribution = NDistribution(
+    ...     distribution=dist.MultivariateNormal,
+    ...     n=4,
+    ...     loc_0=jnp.array([2.0, 2.0]),
+    ...     covariance_matrix_0=jnp.eye(2),
+    ...     loc_1=jnp.array([-2.0, -2.0]),
+    ...     covariance_matrix_1=jnp.eye(2),
+    ...     loc_2=jnp.array([-2.0, 2.0]),
+    ...     covariance_matrix_2=jnp.eye(2),
+    ...     loc_3=jnp.array([2.0, -2.0]),
+    ...     covariance_matrix_3=jnp.eye(2),
+    ... )
+    ```
 
     :param distribution: distribution to mix
     :param n: number of components

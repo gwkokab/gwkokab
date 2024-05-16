@@ -1,2 +1,2 @@
-::: gwkokab.models.ngaussian
+::: gwkokab.models.ndist
 ::: gwkokab.models.truncpowerlaw
