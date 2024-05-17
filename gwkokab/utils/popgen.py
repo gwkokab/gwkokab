@@ -25,6 +25,8 @@ from numpyro.distributions import *
 from numpyro.distributions.constraints import *
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 
+from ..models.utils.jointdistribution import JointDistribution
+
 
 os.environ["KERAS_BACKEND"] = "jax"
 import keras
@@ -115,13 +117,18 @@ class PopulationGenerator(object):
         m1 = jrd.uniform(get_key(), (N,), minval=1, maxval=200)
         if self._m1m2_selection:
             m2 = jrd.uniform(get_key(), (N,), minval=1, maxval=200)
-            value = jnp.column_stack((m1, m2))
+            prob_model_input = jnp.column_stack((m1, m2))
+            vt_input = prob_model_input
+            volume = (200 - 1) ** 2
         if self._m1q_selection:
             q = jrd.uniform(get_key(), (N,))
-            value = jnp.column_stack((m1, q))
-        mass_model = self.get_model_instance(self._models_dict[self._selection_models[0]], update_config_vars=False)
-        where = mass_model.support(value)
-        return jnp.mean(jnp.exp(mass_model.log_prob(value) + self.logVT(value).flatten()), where=where)
+            prob_model_input = jnp.column_stack((m1, q))
+            vt_input = jnp.column_stack((m1, q * m1))
+            volume = (200 - 1) * 1
+        model = JointDistribution(
+            *(self.get_model_instance(self._models_dict[sm], update_config_vars=False) for sm in self._selection_models)
+        )
+        return volume * jnp.mean(jnp.exp(model.log_prob(prob_model_input) + self.logVT(vt_input).flatten()))
 
     def weight_over_m1m2(
         self,

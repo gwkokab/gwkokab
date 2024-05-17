@@ -82,14 +82,12 @@ class LogInhomogeneousPoissonProcessLikelihood:
         self.input_keys = []
         self.models = []
         self.labels = {}
-        self.rate_model_id: Optional[int] = None
+        self.vt_params_available = {}
         for i, model in enumerate(self.model_configs):
             model["id"] = i
             if model.get("for_rate", False) is True:
-                self.rate_model_id = model["id"]
-                self.log_prob_input_value = model["log_prob_input_value"]
-                self.vt_input_value = model["vt_input_value"]
-                self.vt_space_volume = model["vt_space_volume"]
+                for vt_param in model["vt_params"]:
+                    self.vt_params_available[vt_param] = model["id"]
             if model.get("fparams") is None:
                 model["fparams"] = {}
             for rparam in model["rparams"]:
@@ -154,14 +152,11 @@ class LogInhomogeneousPoissonProcessLikelihood:
         :param rparams: Parameters for the model.
         :return: Integral.
         """
-        mass_model = self.get_model(self.rate_model_id, rparams)
-        integral = jnp.mean(
-            jnp.exp(
-                mass_model.log_prob(self.log_prob_input_value).flatten() + self.logVT(self.vt_input_value).flatten()
-            ),
-        )
-        rate = rparams[self.frparams["rate"]["id"]]
-        return self.vt_space_volume * rate * integral
+        N = 1 << 13
+        model_ids = list(set(self.vt_params_available.values()))
+        model = JointDistribution(*[self.get_model(model_id, rparams) for model_id in model_ids])
+        samples = model.sample(10000, (N,))
+        return jnp.mean(jnp.exp(self.logVT(samples)))
 
     @partial(jit, static_argnums=(0,))
     def log_likelihood(self: Self, rparams: Array, data: Optional[dict] = None):
