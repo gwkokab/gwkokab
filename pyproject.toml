@@ -39,6 +39,7 @@ dependencies = [
     "rift",
     "numpy",
     "polars",
+    "flowmc",
     "plotly",
     "numpyro",
     "jaxtyping",

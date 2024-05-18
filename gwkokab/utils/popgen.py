@@ -14,9 +14,8 @@
 
 from __future__ import annotations
 
-import glob
 import os
-from typing_extensions import Optional
+from typing_extensions import Optional, Self
 
 import jax
 import numpy as np
@@ -35,7 +34,6 @@ from ..errors import error_factory
 from ..models import *
 from ..models.utils.constraints import *
 from ..utils.misc import get_key
-from .plotting import scatter2d_batch_plot, scatter2d_plot, scatter3d_batch_plot, scatter3d_plot
 
 
 PROGRESS_BAR_TEXT_WITDH = 25
@@ -47,11 +45,10 @@ class PopulationGenerator(object):
     key = None
 
     def __init__(
-        self,
+        self: Self,
         general: dict,
         models: dict[str, dict],
         selection_effect: Optional[dict] = None,
-        plots: Optional[dict] = None,
     ) -> None:
         """Initialize the PopulationGenerator class.
 
@@ -78,7 +75,6 @@ class PopulationGenerator(object):
             self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
             self._m1q_selection = eval(selection_effect.get("m1q", "False"))
             self._selection_models: list[str] = eval(selection_effect.get("models", None))
-        self._plots = plots
         self._verbose = general.get("verbose", True)
 
     @staticmethod
@@ -112,7 +108,7 @@ class PopulationGenerator(object):
             assert model.get("config_vars", None) is not None
             assert model.get("params", None) is not None
 
-    def exp_rate(self) -> float:
+    def exp_rate(self: Self) -> float:
         N = int(1e4)
         m1 = jrd.uniform(get_key(), (N,), minval=1, maxval=200)
         if self._m1m2_selection:
@@ -131,7 +127,7 @@ class PopulationGenerator(object):
         return volume * jnp.mean(jnp.exp(model.log_prob(prob_model_input) + self.logVT(vt_input).flatten()))
 
     def weight_over_m1m2(
-        self,
+        self: Self,
         input_filename: str,
         output_filename: str,
         n_out: int,
@@ -162,7 +158,7 @@ class PopulationGenerator(object):
         np.savetxt(output_filename, new_realizations, header="\t".join(self._col_names))
 
     def weight_over_m1q(
-        self,
+        self: Self,
         input_filename: str,
         output_filename: str,
         n_out: int,
@@ -193,7 +189,7 @@ class PopulationGenerator(object):
 
         np.savetxt(output_filename, new_realizations, header="\t".join(self._col_names))
 
-    def weighted_injection(self, raw_interpolator_filename: str) -> None:
+    def weighted_injection(self: Self, raw_interpolator_filename: str) -> None:
         """Weighting injections by VTs.
 
         :param raw_interpolator_filename: raw interpolator file name
@@ -246,7 +242,7 @@ class PopulationGenerator(object):
                     )
                 progress.advance(task, 1)
 
-    def generate_injections(self) -> None:
+    def generate_injections(self: Self) -> None:
         """Generate injections and save them to disk."""
         os.makedirs(self._root_container, exist_ok=True)
 
@@ -292,59 +288,7 @@ class PopulationGenerator(object):
 
                 del realisations
 
-    def generate_injections_plots(
-        self,
-        filename: str,
-    ) -> None:
-        """Generate injections plots.
-
-        :param filename: name of the file
-        """
-        populations = glob.glob(f"{self._root_container}/realization_*/{filename}")
-        for realization in glob.glob(f"{self._root_container}/realization_*"):
-            os.makedirs(f"{realization}/plots", exist_ok=True)
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[bold blue]Plotting injections".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
-            BarColumn(bar_width=40),
-            "[progress.percentage]{task.percentage:>3.2f}%",
-            "•",
-            TimeRemainingColumn(elapsed_when_finished=True),
-            "•",
-            MofNCompleteColumn(),
-            disable=not self._verbose,
-        ) as progress:
-            task = progress.add_task("Plotting injections", total=len(populations))
-
-            for pop_filename in populations:
-                output_filename = pop_filename.replace(filename, "plots")
-                for ins in self._plots["injs"]:
-                    if len(ins) == 2:
-                        scatter2d_plot(
-                            input_filename=pop_filename,
-                            output_filename=output_filename + f"/{ins[0]}_{ins[1]}_injs.png",
-                            x_index=self._indexes[ins[0]],
-                            y_index=self._indexes[ins[1]],
-                            x_label=ins[0],
-                            y_label=ins[1],
-                            plt_title="Injections",
-                        )
-                    elif len(ins) == 3:
-                        scatter3d_plot(
-                            input_filename=pop_filename,
-                            output_filename=output_filename + f"/{ins[0]}_{ins[1]}_{ins[2]}_injs.png",
-                            x_index=self._indexes[ins[0]],
-                            y_index=self._indexes[ins[1]],
-                            z_index=self._indexes[ins[2]],
-                            x_label=ins[0],
-                            y_label=ins[1],
-                            z_label=ins[2],
-                            plt_title="Injections",
-                        )
-                progress.advance(task, 1)
-
-    def add_error(self) -> None:
+    def add_error(self: Self) -> None:
         """Add error to the injections."""
         if all(err_type is None for err_type in self._error_type):
             return
@@ -423,53 +367,7 @@ class PopulationGenerator(object):
                         )
                     progress.advance(task, 1)
 
-    def generate_batch_plots(self) -> None:
-        realization_regex = f"{self._root_container}/realization_*"
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[bold blue]Plotting Posterior".ljust(PROGRESS_BAR_TEXT_WITDH + 8), justify="left"),
-            BarColumn(bar_width=40),
-            "[progress.percentage]{task.percentage:>3.2f}%",
-            "•",
-            TimeRemainingColumn(elapsed_when_finished=True),
-            "•",
-            MofNCompleteColumn(),
-            disable=not self._verbose,
-        ) as progress:
-            task = progress.add_task(
-                "Plotting Posterior",
-                total=self._num_realizations,
-            )
-            for realization in glob.glob(realization_regex):
-                os.makedirs(f"{realization}/plots", exist_ok=True)
-
-                for pin in self._plots["posts"]:
-                    if len(pin) == 2:
-                        scatter2d_batch_plot(
-                            file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
-                            output_filename=f"{realization}/plots/{pin[0]}_{pin[1]}_posts.png",
-                            x_index=self._indexes[pin[0]],
-                            y_index=self._indexes[pin[1]],
-                            x_label=pin[0],
-                            y_label=pin[1],
-                            plt_title=f"Posterior {pin[0]} vs {pin[1]}",
-                        )
-                    elif len(pin) == 3:
-                        scatter3d_batch_plot(
-                            file_pattern=realization + f"/posteriors/{self._event_filename.format('*')}",
-                            output_filename=f"{realization}/plots/{pin[0]}_{pin[1]}_{pin[2]}_posts.png",
-                            x_index=self._indexes[pin[0]],
-                            y_index=self._indexes[pin[1]],
-                            z_index=self._indexes[pin[2]],
-                            x_label=pin[0],
-                            y_label=pin[1],
-                            z_label=pin[2],
-                            plt_title=f"Posterior {pin[0]} vs {pin[1]} vs {pin[2]}",
-                        )
-                progress.advance(task, 1)
-
-    def get_model_instance(self, model: dict, update_config_vars: bool = True) -> Distribution:
+    def get_model_instance(self: Self, model: dict, update_config_vars: bool = True) -> Distribution:
         if model.get("models", None) is not None:
             component_models = []
             weights = []
@@ -497,7 +395,7 @@ class PopulationGenerator(object):
 
         return model_instance
 
-    def generate(self) -> None:
+    def generate(self: Self) -> None:
         """Generate population and save them to disk."""
         self._col_names: list[str] = []
         self._col_count: list[int] = []
@@ -531,8 +429,3 @@ class PopulationGenerator(object):
         if self._vt_filename:
             self.weighted_injection(self._vt_filename)
         self.add_error()
-        if self._plots:
-            if self._plots.get("posts", None):
-                self.generate_batch_plots()
-            if self._plots.get("injs", None):
-                self.generate_injections_plots("injections.dat")

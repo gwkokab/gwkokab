@@ -78,12 +78,6 @@ def parse_config(config_path: str) -> dict[str, Any]:
     config_dict["general"]["extra_size"] = int(config["general"].get("extra_size", "1500"))
     config_dict["general"]["verbose"] = eval(config["general"].get("verbose", "True"))
 
-    if "plots" in config:
-        config_dict["plots"] = {
-            "injs": eval(config["plots"].get("injs", "None")),
-            "posts": eval(config["plots"].get("posts", "None")),
-        }
-
     empty_sections = [key for key, value in config_dict.items() if value == {}]
 
     for section in empty_sections:

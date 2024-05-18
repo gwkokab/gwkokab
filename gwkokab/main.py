@@ -28,7 +28,6 @@ def main():
         if "model" in section_name.lower()
     }
     selection_effect = configuration_dict.get("selection_effect", None)
-    plots = configuration_dict.get("plots", None)
 
-    pg = PopulationGenerator(general=general, models=models, selection_effect=selection_effect, plots=plots)
+    pg = PopulationGenerator(general=general, models=models, selection_effect=selection_effect)
     pg.generate()
