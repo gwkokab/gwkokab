@@ -15,17 +15,30 @@
 
 from __future__ import annotations
 
-import os
+import json
 
+import equinox as eqx
 import h5py
+import jax
 import numpy as np
+import optax
 import polars as pl
-from matplotlib import pyplot as plt
+from jax import numpy as jnp
+
+from ..utils import get_key
 
 
-os.environ["KERAS_BACKEND"] = "jax"
+@eqx.filter_value_and_grad
+def loss_fn(model, x, y):
+    """Mean squared error loss function for the neural network.
 
-import keras
+    :param model: Model to approximate the log of the VT function
+    :param x: input data
+    :param y: output data
+    :return: mean squared error
+    """
+    y_pred = jax.vmap(model)(x)
+    return jnp.mean(jnp.square(y - y_pred))  # mean squared error
 
 
 class NeuralVT:
@@ -56,7 +69,7 @@ class NeuralVT:
         batch_size: int = 128,
         epochs: int = 15,
         validation_split: float = 0.2,
-        model_path: str = "model.keras",
+        model_path: str = "model.eqx",
     ) -> None:
         """Initialize the NeuralVT class.
 
@@ -85,6 +98,7 @@ class NeuralVT:
         self.epochs = epochs
         self.validation_split = validation_split
         self.model_path = model_path
+        self.optimizer = optax.adam(1e-3)
 
     def read_data(self) -> pl.DataFrame:
         """Read the data from the HDF5 file.
@@ -99,15 +113,63 @@ class NeuralVT:
         return df
 
     def build_model(self):
-        model = keras.models.Sequential(name=self.model_name)
+        keys = jax.random.split(get_key(), 2 + len(self.hidden_layers))
 
-        for hidden_layer in self.hidden_layers:
-            model.add(keras.layers.Dense(hidden_layer, activation=self.activation))
-        model.add(keras.layers.Dense(len(self.output_keys), name="log(VT) Output Layer"))
+        layers = [
+            eqx.nn.Linear(
+                in_features=len(self.input_keys),
+                out_features=self.hidden_layers[0],
+                key=keys[0],
+            ),
+            eqx.nn.Lambda(jax.nn.relu),
+        ]
+        for i in range(len(self.hidden_layers) - 1):
+            layers.append(
+                eqx.nn.Linear(
+                    in_features=self.hidden_layers[i],
+                    out_features=self.hidden_layers[i + 1],
+                    key=keys[i],
+                ),
+            )
+            layers.append(eqx.nn.Lambda(jax.nn.relu))
+        layers.append(
+            eqx.nn.Linear(
+                in_features=self.hidden_layers[-1],
+                out_features=len(self.output_keys),
+                key=keys[i],
+            )
+        )
 
-        model.compile(optimizer=self.optimizer, loss=self.loss)
+        model = eqx.nn.Sequential(layers)
 
         return model
+
+    @eqx.filter_jit
+    def make_step(self, model, x, y, opt_state):
+        """Make a step in the optimization process.
+
+        :param model: Model to approximate the log of the VT function
+        :param x: input data
+        :param y: output data
+        :param opt_state: optimizer state
+        :return: optimizer state
+        """
+        loss, grads = loss_fn(model, x, y)
+        updates, opt_state = self.optimizer.update(grads, opt_state)
+        model = eqx.apply_updates(model, updates)
+        return model, opt_state, loss
+
+    def train_epoch(self, model, x, y, opt_state):
+        """Train the model for one epoch.
+
+        :param model: Model to approximate the log of the VT function
+        :param x: input data
+        :param y: output data
+        :param opt_state: optimizer state
+        :return: optimizer state
+        """
+        model, opt_state, loss = self.make_step(model, x, y, opt_state)
+        return model, opt_state, loss
 
     def train(self, *, plot_loss: bool = True):
         """Train the neural network to approximate the log of the VT function.
@@ -123,34 +185,16 @@ class NeuralVT:
 
         model = self.build_model()
 
-        history = model.fit(
-            x=data_X,
-            y=log_data_Y,
-            batch_size=self.batch_size,
-            epochs=self.epochs,
-            verbose=1,
-            validation_split=self.validation_split,
-        )
+        opt_state = self.optimizer.init(eqx.filter(model, eqx.is_inexact_array))
 
-        model.summary()
+        for epoch in range(self.epochs):
+            model, opt_state, loss = self.train_epoch(model, data_X, log_data_Y, opt_state)
+            print(f"Epoch {epoch + 1}: loss {loss}")
 
-        keras.saving.save_model(model, self.model_path)
+        self.save(self.model_path, {"hidden_layers": self.hidden_layers}, model)
 
-        if plot_loss:
-            self.plot_loss(history)
-
-    def plot_loss(self, history, save: bool = False, file_path: str = "loss.png"):
-        """Plot the loss function of the model.
-
-        :param history: history object from the model.fit method
-        :param save: save the plot to a file, defaults to False
-        :param file_path: path to save the plot, defaults to "loss.png"
-        """
-        plt.yscale("log")
-        plt.plot(history.history["loss"], label="train")
-        plt.plot(history.history["val_loss"], label="test")
-        plt.legend()
-        plt.tight_layout()
-        if save:
-            plt.savefig(file_path)
-        plt.show()
+    def save(self, filename, hyperparams, model):
+        with open(filename, "wb") as f:
+            hyperparam_str = json.dumps(hyperparams)
+            f.write((hyperparam_str + "\n").encode())
+            eqx.tree_serialise_leaves(f, model)
