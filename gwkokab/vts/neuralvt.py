@@ -41,6 +41,21 @@ def loss_fn(model, x, y):
     return jnp.mean(jnp.square(y - y_pred))  # mean squared error
 
 
+def save(filename, hyperparams, model):
+    with open(filename, "wb") as f:
+        hyperparam_str = json.dumps(hyperparams)
+        f.write((hyperparam_str + "\n").encode())
+        eqx.tree_serialise_leaves(f, model)
+
+
+def load(filename):
+    with open(filename, "rb") as f:
+        hyperparam_str = f.readline().decode()
+        hyperparams = json.loads(hyperparam_str)
+        model = eqx.tree_deserialise_leaves(f)
+    return hyperparams, model
+
+
 class NeuralVT:
     """
     A class to approximate the log of the VT function using a neural network.
@@ -191,10 +206,4 @@ class NeuralVT:
             model, opt_state, loss = self.train_epoch(model, data_X, log_data_Y, opt_state)
             print(f"Epoch {epoch + 1}: loss {loss}")
 
-        self.save(self.model_path, {"hidden_layers": self.hidden_layers}, model)
-
-    def save(self, filename, hyperparams, model):
-        with open(filename, "wb") as f:
-            hyperparam_str = json.dumps(hyperparams)
-            f.write((hyperparam_str + "\n").encode())
-            eqx.tree_serialise_leaves(f, model)
+        save(self.model_path, {"hidden_layers": self.hidden_layers}, model)
