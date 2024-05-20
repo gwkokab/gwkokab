@@ -15,142 +15,346 @@
 
 from __future__ import annotations
 
-import os
+import json
+import warnings
+from typing_extensions import Any, Optional
 
+import equinox as eqx
 import h5py
+import jax
+import matplotlib.pyplot as plt
 import numpy as np
+import optax
 import polars as pl
-from matplotlib import pyplot as plt
+from jax import numpy as jnp
+from jaxtyping import Array, PyTree
+from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
+from rich.table import Table
+
+from ..utils import get_key
 
 
-os.environ["KERAS_BACKEND"] = "jax"
+@eqx.filter_value_and_grad
+def loss_fn(model: PyTree, x: Array, y: Array) -> Array:
+    """Mean squared error loss function for the neural network.
 
-import keras
-
-
-class NeuralVT:
+    :param model: Model to approximate the log of the VT function
+    :param x: input data
+    :param y: output data
+    :return: mean squared error
     """
-    A class to approximate the log of the VT function using a neural network.
+    y_pred = jax.vmap(model)(x)
+    return jnp.mean(jnp.square(y - y_pred))  # mean squared error
 
-    >>> from gwkokab.vts.neuralvt import NeuralVT
-    >>> neural_vt = NeuralVT(
-    ...     input_keys=["m1", "m2"],
-    ...     output_keys=["VT"],
-    ...     hidden_layers=[64, 64, 512, 512, 64, 64],
-    ...     epochs=2,
-    ...     batch_size=128,
-    ... )
-    >>> neural_vt.train(plot_loss=True)
+
+@eqx.filter_jit
+def predict(model: PyTree, x: Array) -> Array:
+    """Predict the output of the model given the input data.
+
+    :param model: Model to approximate the log of the VT function
+    :param x: input data
+    :return: predicted output
     """
+    return jax.vmap(model)(x)
 
-    def __init__(
-        self,
-        input_keys: list[str] = ["m1", "m2"],
-        output_keys: list[str] = ["VT"],
-        hidden_layers: list[int] = [128],
-        optimizer: str = "adam",
-        loss: str = "mean_squared_error",
-        model_name: str = "log(VT) approximation model",
-        activation: str = "relu",
-        data_path: str = "./vt_1_200_1000.hdf5",
-        batch_size: int = 128,
-        epochs: int = 15,
-        validation_split: float = 0.2,
-        model_path: str = "model.keras",
-    ) -> None:
-        """Initialize the NeuralVT class.
 
-        :param input_keys: keys of the input data, defaults to ["m1", "m2"]
-        :param output_key: key of the output data, defaults to ["VT"]
-        :param hidden_layers: hidden layers of the neural network, defaults to [128]
-        :param optimizer: optimizer for the neural network, defaults to "adam"
-        :param loss: loss function for the neural network, defaults to "mean_squared_error"
-        :param model_name: name of the model, defaults to "log(VT) approximation model"
-        :param activation: activation function for the hidden layers, defaults to "relu"
-        :param data_path: path to the HDF5 file containing the data, defaults to "./vt_1_200_1000.hdf5"
-        :param batch_size: batch size for training the neural network, defaults to 128
-        :param epochs: number of epochs for training the neural network, defaults to 15
-        :param validation_split: validation split for training the neural network, defaults to 0.2
-        :param model_path: path to save the trained model, defaults to "model.keras"
-        """
-        self.input_keys = input_keys
-        self.output_keys = output_keys
-        self.hidden_layers = hidden_layers
-        self.optimizer = optimizer
-        self.loss = loss
-        self.model_name = model_name
-        self.activation = activation
-        self.data_path = data_path
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.validation_split = validation_split
-        self.model_path = model_path
+@eqx.filter_jit
+def compute_accuracy(model: PyTree, x: Array, y: Array) -> Array:
+    """Compute the accuracy of the model given the input and output data.
 
-    def read_data(self) -> pl.DataFrame:
-        """Read the data from the HDF5 file.
+    :param model: Model to approximate the log of the VT function
+    :param x: input data
+    :param y: output data
+    :return: accuracy of the model
+    """
+    y_pred = predict(model, x)
+    return jnp.mean(jnp.square(y - y_pred))
 
-        :return: a polars DataFrame containing the data
-        """
-        with h5py.File(self.data_path, "r") as vt_file:
-            keys = list(vt_file.keys())
-            df = pl.DataFrame(
-                data={key: pl.Series(key, np.array(vt_file[key][:]).flatten()) for key in keys},
+
+def read_data(data_path: str) -> pl.DataFrame:
+    """Read the data from the given path.
+
+    :param data_path: path to the data
+    :return: data in a DataFrame
+    """
+    with h5py.File(data_path, "r") as vt_file:
+        keys = list(vt_file.keys())
+        df = pl.DataFrame(
+            data={key: pl.Series(key, np.array(vt_file[key][:]).flatten()) for key in keys},
+        )
+    return df
+
+
+def train_test_split(
+    X: Array, Y: Array, batch_size: int, test_size: float = 0.2
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Split the data into training and testing sets.
+
+    :param X: Input data
+    :param Y: Output data
+    :param batch_size: batch size for training
+    :param test_size: fraction of the data to use for testing, defaults to 0.2
+    :return: training and testing sets
+    """
+    n = len(X)
+    indices = np.random.permutation(n)
+    split = int(n * (1 - test_size))
+    split = (split // batch_size) * batch_size
+    train_indices = indices[:split]
+    test_indices = indices[split:]
+
+    train_X = X[train_indices]
+    train_Y = Y[train_indices]
+    test_X = X[test_indices]
+    test_Y = Y[test_indices]
+
+    return train_X, test_X, train_Y, test_Y
+
+
+def make(*, key, input_layer: int, output_layer: int, hidden_layers: Optional[list[int]] = None) -> PyTree:
+    """Make a neural network model to approximate the log of the VT function.
+
+    :param key: jax random key
+    :param input_layer: input layer of the model
+    :param output_layer: output layer of the model
+    :param hidden_layers: hidden layers of the model
+    :return: neural network model
+    """
+    if hidden_layers is None:
+        keys = jax.random.split(key, 2)
+        layers = [
+            eqx.nn.Linear(
+                in_features=input_layer,
+                out_features=output_layer,
+                key=keys[0],
             )
-        return df
-
-    def build_model(self):
-        model = keras.models.Sequential(name=self.model_name)
-
-        for hidden_layer in self.hidden_layers:
-            model.add(keras.layers.Dense(hidden_layer, activation=self.activation))
-        model.add(keras.layers.Dense(len(self.output_keys), name="log(VT) Output Layer"))
-
-        model.compile(optimizer=self.optimizer, loss=self.loss)
-
+        ]
+        model = eqx.nn.Sequential(layers)
         return model
 
-    def train(self, *, plot_loss: bool = True):
-        """Train the neural network to approximate the log of the VT function.
+    keys = jax.random.split(key, 2 + len(hidden_layers))
 
-        :param plot_loss: plot the loss function of the model, defaults to True
-        """
-        df = self.read_data()
-
-        data_X = df[self.input_keys].to_numpy()
-        data_Y = df[self.output_keys].to_numpy()
-
-        log_data_Y = np.log(data_Y)
-
-        model = self.build_model()
-
-        history = model.fit(
-            x=data_X,
-            y=log_data_Y,
-            batch_size=self.batch_size,
-            epochs=self.epochs,
-            verbose=1,
-            validation_split=self.validation_split,
+    layers = [
+        eqx.nn.Linear(
+            in_features=input_layer,
+            out_features=hidden_layers[0],
+            key=keys[0],
+        ),
+        eqx.nn.Lambda(jax.nn.relu),
+    ]
+    for i in range(len(hidden_layers) - 1):
+        layers.append(
+            eqx.nn.Linear(
+                in_features=hidden_layers[i],
+                out_features=hidden_layers[i + 1],
+                key=keys[i],
+            ),
         )
+        layers.append(eqx.nn.Lambda(jax.nn.relu))
+    layers.append(
+        eqx.nn.Linear(
+            in_features=hidden_layers[-1],
+            out_features=output_layer,
+            key=keys[i],
+        )
+    )
 
-        model.summary()
+    model = eqx.nn.Sequential(layers)
 
-        keras.saving.save_model(model, self.model_path)
+    return model
 
-        if plot_loss:
-            self.plot_loss(history)
 
-    def plot_loss(self, history, save: bool = False, file_path: str = "loss.png"):
-        """Plot the loss function of the model.
+def save(*, filename: str, hyperparams: dict[str, Any], model) -> None:
+    """Save the model to the given file.
 
-        :param history: history object from the model.fit method
-        :param save: save the plot to a file, defaults to False
-        :param file_path: path to save the plot, defaults to "loss.png"
+    :param filename: Name of the file to save the model
+    :param hyperparams: Hyperparameters of the model
+    :param model: Model to approximate the log of the VT function
+    """
+    with open(filename, "wb") as f:
+        hyperparam_str = json.dumps(hyperparams)
+        f.write((hyperparam_str + "\n").encode())
+        eqx.tree_serialise_leaves(f, model)
+
+
+def load(filename) -> tuple[dict[str, Any], PyTree]:
+    """Load the model from the given file.
+
+    :param filename: Name of the file to load the model
+    :return: Hyperparameters and the model
+    """
+    with open(filename, "rb") as f:
+        hyperparam_str = f.readline().decode()
+        hyperparams = json.loads(hyperparam_str)
+        model = make(key=jax.random.PRNGKey(0), **hyperparams)
+        model = eqx.tree_deserialise_leaves(f, model)
+    return hyperparams, model
+
+
+def train_regressor(
+    *,
+    input_keys: list[str],
+    output_keys: list[str],
+    hidden_layers: list[int],
+    batch_size: int,
+    data_path: str,
+    checkpoint_path: Optional[str] = None,
+    epochs: int = 50,
+    validation_split: float = 0.2,
+    learning_rate: float = 1e-3,
+    plot_loss: bool = True,
+) -> None:
+    """Train the model to approximate the log of the VT function.
+
+    :param input_keys: list of input keys
+    :param output_keys: list of output keys
+    :param hidden_layers: list of hidden layers
+    :param batch_size: batch size for training
+    :param data_path: path to the data
+    :param checkpoint_path: path to save the model
+    :param epochs: number of epochs to train the model
+    :param validation_split: fraction of the data to use for validation, defaults to 0.2
+    :param learning_rate: learning rate for the optimizer, defaults to 1e-3
+    :param plot_loss: whether to plot the loss, defaults to True
+    :raises ValueError: if checkpoint path does not end with .eqx
+    """
+    if checkpoint_path is not None:
+        if not checkpoint_path.endswith(".eqx"):
+            raise ValueError("Checkpoint path must end with .eqx")
+    else:
+        warnings.warn("No checkpoint path provided, model will not be saved.")
+
+    optimizer = optax.adam(learning_rate=learning_rate)
+
+    @eqx.filter_jit
+    def make_step(
+        model: PyTree, x: Array, y: Array, opt_state: optax.GradientTransformation
+    ) -> tuple[PyTree, optax.GradientTransformation, Array]:
+        """Make a step in the optimization process.
+
+        :param model: Model to approximate the log of the VT function
+        :param x: input data
+        :param y: output data
+        :param opt_state: optimizer state
+        :return: optimizer state
         """
+        loss, grads = loss_fn(model, x, y)
+        updates, opt_state = optimizer.update(grads, opt_state)
+        model = eqx.apply_updates(model, updates)
+        return model, opt_state, loss
+
+    def train_step(
+        model: PyTree, x: Array, y: Array, opt_state: optax.GradientTransformation
+    ) -> tuple[PyTree, optax.GradientTransformation, Array]:
+        """Train the model for one epoch.
+
+        :param model: Model to approximate the log of the VT function
+        :param x: input data
+        :param y: output data
+        :param opt_state: optimizer state
+        :return: optimizer state
+        """
+        model, opt_state, loss = make_step(model, x, y, opt_state)
+        return model, opt_state, loss
+
+    df = read_data(data_path)
+
+    data_X = df[input_keys].to_numpy()
+    data_Y = df[output_keys].to_numpy()
+
+    log_data_Y = np.log(data_Y)
+
+    train_X, test_X, train_Y, test_Y = train_test_split(
+        data_X,
+        log_data_Y,
+        batch_size,
+        test_size=validation_split,
+    )
+
+    table = Table(title="Data")
+    table.add_column("Parameter", justify="left")
+    table.add_column("Value", justify="left")
+    table.add_row("Input Keys", ", ".join(input_keys))
+    table.add_row("Output Keys", ", ".join(output_keys))
+    table.add_row("Hidden Layers", ", ".join(map(str, hidden_layers)))
+    table.add_row("Data Path", data_path)
+    table.add_row("Checkpoint Path", checkpoint_path)
+    table.add_row("Train Size", str(len(train_X)))
+    table.add_row("Test Size", str(len(test_X)))
+    table.add_row("Validation Split", str(validation_split))
+    table.add_row("Batch Size", str(batch_size))
+    table.add_row("Epochs", str(epochs))
+    table.add_row("Learning Rate", str(learning_rate))
+
+    console = Console()
+    console.print(table)
+
+    model = make(
+        key=get_key(),
+        input_layer=len(input_keys),
+        output_layer=len(output_keys),
+        hidden_layers=hidden_layers,
+    )
+
+    opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
+
+    loss_vals = []
+    val_loss_vals = []
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("Epoch {task.fields[epoch]}"),
+        BarColumn(),
+        TimeRemainingColumn(elapsed_when_finished=True),
+        TextColumn("[progress.description]{task.description}"),
+    ) as progress:
+        total = int(len(train_X) // batch_size)
+        for epoch in range(epochs):
+            task_id = progress.add_task(
+                "",
+                total=total,
+                epoch=epoch + 1,
+            )
+            epoch_loss = 0
+            for i in range(0, len(train_X), batch_size):
+                x = train_X[i : i + batch_size]
+                y = train_Y[i : i + batch_size]
+
+                model, opt_state, loss = train_step(model, x, y, opt_state)
+                epoch_loss += loss
+                progress.update(
+                    task_id,
+                    advance=1,
+                    description=f"loss: {loss:.4f}",
+                )
+
+            loss = epoch_loss / (len(train_X) // batch_size)
+            loss_vals.append(loss)
+
+            val_loss = compute_accuracy(model, test_X, test_Y)
+            val_loss_vals.append(val_loss)
+            progress.update(
+                task_id,
+                advance=1,
+                description=f"loss: {loss:.4f} - val loss: {val_loss:.4f}",
+            )
+
+    if plot_loss:
+        plt.plot(loss_vals, label="loss")
+        plt.plot(val_loss_vals, label="val loss")
         plt.yscale("log")
-        plt.plot(history.history["loss"], label="train")
-        plt.plot(history.history["val_loss"], label="test")
         plt.legend()
         plt.tight_layout()
-        if save:
-            plt.savefig(file_path)
         plt.show()
+
+    if checkpoint_path is not None:
+        save(
+            filename=checkpoint_path,
+            hyperparams={
+                "input_layer": len(input_keys),
+                "output_layer": len(output_keys),
+                "hidden_layers": hidden_layers,
+            },
+            model=model,
+        )
