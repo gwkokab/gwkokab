@@ -13,22 +13,16 @@
 #  limitations under the License.
 
 
-import os
-
-
-os.environ["KERAS_BACKEND"] = "jax"
-
-
 from functools import partial
 from typing_extensions import Optional, Self
 
 import jax
-import keras
 from jax import jit, lax, numpy as jnp
 from jaxtyping import Array
 from numpyro import distributions as dist
 
 from ..models.utils.jointdistribution import JointDistribution
+from ..vts.neuralvt import load_model
 
 
 class LogInhomogeneousPoissonProcessLikelihood:
@@ -73,7 +67,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         self.model_configs = model_config
         self.subroutine()
         if neural_vt_path is not None:
-            self.logVT: keras.Model = keras.models.load_model(neural_vt_path)
+            _, self.logVT = load_model(neural_vt_path)
 
     def subroutine(self: Self):
         k = 0

@@ -24,15 +24,10 @@ from numpyro.distributions import *
 from numpyro.distributions.constraints import *
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 
-from ..models.utils.jointdistribution import JointDistribution
-
-
-os.environ["KERAS_BACKEND"] = "jax"
-import keras
-
 from ..errors import error_factory
 from ..models import *
 from ..models.utils.constraints import *
+from ..models.utils.jointdistribution import JointDistribution
 from ..utils.misc import get_key
 
 
@@ -71,7 +66,9 @@ class PopulationGenerator(object):
         self._extra_size = general["extra_size"]
         self._vt_filename = selection_effect.get("vt_filename", None) if selection_effect else None
         if self._vt_filename is not None:
-            self.logVT: keras.models.Model = keras.models.load_model(self._vt_filename)
+            from ..vts.neuralvt import load_model  # imported here to avoid circular import
+
+            _, self.logVT = load_model(self._vt_filename)
             self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
             self._m1q_selection = eval(selection_effect.get("m1q", "False"))
             self._selection_models: list[str] = eval(selection_effect.get("models", None))

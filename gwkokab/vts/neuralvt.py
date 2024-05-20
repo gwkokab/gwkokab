@@ -165,7 +165,7 @@ def make(*, key, input_layer: int, output_layer: int, hidden_layers: Optional[li
     return model
 
 
-def save(*, filename: str, hyperparams: dict[str, Any], model) -> None:
+def save_model(*, filename: str, hyperparams: dict[str, Any], model) -> None:
     """Save the model to the given file.
 
     :param filename: Name of the file to save the model
@@ -178,7 +178,7 @@ def save(*, filename: str, hyperparams: dict[str, Any], model) -> None:
         eqx.tree_serialise_leaves(f, model)
 
 
-def load(filename) -> tuple[dict[str, Any], PyTree]:
+def load_model(filename) -> tuple[dict[str, Any], PyTree]:
     """Load the model from the given file.
 
     :param filename: Name of the file to load the model
@@ -349,7 +349,7 @@ def train_regressor(
         plt.show()
 
     if checkpoint_path is not None:
-        save(
+        save_model(
             filename=checkpoint_path,
             hyperparams={
                 "input_layer": len(input_keys),
