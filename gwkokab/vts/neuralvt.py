@@ -29,7 +29,7 @@ import polars as pl
 from jax import numpy as jnp
 from jaxtyping import Array, PyTree
 from rich.console import Console
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
+from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 from rich.table import Table
 
 from ..utils import get_key
@@ -272,7 +272,7 @@ def train_regressor(
         test_size=validation_split,
     )
 
-    table = Table(title="Data")
+    table = Table(title="Summary of the Neural Network Model", highlight=True)
     table.add_column("Parameter", justify="left")
     table.add_column("Value", justify="left")
     table.add_row("Input Keys", ", ".join(input_keys))
@@ -306,8 +306,10 @@ def train_regressor(
         SpinnerColumn(),
         TextColumn("Epoch {task.fields[epoch]}"),
         BarColumn(),
+        MofNCompleteColumn(),
         TimeRemainingColumn(elapsed_when_finished=True),
         TextColumn("[progress.description]{task.description}"),
+        refresh_per_second=5,
     ) as progress:
         total = int(len(train_X) // batch_size)
         for epoch in range(epochs):
@@ -336,17 +338,9 @@ def train_regressor(
             val_loss_vals.append(val_loss)
             progress.update(
                 task_id,
-                advance=1,
+                completed=total,
                 description=f"loss: {loss:.4f} - val loss: {val_loss:.4f}",
             )
-
-    if plot_loss:
-        plt.plot(loss_vals, label="loss")
-        plt.plot(val_loss_vals, label="val loss")
-        plt.yscale("log")
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
 
     if checkpoint_path is not None:
         save_model(
@@ -358,3 +352,12 @@ def train_regressor(
             },
             model=model,
         )
+
+    if plot_loss:
+        plt.plot(loss_vals, label="loss")
+        plt.plot(val_loss_vals, label="val loss")
+        plt.yscale("log")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig("loss.png")
+        plt.show()
