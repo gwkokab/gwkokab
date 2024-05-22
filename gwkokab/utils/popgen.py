@@ -69,6 +69,7 @@ class PopulationGenerator(object):
             from ..vts.neuralvt import load_model  # imported here to avoid circular import
 
             _, self.logVT = load_model(self._vt_filename)
+            self.logVT = jax.vmap(self.logVT)
             self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
             self._m1q_selection = eval(selection_effect.get("m1q", "False"))
             self._selection_models: list[str] = eval(selection_effect.get("models", None))

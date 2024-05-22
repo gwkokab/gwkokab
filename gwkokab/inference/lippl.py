@@ -68,6 +68,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         self.subroutine()
         if neural_vt_path is not None:
             _, self.logVT = load_model(neural_vt_path)
+            self.logVT = jax.vmap(self.logVT)
 
     def subroutine(self: Self):
         k = 0
