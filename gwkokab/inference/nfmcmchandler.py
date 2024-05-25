@@ -110,7 +110,7 @@ class NFMCMCHandler:
         nf_sampler = Sampler(
             self._likelihood_obj.n_dim,
             get_key(),
-            None,
+            self.load_dataset(),
             MALA_Sampler,
             model,
             n_loop_training=self._n_loop_training,

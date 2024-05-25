@@ -13,11 +13,10 @@
 #  limitations under the License.
 
 
-from functools import partial
 from typing_extensions import Optional, Self
 
 import jax
-from jax import jit, lax, numpy as jnp
+from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro import distributions as dist
 
@@ -126,16 +125,20 @@ class LogInhomogeneousPoissonProcessLikelihood:
         rparam = jax.tree.map(lambda index: rparams[index], self.rparams[model_id])
         return model(**fparams, **rparam)
 
-    @partial(jit, static_argnums=(0,))
     def sum_log_prior(self: Self, value: Array) -> Array:
         r"""Sum of log prior probabilities.
 
         :param value: Value for which the prior probabilities are to be calculated.
         :return: Sum of log prior probabilities.
         """
-        return jnp.sum(jnp.asarray([prior.log_prob(value[i]) for i, prior in enumerate(self.priors)]))
+        log_prior = 0
+        for i, prior in enumerate(self.priors):
+            log_prior_i = prior.log_prob(value[i])
+            if jnp.isfinite(log_prior_i) is False:
+                return -jnp.inf
+            log_prior += log_prior_i
+        return log_prior
 
-    @partial(jit, static_argnums=(0,))
     def exp_rate(self: Self, rparams: Array) -> Array:
         r"""This function calculates the integral inside the term $\exp(\Lambda)$ in the
         likelihood function. The integral is given by,
@@ -153,7 +156,6 @@ class LogInhomogeneousPoissonProcessLikelihood:
         samples = model.sample(10000, (N,))
         return jnp.mean(jnp.exp(self.logVT(samples)))
 
-    @partial(jit, static_argnums=(0,))
     def log_likelihood(self: Self, rparams: Array, data: Optional[dict] = None):
         """The log likelihood function for the inhomogeneous Poisson process.
 
@@ -174,19 +176,16 @@ class LogInhomogeneousPoissonProcessLikelihood:
         )
 
         log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(integral_individual)))
+        if jnp.isfinite(log_likelihood) is False:
+            return -jnp.inf
+
         log_rate = jnp.log(rparams[self.frparams["rate"]["id"]])
         log_likelihood += data["N"] * log_rate
 
-        log_likelihood -= lax.cond(
-            jnp.isfinite(log_likelihood),
-            lambda r: self.exp_rate(r),  # true function
-            lambda r: 0.0,  # false function
-            rparams,
-        )
+        log_likelihood -= self.exp_rate(rparams)
 
         return log_likelihood
 
-    @partial(jit, static_argnums=(0,))
     def log_posterior(self: Self, rparams: Array, data: Optional[dict] = None):
         r"""The likelihood function for the inhomogeneous Poisson process.
 
@@ -197,10 +196,6 @@ class LogInhomogeneousPoissonProcessLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.sum_log_prior(rparams)
-        return log_prior + lax.cond(
-            jnp.isfinite(log_prior),
-            lambda r, d: self.log_likelihood(r, d),  # true function
-            lambda r, d: 0.0,  # false function
-            rparams,
-            data,
-        )
+        if jnp.isfinite(log_prior) is False:
+            return -jnp.inf
+        return log_prior + self.log_likelihood(rparams, data)
