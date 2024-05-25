@@ -14,12 +14,14 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 from jax import jit, lax
 
 from ..typing import Numeric
 
 
-@jit
+@partial(jit, inline=True)
 def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     $$M_c = \frac{(m_1 m_2)^{\frac{3}{5}}}{(m_1 + m_2)^{\frac{1}{5}}}$$
@@ -31,7 +33,7 @@ def chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
     return lax.mul(lax.pow(lax.mul(m1, m2), 0.6), lax.pow(lax.add(m1, m2), -0.2))
 
 
-@jit
+@partial(jit, inline=True)
 def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     $$\eta = \frac{m_1 m_2}{(m_1 + m_2)^2}$$
@@ -43,7 +45,7 @@ def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     return lax.mul(lax.mul(m1, m2), lax.pow(lax.add(m1, m2), -2))
 
 
-@jit
+@partial(jit, inline=True)
 def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     $$M_r = \frac{m_1 m_2}{m_1 + m_2}$$
@@ -55,7 +57,7 @@ def reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
     return lax.div(lax.mul(m1, m2), lax.add(m1, m2))
 
 
-@jit
+@partial(jit, inline=True)
 def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     $$q=\frac{m_2}{m_1}$$
