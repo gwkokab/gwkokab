@@ -14,13 +14,14 @@
 
 from __future__ import annotations
 
-import jax
-from jax import numpy as jnp
+from functools import partial
+
+from jax import jit, numpy as jnp
 
 from ...typing import Numeric
 
 
-@jax.jit
+@partial(jit, inline=True)
 def smoothing_kernel(mass: Numeric, mass_min: Numeric, delta: Numeric) -> Numeric:
     r"""See equation B4 in [Population Properties of Compact Objects from the Second
     LIGO-Virgo Gravitational-Wave Transient Catalog](https://arxiv.org/abs/2010.14533).
@@ -40,26 +41,12 @@ def smoothing_kernel(mass: Numeric, mass_min: Numeric, delta: Numeric) -> Numeri
     :param delta: small mass difference
     :return: smoothing kernel value
     """
-
-    @jax.jit
-    def sub_kernel(mass_: Numeric, delta_m: Numeric) -> Numeric:
-        r"""See equation B5 in `Population Properties of Compact Objects from the Second
-        LIGO-Virgo Gravitational-Wave Transient Catalog <https://arxiv.org/abs/2010.14533>__`.
-
-        :param mass_: mass of the primary black hole
-        :param delta_m: small mass difference
-        :return: smoothing function
-        """
-        return jnp.exp((delta_m / mass_) + (delta_m / (mass_ - delta_m)))
-
     conditions = [
         mass < mass_min,
         (mass_min <= mass) & (mass < mass_min + delta),
-        mass >= mass_min + delta,
     ]
     choices = [
         jnp.zeros_like(mass),
-        jnp.reciprocal(1 + sub_kernel(mass - mass_min, delta)),
-        jnp.ones_like(mass),
+        jnp.reciprocal(1 + jnp.exp((delta / (mass - mass_min)) + (delta / (mass - mass_min - delta)))),
     ]
-    return jnp.select(conditions, choices)
+    return jnp.select(conditions, choices, default=jnp.ones_like(mass))

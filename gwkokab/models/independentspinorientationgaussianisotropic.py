@@ -25,8 +25,6 @@ def IndependentSpinOrientationGaussianIsotropic(
     zeta: float,
     sigma1: float,
     sigma2: float,
-    *,
-    validate_args=None,
 ):
     r"""A mixture model of spin orientations with isotropic and normally
     distributed components. See Eq. (4) of [Determining the population
@@ -56,19 +54,20 @@ def IndependentSpinOrientationGaussianIsotropic(
             scale=sigma1,
             low=-1,
             high=1,
-            validate_args=validate_args,
+            validate_args=True,
         ),
         dist.TruncatedNormal(
             loc=1.0,
             scale=sigma2,
             low=-1,
             high=1,
-            validate_args=validate_args,
+            validate_args=True,
         ),
     )
 
     return dist.MixtureGeneral(
         mixing_distribution=dist.Categorical(probs=mixing_probs),
         component_distributions=[component_0_dist, component_1_dist],
-        validate_args=validate_args,
+        support=dist.constraints.real,
+        validate_args=True,
     )

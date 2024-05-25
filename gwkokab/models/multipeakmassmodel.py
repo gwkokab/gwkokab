@@ -64,8 +64,8 @@ class MultiPeakMassModel(dist.Distribution):
         "lam": dist.constraints.interval(0, 1),
         "lam1": dist.constraints.interval(0, 1),
         "delta": dist.constraints.positive,
-        "mmin": dist.constraints.positive,
-        "mmax": dist.constraints.positive,
+        "mmin": dist.constraints.dependent,
+        "mmax": dist.constraints.dependent,
         "mu1": dist.constraints.positive,
         "sigma1": dist.constraints.positive,
         "mu2": dist.constraints.positive,
@@ -125,7 +125,7 @@ class MultiPeakMassModel(dist.Distribution):
             jnp.shape(mu2),
             jnp.shape(sigma2),
         )
-        self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(MultiPeakMassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -133,6 +133,10 @@ class MultiPeakMassModel(dist.Distribution):
         )
 
         self._normalization()
+
+    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        return self._support
 
     def _normalization(self):
         """Precomputes the normalization constant for the primary mass model

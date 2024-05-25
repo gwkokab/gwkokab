@@ -54,8 +54,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
         "alpha1": dist.constraints.real,
         "alpha2": dist.constraints.real,
         "beta_q": dist.constraints.real,
-        "mmin": dist.constraints.positive,
-        "mmax": dist.constraints.positive,
+        "mmin": dist.constraints.dependent,
+        "mmax": dist.constraints.dependent,
         "mbreak": dist.constraints.positive,
         "delta": dist.constraints.positive,
     }
@@ -84,7 +84,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
             jnp.shape(mbreak),
             jnp.shape(delta),
         )
-        self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(BrokenPowerLawMassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -101,6 +101,10 @@ class BrokenPowerLawMassModel(dist.Distribution):
             xmax=self.mmax,
         )
         self._normalization()
+
+    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        return self._support
 
     def _normalization(self):
         """Precomputes the normalization constant for the primary mass model

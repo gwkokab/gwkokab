@@ -39,8 +39,8 @@ class Wysocki2019MassModel(dist.Distribution):
 
     arg_constraints = {
         "alpha_m": dist.constraints.real,
-        "mmin": dist.constraints.positive,
-        "mmax": dist.constraints.positive,
+        "mmin": dist.constraints.dependent,
+        "mmax": dist.constraints.dependent,
     }
 
     def __init__(self, alpha_m: float, mmin: float, mmax: float) -> None:
@@ -55,12 +55,16 @@ class Wysocki2019MassModel(dist.Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
         )
-        self.support = mass_sandwich(self.mmin, self.mmax)
+        self._support = mass_sandwich(mmin, mmax)
         super(Wysocki2019MassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
             validate_args=True,
         )
+
+    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        return self._support
 
     @validate_sample
     def log_prob(self, value):

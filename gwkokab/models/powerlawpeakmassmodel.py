@@ -57,8 +57,8 @@ class PowerLawPeakMassModel(dist.Distribution):
         "beta": dist.constraints.real,
         "lam": dist.constraints.interval(0, 1),
         "delta": dist.constraints.real,
-        "mmin": dist.constraints.real,
-        "mmax": dist.constraints.real,
+        "mmin": dist.constraints.dependent,
+        "mmax": dist.constraints.dependent,
         "mu": dist.constraints.real,
         "sigma": dist.constraints.positive,
     }
@@ -104,7 +104,7 @@ class PowerLawPeakMassModel(dist.Distribution):
             jnp.shape(mu),
             jnp.shape(sigma),
         )
-        self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(PowerLawPeakMassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -112,6 +112,10 @@ class PowerLawPeakMassModel(dist.Distribution):
         )
 
         self._normalization()
+
+    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        return self._support
 
     def _normalization(self):
         """Precomputes the normalization constant for the primary mass model

@@ -41,8 +41,8 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     arg_constraints = {
         "alpha": dist.constraints.real,
         "beta": dist.constraints.real,
-        "mmin": dist.constraints.positive,
-        "mmax": dist.constraints.positive,
+        "mmin": dist.constraints.dependent,
+        "mmax": dist.constraints.dependent,
     }
 
     def __init__(self, alpha: float, beta: float, mmin: float, mmax: float) -> None:
@@ -54,12 +54,16 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         """
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(alpha, beta, mmin, mmax)
         batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax))
-        self.support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(PowerLawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
             validate_args=True,
         )
+
+    @dist.constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self):
+        return self._support
 
     @validate_sample
     def log_prob(self, value):
