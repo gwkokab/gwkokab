@@ -22,6 +22,7 @@ CORE_LABELS: set[str] = {
     "documentation",
     "enhancement",
     "experimental",
+    "bug",
     # "panic / crash",
 }
 # A set of labels for adding in labels that we want present in the final
