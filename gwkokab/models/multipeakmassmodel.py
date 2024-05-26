@@ -158,11 +158,11 @@ class MultiPeakMassModel(dist.Distribution):
         )
 
         value = jnp.column_stack([mm1, qq])
-        support = self.support(value)
         self._logZ = jnp.zeros_like(self.mmin)
         log_prob = self.log_prob(value)
         prob = jnp.exp(log_prob)
-        self._logZ = jnp.log(jnp.mean(prob, axis=-1, where=support))
+        volume = jnp.prod(self.mmax - self.mmin)
+        self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_primary_mass_model(self, m1: Numeric) -> Numeric:

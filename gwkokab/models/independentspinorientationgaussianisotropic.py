@@ -45,8 +45,8 @@ def IndependentSpinOrientationGaussianIsotropic(
     """
     mixing_probs = jnp.array([1 - zeta, zeta])
     component_0_dist = JointDistribution(
-        dist.Uniform(low=-1, high=1, validate_args=False),
-        dist.Uniform(low=-1, high=1, validate_args=False),
+        dist.Uniform(low=-1, high=1, validate_args=True),
+        dist.Uniform(low=-1, high=1, validate_args=True),
     )
     component_1_dist = JointDistribution(
         dist.TruncatedNormal(

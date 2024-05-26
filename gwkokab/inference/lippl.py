@@ -153,7 +153,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         N = 1 << 13
         model_ids = list(set(self.vt_params_available.values()))
         model = JointDistribution(*[self.get_model(model_id, rparams) for model_id in model_ids])
-        samples = model.sample(10000, (N,))
+        samples = model.sample(10_000, (N,))
         return jnp.mean(jnp.exp(self.logVT(samples)))
 
     def log_likelihood(self: Self, rparams: Array, data: Optional[dict] = None):
@@ -176,13 +176,16 @@ class LogInhomogeneousPoissonProcessLikelihood:
         )
 
         log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(integral_individual)))
+
         if jnp.isfinite(log_likelihood) is False:
             return -jnp.inf
 
-        log_rate = jnp.log(rparams[self.frparams["rate"]["id"]])
+        rate = rparams[self.frparams["rate"]["id"]]
+        log_rate = jnp.log(rate)
+
         log_likelihood += data["N"] * log_rate
 
-        log_likelihood -= self.exp_rate(rparams)
+        log_likelihood -= rate * self.exp_rate(rparams)
 
         return log_likelihood
 
@@ -196,6 +199,8 @@ class LogInhomogeneousPoissonProcessLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.sum_log_prior(rparams)
+
         if jnp.isfinite(log_prior) is False:
             return -jnp.inf
+
         return log_prior + self.log_likelihood(rparams, data)
