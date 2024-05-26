@@ -44,6 +44,8 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         "mmin": dist.constraints.dependent,
         "mmax": dist.constraints.dependent,
     }
+    reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
+    pytree_aux_fields = ("_support",)
 
     def __init__(self, alpha: float, beta: float, mmin: float, mmax: float) -> None:
         """

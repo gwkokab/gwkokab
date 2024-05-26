@@ -42,6 +42,8 @@ class Wysocki2019MassModel(dist.Distribution):
         "mmin": dist.constraints.dependent,
         "mmax": dist.constraints.dependent,
     }
+    reparametrized_params = ["alpha_m", "mmin", "mmax"]
+    pytree_aux_fields = ("_support",)
 
     def __init__(self, alpha_m: float, mmin: float, mmax: float) -> None:
         r"""

@@ -59,6 +59,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
         "mbreak": dist.constraints.positive,
         "delta": dist.constraints.positive,
     }
+    reparametrized_params = ["alpha1", "alpha2", "beta_q", "mmin", "mmax", "mbreak", "delta"]
+    pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
         self, alpha1: float, alpha2: float, beta_q: float, mmin: float, mmax: float, mbreak: float, delta: float

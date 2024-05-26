@@ -62,6 +62,8 @@ class PowerLawPeakMassModel(dist.Distribution):
         "mu": dist.constraints.real,
         "sigma": dist.constraints.positive,
     }
+    reparametrized_params = ["alpha", "beta", "lam", "delta", "mmin", "mmax", "mu", "sigma"]
+    pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
         self,

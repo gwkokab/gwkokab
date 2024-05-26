@@ -60,6 +60,8 @@ class TruncatedPowerLaw(dist.Distribution):
         "xmin": dist.constraints.dependent,
         "xmax": dist.constraints.dependent,
     }
+    reparametrized_params = ["alpha", "xmin", "xmax"]
+    pytree_aux_fields = ("_support", "_logZ")
 
     def __init__(self, alpha: float, xmin: float, xmax: float):
         r"""

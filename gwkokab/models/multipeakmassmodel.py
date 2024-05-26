@@ -71,6 +71,8 @@ class MultiPeakMassModel(dist.Distribution):
         "mu2": dist.constraints.positive,
         "sigma2": dist.constraints.positive,
     }
+    reparametrized_params = ["alpha", "beta", "lam", "lam1", "delta", "mmin", "mmax", "mu1", "sigma1", "mu2", "sigma2"]
+    pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
         self,
