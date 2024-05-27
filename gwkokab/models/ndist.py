@@ -17,10 +17,11 @@ from __future__ import annotations
 
 import jax
 from jax import numpy as jnp
+from jaxtyping import Int
 from numpyro import distributions as dist
 
 
-def NDistribution(distribution: dist.Distribution, n: int, **params) -> dist.MixtureGeneral:
+def NDistribution(distribution: dist.Distribution, n: Int, **params) -> dist.MixtureGeneral:
     """Mixture of any $n$ distributions.
 
     ```python

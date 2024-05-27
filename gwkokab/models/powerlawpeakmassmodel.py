@@ -16,9 +16,11 @@
 from __future__ import annotations
 
 from functools import partial
+from typing_extensions import Self
 
 from jax import jit, lax, numpy as jnp, random as jrd
 from jax.scipy.stats import norm
+from jaxtyping import Float
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -66,16 +68,16 @@ class PowerLawPeakMassModel(dist.Distribution):
     pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
-        self,
-        alpha: float,
-        beta: float,
-        lam: float,
-        delta: float,
-        mmin: float,
-        mmax: float,
-        mu: float,
-        sigma: float,
-    ):
+        self: Self,
+        alpha: Float,
+        beta: Float,
+        lam: Float,
+        delta: Float,
+        mmin: Float,
+        mmax: Float,
+        mu: Float,
+        sigma: Float,
+    ) -> None:
         r"""
         :param alpha: Power-law index for primary mass model
         :param beta: Power-law index for mass ratio model
@@ -146,7 +148,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self, m1: Numeric) -> Numeric:
+    def _log_prob_primary_mass_model(self: Self, m1: Numeric) -> Numeric:
         r"""Log probability of primary mass model.
 
         .. math::
@@ -168,7 +170,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         return log_prob_val
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_mass_ratio_model(self, m1: Numeric, q: Numeric) -> Numeric:
+    def _log_prob_mass_ratio_model(self: Self, m1: Numeric, q: Numeric) -> Numeric:
         r"""Log probability of mass ratio model
 
         .. math::
@@ -183,7 +185,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         return self.beta * jnp.log(q) + log_smoothing_val
 
     @validate_sample
-    def log_prob(self, value):
+    def log_prob(self: Self, value):
         m1 = value[..., 0]
         q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)

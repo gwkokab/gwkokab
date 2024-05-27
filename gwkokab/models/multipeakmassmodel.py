@@ -16,9 +16,11 @@
 from __future__ import annotations
 
 from functools import partial
+from typing_extensions import Self
 
 from jax import jit, lax, numpy as jnp, random as jrd
 from jax.scipy.stats import norm
+from jaxtyping import Float
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -75,18 +77,18 @@ class MultiPeakMassModel(dist.Distribution):
     pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
-        self,
-        alpha: float,
-        beta: float,
-        lam: float,
-        lam1: float,
-        delta: float,
-        mmin: float,
-        mmax: float,
-        mu1: float,
-        sigma1: float,
-        mu2: float,
-        sigma2: float,
+        self: Self,
+        alpha: Float,
+        beta: Float,
+        lam: Float,
+        lam1: Float,
+        delta: Float,
+        mmin: Float,
+        mmax: Float,
+        mu1: Float,
+        sigma1: Float,
+        mu2: Float,
+        sigma2: Float,
     ):
         r"""
         :param alpha: Power-law index for primary mass model
@@ -167,7 +169,7 @@ class MultiPeakMassModel(dist.Distribution):
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self, m1: Numeric) -> Numeric:
+    def _log_prob_primary_mass_model(self: Self, m1: Numeric) -> Numeric:
         r"""Log probability of primary mass model.
 
         $$
@@ -193,7 +195,7 @@ class MultiPeakMassModel(dist.Distribution):
         return log_prob_val
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_mass_ratio_model(self, m1: Numeric, q: Numeric) -> Numeric:
+    def _log_prob_mass_ratio_model(self: Self, m1: Numeric, q: Numeric) -> Numeric:
         r"""Log probability of mass ratio model
 
         $$\log p(q\mid m_1) = \beta \log q + \log S(m_1q\mid m_{\text{min}},\delta_m)$$
@@ -206,7 +208,7 @@ class MultiPeakMassModel(dist.Distribution):
         return self.beta * jnp.log(q) + log_smoothing_val
 
     @validate_sample
-    def log_prob(self, value):
+    def log_prob(self: Self, value):
         m1 = value[..., 0]
         q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)

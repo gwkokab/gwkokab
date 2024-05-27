@@ -14,10 +14,11 @@
 
 from __future__ import annotations
 
+from jaxtyping import Float
 from numpyro.distributions import MultivariateNormal
 
 
-def GaussianSpinModel(mu_eff: float, sigma_eff: float, mu_p: float, sigma_p: float, rho: float) -> MultivariateNormal:
+def GaussianSpinModel(mu_eff: Float, sigma_eff: Float, mu_p: Float, sigma_p: Float, rho: Float) -> MultivariateNormal:
     r"""Bivariate normal distribution for the effective and precessing spins.
     See Eq. (D3) and (D4) in [Population Properties of Compact Objects from
     the Second LIGO-Virgo Gravitational-Wave Transient

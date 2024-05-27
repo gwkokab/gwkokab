@@ -15,11 +15,11 @@
 from __future__ import annotations
 
 from functools import partial
-from typing_extensions import Optional
+from typing_extensions import Optional, Self
 
 from jax import jit, lax, numpy as jnp
 from jax.random import uniform
-from jaxtyping import Array
+from jaxtyping import Array, Float
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -63,7 +63,7 @@ class TruncatedPowerLaw(dist.Distribution):
     reparametrized_params = ["alpha", "xmin", "xmax"]
     pytree_aux_fields = ("_support", "_logZ")
 
-    def __init__(self, alpha: float, xmin: float, xmax: float):
+    def __init__(self: Self, alpha: Float, xmin: Float, xmax: Float) -> None:
         r"""
         :param alpha: Index of the power law
         :param xmin: Lower truncation limit
@@ -93,10 +93,10 @@ class TruncatedPowerLaw(dist.Distribution):
         )
 
     @validate_sample
-    def log_prob(self, value: Numeric) -> Numeric:
+    def log_prob(self: Self, value: Numeric) -> Numeric:
         return self.alpha * jnp.log(value) - self._logZ
 
-    def sample(self, key: Optional[Array | int], sample_shape: tuple = ()):
+    def sample(self: Self, key: Optional[Array | int], sample_shape: tuple = ()):
         if key is None or isinstance(key, int):
             key = get_key(key)
         U = uniform(key, sample_shape + self.batch_shape)

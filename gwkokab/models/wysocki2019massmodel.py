@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
-from typing_extensions import Optional
+from typing_extensions import Optional, Self
 
 from jax import lax, numpy as jnp
-from jaxtyping import Array
+from jaxtyping import Array, Float
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -45,7 +45,7 @@ class Wysocki2019MassModel(dist.Distribution):
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha_m: float, mmin: float, mmax: float) -> None:
+    def __init__(self: Self, alpha_m: Float, mmin: Float, mmax: Float) -> None:
         r"""
         :param alpha_m: index of the power law distribution
         :param mmin: lower mass limit
@@ -69,7 +69,7 @@ class Wysocki2019MassModel(dist.Distribution):
         return self._support
 
     @validate_sample
-    def log_prob(self, value):
+    def log_prob(self: Self, value):
         m1 = value[..., 0]
         log_prob_m1 = TruncatedPowerLaw(
             alpha=-self.alpha_m,
@@ -79,7 +79,7 @@ class Wysocki2019MassModel(dist.Distribution):
         log_prob_m2_given_m1 = -jnp.log(m1 - self.mmin)
         return log_prob_m1 + log_prob_m2_given_m1
 
-    def sample(self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
+    def sample(self: Self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
         if key is None or isinstance(key, int):
             key = get_key(key)
         m2 = dist.Uniform(
