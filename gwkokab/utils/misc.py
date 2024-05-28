@@ -18,7 +18,7 @@ from typing_extensions import Any, Optional
 
 import jax
 import numpy as np
-from jaxtyping import Array
+from jaxtyping import Array, Int
 
 
 def dump_configurations(filename: str, *args: tuple[str, Any]) -> None:
@@ -33,7 +33,7 @@ def dump_configurations(filename: str, *args: tuple[str, Any]) -> None:
     np.savetxt(filename, np.array([[arg[1] for arg in args]]), header="\t".join(arg[0] for arg in args))
 
 
-def get_key(key: Optional[Array | int] = None) -> Array:
+def get_key(key: Optional[Array | Int] = None) -> Array:
     r"""Get a new JAX random key if not provide. The key is
     generated using the `jax.random.PRNGKey` function. It is
     split into two keys, the first of which is returned. The

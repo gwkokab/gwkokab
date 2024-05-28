@@ -20,7 +20,7 @@ from typing_extensions import Optional
 import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, vmap
 from jax.random import normal, uniform
-from jaxtyping import Array
+from jaxtyping import Array, Float, Int
 from numpyro import distributions as dist
 
 from ..utils import chirp_mass, get_key, symmetric_mass_ratio
@@ -28,10 +28,10 @@ from ..utils import chirp_mass, get_key, symmetric_mass_ratio
 
 def normal_error(
     x: Array,
-    size: int,
+    size: Int,
     key: Array,
     *,
-    scale: float,
+    scale: Float,
 ) -> Array:
     r"""Add normal error to the given values.
 
@@ -55,10 +55,10 @@ def normal_error(
 
 def truncated_normal_error(
     x: Array,
-    size: int,
+    size: Int,
     key: Array,
     *,
-    scale: float,
+    scale: Float,
     lower: Optional[float] = None,
     upper: Optional[float] = None,
 ) -> Array:
@@ -83,7 +83,7 @@ def truncated_normal_error(
     )(x)
 
 
-def uniform_error(x: Array, size: int, key: Array, *, lower: float, upper: float) -> Array:
+def uniform_error(x: Array, size: Int, key: Array, *, lower: Float, upper: Float) -> Array:
     r"""Add uniform error to the given values.
 
     $$x' \sim x+\mathcal{U}(a=lower, b=upper)$$
@@ -100,11 +100,11 @@ def uniform_error(x: Array, size: int, key: Array, *, lower: float, upper: float
 
 def banana_error_m1_m2(
     x: Array,
-    size: int,
+    size: Int,
     key: Array,
     *,
-    scale_Mc: float = 1.0,
-    scale_eta: float = 1.0,
+    scale_Mc: Float = 1.0,
+    scale_eta: Float = 1.0,
 ) -> Array:
     r"""Add banana error to the given values. Section 3 of the [Model-independent
     inference on compact-binary observations](https://doi.org/10.1093/mnras/stw2883)
@@ -167,11 +167,11 @@ def banana_error_m1_m2(
 
 def banana_error_m1_q(
     x: Array,
-    size: int,
+    size: Int,
     key: Array,
     *,
-    scale_Mc: float = 1.0,
-    scale_eta: float = 1.0,
+    scale_Mc: Float = 1.0,
+    scale_eta: Float = 1.0,
 ) -> Array:
     """Add banana error to the given values. This function is similar to the
     `banana_error_m1_m2` function but returns the values as m1 and q
