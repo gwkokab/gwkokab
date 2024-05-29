@@ -17,13 +17,15 @@ from typing_extensions import Optional, Self
 
 import jax
 from jax import numpy as jnp
-from jaxtyping import Array
+from jax.tree_util import register_pytree_node_class
+from jaxtyping import Array, Int
 from numpyro import distributions as dist
 
 from ..models.utils.jointdistribution import JointDistribution
 from ..vts.neuralvt import load_model
 
 
+@register_pytree_node_class
 class LogInhomogeneousPoissonProcessLikelihood:
     r"""This class is used to provide a likelihood function for the inhomogeneous
     Poisson process. The likelihood is given by,
@@ -63,13 +65,13 @@ class LogInhomogeneousPoissonProcessLikelihood:
         neural_vt_path: Optional[str] = None,
     ) -> None:
         self.frparams = frparams
-        self.model_configs = model_config
-        self.subroutine()
+
+        self.subroutine(model_config)
         if neural_vt_path is not None:
             _, self.logVT = load_model(neural_vt_path)
             self.logVT = jax.vmap(self.logVT)
 
-    def subroutine(self: Self):
+    def subroutine(self: Self, model_configs: dict):
         k = 0
         self.rparams = []
         self.fparams = []
@@ -77,7 +79,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         self.models = []
         self.labels = {}
         self.vt_params_available = {}
-        for i, model in enumerate(self.model_configs):
+        for i, model in enumerate(model_configs):
             model["id"] = i
             if model.get("for_rate", False) is True:
                 for vt_param in model["vt_params"]:
@@ -106,14 +108,34 @@ class LogInhomogeneousPoissonProcessLikelihood:
             )
         self.n_dim = k
         self.priors: list[dist.Distribution] = [None] * self.n_dim
-        for i, model in enumerate(self.model_configs):
+        for i, model in enumerate(model_configs):
             for rparam in model["rparams"]:
                 self.priors[model["rparams"][rparam]["id"]] = model["rparams"][rparam]["prior"]
         if self.frparams is not None:
             for rparam in self.frparams:
                 self.priors[self.frparams[rparam]["id"]] = self.frparams[rparam]["prior"]
 
-    def get_model(self: Self, model_id: int, rparams: Array) -> dist.Distribution:
+    def tree_flatten(self):
+        children = ()
+        aux_data = {
+            "models": self.models,
+            "n_dim": self.n_dim,
+            "priors": self.priors,
+            "input_keys": self.input_keys,
+            "labels": self.labels,
+            "frparams": self.frparams,
+            "rparams": self.rparams,
+            "fparams": self.fparams,
+            "vt_params_available": self.vt_params_available,
+            "logVT": self.logVT,
+        }
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(*aux_data.values())
+
+    def get_model(self: Self, model_id: Int, rparams: Array) -> dist.Distribution:
         r"""Get the model for the given model_id and rparams.
 
         :param model_id: Model ID.
