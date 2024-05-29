@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing_extensions import Union
 
 import numpy as np
-from jaxtyping import Array
+from jaxtyping import Array, Bool, Float, Int
 
 
-Numeric = Union[Array, np.ndarray, np.bool_, np.number, bool, int, float]
+Numeric = Union[Array, np.ndarray, np.bool_, np.number, Bool, Int, Float]

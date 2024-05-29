@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
+from typing_extensions import Self
+
 from jax import lax, numpy as jnp
+from jaxtyping import Float
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -44,8 +47,10 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         "mmin": dist.constraints.dependent,
         "mmax": dist.constraints.dependent,
     }
+    reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
+    pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha: float, beta: float, mmin: float, mmax: float) -> None:
+    def __init__(self: Self, alpha: Float, beta: Float, mmin: Float, mmax: Float) -> None:
         """
         :param alpha: Power law index for primary mass
         :param beta: Power law index for mass ratio
@@ -66,7 +71,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         return self._support
 
     @validate_sample
-    def log_prob(self, value):
+    def log_prob(self: Self, value):
         m1 = value[..., 0]
         q = value[..., 1]
         log_prob_m1 = TruncatedPowerLaw(
@@ -81,7 +86,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         ).log_prob(q)
         return log_prob_m1 + log_prob_q
 
-    def sample(self, key, sample_shape: tuple = ()):
+    def sample(self: Self, key, sample_shape: tuple = ()):
         if key is None or isinstance(key, int):
             key = get_key(key)
 

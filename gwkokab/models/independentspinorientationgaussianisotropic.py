@@ -16,16 +16,13 @@
 from __future__ import annotations
 
 from jax import numpy as jnp
+from jaxtyping import Float
 from numpyro import distributions as dist
 
 from .utils import JointDistribution
 
 
-def IndependentSpinOrientationGaussianIsotropic(
-    zeta: float,
-    sigma1: float,
-    sigma2: float,
-):
+def IndependentSpinOrientationGaussianIsotropic(zeta: Float, sigma1: Float, sigma2: Float) -> dist.MixtureGeneral:
     r"""A mixture model of spin orientations with isotropic and normally
     distributed components. See Eq. (4) of [Determining the population
     properties of spinning black holes](https://arxiv.org/abs/1704.08370).

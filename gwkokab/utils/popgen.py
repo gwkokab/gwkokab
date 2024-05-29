@@ -20,6 +20,7 @@ from typing_extensions import Optional, Self
 import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd, vmap
+from jaxtyping import Float, Int
 from numpyro.distributions import *
 from numpyro.distributions.constraints import *
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
@@ -55,12 +56,12 @@ class PopulationGenerator(object):
         for _, model in models.items():
             self.check_models(model)
 
-        self._rate: float = general["rate"]
-        self._error_size: int = general["error_size"]
+        self._rate: Float = general["rate"]
+        self._error_size: Int = general["error_size"]
         self._root_container: str = general["root_container"]
         self._event_filename: str = general["event_filename"]
         self._config_filename: str = general["config_filename"]
-        self._num_realizations: int = general["num_realizations"]
+        self._num_realizations: Int = general["num_realizations"]
         self._models: list = models.values()
         self._models_dict: dict = models
         self._extra_size = general["extra_size"]
@@ -106,7 +107,7 @@ class PopulationGenerator(object):
             assert model.get("config_vars", None) is not None
             assert model.get("params", None) is not None
 
-    def exp_rate(self: Self) -> float:
+    def exp_rate(self: Self) -> Float:
         N = int(1e4)
         m1 = jrd.uniform(get_key(), (N,), minval=1, maxval=200)
         if self._m1m2_selection:
@@ -128,9 +129,9 @@ class PopulationGenerator(object):
         self: Self,
         input_filename: str,
         output_filename: str,
-        n_out: int,
-        m1_col_index: int,
-        m2_col_index: int,
+        n_out: Int,
+        m1_col_index: Int,
+        m2_col_index: Int,
     ) -> None:
         """Weighting masses by VTs.
 
@@ -159,9 +160,9 @@ class PopulationGenerator(object):
         self: Self,
         input_filename: str,
         output_filename: str,
-        n_out: int,
-        m1_col_index: int,
-        q_col_index: int,
+        n_out: Int,
+        m1_col_index: Int,
+        q_col_index: Int,
     ) -> None:
         """Weighting masses by VTs.
 
@@ -404,7 +405,7 @@ class PopulationGenerator(object):
         self._constraints: list[Optional[Constraint]] = []
 
         exp_rate = self._rate * self.exp_rate()
-        self._size: int = int(jrd.poisson(get_key(), exp_rate))
+        self._size: Int = int(jrd.poisson(get_key(), exp_rate))
 
         for model in self._models:
             model_instance = self.get_model_instance(model)

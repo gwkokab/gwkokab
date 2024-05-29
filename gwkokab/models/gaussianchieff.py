@@ -14,10 +14,11 @@
 
 from __future__ import annotations
 
+from jaxtyping import Float
 from numpyro.distributions import TruncatedNormal
 
 
-def GaussianChiEff(mu: float, sigma: float) -> TruncatedNormal:
+def GaussianChiEff(mu: Float, sigma: Float) -> TruncatedNormal:
     r"""Truncated normal distribution for the effective spin. See Eq. (3)-(4) in
     [The Low Effective Spin of Binary Black Holes and Implications for Individual
     Gravitational-Wave Events](https://arxiv.org/abs/2001.06051) and

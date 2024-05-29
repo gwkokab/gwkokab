@@ -24,6 +24,7 @@ from flowMC.nfmodel.rqSpline import MaskedCouplingRQSpline
 from flowMC.proposal.MALA import MALA
 from flowMC.Sampler import Sampler
 from jax import numpy as jnp
+from jaxtyping import Float, Int
 
 from ..utils import get_key
 from .lippl import LogInhomogeneousPoissonProcessLikelihood
@@ -37,23 +38,23 @@ class NFMCMCHandler:
         headers: list[str],
         likelihood_obj: LogInhomogeneousPoissonProcessLikelihood,
         #
-        n_chains: int = 4,
+        n_chains: Int = 4,
         #
-        step_size: float = 1e-1,
+        step_size: Float = 1e-1,
         #
-        n_layers: int = 5,
+        n_layers: Int = 5,
         hidden_size: list[int] = [32, 32],
-        num_bins: int = 8,
+        num_bins: Int = 8,
         #
-        n_loop_training: int = 100,
-        n_loop_production: int = 100,
-        n_local_steps: int = 100,
-        n_global_steps: int = 10,
-        num_epochs: int = 5,
-        learning_rate: float = 0.001,
-        momentum: float = 0.9,
-        batch_size: int = 5000,
-        max_samples: int = 5000,
+        n_loop_training: Int = 100,
+        n_loop_production: Int = 100,
+        n_local_steps: Int = 100,
+        n_global_steps: Int = 10,
+        num_epochs: Int = 5,
+        learning_rate: Float = 0.001,
+        momentum: Float = 0.9,
+        batch_size: Int = 5000,
+        max_samples: Int = 5000,
         #
         results_dir: str = "results",
     ) -> None:
