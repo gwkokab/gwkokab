@@ -25,7 +25,15 @@ from ...utils import get_key
 
 
 def numerical_inverse_transform_sampling(
-    logpdf: Callable[[Array], Array], limits: Array, n_samples: Int, seed: Optional[Int] = None
+    logpdf: Callable[[Array], Array],
+    limits: Array,
+    n_samples: Int,
+    *,
+    seed: Optional[Int] = None,
+    n_grid_points: Int = 1000,
+    method: str = "linear",
+    bounds_error: bool = False,
+    fill_value: Optional[float] = None,
 ) -> Array:
     """Numerical inverse transform sampling.
 
@@ -33,19 +41,32 @@ def numerical_inverse_transform_sampling(
     :param limits: limits of the domain
     :param n_samples: number of samples
     :param seed: random seed. defaults to None
+    :param n_grid_points: number of points on grid, defaults to 1000
+    :param points: length-N sequence of arrays specifying the grid coordinates.
+    :param values: N-dimensional array specifying the grid values.
+    :param method: interpolation method, either ``"linear"`` or ``"nearest"``.
+    :param bounds_error: error if points are outside the grid, defaults to False
+    :param fill_value: value returned for points outside the grid, defaults to NaN.
+    :raises ValueError: if method is not 'linear' or 'nearest'
     :return: samples from the distribution
     """
+    if method not in ["linear", "nearest"]:
+        raise ValueError("method must be either 'linear' or 'nearest'")
     if seed is None:
         key = get_key()
     else:
         key = jax.random.PRNGKey(seed)
-    grid = jnp.linspace(limits[0], limits[1], 1000)  # 1000 grid points
+    grid = jnp.linspace(limits[0], limits[1], n_grid_points)  # 1000 grid points
     pdf = jnp.exp(logpdf(grid))  # pdf
     pdf = pdf / trapezoid(y=pdf, x=grid, axis=0)  # normalize
     cdf = jnp.cumsum(pdf, axis=0)  # cdf
     cdf = cdf / cdf[-1]  # normalize
     cdf = RegularGridInterpolator(  # interpolate
-        (cdf.flatten(),), grid.flatten(), method="linear", bounds_error=False, fill_value=None
+        (cdf.flatten(),),
+        grid.flatten(),
+        method=method,
+        bounds_error=bounds_error,
+        fill_value=fill_value,
     )
     u = jax.random.uniform(key, (n_samples,))  # uniform samples
     return cdf(u)  # inverse transform sampling
