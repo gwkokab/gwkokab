@@ -16,16 +16,17 @@
 from __future__ import annotations
 
 from functools import partial
-from typing_extensions import Self
+from typing_extensions import Optional, Self
 
-from jax import jit, lax, numpy as jnp, random as jrd
+from jax import jit, lax, numpy as jnp, random as jrd, vmap
 from jax.scipy.stats import norm
-from jaxtyping import Float
+from jaxtyping import Float, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
 from ..utils import get_key
+from .utils import numerical_inverse_transform_sampling
 from .utils.constraints import mass_ratio_mass_sandwich
 from .utils.smoothing import smoothing_kernel
 
@@ -126,23 +127,9 @@ class PowerLawPeakMassModel(dist.Distribution):
         and mass ratio model using Monte Carlo integration.
         """
         num_samples = 20_000
-
-        mm1 = jrd.uniform(  # mmin <= xx < mmax
-            get_key(),
-            shape=(num_samples,),
-            minval=self.mmin,
-            maxval=self.mmax,
-        )
-        qq = jrd.uniform(  # 0 <= qq < 1
-            get_key(),
-            shape=(num_samples,),
-            minval=0,
-            maxval=1,
-        )
-
-        value = jnp.column_stack([mm1, qq])
         self._logZ = jnp.zeros_like(self.mmin)
-        log_prob = self.log_prob(value)
+        samples = self.sample(get_key(), (num_samples,))
+        log_prob = self.log_prob(samples)
         prob = jnp.exp(log_prob)
         volume = jnp.prod(self.mmax - self.mmin)
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
@@ -191,3 +178,30 @@ class PowerLawPeakMassModel(dist.Distribution):
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         return log_prob_m1 + log_prob_q - self._logZ
+
+    def sample(self, key: Optional[PRNGKeyArray | int], sample_shape: tuple = ()):
+        if key is None or isinstance(key, int):
+            key = get_key(key)
+        m1 = numerical_inverse_transform_sampling(
+            logpdf=self._log_prob_primary_mass_model,
+            limits=(self.mmin, self.mmax),
+            sample_shape=sample_shape,
+            key=key,
+            batch_shape=self.batch_shape,
+            n_grid_points=1000,
+        )
+
+        key = jrd.split(key, m1.shape)
+
+        q = vmap(
+            lambda _m1, _k: numerical_inverse_transform_sampling(
+                logpdf=partial(self._log_prob_mass_ratio_model, _m1),
+                limits=(self.mmin / _m1, 1.0),
+                sample_shape=(),
+                key=_k,
+                batch_shape=self.batch_shape,
+                n_grid_points=1000,
+            )
+        )(m1, key)
+
+        return jnp.column_stack([m1, q])
