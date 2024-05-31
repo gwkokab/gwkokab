@@ -15,16 +15,17 @@
 from __future__ import annotations
 
 from functools import partial
-from typing_extensions import Self
+from typing_extensions import Optional, Self
 
-from jax import jit, lax, numpy as jnp, random as jrd
-from jaxtyping import Float
+from jax import jit, lax, numpy as jnp, random as jrd, vmap
+from jaxtyping import Float, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
 from ..utils import get_key
 from .truncpowerlaw import TruncatedPowerLaw
+from .utils import numerical_inverse_transform_sampling
 from .utils.constraints import mass_ratio_mass_sandwich
 from .utils.smoothing import smoothing_kernel
 
@@ -186,3 +187,30 @@ class BrokenPowerLawMassModel(dist.Distribution):
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         return log_prob_m1 + log_prob_q - self._logZ
+
+    def sample(self, key: Optional[PRNGKeyArray | int], sample_shape: tuple = ()):
+        if key is None or isinstance(key, int):
+            key = get_key(key)
+        m1 = numerical_inverse_transform_sampling(
+            logpdf=self._log_prob_primary_mass_model,
+            limits=(self.mmin, self.mmax),
+            sample_shape=sample_shape,
+            key=key,
+            batch_shape=self.batch_shape,
+            n_grid_points=1000,
+        )
+
+        key = jrd.split(key, sample_shape)
+
+        q = vmap(
+            lambda _m1, _k: numerical_inverse_transform_sampling(
+                logpdf=partial(self._log_prob_mass_ratio_model, _m1),
+                limits=(self.mmin / _m1, 1.0),
+                sample_shape=(),
+                key=_k,
+                batch_shape=self.batch_shape,
+                n_grid_points=1000,
+            )
+        )(m1, key)
+
+        return jnp.column_stack([m1, q])
