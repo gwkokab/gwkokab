@@ -116,24 +116,9 @@ class BrokenPowerLawMassModel(dist.Distribution):
         and mass ratio model using Monte Carlo integration.
         """
         num_samples = 20_000
-
-        mm1 = jrd.uniform(  # mmin <= xx < mmax
-            get_key(),
-            shape=(num_samples,),
-            minval=self.mmin,
-            maxval=self.mmax,
-        )
-        qq = jrd.uniform(  # mmin / mm1 <= qq < 1
-            get_key(),
-            shape=(num_samples,),
-            minval=0,
-            maxval=1,
-        )
-
-        value = jnp.column_stack([mm1, qq])
-
         self._logZ = jnp.zeros_like(self.mmin)
-        log_prob = self.log_prob(value)
+        samples = self.sample(get_key(), (num_samples,))
+        log_prob = self.log_prob(samples)
         prob = jnp.exp(log_prob)
         volume = jnp.prod(self.mmax - self.mmin)
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
@@ -200,7 +185,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
             n_grid_points=1000,
         )
 
-        key = jrd.split(key, sample_shape)
+        key = jrd.split(key, m1.shape)
 
         q = vmap(
             lambda _m1, _k: numerical_inverse_transform_sampling(
