@@ -22,6 +22,7 @@ from jaxtyping import Array, Int
 from numpyro import distributions as dist
 
 from ..models.utils.jointdistribution import JointDistribution
+from ..utils import get_key
 from ..vts.neuralvt import load_model
 
 
@@ -175,7 +176,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
         N = 1 << 13
         model_ids = list(set(self.vt_params_available.values()))
         model = JointDistribution(*[self.get_model(model_id, rparams) for model_id in model_ids])
-        samples = model.sample(10_000, (N,))
+        samples = model.sample(get_key(), (N,))
         return jnp.mean(jnp.exp(self.logVT(samples)))
 
     def log_likelihood(self: Self, rparams: Array, data: Optional[dict] = None):

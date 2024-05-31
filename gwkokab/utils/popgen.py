@@ -74,6 +74,7 @@ class PopulationGenerator(object):
             self._m1m2_selection = eval(selection_effect.get("m1m2", "False"))
             self._m1q_selection = eval(selection_effect.get("m1q", "False"))
             self._selection_models: list[str] = eval(selection_effect.get("models", None))
+            self._time = eval(selection_effect["time"])
         self._verbose = general.get("verbose", True)
 
     @staticmethod
@@ -404,7 +405,7 @@ class PopulationGenerator(object):
         self._error_params: list[dict] = []
         self._constraints: list[Optional[Constraint]] = []
 
-        exp_rate = self._rate * self.exp_rate()
+        exp_rate = self._time * self._rate * self.exp_rate()
         self._size: Int = int(jrd.poisson(get_key(), exp_rate))
 
         for model in self._models:
