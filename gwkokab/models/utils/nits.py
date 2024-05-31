@@ -18,7 +18,7 @@ from typing_extensions import Callable, Optional
 import jax
 from jax import numpy as jnp
 from jax.scipy.integrate import trapezoid
-from jaxtyping import Array, Int
+from jaxtyping import Array, Int, PRNGKeyArray
 
 from ...utils import get_key
 
@@ -29,7 +29,7 @@ def numerical_inverse_transform_sampling(
     sample_shape: tuple,
     *,
     batch_shape: tuple = (),
-    seed: Optional[Int] = None,
+    key: Optional[PRNGKeyArray] = None,
     n_grid_points: Int = 1000,
 ) -> Array:
     """Numerical inverse transform sampling.
@@ -51,10 +51,8 @@ def numerical_inverse_transform_sampling(
     cdf = jnp.cumsum(pdf, axis=0)  # cdf
     cdf = cdf / cdf[-1]  # normalize
 
-    if seed is None:
+    if key is None:
         key = get_key()
-    else:
-        key = jax.random.PRNGKey(seed)
     u = jax.random.uniform(key, sample_shape)  # uniform samples
 
     interp = lambda _xp, _fp: jnp.interp(x=u, xp=_xp, fp=_fp)
