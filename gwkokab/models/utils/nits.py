@@ -18,7 +18,6 @@ from typing_extensions import Callable, Optional
 import jax
 from jax import numpy as jnp
 from jax.scipy.integrate import trapezoid
-from jax.scipy.interpolate import RegularGridInterpolator
 from jaxtyping import Array, Int
 
 from ...utils import get_key
@@ -27,13 +26,11 @@ from ...utils import get_key
 def numerical_inverse_transform_sampling(
     logpdf: Callable[[Array], Array],
     limits: Array,
-    n_samples: Int,
+    sample_shape: tuple,
     *,
+    batch_shape: tuple = (),
     seed: Optional[Int] = None,
     n_grid_points: Int = 1000,
-    method: str = "linear",
-    bounds_error: bool = False,
-    fill_value: Optional[float] = None,
 ) -> Array:
     """Numerical inverse transform sampling.
 
@@ -44,29 +41,24 @@ def numerical_inverse_transform_sampling(
     :param n_grid_points: number of points on grid, defaults to 1000
     :param points: length-N sequence of arrays specifying the grid coordinates.
     :param values: N-dimensional array specifying the grid values.
-    :param method: interpolation method, either ``"linear"`` or ``"nearest"``.
-    :param bounds_error: error if points are outside the grid, defaults to False
-    :param fill_value: value returned for points outside the grid, defaults to NaN.
-    :raises ValueError: if method is not 'linear' or 'nearest'
     :return: samples from the distribution
     """
-    if method not in ["linear", "nearest"]:
-        raise ValueError("method must be either 'linear' or 'nearest'")
-    if seed is None:
-        key = get_key()
-    else:
-        key = jax.random.PRNGKey(seed)
-    grid = jnp.linspace(limits[0], limits[1], n_grid_points)  # 1000 grid points
+    grid = jnp.linspace(
+        jnp.full(batch_shape, limits[0]), jnp.full(batch_shape, limits[1]), n_grid_points
+    )  # 1000 grid points
     pdf = jnp.exp(logpdf(grid))  # pdf
     pdf = pdf / trapezoid(y=pdf, x=grid, axis=0)  # normalize
     cdf = jnp.cumsum(pdf, axis=0)  # cdf
     cdf = cdf / cdf[-1]  # normalize
-    cdf = RegularGridInterpolator(  # interpolate
-        (cdf.flatten(),),
-        grid.flatten(),
-        method=method,
-        bounds_error=bounds_error,
-        fill_value=fill_value,
-    )
-    u = jax.random.uniform(key, (n_samples,))  # uniform samples
-    return cdf(u)  # inverse transform sampling
+
+    if seed is None:
+        key = get_key()
+    else:
+        key = jax.random.PRNGKey(seed)
+    u = jax.random.uniform(key, sample_shape)  # uniform samples
+
+    interp = lambda _xp, _fp: jnp.interp(x=u, xp=_xp, fp=_fp)
+    if batch_shape:
+        interp = jax.vmap(interp, in_axes=(1, 1))
+    samples = interp(cdf, grid)  # interpolate
+    return samples  # inverse transform sampling
