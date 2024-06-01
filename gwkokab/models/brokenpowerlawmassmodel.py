@@ -17,16 +17,17 @@ from __future__ import annotations
 from functools import partial
 from typing_extensions import Optional, Self
 
-from jax import jit, lax, numpy as jnp, random as jrd, vmap
+from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jaxtyping import Float, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
 from ..utils import get_key
+from ..utils.mass_relations import mass_ratio
 from .truncpowerlaw import TruncatedPowerLaw
 from .utils import numerical_inverse_transform_sampling
-from .utils.constraints import mass_ratio_mass_sandwich
+from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils.smoothing import smoothing_kernel
 
 
@@ -66,7 +67,15 @@ class BrokenPowerLawMassModel(dist.Distribution):
     pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
-        self: Self, alpha1: Float, alpha2: Float, beta_q: Float, mmin: Float, mmax: Float, mbreak: Float, delta: Float
+        self: Self,
+        alpha1: Float,
+        alpha2: Float,
+        beta_q: Float,
+        mmin: Float,
+        mmax: Float,
+        mbreak: Float,
+        delta: Float,
+        **kwargs,
     ):
         r"""
         :param alpha1: Power-law index for first component of primary mass model
@@ -76,6 +85,9 @@ class BrokenPowerLawMassModel(dist.Distribution):
         :param mmax: Maximum mass
         :param mbreak: Break mass
         :param delta: Smoothing parameter
+        :param default_params: If `True`, the model will use the default parameters
+            i.e. primary mass and secondary mass. If `False`, the model will use
+            primary mass and mass ratio.
         """
         self.alpha1, self.alpha2, self.beta_q, self.mmin, self.mmax, self.mbreak, self.delta = promote_shapes(
             alpha1, alpha2, beta_q, mmin, mmax, mbreak, delta
@@ -89,7 +101,11 @@ class BrokenPowerLawMassModel(dist.Distribution):
             jnp.shape(mbreak),
             jnp.shape(delta),
         )
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._default_params = kwargs.get("default_params", True)
+        if self._default_params:
+            self._support = mass_sandwich(mmin, mmax)
+        else:
+            self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(BrokenPowerLawMassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -168,7 +184,11 @@ class BrokenPowerLawMassModel(dist.Distribution):
     @validate_sample
     def log_prob(self: Self, value):
         m1 = value[..., 0]
-        q = value[..., 1]
+        if self._default_params:
+            m2 = value[..., 1]
+            q = mass_ratio(m1, m2)
+        else:
+            q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         return log_prob_m1 + log_prob_q - self._logZ
@@ -176,10 +196,13 @@ class BrokenPowerLawMassModel(dist.Distribution):
     def sample(self, key: Optional[PRNGKeyArray | int], sample_shape: tuple = ()):
         if key is None or isinstance(key, int):
             key = get_key(key)
+
+        flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
+
         m1 = numerical_inverse_transform_sampling(
             logpdf=self._log_prob_primary_mass_model,
             limits=(self.mmin, self.mmax),
-            sample_shape=sample_shape,
+            sample_shape=(flattened_sample_shape,),
             key=key,
             batch_shape=self.batch_shape,
             n_grid_points=1000,
@@ -198,4 +221,6 @@ class BrokenPowerLawMassModel(dist.Distribution):
             )
         )(m1, key)
 
-        return jnp.column_stack([m1, q])
+        if self._default_params:
+            return jnp.column_stack([m1, m1 * q]).reshape(sample_shape + self.event_shape)
+        return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)

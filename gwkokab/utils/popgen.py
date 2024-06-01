@@ -29,7 +29,7 @@ from ..errors import error_factory
 from ..models import *
 from ..models.utils.constraints import *
 from ..models.utils.jointdistribution import JointDistribution
-from ..utils.misc import get_key
+from ..utils import get_key
 
 
 PROGRESS_BAR_TEXT_WITDH = 25
