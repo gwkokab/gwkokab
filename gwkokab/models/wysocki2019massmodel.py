@@ -21,7 +21,7 @@ from jaxtyping import Array, Float
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ..utils.misc import get_key
+from ..utils import get_key
 from .truncpowerlaw import TruncatedPowerLaw
 from .utils.constraints import mass_sandwich
 

@@ -21,9 +21,10 @@ from jaxtyping import Float
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ..utils.misc import get_key
+from ..utils import get_key
+from ..utils.mass_relations import mass_ratio
 from .truncpowerlaw import TruncatedPowerLaw
-from .utils.constraints import mass_ratio_mass_sandwich
+from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
 
 
 class PowerLawPrimaryMassRatio(dist.Distribution):
@@ -50,16 +51,23 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self: Self, alpha: Float, beta: Float, mmin: Float, mmax: Float) -> None:
+    def __init__(self: Self, alpha: Float, beta: Float, mmin: Float, mmax: Float, **kwargs) -> None:
         """
         :param alpha: Power law index for primary mass
         :param beta: Power law index for mass ratio
         :param mmin: Minimum mass
         :param mmax: Maximum mass
+        :param default_params: If `True`, the model will use the default parameters
+            i.e. primary mass and secondary mass. If `False`, the model will use
+            primary mass and mass ratio.
         """
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(alpha, beta, mmin, mmax)
         batch_shape = lax.broadcast_shapes(jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax))
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._default_params = kwargs.get("default_params", True)
+        if self._default_params:
+            self._support = mass_sandwich(mmin, mmax)
+        else:
+            self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(PowerLawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -73,7 +81,11 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     @validate_sample
     def log_prob(self: Self, value):
         m1 = value[..., 0]
-        q = value[..., 1]
+        if self._default_params:
+            m2 = value[..., 1]
+            q = mass_ratio(m1, m2)
+        else:
+            q = value[..., 1]
         log_prob_m1 = TruncatedPowerLaw(
             alpha=self.alpha,
             xmin=self.mmin,
@@ -81,7 +93,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         ).log_prob(m1)
         log_prob_q = TruncatedPowerLaw(
             alpha=self.beta,
-            xmin=self.mmin / m1,
+            xmin=lax.div(self.mmin, m1),
             xmax=1.0,
         ).log_prob(q)
         return log_prob_m1 + log_prob_q
@@ -98,8 +110,10 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         key = get_key(key)
         q = TruncatedPowerLaw(
             alpha=self.beta,
-            xmin=self.mmin / m1,
+            xmin=lax.div(self.mmin, m1),
             xmax=1.0,
         ).sample(key=key, sample_shape=())
 
+        if self._default_params:
+            return jnp.column_stack((m1, m1 * q))
         return jnp.column_stack((m1, q))
