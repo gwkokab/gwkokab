@@ -15,6 +15,9 @@
 
 from dataclasses import dataclass
 from enum import auto, Enum, unique
+from typing_extensions import Optional
+
+from jaxtyping import Float, Int
 
 
 @unique
@@ -38,7 +41,8 @@ class PopInfo:
     ROOT_DIR: str
     EVENT_FILENAME: str
     CONFIG_FILENAME: str
-    RATE: float
-    VT_FILE: str
-    TIME: float
-    NUM_REALIZATIONS: int = 5
+    RATE: Float
+    TIME: Optional[Float] = None
+    VT_FILE: Optional[str] = None
+    VT_PARAMS: Optional[list[Parameter]] = None
+    NUM_REALIZATIONS: Int = 5
