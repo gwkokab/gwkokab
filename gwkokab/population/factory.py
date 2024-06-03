@@ -19,9 +19,9 @@ import warnings
 from typing_extensions import Self
 
 import jax
+import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
-from jaxtyping import Float, Int
-from numpyro import distributions as dist
+from jaxtyping import Array, Float, Int
 from numpyro.distributions import *
 from numpyro.distributions.constraints import *
 
@@ -33,48 +33,54 @@ from ..vts.neuralvt import load_model  # imported here to avoid circular import
 from .aliases import ModelMeta, Parameter, PopInfo
 
 
+__all__ = ["PopulationFactory"]
+
+
+def _check_model(model) -> None:
+    if ModelMeta.NAME not in model:
+        raise ValueError("Model must have a name")
+    if ModelMeta.OUTPUT not in model:
+        raise ValueError("Model must have an output")
+    if ModelMeta.PARAMETERS not in model:
+        raise ValueError("Model must have parameters")
+    if ModelMeta.SAVE_AS not in model:
+        warnings.warn(
+            message=f"{model[ModelMeta.NAME].__name__} does not have a save_as. Parameters will not be saved."
+        )
+
+
 class PopulationFactory:
-    def __init__(self, models: list[dict], popinfo: PopInfo) -> None:
+    INJECTIONS_DIR: str = "injections"
+    REALIZATIONS_DIR: str = "realization_{}"
+
+    def __init__(self, models: list[dict], popinfo: PopInfo, seperate_injections: bool = False) -> None:
         for model in models:
-            self._check_model(model)
+            _check_model(model)
 
-        self.models: list[dist.Distribution] = [
-            model[ModelMeta.NAME](**model[ModelMeta.PARAMETERS]) for model in models
-        ]
+        self.seperate_injections = seperate_injections
 
-        VT_selection_flag = popinfo.VT_FILE is not None
+        self.models: list[Distribution] = [model[ModelMeta.NAME](**model[ModelMeta.PARAMETERS]) for model in models]
 
         headers: list[Parameter] = []
-        if VT_selection_flag:
+        for i, model in enumerate(models):
+            headers.extend(model[ModelMeta.OUTPUT])
+
+        if popinfo.VT_FILE is not None:
             no_vt_param = len(popinfo.VT_PARAMS)
             vt_models_index: list[int] = [None] * no_vt_param
             vt_params = list(popinfo.VT_PARAMS.keys())
 
-        for i, model in enumerate(models):
-            output = model[ModelMeta.OUTPUT]
-            headers.extend(output)
-            if VT_selection_flag:
+            for i, model in enumerate(models):
+                output = model[ModelMeta.OUTPUT]
                 for out in output:
                     if out in popinfo.VT_PARAMS:
                         index = vt_params.index(out)
                         vt_models_index[index] = i
-        self.vt_param_dist = JointDistribution(*list(map(lambda x: popinfo.VT_PARAMS.get(x), vt_params)))
+
+            self.vt_param_dist = JointDistribution(*list(map(lambda x: popinfo.VT_PARAMS.get(x), vt_params)))
 
         self.headers = [header.value for header in headers]
         self.popinfo = popinfo
-
-    @staticmethod
-    def _check_model(model) -> None:
-        if ModelMeta.NAME not in model:
-            raise ValueError("Model must have a name")
-        if ModelMeta.OUTPUT not in model:
-            raise ValueError("Model must have an output")
-        if ModelMeta.PARAMETERS not in model:
-            raise ValueError("Model must have parameters")
-        if ModelMeta.SAVE_AS not in model:
-            warnings.warn(
-                message=f"{model[ModelMeta.NAME].__name__} does not have a save_as. Parameters will not be saved."
-            )
 
     def exp_rate(self: Self) -> Float:
         N = int(1e4)
@@ -88,7 +94,7 @@ class PopulationFactory:
         logVT = jax.vmap(logVT)
         return self.popinfo.RATE * volume * jnp.mean(jnp.exp(model.log_prob(value) + logVT(value).flatten()))
 
-    def generate_population(self, size: Int) -> None:
+    def generate_population(self, size: Int) -> Array:
         keys = list(jrd.split(get_key(), len(self.models)))
         if self.popinfo.VT_FILE is not None:
             old_size = size
@@ -97,7 +103,7 @@ class PopulationFactory:
             lambda model, key: model.sample(key, (size,)).reshape(size, -1),
             self.models,
             keys,
-            is_leaf=lambda x: isinstance(x, dist.Distribution),
+            is_leaf=lambda x: isinstance(x, Distribution),
         )
         population = jtr.reduce(lambda x, y: jnp.concatenate((x, y), axis=-1), population)
         if self.popinfo.VT_FILE is not None:
@@ -109,7 +115,7 @@ class PopulationFactory:
             logVT = jax.vmap(logVT)
 
             vt = jnp.exp(logVT(value).flatten())
-            vt = vt / jnp.sum(vt)
+            vt /= jnp.sum(vt)
 
             index = jrd.choice(get_key(), jnp.arange(size), p=vt, shape=(old_size,))
 
@@ -118,9 +124,33 @@ class PopulationFactory:
         return population
 
     def generate_realizations(self) -> None:
+        # TODO: Fix this issue
         # size: Int = jrd.poisson(get_key(), self.exp_rate())
         size = 100
+        if size == 0:
+            raise ValueError(
+                "Population size is zero. This can be a result of following:\n"
+                "\t1. The rate is zero.\n"
+                "\t2. The volume is zero.\n"
+                "\t3. The models are not selected for rate calculation.\n"
+                "\t4. VT file is not provided or is not valid.\n"
+                "\t5. Or some other reason."
+            )
         os.makedirs(self.popinfo.ROOT_DIR, exist_ok=True)
         for i in range(self.popinfo.NUM_REALIZATIONS):
             population = self.generate_population(size)
-            print(population)
+
+            if population.shape == ():
+                continue
+
+            realizations_path = os.path.join(self.popinfo.ROOT_DIR, self.REALIZATIONS_DIR.format(i))
+            os.makedirs(realizations_path, exist_ok=True)
+            filename = os.path.join(realizations_path, "injections.dat")
+            np.savetxt(filename, population, comments="#", header=" ".join(self.headers))
+
+            if self.seperate_injections:
+                injection_path = os.path.join(realizations_path, self.INJECTIONS_DIR)
+                os.makedirs(injection_path, exist_ok=True)
+                for j in range(population.shape[0]):
+                    filename = os.path.join(injection_path, self.popinfo.EVENT_FILENAME.format(j) + ".dat")
+                    np.savetxt(filename, population[j].reshape(1, -1), comments="#", header=" ".join(self.headers))
