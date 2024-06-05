@@ -83,33 +83,35 @@ class PopulationFactory:
             headers.extend(model[ModelMeta.OUTPUT])
 
         if popinfo.VT_FILE is not None:
-            no_vt_param = len(popinfo.VT_PARAMS)
-            vt_models_index: list[int] = [None] * no_vt_param
-            vt_params = list(popinfo.VT_PARAMS.keys())
+            vt_models: list[Distribution] = []
+            vt_selection_mask: list[int] = []
+            vt_params = list(popinfo.VT_PARAMS)
 
+            k = 0
             for i, model in enumerate(models):
                 output = model[ModelMeta.OUTPUT]
+                flag = False
                 for out in output:
-                    if out in popinfo.VT_PARAMS:
-                        index = vt_params.index(out)
-                        vt_models_index[index] = i
+                    if out in vt_params:
+                        index = output.index(out) + k
+                        vt_selection_mask.append(index)
+                        vt_models.append(self.models[i])
+                        flag = True
+                if flag:
+                    k += len(output)
 
-            self.vt_param_dist = JointDistribution(*list(map(lambda x: popinfo.VT_PARAMS.get(x), vt_params)))
+            self.vt_param_dist = JointDistribution(*vt_models)
+            self.vt_selection_mask = vt_selection_mask
 
         self.headers = [header.value for header in headers]
         self.popinfo = popinfo
 
     def exp_rate(self: Self) -> Float:
         N = int(1e4)
-        value = self.vt_param_dist.sample(get_key(), (N,))
-        # TODO: Complete the mechanism for the models to be selected for rate calculation
-        model = JointDistribution(
-            *(self.get_model_instance(self._models_dict[sm], update_config_vars=False) for sm in self._selection_models)
-        )
-        volume = jnp.prod(jnp.max(value, axis=0) - jnp.min(value, axis=0))
+        value = self.vt_param_dist.sample(get_key(), (N,))[..., self.vt_selection_mask]
         _, logVT = load_model(self.popinfo.VT_FILE)
         logVT = jax.vmap(logVT)
-        return self.popinfo.RATE * volume * jnp.mean(jnp.exp(model.log_prob(value) + logVT(value).flatten()))
+        return self.popinfo.TIME * self.popinfo.RATE * jnp.mean(jnp.exp(logVT(value).flatten()))
 
     def generate_population(self, size: Int) -> Array:
         keys = list(jrd.split(get_key(), len(self.models)))
@@ -141,9 +143,7 @@ class PopulationFactory:
         return population
 
     def generate_realizations(self) -> None:
-        # TODO: Fix this issue
-        # size: Int = jrd.poisson(get_key(), self.exp_rate())
-        size = 100
+        size: Int = jrd.poisson(get_key(), self.exp_rate())
         if size == 0:
             raise ValueError(
                 "Population size is zero. This can be a result of following:\n"
