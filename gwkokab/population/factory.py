@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import os
 import warnings
-from typing_extensions import Self
+from typing_extensions import Optional, Self
 
 import jax
 import numpy as np
@@ -53,13 +53,30 @@ class PopulationFactory:
     INJECTIONS_DIR: str = "injections"
     REALIZATIONS_DIR: str = "realization_{}"
 
-    def __init__(self, models: list[dict], popinfo: PopInfo, seperate_injections: bool = False) -> None:
+    def __init__(self, models: list[dict], popinfo: PopInfo, seperate_injections: Optional[bool] = None) -> None:
         for model in models:
             _check_model(model)
 
+        if seperate_injections is None:
+            self.seperate_injections = False
         self.seperate_injections = seperate_injections
 
         self.models: list[Distribution] = [model[ModelMeta.NAME](**model[ModelMeta.PARAMETERS]) for model in models]
+
+        config_vars = [
+            [],  # header
+            [],  # save_as
+        ]
+
+        for model in models:
+            head = model[ModelMeta.SAVE_AS].keys()
+            for h in head:
+                config_vars[0].append(model[ModelMeta.SAVE_AS][h])
+                config_vars[1].append(model[ModelMeta.PARAMETERS][h])
+
+        config_vars[1] = np.array(config_vars[1]).reshape(1, -1)
+
+        self.config_vars = config_vars
 
         headers: list[Parameter] = []
         for i, model in enumerate(models):
@@ -145,12 +162,16 @@ class PopulationFactory:
 
             realizations_path = os.path.join(self.popinfo.ROOT_DIR, self.REALIZATIONS_DIR.format(i))
             os.makedirs(realizations_path, exist_ok=True)
-            filename = os.path.join(realizations_path, "injections.dat")
-            np.savetxt(filename, population, comments="#", header=" ".join(self.headers))
+            injection_filename = os.path.join(realizations_path, "injections.dat")
+            config_filename = os.path.join(realizations_path, "config.dat")
+            np.savetxt(injection_filename, population, comments="#", header=" ".join(self.headers))
+            np.savetxt(config_filename, self.config_vars[1], comments="#", header=" ".join(self.config_vars[0]))
 
             if self.seperate_injections:
                 injection_path = os.path.join(realizations_path, self.INJECTIONS_DIR)
                 os.makedirs(injection_path, exist_ok=True)
                 for j in range(population.shape[0]):
-                    filename = os.path.join(injection_path, self.popinfo.EVENT_FILENAME.format(j) + ".dat")
-                    np.savetxt(filename, population[j].reshape(1, -1), comments="#", header=" ".join(self.headers))
+                    injection_filename = os.path.join(injection_path, self.popinfo.EVENT_FILENAME.format(j) + ".dat")
+                    np.savetxt(
+                        injection_filename, population[j].reshape(1, -1), comments="#", header=" ".join(self.headers)
+                    )
