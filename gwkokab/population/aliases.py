@@ -15,9 +15,9 @@
 
 from dataclasses import dataclass
 from enum import auto, Enum, unique
-from typing_extensions import Optional
+from typing_extensions import Callable, Optional
 
-from jaxtyping import Float, Int
+from jaxtyping import Array, Float, Int
 
 
 @unique
@@ -46,3 +46,12 @@ class PopInfo:
     VT_FILE: Optional[str] = None
     VT_PARAMS: Optional[list[Parameter]] = None
     NUM_REALIZATIONS: Int = 5
+
+
+@dataclass(repr=True)
+class NoisePopInfo:
+    FILENAME_REGEX: str
+    OUTPUT_DIR: str
+    HEADER: list[Parameter]
+    SIZE: Int
+    ERROR_FUNCS: list[tuple[Int, Callable[[Float, Int], Array]]]
