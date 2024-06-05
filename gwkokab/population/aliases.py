@@ -32,8 +32,23 @@ class ModelMeta(Enum):
 class Parameter(Enum):
     PRIMARY_MASS = "m1_source"
     SECONDARY_MASS = "m2_source"
+
     MASS_RATIO = "q"
+    CHIRP_MASS = "M_c"
+    SYMMETRIC_MASS_RATIO = "eta"
+    REDUCED_MASS = "M_r"
+
     ECCENTRICITY = "ecc"
+
+    PRIMARY_ALIGNED_SPIN = "a1"
+    SECONDARY_ALIGNED_SPIN = "a2"
+
+    PRIMARY_SPIN_X = "a1x"
+    PRIMARY_SPIN_Y = "a1y"
+    PRIMARY_SPIN_Z = "a1z"
+    SECONDARY_SPIN_X = "a2x"
+    SECONDARY_SPIN_Y = "a2y"
+    SECONDARY_SPIN_Z = "a2z"
 
 
 @dataclass(repr=True)

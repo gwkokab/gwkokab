@@ -18,9 +18,11 @@ from __future__ import annotations
 import glob
 import os
 import warnings
-from typing_extensions import Callable
+from typing_extensions import Callable, Optional
 
 import numpy as np
+from jax import random as jrd
+from jaxtyping import Array, PRNGKeyArray
 
 from .aliases import NoisePopInfo
 
@@ -28,7 +30,7 @@ from .aliases import NoisePopInfo
 __all__ = ["run_noise_factory"]
 
 
-def run_noise_factory(npopinfo: NoisePopInfo) -> None:
+def run_noise_factory(npopinfo: NoisePopInfo, *, key: Optional[PRNGKeyArray] = None) -> None:
     filenames = glob.glob(npopinfo.FILENAME_REGEX)
     heads: list[list[int]] = []
     error_fns: list[Callable] = []
@@ -42,11 +44,21 @@ def run_noise_factory(npopinfo: NoisePopInfo) -> None:
 
     index = 0
 
+    if key is None:
+        key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
+
+    keys = jrd.split(key, len(filenames) * len(heads))
+
     for filename in filenames:
         noisey_data = np.empty((npopinfo.SIZE, len(npopinfo.HEADER)))
         data = np.loadtxt(filename)
+        i = 0
         for head, err_fn in zip(heads, error_fns):
-            noisey_data[:, head] = err_fn(data[head], npopinfo.SIZE)
+            noisey_data_i: Array = err_fn(data[head], npopinfo.SIZE, keys[index + i])
+            if noisey_data_i.ndim == 1:
+                noisey_data_i = noisey_data_i.reshape(npopinfo.SIZE, -1)
+            noisey_data[:, head] = noisey_data_i
+            i += 1
         nan_mask = np.isnan(noisey_data).any(axis=1)
         masked_noisey_data = noisey_data[~nan_mask]
         count = np.count_nonzero(masked_noisey_data)

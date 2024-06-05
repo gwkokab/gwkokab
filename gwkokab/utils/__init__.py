@@ -21,5 +21,3 @@ from .mass_relations import (
     symmetric_mass_ratio as symmetric_mass_ratio,
 )
 from .misc import dump_configurations as dump_configurations, get_key as get_key
-from .parser import cmd_parser as cmd_parser, parse_config as parse_config
-from .popgen import PopulationGenerator as PopulationGenerator
