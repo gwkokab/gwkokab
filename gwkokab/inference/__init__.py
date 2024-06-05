@@ -14,4 +14,4 @@
 
 
 from .lippl import LogInhomogeneousPoissonProcessLikelihood as LogInhomogeneousPoissonProcessLikelihood
-from .nfmcmchandler import NFMCMCHandler as NFMCMCHandler
+from .utils import save_data_from_sampler as save_data_from_sampler
