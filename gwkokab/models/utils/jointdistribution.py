@@ -15,9 +15,9 @@
 
 import jax
 from jax import lax, numpy as jnp
+from jaxtyping import PRNGKeyArray
 from numpyro import distributions as dist
-
-from gwkokab.utils import get_key
+from numpyro.util import is_prng_key
 
 
 class JointDistribution(dist.Distribution):
@@ -54,9 +54,8 @@ class JointDistribution(dist.Distribution):
         log_probs = jnp.sum(jnp.asarray(log_probs).T, axis=-1)
         return log_probs
 
-    def sample(self, key, sample_shape=()):
-        if key is None or isinstance(key, int):
-            key = get_key(key)
+    def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
+        assert is_prng_key(key)
         keys = tuple(jax.random.split(key, len(self.marginal_distributions)))
         samples = jax.tree.map(
             lambda d, k: d.sample(k, sample_shape).reshape(*sample_shape, -1),

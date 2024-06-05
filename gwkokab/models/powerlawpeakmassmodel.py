@@ -16,8 +16,9 @@
 from __future__ import annotations
 
 from functools import partial
-from typing_extensions import Optional, Self
+from typing_extensions import Self
 
+import numpy as np
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.scipy.stats import norm
 from jaxtyping import Float, PRNGKeyArray
@@ -25,7 +26,6 @@ from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
-from ..utils import get_key
 from ..utils.mass_relations import mass_ratio
 from .utils import numerical_inverse_transform_sampling
 from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
@@ -137,7 +137,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         """
         num_samples = 20_000
         self._logZ = jnp.zeros_like(self.mmin)
-        samples = self.sample(get_key(), (num_samples,))
+        samples = self.sample(jrd.PRNGKey(np.random.randint(0, 2**32 - 1)), (num_samples,))
         log_prob = self.log_prob(samples)
         prob = jnp.exp(log_prob)
         volume = jnp.prod(self.mmax - self.mmin)
@@ -192,10 +192,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         return log_prob_m1 + log_prob_q - self._logZ
 
-    def sample(self, key: Optional[PRNGKeyArray | int], sample_shape: tuple = ()):
-        if key is None or isinstance(key, int):
-            key = get_key(key)
-
+    def sample(self, key: PRNGKeyArray, sample_shape: tuple = ()):
         flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
 
         m1 = numerical_inverse_transform_sampling(
@@ -207,7 +204,7 @@ class PowerLawPeakMassModel(dist.Distribution):
             n_grid_points=1000,
         )
 
-        key = jrd.split(key, m1.shape)
+        keys = jrd.split(key, m1.shape)
 
         q = vmap(
             lambda _m1, _k: numerical_inverse_transform_sampling(
@@ -218,7 +215,7 @@ class PowerLawPeakMassModel(dist.Distribution):
                 batch_shape=self.batch_shape,
                 n_grid_points=1000,
             )
-        )(m1, key)
+        )(m1, keys)
 
         if self._default_params:
             return jnp.column_stack([m1, m1 * q]).reshape(sample_shape + self.event_shape)

@@ -20,4 +20,3 @@ from .mass_relations import (
     reduced_mass as reduced_mass,
     symmetric_mass_ratio as symmetric_mass_ratio,
 )
-from .misc import dump_configurations as dump_configurations, get_key as get_key

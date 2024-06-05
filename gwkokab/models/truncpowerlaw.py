@@ -15,16 +15,15 @@
 from __future__ import annotations
 
 from functools import partial
-from typing_extensions import Optional, Self
+from typing_extensions import Self
 
 from jax import jit, lax, numpy as jnp
 from jax.random import uniform
-from jaxtyping import Array, Float
+from jaxtyping import Float, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
-from ..utils import get_key
 
 
 class TruncatedPowerLaw(dist.Distribution):
@@ -96,9 +95,7 @@ class TruncatedPowerLaw(dist.Distribution):
     def log_prob(self: Self, value: Numeric) -> Numeric:
         return self.alpha * jnp.log(value) - self._logZ
 
-    def sample(self: Self, key: Optional[Array | int], sample_shape: tuple = ()):
-        if key is None or isinstance(key, int):
-            key = get_key(key)
+    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
         U = uniform(key, sample_shape + self.batch_shape)
         return jnp.where(
             self.alpha == -1.0,

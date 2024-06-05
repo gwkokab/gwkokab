@@ -16,12 +16,11 @@ from __future__ import annotations
 
 from typing_extensions import Self
 
-from jax import lax, numpy as jnp
-from jaxtyping import Float
+from jax import lax, numpy as jnp, random as jrd
+from jaxtyping import Float, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ..utils import get_key
 from ..utils.mass_relations import mass_ratio
 from .truncpowerlaw import TruncatedPowerLaw
 from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
@@ -98,16 +97,13 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         ).log_prob(q)
         return log_prob_m1 + log_prob_q
 
-    def sample(self: Self, key, sample_shape: tuple = ()):
-        if key is None or isinstance(key, int):
-            key = get_key(key)
-
+    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
         m1 = TruncatedPowerLaw(
             alpha=self.alpha,
             xmin=self.mmin,
             xmax=self.mmax,
         ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
-        key = get_key(key)
+        key = jrd.split(key)[1]
         q = TruncatedPowerLaw(
             alpha=self.beta,
             xmin=lax.div(self.mmin, m1),

@@ -21,14 +21,14 @@ from typing_extensions import Optional, Self
 import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
-from jaxtyping import Array, Float, Int
+from jaxtyping import Array, Float, Int, PRNGKeyArray
 from numpyro.distributions import *
 from numpyro.distributions.constraints import *
+from numpyro.util import is_prng_key
 
 from ..models import *
 from ..models.utils.constraints import *
 from ..models.utils.jointdistribution import JointDistribution
-from ..utils import get_key
 from ..vts.neuralvt import load_model  # imported here to avoid circular import
 from .aliases import ModelMeta, Parameter, PopInfo
 
@@ -53,7 +53,14 @@ class PopulationFactory:
     INJECTIONS_DIR: str = "injections"
     REALIZATIONS_DIR: str = "realization_{}"
 
-    def __init__(self, models: list[dict], popinfo: PopInfo, seperate_injections: Optional[bool] = None) -> None:
+    def __init__(
+        self,
+        models: list[dict],
+        popinfo: PopInfo,
+        seperate_injections: Optional[bool] = None,
+        *,
+        key: Optional[PRNGKeyArray] = None,
+    ) -> None:
         for model in models:
             _check_model(model)
 
@@ -106,15 +113,15 @@ class PopulationFactory:
         self.headers = [header.value for header in headers]
         self.popinfo = popinfo
 
-    def exp_rate(self: Self) -> Float:
+    def exp_rate(self: Self, *, key: PRNGKeyArray) -> Float:
         N = int(1e4)
-        value = self.vt_param_dist.sample(get_key(), (N,))[..., self.vt_selection_mask]
+        value = self.vt_param_dist.sample(key, (N,))[..., self.vt_selection_mask]
         _, logVT = load_model(self.popinfo.VT_FILE)
         logVT = jax.vmap(logVT)
         return self.popinfo.TIME * self.popinfo.RATE * jnp.mean(jnp.exp(logVT(value).flatten()))
 
-    def generate_population(self, size: Int) -> Array:
-        keys = list(jrd.split(get_key(), len(self.models)))
+    def generate_population(self, size: Int, *, key: PRNGKeyArray) -> Array:
+        keys = list(jrd.split(key, len(self.models)))
         if self.popinfo.VT_FILE is not None:
             old_size = size
             size += int(5e4)
@@ -135,15 +142,19 @@ class PopulationFactory:
 
             vt = jnp.exp(logVT(value).flatten())
             vt /= jnp.sum(vt)
-
-            index = jrd.choice(get_key(), jnp.arange(size), p=vt, shape=(old_size,))
+            _, key = jrd.split(keys[-1])
+            index = jrd.choice(key, jnp.arange(size), p=vt, shape=(old_size,))
 
             population = population[index]
 
         return population
 
-    def generate_realizations(self) -> None:
-        size: Int = jrd.poisson(get_key(), self.exp_rate())
+    def generate_realizations(self, key: Optional[PRNGKeyArray] = None) -> None:
+        if key is None:
+            key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
+        assert is_prng_key(key)
+        poisson_key, rate_key = jrd.split(key)
+        size: Int = jrd.poisson(poisson_key, self.exp_rate(key=rate_key))
         if size == 0:
             raise ValueError(
                 "Population size is zero. This can be a result of following:\n"
@@ -153,9 +164,10 @@ class PopulationFactory:
                 "\t4. VT file is not provided or is not valid.\n"
                 "\t5. Or some other reason."
             )
+        pop_keys = jrd.split(rate_key, self.popinfo.NUM_REALIZATIONS)
         os.makedirs(self.popinfo.ROOT_DIR, exist_ok=True)
         for i in range(self.popinfo.NUM_REALIZATIONS):
-            population = self.generate_population(size)
+            population = self.generate_population(size, key=pop_keys[i])
 
             if population.shape == ():
                 continue

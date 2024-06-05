@@ -14,14 +14,13 @@
 
 from __future__ import annotations
 
-from typing_extensions import Optional, Self
+from typing_extensions import Self
 
-from jax import lax, numpy as jnp
-from jaxtyping import Array, Float
+from jax import lax, numpy as jnp, random as jrd
+from jaxtyping import Array, Float, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ..utils import get_key
 from .truncpowerlaw import TruncatedPowerLaw
 from .utils.constraints import mass_sandwich
 
@@ -79,14 +78,12 @@ class Wysocki2019MassModel(dist.Distribution):
         log_prob_m2_given_m1 = -jnp.log(m1 - self.mmin)
         return log_prob_m1 + log_prob_m2_given_m1
 
-    def sample(self: Self, key: Optional[Array | int], sample_shape: tuple = ()) -> Array:
-        if key is None or isinstance(key, int):
-            key = get_key(key)
+    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()) -> Array:
         m2 = dist.Uniform(
             low=self.mmin,
             high=self.mmax,
         ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
-        key = get_key(key)
+        key = jrd.split(key)[-1]
         m1 = TruncatedPowerLaw(
             alpha=-self.alpha_m,
             xmin=m2,

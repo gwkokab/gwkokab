@@ -13,14 +13,13 @@
 #  limitations under the License.
 
 
-from typing_extensions import Callable, Optional
+from typing_extensions import Callable
 
 import jax
 from jax import numpy as jnp
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array, Int, PRNGKeyArray
-
-from ...utils import get_key
+from numpyro.util import is_prng_key
 
 
 def numerical_inverse_transform_sampling(
@@ -28,8 +27,8 @@ def numerical_inverse_transform_sampling(
     limits: Array,
     sample_shape: tuple,
     *,
+    key: PRNGKeyArray,
     batch_shape: tuple = (),
-    key: Optional[PRNGKeyArray] = None,
     n_grid_points: Int = 1000,
 ) -> Array:
     """Numerical inverse transform sampling.
@@ -43,6 +42,7 @@ def numerical_inverse_transform_sampling(
     :param values: N-dimensional array specifying the grid values.
     :return: samples from the distribution
     """
+    assert is_prng_key(key)
     grid = jnp.linspace(
         jnp.full(batch_shape, limits[0]), jnp.full(batch_shape, limits[1]), n_grid_points
     )  # 1000 grid points
@@ -51,8 +51,6 @@ def numerical_inverse_transform_sampling(
     cdf = jnp.cumsum(pdf, axis=0)  # cdf
     cdf = cdf / cdf[-1]  # normalize
 
-    if key is None:
-        key = get_key()
     u = jax.random.uniform(key, sample_shape)  # uniform samples
 
     interp = lambda _xp, _fp: jnp.interp(x=u, xp=_xp, fp=_fp)

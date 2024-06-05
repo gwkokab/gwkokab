@@ -26,13 +26,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optax
 import polars as pl
-from jax import numpy as jnp
-from jaxtyping import Array, PyTree
+from jax import numpy as jnp, random as jrd
+from jaxtyping import Array, PRNGKeyArray, PyTree
+from numpyro.util import is_prng_key
 from rich.console import Console
 from rich.progress import BarColumn, MofNCompleteColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 from rich.table import Table
-
-from ..utils import get_key
 
 
 @eqx.filter_value_and_grad
@@ -112,7 +111,9 @@ def train_test_split(
     return train_X, test_X, train_Y, test_Y
 
 
-def make(*, key, input_layer: int, output_layer: int, hidden_layers: Optional[list[int]] = None) -> PyTree:
+def make(
+    *, key: PRNGKeyArray, input_layer: int, output_layer: int, hidden_layers: Optional[list[int]] = None
+) -> PyTree:
     """Make a neural network model to approximate the log of the VT function.
 
     :param key: jax random key
@@ -121,6 +122,7 @@ def make(*, key, input_layer: int, output_layer: int, hidden_layers: Optional[li
     :param hidden_layers: hidden layers of the model
     :return: neural network model
     """
+    assert is_prng_key(key)
     if hidden_layers is None:
         keys = jax.random.split(key, 2)
         layers = [
@@ -291,7 +293,7 @@ def train_regressor(
     console.print(table)
 
     model = make(
-        key=get_key(),
+        key=jrd.PRNGKey(np.random.randint(0, 2**32 - 1)),
         input_layer=len(input_keys),
         output_layer=len(output_keys),
         hidden_layers=hidden_layers,
