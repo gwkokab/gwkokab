@@ -15,12 +15,12 @@
 from __future__ import annotations
 
 import os
+from typing_extensions import Optional
 
 import numpy as np
 from flowMC.Sampler import Sampler
 from jax import random as jrd
 from jaxtyping import Int
-from typing_extensions import Optional
 
 
 def save_data_from_sampler(

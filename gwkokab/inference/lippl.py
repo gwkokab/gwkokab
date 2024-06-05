@@ -16,13 +16,13 @@
 from typing_extensions import Optional, Self
 
 import jax
-from jax import numpy as jnp
+import numpy as np
+from jax import numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Int
 from numpyro import distributions as dist
 
 from ..models.utils.jointdistribution import JointDistribution
-from ..utils import get_key
 from ..vts.neuralvt import load_model
 
 
@@ -62,10 +62,10 @@ class LogInhomogeneousPoissonProcessLikelihood:
     def __init__(
         self: Self,
         *model_config: dict,
-        frparams: Optional[dict] = None,
+        independent_recovering_params: Optional[dict] = None,
         neural_vt_path: Optional[str] = None,
     ) -> None:
-        self.frparams = frparams
+        self.free_recovering_params = independent_recovering_params
 
         self.subroutine(model_config)
         if neural_vt_path is not None:
@@ -74,8 +74,8 @@ class LogInhomogeneousPoissonProcessLikelihood:
 
     def subroutine(self: Self, model_configs: dict):
         k = 0
-        self.rparams = []
-        self.fparams = []
+        self.recovering_params = []
+        self.fixed_params = []
         self.input_keys = []
         self.models = []
         self.labels = {}
@@ -90,31 +90,36 @@ class LogInhomogeneousPoissonProcessLikelihood:
             for rparam in model["rparams"]:
                 model["rparams"][rparam]["id"] = k
                 k += 1
-            self.rparams.append({rparam: model["rparams"][rparam]["id"] for rparam in model["rparams"].keys()})
+            self.recovering_params.append(
+                {rparam: model["rparams"][rparam]["id"] for rparam in model["rparams"].keys()}
+            )
             self.labels.update(
                 {
                     model["rparams"][rparam]["id"]: model["rparams"][rparam]["label"]
                     for rparam in model["rparams"].keys()
                 }
             )
-            self.fparams.append(model["fparams"])
+            self.fixed_params.append(model["fparams"])
             self.input_keys.extend(model["input_keys"])
             self.models.append(model["name"])
-        if self.frparams is not None:
-            for rparam in self.frparams:
-                self.frparams[rparam]["id"] = k
+        if self.free_recovering_params is not None:
+            for rparam in self.free_recovering_params:
+                self.free_recovering_params[rparam]["id"] = k
                 k += 1
             self.labels.update(
-                {self.frparams[rparam]["id"]: self.frparams[rparam]["label"] for rparam in self.frparams.keys()}
+                {
+                    self.free_recovering_params[rparam]["id"]: self.free_recovering_params[rparam]["label"]
+                    for rparam in self.free_recovering_params.keys()
+                }
             )
         self.n_dim = k
         self.priors: list[dist.Distribution] = [None] * self.n_dim
         for i, model in enumerate(model_configs):
             for rparam in model["rparams"]:
                 self.priors[model["rparams"][rparam]["id"]] = model["rparams"][rparam]["prior"]
-        if self.frparams is not None:
-            for rparam in self.frparams:
-                self.priors[self.frparams[rparam]["id"]] = self.frparams[rparam]["prior"]
+        if self.free_recovering_params is not None:
+            for rparam in self.free_recovering_params:
+                self.priors[self.free_recovering_params[rparam]["id"]] = self.free_recovering_params[rparam]["prior"]
 
     def tree_flatten(self):
         children = ()
@@ -124,9 +129,9 @@ class LogInhomogeneousPoissonProcessLikelihood:
             "priors": self.priors,
             "input_keys": self.input_keys,
             "labels": self.labels,
-            "frparams": self.frparams,
-            "rparams": self.rparams,
-            "fparams": self.fparams,
+            "frparams": self.free_recovering_params,
+            "rparams": self.recovering_params,
+            "fparams": self.fixed_params,
             "vt_params_available": self.vt_params_available,
             "logVT": self.logVT,
         }
@@ -144,8 +149,8 @@ class LogInhomogeneousPoissonProcessLikelihood:
         :return: Model.
         """
         model = self.models[model_id]
-        fparams = self.fparams[model_id]
-        rparam = jax.tree.map(lambda index: rparams[index], self.rparams[model_id])
+        fparams = self.fixed_params[model_id]
+        rparam = jtr.map(lambda index: rparams[index], self.recovering_params[model_id])
         return model(**fparams, **rparam)
 
     def sum_log_prior(self: Self, value: Array) -> Array:
@@ -162,7 +167,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
             log_prior += log_prior_i
         return log_prior
 
-    def exp_rate(self: Self, rparams: Array) -> Array:
+    def exp_rate(self: Self, recovered_params: Array) -> Array:
         r"""This function calculates the integral inside the term $\exp(\Lambda)$ in the
         likelihood function. The integral is given by,
 
@@ -175,8 +180,8 @@ class LogInhomogeneousPoissonProcessLikelihood:
         """
         N = 1 << 13
         model_ids = list(set(self.vt_params_available.values()))
-        model = JointDistribution(*[self.get_model(model_id, rparams) for model_id in model_ids])
-        samples = model.sample(get_key(), (N,))
+        model = JointDistribution(*[self.get_model(model_id, recovered_params) for model_id in model_ids])
+        samples = model.sample(jrd.PRNGKey(np.random.randint(1, 2**32 - 1)), (N,))
         return jnp.mean(jnp.exp(self.logVT(samples)))
 
     def log_likelihood(self: Self, rparams: Array, data: Optional[dict] = None):
@@ -186,24 +191,24 @@ class LogInhomogeneousPoissonProcessLikelihood:
         :param data: Data provided by the user/sampler.
         :return: Log likelihood value for the given parameters.
         """
-        mapped_rparams = jax.tree.map(lambda index: rparams[index], self.rparams)
-        mapped_models = jax.tree.map(
-            lambda model, fparams, rparam: model(**fparams, **rparam), self.models, self.fparams, mapped_rparams
+        mapped_rparams = jtr.map(lambda index: rparams[index], self.recovering_params)
+        mapped_models = jtr.map(
+            lambda model, fparams, rparam: model(**fparams, **rparam), self.models, self.fixed_params, mapped_rparams
         )
 
         joint_model = JointDistribution(*mapped_models)
 
-        integral_individual = jax.tree.map(
-            lambda y: jax.scipy.special.logsumexp(joint_model.log_prob(y)) - jnp.log(y.shape[0]),
+        integral_individual = jtr.map(
+            lambda y: jax.nn.logsumexp(joint_model.log_prob(y)) - jnp.log(y.shape[0]),
             data["data"],
         )
 
-        log_likelihood = jnp.sum(jnp.asarray(jax.tree.leaves(integral_individual)))
+        log_likelihood = jtr.reduce(lambda x, y: x + y, integral_individual)
 
         if jnp.isfinite(log_likelihood) is False:
             return -jnp.inf
 
-        rate = rparams[self.frparams["rate"]["id"]]
+        rate = rparams[self.free_recovering_params["rate"]["id"]]
         log_rate = jnp.log(rate)
 
         log_likelihood += data["N"] * log_rate
@@ -212,7 +217,7 @@ class LogInhomogeneousPoissonProcessLikelihood:
 
         return log_likelihood
 
-    def log_posterior(self: Self, rparams: Array, data: Optional[dict] = None):
+    def __call__(self: Self, rparams: Array, data: Optional[dict] = None):
         r"""The likelihood function for the inhomogeneous Poisson process.
 
         $$p(\Lambda\mid\text{data})$$
