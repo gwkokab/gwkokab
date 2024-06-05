@@ -18,12 +18,10 @@ from __future__ import annotations
 from typing_extensions import Optional
 
 import RIFT.lalsimutils as lalsimutils
-from jax import numpy as jnp, vmap
-from jax.random import normal, uniform
+from jax import numpy as jnp, random as jrd, vmap
 from jaxtyping import Array, Float, Int
-from numpyro import distributions as dist
 
-from ..utils import chirp_mass, get_key, symmetric_mass_ratio
+from ..utils.mass_relations import chirp_mass, symmetric_mass_ratio
 
 
 def normal_error(
@@ -43,7 +41,7 @@ def normal_error(
     :return: error values
     """
     return vmap(
-        lambda x_: normal(
+        lambda x_: jrd.normal(
             key=key,
             shape=(size,),
             dtype=x.dtype,
@@ -73,14 +71,7 @@ def truncated_normal_error(
     :param upper: upper bound of the truncated normal distribution
     :return: error values
     """
-    return vmap(
-        lambda x_: dist.TruncatedNormal(
-            loc=x_,
-            scale=scale,
-            low=lower,
-            high=upper,
-        ).sample(key=key, sample_shape=(size,))
-    )(x)
+    return vmap(lambda x_: jrd.truncated_normal(key=key, lower=lower, upper=upper, shape=(size,)) * scale + x_)(x)
 
 
 def uniform_error(x: Array, size: Int, key: Array, *, lower: Float, upper: Float) -> Array:
@@ -95,7 +86,7 @@ def uniform_error(x: Array, size: Int, key: Array, *, lower: Float, upper: Float
     :param upper: upper bound of the uniform distribution
     :return: error values
     """
-    return vmap(lambda x_: dist.Uniform(low=lower, high=upper).sample(key=key, sample_shape=(size,)) + x_)(x)
+    return vmap(lambda x_: jrd.uniform(key=key, shape=(size,), minval=lower, maxval=upper) + x_)(x)
 
 
 def banana_error_m1_m2(
@@ -125,20 +116,13 @@ def banana_error_m1_m2(
     m1 = x[..., 0]
     m2 = x[..., 1]
 
-    key = get_key(key)
-    r0 = normal(key=key)
+    keys = jrd.split(key, 5)
 
-    key = get_key(key)
-    r0p = normal(key=key)
-
-    key = get_key(key)
-    r = normal(key=key, shape=(size,)) * scale_Mc
-
-    key = get_key(key)
-    rp = normal(key=key, shape=(size,)) * scale_eta
-
-    key = get_key(key)
-    rho = 9.0 * jnp.power(uniform(key=key), -1.0 / 3.0)
+    r0 = jrd.normal(key=keys[0])
+    r0p = jrd.normal(key=keys[1])
+    r = jrd.normal(key=keys[2], shape=(size,)) * scale_Mc
+    rp = jrd.normal(key=keys[3], shape=(size,)) * scale_eta
+    rho = 9.0 * jnp.power(jrd.uniform(key=keys[4]), -1.0 / 3.0)
 
     Mc_true = chirp_mass(m1, m2)
     eta_true = symmetric_mass_ratio(m1, m2)
@@ -163,32 +147,3 @@ def banana_error_m1_m2(
     m2_final = factor * (1.0 - etaV_sqrt)
 
     return jnp.column_stack([m1_final, m2_final])
-
-
-def banana_error_m1_q(
-    x: Array,
-    size: Int,
-    key: Array,
-    *,
-    scale_Mc: Float = 1.0,
-    scale_eta: Float = 1.0,
-) -> Array:
-    """Add banana error to the given values. This function is similar to the
-    `banana_error_m1_m2` function but returns the values as m1 and q
-    instead of m1 and m2.
-
-    :param x: given values as m1 and q
-    :param size: number of samples
-    :param key: jax random key
-    :param scale_Mc: scale of the chirp mass error, defaults to 1.0
-    :param scale_eta: scale of the symmetric mass ratio error, defaults to 1.0
-    :return: error values
-    """
-    m1 = x[..., 0]
-    m2 = m1 * x[..., 1]
-    m1m2 = banana_error_m1_m2(jnp.array([m1, m2]), size, key, scale_Mc=scale_Mc, scale_eta=scale_eta)
-    m1 = m1m2[..., 0]
-    q = m1m2[..., 1] / m1m2[..., 0]
-    mask = (q >= 1.0) | (q <= 0.0)
-    q = jnp.where(mask, jnp.nan, q)
-    return jnp.column_stack([m1, q])

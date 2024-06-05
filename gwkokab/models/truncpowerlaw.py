@@ -24,7 +24,7 @@ from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
-from ..utils.misc import get_key
+from ..utils import get_key
 
 
 class TruncatedPowerLaw(dist.Distribution):
