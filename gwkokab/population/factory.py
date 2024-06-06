@@ -134,7 +134,7 @@ class PopulationFactory:
             return population
 
         value = jnp.column_stack(
-            (population[:, self.headers.index(vt_params.value)] for vt_params in self.popinfo.VT_PARAMS)
+            [population[:, self.headers.index(vt_params.value)] for vt_params in self.popinfo.VT_PARAMS]
         )
 
         _, logVT = load_model(self.popinfo.VT_FILE)
