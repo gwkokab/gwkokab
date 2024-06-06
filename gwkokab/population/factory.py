@@ -82,6 +82,9 @@ class PopulationFactory:
         for i, model in enumerate(models):
             headers.extend(model[ModelMeta.OUTPUT])
 
+        self.vt_param_dist = None
+        self.vt_selection_mask = None
+
         if popinfo.VT_FILE is not None:
             vt_models: list[Distribution] = []
             vt_selection_mask: list[int] = []
@@ -124,21 +127,25 @@ class PopulationFactory:
             keys,
             is_leaf=lambda x: isinstance(x, Distribution),
         )
+
         population = jtr.reduce(lambda x, y: jnp.concatenate((x, y), axis=-1), population)
-        if self.popinfo.VT_FILE is not None:
-            value = jnp.column_stack(
-                (population[:, self.headers.index(vt_params.value)] for vt_params in self.popinfo.VT_PARAMS)
-            )
 
-            _, logVT = load_model(self.popinfo.VT_FILE)
-            logVT = jax.vmap(logVT)
+        if self.popinfo.VT_FILE is None:
+            return population
 
-            vt = jnp.exp(logVT(value).flatten())
-            vt /= jnp.sum(vt)
-            _, key = jrd.split(keys[-1])
-            index = jrd.choice(key, jnp.arange(size), p=vt, shape=(old_size,))
+        value = jnp.column_stack(
+            (population[:, self.headers.index(vt_params.value)] for vt_params in self.popinfo.VT_PARAMS)
+        )
 
-            population = population[index]
+        _, logVT = load_model(self.popinfo.VT_FILE)
+        logVT = jax.vmap(logVT)
+
+        vt = jnp.exp(logVT(value).flatten())
+        vt /= jnp.sum(vt)
+        _, key = jrd.split(keys[-1])
+        index = jrd.choice(key, jnp.arange(size), p=vt, shape=(old_size,))
+
+        population = population[index]
 
         return population
 
@@ -148,7 +155,7 @@ class PopulationFactory:
         assert is_prng_key(key)
         if self.popinfo.VT_FILE is None:
             size = self.popinfo.RATE
-        else:
+        if self.popinfo.VT_FILE is not None:
             poisson_key, rate_key = jrd.split(key)
             size: Int = jrd.poisson(poisson_key, self.exp_rate(key=rate_key))
             key = rate_key
