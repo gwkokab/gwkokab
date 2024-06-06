@@ -53,14 +53,7 @@ class PopulationFactory:
     INJECTIONS_DIR: str = "injections"
     REALIZATIONS_DIR: str = "realization_{}"
 
-    def __init__(
-        self,
-        models: list[dict],
-        popinfo: PopInfo,
-        seperate_injections: Optional[bool] = None,
-        *,
-        key: Optional[PRNGKeyArray] = None,
-    ) -> None:
+    def __init__(self, models: list[dict], popinfo: PopInfo, seperate_injections: Optional[bool] = None) -> None:
         for model in models:
             _check_model(model)
 
@@ -133,9 +126,9 @@ class PopulationFactory:
         )
         population = jtr.reduce(lambda x, y: jnp.concatenate((x, y), axis=-1), population)
         if self.popinfo.VT_FILE is not None:
-            m1 = population[:, self.headers.index(Parameter.PRIMARY_MASS.value)]
-            m2 = population[:, self.headers.index(Parameter.SECONDARY_MASS.value)]
-            value = jnp.column_stack((m1, m2))
+            value = jnp.column_stack(
+                (population[:, self.headers.index(vt_params.value)] for vt_params in self.popinfo.VT_PARAMS)
+            )
 
             _, logVT = load_model(self.popinfo.VT_FILE)
             logVT = jax.vmap(logVT)
@@ -153,8 +146,12 @@ class PopulationFactory:
         if key is None:
             key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
         assert is_prng_key(key)
-        poisson_key, rate_key = jrd.split(key)
-        size: Int = jrd.poisson(poisson_key, self.exp_rate(key=rate_key))
+        if self.popinfo.VT_FILE is None:
+            size = self.popinfo.RATE
+        else:
+            poisson_key, rate_key = jrd.split(key)
+            size: Int = jrd.poisson(poisson_key, self.exp_rate(key=rate_key))
+            key = rate_key
         if size == 0:
             raise ValueError(
                 "Population size is zero. This can be a result of following:\n"
@@ -164,7 +161,7 @@ class PopulationFactory:
                 "\t4. VT file is not provided or is not valid.\n"
                 "\t5. Or some other reason."
             )
-        pop_keys = jrd.split(rate_key, self.popinfo.NUM_REALIZATIONS)
+        pop_keys = jrd.split(key, self.popinfo.NUM_REALIZATIONS)
         os.makedirs(self.popinfo.ROOT_DIR, exist_ok=True)
         for i in range(self.popinfo.NUM_REALIZATIONS):
             population = self.generate_population(size, key=pop_keys[i])
