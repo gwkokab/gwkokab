@@ -30,8 +30,8 @@ class ModelMeta(Enum):
 
 @unique
 class Parameter(Enum):
-    PRIMARY_MASS = "m1_source"
-    SECONDARY_MASS = "m2_source"
+    PRIMARY_MASS_SOURCE = "m1_source"
+    SECONDARY_MASS_SOURCE = "m2_source"
 
     MASS_RATIO = "q"
     CHIRP_MASS = "M_c"

@@ -9,7 +9,7 @@ from gwkokab.errors import banana_error_m1_m2
 models = [
     {
         gwk_pop.ModelMeta.NAME: dist.Normal,
-        gwk_pop.ModelMeta.OUTPUT: [gwk_pop.Parameter.PRIMARY_MASS],
+        gwk_pop.ModelMeta.OUTPUT: [gwk_pop.Parameter.PRIMARY_MASS_SOURCE],
         gwk_pop.ModelMeta.PARAMETERS: {
             "loc": 80,
             "scale": 2,
@@ -22,7 +22,7 @@ models = [
     },
     {
         gwk_pop.ModelMeta.NAME: dist.Normal,
-        gwk_pop.ModelMeta.OUTPUT: [gwk_pop.Parameter.SECONDARY_MASS],
+        gwk_pop.ModelMeta.OUTPUT: [gwk_pop.Parameter.SECONDARY_MASS_SOURCE],
         gwk_pop.ModelMeta.PARAMETERS: {
             "loc": 30,
             "scale": 2,
@@ -43,7 +43,7 @@ popinfo = gwk_pop.PopInfo(
     RATE=1e6,
     NUM_REALIZATIONS=5,
     VT_FILE=r"/media/gradf/Academic/project/jaxtro/neural_vt_0.5_200_1day_SimNoisePSDaLIGO175MpcT1800545_IMRPhenomD_snr10.eqx",
-    VT_PARAMS=[gwk_pop.Parameter.PRIMARY_MASS, gwk_pop.Parameter.SECONDARY_MASS],
+    VT_PARAMS=[gwk_pop.Parameter.PRIMARY_MASS_SOURCE, gwk_pop.Parameter.SECONDARY_MASS_SOURCE],
     TIME=365.25,
 )
 
@@ -67,7 +67,7 @@ noisepopinfo = gwk_pop.NoisePopInfo(
     SIZE=4000,
     ERROR_FUNCS=[
         (
-            (gwk_pop.Parameter.PRIMARY_MASS, gwk_pop.Parameter.SECONDARY_MASS),
+            (gwk_pop.Parameter.PRIMARY_MASS_SOURCE, gwk_pop.Parameter.SECONDARY_MASS_SOURCE),
             lambda x, size, key: banana_error_m1_m2(x, size, key, scale_Mc=1.0, scale_eta=1.0),
         )
     ],
