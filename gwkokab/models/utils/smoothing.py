@@ -17,12 +17,11 @@ from __future__ import annotations
 from functools import partial
 
 from jax import jit, numpy as jnp
-
-from ...typing import Numeric
+from jaxtyping import Array, Real
 
 
 @partial(jit, inline=True)
-def smoothing_kernel(mass: Numeric, mass_min: Numeric, delta: Numeric) -> Numeric:
+def smoothing_kernel(mass: Array | Real, mass_min: Array | Real, delta: Array | Real) -> Array | Real:
     r"""See equation B4 in [Population Properties of Compact Objects from the Second
     LIGO-Virgo Gravitational-Wave Transient Catalog](https://arxiv.org/abs/2010.14533).
     

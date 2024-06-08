@@ -19,12 +19,11 @@ from typing_extensions import Self
 
 import numpy as np
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
-from jaxtyping import Float, PRNGKeyArray
+from jaxtyping import Array, Float, PRNGKeyArray, Real
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
-from ..typing import Numeric
 from ..utils.transformations import m1_q_to_m2, mass_ratio
 from .truncpowerlaw import TruncatedPowerLaw
 from .utils import numerical_inverse_transform_sampling
@@ -141,7 +140,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self: Self, m1: Numeric) -> Numeric:
+    def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
         
         .. math::
@@ -168,7 +167,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         return jnp.select(conditions, log_probs, default=jnp.full_like(m1, -jnp.inf))
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_mass_ratio_model(self: Self, m1: Numeric, q: Numeric) -> Numeric:
+    def _log_prob_mass_ratio_model(self: Self, m1: Array | Real, q: Array | Real) -> Array | Real:
         r"""Log probability of mass ratio model
 
         .. math::

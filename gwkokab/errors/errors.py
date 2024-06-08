@@ -124,7 +124,7 @@ def banana_error_m1_m2(
     rp = jrd.normal(key=keys[3], shape=(size,)) * scale_eta
     rho = 9.0 * jnp.power(jrd.uniform(key=keys[4]), -1.0 / 3.0)
 
-    Mc_true = chirp_mass(m1, m2)
+    Mc_true = chirp_mass(m1=m1, m2=m2)
     eta_true = symmetric_mass_ratio(m1=m1, m2=m2)
 
     v_PN_param = (jnp.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (1.0 / 3.0)  # 'v' parameter

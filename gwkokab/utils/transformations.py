@@ -14,11 +14,9 @@
 
 from __future__ import annotations
 
-from numbers import Real
-
 import jax
 from jax import lax, numpy as jnp
-from jaxtyping import Array
+from jaxtyping import Array, Real
 
 
 __all__ = [
