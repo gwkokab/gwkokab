@@ -21,13 +21,12 @@ from typing_extensions import Self
 import numpy as np
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.scipy.stats import norm
-from jaxtyping import Float, PRNGKeyArray
+from jaxtyping import Array, Float, PRNGKeyArray, Real
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
-from ..typing import Numeric
-from ..utils.mass_relations import mass_ratio
+from ..utils.transformations import m1_q_to_m2, mass_ratio
 from .utils import numerical_inverse_transform_sampling
 from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils.smoothing import smoothing_kernel
@@ -166,7 +165,7 @@ class MultiPeakMassModel(dist.Distribution):
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self: Self, m1: Numeric) -> Numeric:
+    def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
 
         $$
@@ -192,7 +191,7 @@ class MultiPeakMassModel(dist.Distribution):
         return log_prob_val
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_mass_ratio_model(self: Self, m1: Numeric, q: Numeric) -> Numeric:
+    def _log_prob_mass_ratio_model(self: Self, m1: Array | Real, q: Array | Real) -> Array | Real:
         r"""Log probability of mass ratio model
 
         $$\log p(q\mid m_1) = \beta \log q + \log S(m_1q\mid m_{\text{min}},\delta_m)$$
@@ -201,7 +200,7 @@ class MultiPeakMassModel(dist.Distribution):
         :param q: mass ratio
         :return: log probability of mass ratio model
         """
-        log_smoothing_val = jnp.log(smoothing_kernel(m1 * q, self.mmin, self.delta))
+        log_smoothing_val = jnp.log(smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, self.delta))
         return self.beta * jnp.log(q) + log_smoothing_val
 
     @validate_sample
@@ -209,7 +208,7 @@ class MultiPeakMassModel(dist.Distribution):
         m1 = value[..., 0]
         if self._default_params:
             m2 = value[..., 1]
-            q = mass_ratio(m1, m2)
+            q = mass_ratio(m1=m1, m2=m2)
         else:
             q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
@@ -243,5 +242,5 @@ class MultiPeakMassModel(dist.Distribution):
         )(m1, key)
 
         if self._default_params:
-            return jnp.column_stack([m1, m1 * q]).reshape(sample_shape + self.event_shape)
+            return jnp.column_stack([m1, m1_q_to_m2(m1=m1, q=q)]).reshape(sample_shape + self.event_shape)
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)

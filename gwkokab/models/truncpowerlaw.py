@@ -19,11 +19,9 @@ from typing_extensions import Self
 
 from jax import jit, lax, numpy as jnp
 from jax.random import uniform
-from jaxtyping import Float, PRNGKeyArray
+from jaxtyping import Array, Float, PRNGKeyArray, Real
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
-
-from ..typing import Numeric
 
 
 class TruncatedPowerLaw(dist.Distribution):
@@ -79,7 +77,7 @@ class TruncatedPowerLaw(dist.Distribution):
         return self._support
 
     @partial(jit, static_argnums=(0,))
-    def _log_Z(self) -> Numeric:
+    def _log_Z(self) -> Array | Real:
         """Computes the logarithm of normalization constant.
 
         :return: The logarithm of normalization constant.
@@ -92,7 +90,7 @@ class TruncatedPowerLaw(dist.Distribution):
         )
 
     @validate_sample
-    def log_prob(self: Self, value: Numeric) -> Numeric:
+    def log_prob(self: Self, value: Array | Real) -> Array | Real:
         return self.alpha * jnp.log(value) - self._logZ
 
     def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):

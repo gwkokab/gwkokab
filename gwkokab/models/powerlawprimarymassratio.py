@@ -21,7 +21,7 @@ from jaxtyping import Float, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ..utils.mass_relations import mass_ratio
+from ..utils.transformations import m1_q_to_m2, mass_ratio
 from .truncpowerlaw import TruncatedPowerLaw
 from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
 
@@ -82,7 +82,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         m1 = value[..., 0]
         if self._default_params:
             m2 = value[..., 1]
-            q = mass_ratio(m1, m2)
+            q = mass_ratio(m1=m1, m2=m2)
         else:
             q = value[..., 1]
         log_prob_m1 = TruncatedPowerLaw(
@@ -111,5 +111,5 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         ).sample(key=key, sample_shape=())
 
         if self._default_params:
-            return jnp.column_stack((m1, m1 * q))
+            return jnp.column_stack((m1, m1_q_to_m2(m1=m1, q=q)))
         return jnp.column_stack((m1, q))
