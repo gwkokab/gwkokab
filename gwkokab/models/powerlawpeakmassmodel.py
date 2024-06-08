@@ -26,7 +26,7 @@ from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..typing import Numeric
-from ..utils.mass_relations import mass_ratio
+from ..utils.transformations import m1_q_to_m2, mass_ratio
 from .utils import numerical_inverse_transform_sampling
 from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils.smoothing import smoothing_kernel
@@ -177,7 +177,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         :param q: mass ratio
         :return: log probability of mass ratio model
         """
-        log_smoothing_val = jnp.log(smoothing_kernel(m1 * q, self.mmin, self.delta))
+        log_smoothing_val = jnp.log(smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, self.delta))
         return self.beta * jnp.log(q) + log_smoothing_val
 
     @validate_sample
@@ -185,7 +185,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         m1 = value[..., 0]
         if self._default_params:
             m2 = value[..., 1]
-            q = mass_ratio(m1, m2)
+            q = mass_ratio(m1=m1, m2=m2)
         else:
             q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
@@ -218,5 +218,5 @@ class PowerLawPeakMassModel(dist.Distribution):
         )(m1, keys)
 
         if self._default_params:
-            return jnp.column_stack([m1, m1 * q]).reshape(sample_shape + self.event_shape)
+            return jnp.column_stack([m1, m1_q_to_m2(m1=m1, q=q)]).reshape(sample_shape + self.event_shape)
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)

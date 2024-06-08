@@ -21,7 +21,7 @@ import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, random as jrd, vmap
 from jaxtyping import Array, Float, Int
 
-from ..utils.mass_relations import chirp_mass, symmetric_mass_ratio
+from ..utils.transformations import chirp_mass, symmetric_mass_ratio
 
 
 def normal_error(
@@ -125,7 +125,7 @@ def banana_error_m1_m2(
     rho = 9.0 * jnp.power(jrd.uniform(key=keys[4]), -1.0 / 3.0)
 
     Mc_true = chirp_mass(m1, m2)
-    eta_true = symmetric_mass_ratio(m1, m2)
+    eta_true = symmetric_mass_ratio(m1=m1, m2=m2)
 
     v_PN_param = (jnp.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (1.0 / 3.0)  # 'v' parameter
     v_PN_param_max = 0.2
