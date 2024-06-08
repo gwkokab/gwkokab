@@ -132,11 +132,8 @@ def _m2_q_to_m1(*, m2: Array | Real, q: Array | Real) -> Array | Real:
 
 
 def _M_q_to_m1_m2(*, M: Array | Real, q: Array | Real) -> tuple[Array, Array]:
-    m1 = lax.div(
-        M,
-        lax.add(1, q),  # 1 + q
-    )
-    m2 = lax.mul(m1, q)  # m2 = m1 * q
+    m1 = lax.div(M, lax.add(1, q))  # M/(1 + q)
+    m2 = _m1_q_to_m2(m1=m1, q=q)
     return m1, m2
 
 
@@ -222,39 +219,40 @@ def _Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Arr
 
 def _m1_m2_to_Mc_eta(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
     M = _total_mass(m1, m2)
-    eta = m1 * m2 * lax.reciprocal(M * M)  # eta = m1 * m2 / M^2
+    m1m2 = _m1_times_m2(m1, m2)
+    eta = lax.mul(m1m2, lax.reciprocal(M * M))  # eta = m1 * m2 / M^2
     Mc = lax.mul(lax.pow(eta, 0.6), M)  # Mc = M * eta^0.6
     return Mc, eta
 
 
 def _MC_delta_to_m1_m2(*, Mc: Array | Real, delta: Array | Real) -> tuple[Array, Array]:
-    eta = _symmetric_mass_ratio_to_delta_m(0.25 * delta)  # eta = sqrt(1 - 4 * delta) / 4
+    eta = _symmetric_mass_ratio_to_delta_m(lax.mul(0.25, delta))  # eta = sqrt(1 - 4 * delta) / 4
     return _Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
 
 
 def _polar_to_cart(*, r: Array | Real, theta: Array | Real) -> tuple[Array, Array]:
-    x = r * lax.cos(theta)
-    y = r * lax.sin(theta)
+    x = lax.mul(r, lax.cos(theta))
+    y = lax.mul(r, lax.sin(theta))
     return x, y
 
 
 def _cart_to_polar(*, x: Array | Real, y: Array | Real) -> tuple[Array, Array]:
-    r = lax.sqrt(lax.square(x) + lax.square(y))
+    r = lax.sqrt(lax.add(lax.square(x), lax.square(y)))
     theta = jnp.arctan2(y, x)
     return r, theta
 
 
 def _spherical_to_cart(*, r: Array | Real, theta: Array | Real, phi: Array | Real) -> tuple[Array, Array, Array]:
-    x = r * lax.sin(theta) * lax.cos(phi)
-    y = r * lax.sin(theta) * lax.sin(phi)
-    z = r * lax.cos(theta)
+    x = lax.mul(lax.mul(r, lax.sin(theta)), lax.cos(phi))  # x = r * sin(theta) * cos(phi)
+    y = lax.mul(lax.mul(r, lax.sin(theta)), lax.sin(phi))  # y = r * sin(theta) * sin(phi)
+    z = lax.mul(r, lax.cos(theta))  # z = r * cos(theta)
     return x, y, z
 
 
 def _cart_to_spherical(*, x: Array | Real, y: Array | Real, z: Array | Real) -> tuple[Array, Array, Array]:
-    r = lax.sqrt(lax.square(x) + lax.square(y) + lax.square(z))
-    theta = jnp.arccos(lax.div(z, r))
-    phi = jnp.arctan2(y, x)
+    r = lax.sqrt(lax.add(lax.add(lax.square(x), lax.square(y)), lax.square(z)))  # r = sqrt(x^2 + y^2 + z^2)
+    theta = jnp.arccos(lax.div(z, r))  # theta = arccos(z / r)
+    phi = jnp.arctan2(y, x)  # phi = arctan(y / x)
     return r, theta, phi
 
 
