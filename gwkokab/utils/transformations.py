@@ -35,9 +35,9 @@ __all__ = [
     "m1_m2_chieff_chiminus_to_chi1z_chi2z",
     "m1_m2_ordering",
     "m1_m2_to_Mc_eta",
+    "m1_q_to_m2",
     "m1_times_m2",
-    "m1q_to_m2",
-    "m2q_to_m1",
+    "m2_q_to_m1",
     "m_det_z_to_m_source",
     "M_q_to_m1_m2",
     "m_source_z_to_m_det",
@@ -123,11 +123,11 @@ def _m_source_z_to_m_det(*, m_source: Array | Real, z: Array | Real) -> Array | 
     )
 
 
-def _m1q_to_m2(*, m1: Array | Real, q: Array | Real) -> Array | Real:
+def _m1_q_to_m2(*, m1: Array | Real, q: Array | Real) -> Array | Real:
     return lax.mul(m1, q)  # m2 = m1 * q
 
 
-def _m2q_to_m1(*, m2: Array | Real, q: Array | Real) -> Array | Real:
+def _m2_q_to_m1(*, m2: Array | Real, q: Array | Real) -> Array | Real:
     return lax.div(m2, q)  # m1 = m2 / q
 
 
@@ -271,9 +271,9 @@ m1_m2_chi1z_chi2z_to_chiminus = jax.jit(_m1_m2_chi1z_chi2z_to_chiminus, inline=T
 m1_m2_chieff_chiminus_to_chi1z_chi2z = jax.jit(_m1_m2_chieff_chiminus_to_chi1z_chi2z, inline=True)
 m1_m2_ordering = jax.jit(_m1_m2_ordering, inline=True)
 m1_m2_to_Mc_eta = jax.jit(_m1_m2_to_Mc_eta, inline=True)
+m1_q_to_m2 = jax.jit(_m1_q_to_m2, inline=True)
 m1_times_m2 = jax.jit(_m1_times_m2, inline=True)
-m1q_to_m2 = jax.jit(_m1q_to_m2, inline=True)
-m2q_to_m1 = jax.jit(_m2q_to_m1, inline=True)
+m2_q_to_m1 = jax.jit(_m2_q_to_m1, inline=True)
 m_det_z_to_m_source = jax.jit(_m_det_z_to_m_source, inline=True)
 M_q_to_m1_m2 = jax.jit(_M_q_to_m1_m2, inline=True)
 m_source_z_to_m_det = jax.jit(_m_source_z_to_m_det, inline=True)
