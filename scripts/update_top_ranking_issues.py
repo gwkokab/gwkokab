@@ -23,7 +23,7 @@ CORE_LABELS: set[str] = {
     "enhancement",
     "experimental",
     "bug",
-    # "panic / crash",
+    "design enhancement",
 }
 # A set of labels for adding in labels that we want present in the final
 # report, but that we don't want being defined as a core label, since issues
