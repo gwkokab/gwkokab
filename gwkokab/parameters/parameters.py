@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 
+from functools import partial
 from typing_extensions import Optional
 
 from numpyro import distributions as dist
@@ -29,12 +30,16 @@ class Parameter(object):
 
     def __init__(
         self,
+        *,
         name: str,
         label: Optional[str] = None,
         prior: Optional[dist.Distribution] = None,
+        default_prior: Optional[dist.Distribution] = None,
     ) -> None:
-        if prior is None:
+        if prior is None and default_prior is None:
             raise ValueError("Prior distribution must be provided.")
+        if prior is None:
+            prior = default_prior
         self._prior = prior
         self._name = name
         if label is None:
@@ -71,46 +76,22 @@ class Parameter(object):
 uniform_01 = dist.Uniform()
 uniform_neg1_1 = dist.Uniform(-1.0, 1.0)
 
-PRIMARY_MASS_SOURCE = lambda prior=None: Parameter(
-    name="m1_source", label=r"$m_1^\text{source}$", prior=dist.Uniform(50.0, 100.0) if prior is None else prior
+PRIMARY_MASS_SOURCE = partial(
+    Parameter, name="m1_source", label=r"$m_1^\text{source}$", default_prior=dist.Uniform(50.0, 100.0)
 )
-SECONDARY_MASS_SOURCE = lambda prior=None: Parameter(
-    name="m2_source", label=r"$m_2^\text{source}$", prior=dist.Uniform(5.0, 30.0) if prior is None else prior
+SECONDARY_MASS_SOURCE = partial(
+    Parameter, name="m2_source", label=r"$m_2^\text{source}$", default_prior=dist.Uniform(5.0, 30.0)
 )
-MASS_RATIO = lambda prior=None: Parameter(name="q", label=r"$q$", prior=uniform_01 if prior is None else prior)
-CHIRP_MASS = lambda prior=None: Parameter(
-    name="M_c", label=r"$M_c$", prior=dist.Uniform(5.0, 50.0) if prior is None else prior
-)
-SYMMETRIC_MASS_RATIO = lambda prior=None: Parameter(
-    name="eta", label=r"$\eta$", prior=dist.Uniform(5.0, 50.0) if prior is None else prior
-)
-REDUCED_MASS = lambda prior=None: Parameter(
-    name="M_r", label=r"$M_r$", prior=dist.Uniform(5.0, 50.0) if prior is None else prior
-)
-ECCENTRICITY = lambda prior=None: Parameter(
-    name="ecc", label=r"$\varepsilon$", prior=uniform_01 if prior is None else prior
-)
-PRIMARY_ALIGNED_SPIN = lambda prior=None: Parameter(
-    name="a1", label=r"$a_1$", prior=uniform_01 if prior is None else prior
-)
-SECONDARY_ALIGNED_SPIN = lambda prior=None: Parameter(
-    name="a2", label=r"$a_2$", prior=uniform_01 if prior is None else prior
-)
-PRIMARY_SPIN_X = lambda prior=None: Parameter(
-    name="a1x", label=r"$a_1^x$", prior=uniform_neg1_1 if prior is None else prior
-)
-PRIMARY_SPIN_Y = lambda prior=None: Parameter(
-    name="a1y", label=r"$a_1^y$", prior=uniform_neg1_1 if prior is None else prior
-)
-PRIMARY_SPIN_Z = lambda prior=None: Parameter(
-    name="a1z", label=r"$a_1^z$", prior=uniform_neg1_1 if prior is None else prior
-)
-SECONDARY_SPIN_X = lambda prior=None: Parameter(
-    name="a2x", label=r"$a_2^x$", prior=uniform_neg1_1 if prior is None else prior
-)
-SECONDARY_SPIN_Y = lambda prior=None: Parameter(
-    name="a2y", label=r"$a_2^y$", prior=uniform_neg1_1 if prior is None else prior
-)
-SECONDARY_SPIN_Z = lambda prior=None: Parameter(
-    name="a2z", label=r"$a_2^z$", prior=uniform_neg1_1 if prior is None else prior
-)
+MASS_RATIO = partial(Parameter, name="q", label=r"$q$", default_prior=uniform_01)
+CHIRP_MASS = partial(Parameter, name="M_c", label=r"$M_c$", default_prior=dist.Uniform(5.0, 50.0))
+SYMMETRIC_MASS_RATIO = partial(Parameter, name="eta", label=r"$\eta$", default_prior=dist.Uniform(5.0, 50.0))
+REDUCED_MASS = partial(Parameter, name="M_r", label=r"$M_r$", default_prior=dist.Uniform(5.0, 50.0))
+ECCENTRICITY = partial(Parameter, name="ecc", label=r"$\varepsilon$", default_prior=uniform_01)
+PRIMARY_ALIGNED_SPIN = partial(Parameter, name="a1", label=r"$a_1$", default_prior=uniform_01)
+SECONDARY_ALIGNED_SPIN = partial(Parameter, name="a2", label=r"$a_2$", default_prior=uniform_01)
+PRIMARY_SPIN_X = partial(Parameter, name="a1x", label=r"$a_1^x$", default_prior=uniform_neg1_1)
+PRIMARY_SPIN_Y = partial(Parameter, name="a1y", label=r"$a_1^y$", default_prior=uniform_neg1_1)
+PRIMARY_SPIN_Z = partial(Parameter, name="a1z", label=r"$a_1^z$", default_prior=uniform_neg1_1)
+SECONDARY_SPIN_X = partial(Parameter, name="a2x", label=r"$a_2^x$", default_prior=uniform_neg1_1)
+SECONDARY_SPIN_Y = partial(Parameter, name="a2y", label=r"$a_2^y$", default_prior=uniform_neg1_1)
+SECONDARY_SPIN_Z = partial(Parameter, name="a2z", label=r"$a_2^z$", default_prior=uniform_neg1_1)
