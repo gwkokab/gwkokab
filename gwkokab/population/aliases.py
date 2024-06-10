@@ -28,29 +28,6 @@ class ModelMeta(Enum):
     SAVE_AS = auto()
 
 
-@unique
-class Parameter(Enum):
-    PRIMARY_MASS_SOURCE = "m1_source"
-    SECONDARY_MASS_SOURCE = "m2_source"
-
-    MASS_RATIO = "q"
-    CHIRP_MASS = "M_c"
-    SYMMETRIC_MASS_RATIO = "eta"
-    REDUCED_MASS = "M_r"
-
-    ECCENTRICITY = "ecc"
-
-    PRIMARY_ALIGNED_SPIN = "a1"
-    SECONDARY_ALIGNED_SPIN = "a2"
-
-    PRIMARY_SPIN_X = "a1x"
-    PRIMARY_SPIN_Y = "a1y"
-    PRIMARY_SPIN_Z = "a1z"
-    SECONDARY_SPIN_X = "a2x"
-    SECONDARY_SPIN_Y = "a2y"
-    SECONDARY_SPIN_Z = "a2z"
-
-
 @dataclass(repr=True)
 class PopInfo:
     ROOT_DIR: str
@@ -59,7 +36,7 @@ class PopInfo:
     RATE: Float
     TIME: Optional[Float] = None
     VT_FILE: Optional[str] = None
-    VT_PARAMS: Optional[list[Parameter]] = None
+    VT_PARAMS: Optional[list[str]] = None
     NUM_REALIZATIONS: Int = 5
 
 
@@ -67,6 +44,6 @@ class PopInfo:
 class NoisePopInfo:
     FILENAME_REGEX: str
     OUTPUT_DIR: str
-    HEADER: list[Parameter]
+    HEADER: list[str]
     SIZE: Int
     ERROR_FUNCS: list[tuple[Int, Callable[[Float, Int], Array]]]

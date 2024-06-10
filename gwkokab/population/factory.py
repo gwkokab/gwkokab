@@ -29,8 +29,8 @@ from numpyro.util import is_prng_key
 from ..models import *
 from ..models.utils.constraints import *
 from ..models.utils.jointdistribution import JointDistribution
-from ..vts.neuralvt import load_model  # imported here to avoid circular import
-from .aliases import ModelMeta, Parameter, PopInfo
+from ..vts.neuralvt import load_model
+from .aliases import ModelMeta, PopInfo
 
 
 __all__ = ["PopulationFactory"]
@@ -78,9 +78,10 @@ class PopulationFactory:
 
         self.config_vars = config_vars
 
-        headers: list[Parameter] = []
+        headers: list[str] = []
         for i, model in enumerate(models):
             headers.extend(model[ModelMeta.OUTPUT])
+        self.headers = headers
 
         self.vt_param_dist = None
         self.vt_selection_mask = None
@@ -106,7 +107,6 @@ class PopulationFactory:
             self.vt_param_dist = JointDistribution(*vt_models)
             self.vt_selection_mask = vt_selection_mask
 
-        self.headers = [header.value for header in headers]
         self.popinfo = popinfo
 
     def exp_rate(self: Self, *, key: PRNGKeyArray) -> Float:
@@ -133,9 +133,7 @@ class PopulationFactory:
         if self.popinfo.VT_FILE is None:
             return population
 
-        value = jnp.column_stack(
-            [population[:, self.headers.index(vt_params.value)] for vt_params in self.popinfo.VT_PARAMS]
-        )
+        value = jnp.column_stack([population[:, self.headers.index(vt_params)] for vt_params in self.popinfo.VT_PARAMS])
 
         _, logVT = load_model(self.popinfo.VT_FILE)
         logVT = jax.vmap(logVT)

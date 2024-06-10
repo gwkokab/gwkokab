@@ -32,6 +32,7 @@ __all__ = ["run_noise_factory"]
 
 def run_noise_factory(npopinfo: NoisePopInfo, *, key: Optional[PRNGKeyArray] = None) -> None:
     filenames = glob.glob(npopinfo.FILENAME_REGEX)
+    print(filenames)
     heads: list[list[int]] = []
     error_fns: list[Callable] = []
     for head, err_fn in npopinfo.ERROR_FUNCS:
@@ -42,6 +43,8 @@ def run_noise_factory(npopinfo: NoisePopInfo, *, key: Optional[PRNGKeyArray] = N
         heads.append(_head)
         error_fns.append(err_fn)
 
+    print(heads)
+
     index = 0
 
     if key is None:
@@ -50,6 +53,7 @@ def run_noise_factory(npopinfo: NoisePopInfo, *, key: Optional[PRNGKeyArray] = N
     keys = jrd.split(key, len(filenames) * len(heads))
 
     for filename in filenames:
+        print(f"Processing file {index}")
         noisey_data = np.empty((npopinfo.SIZE, len(npopinfo.HEADER)))
         data = np.loadtxt(filename)
         i = 0
@@ -72,7 +76,7 @@ def run_noise_factory(npopinfo: NoisePopInfo, *, key: Optional[PRNGKeyArray] = N
         np.savetxt(
             npopinfo.OUTPUT_DIR.format(index),
             masked_noisey_data,
-            header=" ".join([h.value for h in npopinfo.HEADER]),
+            header=" ".join(npopinfo.HEADER),
             comments="#",
         )
         index += 1
