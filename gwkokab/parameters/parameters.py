@@ -40,6 +40,7 @@ class Parameter(object):
             raise ValueError("Prior distribution must be provided.")
         if prior is None:
             prior = default_prior
+        assert isinstance(prior, dist.Distribution), "Prior must be a numpyro.distributions.Distribution object."
         self._prior = prior
         self._name = name
         if label is None:
@@ -72,20 +73,30 @@ class Parameter(object):
 
 
 # TODO: default priors are placeholders at the moment. Jeffery priors should be used.
+# TODO: Add more parameters as needed.
+# TODO: Rename the parameters to be more descriptive and standard.
 
-uniform_01 = dist.Uniform()
-uniform_neg1_1 = dist.Uniform(-1.0, 1.0)
+uniform_01 = dist.Uniform(validate_args=True)
+uniform_neg1_1 = dist.Uniform(-1.0, 1.0, validate_args=True)
 
 PRIMARY_MASS_SOURCE = partial(
-    Parameter, name="m1_source", label=r"$m_1^\text{source}$", default_prior=dist.Uniform(50.0, 100.0)
+    Parameter,
+    name="m1_source",
+    label=r"$m_1^\text{source}$",
+    default_prior=dist.Uniform(0.5, 200.0, validate_args=True),
 )
 SECONDARY_MASS_SOURCE = partial(
-    Parameter, name="m2_source", label=r"$m_2^\text{source}$", default_prior=dist.Uniform(5.0, 30.0)
+    Parameter,
+    name="m2_source",
+    label=r"$m_2^\text{source}$",
+    default_prior=dist.Uniform(0.5, 200.0, validate_args=True),
 )
 MASS_RATIO = partial(Parameter, name="q", label=r"$q$", default_prior=uniform_01)
-CHIRP_MASS = partial(Parameter, name="M_c", label=r"$M_c$", default_prior=dist.Uniform(5.0, 50.0))
-SYMMETRIC_MASS_RATIO = partial(Parameter, name="eta", label=r"$\eta$", default_prior=dist.Uniform(5.0, 50.0))
-REDUCED_MASS = partial(Parameter, name="M_r", label=r"$M_r$", default_prior=dist.Uniform(5.0, 50.0))
+CHIRP_MASS = partial(Parameter, name="M_c", label=r"$M_c$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True))
+SYMMETRIC_MASS_RATIO = partial(
+    Parameter, name="eta", label=r"$\eta$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True)
+)
+REDUCED_MASS = partial(Parameter, name="M_r", label=r"$M_r$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True))
 ECCENTRICITY = partial(Parameter, name="ecc", label=r"$\varepsilon$", default_prior=uniform_01)
 PRIMARY_ALIGNED_SPIN = partial(Parameter, name="a1", label=r"$a_1$", default_prior=uniform_01)
 SECONDARY_ALIGNED_SPIN = partial(Parameter, name="a2", label=r"$a_2$", default_prior=uniform_01)
