@@ -13,4 +13,7 @@
 #  limitations under the License.
 
 
-from gwkokab.utils import transformations as transformations
+from .jointdistribution import JointDistribution as JointDistribution
+from .nits import (
+    numerical_inverse_transform_sampling as numerical_inverse_transform_sampling,
+)

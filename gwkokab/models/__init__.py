@@ -12,18 +12,34 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from __future__ import annotations
 
-from .brokenpowerlawmassmodel import BrokenPowerLawMassModel as BrokenPowerLawMassModel
-from .gaussianchieff import GaussianChiEff as GaussianChiEff
-from .gaussianchip import GaussianChiP as GaussianChiP
-from .gaussianspinmodel import GaussianSpinModel as GaussianSpinModel
-from .independentspinorientationgaussianisotropic import (
+from gwkokab._src.models.brokenpowerlawmassmodel import (
+    BrokenPowerLawMassModel as BrokenPowerLawMassModel,
+)
+from gwkokab._src.models.gaussianchieff import GaussianChiEff as GaussianChiEff
+from gwkokab._src.models.gaussianchip import GaussianChiP as GaussianChiP
+from gwkokab._src.models.gaussianspinmodel import (
+    GaussianSpinModel as GaussianSpinModel,
+)
+from gwkokab._src.models.independentspinorientationgaussianisotropic import (
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
 )
-from .multipeakmassmodel import MultiPeakMassModel as MultiPeakMassModel
-from .ndist import NDistribution as NDistribution
-from .powerlawpeakmassmodel import PowerLawPeakMassModel as PowerLawPeakMassModel
-from .powerlawprimarymassratio import PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio
-from .truncpowerlaw import TruncatedPowerLaw as TruncatedPowerLaw
-from .wysocki2019massmodel import Wysocki2019MassModel as Wysocki2019MassModel
+from gwkokab._src.models.multipeakmassmodel import (
+    MultiPeakMassModel as MultiPeakMassModel,
+)
+from gwkokab._src.models.ndist import NDistribution as NDistribution
+from gwkokab._src.models.powerlawpeakmassmodel import (
+    PowerLawPeakMassModel as PowerLawPeakMassModel,
+)
+from gwkokab._src.models.powerlawprimarymassratio import (
+    PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
+)
+from gwkokab._src.models.truncpowerlaw import (
+    TruncatedPowerLaw as TruncatedPowerLaw,
+)
+from gwkokab._src.models.utils.jointdistribution import (
+    JointDistribution as JointDistribution,
+)
+from gwkokab._src.models.wysocki2019massmodel import (
+    Wysocki2019MassModel as Wysocki2019MassModel,
+)
