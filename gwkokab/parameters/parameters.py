@@ -74,35 +74,60 @@ class Parameter(object):
 
 # TODO: default priors are placeholders at the moment. Jeffery priors should be used.
 # TODO: Add more parameters as needed.
-# TODO: Rename the parameters to be more descriptive and standard.
 
 uniform_01 = dist.Uniform(validate_args=True)
 uniform_neg1_1 = dist.Uniform(-1.0, 1.0, validate_args=True)
 
 PRIMARY_MASS_SOURCE = partial(
     Parameter,
-    name="m1_source",
+    name="mass_1_source",
     label=r"$m_1^\text{source}$",
     default_prior=dist.Uniform(0.5, 200.0, validate_args=True),
 )
 SECONDARY_MASS_SOURCE = partial(
     Parameter,
-    name="m2_source",
-    label=r"$m_2^\text{source}$",
+    name="mass_2_source",
+    label=r"$m_2$",
     default_prior=dist.Uniform(0.5, 200.0, validate_args=True),
 )
-MASS_RATIO = partial(Parameter, name="q", label=r"$q$", default_prior=uniform_01)
-CHIRP_MASS = partial(Parameter, name="M_c", label=r"$M_c$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True))
-SYMMETRIC_MASS_RATIO = partial(
-    Parameter, name="eta", label=r"$\eta$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True)
+PRIMARY_MASS_DETECTED = partial(
+    Parameter,
+    name="mass_1",
+    label=r"$m_1^\text{source}$",
+    default_prior=dist.Uniform(0.5, 200.0, validate_args=True),
 )
-REDUCED_MASS = partial(Parameter, name="M_r", label=r"$M_r$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True))
+SECONDARY_MASS_DETECTED = partial(
+    Parameter,
+    name="mass_2",
+    label=r"$m_2$",
+    default_prior=dist.Uniform(0.5, 200.0, validate_args=True),
+)
+MASS_RATIO = partial(Parameter, name="mass_ratio", label=r"$q$", default_prior=uniform_01)
+CHIRP_MASS = partial(
+    Parameter, name="chirp_mass", label=r"$M_c$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True)
+)
+SYMMETRIC_MASS_RATIO = partial(
+    Parameter, name="symmetric_mass_ratio", label=r"$\eta$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True)
+)
+REDUCED_MASS = partial(
+    Parameter, name="reduced_mass", label=r"$M_r$", default_prior=dist.Uniform(5.0, 50.0, validate_args=True)
+)
 ECCENTRICITY = partial(Parameter, name="ecc", label=r"$\varepsilon$", default_prior=uniform_01)
-PRIMARY_ALIGNED_SPIN = partial(Parameter, name="a1", label=r"$a_1$", default_prior=uniform_01)
-SECONDARY_ALIGNED_SPIN = partial(Parameter, name="a2", label=r"$a_2$", default_prior=uniform_01)
-PRIMARY_SPIN_X = partial(Parameter, name="a1x", label=r"$a_1^x$", default_prior=uniform_neg1_1)
-PRIMARY_SPIN_Y = partial(Parameter, name="a1y", label=r"$a_1^y$", default_prior=uniform_neg1_1)
-PRIMARY_SPIN_Z = partial(Parameter, name="a1z", label=r"$a_1^z$", default_prior=uniform_neg1_1)
-SECONDARY_SPIN_X = partial(Parameter, name="a2x", label=r"$a_2^x$", default_prior=uniform_neg1_1)
-SECONDARY_SPIN_Y = partial(Parameter, name="a2y", label=r"$a_2^y$", default_prior=uniform_neg1_1)
-SECONDARY_SPIN_Z = partial(Parameter, name="a2z", label=r"$a_2^z$", default_prior=uniform_neg1_1)
+PRIMARY_SPIN_MAGNITUDE = partial(Parameter, name="a1", label=r"$a_1$", default_prior=uniform_01)
+SECONDARY_SPIN_MAGNITUDE = partial(Parameter, name="a2", label=r"$a_2$", default_prior=uniform_01)
+PRIMARY_SPIN_X = partial(Parameter, name="spin_1x", label=r"$a_1^x$", default_prior=uniform_neg1_1)
+PRIMARY_SPIN_Y = partial(Parameter, name="spin_1y", label=r"$a_1^y$", default_prior=uniform_neg1_1)
+PRIMARY_SPIN_Z = partial(Parameter, name="spin_1z", label=r"$a_1^z$", default_prior=uniform_neg1_1)
+SECONDARY_SPIN_X = partial(Parameter, name="spin_2x", label=r"$a_2^x$", default_prior=uniform_neg1_1)
+SECONDARY_SPIN_Y = partial(Parameter, name="spin_2y", label=r"$a_2^y$", default_prior=uniform_neg1_1)
+SECONDARY_SPIN_Z = partial(Parameter, name="spin_2z", label=r"$a_2^z$", default_prior=uniform_neg1_1)
+TILE_1 = partial(
+    Parameter, name="tile_1", label=r"$\theta_1$", default_prior=uniform_neg1_1
+)  # TODO: priors are incorrect
+TILE_2 = partial(
+    Parameter, name="tile_2", label=r"$\theta_2$", default_prior=uniform_neg1_1
+)  # TODO: priors are incorrect
+EFFECTIVE_SPIN_MAGNITUDE = partial(Parameter, name="chi_eff", label=r"$\chi_\text{eff}$", default_prior=uniform_neg1_1)
+COS_TILE_1 = partial(Parameter, name="tile_1", label=r"$\cos(\theta_1)$", default_prior=uniform_neg1_1)
+COS_TILE_2 = partial(Parameter, name="tile_2", label=r"$\cos(\theta_2)$", default_prior=uniform_neg1_1)
+REDSHIFT = partial(Parameter, name="redshift", label=r"$z$", default_prior=dist.Uniform(0.0, 2.0, validate_args=True))
