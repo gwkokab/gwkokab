@@ -96,21 +96,22 @@ Discussion = "https://github.com/gwkokab/gwkokab/discussions"
 Changelog = "https://github.com/gwkokab/gwkokab/blob/master/CHANGELOG.md"
 
 [project.scripts]
-gwk_scatter2d = "gwkokab.scripts.scatter2d:main"
-gwk_scatter3d = "gwkokab.scripts.scatter3d:main"
-gwk_batch_scatter2d = "gwkokab.scripts.batch_scatter2d:main"
-gwk_batch_scatter3d = "gwkokab.scripts.batch_scatter3d:main"
-gwk_corner_plot = "gwkokab.scripts.corner_plot:main"
-gwk_chain_plot = "gwkokab.scripts.chain_plot:main"
-gwk_confidence_plot = "gwkokab.scripts.confidence_plot:main"
-gwk_fancy_scatter3d = "gwkokab.scripts.fancy_scatter3d:main"
-gwk_joint_plot = "gwkokab.scripts.joint_plot:main"
+gwk_scatter2d = "gwkokab._src.scripts.scatter2d:main"
+gwk_scatter3d = "gwkokab._src.scripts.scatter3d:main"
+gwk_batch_scatter2d = "gwkokab._src.scripts.batch_scatter2d:main"
+gwk_batch_scatter3d = "gwkokab._src.scripts.batch_scatter3d:main"
+gwk_corner_plot = "gwkokab._src.scripts.corner_plot:main"
+gwk_chain_plot = "gwkokab._src.scripts.chain_plot:main"
+gwk_confidence_plot = "gwkokab._src.scripts.confidence_plot:main"
+gwk_fancy_scatter3d = "gwkokab._src.scripts.fancy_scatter3d:main"
+gwk_joint_plot = "gwkokab._src.scripts.joint_plot:main"
 
 [tool.ruff]
 lint.ignore-init-module-imports = true
-line-length = 120
+line-length = 80
+target-version = "py311"
 lint.fixable = ["I001", "F401"]
-lint.ignore = ["E402", "E721", "E731", "E741", "F722", "F403", "F405"]
+lint.ignore = ["E402", "E721", "E731", "E741", "F722", "F403", "F405", "E501"]
 lint.select = ["E", "F", "I001"]
 
 [tool.ruff.lint.isort]
@@ -121,7 +122,7 @@ order-by-type = false
 
 [tool.pyright]
 reportIncompatibleMethodOverride = true
-include = ["gwkokab", "tests", "examples"]
+include = ["gwkokab"]
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]

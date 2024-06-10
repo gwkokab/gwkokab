@@ -44,8 +44,11 @@ class IssueData:
         self.url: str = issue.html_url
         self.like_count: int = issue._rawData["reactions"]["+1"]  # type: ignore [attr-defined]
         self.creation_datetime: str = issue.created_at.strftime(DATETIME_FORMAT)
-        # TODO: Change script to support storing labels here, rather than directly in the script
-        self.labels: set[str] = {label["name"] for label in issue._rawData["labels"]}  # type: ignore [attr-defined]
+        # TODO: Change script to support storing labels here, rather than
+        # directly in the script
+        self.labels: set[str] = {
+            label["name"] for label in issue._rawData["labels"]
+        }  # type: ignore [attr-defined]
 
 
 @app.command()
@@ -60,11 +63,14 @@ def main(
 
     if query_day_interval:
         tz = timezone("america/new_york")
-        current_time = datetime.now(tz).replace(hour=0, minute=0, second=0, microsecond=0)
+        current_time = datetime.now(tz).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
         start_date = current_time - timedelta(days=query_day_interval)
 
     # GitHub Workflow will pass in the token as an environment variable,
-    # but we can place it in our env when running the script locally, for convenience
+    # but we can place it in our env when running the script locally, for
+    # convenience
     github_token = github_token or os.getenv("GITHUB_ACCESS_TOKEN")
     github = Github(github_token)
 
@@ -88,14 +94,18 @@ def main(
     )
 
     if issue_reference_number:
-        top_ranking_issues_issue: Issue = repository.get_issue(issue_reference_number)
+        top_ranking_issues_issue: Issue = repository.get_issue(
+            issue_reference_number
+        )
         top_ranking_issues_issue.edit(body=issue_text)
     else:
         print(issue_text)
 
     remaining_requests_after: int = github.rate_limiting[0]
     print(f"Remaining requests after: {remaining_requests_after}")
-    print(f"Requests used: {remaining_requests_before - remaining_requests_after}")
+    print(
+        f"Requests used: {remaining_requests_before - remaining_requests_after}"
+    )
 
     run_duration: timedelta = datetime.now() - start_time
     print(run_duration)
@@ -111,24 +121,33 @@ def get_issue_maps(
         repository,
         start_date,
     )
-    label_to_issue_data: dict[str, list[IssueData]] = get_label_to_issue_data(label_to_issues)
-
-    error_message_to_erroneous_issues: defaultdict[str, list[Issue]] = get_error_message_to_erroneous_issues(
-        github, repository
-    )
-    error_message_to_erroneous_issue_data: dict[str, list[IssueData]] = get_error_message_to_erroneous_issue_data(
-        error_message_to_erroneous_issues
+    label_to_issue_data: dict[str, list[IssueData]] = get_label_to_issue_data(
+        label_to_issues
     )
 
-    # Create a new dictionary with labels ordered by the summation the of likes on the associated issues
+    error_message_to_erroneous_issues: defaultdict[str, list[Issue]] = (
+        get_error_message_to_erroneous_issues(github, repository)
+    )
+    error_message_to_erroneous_issue_data: dict[str, list[IssueData]] = (
+        get_error_message_to_erroneous_issue_data(
+            error_message_to_erroneous_issues
+        )
+    )
+
+    # Create a new dictionary with labels ordered by the summation the of likes
+    # on the associated issues
     labels = list(label_to_issue_data.keys())
 
     labels.sort(
-        key=lambda label: sum(issue_data.like_count for issue_data in label_to_issue_data[label]),
+        key=lambda label: sum(
+            issue_data.like_count for issue_data in label_to_issue_data[label]
+        ),
         reverse=True,
     )
 
-    label_to_issue_data = {label: label_to_issue_data[label] for label in labels}
+    label_to_issue_data = {
+        label: label_to_issue_data[label] for label in labels
+    }
 
     return (
         label_to_issue_data,
@@ -144,9 +163,13 @@ def get_label_to_issues(
     label_to_issues: defaultdict[str, list[Issue]] = defaultdict(list)
 
     labels: set[str] = CORE_LABELS | ADDITIONAL_LABELS
-    ignored_labels_text: str = " ".join([f'-label:"{label}"' for label in IGNORED_LABELS])
+    ignored_labels_text: str = " ".join(
+        [f'-label:"{label}"' for label in IGNORED_LABELS]
+    )
 
-    date_query: str = f"created:>={start_date.strftime('%Y-%m-%d')}" if start_date else ""
+    date_query: str = (
+        f"created:>={start_date.strftime('%Y-%m-%d')}" if start_date else ""
+    )
 
     for label in labels:
         query: str = (
@@ -184,13 +207,22 @@ def get_label_to_issue_data(
     return label_to_issue_data
 
 
-def get_error_message_to_erroneous_issues(github: Github, repository: Repository) -> defaultdict[str, list[Issue]]:
-    error_message_to_erroneous_issues: defaultdict[str, list[Issue]] = defaultdict(list)
+def get_error_message_to_erroneous_issues(
+    github: Github, repository: Repository
+) -> defaultdict[str, list[Issue]]:
+    error_message_to_erroneous_issues: defaultdict[str, list[Issue]] = (
+        defaultdict(list)
+    )
 
-    # Query for all open issues that don't have either a core or ignored label and mark those as erroneous
+    # Query for all open issues that don't have either a core or ignored label
+    # and mark those as erroneous
     filter_labels: set[str] = CORE_LABELS | IGNORED_LABELS
-    filter_labels_text: str = " ".join([f'-label:"{label}"' for label in filter_labels])
-    query: str = f"repo:{repository.full_name} is:open is:issue {filter_labels_text}"
+    filter_labels_text: str = " ".join(
+        [f'-label:"{label}"' for label in filter_labels]
+    )
+    query: str = (
+        f"repo:{repository.full_name} is:open is:issue {filter_labels_text}"
+    )
 
     for issue in github.search_issues(query):
         error_message_to_erroneous_issues["missing core label"].append(issue)
@@ -218,7 +250,9 @@ def get_issue_text(
     tz = timezone("asia/karachi")
     current_datetime: str = datetime.now(tz).strftime(f"{DATETIME_FORMAT} (%Z)")
 
-    highest_ranking_issues_lines: list[str] = get_highest_ranking_issues_lines(label_to_issue_data)
+    highest_ranking_issues_lines: list[str] = get_highest_ranking_issues_lines(
+        label_to_issue_data
+    )
 
     issue_text_lines: list[str] = [
         f"*Updated on {current_datetime}*",
@@ -227,23 +261,30 @@ def get_issue_text(
         "---\n",
     ]
 
-    erroneous_issues_lines: list[str] = get_erroneous_issues_lines(error_message_to_erroneous_issue_data)
+    erroneous_issues_lines: list[str] = get_erroneous_issues_lines(
+        error_message_to_erroneous_issue_data
+    )
 
     if erroneous_issues_lines:
-        core_labels_text: str = ", ".join(f'"{core_label}"' for core_label in CORE_LABELS)
-        ignored_labels_text: str = ", ".join(f'"{ignored_label}"' for ignored_label in IGNORED_LABELS)
+        core_labels_text: str = ", ".join(
+            f'"{core_label}"' for core_label in CORE_LABELS
+        )
+        ignored_labels_text: str = ", ".join(
+            f'"{ignored_label}"' for ignored_label in IGNORED_LABELS
+        )
 
         issue_text_lines.extend(
             [
-                "## errors with issues (this section only shows when there are errors with issues)\n",
-                "This script expects every issue to have at least one"
-                f" of the following core labels: {core_labels_text}",
-                f"This script currently ignores issues that have one "
-                f"of the following labels: {ignored_labels_text}\n",
+                "## errors with issues (this section only shows when there are"
+                "errors with issues)\nThis script expects every issue to have "
+                "at least one of the following core labels: "
+                f"{core_labels_text} This script currently ignores issues that "
+                f"have one of the following labels: {ignored_labels_text}\n",
                 "### what to do?\n",
                 "- Adjust the core labels on an issue to put it into a "
                 "correct state or add a currently-ignored label to the issue",
-                "- Adjust the core and ignored labels registered in this script",
+                "- Adjust the core and ignored labels registered in this"
+                " script",
                 *erroneous_issues_lines,
                 "",
                 "---\n",
@@ -253,7 +294,8 @@ def get_issue_text(
     issue_text_lines.extend(
         [
             "*For details on how this issue is generated, "
-            "[see the script](https://github.com/gwkokab/gwkokab/blob/main/scripts/update_top_ranking_issues.py)*",
+            "[see the script](https://github.com/gwkokab/gwkokab/blob/"
+            "main/scripts/update_top_ranking_issues.py)*",
         ]
     )
 
@@ -270,7 +312,9 @@ def get_highest_ranking_issues_lines(
             highest_ranking_issues_lines.append(f"\n## {label}\n")
 
             for i, issue_data in enumerate(issue_data):
-                markdown_bullet_point: str = f"{issue_data.url} ({issue_data.like_count} :thumbsup:)"
+                markdown_bullet_point: str = (
+                    f"{issue_data.url} ({issue_data.like_count} :thumbsup:)"
+                )
 
                 markdown_bullet_point = f"{i + 1}. {markdown_bullet_point}"
                 highest_ranking_issues_lines.append(markdown_bullet_point)
