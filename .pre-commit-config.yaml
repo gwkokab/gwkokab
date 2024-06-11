@@ -1,9 +1,9 @@
-files: examples||gwkokab||runs
+files: gwkokab||scripts
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: "v0.4.3"
     hooks:
       - id: ruff
-        args: ["--fix"]
+        args: [--fix]
       - id: ruff-format # formatter
         types_or: [python, pyi, jupyter]

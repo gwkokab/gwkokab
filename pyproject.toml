@@ -106,20 +106,6 @@ gwk_confidence_plot = "gwkokab._src.scripts.confidence_plot:main"
 gwk_fancy_scatter3d = "gwkokab._src.scripts.fancy_scatter3d:main"
 gwk_joint_plot = "gwkokab._src.scripts.joint_plot:main"
 
-[tool.ruff]
-lint.ignore-init-module-imports = true
-line-length = 80
-target-version = "py311"
-lint.fixable = ["I001", "F401"]
-lint.ignore = ["E402", "E721", "E731", "E741", "F722", "F403", "F405", "E501"]
-lint.select = ["E", "F", "I001"]
-
-[tool.ruff.lint.isort]
-combine-as-imports = true
-extra-standard-library = ["typing_extensions"]
-lines-after-imports = 2
-order-by-type = false
-
 [tool.pyright]
 reportIncompatibleMethodOverride = true
 include = ["gwkokab"]
