@@ -16,4 +16,7 @@
 from .lippl import (
     LogInhomogeneousPoissonProcessLikelihood as LogInhomogeneousPoissonProcessLikelihood,
 )
-from .utils import save_data_from_sampler as save_data_from_sampler
+from .utils import (
+    ModelPack as ModelPack,
+    save_data_from_sampler as save_data_from_sampler,
+)
