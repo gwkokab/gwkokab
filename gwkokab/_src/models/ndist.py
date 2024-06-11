@@ -15,8 +15,7 @@
 
 from __future__ import annotations
 
-import jax
-from jax import numpy as jnp
+from jax import numpy as jnp, tree as jtr
 from jaxtyping import Int
 from numpyro import distributions as dist
 
@@ -50,7 +49,7 @@ def NDistribution(
     args_per_component = [
         {arg: params.get(f"{arg}_{i}") for arg in arg_names} for i in range(n)
     ]
-    component_dists = jax.tree.map(
+    component_dists = jtr.map(
         lambda x: distribution(**x),
         args_per_component,
         is_leaf=lambda x: isinstance(x, dict),

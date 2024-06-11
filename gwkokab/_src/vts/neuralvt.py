@@ -138,7 +138,7 @@ def make(
     """
     assert is_prng_key(key)
     if hidden_layers is None:
-        keys = jax.random.split(key, 2)
+        keys = jrd.split(key, 2)
         layers = [
             eqx.nn.Linear(
                 in_features=input_layer,
@@ -149,7 +149,7 @@ def make(
         model = eqx.nn.Sequential(layers)
         return model
 
-    keys = jax.random.split(key, 2 + len(hidden_layers))
+    keys = jrd.split(key, 2 + len(hidden_layers))
 
     layers = [
         eqx.nn.Linear(
@@ -203,7 +203,7 @@ def load_model(filename) -> tuple[dict[str, Any], PyTree]:
     with open(filename, "rb") as f:
         hyperparam_str = f.readline().decode()
         hyperparams = json.loads(hyperparam_str)
-        model = make(key=jax.random.PRNGKey(0), **hyperparams)
+        model = make(key=jrd.PRNGKey(0), **hyperparams)
         model = eqx.tree_deserialise_leaves(f, model)
     return hyperparams, model
 

@@ -13,8 +13,7 @@
 #  limitations under the License.
 
 
-import jax
-from jax import lax, numpy as jnp
+from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jaxtyping import PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.util import is_prng_key
@@ -47,7 +46,7 @@ class JointDistribution(dist.Distribution):
         )
 
     def log_prob(self, value):
-        log_probs = jax.tree.map(
+        log_probs = jtr.map(
             lambda d, v: d.log_prob(value[..., v]),
             self.marginal_distributions,
             self.shaped_values,
@@ -58,8 +57,8 @@ class JointDistribution(dist.Distribution):
 
     def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
         assert is_prng_key(key)
-        keys = tuple(jax.random.split(key, len(self.marginal_distributions)))
-        samples = jax.tree.map(
+        keys = tuple(jrd.split(key, len(self.marginal_distributions)))
+        samples = jtr.map(
             lambda d, k: d.sample(k, sample_shape).reshape(*sample_shape, -1),
             self.marginal_distributions,
             keys,
