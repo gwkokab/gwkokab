@@ -28,7 +28,7 @@ class ModelMeta(Enum):
     SAVE_AS = auto()
 
 
-@dataclass(repr=True)
+@dataclass(frozen=True)
 class PopInfo:
     ROOT_DIR: str
     EVENT_FILENAME: str
@@ -40,7 +40,7 @@ class PopInfo:
     NUM_REALIZATIONS: Int = 5
 
 
-@dataclass(repr=True)
+@dataclass(forzen=True)
 class NoisePopInfo:
     FILENAME_REGEX: str
     OUTPUT_DIR: str
