@@ -1,0 +1,226 @@
+#  Copyright 2023 The GWKokab Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+
+from functools import reduce
+from typing_extensions import Optional, Self
+
+import equinox as eqx
+import jax
+import numpy as np
+from jax import numpy as jnp, random as jrd, tree as jtr
+from jax.tree_util import register_pytree_node_class
+from jaxtyping import Array
+
+from ..models.utils.jointdistribution import JointDistribution
+from .utils import ModelPack
+
+
+@register_pytree_node_class
+class LogBayesianHierarchicalModel:
+    r"""This class is used to provide a likelihood function for the
+    inhomogeneous Poisson process. The likelihood is given by,
+
+    $$
+        \log\mathcal{L}(\Lambda) \propto -\mu(\Lambda)
+        +\log\sum_{n=1}^N \int \ell_n(\lambda) \rho(\lambda\mid\Lambda)
+        \mathrm{d}\lambda
+    $$
+
+    where, $\displaystyle\rho(\lambda\mid\Lambda) =
+    \frac{\mathrm{d}N}{\mathrm{d}V\mathrm{d}t \mathrm{d}\lambda}$ is the merger
+    rate density for a population parameterized by $\Lambda$, $\mu(\Lambda)$ is
+    the expected number of detected mergers for that population, and
+    $\ell_n(\lambda)$ is the likelihood for the $n$th observed event's
+    parameters. Using Bayes' theorem, we can obtain the posterior
+    $p(\Lambda\mid\text{data})$ by multiplying the likelihood by a prior
+    $\pi(\Lambda)$.
+
+    $$
+        p(\Lambda\mid\text{data}) \propto \pi(\Lambda) \mathcal{L}(\Lambda)
+    $$
+
+    The integral inside the main likelihood expression is then evaluated via
+    Monte Carlo as
+
+    $$
+        \int \ell_n(\lambda) \rho(\lambda\mid\Lambda) \mathrm{d}\lambda \propto
+        \int \frac{p(\lambda | \mathrm{data}_n)}{\pi_n(\lambda)}
+        \rho(\lambda\mid\Lambda) \mathrm{d}\lambda \approx
+        \frac{1}{N_{\mathrm{samples}}}
+        \sum_{i=1}^{N_{\mathrm{samples}}}
+        \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
+    $$
+    """
+
+    def __init__(
+        self: Self,
+        *models: ModelPack,
+        vt_params: list[str] = None,
+        logVT: Optional[eqx.Module] = None,
+    ) -> None:
+        self.logVT = logVT
+        parameters_to_recover = reduce(
+            lambda x, y: x + y.parameters_to_recover, models, []
+        )
+        self.parameters_to_recover_name = list(
+            map(lambda x: x.name, parameters_to_recover)
+        )
+        self.population_priors = JointDistribution(
+            *map(lambda x: x.prior, parameters_to_recover)
+        )
+        self.reference_prior = JointDistribution(
+            *map(
+                lambda x: x.prior, reduce(lambda x, y: x + y.output, models, [])
+            )
+        )
+        self.arguments = list(
+            map(
+                lambda x: x.arguments,
+                filter(lambda x: x.name is not None, models),
+            )
+        )
+        self.names = list(
+            filter(lambda x: x is not None, map(lambda x: x.name, models))
+        )
+        k = 0
+        indexes = []
+        outputs = []
+        for model in models:
+            if model.name is None:
+                continue
+            outputs.append(list(map(lambda x: x.name, model.output)))
+            k_ = len(model.parameters_to_recover)
+            indexes.append(list(range(k, k + k_)))
+            k += k_
+
+        vt_model_index = []
+        vt_joint_dist_params = []
+        for j, out in enumerate(outputs):
+            for vt_param in vt_params:
+                if vt_param in out and vt_param not in vt_joint_dist_params:
+                    vt_joint_dist_params.extend(out)
+                    vt_model_index.append(j)
+                    break
+
+        self.vt_mask = [
+            vt_joint_dist_params.index(_vt_param) for _vt_param in vt_params
+        ]
+        self.vt_model_index = vt_model_index
+        self.indexes = indexes
+
+    def tree_flatten(self):
+        children = ()
+        aux_data = {
+            "logVT": self.logVT,
+            "names": self.names,
+            "parameters_to_recover_name": self.parameters_to_recover_name,
+            "arguments": self.arguments,
+            "population_priors": self.population_priors,
+            "reference_prior": self.reference_prior,
+            "indexes": self.indexes,
+            "vt_model_index": self.vt_model_index,
+            "vt_mask": self.vt_mask,
+        }
+        return (children, aux_data)
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(*aux_data.values())
+
+    def exp_rate(self, x: Array) -> Array:
+        r"""This function calculates the integral inside the term
+        $\exp(\Lambda)$ in the likelihood function. The integral is given by,
+
+        $$
+            \mu(\Lambda) =
+            \int \mathrm{VT}(\lambda)\rho(\lambda\mid\Lambda) \mathrm{d}\lambda
+        $$
+
+        :param rparams: Parameters for the model.
+        :return: Integral.
+        """
+        vt_models = JointDistribution(
+            *(
+                self.names[j](
+                    **self.arguments[j],
+                    **{
+                        self.parameters_to_recover_name[i]: x[..., i]
+                        for i in self.indexes[j]
+                    },
+                )
+                for j in self.vt_model_index
+            )
+        )
+        N = 1 << 13
+        samples = vt_models.sample(
+            jrd.PRNGKey(np.random.randint(1, 2**32 - 1)), (N,)
+        )[..., self.vt_mask]
+        return jnp.mean(jnp.exp(self.logVT(samples)))
+
+    def log_likelihood(self, x: Array, data: Optional[dict] = None) -> Array:
+        """The log likelihood function for the inhomogeneous Poisson process.
+
+        :param x: Recovered parameters.
+        :param data: Data provided by the user/sampler.
+        :return: Log likelihood value for the given parameters.
+        """
+        joint_model = JointDistribution(
+            *(
+                name(
+                    **argument,
+                    **{
+                        self.parameters_to_recover_name[i]: x[..., i]
+                        for i in index
+                    },
+                )
+                for name, index, argument in zip(
+                    self.names, self.indexes, self.arguments
+                )
+            )
+        )
+
+        integral_individual = jtr.map(
+            lambda y: jax.nn.logsumexp(joint_model.log_prob(y))
+            - jnp.log(y.shape[0]),
+            data["data"],
+        )
+
+        log_likelihood = jtr.reduce(lambda x, y: x + y, integral_individual)
+
+        if jnp.isfinite(log_likelihood) is False:
+            return -jnp.inf
+
+        rate = x[..., -1]
+        log_rate = jnp.log(rate)
+
+        log_likelihood += data["N"] * log_rate
+
+        log_likelihood -= rate * self.exp_rate(x)
+
+        return log_likelihood
+
+    def log_posterior(self, x: Array, data: Optional[dict] = None) -> Array:
+        r"""The likelihood function for the inhomogeneous Poisson process.
+
+        $$p(\Lambda\mid\text{data})$$
+
+        :param x: Recovered parameters.
+        :param data: Data provided by the user/sampler.
+        :return: Log likelihood value for the given parameters.
+        """
+        log_prior = self.population_priors.log_prob(x)
+        if jnp.isfinite(log_prior) is False:
+            return -jnp.inf
+        return log_prior + self.log_likelihood(x, data)

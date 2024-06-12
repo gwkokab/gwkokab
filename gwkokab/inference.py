@@ -13,8 +13,8 @@
 #  limitations under the License.
 
 
-from gwkokab._src.inference.lippl import (
-    LogInhomogeneousPoissonProcessLikelihood as LogInhomogeneousPoissonProcessLikelihood,
+from gwkokab._src.inference.lhbm import (
+    LogBayesianHierarchicalModel as LogBayesianHierarchicalModel,
 )
 from gwkokab._src.inference.utils import (
     ModelPack as ModelPack,
