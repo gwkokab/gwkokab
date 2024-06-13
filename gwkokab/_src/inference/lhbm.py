@@ -145,7 +145,19 @@ class LogBayesianHierarchicalModel:
 
     @classmethod
     def tree_unflatten(cls, aux_data, children):
-        return cls(*aux_data.values())
+        del children
+        obj = cls.__new__(cls)
+        obj.logVT = aux_data["logVT"]
+        obj.time = aux_data["time"]
+        obj.names = aux_data["names"]
+        obj.parameters_to_recover_name = aux_data["parameters_to_recover_name"]
+        obj.arguments = aux_data["arguments"]
+        obj.population_priors = aux_data["population_priors"]
+        obj.reference_prior = aux_data["reference_prior"]
+        obj.indexes = aux_data["indexes"]
+        obj.vt_model_index = aux_data["vt_model_index"]
+        obj.vt_mask = aux_data["vt_mask"]
+        return obj
 
     def exp_rate(self, x: Array) -> Array:
         r"""This function calculates the integral inside the term
