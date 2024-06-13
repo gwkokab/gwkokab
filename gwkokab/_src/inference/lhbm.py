@@ -69,8 +69,10 @@ class LogBayesianHierarchicalModel:
         *models: ModelPack,
         vt_params: list[str] = None,
         logVT: Optional[eqx.Module] = None,
+        time: Optional[float] = None,
     ) -> None:
         self.logVT = logVT
+        self.time = time
         parameters_to_recover = reduce(
             lambda x, y: x + y.parameters_to_recover, models, []
         )
@@ -82,7 +84,12 @@ class LogBayesianHierarchicalModel:
         )
         self.reference_prior = JointDistribution(
             *map(
-                lambda x: x.prior, reduce(lambda x, y: x + y.output, models, [])
+                lambda x: x.prior,
+                reduce(
+                    lambda x, y: x + y.output,
+                    filter(lambda x: x.name is not None, models),
+                    [],
+                ),
             )
         )
         self.arguments = list(
@@ -124,6 +131,7 @@ class LogBayesianHierarchicalModel:
         children = ()
         aux_data = {
             "logVT": self.logVT,
+            "time": self.time,
             "names": self.names,
             "parameters_to_recover_name": self.parameters_to_recover_name,
             "arguments": self.arguments,
@@ -152,15 +160,15 @@ class LogBayesianHierarchicalModel:
         :return: Integral.
         """
         vt_models = JointDistribution(
-            *(
-                self.names[j](
+            *jtr.map(
+                lambda j: self.names[j](
                     **self.arguments[j],
                     **{
                         self.parameters_to_recover_name[i]: x[..., i]
                         for i in self.indexes[j]
                     },
-                )
-                for j in self.vt_model_index
+                ),
+                self.vt_model_index,
             )
         )
         N = 1 << 13
@@ -177,27 +185,31 @@ class LogBayesianHierarchicalModel:
         :return: Log likelihood value for the given parameters.
         """
         joint_model = JointDistribution(
-            *(
-                name(
+            *jtr.map(
+                lambda name, index, argument: name(
                     **argument,
                     **{
                         self.parameters_to_recover_name[i]: x[..., i]
                         for i in index
                     },
-                )
-                for name, index, argument in zip(
-                    self.names, self.indexes, self.arguments
-                )
+                ),
+                self.names,
+                self.indexes,
+                self.arguments,
             )
         )
 
         integral_individual = jtr.map(
-            lambda y: jax.nn.logsumexp(joint_model.log_prob(y))
+            lambda y: jax.nn.logsumexp(
+                joint_model.log_prob(y) - self.reference_prior.log_prob(y)
+            )
             - jnp.log(y.shape[0]),
             data["data"],
         )
 
-        log_likelihood = jtr.reduce(lambda x, y: x + y, integral_individual)
+        log_likelihood = jtr.reduce(
+            lambda x, y: x + y, integral_individual, 0.0
+        )
 
         if jnp.isfinite(log_likelihood) is False:
             return -jnp.inf
@@ -207,7 +219,7 @@ class LogBayesianHierarchicalModel:
 
         log_likelihood += data["N"] * log_rate
 
-        log_likelihood -= rate * self.exp_rate(x)
+        log_likelihood -= rate * self.time * self.exp_rate(x)
 
         return log_likelihood
 
