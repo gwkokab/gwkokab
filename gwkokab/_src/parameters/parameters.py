@@ -26,6 +26,8 @@ class Parameter(object):
     :param label: Label of the parameter, defaults to None
     :param prior: Distribution object representing the prior distribution of
         the parameter, defaults to None
+    :param default_prior: Default prior distribution of the parameter, defaults
+        to None
     :raises ValueError: If prior distribution is not provided
     """
 
@@ -47,9 +49,8 @@ class Parameter(object):
         self._prior = prior
         self._name = name
         if label is None:
-            self._label = name
-        else:
-            self._label = label
+            label = name
+        self._label = label
 
     @property
     def name(self) -> str:
@@ -64,7 +65,7 @@ class Parameter(object):
         return self._prior
 
     def __repr__(self) -> str:
-        return f"Parameter(name={self.name})"
+        return f"Parameter(name={self.name}, label={self.label})"
 
     def __hash__(self) -> int:
         return hash(self.name)
@@ -89,13 +90,13 @@ PRIMARY_MASS_SOURCE = partial(
 SECONDARY_MASS_SOURCE = partial(
     Parameter,
     name="mass_2_source",
-    label=r"$m_2$",
+    label=r"$m_2^\text{source}$",
     default_prior=dist.Uniform(0.5, 200.0, validate_args=True),
 )
 PRIMARY_MASS_DETECTED = partial(
     Parameter,
     name="mass_1",
-    label=r"$m_1^\text{source}$",
+    label=r"$m_1$",
     default_prior=dist.Uniform(0.5, 200.0, validate_args=True),
 )
 SECONDARY_MASS_DETECTED = partial(

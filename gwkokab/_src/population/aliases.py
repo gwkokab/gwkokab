@@ -40,7 +40,7 @@ class PopInfo:
     NUM_REALIZATIONS: Int = 5
 
 
-@dataclass(forzen=True)
+@dataclass(frozen=True)
 class NoisePopInfo:
     FILENAME_REGEX: str
     OUTPUT_DIR: str
