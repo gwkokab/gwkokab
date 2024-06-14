@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 import os
-import warnings
 from typing_extensions import Optional, Self
 
 import jax
@@ -36,40 +35,22 @@ from .aliases import ModelMeta, PopInfo
 __all__ = ["PopulationFactory"]
 
 
-def _check_model(model) -> None:
-    if ModelMeta.NAME not in model:
-        raise ValueError("Model must have a name")
-    if ModelMeta.OUTPUT not in model:
-        raise ValueError("Model must have an output")
-    if ModelMeta.PARAMETERS not in model:
-        raise ValueError("Model must have parameters")
-    if ModelMeta.SAVE_AS not in model:
-        warnings.warn(
-            message=f"{model[ModelMeta.NAME].__name__} does not have a save_as."
-            "Parameters will not be saved."
-        )
-
-
 class PopulationFactory:
     INJECTIONS_DIR: str = "injections"
     REALIZATIONS_DIR: str = "realization_{}"
 
     def __init__(
         self,
-        models: list[dict],
+        models: list[ModelMeta],
         popinfo: PopInfo,
         seperate_injections: Optional[bool] = None,
     ) -> None:
-        for model in models:
-            _check_model(model)
-
         if seperate_injections is None:
             self.seperate_injections = False
         self.seperate_injections = seperate_injections
 
         self.models: list[Distribution] = [
-            model[ModelMeta.NAME](**model[ModelMeta.PARAMETERS])
-            for model in models
+            model.NAME(**model.PARAMETERS) for model in models
         ]
 
         config_vars = [
@@ -78,10 +59,10 @@ class PopulationFactory:
         ]
 
         for model in models:
-            head = model[ModelMeta.SAVE_AS].keys()
+            head = model.SAVE_AS.keys()
             for h in head:
-                config_vars[0].append(model[ModelMeta.SAVE_AS][h])
-                config_vars[1].append(model[ModelMeta.PARAMETERS][h])
+                config_vars[0].append(model.SAVE_AS[h])
+                config_vars[1].append(model.PARAMETERS[h])
 
         config_vars[1] = np.array(config_vars[1]).reshape(1, -1)
 
@@ -89,7 +70,7 @@ class PopulationFactory:
 
         headers: list[str] = []
         for i, model in enumerate(models):
-            headers.extend(model[ModelMeta.OUTPUT])
+            headers.extend(model.OUTPUT)
         self.headers = headers
 
         self.vt_param_dist = None
@@ -102,7 +83,7 @@ class PopulationFactory:
 
             k = 0
             for i, model in enumerate(models):
-                output = model[ModelMeta.OUTPUT]
+                output = model.OUTPUT
                 flag = False
                 for out in output:
                     if out in vt_params:

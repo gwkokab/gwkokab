@@ -14,18 +14,18 @@
 
 
 from dataclasses import dataclass
-from enum import auto, Enum, unique
 from typing_extensions import Callable, Optional
 
 from jaxtyping import Array, Float, Int
+from numpyro import distributions as dist
 
 
-@unique
-class ModelMeta(Enum):
-    NAME = auto()
-    PARAMETERS = auto()
-    OUTPUT = auto()
-    SAVE_AS = auto()
+@dataclass(frozen=True)
+class ModelMeta:
+    NAME: dist.Distribution
+    PARAMETERS: dict[str, Float]
+    OUTPUT: list[str]
+    SAVE_AS: dict[str, str]
 
 
 @dataclass(frozen=True)
