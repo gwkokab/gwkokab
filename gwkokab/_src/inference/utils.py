@@ -24,14 +24,14 @@ from jax import random as jrd
 from jaxtyping import Int
 from numpyro import distributions as dist
 
-import gwkokab as gwk
+from ..parameters.parameters import Parameter
 
 
 @dataclass(frozen=True)
 class ModelPack:
     name: dist.Distribution
-    output: list[gwk.parameters.Parameter]
-    parameters_to_recover: list[gwk.parameters.Parameter]
+    output: list[Parameter]
+    parameters_to_recover: list[Parameter]
     arguments: dict[str, Any] = field(default_factory=dict)
 
 
@@ -79,45 +79,42 @@ def save_data_from_sampler(
         )
     )
 
-    np.savetxt(
-        rf"{out_dir}/nf_samples.dat",
-        samples,
-        header=" ".join(labels),
-    )
+    header = " ".join(labels)
+
+    np.savetxt(rf"{out_dir}/nf_samples.dat", samples, header=header)
 
     n_chains = sampler.n_chains
+
+    np.savetxt(
+        rf"{out_dir}/global_accs.dat",
+        np.column_stack((train_global_accs.mean(0), prod_global_accs.mean(0))),
+        header="train prod",
+        comments="#",
+    )
+    np.savetxt(
+        rf"{out_dir}/local_accs.dat",
+        np.column_stack((train_local_accs.mean(0), prod_local_accs.mean(0))),
+        header="train prod",
+        comments="#",
+    )
+    np.savetxt(
+        rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss"
+    )
 
     for i in range(n_chains):
         np.savetxt(
             rf"{out_dir}/train_chains_{i}.dat",
             train_chains[i, :, :],
-            header=" ".join(labels),
+            header=header,
         )
         np.savetxt(
             rf"{out_dir}/prod_chains_{i}.dat",
             prod_chains[i, :, :],
-            header=" ".join(labels),
+            header=header,
         )
         np.savetxt(
             rf"{out_dir}/log_prob_{i}.dat",
             np.column_stack((train_log_prob[i, :], prod_log_prob[i, :])),
             header="train prod",
             comments="#",
-        )
-        np.savetxt(
-            rf"{out_dir}/global_accs_{i}.dat",
-            np.column_stack((train_global_accs[i, :], prod_global_accs[i, :])),
-            header="train prod",
-            comments="#",
-        )
-        np.savetxt(
-            rf"{out_dir}/local_accs_{i}.dat",
-            np.column_stack((train_local_accs[i, :], prod_local_accs[i, :])),
-            header="train prod",
-            comments="#",
-        )
-        np.savetxt(
-            rf"{out_dir}/loss_{i}.dat",
-            train_loss_vals[i, :],
-            header="loss",
         )
