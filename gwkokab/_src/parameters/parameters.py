@@ -16,6 +16,7 @@
 from functools import partial
 from typing_extensions import Optional
 
+from jaxtyping import Float
 from numpyro import distributions as dist
 
 
@@ -36,6 +37,7 @@ class Parameter(object):
         *,
         name: str,
         label: Optional[str] = None,
+        value: Optional[Float] = None,
         prior: Optional[dist.Distribution] = None,
         default_prior: Optional[dist.Distribution] = None,
     ) -> None:
@@ -47,6 +49,8 @@ class Parameter(object):
             prior, dist.Distribution
         ), "Prior must be a numpyro.distributions.Distribution object."
         self._prior = prior
+        if value is not None:
+            self._value = value
         self._name = name
         if label is None:
             label = name
@@ -61,6 +65,10 @@ class Parameter(object):
         return self._label
 
     @property
+    def value(self) -> Float:
+        return self._value
+
+    @property
     def prior(self) -> dist.Distribution:
         return self._prior
 
@@ -73,7 +81,11 @@ class Parameter(object):
     def __eq__(self, value: object) -> bool:
         if not isinstance(value, Parameter):
             return False
-        return self.name == value.name and self.label == value.label
+        return (
+            self.name == value.name
+            and self.label == value.label
+            and self.value == value.value
+        )
 
 
 # TODO: Add more parameters as needed.
