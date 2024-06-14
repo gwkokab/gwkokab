@@ -69,6 +69,20 @@ def make_parser() -> argparse.ArgumentParser:
         help="title for the plot",
         type=str,
     )
+    parser.add_argument(
+        "-width",
+        "--width",
+        help="width of the plot in inches",
+        default=20,
+        type=int,
+    )
+    parser.add_argument(
+        "-height",
+        "--height",
+        help="height of the plot in inches",
+        default=None,
+        type=int,
+    )
 
     return parser
 
@@ -80,13 +94,13 @@ def main() -> None:
     files = glob.glob(args.data_regex)
     n_dim = args.dimension
 
-    fig, ax = plt.subplots(
-        n_dim,
-        1,
-        figsize=(20, 2.5 * n_dim),
-        sharex=True,
-    )
-    for i, file in enumerate(files):
+    if args.height is None:
+        figsize = (args.width, n_dim * 2.5)
+    else:
+        figsize = (args.width, args.height)
+
+    fig, ax = plt.subplots(n_dim, 1, figsize=figsize, sharex=True)
+    for file in files:
         data = np.loadtxt(file)
         for j, data_ in enumerate(data.T):
             ax[j].plot(
