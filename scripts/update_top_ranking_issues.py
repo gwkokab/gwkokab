@@ -17,24 +17,20 @@ app: Typer = typer.Typer()
 
 DATETIME_FORMAT: str = "%m/%d/%Y %I:%M %p"
 CORE_LABELS: set[str] = {
-    # "defect",
-    # "design",
-    "documentation",
-    "enhancement",
-    "experimental",
-    "bug",
-    "design enhancement",
+    "documentation :scroll:",
+    "enhancement :nail_care:",
+    "experimental :test_tube:",
+    "bug :lady_beetle:",
+    "design  enhancement :pinched_fingers: :ok_hand:",
 }
 # A set of labels for adding in labels that we want present in the final
 # report, but that we don't want being defined as a core label, since issues
 # with without core labels are flagged as errors.
 ADDITIONAL_LABELS: set[str] = {
-    # "experimental",
-    "help wanted",
+    "help wanted :rescue_worker_helmet:",
 }
 IGNORED_LABELS: set[str] = {
-    "ignore top-ranking issues",
-    "meta",
+    "meta :see_no_evil:",
 }
 ISSUES_PER_LABEL: int = 20
 
