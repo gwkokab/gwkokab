@@ -15,12 +15,12 @@
 from __future__ import annotations
 
 import os
-from typing_extensions import Optional, Self
+from typing_extensions import Callable, Optional, Self
 
 import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
-from jaxtyping import Array, Float, Int, PRNGKeyArray
+from jaxtyping import Array, Bool, Float, Int, PRNGKeyArray
 from numpyro.distributions import *
 from numpyro.distributions.constraints import *
 from numpyro.util import is_prng_key
@@ -44,10 +44,15 @@ class PopulationFactory:
         models: list[ModelMeta],
         popinfo: PopInfo,
         seperate_injections: Optional[bool] = None,
+        constraint: Optional[Callable[[Array], Bool]] = None,
     ) -> None:
         if seperate_injections is None:
             self.seperate_injections = False
         self.seperate_injections = seperate_injections
+
+        if constraint is None:
+            constraint = lambda x: True
+        self.constraint = constraint
 
         self.models: list[Distribution] = [
             model.NAME(**model.PARAMETERS) for model in models
@@ -116,7 +121,7 @@ class PopulationFactory:
         keys = list(jrd.split(key, len(self.models)))
         if self.popinfo.VT_FILE is not None:
             old_size = size
-            size += int(5e4)
+            size += int(1e5)
         population = jtr.map(
             lambda model, key: model.sample(key, (size,)).reshape(size, -1),
             self.models,
@@ -127,6 +132,8 @@ class PopulationFactory:
         population = jtr.reduce(
             lambda x, y: jnp.concatenate((x, y), axis=-1), population
         )
+
+        population = population[self.constraint(population)]
 
         if self.popinfo.VT_FILE is None:
             return population
@@ -142,9 +149,12 @@ class PopulationFactory:
         logVT = jax.vmap(logVT)
 
         vt = jnp.exp(logVT(value).flatten())
+        vt = jnp.nan_to_num(vt, nan=0.0)
         vt /= jnp.sum(vt)
         _, key = jrd.split(keys[-1])
-        index = jrd.choice(key, jnp.arange(size), p=vt, shape=(old_size,))
+        index = jrd.choice(
+            key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
+        )
 
         population = population[index]
 
