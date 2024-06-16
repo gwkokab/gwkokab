@@ -19,7 +19,7 @@ from typing_extensions import Optional, Self
 import equinox as eqx
 import jax
 import numpy as np
-from jax import numpy as jnp, random as jrd, tree as jtr
+from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array
 
@@ -223,17 +223,16 @@ class BayesianHierarchicalModel:
             lambda x, y: x + y, integral_individual, 0.0
         )
 
-        if jnp.isinf(log_likelihood) or jnp.isnan(log_likelihood):
-            return log_likelihood
-
         rate = x[..., -1]
-        log_rate = jnp.log(rate)
 
-        log_likelihood += data["N"] * log_rate
+        log_likelihood += data["N"] * jnp.log(rate)
 
-        log_likelihood -= rate * self.time * self.exp_rate_integral(x)
-
-        return log_likelihood
+        return log_likelihood - rate * self.time * lax.cond(
+            jnp.isinf(log_likelihood),
+            lambda x_: 0.0,
+            lambda x_: self.exp_rate_integral(x_),
+            x,
+        )
 
     def log_posterior(self, x: Array, data: Optional[dict] = None) -> Array:
         r"""The likelihood function for the inhomogeneous Poisson process.
@@ -245,6 +244,10 @@ class BayesianHierarchicalModel:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.population_priors.log_prob(x)
-        if jnp.isinf(log_prior) or jnp.isnan(log_prior):
-            return log_prior
-        return log_prior + self.log_likelihood(x, data)
+        return log_prior + lax.cond(
+            jnp.isinf(log_prior),
+            lambda x_, d_: 0.0,
+            lambda x_, d_: self.log_likelihood(x_, d_),
+            x,
+            data,
+        )
