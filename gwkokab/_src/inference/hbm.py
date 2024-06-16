@@ -28,7 +28,7 @@ from .utils import ModelPack
 
 
 @register_pytree_node_class
-class LogBayesianHierarchicalModel:
+class BayesianHierarchicalModel:
     r"""This class is used to provide a likelihood function for the
     inhomogeneous Poisson process. The likelihood is given by,
 
@@ -159,7 +159,7 @@ class LogBayesianHierarchicalModel:
         obj.vt_mask = aux_data["vt_mask"]
         return obj
 
-    def exp_rate(self, x: Array) -> Array:
+    def exp_rate_integral(self, x: Array) -> Array:
         r"""This function calculates the integral inside the term
         $\exp(\Lambda)$ in the likelihood function. The integral is given by,
 
@@ -223,15 +223,15 @@ class LogBayesianHierarchicalModel:
             lambda x, y: x + y, integral_individual, 0.0
         )
 
-        if jnp.isfinite(log_likelihood) is False:
-            return -jnp.inf
+        if jnp.isinf(log_likelihood) or jnp.isnan(log_likelihood):
+            return log_likelihood
 
         rate = x[..., -1]
         log_rate = jnp.log(rate)
 
         log_likelihood += data["N"] * log_rate
 
-        log_likelihood -= rate * self.time * self.exp_rate(x)
+        log_likelihood -= rate * self.time * self.exp_rate_integral(x)
 
         return log_likelihood
 
@@ -245,6 +245,6 @@ class LogBayesianHierarchicalModel:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.population_priors.log_prob(x)
-        if jnp.isfinite(log_prior) is False:
-            return -jnp.inf
+        if jnp.isinf(log_prior) or jnp.isnan(log_prior):
+            return log_prior
         return log_prior + self.log_likelihood(x, data)

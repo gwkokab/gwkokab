@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 
-from .lhbm import LogBayesianHierarchicalModel as LogBayesianHierarchicalModel
+from .hbm import BayesianHierarchicalModel as BayesianHierarchicalModel
 from .utils import (
     ModelPack as ModelPack,
     save_data_from_sampler as save_data_from_sampler,
