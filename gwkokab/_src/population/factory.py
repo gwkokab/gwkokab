@@ -158,7 +158,9 @@ class PopulationFactory:
             size = self.popinfo.RATE
         if self.popinfo.VT_FILE is not None:
             poisson_key, rate_key = jrd.split(key)
-            size: Int = jrd.poisson(poisson_key, self.exp_rate(key=rate_key))
+            size: Int = int(
+                jrd.poisson(poisson_key, self.exp_rate(key=rate_key))
+            )
             key = rate_key
         if size == 0:
             raise ValueError(
