@@ -12,21 +12,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from __future__ import annotations
 
-import importlib.metadata
-
-
-__version__ = importlib.metadata.version("gwkokab")
-
-
-from . import (
-    errors as errors,
-    inference as inference,
-    models as models,
-    parameters as parameters,
-    population as population,
-    priors as priors,
-    utils as utils,
-    vts as vts,
+from gwkokab._src.priors import (
+    UnnormalizedUniformOnRealLine as UnnormalizedUniformOnRealLine,
 )
