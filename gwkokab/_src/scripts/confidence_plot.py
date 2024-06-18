@@ -98,9 +98,15 @@ def make_parser() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
-        "-log",
-        "--log-scale",
-        help="log scale the confidence plot",
+        "-xlog",
+        "--x-log-scale",
+        help="x-axis on log scale",
+        action="store_true",
+    )
+    parser.add_argument(
+        "-ylog",
+        "--y-log-scale",
+        help="y-axis on log scale",
         action="store_true",
     )
     parser.add_argument(
@@ -140,9 +146,10 @@ def main() -> None:
 
     xx_limit = args.x_limit
     steps = args.x_step
-    if args.log_scale:
-        plt.xscale("log")
+    if args.y_log_scale:
         plt.yscale("log")
+    if args.x_log_scale:
+        plt.xscale("log")
         xx = np.logspace(np.log10(xx_limit[0]), np.log10(xx_limit[1]), steps)
     else:
         xx = np.linspace(xx_limit[0], xx_limit[1], steps)
@@ -162,5 +169,7 @@ def main() -> None:
         plt.ylabel(args.y_label)
     if args.title:
         plt.title(args.title)
+
+    plt.tight_layout()
 
     plt.savefig(args.output.name)
