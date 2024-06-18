@@ -83,6 +83,20 @@ def make_parser() -> argparse.ArgumentParser:
         default=None,
         type=int,
     )
+    parser.add_argument(
+        "-xs",
+        "--x-scale",
+        help="scale of the x-axis",
+        default="linear",
+        type=str,
+    )
+    parser.add_argument(
+        "-ys",
+        "--y-scale",
+        help="scale of the y-axis",
+        default="linear",
+        type=str,
+    )
 
     return parser
 
@@ -98,17 +112,28 @@ def main() -> None:
         figsize = (args.width, n_dim * 2.5)
     else:
         figsize = (args.width, args.height)
-
-    fig, ax = plt.subplots(n_dim, 1, figsize=figsize, sharex=True)
-    for file in files:
-        data = np.loadtxt(file)
-        for j, data_ in enumerate(data.T):
-            ax[j].plot(
-                data_,
+    if n_dim == 1:
+        fig, ax = plt.subplots(n_dim, 1, figsize=figsize, sharex=True)
+        for file in files:
+            data = np.loadtxt(file)
+            ax.plot(
+                data,
                 alpha=args.alpha,
             )
-            ax[j].set_ylabel(args.labels[j])
+            ax.set_ylabel(args.labels[0])
+    else:
+        fig, ax = plt.subplots(n_dim, 1, figsize=figsize, sharex=True)
+        for file in files:
+            data = np.loadtxt(file)
+            for j, data_ in enumerate(data.T):
+                ax[j].plot(
+                    data_,
+                    alpha=args.alpha,
+                )
+                ax[j].set_ylabel(args.labels[j])
     if args.title:
         plt.suptitle(args.title)
+    plt.xscale(args.x_scale)
+    plt.yscale(args.y_scale)
     plt.tight_layout()
     fig.savefig(args.output.name)
