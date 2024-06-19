@@ -105,6 +105,8 @@ gwk_chain_plot = "gwkokab._src.scripts.chain_plot:main"
 gwk_confidence_plot = "gwkokab._src.scripts.confidence_plot:main"
 gwk_fancy_scatter3d = "gwkokab._src.scripts.fancy_scatter3d:main"
 gwk_joint_plot = "gwkokab._src.scripts.joint_plot:main"
+gwk_ppd_plot = "gwkokab._src.scripts.ppd_plot:main"
+gwk_ppd_and_confidence_plot = "gwkokab._src.scripts.ppd_confidence_plot:main"
 
 [tool.pyright]
 reportIncompatibleMethodOverride = true
