@@ -19,8 +19,6 @@ from .utils.smoothing import smoothing_kernel
 
 __all__ = [
     "BrokenPowerLawMassModel",
-    "GaussianChiEff",
-    "GaussianChiP",
     "GaussianSpinModel",
     "IndependentSpinOrientationGaussianIsotropic",
     "MultiPeakMassModel",
@@ -260,55 +258,6 @@ class BrokenPowerLawMassModel(dist.Distribution):
         )
 
 
-def GaussianChiEff(mu: Float, sigma: Float) -> dist.TruncatedNormal:
-    r"""Truncated normal distribution for the effective spin. See Eq. (3)-(4) in
-    [The Low Effective Spin of Binary Black Holes and Implications for
-    Individual Gravitational-Wave Events](https://arxiv.org/abs/2001.06051) and
-    [Population Properties of Compact Objects from the Second LIGO-Virgo
-    Gravitational-Wave Transient Catalog](https://arxiv.org/abs/2010.14533)
-
-    $$
-        p(\chi_{\text{eff}}\mid\mu,\sigma)\propto
-        \mathbb{I}_{[-1,1]}(\chi_{\text{eff}})
-        \mathcal{N}(\chi_{\text{eff}}\mid\mu,\sigma)
-    $$
-
-    where $\chi_{\text{eff}}$ is the effective spin and $\mathbb{I}(\cdot)$
-    is the indicator function.
-
-    :param mu: mean of the distribution
-    :param sigma: standard deviation of the distribution
-    :return: Truncated normal distribution for the effective spin
-    """
-    return dist.TruncatedNormal(
-        mu, sigma, low=-1.0, high=1.0, validate_args=True
-    )
-
-
-def GaussianChiP(mu: Float, sigma: Float) -> dist.TruncatedNormal:
-    r"""Truncated normal distribution for the precessing spin. See Eq. (3)-(4)
-    in [The Low Effective Spin of Binary Black Holes and Implications for
-    Individual Gravitational-Wave Events](https://arxiv.org/abs/2001.06051) and
-    [Population Properties of Compact Objects from the Second LIGO-Virgo
-    Gravitational-Wave Transient Catalog](https://arxiv.org/abs/2010.14533).
-
-    $$
-        p(\chi_{p}\mid\mu,\sigma)\propto\mathbb{I}_{[0,1]}(\chi_{p})
-        \mathcal{N}(\chi_{p}\mid\mu,\sigma)
-    $$
-
-    where $\chi_{p}$ is the precessing spin and $\mathbb{I}(\cdot)$
-    is the indicator function.
-
-    :param mu: mean of the distribution
-    :param sigma: standard deviation of the distribution
-    :return: Truncated normal distribution for the precessing spin
-    """
-    return dist.TruncatedNormal(
-        mu, sigma, low=0.0, high=1.0, validate_args=True
-    )
-
-
 def GaussianSpinModel(
     mu_eff: Float, sigma_eff: Float, mu_p: Float, sigma_p: Float, rho: Float
 ) -> dist.MultivariateNormal:
@@ -345,8 +294,8 @@ def GaussianSpinModel(
     return dist.MultivariateNormal(
         loc=[mu_eff, mu_p],
         covariance_matrix=[
-            [sigma_eff**2, rho * sigma_eff * sigma_p],
-            [rho * sigma_eff * sigma_p, sigma_p**2],
+            [lax.square(sigma_eff), rho * sigma_eff * sigma_p],
+            [rho * sigma_eff * sigma_p, lax.square(sigma_p)],
         ],
         validate_args=True,
     )

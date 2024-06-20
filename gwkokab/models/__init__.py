@@ -15,8 +15,6 @@
 
 from gwkokab._src.models.models import (
     BrokenPowerLawMassModel as BrokenPowerLawMassModel,
-    GaussianChiEff as GaussianChiEff,
-    GaussianChiP as GaussianChiP,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
     MultiPeakMassModel as MultiPeakMassModel,
