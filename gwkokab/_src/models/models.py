@@ -128,13 +128,15 @@ class BrokenPowerLawMassModel(dist.Distribution):
         )
         self.alpha1_powerlaw = TruncatedPowerLaw(
             alpha=-self.alpha1,
-            xmin=self.mmin,
-            xmax=self.mbreak,
+            low=self.mmin,
+            high=self.mbreak,
+            validate_args=True,
         )
         self.alpha2_powerlaw = TruncatedPowerLaw(
             alpha=-self.alpha2,
-            xmin=self.mbreak,
-            xmax=self.mmax,
+            low=self.mbreak,
+            high=self.mmax,
+            validate_args=True,
         )
         self._normalization()
 
@@ -945,27 +947,31 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
             q = value[..., 1]
         log_prob_m1 = TruncatedPowerLaw(
             alpha=self.alpha,
-            xmin=self.mmin,
-            xmax=self.mmax,
+            low=self.mmin,
+            high=self.mmax,
+            validate_args=True,
         ).log_prob(m1)
         log_prob_q = TruncatedPowerLaw(
             alpha=self.beta,
-            xmin=lax.div(self.mmin, m1),
-            xmax=1.0,
+            low=lax.div(self.mmin, m1),
+            high=1.0,
+            validate_args=True,
         ).log_prob(q)
         return log_prob_m1 + log_prob_q
 
     def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
         m1 = TruncatedPowerLaw(
             alpha=self.alpha,
-            xmin=self.mmin,
-            xmax=self.mmax,
+            low=self.mmin,
+            high=self.mmax,
+            validate_args=True,
         ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
         key = jrd.split(key)[1]
         q = TruncatedPowerLaw(
             alpha=self.beta,
-            xmin=lax.div(self.mmin, m1),
-            xmax=1.0,
+            low=lax.div(self.mmin, m1),
+            high=1.0,
+            validate_args=True,
         ).sample(key=key, sample_shape=())
 
         if self._default_params:
@@ -1007,72 +1013,81 @@ class TruncatedPowerLaw(dist.Distribution):
 
     arg_constraints = {
         "alpha": dist.constraints.real,
-        "xmin": dist.constraints.dependent,
-        "xmax": dist.constraints.dependent,
+        "low": dist.constraints.positive,
+        "high": dist.constraints.positive,
     }
-    reparametrized_params = ["alpha", "xmin", "xmax"]
-    pytree_aux_fields = ("_support", "_logZ")
+    reparametrized_params = ["low", "high", "alpha"]
 
-    def __init__(self: Self, alpha: Float, xmin: Float, xmax: Float) -> None:
-        r"""
-        :param alpha: Index of the power law
-        :param xmin: Lower truncation limit
-        :param xmax: Upper truncation limit
-        """
-        self.alpha, self.xmin, self.xmax = promote_shapes(alpha, xmin, xmax)
+    def __init__(
+        self,
+        alpha,
+        low=0.0,
+        high=1.0,
+        validate_args=None,
+    ):
+        self.low, self.high, self.alpha = promote_shapes(low, high, alpha)
+        self._support = dist.constraints.interval(low, high)
         batch_shape = lax.broadcast_shapes(
-            jnp.shape(alpha), jnp.shape(xmin), jnp.shape(xmax)
+            jnp.shape(low),
+            jnp.shape(high),
+            jnp.shape(alpha),
         )
         super(TruncatedPowerLaw, self).__init__(
-            batch_shape=batch_shape, validate_args=True
+            batch_shape=batch_shape, validate_args=validate_args
         )
-        self._support = dist.constraints.interval(xmin, xmax)
-        self._logZ = self._log_Z()
 
     @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self: Self):
+    def support(self):
         return self._support
 
-    @partial(jit, static_argnums=(0,))
-    def _log_Z(self: Self) -> Array | Real:
-        """Computes the logarithm of normalization constant.
-
-        :return: The logarithm of normalization constant.
-        """
-        return jnp.where(
-            self.alpha == -1.0,
-            jnp.log(jnp.log(self.xmax) - jnp.log(self.xmin)),
-            jnp.log(
-                jnp.abs(
-                    jnp.power(self.xmax, 1.0 + self.alpha)
-                    - jnp.power(self.xmin, 1.0 + self.alpha)
-                )
-            )
-            - jnp.log(jnp.abs(1.0 + self.alpha)),
+    def sample(self, key, sample_shape=()):
+        assert is_prng_key(key)
+        return self.icdf(
+            jrd.uniform(key, shape=sample_shape + self.batch_shape)
         )
 
     @validate_sample
-    def log_prob(self: Self, value: Array | Real) -> Array | Real:
-        return self.alpha * jnp.log(value) - self._logZ
+    def log_prob(self, value):
+        # See: https://github.com/google/jax/discussions/22013
+        def logp_neg1(value):
+            return -jnp.log(value) - jnp.log(self.high) + jnp.log(self.low)
 
-    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
-        U = jrd.uniform(key, sample_shape + self.batch_shape)
+        def logp(value):
+            log_value = jnp.log(value)
+            logp = self.alpha * log_value
+            beta = 1.0 + self.alpha
+            logp = logp + jnp.log(
+                beta / (jnp.power(self.high, beta) - jnp.power(self.low, beta))
+            )
+            return logp
+
         return jnp.where(
-            self.alpha == -1.0,
-            jnp.exp(
-                jnp.log(self.xmin)
-                + U * (jnp.log(self.xmax) - jnp.log(self.xmin))
-            ),
-            jnp.power(
-                jnp.power(self.xmin, 1.0 + self.alpha)
-                + U
-                * (
-                    jnp.power(self.xmax, 1.0 + self.alpha)
-                    - jnp.power(self.xmin, 1.0 + self.alpha)
-                ),
-                jnp.reciprocal(1.0 + self.alpha),
-            ),
+            jnp.equal(self.alpha, -1.0), logp_neg1(value), logp(value)
         )
+
+    def cdf(self, value):
+        beta = 1.0 + self.alpha
+        cdf = jnp.atleast_1d(value**beta - self.low**beta) / (
+            self.high**beta - self.low**beta
+        )
+        cdf_neg1 = (jnp.log(value) - jnp.log(self.low)) / (
+            jnp.log(self.high) - jnp.log(self.low)
+        )
+        cdf = jnp.where(jnp.equal(self.alpha, -1.0), cdf_neg1, cdf)
+        cdf = jnp.minimum(cdf, 1.0)
+        cdf = jnp.maximum(cdf, 0.0)
+        return cdf
+
+    def icdf(self, q):
+        beta = 1.0 + self.alpha
+        low_pow_beta = jnp.power(self.low, beta)
+        high_pow_beta = jnp.power(self.high, beta)
+        icdf = jnp.power(
+            low_pow_beta + q * (high_pow_beta - low_pow_beta),
+            jnp.reciprocal(beta),
+        )
+        icdf_neg1 = self.low * jnp.exp(q * jnp.log(self.high / self.low))
+        return jnp.where(jnp.equal(self.alpha, -1.0), icdf_neg1, icdf)
 
 
 class Wysocki2019MassModel(dist.Distribution):
@@ -1122,8 +1137,8 @@ class Wysocki2019MassModel(dist.Distribution):
         m1 = value[..., 0]
         log_prob_m1 = TruncatedPowerLaw(
             alpha=-self.alpha_m,
-            xmin=self.mmin,
-            xmax=self.mmax,
+            low=self.mmin,
+            high=self.mmax,
         ).log_prob(m1)
         log_prob_m2_given_m1 = -jnp.log(m1 - self.mmin)
         return log_prob_m1 + log_prob_m2_given_m1
@@ -1138,7 +1153,7 @@ class Wysocki2019MassModel(dist.Distribution):
         key = jrd.split(key)[-1]
         m1 = TruncatedPowerLaw(
             alpha=-self.alpha_m,
-            xmin=m2,
-            xmax=self.mmax,
+            low=m2,
+            high=self.mmax,
         ).sample(key=key, sample_shape=())
         return jnp.column_stack((m1, m2))
