@@ -13,33 +13,19 @@
 #  limitations under the License.
 
 
-from gwkokab._src.models.brokenpowerlawmassmodel import (
+from gwkokab._src.models.models import (
     BrokenPowerLawMassModel as BrokenPowerLawMassModel,
-)
-from gwkokab._src.models.gaussianchieff import GaussianChiEff as GaussianChiEff
-from gwkokab._src.models.gaussianchip import GaussianChiP as GaussianChiP
-from gwkokab._src.models.gaussianspinmodel import (
+    GaussianChiEff as GaussianChiEff,
+    GaussianChiP as GaussianChiP,
     GaussianSpinModel as GaussianSpinModel,
-)
-from gwkokab._src.models.independentspinorientationgaussianisotropic import (
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
-)
-from gwkokab._src.models.multipeakmassmodel import (
     MultiPeakMassModel as MultiPeakMassModel,
-)
-from gwkokab._src.models.ndist import NDistribution as NDistribution
-from gwkokab._src.models.powerlawpeakmassmodel import (
+    NDistribution as NDistribution,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
-)
-from gwkokab._src.models.powerlawprimarymassratio import (
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
-)
-from gwkokab._src.models.truncpowerlaw import (
     TruncatedPowerLaw as TruncatedPowerLaw,
+    Wysocki2019MassModel as Wysocki2019MassModel,
 )
 from gwkokab._src.models.utils.jointdistribution import (
     JointDistribution as JointDistribution,
-)
-from gwkokab._src.models.wysocki2019massmodel import (
-    Wysocki2019MassModel as Wysocki2019MassModel,
 )

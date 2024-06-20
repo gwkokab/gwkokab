@@ -12,24 +12,17 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from __future__ import annotations
 
-from .brokenpowerlawmassmodel import (
+from .models import (
     BrokenPowerLawMassModel as BrokenPowerLawMassModel,
-)
-from .gaussianchieff import GaussianChiEff as GaussianChiEff
-from .gaussianchip import GaussianChiP as GaussianChiP
-from .gaussianspinmodel import GaussianSpinModel as GaussianSpinModel
-from .independentspinorientationgaussianisotropic import (
+    GaussianChiEff as GaussianChiEff,
+    GaussianChiP as GaussianChiP,
+    GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
-)
-from .multipeakmassmodel import MultiPeakMassModel as MultiPeakMassModel
-from .ndist import NDistribution as NDistribution
-from .powerlawpeakmassmodel import (
+    MultiPeakMassModel as MultiPeakMassModel,
+    NDistribution as NDistribution,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
-)
-from .powerlawprimarymassratio import (
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
+    TruncatedPowerLaw as TruncatedPowerLaw,
+    Wysocki2019MassModel as Wysocki2019MassModel,
 )
-from .truncpowerlaw import TruncatedPowerLaw as TruncatedPowerLaw
-from .wysocki2019massmodel import Wysocki2019MassModel as Wysocki2019MassModel
