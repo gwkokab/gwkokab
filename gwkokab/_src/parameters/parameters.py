@@ -75,7 +75,18 @@ class Parameter(object):
         return self._prior
 
     def __repr__(self) -> str:
-        return f"Parameter(name={self.name}, label={self.label})"
+        string = (
+            f"Parameter(name={self.name}, label={self.label}, "
+            f"prior={self.prior.__class__.__name__}("
+            ", ".join(
+                [
+                    f"{v}={self.prior.__getattribute__(v)}"
+                    for v in self.prior.arg_constraints.keys()
+                ]
+            )
+            + "))"
+        )
+        return string
 
     def __hash__(self) -> int:
         return hash(self.name)
