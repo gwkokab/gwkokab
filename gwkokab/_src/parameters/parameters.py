@@ -78,7 +78,7 @@ class Parameter(object):
         string = (
             f"Parameter(name={self.name}, label={self.label}, "
             f"prior={self.prior.__class__.__name__}("
-            ", ".join(
+            + ", ".join(
                 [
                     f"{v}={self.prior.__getattribute__(v)}"
                     for v in self.prior.arg_constraints.keys()
