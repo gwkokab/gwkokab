@@ -25,7 +25,7 @@ body:
 
         [issue search]: https://github.com/gwkokab/gwkokab/search?q=is%3Aissue&type=issues
 
-        [Raw report]: http://github.com/gwkokab/gwkokab/issues/new
+        [Raw report]: https://github.com/gwkokab/gwkokab/issues/new
   - type: textarea
     attributes:
       label: Description

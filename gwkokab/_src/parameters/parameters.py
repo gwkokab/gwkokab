@@ -51,8 +51,7 @@ class Parameter(object):
             prior, dist.Distribution
         ), "Prior must be a numpyro.distributions.Distribution object."
         self._prior = prior
-        if value is not None:
-            self._value = value
+        self._value = value
         self._name = name
         if label is None:
             label = name
@@ -67,8 +66,12 @@ class Parameter(object):
         return self._label
 
     @property
-    def value(self) -> Float:
+    def value(self) -> Optional[Float]:
         return self._value
+
+    @value.setter
+    def value(self, value: Float) -> None:
+        self._value = value
 
     @property
     def prior(self) -> dist.Distribution:
@@ -76,7 +79,7 @@ class Parameter(object):
 
     def __repr__(self) -> str:
         string = (
-            f"Parameter(name={self.name}, label={self.label}, "
+            f"Parameter(name={self.name}, label={self.label}, value={self.value}, "
             f"prior={self.prior.__class__.__name__}("
             + ", ".join(
                 [
@@ -211,13 +214,13 @@ TILE_1 = partial(
     name="tile_1",
     label=r"$\theta_1$",
     default_prior=UnnormalizedUniformOnRealLine(),
-)  # TODO: priors are incorrect
+)
 TILE_2 = partial(
     Parameter,
     name="tile_2",
     label=r"$\theta_2$",
     default_prior=UnnormalizedUniformOnRealLine(),
-)  # TODO: priors are incorrect
+)
 EFFECTIVE_SPIN_MAGNITUDE = partial(
     Parameter,
     name="chi_eff",
