@@ -97,9 +97,7 @@ def save_data_from_sampler(
         header="train prod",
         comments="#",
     )
-    np.savetxt(
-        rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss"
-    )
+    np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
 
     for i in range(n_chains):
         np.savetxt(

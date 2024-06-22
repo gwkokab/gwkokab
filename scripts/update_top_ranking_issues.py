@@ -42,9 +42,7 @@ class IssueData:
         self.creation_datetime: str = issue.created_at.strftime(DATETIME_FORMAT)
         # TODO: Change script to support storing labels here, rather than
         # directly in the script
-        self.labels: set[str] = {
-            label["name"] for label in issue._rawData["labels"]
-        }  # type: ignore [attr-defined]
+        self.labels: set[str] = {label["name"] for label in issue._rawData["labels"]}  # type: ignore [attr-defined]
 
 
 @app.command()
@@ -90,18 +88,14 @@ def main(
     )
 
     if issue_reference_number:
-        top_ranking_issues_issue: Issue = repository.get_issue(
-            issue_reference_number
-        )
+        top_ranking_issues_issue: Issue = repository.get_issue(issue_reference_number)
         top_ranking_issues_issue.edit(body=issue_text)
     else:
         print(issue_text)
 
     remaining_requests_after: int = github.rate_limiting[0]
     print(f"Remaining requests after: {remaining_requests_after}")
-    print(
-        f"Requests used: {remaining_requests_before - remaining_requests_after}"
-    )
+    print(f"Requests used: {remaining_requests_before - remaining_requests_after}")
 
     run_duration: timedelta = datetime.now() - start_time
     print(run_duration)
@@ -125,9 +119,7 @@ def get_issue_maps(
         get_error_message_to_erroneous_issues(github, repository)
     )
     error_message_to_erroneous_issue_data: dict[str, list[IssueData]] = (
-        get_error_message_to_erroneous_issue_data(
-            error_message_to_erroneous_issues
-        )
+        get_error_message_to_erroneous_issue_data(error_message_to_erroneous_issues)
     )
 
     # Create a new dictionary with labels ordered by the summation the of likes
@@ -141,9 +133,7 @@ def get_issue_maps(
         reverse=True,
     )
 
-    label_to_issue_data = {
-        label: label_to_issue_data[label] for label in labels
-    }
+    label_to_issue_data = {label: label_to_issue_data[label] for label in labels}
 
     return (
         label_to_issue_data,
@@ -206,19 +196,13 @@ def get_label_to_issue_data(
 def get_error_message_to_erroneous_issues(
     github: Github, repository: Repository
 ) -> defaultdict[str, list[Issue]]:
-    error_message_to_erroneous_issues: defaultdict[str, list[Issue]] = (
-        defaultdict(list)
-    )
+    error_message_to_erroneous_issues: defaultdict[str, list[Issue]] = defaultdict(list)
 
     # Query for all open issues that don't have either a core or ignored label
     # and mark those as erroneous
     filter_labels: set[str] = CORE_LABELS | IGNORED_LABELS
-    filter_labels_text: str = " ".join(
-        [f'-label:"{label}"' for label in filter_labels]
-    )
-    query: str = (
-        f"repo:{repository.full_name} is:open is:issue {filter_labels_text}"
-    )
+    filter_labels_text: str = " ".join([f'-label:"{label}"' for label in filter_labels])
+    query: str = f"repo:{repository.full_name} is:open is:issue {filter_labels_text}"
 
     for issue in github.search_issues(query):
         error_message_to_erroneous_issues["missing core label"].append(issue)
@@ -279,8 +263,7 @@ def get_issue_text(
                 "### what to do?\n",
                 "- Adjust the core labels on an issue to put it into a "
                 "correct state or add a currently-ignored label to the issue",
-                "- Adjust the core and ignored labels registered in this"
-                " script",
+                "- Adjust the core and ignored labels registered in this" " script",
                 *erroneous_issues_lines,
                 "",
                 "---\n",

@@ -106,9 +106,7 @@ class PopulationFactory:
 
     def exp_rate(self: Self, *, key: PRNGKeyArray) -> Float:
         N = int(1e4)
-        value = self.vt_param_dist.sample(key, (N,))[
-            ..., self.vt_selection_mask
-        ]
+        value = self.vt_param_dist.sample(key, (N,))[..., self.vt_selection_mask]
         _, logVT = load_model(self.popinfo.VT_FILE)
         logVT = jax.vmap(logVT)
         return (
@@ -168,9 +166,7 @@ class PopulationFactory:
             size = self.popinfo.RATE
         if self.popinfo.VT_FILE is not None:
             poisson_key, rate_key = jrd.split(key)
-            size: Int = int(
-                jrd.poisson(poisson_key, self.exp_rate(key=rate_key))
-            )
+            size: Int = int(jrd.poisson(poisson_key, self.exp_rate(key=rate_key)))
             key = rate_key
         if size == 0:
             raise ValueError(
@@ -193,9 +189,7 @@ class PopulationFactory:
                 self.popinfo.ROOT_DIR, self.REALIZATIONS_DIR.format(i)
             )
             os.makedirs(realizations_path, exist_ok=True)
-            injection_filename = os.path.join(
-                realizations_path, "injections.dat"
-            )
+            injection_filename = os.path.join(realizations_path, "injections.dat")
             config_filename = os.path.join(realizations_path, "config.dat")
             np.savetxt(
                 injection_filename,
@@ -211,9 +205,7 @@ class PopulationFactory:
             )
 
             if self.seperate_injections:
-                injection_path = os.path.join(
-                    realizations_path, self.INJECTIONS_DIR
-                )
+                injection_path = os.path.join(realizations_path, self.INJECTIONS_DIR)
                 os.makedirs(injection_path, exist_ok=True)
                 for j in range(population.shape[0]):
                     injection_filename = os.path.join(

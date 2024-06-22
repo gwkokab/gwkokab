@@ -172,9 +172,7 @@ def main() -> None:
         cursor.connect(
             "add",
             lambda sel: sel.annotation.set_text(
-                sel.annotation.get_text()
-                + " "
-                + str(sel.target.get_array()[sel.index])
+                sel.annotation.get_text() + " " + str(sel.target.get_array()[sel.index])
             ),
         )
 

@@ -184,9 +184,9 @@ class BayesianHierarchicalModel:
             )
         )
         N = 1 << 13
-        samples = vt_models.sample(
-            jrd.PRNGKey(np.random.randint(1, 2**32 - 1)), (N,)
-        )[..., self.vt_mask]
+        samples = vt_models.sample(jrd.PRNGKey(np.random.randint(1, 2**32 - 1)), (N,))[
+            ..., self.vt_mask
+        ]
         return jnp.mean(jnp.exp(self.logVT(samples)))
 
     def log_likelihood(self, x: Array, data: Optional[dict] = None) -> Array:
@@ -200,10 +200,7 @@ class BayesianHierarchicalModel:
             *jtr.map(
                 lambda name, index, argument: name(
                     **argument,
-                    **{
-                        self.parameters_to_recover_name[i]: x[..., i]
-                        for i in index
-                    },
+                    **{self.parameters_to_recover_name[i]: x[..., i] for i in index},
                 ),
                 self.names,
                 self.indexes,
@@ -219,9 +216,7 @@ class BayesianHierarchicalModel:
             data["data"],
         )
 
-        log_likelihood = jtr.reduce(
-            lambda x, y: x + y, integral_individual, 0.0
-        )
+        log_likelihood = jtr.reduce(lambda x, y: x + y, integral_individual, 0.0)
 
         rate = x[..., -1]
 

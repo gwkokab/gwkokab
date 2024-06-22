@@ -88,8 +88,7 @@ def read_data(data_path: str) -> pl.DataFrame:
         keys = list(vt_file.keys())
         df = pl.DataFrame(
             data={
-                key: pl.Series(key, np.array(vt_file[key][:]).flatten())
-                for key in keys
+                key: pl.Series(key, np.array(vt_file[key][:]).flatten()) for key in keys
             },
         )
     return df

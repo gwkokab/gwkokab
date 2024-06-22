@@ -159,9 +159,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(
-        self: Self, m1: Array | Real
-    ) -> Array | Real:
+    def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
         
         .. math::
@@ -189,9 +187,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
             log_smoothing_val + self.alpha1_powerlaw.log_prob(m1),
             log_smoothing_val + self.alpha2_powerlaw.log_prob(m1),
         ]
-        return jnp.select(
-            conditions, log_probs, default=jnp.full_like(m1, -jnp.inf)
-        )
+        return jnp.select(conditions, log_probs, default=jnp.full_like(m1, -jnp.inf))
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_mass_ratio_model(
@@ -255,9 +251,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
             return jnp.column_stack([m1, m1_q_to_m2(m1=m1, q=q)]).reshape(
                 sample_shape + self.event_shape
             )
-        return jnp.column_stack([m1, q]).reshape(
-            sample_shape + self.event_shape
-        )
+        return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
 def GaussianSpinModel(
@@ -506,9 +500,7 @@ class MultiPeakMassModel(dist.Distribution):
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(
-        self: Self, m1: Array | Real
-    ) -> Array | Real:
+    def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
 
         $$
@@ -606,9 +598,7 @@ class MultiPeakMassModel(dist.Distribution):
             return jnp.column_stack([m1, m1_q_to_m2(m1=m1, q=q)]).reshape(
                 sample_shape + self.event_shape
             )
-        return jnp.column_stack([m1, q]).reshape(
-            sample_shape + self.event_shape
-        )
+        return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
 def NDistribution(
@@ -777,9 +767,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(
-        self: Self, m1: Array | Real
-    ) -> Array | Real:
+    def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
 
         .. math::
@@ -868,9 +856,7 @@ class PowerLawPeakMassModel(dist.Distribution):
             return jnp.column_stack([m1, m1_q_to_m2(m1=m1, q=q)]).reshape(
                 sample_shape + self.event_shape
             )
-        return jnp.column_stack([m1, q]).reshape(
-            sample_shape + self.event_shape
-        )
+        return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
 class PowerLawPrimaryMassRatio(dist.Distribution):
@@ -1042,9 +1028,7 @@ class TruncatedPowerLaw(dist.Distribution):
 
     def sample(self, key, sample_shape=()):
         assert is_prng_key(key)
-        return self.icdf(
-            jrd.uniform(key, shape=sample_shape + self.batch_shape)
-        )
+        return self.icdf(jrd.uniform(key, shape=sample_shape + self.batch_shape))
 
     @validate_sample
     def log_prob(self, value):
@@ -1061,9 +1045,7 @@ class TruncatedPowerLaw(dist.Distribution):
             )
             return logp
 
-        return jnp.where(
-            jnp.equal(self.alpha, -1.0), logp_neg1(value), logp(value)
-        )
+        return jnp.where(jnp.equal(self.alpha, -1.0), logp_neg1(value), logp(value))
 
     def cdf(self, value):
         beta = 1.0 + self.alpha
@@ -1143,9 +1125,7 @@ class Wysocki2019MassModel(dist.Distribution):
         log_prob_m2_given_m1 = -jnp.log(m1 - self.mmin)
         return log_prob_m1 + log_prob_m2_given_m1
 
-    def sample(
-        self: Self, key: PRNGKeyArray, sample_shape: tuple = ()
-    ) -> Array:
+    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()) -> Array:
         m2 = dist.Uniform(
             low=self.mmin,
             high=self.mmax,

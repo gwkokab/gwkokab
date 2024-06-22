@@ -109,7 +109,5 @@ def main() -> None:
         smooth=args.smooth,
     )
     scaling_factor = args.scale
-    figure.set_size_inches(
-        scaling_factor * args.size[0], scaling_factor * args.size[1]
-    )
+    figure.set_size_inches(scaling_factor * args.size[0], scaling_factor * args.size[1])
     figure.savefig(args.output.name)

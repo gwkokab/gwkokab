@@ -57,9 +57,7 @@ def run_noise_factory(
         data = np.loadtxt(filename)
         i = 0
         for head, err_fn in zip(heads, error_fns):
-            noisey_data_i: Array = err_fn(
-                data[head], npopinfo.SIZE, keys[index + i]
-            )
+            noisey_data_i: Array = err_fn(data[head], npopinfo.SIZE, keys[index + i])
             if noisey_data_i.ndim == 1:
                 noisey_data_i = noisey_data_i.reshape(npopinfo.SIZE, -1)
             noisey_data[:, head] = noisey_data_i
@@ -76,9 +74,7 @@ def run_noise_factory(
             continue
         if masked_noisey_data.shape[0] == 1:
             masked_noisey_data = masked_noisey_data.reshape(1, -1)
-        os.makedirs(
-            os.path.dirname(npopinfo.OUTPUT_DIR.format(index)), exist_ok=True
-        )
+        os.makedirs(os.path.dirname(npopinfo.OUTPUT_DIR.format(index)), exist_ok=True)
         np.savetxt(
             npopinfo.OUTPUT_DIR.format(index),
             masked_noisey_data,

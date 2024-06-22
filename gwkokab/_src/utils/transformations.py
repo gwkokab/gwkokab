@@ -70,9 +70,7 @@ def _chirp_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
     return lax.mul(lax.pow(m1m2, 0.6), lax.pow(M, -0.2))
 
 
-def _symmetric_mass_ratio(
-    *, m1: Array | Real, m2: Array | Real
-) -> Array | Real:
+def _symmetric_mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
     M = _total_mass(m1=m1, m2=m2)
     m1m2 = _m1_times_m2(m1=m1, m2=m2)
     return lax.mul(m1m2, lax.pow(M, -2))
@@ -102,27 +100,21 @@ def _symmetric_mass_ratio_to_delta_m(*, eta: Array | Real) -> Array | Real:
     return delta_m
 
 
-def _m1_m2_ordering(
-    *, m1: Array | Real, m2: Array | Real
-) -> tuple[Array, Array]:
+def _m1_m2_ordering(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
     i_sorted = m1 >= m2
     m1_sorted = jnp.where(i_sorted, m1, m2)
     m2_sorted = jnp.where(i_sorted, m2, m1)
     return m1_sorted, m2_sorted
 
 
-def _m_det_z_to_m_source(
-    *, m_det: Array | Real, z: Array | Real
-) -> Array | Real:
+def _m_det_z_to_m_source(*, m_det: Array | Real, z: Array | Real) -> Array | Real:
     return lax.div(
         m_det,
         lax.add(1.0, z),  # 1 + z
     )
 
 
-def _m_source_z_to_m_det(
-    *, m_source: Array | Real, z: Array | Real
-) -> Array | Real:
+def _m_source_z_to_m_det(*, m_source: Array | Real, z: Array | Real) -> Array | Real:
     return lax.mul(
         m_source,
         lax.add(1.0, z),  # 1 + z
@@ -143,9 +135,7 @@ def _M_q_to_m1_m2(*, M: Array | Real, q: Array | Real) -> tuple[Array, Array]:
     return m1, m2
 
 
-def _chi_cos_tilt_to_chiz(
-    *, chi: Array | Real, cos_tilt: Array | Real
-) -> Array | Real:
+def _chi_cos_tilt_to_chiz(*, chi: Array | Real, cos_tilt: Array | Real) -> Array | Real:
     return lax.mul(chi, cos_tilt)
 
 
@@ -202,9 +192,7 @@ def _m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(
 ) -> Array | Real:
     chi1z = _chi_cos_tilt_to_chiz(chi=chi1, cos_tilt=costilt1)
     chi2z = _chi_cos_tilt_to_chiz(chi=chi2, cos_tilt=costilt2)
-    return _m1_m2_chi1z_chi2z_to_chiminus(
-        m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z
-    )
+    return _m1_m2_chi1z_chi2z_to_chiminus(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 
 def _m1_m2_chieff_chiminus_to_chi1z_chi2z(
@@ -237,9 +225,7 @@ def _Mc_delta_chieff_chiminus_to_chi1z_chi2z(
     )
 
 
-def _Mc_eta_to_m1_m2(
-    *, Mc: Array | Real, eta: Array | Real
-) -> tuple[Array, Array]:
+def _Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Array]:
     delta_sq = lax.sub(1, lax.mul(4, eta))  # 1 - 4 * eta
     delta_sq = lax.max(delta_sq, 0)  # to avoid negative values
     delta = lax.sqrt(delta_sq)  # sqrt(1 - 4 * eta)
@@ -251,9 +237,7 @@ def _Mc_eta_to_m1_m2(
     return m1, m2
 
 
-def _m1_m2_to_Mc_eta(
-    *, m1: Array | Real, m2: Array | Real
-) -> tuple[Array, Array]:
+def _m1_m2_to_Mc_eta(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
     M = _total_mass(m1=m1, m2=m2)
     m1m2 = _m1_times_m2(m1=m1, m2=m2)
     eta = lax.mul(m1m2, lax.reciprocal(M * M))  # eta = m1 * m2 / M^2
@@ -261,18 +245,14 @@ def _m1_m2_to_Mc_eta(
     return Mc, eta
 
 
-def _Mc_delta_to_m1_m2(
-    *, Mc: Array | Real, delta: Array | Real
-) -> tuple[Array, Array]:
+def _Mc_delta_to_m1_m2(*, Mc: Array | Real, delta: Array | Real) -> tuple[Array, Array]:
     eta = _symmetric_mass_ratio_to_delta_m(
         lax.mul(0.25, delta)
     )  # eta = sqrt(1 - 4 * delta) / 4
     return _Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
 
 
-def _polar_to_cart(
-    *, r: Array | Real, theta: Array | Real
-) -> tuple[Array, Array]:
+def _polar_to_cart(*, r: Array | Real, theta: Array | Real) -> tuple[Array, Array]:
     x = lax.mul(r, lax.cos(theta))
     y = lax.mul(r, lax.sin(theta))
     return x, y
@@ -313,9 +293,7 @@ cart_to_spherical = jax.jit(_cart_to_spherical, inline=True)
 chi_cos_tilt_to_chiz = jax.jit(_chi_cos_tilt_to_chiz, inline=True)
 chirp_mass = jax.jit(_chirp_mass, inline=True)
 delta_m = jax.jit(_delta_m, inline=True)
-delta_m_to_symmetric_mass_ratio = jax.jit(
-    _delta_m_to_symmetric_mass_ratio, inline=True
-)
+delta_m_to_symmetric_mass_ratio = jax.jit(_delta_m_to_symmetric_mass_ratio, inline=True)
 m1_m2_chi1_chi2_costilt1_costilt2_to_chieff = jax.jit(
     _m1_m2_chi1_chi2_costilt1_costilt2_to_chieff, inline=True
 )
@@ -323,9 +301,7 @@ m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus = jax.jit(
     _m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus, inline=True
 )
 m1_m2_chi1z_chi2z_to_chieff = jax.jit(_m1_m2_chi1z_chi2z_to_chieff, inline=True)
-m1_m2_chi1z_chi2z_to_chiminus = jax.jit(
-    _m1_m2_chi1z_chi2z_to_chiminus, inline=True
-)
+m1_m2_chi1z_chi2z_to_chiminus = jax.jit(_m1_m2_chi1z_chi2z_to_chiminus, inline=True)
 m1_m2_chieff_chiminus_to_chi1z_chi2z = jax.jit(
     _m1_m2_chieff_chiminus_to_chi1z_chi2z, inline=True
 )
@@ -347,7 +323,5 @@ polar_to_cart = jax.jit(_polar_to_cart, inline=True)
 reduced_mass = jax.jit(_reduced_mass, inline=True)
 spherical_to_cart = jax.jit(_spherical_to_cart, inline=True)
 symmetric_mass_ratio = jax.jit(_symmetric_mass_ratio, inline=True)
-symmetric_mass_ratio_to_delta_m = jax.jit(
-    _symmetric_mass_ratio_to_delta_m, inline=True
-)
+symmetric_mass_ratio_to_delta_m = jax.jit(_symmetric_mass_ratio_to_delta_m, inline=True)
 total_mass = jax.jit(_total_mass, inline=True)

@@ -71,4 +71,4 @@ class flowMChandler(object):
     def run(self) -> None:
         sampler = self.make_sampler()
         sampler.sample(self.initial_position, self.data)
-        save_data_from_sampler(**self.data_dump_kwargs)
+        save_data_from_sampler(sampler, **self.data_dump_kwargs)

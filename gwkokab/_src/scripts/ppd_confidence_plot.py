@@ -187,9 +187,7 @@ def main() -> None:
     q = np.quantile(yy, args.quantiles, axis=1)
     for ends in args.fill_between:
         if len(ends) == 1:
-            plt.plot(
-                xx, q[ends[0]], label=f"Quantile {args.quantiles[ends[0]]*100}%"
-            )
+            plt.plot(xx, q[ends[0]], label=f"Quantile {args.quantiles[ends[0]]*100}%")
         elif len(ends) == 2:
             plt.fill_between(
                 xx,

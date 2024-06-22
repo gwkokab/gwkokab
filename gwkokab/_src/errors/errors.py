@@ -95,10 +95,7 @@ def uniform_error(
     :return: error values
     """
     return vmap(
-        lambda x_: jrd.uniform(
-            key=key, shape=(size,), minval=lower, maxval=upper
-        )
-        + x_
+        lambda x_: jrd.uniform(key=key, shape=(size,), minval=lower, maxval=upper) + x_
     )(x)
 
 

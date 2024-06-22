@@ -51,10 +51,7 @@ def smoothing_kernel(
         jnp.zeros_like(mass),
         jnp.reciprocal(
             1
-            + jnp.exp(
-                (delta / (mass - mass_min))
-                + (delta / (mass - mass_min - delta))
-            )
+            + jnp.exp((delta / (mass - mass_min)) + (delta / (mass - mass_min - delta)))
         ),
     ]
     return jnp.select(conditions, choices, default=jnp.ones_like(mass))
