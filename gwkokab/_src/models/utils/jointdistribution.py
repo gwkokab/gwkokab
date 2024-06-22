@@ -52,7 +52,11 @@ class JointDistribution(dist.Distribution):
             self.shaped_values,
             is_leaf=lambda x: isinstance(x, dist.Distribution),
         )
-        log_probs = jnp.sum(jnp.asarray(log_probs).T, axis=-1)
+        log_probs = jtr.reduce(
+            lambda x, y: x + y,
+            log_probs,
+            is_leaf=lambda x: isinstance(x, jnp.ndarray),
+        )
         return log_probs
 
     def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
