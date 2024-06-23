@@ -12,7 +12,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
 from ..utils.transformations import m1_q_to_m2, mass_ratio
-from .utils import JointDistribution, numerical_inverse_transform_sampling
+from .utils import numerical_inverse_transform_sampling
 from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils.smoothing import smoothing_kernel
 
@@ -318,27 +318,14 @@ def IndependentSpinOrientationGaussianIsotropic(
     :return: Mixture model of spin orientations.
     """
     mixing_probs = jnp.array([1 - zeta, zeta])
-    component_0_dist = JointDistribution(
-        dist.Uniform(low=-1, high=1, validate_args=True),
-        dist.Uniform(low=-1, high=1, validate_args=True),
+    component_0_dist = dist.Uniform(low=-1, high=1, validate_args=True)
+    component_1_dist = dist.TruncatedNormal(
+        loc=1.0,
+        scale=jnp.array([sigma1, sigma2]),
+        low=-1,
+        high=1,
+        validate_args=True,
     )
-    component_1_dist = JointDistribution(
-        dist.TruncatedNormal(
-            loc=1.0,
-            scale=sigma1,
-            low=-1,
-            high=1,
-            validate_args=True,
-        ),
-        dist.TruncatedNormal(
-            loc=1.0,
-            scale=sigma2,
-            low=-1,
-            high=1,
-            validate_args=True,
-        ),
-    )
-
     return dist.MixtureGeneral(
         mixing_distribution=dist.Categorical(probs=mixing_probs),
         component_distributions=[component_0_dist, component_1_dist],
