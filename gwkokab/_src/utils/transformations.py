@@ -14,15 +14,14 @@
 
 from __future__ import annotations
 
-import jax
-from jax import lax, numpy as jnp
+from jax import numpy as jnp
 from jaxtyping import Array, Real
 
 
 __all__ = [
     "cart_to_polar",
     "cart_to_spherical",
-    "chi_cos_tilt_to_chiz",
+    "chi_costilt_to_chiz",
     "chirp_mass",
     "delta_m",
     "delta_m_to_symmetric_mass_ratio",
@@ -40,9 +39,9 @@ __all__ = [
     "M_q_to_m1_m2",
     "m_source_z_to_m_det",
     "mass_ratio",
-    "Mc_delta_chieff_chiminus_to_chi1z_chi2z",
-    "MC_delta_to_m1_m2",
-    "Mc_eta_to_m1_m2",
+    # "Mc_delta_chieff_chiminus_to_chi1z_chi2z",
+    # "Mc_delta_to_m1_m2",
+    # "Mc_eta_to_m1_m2",
     "polar_to_cart",
     "reduced_mass",
     "spherical_to_cart",
@@ -52,122 +51,122 @@ __all__ = [
 ]
 
 
-def _m1_times_m2(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
-    return lax.mul(m1, m2)
+def m1_times_m2(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    return jnp.multiply(m1, m2)
 
 
-def _total_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
-    return lax.add(m1, m2)
+def total_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    return jnp.add(m1, m2)
 
 
-def _mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
-    return lax.div(m2, m1)
+def mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    return jnp.divide(m2, m1)
 
 
-def _chirp_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
-    M = _total_mass(m1=m1, m2=m2)
-    m1m2 = _m1_times_m2(m1=m1, m2=m2)
-    return lax.mul(lax.pow(m1m2, 0.6), lax.pow(M, -0.2))
+def chirp_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    M = total_mass(m1=m1, m2=m2)
+    m1m2 = m1_times_m2(m1=m1, m2=m2)
+    return jnp.multiply(jnp.power(m1m2, 0.6), jnp.power(M, -0.2))
 
 
-def _symmetric_mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
-    M = _total_mass(m1=m1, m2=m2)
-    m1m2 = _m1_times_m2(m1=m1, m2=m2)
-    return lax.mul(m1m2, lax.pow(M, -2))
+def symmetric_mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    M = total_mass(m1=m1, m2=m2)
+    m1m2 = m1_times_m2(m1=m1, m2=m2)
+    return jnp.multiply(m1m2, jnp.power(M, -2.0))
 
 
-def _reduced_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
-    M = _total_mass(m1=m1, m2=m2)
-    m1m2 = _m1_times_m2(m1=m1, m2=m2)
-    return lax.div(m1m2, M)
+def reduced_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    M = total_mass(m1=m1, m2=m2)
+    m1m2 = m1_times_m2(m1=m1, m2=m2)
+    return jnp.divide(m1m2, M)
 
 
-def _delta_m(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
-    diff = lax.sub(m1, m2)
-    M = _total_mass(m1=m1, m2=m2)
-    return lax.div(diff, M)
+def delta_m(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    diff = jnp.subtract(m1, m2)
+    M = total_mass(m1=m1, m2=m2)
+    return jnp.divide(diff, M)
 
 
-def _delta_m_to_symmetric_mass_ratio(*, delta_m: Array | Real) -> Array | Real:
-    delta_m_sq = lax.square(delta_m)  # delta_m^2
-    eta = lax.mul(0.25, lax.sub(1, delta_m_sq))  # (1 - delta_m^2) / 4
+def delta_m_to_symmetric_mass_ratio(*, delta_m: Array | Real) -> Array | Real:
+    delta_m_sq = jnp.square(delta_m)  # delta_m^2
+    eta = jnp.multiply(0.25, jnp.subtract(1, delta_m_sq))  # (1 - delta_m^2) / 4
     return eta
 
 
-def _symmetric_mass_ratio_to_delta_m(*, eta: Array | Real) -> Array | Real:
-    eta_4 = lax.mul(eta, 4)  #  eta*4
-    delta_m = lax.sqrt(lax.sub(1, eta_4))  # sqrt(1 - 4 * eta)
+def symmetric_mass_ratio_to_delta_m(*, eta: Array | Real) -> Array | Real:
+    eta_4 = jnp.multiply(eta, 4)  #  eta*4
+    delta_m = jnp.sqrt(jnp.subtract(1, eta_4))  # sqrt(1 - 4 * eta)
     return delta_m
 
 
-def _m1_m2_ordering(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
+def m1_m2_ordering(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
     i_sorted = m1 >= m2
     m1_sorted = jnp.where(i_sorted, m1, m2)
     m2_sorted = jnp.where(i_sorted, m2, m1)
     return m1_sorted, m2_sorted
 
 
-def _m_det_z_to_m_source(*, m_det: Array | Real, z: Array | Real) -> Array | Real:
-    return lax.div(
+def m_det_z_to_m_source(*, m_det: Array | Real, z: Array | Real) -> Array | Real:
+    return jnp.divide(
         m_det,
-        lax.add(1.0, z),  # 1 + z
+        jnp.add(1.0, z),  # 1 + z
     )
 
 
-def _m_source_z_to_m_det(*, m_source: Array | Real, z: Array | Real) -> Array | Real:
-    return lax.mul(
+def m_source_z_to_m_det(*, m_source: Array | Real, z: Array | Real) -> Array | Real:
+    return jnp.multiply(
         m_source,
-        lax.add(1.0, z),  # 1 + z
+        jnp.add(1.0, z),  # 1 + z
     )
 
 
-def _m1_q_to_m2(*, m1: Array | Real, q: Array | Real) -> Array | Real:
-    return lax.mul(m1, q)  # m2 = m1 * q
+def m1_q_to_m2(*, m1: Array | Real, q: Array | Real) -> Array | Real:
+    return jnp.multiply(m1, q)  # m2 = m1 * q
 
 
-def _m2_q_to_m1(*, m2: Array | Real, q: Array | Real) -> Array | Real:
-    return lax.div(m2, q)  # m1 = m2 / q
+def m2_q_to_m1(*, m2: Array | Real, q: Array | Real) -> Array | Real:
+    return jnp.divide(m2, q)  # m1 = m2 / q
 
 
-def _M_q_to_m1_m2(*, M: Array | Real, q: Array | Real) -> tuple[Array, Array]:
-    m1 = lax.div(M, lax.add(1, q))  # M/(1 + q)
-    m2 = _m1_q_to_m2(m1=m1, q=q)
+def M_q_to_m1_m2(*, M: Array | Real, q: Array | Real) -> tuple[Array, Array]:
+    m1 = jnp.divide(M, jnp.add(1, q))  # M/(1 + q)
+    m2 = m1_q_to_m2(m1=m1, q=q)
     return m1, m2
 
 
-def _chi_cos_tilt_to_chiz(*, chi: Array | Real, cos_tilt: Array | Real) -> Array | Real:
-    return lax.mul(chi, cos_tilt)
+def chi_costilt_to_chiz(*, chi: Array | Real, costilt: Array | Real) -> Array | Real:
+    return jnp.multiply(chi, costilt)
 
 
-def _m1_m2_chi1z_chi2z_to_chiminus(
+def m1_m2_chi1z_chi2z_to_chiminus(
     *,
     m1: Array | Real,
     m2: Array | Real,
     chi1z: Array | Real,
     chi2z: Array | Real,
 ) -> Array | Real:
-    m1_chi1z = lax.mul(m1, chi1z)
-    m2_chi2z = lax.mul(m2, chi2z)
-    M = _total_mass(m1=m1, m2=m2)
-    diff = lax.sub(m1_chi1z, m2_chi2z)
-    return lax.div(diff, M)
+    m1_chi1z = jnp.multiply(m1, chi1z)
+    m2_chi2z = jnp.multiply(m2, chi2z)
+    M = total_mass(m1=m1, m2=m2)
+    diff = jnp.subtract(m1_chi1z, m2_chi2z)
+    return jnp.divide(diff, M)
 
 
-def _m1_m2_chi1z_chi2z_to_chieff(
+def m1_m2_chi1z_chi2z_to_chieff(
     *,
     m1: Array | Real,
     m2: Array | Real,
     chi1z: Array | Real,
     chi2z: Array | Real,
 ) -> Array | Real:
-    m1_chi1z = lax.mul(m1, chi1z)
-    m2_chi2z = lax.mul(m2, chi2z)
-    M = _total_mass(m1=m1, m2=m2)
-    m_dot_chi = lax.add(m1_chi1z, m2_chi2z)
-    return lax.div(m_dot_chi, M)
+    m1_chi1z = jnp.multiply(m1, chi1z)
+    m2_chi2z = jnp.multiply(m2, chi2z)
+    M = total_mass(m1=m1, m2=m2)
+    m_dot_chi = jnp.add(m1_chi1z, m2_chi2z)
+    return jnp.divide(m_dot_chi, M)
 
 
-def _m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
+def m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
     *,
     m1: Array | Real,
     m2: Array | Real,
@@ -176,12 +175,12 @@ def _m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
     costilt1: Array | Real,
     costilt2: Array | Real,
 ) -> Array | Real:
-    chi1z = _chi_cos_tilt_to_chiz(chi=chi1, cos_tilt=costilt1)
-    chi2z = _chi_cos_tilt_to_chiz(chi=chi2, cos_tilt=costilt2)
-    return _m1_m2_chi1z_chi2z_to_chieff(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
+    chi1z = chi_costilt_to_chiz(chi=chi1, costilt=costilt1)
+    chi2z = chi_costilt_to_chiz(chi=chi2, costilt=costilt2)
+    return m1_m2_chi1z_chi2z_to_chieff(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 
-def _m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(
+def m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(
     *,
     m1: Array | Real,
     m2: Array | Real,
@@ -190,138 +189,108 @@ def _m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(
     costilt1: Array | Real,
     costilt2: Array | Real,
 ) -> Array | Real:
-    chi1z = _chi_cos_tilt_to_chiz(chi=chi1, cos_tilt=costilt1)
-    chi2z = _chi_cos_tilt_to_chiz(chi=chi2, cos_tilt=costilt2)
-    return _m1_m2_chi1z_chi2z_to_chiminus(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
+    chi1z = chi_costilt_to_chiz(chi=chi1, costilt=costilt1)
+    chi2z = chi_costilt_to_chiz(chi=chi2, costilt=costilt2)
+    return m1_m2_chi1z_chi2z_to_chiminus(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 
-def _m1_m2_chieff_chiminus_to_chi1z_chi2z(
+def m1_m2_chieff_chiminus_to_chi1z_chi2z(
     *,
     m1: Array | Real,
     m2: Array | Real,
     chieff: Array | Real,
     chiminus: Array | Real,
 ) -> tuple[Array, Array]:
-    half_M = lax.mul(0.5, _total_mass(m1=m1, m2=m2))  # M/2
-    chi1z = lax.div(
-        lax.mul(half_M, lax.add(chieff, chiminus)), m1
+    half_M = jnp.multiply(0.5, total_mass(m1=m1, m2=m2))  # M/2
+    chi1z = jnp.divide(
+        jnp.multiply(half_M, jnp.add(chieff, chiminus)), m1
     )  # chi1z = M/2 * (chieff + chiminus) / m1
-    chi2z = lax.div(
-        lax.mul(half_M, lax.sub(chieff, chiminus)), m2
+    chi2z = jnp.divide(
+        jnp.multiply(half_M, jnp.subtract(chieff, chiminus)), m2
     )  # chi2z = M/2 * (chieff - chiminus) / m2
     return chi1z, chi2z
 
 
-def _Mc_delta_chieff_chiminus_to_chi1z_chi2z(
+def Mc_delta_chieff_chiminus_to_chi1z_chi2z(
     *,
     Mc: Array | Real,
     delta: Array | Real,
     chieff: Array | Real,
     chiminus: Array | Real,
 ) -> tuple[Array, Array]:
-    m1, m2 = _Mc_delta_to_m1_m2(Mc, delta)
-    return _m1_m2_chieff_chiminus_to_chi1z_chi2z(
+    m1, m2 = Mc_delta_to_m1_m2(Mc, delta)
+    return m1_m2_chieff_chiminus_to_chi1z_chi2z(
         m1=m1, m2=m2, chieff=chieff, chiminus=chiminus
     )
 
 
-def _Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Array]:
-    delta_sq = lax.sub(1, lax.mul(4, eta))  # 1 - 4 * eta
-    delta_sq = lax.max(delta_sq, 0)  # to avoid negative values
-    delta = lax.sqrt(delta_sq)  # sqrt(1 - 4 * eta)
-    half_Mc = lax.mul(0.5, Mc)  # Mc/2
-    eta_pow_point_six = lax.pow(eta, -0.6)  # eta^-0.6
-    m1 = lax.mul(half_Mc, eta_pow_point_six)  # Mc/2 * eta^-0.6
-    m2 = lax.mul(m1, lax.sub(1, delta))  # m2 = Mc/2 * eta^-0.6 * (1 - delta)
-    m1 = lax.mul(m1, lax.add(1, delta))  # m1 = Mc/2 * eta^-0.6 * (1 + delta)
+def Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Array]:
+    """This function has bugs. On some test cases it is returning answer
+    in swap order. Up until the bug is fixed, this function and the functions
+    that depend on it should not be used.
+    """
+    # TODO: Fix the bug in this function
+    delta_sq = jnp.subtract(1, jnp.multiply(4, eta))  # 1 - 4 * eta
+    delta_sq = jnp.maximum(delta_sq, 0.0)  # to avoid negative values
+    delta = jnp.sqrt(delta_sq)  # sqrt(1 - 4 * eta)
+    half_Mc = jnp.multiply(0.5, Mc)  # Mc/2
+    eta_pow_neg_point_six = jnp.power(eta, -0.6)  # eta^-0.6
+    half_Mc_times_eta_pow_neg_point_six = jnp.multiply(
+        half_Mc, eta_pow_neg_point_six
+    )  # Mc/2 * eta^-0.6
+    m2 = jnp.multiply(
+        half_Mc_times_eta_pow_neg_point_six, jnp.subtract(1, delta)
+    )  # m2 = Mc/2 * eta^-0.6 * (1 - delta)
+    m1 = jnp.multiply(
+        half_Mc_times_eta_pow_neg_point_six, jnp.add(1, delta)
+    )  # m1 = Mc/2 * eta^-0.6 * (1 + delta)
     return m1, m2
 
 
-def _m1_m2_to_Mc_eta(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
-    M = _total_mass(m1=m1, m2=m2)
-    m1m2 = _m1_times_m2(m1=m1, m2=m2)
-    eta = lax.mul(m1m2, lax.reciprocal(M * M))  # eta = m1 * m2 / M^2
-    Mc = lax.mul(lax.pow(eta, 0.6), M)  # Mc = M * eta^0.6
+def m1_m2_to_Mc_eta(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
+    M = total_mass(m1=m1, m2=m2)
+    m1m2 = m1_times_m2(m1=m1, m2=m2)
+    eta = jnp.multiply(m1m2, jnp.reciprocal(M * M))  # eta = m1 * m2 / M^2
+    Mc = jnp.multiply(jnp.power(eta, 0.6), M)  # Mc = M * eta^0.6
     return Mc, eta
 
 
-def _Mc_delta_to_m1_m2(*, Mc: Array | Real, delta: Array | Real) -> tuple[Array, Array]:
-    eta = _symmetric_mass_ratio_to_delta_m(
-        lax.mul(0.25, delta)
-    )  # eta = sqrt(1 - 4 * delta) / 4
-    return _Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
+def Mc_delta_to_m1_m2(*, Mc: Array | Real, delta: Array | Real) -> tuple[Array, Array]:
+    eta = delta_m_to_symmetric_mass_ratio(delta_m=delta)
+    return Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
 
 
-def _polar_to_cart(*, r: Array | Real, theta: Array | Real) -> tuple[Array, Array]:
-    x = lax.mul(r, lax.cos(theta))
-    y = lax.mul(r, lax.sin(theta))
+def polar_to_cart(*, r: Array | Real, theta: Array | Real) -> tuple[Array, Array]:
+    x = jnp.multiply(r, jnp.cos(theta))
+    y = jnp.multiply(r, jnp.sin(theta))
     return x, y
 
 
-def _cart_to_polar(*, x: Array | Real, y: Array | Real) -> tuple[Array, Array]:
-    r = lax.sqrt(lax.add(lax.square(x), lax.square(y)))
+def cart_to_polar(*, x: Array | Real, y: Array | Real) -> tuple[Array, Array]:
+    r = jnp.sqrt(jnp.add(jnp.square(x), jnp.square(y)))
     theta = jnp.arctan2(y, x)
     return r, theta
 
 
-def _spherical_to_cart(
+def spherical_to_cart(
     *, r: Array | Real, theta: Array | Real, phi: Array | Real
 ) -> tuple[Array, Array, Array]:
-    x = lax.mul(
-        lax.mul(r, lax.sin(theta)), lax.cos(phi)
+    x = jnp.multiply(
+        jnp.multiply(r, jnp.sin(theta)), jnp.cos(phi)
     )  # x = r * sin(theta) * cos(phi)
-    y = lax.mul(
-        lax.mul(r, lax.sin(theta)), lax.sin(phi)
+    y = jnp.multiply(
+        jnp.multiply(r, jnp.sin(theta)), jnp.sin(phi)
     )  # y = r * sin(theta) * sin(phi)
-    z = lax.mul(r, lax.cos(theta))  # z = r * cos(theta)
+    z = jnp.multiply(r, jnp.cos(theta))  # z = r * cos(theta)
     return x, y, z
 
 
-def _cart_to_spherical(
+def cart_to_spherical(
     *, x: Array | Real, y: Array | Real, z: Array | Real
 ) -> tuple[Array, Array, Array]:
-    r = lax.sqrt(
-        lax.add(lax.add(lax.square(x), lax.square(y)), lax.square(z))
+    r = jnp.sqrt(
+        jnp.add(jnp.add(jnp.square(x), jnp.square(y)), jnp.square(z))
     )  # r = sqrt(x^2 + y^2 + z^2)
-    theta = jnp.arccos(lax.div(z, r))  # theta = arccos(z / r)
+    theta = jnp.arccos(jnp.divide(z, r))  # theta = arccos(z / r)
     phi = jnp.arctan2(y, x)  # phi = arctan(y / x)
     return r, theta, phi
-
-
-cart_to_polar = jax.jit(_cart_to_polar, inline=True)
-cart_to_spherical = jax.jit(_cart_to_spherical, inline=True)
-chi_cos_tilt_to_chiz = jax.jit(_chi_cos_tilt_to_chiz, inline=True)
-chirp_mass = jax.jit(_chirp_mass, inline=True)
-delta_m = jax.jit(_delta_m, inline=True)
-delta_m_to_symmetric_mass_ratio = jax.jit(_delta_m_to_symmetric_mass_ratio, inline=True)
-m1_m2_chi1_chi2_costilt1_costilt2_to_chieff = jax.jit(
-    _m1_m2_chi1_chi2_costilt1_costilt2_to_chieff, inline=True
-)
-m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus = jax.jit(
-    _m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus, inline=True
-)
-m1_m2_chi1z_chi2z_to_chieff = jax.jit(_m1_m2_chi1z_chi2z_to_chieff, inline=True)
-m1_m2_chi1z_chi2z_to_chiminus = jax.jit(_m1_m2_chi1z_chi2z_to_chiminus, inline=True)
-m1_m2_chieff_chiminus_to_chi1z_chi2z = jax.jit(
-    _m1_m2_chieff_chiminus_to_chi1z_chi2z, inline=True
-)
-m1_m2_ordering = jax.jit(_m1_m2_ordering, inline=True)
-m1_m2_to_Mc_eta = jax.jit(_m1_m2_to_Mc_eta, inline=True)
-m1_q_to_m2 = jax.jit(_m1_q_to_m2, inline=True)
-m1_times_m2 = jax.jit(_m1_times_m2, inline=True)
-m2_q_to_m1 = jax.jit(_m2_q_to_m1, inline=True)
-m_det_z_to_m_source = jax.jit(_m_det_z_to_m_source, inline=True)
-M_q_to_m1_m2 = jax.jit(_M_q_to_m1_m2, inline=True)
-m_source_z_to_m_det = jax.jit(_m_source_z_to_m_det, inline=True)
-mass_ratio = jax.jit(_mass_ratio, inline=True)
-Mc_delta_chieff_chiminus_to_chi1z_chi2z = jax.jit(
-    _Mc_delta_chieff_chiminus_to_chi1z_chi2z, inline=True
-)
-MC_delta_to_m1_m2 = jax.jit(_Mc_delta_to_m1_m2, inline=True)
-Mc_eta_to_m1_m2 = jax.jit(_Mc_eta_to_m1_m2, inline=True)
-polar_to_cart = jax.jit(_polar_to_cart, inline=True)
-reduced_mass = jax.jit(_reduced_mass, inline=True)
-spherical_to_cart = jax.jit(_spherical_to_cart, inline=True)
-symmetric_mass_ratio = jax.jit(_symmetric_mass_ratio, inline=True)
-symmetric_mass_ratio_to_delta_m = jax.jit(_symmetric_mass_ratio_to_delta_m, inline=True)
-total_mass = jax.jit(_total_mass, inline=True)

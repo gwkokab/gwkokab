@@ -37,7 +37,7 @@ dependencies = [
     "rich",
     "h5py",
     "rift",
-    "numpy==1.26",
+    "numpy==1.26.4",
     "polars",
     "flowmc",
     "plotly",

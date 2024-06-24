@@ -16,7 +16,7 @@
 from gwkokab._src.utils.transformations import (
     cart_to_polar as cart_to_polar,
     cart_to_spherical as cart_to_spherical,
-    chi_cos_tilt_to_chiz as chi_cos_tilt_to_chiz,
+    chi_costilt_to_chiz as chi_costilt_to_chiz,
     chirp_mass as chirp_mass,
     delta_m as delta_m,
     delta_m_to_symmetric_mass_ratio as delta_m_to_symmetric_mass_ratio,
@@ -34,9 +34,6 @@ from gwkokab._src.utils.transformations import (
     M_q_to_m1_m2 as M_q_to_m1_m2,
     m_source_z_to_m_det as m_source_z_to_m_det,
     mass_ratio as mass_ratio,
-    Mc_delta_chieff_chiminus_to_chi1z_chi2z as Mc_delta_chieff_chiminus_to_chi1z_chi2z,
-    MC_delta_to_m1_m2 as MC_delta_to_m1_m2,
-    Mc_eta_to_m1_m2 as Mc_eta_to_m1_m2,
     polar_to_cart as polar_to_cart,
     reduced_mass as reduced_mass,
     spherical_to_cart as spherical_to_cart,
