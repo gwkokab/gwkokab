@@ -29,7 +29,6 @@ from gwkokab.utils.transformations import (
     M_q_to_m1_m2,
     m_source_z_to_m_det,
     mass_ratio,
-    Mc_eta_to_m1_m2,
     polar_to_cart,
     reduced_mass,
     spherical_to_cart,
@@ -67,17 +66,11 @@ def test_different_mass_representations(m1, m2):
     assert jnp.allclose(Mr, reduced_mass(m1=m1, m2=m2))
     delta = (m1 - m2) / M
     assert jnp.allclose(delta, delta_m(m1=m1, m2=m2))
-    eta_ = (1 - delta**2) / 4
+    eta_ = (1 - jnp.square(delta)) / 4
     assert jnp.allclose(eta_, delta_m_to_symmetric_mass_ratio(delta_m=delta))
     delta_ = jnp.sqrt(1 - 4 * eta)
     assert jnp.allclose(delta_, symmetric_mass_ratio_to_delta_m(eta=eta))
     m1_, m2_ = M_q_to_m1_m2(M=M, q=q)
-    assert jnp.allclose(m1, m1_)
-    assert jnp.allclose(m2, m2_)
-    # m1_, m2_ = Mc_delta_to_m1_m2(Mc=Mc, delta=delta)
-    # assert jnp.allclose(m1, m1_)
-    # assert jnp.allclose(m2, m2_)
-    m1_, m2_ = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
     assert jnp.allclose(m1, m1_)
     assert jnp.allclose(m2, m2_)
 
@@ -95,7 +88,7 @@ def test_mass_and_reshift(m, z):
 @pytest.mark.parametrize("y", _xyz)
 def test_cart_to_polar(x, y):
     r, theta = cart_to_polar(x=x, y=y)
-    r_ = jnp.sqrt(x**2 + y**2)
+    r_ = jnp.sqrt(jnp.square(x) + jnp.square(y))
     theta_ = jnp.arctan2(y, x)
     assert jnp.allclose(r, r_)
     assert jnp.allclose(theta, theta_)
@@ -129,7 +122,7 @@ def test_spherical_to_cart(r, theta, phi):
 @pytest.mark.parametrize("z", _xyz)
 def test_cart_to_spherical(x, y, z):
     r, theta, phi = cart_to_spherical(x=x, y=y, z=z)
-    r_ = jnp.sqrt(x**2 + y**2 + z**2)
+    r_ = jnp.sqrt(jnp.square(x) + jnp.square(y) + jnp.square(z))
     theta_ = jnp.arccos(z / r_)
     phi_ = jnp.arctan2(y, x)
     assert jnp.allclose(r, r_)
