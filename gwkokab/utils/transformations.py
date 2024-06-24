@@ -35,7 +35,7 @@ from gwkokab._src.utils.transformations import (
     m_source_z_to_m_det as m_source_z_to_m_det,
     mass_ratio as mass_ratio,
     Mc_delta_chieff_chiminus_to_chi1z_chi2z as Mc_delta_chieff_chiminus_to_chi1z_chi2z,
-    MC_delta_to_m1_m2 as MC_delta_to_m1_m2,
+    Mc_delta_to_m1_m2 as Mc_delta_to_m1_m2,
     Mc_eta_to_m1_m2 as Mc_eta_to_m1_m2,
     polar_to_cart as polar_to_cart,
     reduced_mass as reduced_mass,
