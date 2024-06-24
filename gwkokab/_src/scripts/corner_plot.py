@@ -59,7 +59,7 @@ def make_parser() -> argparse.ArgumentParser:
         "-q",
         "--quantiles",
         help="quantiles for the corner plot",
-        default=(0.25, 0.5, 0.75),
+        default=None,
         type=list[float],
     )
     parser.add_argument(
@@ -76,6 +76,11 @@ def make_parser() -> argparse.ArgumentParser:
         action="store_true",
     )
     parser.add_argument(
+        "--show-titles",
+        help="show titles in the corner plot",
+        action="store_true",
+    )
+    parser.add_argument(
         "-scale",
         "--scale",
         help="scale the corner plot",
@@ -88,6 +93,26 @@ def make_parser() -> argparse.ArgumentParser:
         help="size of the corner plot in inches",
         default=(6, 6),
         type=tuple[float, float],
+    )
+    parser.add_argument(
+        "--range",
+        help="range of the corner plot",
+        nargs="+",
+        action="append",
+        default=None,
+        type=float,
+    )
+    parser.add_argument(
+        "--truth-color",
+        help="color of the truth values in the corner plot",
+        default="#F1C40F",
+        type=str,
+    )
+    parser.add_argument(
+        "--color",
+        help="color of the corner plot",
+        default="#3498DB",
+        type=str,
     )
 
     return parser
@@ -103,10 +128,14 @@ def main() -> None:
         data,
         labels=args.labels,
         truths=args.truths if args.truths is not None else None,
-        show_titles=True,
         quantiles=args.quantiles,
         bins=args.bins,
         smooth=args.smooth,
+        show_titles=args.show_titles,
+        truth_color=args.truth_color,
+        color=args.color,
+        plot_datapoints=False,
+        range=args.range,
     )
     scaling_factor = args.scale
     figure.set_size_inches(scaling_factor * args.size[0], scaling_factor * args.size[1])
