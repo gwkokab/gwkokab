@@ -1,4 +1,4 @@
-files: gwkokab||scripts
+files: gwkokab||scripts||tests
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: "v0.4.3"

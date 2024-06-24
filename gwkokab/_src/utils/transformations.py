@@ -72,7 +72,7 @@ def chirp_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
 def symmetric_mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
     M = total_mass(m1=m1, m2=m2)
     m1m2 = m1_times_m2(m1=m1, m2=m2)
-    return jnp.multiply(m1m2, jnp.power(M, -2))
+    return jnp.multiply(m1m2, jnp.power(M, -2.0))
 
 
 def reduced_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
