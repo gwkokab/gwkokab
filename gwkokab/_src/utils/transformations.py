@@ -21,7 +21,7 @@ from jaxtyping import Array, Real
 __all__ = [
     "cart_to_polar",
     "cart_to_spherical",
-    "chi_cos_tilt_to_chiz",
+    "chi_costilt_to_chiz",
     "chirp_mass",
     "delta_m",
     "delta_m_to_symmetric_mass_ratio",
@@ -134,8 +134,8 @@ def M_q_to_m1_m2(*, M: Array | Real, q: Array | Real) -> tuple[Array, Array]:
     return m1, m2
 
 
-def chi_cos_tilt_to_chiz(*, chi: Array | Real, cos_tilt: Array | Real) -> Array | Real:
-    return jnp.multiply(chi, cos_tilt)
+def chi_costilt_to_chiz(*, chi: Array | Real, costilt: Array | Real) -> Array | Real:
+    return jnp.multiply(chi, costilt)
 
 
 def m1_m2_chi1z_chi2z_to_chiminus(
@@ -175,8 +175,8 @@ def m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
     costilt1: Array | Real,
     costilt2: Array | Real,
 ) -> Array | Real:
-    chi1z = chi_cos_tilt_to_chiz(chi=chi1, cos_tilt=costilt1)
-    chi2z = chi_cos_tilt_to_chiz(chi=chi2, cos_tilt=costilt2)
+    chi1z = chi_costilt_to_chiz(chi=chi1, costilt=costilt1)
+    chi2z = chi_costilt_to_chiz(chi=chi2, costilt=costilt2)
     return m1_m2_chi1z_chi2z_to_chieff(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 
@@ -189,8 +189,8 @@ def m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(
     costilt1: Array | Real,
     costilt2: Array | Real,
 ) -> Array | Real:
-    chi1z = chi_cos_tilt_to_chiz(chi=chi1, cos_tilt=costilt1)
-    chi2z = chi_cos_tilt_to_chiz(chi=chi2, cos_tilt=costilt2)
+    chi1z = chi_costilt_to_chiz(chi=chi1, costilt=costilt1)
+    chi2z = chi_costilt_to_chiz(chi=chi2, costilt=costilt2)
     return m1_m2_chi1z_chi2z_to_chiminus(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 

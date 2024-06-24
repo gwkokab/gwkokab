@@ -16,7 +16,7 @@
 from gwkokab._src.utils.transformations import (
     cart_to_polar as cart_to_polar,
     cart_to_spherical as cart_to_spherical,
-    chi_cos_tilt_to_chiz as chi_cos_tilt_to_chiz,
+    chi_costilt_to_chiz as chi_costilt_to_chiz,
     chirp_mass as chirp_mass,
     delta_m as delta_m,
     delta_m_to_symmetric_mass_ratio as delta_m_to_symmetric_mass_ratio,
