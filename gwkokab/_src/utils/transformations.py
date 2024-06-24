@@ -245,9 +245,7 @@ def m1_m2_to_Mc_eta(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array
 
 
 def Mc_delta_to_m1_m2(*, Mc: Array | Real, delta: Array | Real) -> tuple[Array, Array]:
-    eta = symmetric_mass_ratio_to_delta_m(
-        jnp.multiply(0.25, delta)
-    )  # eta = sqrt(1 - 4 * delta) / 4
+    eta = delta_m_to_symmetric_mass_ratio(delta)
     return Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
 
 
