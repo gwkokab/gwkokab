@@ -43,9 +43,7 @@ _redshifts = np.random.uniform(0, 1, 5)
 _rho = np.random.uniform(0, 10, 5)
 _thetas = np.random.uniform(0, 2 * np.pi, 7)
 _phis = np.random.uniform(0, np.pi, 7)
-_x = np.random.uniform(-10, 10, 11)
-_y = np.random.uniform(-10, 10, 11)
-_z = np.random.uniform(-10, 10, 11)
+_xyz = np.random.uniform(-10, 10, 7)
 
 
 @pytest.mark.parametrize("m1", _primary_masses)
@@ -82,8 +80,8 @@ def test_mass_and_reshift(m, z):
     assert jnp.allclose(m_det, m_source_z_to_m_det(m_source=m, z=z))
 
 
-@pytest.mark.parametrize("x", _x)
-@pytest.mark.parametrize("y", _y)
+@pytest.mark.parametrize("x", _xyz)
+@pytest.mark.parametrize("y", _xyz)
 def test_cart_to_polar(x, y):
     r, theta = cart_to_polar(x=x, y=y)
     r_ = jnp.sqrt(x**2 + y**2)
@@ -115,9 +113,9 @@ def test_spherical_to_cart(r, theta, phi):
     assert jnp.allclose(z, z_)
 
 
-@pytest.mark.parametrize("x", _x)
-@pytest.mark.parametrize("y", _y)
-@pytest.mark.parametrize("z", _z)
+@pytest.mark.parametrize("x", _xyz)
+@pytest.mark.parametrize("y", _xyz)
+@pytest.mark.parametrize("z", _xyz)
 def test_cart_to_spherical(x, y, z):
     r, theta, phi = cart_to_spherical(x=x, y=y, z=z)
     r_ = jnp.sqrt(x**2 + y**2 + z**2)
