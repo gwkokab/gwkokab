@@ -18,6 +18,7 @@ from jax import numpy as jnp
 
 from gwkokab.utils.transformations import (
     cart_to_polar,
+    cart_to_spherical,
     chirp_mass,
     delta_m,
     delta_m_to_symmetric_mass_ratio,
@@ -29,6 +30,7 @@ from gwkokab.utils.transformations import (
     mass_ratio,
     polar_to_cart,
     reduced_mass,
+    spherical_to_cart,
     symmetric_mass_ratio,
     symmetric_mass_ratio_to_delta_m,
     total_mass,
@@ -39,11 +41,11 @@ _primary_masses = np.unique(np.random.uniform(0.5, 200, 7))
 _secondary_masses = np.array([np.random.uniform(0.5, m) for m in _primary_masses])
 _redshifts = np.random.uniform(0, 1, 5)
 _rho = np.random.uniform(0, 10, 5)
-_thetas = np.random.uniform(0, 2 * np.pi, 10)
-_phis = np.random.uniform(0, np.pi, 10)
-_x = np.random.uniform(-10, 10, 10)
-_y = np.random.uniform(-10, 10, 10)
-_z = np.random.uniform(-10, 10, 10)
+_thetas = np.random.uniform(0, 2 * np.pi, 7)
+_phis = np.random.uniform(0, np.pi, 7)
+_x = np.random.uniform(-10, 10, 11)
+_y = np.random.uniform(-10, 10, 11)
+_z = np.random.uniform(-10, 10, 11)
 
 
 @pytest.mark.parametrize("m1", _primary_masses)
@@ -98,3 +100,29 @@ def test_polar_to_cart(r, theta):
     y_ = r * jnp.sin(theta)
     assert jnp.allclose(x, x_)
     assert jnp.allclose(y, y_)
+
+
+@pytest.mark.parametrize("r", _rho)
+@pytest.mark.parametrize("theta", _thetas)
+@pytest.mark.parametrize("phi", _phis)
+def test_spherical_to_cart(r, theta, phi):
+    x, y, z = spherical_to_cart(r=r, theta=theta, phi=phi)
+    x_ = r * jnp.sin(theta) * jnp.cos(phi)
+    y_ = r * jnp.sin(theta) * jnp.sin(phi)
+    z_ = r * jnp.cos(theta)
+    assert jnp.allclose(x, x_)
+    assert jnp.allclose(y, y_)
+    assert jnp.allclose(z, z_)
+
+
+@pytest.mark.parametrize("x", _x)
+@pytest.mark.parametrize("y", _y)
+@pytest.mark.parametrize("z", _z)
+def test_cart_to_spherical(x, y, z):
+    r, theta, phi = cart_to_spherical(x=x, y=y, z=z)
+    r_ = jnp.sqrt(x**2 + y**2 + z**2)
+    theta_ = jnp.arccos(z / r_)
+    phi_ = jnp.arctan2(y, x)
+    assert jnp.allclose(r, r_)
+    assert jnp.allclose(theta, theta_)
+    assert jnp.allclose(phi, phi_)
