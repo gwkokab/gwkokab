@@ -46,4 +46,4 @@ class NoisePopInfo:
     OUTPUT_DIR: str
     HEADER: list[str]
     SIZE: Int
-    ERROR_FUNCS: list[tuple[Int, Callable[[Float, Int], Array]]]
+    ERROR_FUNCS: dict[tuple[Int, Callable[[Float, Int], Array]]]

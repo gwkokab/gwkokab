@@ -37,7 +37,7 @@ def run_noise_factory(
 
     heads: list[list[int]] = []
     error_fns: list[Callable] = []
-    for head, err_fn in npopinfo.ERROR_FUNCS:
+    for head, err_fn in npopinfo.ERROR_FUNCS.items():
         _head = []
         for h in head:
             i = npopinfo.HEADER.index(h)
