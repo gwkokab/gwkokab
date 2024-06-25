@@ -5,7 +5,7 @@ from typing_extensions import Self
 
 import numpy as np
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
-from jax.scipy.stats import norm
+from jax.scipy.stats import norm, uniform
 from jaxtyping import Array, Float, Int, PRNGKeyArray, Real
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
@@ -127,13 +127,13 @@ class BrokenPowerLawMassModel(dist.Distribution):
             validate_args=True,
         )
         self.alpha1_powerlaw = TruncatedPowerLaw(
-            alpha=-self.alpha1,
+            alpha=jnp.negative(self.alpha1),
             low=self.mmin,
             high=self.mbreak,
             validate_args=True,
         )
         self.alpha2_powerlaw = TruncatedPowerLaw(
-            alpha=-self.alpha2,
+            alpha=jnp.negative(self.alpha2),
             low=self.mbreak,
             high=self.mmax,
             validate_args=True,
@@ -155,8 +155,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
         )
         log_prob = self.log_prob(samples)
         prob = jnp.exp(log_prob)
-        volume = jnp.prod(self.mmax - self.mmin)
-        self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
+        volume = jnp.prod(jnp.subtract(self.mmax, self.mmin))
+        self._logZ = jnp.add(jnp.log(jnp.mean(prob, axis=-1)), jnp.log(volume))
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
@@ -184,8 +184,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
         ]
         log_smoothing_val = jnp.log(smoothing_kernel(m1, self.mmin, self.delta))
         log_probs = [
-            log_smoothing_val + self.alpha1_powerlaw.log_prob(m1),
-            log_smoothing_val + self.alpha2_powerlaw.log_prob(m1),
+            jnp.add(log_smoothing_val, self.alpha1_powerlaw.log_prob(m1)),
+            jnp.add(log_smoothing_val, self.alpha2_powerlaw.log_prob(m1)),
         ]
         return jnp.select(conditions, log_probs, default=jnp.full_like(m1, -jnp.inf))
 
@@ -207,7 +207,9 @@ class BrokenPowerLawMassModel(dist.Distribution):
         log_smoothing_val = jnp.log(
             smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, self.delta)
         )
-        return self.beta_q * jnp.log(q) + log_smoothing_val
+        log_val = jnp.log(q)
+        log_val = jnp.multiply(self.beta_q, log_val)
+        return jnp.add(log_val, log_smoothing_val)
 
     @validate_sample
     def log_prob(self: Self, value):
@@ -219,7 +221,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
             q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
-        return log_prob_m1 + log_prob_q - self._logZ
+        log_val = jnp.add(log_prob_m1, log_prob_q)
+        return jnp.subtract(log_val, self._logZ)
 
     def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
         assert is_prng_key(key)
@@ -239,7 +242,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         q = vmap(
             lambda _m1, _k: numerical_inverse_transform_sampling(
                 logpdf=partial(self._log_prob_mass_ratio_model, _m1),
-                limits=(self.mmin / _m1, 1.0),
+                limits=(jnp.divide(self.mmin, _m1), 1.0),
                 sample_shape=(),
                 key=_k,
                 batch_shape=self.batch_shape,
@@ -288,11 +291,19 @@ def GaussianSpinModel(
         spins
     """
     return dist.MultivariateNormal(
-        loc=[mu_eff, mu_p],
-        covariance_matrix=[
-            [lax.square(sigma_eff), rho * sigma_eff * sigma_p],
-            [rho * sigma_eff * sigma_p, lax.square(sigma_p)],
-        ],
+        loc=jnp.array([mu_eff, mu_p]),
+        covariance_matrix=jnp.array(
+            [
+                [
+                    jnp.square(sigma_eff),
+                    jnp.multiply(rho, jnp.multiply(sigma_eff, sigma_p)),
+                ],
+                [
+                    jnp.multiply(rho, jnp.multiply(sigma_eff, sigma_p)),
+                    jnp.square(sigma_p),
+                ],
+            ]
+        ),
         validate_args=True,
     )
 
@@ -483,8 +494,8 @@ class MultiPeakMassModel(dist.Distribution):
         )
         log_prob = self.log_prob(samples)
         prob = jnp.exp(log_prob)
-        volume = jnp.prod(self.mmax - self.mmin)
-        self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
+        volume = jnp.prod(jnp.subtract(self.mmax, self.mmin))
+        self._logZ = jnp.add(jnp.log(jnp.mean(prob, axis=-1)), jnp.log(volume))
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
@@ -504,23 +515,36 @@ class MultiPeakMassModel(dist.Distribution):
         :param m1: primary mass
         :return: log probability of primary mass
         """
-        gaussian_term1 = jnp.exp(
-            jnp.log(self.lam)
-            + jnp.log(self.lam1)
-            + norm.logpdf(m1, self.mu1, self.sigma1)
+        gaussian_term1 = jnp.add(jnp.log(self.lam), jnp.log(self.lam1))
+        gaussian_term1 = jnp.add(
+            gaussian_term1,
+            norm.logpdf(m1, self.mu1, self.sigma1),
         )
-        gaussian_term2 = jnp.exp(
-            jnp.log(self.lam)
-            + jnp.log(1 - self.lam1)
-            + norm.logpdf(m1, self.mu2, self.sigma2)
+        gaussian_term1 = jnp.exp(gaussian_term1)
+
+        gaussian_term2 = jnp.add(jnp.log(self.lam), jnp.log(jnp.subtract(1, self.lam1)))
+        gaussian_term2 = jnp.add(
+            gaussian_term2,
+            norm.logpdf(m1, self.mu2, self.sigma2),
         )
+        gaussian_term2 = jnp.exp(gaussian_term2)
+
         powerlaw_term = jnp.where(
-            m1 < self.mmax,
-            jnp.exp(jnp.log(1 - self.lam) - self.alpha * jnp.log(m1)),
+            jnp.less(m1, self.mmax),
+            jnp.exp(
+                jnp.subtract(
+                    jnp.log(jnp.subtract(1, self.lam)),
+                    jnp.multiply(self.alpha, jnp.log(m1)),
+                )
+            ),
             jnp.zeros_like(m1),
         )
-        log_prob_val = jnp.log(powerlaw_term + gaussian_term1 + gaussian_term2)
-        log_prob_val += jnp.log(smoothing_kernel(m1, self.mmin, self.delta))
+        log_prob_val = jnp.add(powerlaw_term, gaussian_term1)
+        log_prob_val = jnp.add(log_prob_val, gaussian_term2)
+        log_prob_val = jnp.log(log_prob_val)
+        log_prob_val = jnp.add(
+            log_prob_val, jnp.log(smoothing_kernel(m1, self.mmin, self.delta))
+        )
         return log_prob_val
 
     @partial(jit, static_argnums=(0,))
@@ -541,7 +565,8 @@ class MultiPeakMassModel(dist.Distribution):
         log_smoothing_val = jnp.log(
             smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, self.delta)
         )
-        return self.beta * jnp.log(q) + log_smoothing_val
+        log_prob_val = jnp.multiply(self.beta, jnp.log(q))
+        return jnp.add(log_prob_val, log_smoothing_val)
 
     @validate_sample
     def log_prob(self: Self, value):
@@ -553,7 +578,7 @@ class MultiPeakMassModel(dist.Distribution):
             q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
-        return log_prob_m1 + log_prob_q - self._logZ
+        return jnp.subtract(jnp.add(log_prob_m1, log_prob_q), self._logZ)
 
     def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
         assert is_prng_key(key)
@@ -573,7 +598,7 @@ class MultiPeakMassModel(dist.Distribution):
         q = vmap(
             lambda _m1, _k: numerical_inverse_transform_sampling(
                 logpdf=partial(self._log_prob_mass_ratio_model, _m1),
-                limits=(self.mmin / _m1, 1.0),
+                limits=(jnp.divide(self.mmin, _m1), 1.0),
                 sample_shape=(),
                 key=_k,
                 batch_shape=self.batch_shape,
@@ -613,7 +638,7 @@ def NDistribution(
     :return: Mixture of $n$ distributions
     """
     arg_names = distribution.arg_constraints.keys()
-    mixing_dist = dist.Categorical(probs=jnp.ones(n) / n, validate_args=True)
+    mixing_dist = dist.Categorical(probs=jnp.divide(jnp.ones(n), n), validate_args=True)
     args_per_component = [
         {arg: params.get(f"{arg}_{i}") for arg in arg_names} for i in range(n)
     ]
@@ -750,8 +775,8 @@ class PowerLawPeakMassModel(dist.Distribution):
         )
         log_prob = self.log_prob(samples)
         prob = jnp.exp(log_prob)
-        volume = jnp.prod(self.mmax - self.mmin)
-        self._logZ = jnp.log(jnp.mean(prob, axis=-1)) + jnp.log(volume)
+        volume = jnp.prod(jnp.subtract(self.mmax, self.mmin))
+        self._logZ = jnp.add(jnp.log(jnp.mean(prob, axis=-1)), jnp.log(volume))
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
@@ -770,15 +795,22 @@ class PowerLawPeakMassModel(dist.Distribution):
         :return: log probability of primary mass
         """
         gaussian_term = jnp.exp(
-            jnp.log(self.lam) + norm.logpdf(m1, self.mu, self.sigma)
+            jnp.add(jnp.log(self.lam), norm.logpdf(m1, self.mu, self.sigma))
         )
         powerlaw_term = jnp.where(
-            m1 < self.mmax,
-            jnp.exp(jnp.log(1 - self.lam) - self.alpha * jnp.log(m1)),
+            jnp.less(m1, self.mmax),
+            jnp.exp(
+                jnp.subtract(
+                    jnp.log(jnp.subtract(1, self.lam)),
+                    jnp.multiply(self.alpha, jnp.log(m1)),
+                )
+            ),
             jnp.zeros_like(m1),
         )
-        log_prob_val = jnp.log(powerlaw_term + gaussian_term) + jnp.log(
-            smoothing_kernel(m1, self.mmin, self.delta)
+        log_prob_val = jnp.add(powerlaw_term, gaussian_term)
+        log_prob_val = jnp.log(log_prob_val)
+        log_prob_val = jnp.add(
+            log_prob_val, jnp.log(smoothing_kernel(m1, self.mmin, self.delta))
         )
         return log_prob_val
 
@@ -800,7 +832,8 @@ class PowerLawPeakMassModel(dist.Distribution):
         log_smoothing_val = jnp.log(
             smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, self.delta)
         )
-        return self.beta * jnp.log(q) + log_smoothing_val
+        log_prob_val = jnp.multiply(self.beta, jnp.log(q))
+        return jnp.add(log_prob_val, log_smoothing_val)
 
     @validate_sample
     def log_prob(self: Self, value):
@@ -812,7 +845,7 @@ class PowerLawPeakMassModel(dist.Distribution):
             q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
-        return log_prob_m1 + log_prob_q - self._logZ
+        return jnp.subtract(jnp.add(log_prob_m1, log_prob_q), self._logZ)
 
     def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
         flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
@@ -831,7 +864,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         q = vmap(
             lambda _m1, _k: numerical_inverse_transform_sampling(
                 logpdf=partial(self._log_prob_mass_ratio_model, _m1),
-                limits=(self.mmin / _m1, 1.0),
+                limits=(jnp.divide(self.mmin, _m1), 1.0),
                 sample_shape=(),
                 key=_k,
                 batch_shape=self.batch_shape,
@@ -926,11 +959,11 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         ).log_prob(m1)
         log_prob_q = TruncatedPowerLaw(
             alpha=self.beta,
-            low=lax.div(self.mmin, m1),
+            low=jnp.divide(self.mmin, m1),
             high=1.0,
             validate_args=True,
         ).log_prob(q)
-        return log_prob_m1 + log_prob_q
+        return jnp.add(log_prob_m1, log_prob_q)
 
     def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
         m1 = TruncatedPowerLaw(
@@ -942,7 +975,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         key = jrd.split(key)[1]
         q = TruncatedPowerLaw(
             alpha=self.beta,
-            low=lax.div(self.mmin, m1),
+            low=jnp.divide(self.mmin, m1),
             high=1.0,
             validate_args=True,
         ).sample(key=key, sample_shape=())
@@ -1019,23 +1052,32 @@ class TruncatedPowerLaw(dist.Distribution):
 
     @validate_sample
     def log_prob(self, value):
-        # See: https://github.com/google/jax/discussions/22013
         def logp_neg1(value):
-            return -jnp.log(value) - jnp.log(self.high) + jnp.log(self.low)
+            logp_neg1_val = jnp.add(jnp.log(value), jnp.log(self.high))
+            logp_neg1_val = jnp.subtract(jnp.log(self.low), logp_neg1_val)
+            return logp_neg1_val
 
         def logp(value):
             log_value = jnp.log(value)
-            logp = self.alpha * log_value
-            beta = 1.0 + self.alpha
-            logp = logp + jnp.log(
-                beta / (jnp.power(self.high, beta) - jnp.power(self.low, beta))
+            logp = jnp.multiply(self.alpha, log_value)
+            beta = jnp.add(1.0, self.alpha)
+            logp = jnp.add(
+                logp,
+                jnp.log(
+                    jnp.divide(
+                        beta,
+                        jnp.subtract(
+                            jnp.power(self.high, beta), jnp.power(self.low, beta)
+                        ),
+                    )
+                ),
             )
             return logp
 
         return jnp.where(jnp.equal(self.alpha, -1.0), logp_neg1(value), logp(value))
 
     def cdf(self, value):
-        beta = 1.0 + self.alpha
+        beta = jnp.add(1.0, self.alpha)
         cdf = jnp.atleast_1d(value**beta - self.low**beta) / (
             self.high**beta - self.low**beta
         )
@@ -1048,14 +1090,18 @@ class TruncatedPowerLaw(dist.Distribution):
         return cdf
 
     def icdf(self, q):
-        beta = 1.0 + self.alpha
+        beta = jnp.add(1.0, self.alpha)
         low_pow_beta = jnp.power(self.low, beta)
         high_pow_beta = jnp.power(self.high, beta)
-        icdf = jnp.power(
-            low_pow_beta + q * (high_pow_beta - low_pow_beta),
-            jnp.reciprocal(beta),
-        )
-        icdf_neg1 = self.low * jnp.exp(q * jnp.log(self.high / self.low))
+        icdf = jnp.multiply(q, jnp.subtract(high_pow_beta, low_pow_beta))
+        icdf = jnp.add(low_pow_beta, icdf)
+        icdf = jnp.power(icdf, jnp.reciprocal(beta))
+
+        icdf_neg1 = jnp.divide(self.high, self.low)
+        icdf_neg1 = jnp.log(icdf_neg1)
+        icdf_neg1 = jnp.multiply(q, icdf_neg1)
+        icdf_neg1 = jnp.exp(icdf_neg1)
+        icdf_neg1 = jnp.multiply(self.low, icdf_neg1)
         return jnp.where(jnp.equal(self.alpha, -1.0), icdf_neg1, icdf)
 
 
@@ -1104,23 +1150,25 @@ class Wysocki2019MassModel(dist.Distribution):
     @validate_sample
     def log_prob(self: Self, value):
         m1 = value[..., 0]
+        m2 = value[..., 1]
         log_prob_m1 = TruncatedPowerLaw(
-            alpha=-self.alpha_m,
+            alpha=jnp.negative(self.alpha_m),
             low=self.mmin,
             high=self.mmax,
+            validate_args=True,
         ).log_prob(m1)
-        log_prob_m2_given_m1 = -jnp.log(m1 - self.mmin)
-        return log_prob_m1 + log_prob_m2_given_m1
+        log_prob_m2_given_m1 = uniform.logpdf(m2, loc=self.mmin, scale=m1)
+        return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()) -> Array:
-        m2 = dist.Uniform(
-            low=self.mmin,
-            high=self.mmax,
-        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
+        m2 = jrd.uniform(key, shape=sample_shape + self.batch_shape)
+        m2 = jnp.multiply(m2, jnp.subtract(self.mmax, self.mmin))
+        m2 = jnp.add(m2, self.mmin)
         key = jrd.split(key)[-1]
         m1 = TruncatedPowerLaw(
-            alpha=-self.alpha_m,
+            alpha=jnp.negative(self.alpha_m),
             low=m2,
             high=self.mmax,
+            validate_args=True,
         ).sample(key=key, sample_shape=())
         return jnp.column_stack((m1, m2))
