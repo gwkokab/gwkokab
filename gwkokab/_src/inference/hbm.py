@@ -14,14 +14,13 @@
 
 
 from functools import reduce
-from typing_extensions import Optional, Self
+from typing_extensions import Callable, Optional, Self
 
-import equinox as eqx
 import jax
 import numpy as np
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
-from jaxtyping import Array
+from jaxtyping import Array, Float
 
 from ..models.utils.jointdistribution import JointDistribution
 from .utils import ModelPack
@@ -67,9 +66,9 @@ class BayesianHierarchicalModel:
     def __init__(
         self: Self,
         *models: ModelPack,
-        vt_params: list[str] = None,
-        logVT: Optional[eqx.Module] = None,
-        time: Optional[float] = None,
+        vt_params: list[str],
+        logVT: Callable,
+        time: Float,
     ) -> None:
         self.logVT = logVT
         self.time = time

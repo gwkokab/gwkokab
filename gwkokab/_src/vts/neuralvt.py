@@ -27,7 +27,7 @@ import numpy as np
 import optax
 import polars as pl
 from jax import numpy as jnp, random as jrd
-from jaxtyping import Array, PRNGKeyArray, PyTree
+from jaxtyping import Array, Float, PRNGKeyArray, PyTree
 from numpyro.util import is_prng_key
 from rich.console import Console
 from rich.progress import (
@@ -42,7 +42,7 @@ from rich.table import Table
 
 
 @eqx.filter_value_and_grad
-def loss_fn(model: PyTree, x: Array, y: Array) -> Array:
+def loss_fn(model: PyTree, x: Float[Array, ""], y: Float[Array, ""]) -> Array:
     """Mean squared error loss function for the neural network.
 
     :param model: Model to approximate the log of the VT function
@@ -55,7 +55,7 @@ def loss_fn(model: PyTree, x: Array, y: Array) -> Array:
 
 
 @eqx.filter_jit
-def predict(model: PyTree, x: Array) -> Array:
+def predict(model: PyTree, x: Float[Array, ""]) -> Array:
     """Predict the output of the model given the input data.
 
     :param model: Model to approximate the log of the VT function
@@ -66,7 +66,7 @@ def predict(model: PyTree, x: Array) -> Array:
 
 
 @eqx.filter_jit
-def compute_accuracy(model: PyTree, x: Array, y: Array) -> Array:
+def compute_accuracy(model: PyTree, x: Float[Array, ""], y: Float[Array, ""]) -> Array:
     """Compute the accuracy of the model given the input and output data.
 
     :param model: Model to approximate the log of the VT function
@@ -88,15 +88,15 @@ def read_data(data_path: str) -> pl.DataFrame:
         keys = list(vt_file.keys())
         df = pl.DataFrame(
             data={
-                key: pl.Series(key, np.array(vt_file[key][:]).flatten()) for key in keys
+                key: pl.Series(key, np.array(vt_file[key]).flatten()) for key in keys
             },
         )
     return df
 
 
 def train_test_split(
-    X: Array, Y: Array, batch_size: int, test_size: float = 0.2
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    X: Float[Array, ""], Y: Float[Array, ""], batch_size: int, test_size: float = 0.2
+) -> tuple[Array, Array, Array, Array]:
     """Split the data into training and testing sets.
 
     :param X: Input data
@@ -171,7 +171,7 @@ def make(
         eqx.nn.Linear(
             in_features=hidden_layers[-1],
             out_features=output_layer,
-            key=keys[i],
+            key=keys[-1],
         )
     )
 
@@ -248,8 +248,8 @@ def train_regressor(
         model: PyTree,
         x: Array,
         y: Array,
-        opt_state: optax.GradientTransformation,
-    ) -> tuple[PyTree, optax.GradientTransformation, Array]:
+        opt_state: optax.OptState,
+    ) -> tuple[PyTree, optax.OptState, Array]:
         """Make a step in the optimization process.
 
         :param model: Model to approximate the log of the VT function
@@ -267,8 +267,8 @@ def train_regressor(
         model: PyTree,
         x: Array,
         y: Array,
-        opt_state: optax.GradientTransformation,
-    ) -> tuple[PyTree, optax.GradientTransformation, Array]:
+        opt_state: optax.OptState,
+    ) -> tuple[PyTree, optax.OptState, Array]:
         """Train the model for one epoch.
 
         :param model: Model to approximate the log of the VT function
@@ -282,10 +282,10 @@ def train_regressor(
 
     df = read_data(data_path)
 
-    data_X = df[input_keys].to_numpy()
+    data_X = jnp.asarray(df[input_keys].to_numpy())
     data_Y = df[output_keys].to_numpy()
 
-    log_data_Y = np.log(data_Y)
+    log_data_Y = jnp.log(data_Y)
 
     train_X, test_X, train_Y, test_Y = train_test_split(
         data_X,

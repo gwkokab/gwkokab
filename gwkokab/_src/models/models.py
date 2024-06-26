@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from functools import partial
-from typing_extensions import Self
 
 import numpy as np
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.scipy.stats import norm, uniform
-from jaxtyping import Array, Float, Int, PRNGKeyArray, Real
+from jaxtyping import Array, Int, Real
 from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
@@ -75,14 +74,14 @@ class BrokenPowerLawMassModel(dist.Distribution):
     pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
-        self: Self,
-        alpha1: Float,
-        alpha2: Float,
-        beta_q: Float,
-        mmin: Float,
-        mmax: Float,
-        mbreak: Float,
-        delta: Float,
+        self,
+        alpha1,
+        alpha2,
+        beta_q,
+        mmin,
+        mmax,
+        mbreak,
+        delta,
         **kwargs,
     ):
         r"""
@@ -141,10 +140,10 @@ class BrokenPowerLawMassModel(dist.Distribution):
         self._normalization()
 
     @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self: Self):
+    def support(self):
         return self._support
 
-    def _normalization(self: Self):
+    def _normalization(self):
         """Precomputes the normalization constant for the primary mass model
         and mass ratio model using Monte Carlo integration.
         """
@@ -159,7 +158,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         self._logZ = jnp.add(jnp.log(jnp.mean(prob, axis=-1)), jnp.log(volume))
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
+    def _log_prob_primary_mass_model(self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
         
         .. math::
@@ -191,7 +190,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_mass_ratio_model(
-        self: Self, m1: Array | Real, q: Array | Real
+        self, m1: Array | Real, q: Array | Real
     ) -> Array | Real:
         r"""Log probability of mass ratio model
 
@@ -212,7 +211,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         return jnp.add(log_val, log_smoothing_val)
 
     @validate_sample
-    def log_prob(self: Self, value):
+    def log_prob(self, value):
         m1 = value[..., 0]
         if self._default_params:
             m2 = value[..., 1]
@@ -224,7 +223,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         log_val = jnp.add(log_prob_m1, log_prob_q)
         return jnp.subtract(log_val, self._logZ)
 
-    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
+    def sample(self, key, sample_shape=()):
         assert is_prng_key(key)
         flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
 
@@ -257,9 +256,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
-def GaussianSpinModel(
-    mu_eff: Float, sigma_eff: Float, mu_p: Float, sigma_p: Float, rho: Float
-) -> dist.MultivariateNormal:
+def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.MultivariateNormal:
     r"""Bivariate normal distribution for the effective and precessing spins.
     See Eq. (D3) and (D4) in [Population Properties of Compact Objects from
     the Second LIGO-Virgo Gravitational-Wave Transient
@@ -309,7 +306,7 @@ def GaussianSpinModel(
 
 
 def IndependentSpinOrientationGaussianIsotropic(
-    zeta: Float, sigma1: Float, sigma2: Float
+    zeta, sigma1, sigma2
 ) -> dist.MixtureGeneral:
     r"""A mixture model of spin orientations with isotropic and normally
     distributed components. See Eq. (4) of [Determining the population
@@ -408,18 +405,18 @@ class MultiPeakMassModel(dist.Distribution):
     pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
-        self: Self,
-        alpha: Float,
-        beta: Float,
-        lam: Float,
-        lam1: Float,
-        delta: Float,
-        mmin: Float,
-        mmax: Float,
-        mu1: Float,
-        sigma1: Float,
-        mu2: Float,
-        sigma2: Float,
+        self,
+        alpha,
+        beta,
+        lam,
+        lam1,
+        delta,
+        mmin,
+        mmax,
+        mu1,
+        sigma1,
+        mu2,
+        sigma2,
         **kwargs,
     ):
         r"""
@@ -480,10 +477,10 @@ class MultiPeakMassModel(dist.Distribution):
         self._normalization()
 
     @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self: Self):
+    def support(self):
         return self._support
 
-    def _normalization(self: Self):
+    def _normalization(self):
         """Precomputes the normalization constant for the primary mass model
         and mass ratio model using Monte Carlo integration.
         """
@@ -498,7 +495,7 @@ class MultiPeakMassModel(dist.Distribution):
         self._logZ = jnp.add(jnp.log(jnp.mean(prob, axis=-1)), jnp.log(volume))
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
+    def _log_prob_primary_mass_model(self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
 
         $$
@@ -549,7 +546,7 @@ class MultiPeakMassModel(dist.Distribution):
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_mass_ratio_model(
-        self: Self, m1: Array | Real, q: Array | Real
+        self, m1: Array | Real, q: Array | Real
     ) -> Array | Real:
         r"""Log probability of mass ratio model
 
@@ -569,7 +566,7 @@ class MultiPeakMassModel(dist.Distribution):
         return jnp.add(log_prob_val, log_smoothing_val)
 
     @validate_sample
-    def log_prob(self: Self, value):
+    def log_prob(self, value):
         m1 = value[..., 0]
         if self._default_params:
             m2 = value[..., 1]
@@ -580,7 +577,7 @@ class MultiPeakMassModel(dist.Distribution):
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         return jnp.subtract(jnp.add(log_prob_m1, log_prob_q), self._logZ)
 
-    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
+    def sample(self, key, sample_shape=()):
         assert is_prng_key(key)
         flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
 
@@ -703,15 +700,15 @@ class PowerLawPeakMassModel(dist.Distribution):
     pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
-        self: Self,
-        alpha: Float,
-        beta: Float,
-        lam: Float,
-        delta: Float,
-        mmin: Float,
-        mmax: Float,
-        mu: Float,
-        sigma: Float,
+        self,
+        alpha,
+        beta,
+        lam,
+        delta,
+        mmin,
+        mmax,
+        mu,
+        sigma,
         **kwargs,
     ) -> None:
         r"""
@@ -761,10 +758,10 @@ class PowerLawPeakMassModel(dist.Distribution):
         self._normalization()
 
     @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self: Self):
+    def support(self):
         return self._support
 
-    def _normalization(self: Self):
+    def _normalization(self):
         """Precomputes the normalization constant for the primary mass model
         and mass ratio model using Monte Carlo integration.
         """
@@ -779,7 +776,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         self._logZ = jnp.add(jnp.log(jnp.mean(prob, axis=-1)), jnp.log(volume))
 
     @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self: Self, m1: Array | Real) -> Array | Real:
+    def _log_prob_primary_mass_model(self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
 
         .. math::
@@ -816,7 +813,7 @@ class PowerLawPeakMassModel(dist.Distribution):
 
     @partial(jit, static_argnums=(0,))
     def _log_prob_mass_ratio_model(
-        self: Self, m1: Array | Real, q: Array | Real
+        self, m1: Array | Real, q: Array | Real
     ) -> Array | Real:
         r"""Log probability of mass ratio model
 
@@ -836,7 +833,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         return jnp.add(log_prob_val, log_smoothing_val)
 
     @validate_sample
-    def log_prob(self: Self, value):
+    def log_prob(self, value):
         m1 = value[..., 0]
         if self._default_params:
             m2 = value[..., 1]
@@ -847,7 +844,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         return jnp.subtract(jnp.add(log_prob_m1, log_prob_q), self._logZ)
 
-    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
+    def sample(self, key, sample_shape=()):
         flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
 
         m1 = numerical_inverse_transform_sampling(
@@ -906,11 +903,11 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     pytree_aux_fields = ("_support",)
 
     def __init__(
-        self: Self,
-        alpha: Float,
-        beta: Float,
-        mmin: Float,
-        mmax: Float,
+        self,
+        alpha,
+        beta,
+        mmin,
+        mmax,
         **kwargs,
     ) -> None:
         """
@@ -940,11 +937,11 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         )
 
     @dist.constraints.dependent_property(is_discrete=False, event_dim=1)
-    def support(self: Self):
+    def support(self):
         return self._support
 
     @validate_sample
-    def log_prob(self: Self, value):
+    def log_prob(self, value):
         m1 = value[..., 0]
         if self._default_params:
             m2 = value[..., 1]
@@ -965,7 +962,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         ).log_prob(q)
         return jnp.add(log_prob_m1, log_prob_q)
 
-    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()):
+    def sample(self, key, sample_shape=()):
         m1 = TruncatedPowerLaw(
             alpha=self.alpha,
             low=self.mmin,
@@ -1124,7 +1121,7 @@ class Wysocki2019MassModel(dist.Distribution):
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self: Self, alpha_m: Float, mmin: Float, mmax: Float) -> None:
+    def __init__(self, alpha_m, mmin, mmax) -> None:
         r"""
         :param alpha_m: index of the power law distribution
         :param mmin: lower mass limit
@@ -1144,11 +1141,11 @@ class Wysocki2019MassModel(dist.Distribution):
         )
 
     @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self: Self):
+    def support(self):
         return self._support
 
     @validate_sample
-    def log_prob(self: Self, value):
+    def log_prob(self, value):
         m1 = value[..., 0]
         m2 = value[..., 1]
         log_prob_m1 = TruncatedPowerLaw(
@@ -1160,7 +1157,7 @@ class Wysocki2019MassModel(dist.Distribution):
         log_prob_m2_given_m1 = uniform.logpdf(m2, loc=self.mmin, scale=m1)
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
-    def sample(self: Self, key: PRNGKeyArray, sample_shape: tuple = ()) -> Array:
+    def sample(self, key, sample_shape=()) -> Array:
         m2 = jrd.uniform(key, shape=sample_shape + self.batch_shape)
         m2 = jnp.multiply(m2, jnp.subtract(self.mmax, self.mmin))
         m2 = jnp.add(m2, self.mmin)

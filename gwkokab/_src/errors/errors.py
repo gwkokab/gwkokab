@@ -15,8 +15,6 @@
 
 from __future__ import annotations
 
-from typing_extensions import Optional
-
 import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, random as jrd, vmap
 from jaxtyping import Array, Float, Int
@@ -57,8 +55,8 @@ def truncated_normal_error(
     key: Array,
     *,
     scale: Float,
-    lower: Optional[float] = None,
-    upper: Optional[float] = None,
+    lower: Float = 0.0,
+    upper: Float = 1.0,
 ) -> Array:
     r"""Add truncated normal error to the given values.
 

@@ -42,6 +42,7 @@ dependencies = [
     "flowmc",
     "plotly",
     "numpyro",
+    "seaborn",
     "jaxtyping",
     "jax>=0.4.0",
     "setuptools",

@@ -162,6 +162,7 @@ class PopulationFactory:
         if key is None:
             key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
         assert is_prng_key(key)
+        size = 0
         if self.popinfo.VT_FILE is None:
             size = self.popinfo.RATE
         if self.popinfo.VT_FILE is not None:
