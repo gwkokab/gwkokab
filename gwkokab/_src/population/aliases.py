@@ -35,7 +35,7 @@ class PopInfo:
     CONFIG_FILENAME: str
     RATE: Float
     TIME: Optional[Float] = None
-    VT_FILE: Optional[str] = None
+    LOG_VT: Optional[Callable] = None
     VT_PARAMS: Optional[list[str]] = None
     NUM_REALIZATIONS: Int = 5
 

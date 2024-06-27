@@ -10,7 +10,7 @@ from numpyro import distributions as dist
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
-from ..utils.transformations import m1_q_to_m2, mass_ratio
+from ..utils.transformations import m1_q_to_m2
 from .utils import numerical_inverse_transform_sampling
 from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils.smoothing import smoothing_kernel
@@ -73,17 +73,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
     ]
     pytree_aux_fields = ("_logZ", "_support")
 
-    def __init__(
-        self,
-        alpha1,
-        alpha2,
-        beta_q,
-        mmin,
-        mmax,
-        mbreak,
-        delta,
-        **kwargs,
-    ):
+    def __init__(self, alpha1, alpha2, beta_q, mmin, mmax, mbreak, delta):
         r"""
         :param alpha1: Power-law index for first component of primary mass model
         :param alpha2: Power-law index for second component of primary mass
@@ -115,11 +105,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
             jnp.shape(mbreak),
             jnp.shape(delta),
         )
-        self._default_params = kwargs.get("default_params", True)
-        if self._default_params:
-            self._support = mass_sandwich(mmin, mmax)
-        else:
-            self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(BrokenPowerLawMassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -213,11 +199,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
-        if self._default_params:
-            m2 = value[..., 1]
-            q = mass_ratio(m1=m1, m2=m2)
-        else:
-            q = value[..., 1]
+        q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         log_val = jnp.add(log_prob_m1, log_prob_q)
@@ -249,10 +231,6 @@ class BrokenPowerLawMassModel(dist.Distribution):
             )
         )(m1, keys)
 
-        if self._default_params:
-            return jnp.column_stack([m1, m1_q_to_m2(m1=m1, q=q)]).reshape(
-                sample_shape + self.event_shape
-            )
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
@@ -405,19 +383,7 @@ class MultiPeakMassModel(dist.Distribution):
     pytree_aux_fields = ("_logZ", "_support")
 
     def __init__(
-        self,
-        alpha,
-        beta,
-        lam,
-        lam1,
-        delta,
-        mmin,
-        mmax,
-        mu1,
-        sigma1,
-        mu2,
-        sigma2,
-        **kwargs,
+        self, alpha, beta, lam, lam1, delta, mmin, mmax, mu1, sigma1, mu2, sigma2
     ):
         r"""
         :param alpha: Power-law index for primary mass model
@@ -463,11 +429,7 @@ class MultiPeakMassModel(dist.Distribution):
             jnp.shape(mu2),
             jnp.shape(sigma2),
         )
-        self._default_params = kwargs.get("default_params", True)
-        if self._default_params:
-            self._support = mass_sandwich(mmin, mmax)
-        else:
-            self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(MultiPeakMassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -568,11 +530,7 @@ class MultiPeakMassModel(dist.Distribution):
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
-        if self._default_params:
-            m2 = value[..., 1]
-            q = mass_ratio(m1=m1, m2=m2)
-        else:
-            q = value[..., 1]
+        q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         return jnp.subtract(jnp.add(log_prob_m1, log_prob_q), self._logZ)
@@ -603,10 +561,6 @@ class MultiPeakMassModel(dist.Distribution):
             )
         )(m1, key)
 
-        if self._default_params:
-            return jnp.column_stack([m1, m1_q_to_m2(m1=m1, q=q)]).reshape(
-                sample_shape + self.event_shape
-            )
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
@@ -699,18 +653,7 @@ class PowerLawPeakMassModel(dist.Distribution):
     ]
     pytree_aux_fields = ("_logZ", "_support")
 
-    def __init__(
-        self,
-        alpha,
-        beta,
-        lam,
-        delta,
-        mmin,
-        mmax,
-        mu,
-        sigma,
-        **kwargs,
-    ) -> None:
+    def __init__(self, alpha, beta, lam, delta, mmin, mmax, mu, sigma) -> None:
         r"""
         :param alpha: Power-law index for primary mass model
         :param beta: Power-law index for mass ratio model
@@ -744,11 +687,7 @@ class PowerLawPeakMassModel(dist.Distribution):
             jnp.shape(mu),
             jnp.shape(sigma),
         )
-        self._default_params = kwargs.get("default_params", True)
-        if self._default_params:
-            self._support = mass_sandwich(mmin, mmax)
-        else:
-            self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(PowerLawPeakMassModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -835,11 +774,7 @@ class PowerLawPeakMassModel(dist.Distribution):
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
-        if self._default_params:
-            m2 = value[..., 1]
-            q = mass_ratio(m1=m1, m2=m2)
-        else:
-            q = value[..., 1]
+        q = value[..., 1]
         log_prob_m1 = self._log_prob_primary_mass_model(m1)
         log_prob_q = self._log_prob_mass_ratio_model(m1, q)
         return jnp.subtract(jnp.add(log_prob_m1, log_prob_q), self._logZ)
@@ -869,10 +804,6 @@ class PowerLawPeakMassModel(dist.Distribution):
             )
         )(m1, keys)
 
-        if self._default_params:
-            return jnp.column_stack([m1, m1_q_to_m2(m1=m1, q=q)]).reshape(
-                sample_shape + self.event_shape
-            )
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
@@ -902,14 +833,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(
-        self,
-        alpha,
-        beta,
-        mmin,
-        mmax,
-        **kwargs,
-    ) -> None:
+    def __init__(self, alpha, beta, mmin, mmax) -> None:
         """
         :param alpha: Power law index for primary mass
         :param beta: Power law index for mass ratio
@@ -925,11 +849,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax)
         )
-        self._default_params = kwargs.get("default_params", True)
-        if self._default_params:
-            self._support = mass_sandwich(mmin, mmax)
-        else:
-            self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(PowerLawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape,
             event_shape=(2,),
@@ -943,11 +863,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
-        if self._default_params:
-            m2 = value[..., 1]
-            q = mass_ratio(m1=m1, m2=m2)
-        else:
-            q = value[..., 1]
+        q = value[..., 1]
         log_prob_m1 = TruncatedPowerLaw(
             alpha=self.alpha,
             low=self.mmin,
@@ -977,8 +893,6 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
             validate_args=True,
         ).sample(key=key, sample_shape=())
 
-        if self._default_params:
-            return jnp.column_stack((m1, m1_q_to_m2(m1=m1, q=q)))
         return jnp.column_stack((m1, q))
 
 
@@ -1021,13 +935,7 @@ class TruncatedPowerLaw(dist.Distribution):
     }
     reparametrized_params = ["low", "high", "alpha"]
 
-    def __init__(
-        self,
-        alpha,
-        low=0.0,
-        high=1.0,
-        validate_args=None,
-    ):
+    def __init__(self, alpha, low=0.0, high=1.0, validate_args=None):
         self.low, self.high, self.alpha = promote_shapes(low, high, alpha)
         self._support = dist.constraints.interval(low, high)
         batch_shape = lax.broadcast_shapes(

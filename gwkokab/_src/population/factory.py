@@ -17,7 +17,6 @@ from __future__ import annotations
 import os
 from typing_extensions import Callable, Optional, Self
 
-import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
 from jaxtyping import Array, Bool, Float, Int, PRNGKeyArray
@@ -28,7 +27,6 @@ from numpyro.util import is_prng_key
 from ..models import *
 from ..models.utils.constraints import *
 from ..models.utils.jointdistribution import JointDistribution
-from ..vts.neuralvt import load_model
 from .aliases import ModelMeta, PopInfo
 
 
@@ -81,7 +79,7 @@ class PopulationFactory:
         self.vt_param_dist = None
         self.vt_selection_mask = None
 
-        if popinfo.VT_FILE is not None:
+        if popinfo.LOG_VT is not None:
             vt_models: list[Distribution] = []
             vt_selection_mask: list[int] = []
             vt_params = list(popinfo.VT_PARAMS)
@@ -107,17 +105,15 @@ class PopulationFactory:
     def exp_rate(self: Self, *, key: PRNGKeyArray) -> Float:
         N = int(1e4)
         value = self.vt_param_dist.sample(key, (N,))[..., self.vt_selection_mask]
-        _, logVT = load_model(self.popinfo.VT_FILE)
-        logVT = jax.vmap(logVT)
         return (
             self.popinfo.TIME
             * self.popinfo.RATE
-            * jnp.mean(jnp.exp(logVT(value).flatten()))
+            * jnp.mean(jnp.exp(self.popinfo.LOG_VT(value).flatten()))
         )
 
     def generate_population(self, size: Int, *, key: PRNGKeyArray) -> Array:
         keys = list(jrd.split(key, len(self.models)))
-        if self.popinfo.VT_FILE is not None:
+        if self.popinfo.LOG_VT is not None:
             old_size = size
             size += int(1e5)
         population = jtr.map(
@@ -133,7 +129,7 @@ class PopulationFactory:
 
         population = population[self.constraint(population)]
 
-        if self.popinfo.VT_FILE is None:
+        if self.popinfo.LOG_VT is None:
             return population
 
         value = jnp.column_stack(
@@ -143,10 +139,7 @@ class PopulationFactory:
             ]
         )
 
-        _, logVT = load_model(self.popinfo.VT_FILE)
-        logVT = jax.vmap(logVT)
-
-        vt = jnp.exp(logVT(value).flatten())
+        vt = jnp.exp(self.popinfo.LOG_VT(value).flatten())
         vt = jnp.nan_to_num(vt, nan=0.0)
         vt /= jnp.sum(vt)
         _, key = jrd.split(keys[-1])
@@ -162,10 +155,8 @@ class PopulationFactory:
         if key is None:
             key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
         assert is_prng_key(key)
-        size = 0
-        if self.popinfo.VT_FILE is None:
-            size = self.popinfo.RATE
-        if self.popinfo.VT_FILE is not None:
+        size = self.popinfo.RATE
+        if self.popinfo.LOG_VT is not None:
             poisson_key, rate_key = jrd.split(key)
             size: Int = int(jrd.poisson(poisson_key, self.exp_rate(key=rate_key)))
             key = rate_key
