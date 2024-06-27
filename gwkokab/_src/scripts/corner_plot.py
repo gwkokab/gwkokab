@@ -76,9 +76,11 @@ def make_parser() -> argparse.ArgumentParser:
         action="store_true",
     )
     parser.add_argument(
+        "-st",    
         "--show-titles",
         help="show titles in the corner plot",
-        action="store_true",
+        default="False",
+        type=str,
     )
     parser.add_argument(
         "-scale",
