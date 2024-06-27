@@ -1066,14 +1066,14 @@ class Wysocki2019MassModel(dist.Distribution):
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self, key, sample_shape=()) -> Array:
-        m2 = jrd.uniform(key, shape=sample_shape + self.batch_shape)
-        m2 = jnp.multiply(m2, jnp.subtract(self.mmax, self.mmin))
-        m2 = jnp.add(m2, self.mmin)
-        key = jrd.split(key)[-1]
         m1 = TruncatedPowerLaw(
             alpha=jnp.negative(self.alpha_m),
-            low=m2,
+            low=self.mmin,
             high=self.mmax,
             validate_args=True,
-        ).sample(key=key, sample_shape=())
+        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
+        key = jrd.split(key)[1]
+        m2 = jrd.uniform(
+            key, shape=sample_shape + self.batch_shape, minval=self.mmin, maxval=m1
+        )
         return jnp.column_stack((m1, m2))
