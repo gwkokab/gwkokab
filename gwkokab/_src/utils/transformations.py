@@ -218,7 +218,7 @@ def Mc_delta_chieff_chiminus_to_chi1z_chi2z(
     chieff: Array | Real,
     chiminus: Array | Real,
 ) -> tuple[Array, Array]:
-    m1, m2 = Mc_delta_to_m1_m2(Mc, delta)
+    m1, m2 = Mc_delta_to_m1_m2(Mc=Mc, delta=delta)
     return m1_m2_chieff_chiminus_to_chi1z_chi2z(
         m1=m1, m2=m2, chieff=chieff, chiminus=chiminus
     )

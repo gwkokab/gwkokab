@@ -93,8 +93,9 @@ def make_parser() -> argparse.ArgumentParser:
         "-size",
         "--size",
         help="size of the corner plot in inches",
+        nargs=2,
         default=(6, 6),
-        type=tuple[float, float],
+        type=float,
     )
     parser.add_argument(
         "--range",
