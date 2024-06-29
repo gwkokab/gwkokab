@@ -1062,7 +1062,9 @@ class Wysocki2019MassModel(dist.Distribution):
             high=self.mmax,
             validate_args=True,
         ).log_prob(m1)
-        log_prob_m2_given_m1 = uniform.logpdf(m2, loc=self.mmin, scale=m1)
+        log_prob_m2_given_m1 = uniform.logpdf(
+            m2, loc=self.mmin, scale=jnp.subtract(m1, self.mmin)
+        )
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self, key, sample_shape=()) -> Array:
