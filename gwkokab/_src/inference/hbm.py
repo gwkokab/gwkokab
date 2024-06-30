@@ -207,15 +207,15 @@ class BayesianHierarchicalModel:
             )
         )
 
-        integral_individual = jtr.map(
-            lambda y: jax.nn.logsumexp(
+        log_likelihood = jtr.reduce(
+            lambda x, y: x
+            + jax.nn.logsumexp(
                 joint_model.log_prob(y) - self.reference_prior.log_prob(y)
             )
             - jnp.log(y.shape[0]),
             data["data"],
+            0.0,
         )
-
-        log_likelihood = jtr.reduce(lambda x, y: x + y, integral_individual, 0.0)
 
         rate = x[..., -1]
 
