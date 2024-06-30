@@ -104,6 +104,30 @@ class Parameter(object):
         )
 
 
+def ncopy(
+    n: int, params: list[str], priors: dict[dist.Distribution]
+) -> dict[str, Parameter]:
+    """Creates n copies of the parameters.
+
+    :param n: Number of copies to create.
+    :param params: List of parameters to create copies of.
+    :param priors: Dictionary of priors for the parameters.
+    :return: Dictionary of n copies of the parameters.
+    """
+    all_params = {}
+    for param in params:
+        param_arr = {
+            f"{param}_{i}": Parameter(
+                name=f"{param}_{i}",
+                label="$" + param + "_{" + str(i) + "}$",
+                prior=priors.get(f"{param}_{i}", priors.get(param)),
+            )
+            for i in range(n)
+        }
+        all_params.update(param_arr)
+    return all_params
+
+
 # TODO: Add more parameters as needed.
 
 

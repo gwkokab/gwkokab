@@ -20,6 +20,7 @@ from gwkokab._src.parameters import (
     ECCENTRICITY as ECCENTRICITY,
     EFFECTIVE_SPIN_MAGNITUDE as EFFECTIVE_SPIN_MAGNITUDE,
     MASS_RATIO as MASS_RATIO,
+    ncopy as ncopy,
     Parameter as Parameter,
     PRIMARY_MASS_DETECTED as PRIMARY_MASS_DETECTED,
     PRIMARY_MASS_SOURCE as PRIMARY_MASS_SOURCE,
