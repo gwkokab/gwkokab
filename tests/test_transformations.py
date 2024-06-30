@@ -37,6 +37,9 @@ from gwkokab.utils.transformations import (
     M_q_to_m1_m2,
     m_source_z_to_m_det,
     mass_ratio,
+    Mc_delta_chieff_chiminus_to_chi1z_chi2z,
+    Mc_delta_to_m1_m2,
+    Mc_eta_to_m1_m2,
     polar_to_cart,
     reduced_mass,
     spherical_to_cart,
@@ -46,8 +49,12 @@ from gwkokab.utils.transformations import (
 )
 
 
-_primary_masses = np.unique(np.random.uniform(0.5, 200, 3))
+_primary_masses = np.unique(np.random.uniform(0.5, 200, 13))
 _secondary_masses = np.array([np.random.uniform(0.5, m) for m in _primary_masses])
+
+
+_m1m2 = [(m1, m2) for m1, m2 in zip(_primary_masses, _secondary_masses)]
+
 
 _redshifts = np.random.uniform(0, 1, 3)
 
@@ -68,8 +75,7 @@ _costilt1 = np.random.uniform(-1, 1, 3)
 _costilt2 = np.random.uniform(-1, 1, 3)
 
 
-@pytest.mark.parametrize("m1", _primary_masses)
-@pytest.mark.parametrize("m2", _secondary_masses)
+@pytest.mark.parametrize("m1, m2", _m1m2)
 def test_different_mass_representations(m1, m2):
     m1m2 = m1 * m2
     assert jnp.allclose(m1m2, m1_times_m2(m1=m1, m2=m2))
@@ -97,6 +103,12 @@ def test_different_mass_representations(m1, m2):
     Mc_, eta_ = m1_m2_to_Mc_eta(m1=m1, m2=m2)
     assert jnp.allclose(Mc, Mc_)
     assert jnp.allclose(eta, eta_)
+    m1_, m2_ = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
+    assert jnp.allclose(m1, m1_)
+    assert jnp.allclose(m2, m2_)
+    m1_, m2_ = Mc_delta_to_m1_m2(Mc=Mc, delta=delta)
+    assert jnp.allclose(m1, m1_)
+    assert jnp.allclose(m2, m2_)
 
 
 def test_m1_m2_ordering():
@@ -108,7 +120,7 @@ def test_m1_m2_ordering():
     assert jnp.allclose(m2_sorted, m2_)
 
 
-@pytest.mark.parametrize("m", _primary_masses + _secondary_masses)
+@pytest.mark.parametrize("m", _primary_masses)
 @pytest.mark.parametrize("z", _redshifts)
 def test_mass_and_reshift(m, z):
     m_source = m / (1.0 + z)
@@ -124,8 +136,7 @@ def test_chi_costilt_to_chiz(chi, costilt):
     assert jnp.allclose(chi_z, chi_costilt_to_chiz(chi=chi, costilt=costilt))
 
 
-@pytest.mark.parametrize("m1", _primary_masses)
-@pytest.mark.parametrize("m2", _secondary_masses)
+@pytest.mark.parametrize("m1, m2", _m1m2)
 @pytest.mark.parametrize("chi1", _chi1)
 @pytest.mark.parametrize("chi2", _chi2)
 def test_m1_m2_chi1z_chi2z(m1, m2, chi1, chi2):
@@ -137,8 +148,7 @@ def test_m1_m2_chi1z_chi2z(m1, m2, chi1, chi2):
     assert jnp.allclose(chiminus, chiminus_)
 
 
-@pytest.mark.parametrize("m1", _primary_masses)
-@pytest.mark.parametrize("m2", _secondary_masses)
+@pytest.mark.parametrize("m1, m2", _m1m2)
 @pytest.mark.parametrize("chieff", _chi)
 @pytest.mark.parametrize("chiminus", _chi)
 def test_m1_m2_chieff_chiminus(m1, m2, chieff, chiminus):
@@ -149,10 +159,18 @@ def test_m1_m2_chieff_chiminus(m1, m2, chieff, chiminus):
     chi2z = (m1 + m2) * (chieff - chiminus) / (2 * m2)
     assert jnp.allclose(chi1z, chi1z_)
     assert jnp.allclose(chi2z, chi2z_)
+    m1m2 = m1 * m2
+    M = m1 + m2
+    Mc = m1m2**0.6 * M**-0.2
+    delta = (m1 - m2) / M
+    chi1z_, chi2z_ = Mc_delta_chieff_chiminus_to_chi1z_chi2z(
+        Mc=Mc, delta=delta, chieff=chieff, chiminus=chiminus
+    )
+    assert jnp.allclose(chi1z, chi1z_)
+    assert jnp.allclose(chi2z, chi2z_)
 
 
-@pytest.mark.parametrize("m1", _primary_masses)
-@pytest.mark.parametrize("m2", _secondary_masses)
+@pytest.mark.parametrize("m1, m2", _m1m2)
 @pytest.mark.parametrize("chi1", _chi1)
 @pytest.mark.parametrize("chi2", _chi2)
 @pytest.mark.parametrize("costilt1", _costilt1)

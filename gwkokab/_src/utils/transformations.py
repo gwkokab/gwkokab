@@ -39,9 +39,9 @@ __all__ = [
     "M_q_to_m1_m2",
     "m_source_z_to_m_det",
     "mass_ratio",
-    # "Mc_delta_chieff_chiminus_to_chi1z_chi2z",
-    # "Mc_delta_to_m1_m2",
-    # "Mc_eta_to_m1_m2",
+    "Mc_delta_chieff_chiminus_to_chi1z_chi2z",
+    "Mc_delta_to_m1_m2",
+    "Mc_eta_to_m1_m2",
     "polar_to_cart",
     "reduced_mass",
     "spherical_to_cart",
@@ -225,12 +225,7 @@ def Mc_delta_chieff_chiminus_to_chi1z_chi2z(
 
 
 def Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Array]:
-    """This function has bugs. On some test cases it is returning answer
-    in swap order. Up until the bug is fixed, this function and the functions
-    that depend on it should not be used.
-    """
-    # TODO: Fix the bug in this function
-    delta_sq = jnp.subtract(1, jnp.multiply(4, eta))  # 1 - 4 * eta
+    delta_sq = jnp.subtract(1, jnp.multiply(4.0, eta))  # 1 - 4 * eta
     delta_sq = jnp.maximum(delta_sq, 0.0)  # to avoid negative values
     delta = jnp.sqrt(delta_sq)  # sqrt(1 - 4 * eta)
     half_Mc = jnp.multiply(0.5, Mc)  # Mc/2
@@ -239,10 +234,10 @@ def Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Arra
         half_Mc, eta_pow_neg_point_six
     )  # Mc/2 * eta^-0.6
     m2 = jnp.multiply(
-        half_Mc_times_eta_pow_neg_point_six, jnp.subtract(1, delta)
+        half_Mc_times_eta_pow_neg_point_six, jnp.subtract(1.0, delta)
     )  # m2 = Mc/2 * eta^-0.6 * (1 - delta)
     m1 = jnp.multiply(
-        half_Mc_times_eta_pow_neg_point_six, jnp.add(1, delta)
+        half_Mc_times_eta_pow_neg_point_six, jnp.add(1.0, delta)
     )  # m1 = Mc/2 * eta^-0.6 * (1 + delta)
     return m1, m2
 
