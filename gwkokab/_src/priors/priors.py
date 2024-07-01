@@ -40,4 +40,4 @@ class UnnormalizedUniformOnRealLine(dist.Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
-        return jnp.ones(value.shape[:-1])
+        return jnp.zeros(value.shape[:-1])
