@@ -49,7 +49,7 @@ class PopulationFactory:
         self.seperate_injections = seperate_injections
 
         if constraint is None:
-            constraint = lambda x: True
+            constraint = lambda x: jnp.ones(x.shape[0], dtype=bool)
         self.constraint = constraint
 
         self.models: list[Distribution] = [
