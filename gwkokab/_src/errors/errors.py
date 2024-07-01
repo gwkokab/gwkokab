@@ -147,7 +147,7 @@ def banana_error_m1_m2(
     )  # 'v' parameter
     v_PN_param_max = 0.2
     v_PN_param = jnp.min(jnp.array([v_PN_param, v_PN_param_max]))
-    snr_fac = rho / 15.0
+    snr_fac = rho / 12.0
     # this ignores range due to redshift / distance, based on a low-order est
     ln_mc_error_pseudo_fisher = (
         1.5 * 0.3 * (v_PN_param / v_PN_param_max) ** (7.0) / snr_fac
@@ -156,7 +156,7 @@ def banana_error_m1_m2(
     alpha = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
 
     Mc = Mc_true * (1.0 + alpha * (r0 + r))
-    eta = eta_true * (1.0 + (0.36 / rho) * (r0p + rp))
+    eta = eta_true * (1.0 + 0.03 * (12 / rho) * (r0p + rp))
 
     etaV = 1.0 - 4.0 * eta
     etaV_sqrt = jnp.where(etaV >= 0, jnp.sqrt(etaV), jnp.nan)
