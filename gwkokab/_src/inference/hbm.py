@@ -217,7 +217,7 @@ class BayesianHierarchicalModel:
             0.0,
         )
 
-        log_rate = x[..., 0]
+        log_rate = x[..., -1]
 
         log_likelihood += data["N"] * log_rate
 
