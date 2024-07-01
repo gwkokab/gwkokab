@@ -217,11 +217,15 @@ class BayesianHierarchicalModel:
             0.0,
         )
 
-        log_rate = x[..., -1]
+        log10_rate = x[..., -1]
+
+        log_rate = jnp.divide(
+            log10_rate, jnp.log10(jnp.e)
+        )  # log_rate = log10_rate / log10(e)
 
         log_likelihood += data["N"] * log_rate
 
-        rate = jnp.power(10.0, log_rate)  # rate = 10^log_rate
+        rate = jnp.exp(log_rate)  # rate = e^log_rate
 
         return log_likelihood - rate * self.time * lax.cond(
             jnp.isinf(log_likelihood),
