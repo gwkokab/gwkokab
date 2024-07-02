@@ -215,19 +215,17 @@ class BayesianHierarchicalModel:
             - jnp.log(y.shape[0]),
             data["data"],
             0.0,
-        )
-
-        log10_rate = x[..., -1]
+        ).block_until_ready()
 
         log_rate = jnp.divide(
-            log10_rate, jnp.log10(jnp.e)
+            x[..., -1], jnp.log10(jnp.e)
         )  # log_rate = log10_rate / log10(e)
 
-        log_likelihood += data["N"] * log_rate
+        log_likelihood = jnp.add(log_likelihood, jnp.multiply(data["N"], log_rate))
 
         rate = jnp.exp(log_rate)  # rate = e^log_rate
 
-        return log_likelihood - rate * self.time * lax.cond(
+        return log_likelihood - jnp.multiply(rate, self.time) * lax.cond(
             jnp.isinf(log_likelihood),
             lambda x_: 0.0,
             lambda x_: self.exp_rate_integral(x_),
@@ -243,9 +241,9 @@ class BayesianHierarchicalModel:
         :param data: Data provided by the user/sampler.
         :return: Log likelihood value for the given parameters.
         """
-        log_prior = self.population_priors.log_prob(x)
+        log_prior = self.population_priors.log_prob(x).block_until_ready()
         return log_prior + lax.cond(
-            jnp.isinf(log_prior),
+            jnp.isinf(log_prior).block_until_ready(),
             lambda x_, d_: 0.0,
             lambda x_, d_: self.log_likelihood(x_, d_),
             x,

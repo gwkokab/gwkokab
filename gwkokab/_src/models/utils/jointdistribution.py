@@ -14,7 +14,7 @@
 
 
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
-from jaxtyping import PRNGKeyArray
+from jaxtyping import Array, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro.util import is_prng_key
 
@@ -45,7 +45,7 @@ class JointDistribution(dist.Distribution):
             validate_args=True,
         )
 
-    def log_prob(self, value):
+    def log_prob(self, value) -> Array:
         log_probs = jtr.map(
             lambda d, v: d.log_prob(value[..., v]),
             self.marginal_distributions,
