@@ -207,15 +207,17 @@ class BayesianHierarchicalModel:
             )
         )
 
-        log_likelihood = jtr.reduce(
-            lambda x, y: x
-            + jax.nn.logsumexp(
-                joint_model.log_prob(y) - self.reference_prior.log_prob(y)
+        log_likelihood = jax.block_until_ready(
+            jtr.reduce(
+                lambda x, y: x
+                + jax.nn.logsumexp(
+                    joint_model.log_prob(y) - self.reference_prior.log_prob(y)
+                )
+                - jnp.log(y.shape[0]),
+                data["data"],
+                0.0,
             )
-            - jnp.log(y.shape[0]),
-            data["data"],
-            0.0,
-        ).block_until_ready()
+        )
 
         log_rate = jnp.divide(
             x[..., -1], jnp.log10(jnp.e)
@@ -241,9 +243,9 @@ class BayesianHierarchicalModel:
         :param data: Data provided by the user/sampler.
         :return: Log likelihood value for the given parameters.
         """
-        log_prior = self.population_priors.log_prob(x).block_until_ready()
+        log_prior = jax.block_until_ready(self.population_priors.log_prob(x))
         return log_prior + lax.cond(
-            jnp.isinf(log_prior).block_until_ready(),
+            jnp.isinf(log_prior),
             lambda x_, d_: 0.0,
             lambda x_, d_: self.log_likelihood(x_, d_),
             x,
