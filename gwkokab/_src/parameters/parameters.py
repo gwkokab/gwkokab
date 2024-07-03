@@ -37,7 +37,6 @@ class Parameter(object):
         self,
         *,
         name: str,
-        label: Optional[str] = None,
         prior: Optional[dist.Distribution] = None,
         default_prior: Optional[dist.Distribution] = None,
     ) -> None:
@@ -50,17 +49,10 @@ class Parameter(object):
         ), "Prior must be a numpyro.distributions.Distribution object."
         self._prior = prior
         self._name = name
-        if label is None:
-            label = name
-        self._label = label
 
     @property
     def name(self) -> str:
         return self._name
-
-    @property
-    def label(self) -> str:
-        return self._label
 
     @property
     def prior(self) -> dist.Distribution:
@@ -86,7 +78,7 @@ class Parameter(object):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, Parameter):
             return False
-        return self.name == other.name and self.label == other.label
+        return self.name == other.name and self.prior == other.prior
 
 
 def ncopy(
@@ -119,138 +111,115 @@ def ncopy(
 PRIMARY_MASS_SOURCE = partial(
     Parameter,
     name="mass_1_source",
-    label=r"$m_1^\text{source}$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 SECONDARY_MASS_SOURCE = partial(
     Parameter,
     name="mass_2_source",
-    label=r"$m_2^\text{source}$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 PRIMARY_MASS_DETECTED = partial(
     Parameter,
     name="mass_1",
-    label=r"$m_1$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 SECONDARY_MASS_DETECTED = partial(
     Parameter,
     name="mass_2",
-    label=r"$m_2$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 MASS_RATIO = partial(
     Parameter,
     name="mass_ratio",
-    label=r"$q$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 CHIRP_MASS = partial(
     Parameter,
     name="chirp_mass",
-    label=r"$M_c$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 SYMMETRIC_MASS_RATIO = partial(
     Parameter,
     name="symmetric_mass_ratio",
-    label=r"$\eta$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 REDUCED_MASS = partial(
     Parameter,
     name="reduced_mass",
-    label=r"$M_r$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 ECCENTRICITY = partial(
     Parameter,
     name="ecc",
-    label=r"$\varepsilon$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 PRIMARY_SPIN_MAGNITUDE = partial(
     Parameter,
     name="a1",
-    label=r"$a_1$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 SECONDARY_SPIN_MAGNITUDE = partial(
     Parameter,
     name="a2",
-    label=r"$a_2$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 PRIMARY_SPIN_X = partial(
     Parameter,
     name="spin_1x",
-    label=r"$a_1^x$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 PRIMARY_SPIN_Y = partial(
     Parameter,
     name="spin_1y",
-    label=r"$a_1^y$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 PRIMARY_SPIN_Z = partial(
     Parameter,
     name="spin_1z",
-    label=r"$a_1^z$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 SECONDARY_SPIN_X = partial(
     Parameter,
     name="spin_2x",
-    label=r"$a_2^x$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 SECONDARY_SPIN_Y = partial(
     Parameter,
     name="spin_2y",
-    label=r"$a_2^y$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 SECONDARY_SPIN_Z = partial(
     Parameter,
     name="spin_2z",
-    label=r"$a_2^z$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 TILE_1 = partial(
     Parameter,
     name="tile_1",
-    label=r"$\theta_1$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 TILE_2 = partial(
     Parameter,
     name="tile_2",
-    label=r"$\theta_2$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 EFFECTIVE_SPIN_MAGNITUDE = partial(
     Parameter,
     name="chi_eff",
-    label=r"$\chi_\text{eff}$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 COS_TILE_1 = partial(
     Parameter,
     name="tile_1",
-    label=r"$\cos(\theta_1)$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 COS_TILE_2 = partial(
     Parameter,
     name="tile_2",
-    label=r"$\cos(\theta_2)$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
 REDSHIFT = partial(
     Parameter,
     name="redshift",
-    label=r"$z$",
     default_prior=UnnormalizedUniformOnRealLine(),
 )
