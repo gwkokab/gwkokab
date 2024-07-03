@@ -17,15 +17,6 @@ from dataclasses import dataclass
 from typing_extensions import Callable, Optional
 
 from jaxtyping import Array, Float, Int
-from numpyro import distributions as dist
-
-
-@dataclass(frozen=True)
-class ModelMeta:
-    NAME: dist.Distribution
-    PARAMETERS: dict[str, Float]
-    OUTPUT: list[str]
-    SAVE_AS: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -35,7 +26,7 @@ class PopInfo:
     CONFIG_FILENAME: str
     RATE: Float
     TIME: Optional[Float] = None
-    LOG_VT: Optional[Callable] = None
+    LOG_VT: Optional[Callable[[Array], Array]] = None
     VT_PARAMS: Optional[list[str]] = None
     NUM_REALIZATIONS: Int = 5
 
