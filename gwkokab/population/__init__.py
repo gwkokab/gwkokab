@@ -14,13 +14,8 @@
 
 
 from gwkokab._src.population.aliases import (
-    ModelMeta as ModelMeta,
     NoisePopInfo as NoisePopInfo,
     PopInfo as PopInfo,
 )
-from gwkokab._src.population.factory import (
-    PopulationFactory as PopulationFactory,
-)
-from gwkokab._src.population.noisefactory import (
-    run_noise_factory as run_noise_factory,
-)
+from gwkokab._src.population.factory import PopulationFactory as PopulationFactory
+from gwkokab._src.population.noisefactory import run_noise_factory as run_noise_factory

@@ -13,10 +13,6 @@
 #  limitations under the License.
 
 
-from .aliases import (
-    ModelMeta as ModelMeta,
-    NoisePopInfo as NoisePopInfo,
-    PopInfo as PopInfo,
-)
+from .aliases import NoisePopInfo as NoisePopInfo, PopInfo as PopInfo
 from .factory import PopulationFactory as PopulationFactory
 from .noisefactory import run_noise_factory as run_noise_factory
