@@ -60,7 +60,7 @@ class Parameter(object):
 
     def __repr__(self) -> str:
         string = (
-            f"Parameter(name={self.name}, label={self.label}, "
+            f"Parameter(name={self.name}, "
             f"prior={self.prior.__class__.__name__}("
             + ", ".join(
                 [
