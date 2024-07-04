@@ -25,7 +25,6 @@ class Parameter(object):
     """Initializes a Parameter object.
 
     :param name: Name of the parameter.
-    :param label: Label of the parameter, defaults to None
     :param prior: Distribution object representing the prior distribution of
         the parameter, defaults to None
     :param default_prior: Default prior distribution of the parameter, defaults
@@ -96,7 +95,6 @@ def ncopy(
         param_arr = {
             f"{param}_{i}": Parameter(
                 name=f"{param}_{i}",
-                label="$" + param + "_{" + str(i) + "}$",
                 prior=priors.get(f"{param}_{i}", priors.get(param)),
             )
             for i in range(n)
