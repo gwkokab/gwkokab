@@ -18,6 +18,7 @@ import os
 from typing_extensions import Callable, Optional, Self
 
 import numpy as np
+import numpyro
 from jax import numpy as jnp, random as jrd, tree as jtr
 from jaxtyping import Array, Bool, Float, Int, PRNGKeyArray
 from numpyro.distributions import *
@@ -27,7 +28,7 @@ from numpyro.util import is_prng_key
 from ..models import *
 from ..models.utils.constraints import *
 from ..models.utils.jointdistribution import JointDistribution
-from .aliases import ModelMeta, PopInfo
+from .aliases import PopInfo
 
 
 __all__ = ["PopulationFactory"]
@@ -39,7 +40,7 @@ class PopulationFactory:
 
     def __init__(
         self,
-        models: list[ModelMeta],
+        models: dict[tuple[str, ...], numpyro.distributions.Distribution],
         popinfo: PopInfo,
         seperate_injections: Optional[bool] = None,
         constraint: Optional[Callable[[Array], Bool]] = None,
@@ -52,28 +53,11 @@ class PopulationFactory:
             constraint = lambda x: jnp.ones(x.shape[0], dtype=bool)
         self.constraint = constraint
 
-        self.models: list[Distribution] = [
-            model.NAME(**model.PARAMETERS) for model in models
-        ]
-
-        config_vars = [
-            [],  # header
-            [],  # save_as
-        ]
-
-        for model in models:
-            head = model.SAVE_AS.keys()
-            for h in head:
-                config_vars[0].append(model.SAVE_AS[h])
-                config_vars[1].append(model.PARAMETERS[h])
-
-        config_vars[1] = np.array(config_vars[1]).reshape(1, -1)
-
-        self.config_vars = config_vars
+        self.models = list(models.values())
 
         headers: list[str] = []
-        for i, model in enumerate(models):
-            headers.extend(model.OUTPUT)
+        for output_var in models.keys():
+            headers.extend(output_var)
         self.headers = headers
 
         self.vt_param_dist = None
@@ -85,17 +69,16 @@ class PopulationFactory:
             vt_params = list(popinfo.VT_PARAMS)
 
             k = 0
-            for i, model in enumerate(models):
-                output = model.OUTPUT
+            for i, output_var in enumerate(models.keys()):
                 flag = False
-                for out in output:
+                for out in output_var:
                     if out in vt_params:
-                        index = output.index(out) + k
+                        index = output_var.index(out) + k
                         vt_selection_mask.append(index)
                         vt_models.append(self.models[i])
                         flag = True
                 if flag:
-                    k += len(output)
+                    k += len(output_var)
 
             self.vt_param_dist = JointDistribution(*vt_models)
             self.vt_selection_mask = vt_selection_mask
@@ -182,18 +165,11 @@ class PopulationFactory:
             )
             os.makedirs(realizations_path, exist_ok=True)
             injection_filename = os.path.join(realizations_path, "injections.dat")
-            config_filename = os.path.join(realizations_path, "config.dat")
             np.savetxt(
                 injection_filename,
                 population,
                 comments="#",
                 header=" ".join(self.headers),
-            )
-            np.savetxt(
-                config_filename,
-                self.config_vars[1],
-                comments="#",
-                header=" ".join(self.config_vars[0]),
             )
 
             if self.seperate_injections:
