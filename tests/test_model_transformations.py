@@ -8,17 +8,16 @@ import pytest
 from jax import jacfwd, random, vmap
 from numpyro.distributions.transforms import biject_to
 
-from gwkokab.models.constraints import mass_ratio_mass_sandwich
-from gwkokab.models.transformations import PrimaryMassMassRatioToComponentMassTransform
+from gwkokab.models.transformations import (
+    PrimaryMassMassRatioToComponentMassesTransform,
+)
 
 
 @pytest.mark.parametrize(
     "transform, shape",
     [
         (
-            PrimaryMassMassRatioToComponentMassTransform(
-                mass_ratio_mass_sandwich(10, 50)
-            ),
+            PrimaryMassMassRatioToComponentMassesTransform(10, 50),
             (2,),
         )
     ],

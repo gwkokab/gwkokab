@@ -41,17 +41,17 @@ class PrimaryMassMassRatioToComponentMassesTransform(Transform):
         det(J) = m_1
     """
 
-    def __init__(self, domain: Constraint) -> None:
-        assert isinstance(
-            domain, mass_ratio_mass_sandwich
-        ), "Domain must be a mass ratio sandwich constraint"
-        self.domain = domain
+    def __init__(self, mmin: Array, mmax: Array) -> None:
+        self.mmin = mmin
+        self.mmax = mmax
+
+    @property
+    def domain(self) -> Constraint:
+        return mass_ratio_mass_sandwich(mmin=self.mmin, mmax=self.mmax)
 
     @property
     def codomain(self) -> Constraint:
-        mmin = self.domain.mmin
-        mmax = self.domain.mmax
-        return mass_sandwich(mmin=mmin, mmax=mmax)
+        return mass_sandwich(mmin=self.mmin, mmax=self.mmax)
 
     def __call__(self, x: Array):
         m1 = x[..., 0]
@@ -77,7 +77,7 @@ class PrimaryMassMassRatioToComponentMassesTransform(Transform):
         return shape
 
     def tree_flatten(self):
-        return (self.domain,), (("domain",), dict())
+        return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
     def __eq__(self, other):
         if not isinstance(other, PrimaryMassMassRatioToComponentMassesTransform):
@@ -89,7 +89,9 @@ class PrimaryMassMassRatioToComponentMassesTransform(Transform):
 def _mass_ratio_mass_sandwich_bijector(constraint):
     return ComposeTransform(
         [
-            PrimaryMassMassRatioToComponentMassesTransform(constraint),
+            PrimaryMassMassRatioToComponentMassesTransform(
+                mmin=constraint.mmin, mmax=constraint.mmax
+            ),
             OrderedTransform(),
             ExpTransform(),
         ]
