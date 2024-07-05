@@ -14,5 +14,5 @@
 
 
 from gwkokab._src.models.utils.transformations import (
-    PrimaryMassMassRatioToComponentMassTransform as PrimaryMassMassRatioToComponentMassTransform,
+    PrimaryMassMassRatioToComponentMassesTransform as PrimaryMassMassRatioToComponentMassesTransform,
 )

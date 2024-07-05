@@ -23,15 +23,15 @@ from numpyro.distributions.constraints import Constraint
 from numpyro.distributions.transforms import (
     biject_to,
     ComposeTransform,
+    ExpTransform,
     OrderedTransform,
-    SoftplusTransform,
     Transform,
 )
 
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 
 
-class PrimaryMassMassRatioToComponentMassTransform(Transform):
+class PrimaryMassMassRatioToComponentMassesTransform(Transform):
     r"""Transforms a primary mass and mass ratio to component masses.
 
     .. math::
@@ -80,7 +80,7 @@ class PrimaryMassMassRatioToComponentMassTransform(Transform):
         return (self.domain,), (("domain",), dict())
 
     def __eq__(self, other):
-        if not isinstance(other, PrimaryMassMassRatioToComponentMassTransform):
+        if not isinstance(other, PrimaryMassMassRatioToComponentMassesTransform):
             return False
         return self.domain == other.domain
 
@@ -89,8 +89,8 @@ class PrimaryMassMassRatioToComponentMassTransform(Transform):
 def _mass_ratio_mass_sandwich_bijector(constraint):
     return ComposeTransform(
         [
-            PrimaryMassMassRatioToComponentMassTransform(constraint),
+            PrimaryMassMassRatioToComponentMassesTransform(constraint),
             OrderedTransform(),
-            SoftplusTransform(),
+            ExpTransform(),
         ]
     )

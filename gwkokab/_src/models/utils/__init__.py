@@ -17,6 +17,3 @@ from .jointdistribution import JointDistribution as JointDistribution
 from .nits import (
     numerical_inverse_transform_sampling as numerical_inverse_transform_sampling,
 )
-from .transformations import (
-    PrimaryMassMassRatioToComponentMassTransform as PrimaryMassMassRatioToComponentMassTransform,
-)
