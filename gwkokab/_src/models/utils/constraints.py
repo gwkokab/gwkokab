@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 
+from jax import numpy as jnp
 from numpyro.distributions import constraints
 
 
@@ -62,6 +63,8 @@ class _MassSandwichConstraint(constraints.Constraint):
     $$m_{\text{min}} \leq m_2 \leq m_1 \leq m_{\text{max}}$$
     """
 
+    event_dim = 1
+
     def __init__(self, mmin: float, mmax: float):
         """
         :param mmin: Minimum mass.
@@ -73,7 +76,10 @@ class _MassSandwichConstraint(constraints.Constraint):
     def __call__(self, x):
         m1 = x[..., 0]
         m2 = x[..., 1]
-        return (self.mmin <= m2) & (m2 <= m1) & (m1 <= self.mmax)
+        mask = jnp.less_equal(self.mmin, m1)
+        mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
+        mask = jnp.logical_and(mask, jnp.less_equal(m2, m1))
+        return mask
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
@@ -92,6 +98,8 @@ class _MassRationMassSandwichConstraint(constraints.Constraint):
     $$
     """
 
+    event_dim = 1
+
     def __init__(self, mmin: float, mmax: float):
         r"""
         :param mmin: Minimum mass.
@@ -102,8 +110,11 @@ class _MassRationMassSandwichConstraint(constraints.Constraint):
 
     def __call__(self, x):
         m1 = x[..., 0]
-        m2 = x[..., 1] * m1
-        return (self.mmin <= m2) & (m2 <= m1) & (m1 <= self.mmax)
+        m2 = jnp.multiply(x[..., 1], m1)
+        mask = jnp.less_equal(self.mmin, m1)
+        mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
+        mask = jnp.logical_and(mask, jnp.less_equal(m2, m1))
+        return mask
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())

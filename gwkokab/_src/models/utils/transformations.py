@@ -20,9 +20,15 @@ from typing_extensions import Tuple
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions.constraints import Constraint
-from numpyro.distributions.transforms import Transform
+from numpyro.distributions.transforms import (
+    biject_to,
+    ComposeTransform,
+    OrderedTransform,
+    SoftplusTransform,
+    Transform,
+)
 
-from .constraints import _MassRationMassSandwichConstraint, mass_sandwich
+from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 
 
 class PrimaryMassMassRatioToComponentMassTransform(Transform):
@@ -37,7 +43,7 @@ class PrimaryMassMassRatioToComponentMassTransform(Transform):
 
     def __init__(self, domain: Constraint) -> None:
         assert isinstance(
-            domain, _MassRationMassSandwichConstraint
+            domain, mass_ratio_mass_sandwich
         ), "Domain must be a mass ratio sandwich constraint"
         self.domain = domain
 
@@ -50,14 +56,15 @@ class PrimaryMassMassRatioToComponentMassTransform(Transform):
     def __call__(self, x: Array):
         m1 = x[..., 0]
         q = x[..., 1]
-        m1m2 = jnp.column_stack((m1, jnp.multiply(m1, q)))
+        m2 = jnp.multiply(m1, q)
+        m1m2 = jnp.stack((m1, m2), axis=-1)
         return m1m2
 
     def _inverse(self, y: Array):
         m1 = y[..., 0]
         m2 = y[..., 1]
         q = jnp.divide(m2, m1)
-        return jnp.column_stack((m1, q))
+        return jnp.stack((m1, q), axis=-1)
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
         # log(|det(J)|) = log(m1)
@@ -77,4 +84,13 @@ class PrimaryMassMassRatioToComponentMassTransform(Transform):
             return False
         return self.domain == other.domain
 
-        return self.domain == other.domain
+
+@biject_to.register(mass_ratio_mass_sandwich)
+def _mass_ratio_mass_sandwich_bijector(constraint):
+    return ComposeTransform(
+        [
+            PrimaryMassMassRatioToComponentMassTransform(constraint),
+            OrderedTransform(),
+            SoftplusTransform(),
+        ]
+    )
