@@ -14,6 +14,7 @@
 
 
 from gwkokab._src.models.utils.constraints import (
+    chirp_mass_symmetric_mass_ratio_sandwich as chirp_mass_symmetric_mass_ratio_sandwich,
     greater_than_equal_to as greater_than_equal_to,
     less_than_equal_to as less_than_equal_to,
     mass_ratio_mass_sandwich as mass_ratio_mass_sandwich,

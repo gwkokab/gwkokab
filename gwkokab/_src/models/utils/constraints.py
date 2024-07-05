@@ -18,10 +18,11 @@ from numpyro.distributions import constraints
 
 
 __all__ = [
+    "chirp_mass_symmetric_mass_ratio_sandwich",
     "greater_than_equal_to",
     "less_than_equal_to",
-    "mass_sandwich",
     "mass_ratio_mass_sandwich",
+    "mass_sandwich",
 ]
 
 
@@ -120,6 +121,31 @@ class _MassRationMassSandwichConstraint(constraints.Constraint):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
 
+class _ChirpMassSymmetricMassRatioConstraint(constraints.Constraint):
+    r"""Constraint for chirp mass and symmetric mass ratio.
+    
+    .. math ::
+        \begin{align*}
+            0 < M_c \\
+            0 < \eta \leq \frac{1}{4}
+        \end{align*}
+    """
+
+    event_dim = 1
+
+    def __call__(self, x):
+        Mc = x[..., 0]
+        eta = x[..., 1]
+        mask = jnp.greater(Mc, 0.0)
+        mask = jnp.logical_and(mask, jnp.greater(eta, 0.0))
+        mask = jnp.logical_and(mask, jnp.less_equal(eta, 0.25))
+        return mask
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+
+chirp_mass_symmetric_mass_ratio_sandwich = _ChirpMassSymmetricMassRatioConstraint()
 greater_than_equal_to = _GreaterThanEqualTo
 less_than_equal_to = _LessThanEqualTo
 mass_sandwich = _MassSandwichConstraint
