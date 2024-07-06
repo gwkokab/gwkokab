@@ -9,6 +9,7 @@ from jax import jacfwd, random, vmap
 from numpyro.distributions.transforms import biject_to
 
 from gwkokab.models.transformations import (
+    DeltaToSymmetricMassRatio,
     PrimaryMassMassRatioToComponentMassesTransform,
 )
 
@@ -20,6 +21,7 @@ from gwkokab.models.transformations import (
             PrimaryMassMassRatioToComponentMassesTransform(10, 50),
             (2,),
         ),
+        (DeltaToSymmetricMassRatio(), ()),
         # (ComponentMassesToChirpMassAndSymmetricMassRatio(), (2,)),
     ],
 )

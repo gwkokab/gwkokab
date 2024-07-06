@@ -19,6 +19,7 @@ from typing_extensions import Tuple
 
 from jax import numpy as jnp
 from jaxtyping import Array
+from numpyro.distributions import constraints
 from numpyro.distributions.constraints import Constraint
 from numpyro.distributions.transforms import (
     biject_to,
@@ -155,6 +156,36 @@ def _mass_ratio_mass_sandwich_bijector(constraint):
             ExpTransform(),
         ]
     )
+
+
+class DeltaToSymmetricMassRatio(Transform):
+    r"""
+    .. math::
+        \eta = f(\delta) = \frac{1-\delta^2}{4}
+
+    .. math::
+        \delta = f^{-1}(\eta) = \sqrt{1-4\eta}
+
+    .. math::
+        det(J_f) = -\frac{\delta}{2}
+    """
+
+    domain = constraints.interval(0.0, 1.0)
+    codomain = constraints.interval(0.0, 0.25)
+
+    def __call__(self, x):
+        delta_sq = jnp.square(x)
+        return jnp.multiply(jnp.subtract(1.0, delta_sq), 0.25)
+
+    def _inverse(self, y):
+        eta4 = jnp.multiply(4, y)
+        return jnp.sqrt(jnp.subtract(1, eta4))
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        return jnp.subtract(jnp.log(x), jnp.log(2.0))
+
+    def tree_flatten(self):
+        return (), ((), dict())
 
 
 # TODO: tests not passing for this bijector
