@@ -145,19 +145,6 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         return self.domain == other.domain
 
 
-@biject_to.register(mass_ratio_mass_sandwich)
-def _mass_ratio_mass_sandwich_bijector(constraint):
-    return ComposeTransform(
-        [
-            PrimaryMassMassRatioToComponentMassesTransform(
-                mmin=constraint.mmin, mmax=constraint.mmax
-            ),
-            OrderedTransform(),
-            ExpTransform(),
-        ]
-    )
-
-
 class DeltaToSymmetricMassRatio(Transform):
     r"""
     .. math::
@@ -186,6 +173,19 @@ class DeltaToSymmetricMassRatio(Transform):
 
     def tree_flatten(self):
         return (), ((), dict())
+
+
+@biject_to.register(mass_ratio_mass_sandwich)
+def _mass_ratio_mass_sandwich_bijector(constraint):
+    return ComposeTransform(
+        [
+            PrimaryMassMassRatioToComponentMassesTransform(
+                mmin=constraint.mmin, mmax=constraint.mmax
+            ),
+            OrderedTransform(),
+            ExpTransform(),
+        ]
+    )
 
 
 # TODO: tests not passing for this bijector
