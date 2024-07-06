@@ -100,13 +100,8 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         det(J_f)=\frac{2}{5}M_c\eta q\left(\frac{1-q}{1+q}\right)
     """
 
-    @property
-    def domain(self) -> Constraint:
-        return mass_sandwich(0.0, jnp.inf)
-
-    @property
-    def codomain(self) -> Constraint:
-        return chirp_mass_symmetric_mass_ratio_sandwich
+    domain = mass_sandwich(0.0, jnp.inf)
+    codomain = chirp_mass_symmetric_mass_ratio_sandwich
 
     def __call__(self, x):
         m1 = x[..., 0]
