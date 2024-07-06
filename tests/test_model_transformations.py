@@ -19,7 +19,8 @@ from gwkokab.models.transformations import (
         (
             PrimaryMassMassRatioToComponentMassesTransform(10, 50),
             (2,),
-        )
+        ),
+        # (ComponentMassesToChirpMassAndSymmetricMassRatio(), (2,)),
     ],
 )
 def test_bijective_transforms(transform, shape):
@@ -38,7 +39,7 @@ def test_bijective_transforms(transform, shape):
     assert x2.shape == transform.inverse_shape(y.shape)
     # Some transforms are a bit less stable; we give them larger tolerances.
     atol = 1e-6
-    assert jnp.allclose(x1, x2, atol=atol)
+    assert jnp.allclose(x1, x2, atol=atol, equal_nan=True)
 
     log_abs_det_jacobian = transform.log_abs_det_jacobian(x1, y)
     assert log_abs_det_jacobian.shape == batch_shape

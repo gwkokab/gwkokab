@@ -28,7 +28,12 @@ from numpyro.distributions.transforms import (
     Transform,
 )
 
-from .constraints import mass_ratio_mass_sandwich, mass_sandwich
+from ...utils.transformations import m1_m2_to_Mc_eta, mass_ratio, Mc_eta_to_m1_m2
+from .constraints import (
+    chirp_mass_symmetric_mass_ratio_sandwich,
+    mass_ratio_mass_sandwich,
+    mass_sandwich,
+)
 
 
 class PrimaryMassMassRatioToComponentMassesTransform(Transform):
@@ -38,7 +43,7 @@ class PrimaryMassMassRatioToComponentMassesTransform(Transform):
         f: (m_1, q)\to (m_1, m_1q)
 
     .. math::
-        det(J) = m_1
+        det(J_f) = m_1
     """
 
     def __init__(self, mmin: Array, mmax: Array) -> None:
@@ -63,7 +68,7 @@ class PrimaryMassMassRatioToComponentMassesTransform(Transform):
     def _inverse(self, y: Array):
         m1 = y[..., 0]
         m2 = y[..., 1]
-        q = jnp.divide(m2, m1)
+        q = mass_ratio(m2=m2, m1=m1)
         return jnp.stack((m1, q), axis=-1)
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
@@ -85,6 +90,65 @@ class PrimaryMassMassRatioToComponentMassesTransform(Transform):
         return self.domain == other.domain
 
 
+class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
+    r"""Transforms component masses to chirp mass and symmetric mass ratio.
+
+    .. math::
+        f: (m_1, m_2)\to \left(\frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}}, \frac{m_1m_2}{(m_1+m_2)^{2}}\right)
+
+    .. math::
+        det(J_f)=\frac{2}{5}M_c\eta q\left(\frac{1-q}{1+q}\right)
+    """
+
+    @property
+    def domain(self) -> Constraint:
+        return mass_sandwich(0.0, jnp.inf)
+
+    @property
+    def codomain(self) -> Constraint:
+        return chirp_mass_symmetric_mass_ratio_sandwich
+
+    def __call__(self, x):
+        m1 = x[..., 0]
+        m2 = x[..., 1]
+        Mc, eta = m1_m2_to_Mc_eta(m1=m1, m2=m2)
+        return jnp.stack((Mc, eta), axis=-1)
+
+    def _inverse(self, y):
+        Mc = y[..., 0]
+        eta = y[..., 1]
+        m1, m2 = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
+        return jnp.stack((m1, m2), axis=-1)
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        m1 = x[..., 0]
+        m2 = x[..., 1]
+        log_Mc = jnp.log(y[..., 0])
+        log_eta = jnp.log(y[..., 1])
+        q = mass_ratio(m1=m1, m2=m2)
+        log_detJ = jnp.log(0.4)
+        log_detJ = jnp.add(log_detJ, log_Mc)
+        log_detJ = jnp.add(log_detJ, log_eta)
+        log_detJ = jnp.add(log_detJ, jnp.log(q))
+        log_detJ = jnp.add(log_detJ, jnp.log(jnp.subtract(1.0, q)))
+        log_detJ = jnp.subtract(log_detJ, jnp.log(jnp.add(1.0, q)))
+        return log_detJ
+
+    def forward_shape(self, shape) -> Tuple[int, ...]:
+        return shape
+
+    def inverse_shape(self, shape) -> Tuple[int, ...]:
+        return shape
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+    def __eq__(self, other):
+        if not isinstance(other, ComponentMassesToChirpMassAndSymmetricMassRatio):
+            return False
+        return self.domain == other.domain
+
+
 @biject_to.register(mass_ratio_mass_sandwich)
 def _mass_ratio_mass_sandwich_bijector(constraint):
     return ComposeTransform(
@@ -96,3 +160,26 @@ def _mass_ratio_mass_sandwich_bijector(constraint):
             ExpTransform(),
         ]
     )
+
+
+# TODO: tests not passing for this bijector
+# @biject_to.register(mass_sandwich)
+# def _mass_sandwich_bijector(constraint):
+#     return ComposeTransform(
+#         [
+#             PermuteTransform(jnp.array([1, 0])).inv,
+#             ComponentMassesToChirpMassAndSymmetricMassRatio().inv,
+#             OrderedTransform(),
+#             SoftplusTransform(),
+#         ]
+#     )
+
+# @biject_to.register(type(chirp_mass_symmetric_mass_ratio_sandwich))
+# def _chirp_mass_symmetric_mass_ratio_sandwich_bijector(constraint):
+#     return ComposeTransform(
+#         [
+#             ComponentMassesToChirpMassAndSymmetricMassRatio(),
+#             OrderedTransform().inv,
+#             ExpTransform(),
+#         ]
+#     )

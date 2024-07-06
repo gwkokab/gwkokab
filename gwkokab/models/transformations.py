@@ -14,5 +14,6 @@
 
 
 from gwkokab._src.models.utils.transformations import (
+    ComponentMassesToChirpMassAndSymmetricMassRatio as ComponentMassesToChirpMassAndSymmetricMassRatio,
     PrimaryMassMassRatioToComponentMassesTransform as PrimaryMassMassRatioToComponentMassesTransform,
 )
