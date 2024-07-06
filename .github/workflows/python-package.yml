@@ -5,16 +5,14 @@ name: Python package
 
 on:
   push:
-    branches: [ "main" ]
+    branches: '**'
     paths:
       - "**/*.py"
-      - "requirements.txt"
       - ".github/workflows/python-package.yml"
   pull_request:
-    branches: [ "main" ]
+    branches: '**'
     paths:
       - "**/*.py"
-      - "requirements.txt"
       - ".github/workflows/python-package.yml"
 
 jobs:
