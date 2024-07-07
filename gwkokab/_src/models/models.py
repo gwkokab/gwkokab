@@ -880,7 +880,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
 class TruncatedPowerLaw(dist.Distribution):
     r"""A generic double side truncated power law distribution.
     
-    !!! note
+    .. note::
         There are many different definition of Power Law that include
         exponential cut-offs and interval cut-offs.  They are just
         interchangeably. This class is the implementation of power law that has

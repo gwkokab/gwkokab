@@ -81,6 +81,7 @@ html_theme_options = {
     "use_download_button": True,
     # "collapse_navbar": True,
     "home_page_in_toc": True,
+    "use_issues_button": True,
 }
 
 

@@ -1,16 +1,7 @@
 Installing GWKokab
 ==================
 
-GWKokab is available on PyPI, and can be installed using pip. It is recommended to install GWKokab in a virtual environment. If you do not have the `venv` module installed, you may install it by doing the following
-
-.. code-block:: bash
-
-    pip install --upgrade venv
-    python -m venv jvenv
-    source jvenv/bin/activate
-
-
-You may then install GWKokab by doing
+GWKokab is available on PyPI, and can be installed using pip. It is recommended to install GWKokab in a virtual environment. You may then install GWKokab by doing
 
 .. code-block:: bash
 
