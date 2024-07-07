@@ -74,12 +74,12 @@ html_theme = "sphinx_book_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 html_theme_options = {
-    "show_toc_level": 2,
+    "show_toc_level": 1,
     "repository_url": "https://github.com/gwkokab/gwkokab",
     "use_repository_button": True,  # add a "link to repository" button
     "navigation_with_keys": False,
     "use_download_button": True,
-    "collapse_navbar": True,
+    # "collapse_navbar": True,
     "home_page_in_toc": True,
 }
 

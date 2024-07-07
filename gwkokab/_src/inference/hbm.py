@@ -41,7 +41,7 @@ class BayesianHierarchicalModel:
     \frac{\mathrm{d}N}{\mathrm{d}V\mathrm{d}t \mathrm{d}\lambda}` is the merger
     rate density for a population parameterized by :math:`\Lambda`, :math:`\mu(\Lambda)` is
     the expected number of detected mergers for that population, and
-    :math:`\ell_n(\lambda)` is the likelihood for the :math:`n`th observed event's
+    :math:`\ell_n(\lambda)` is the likelihood for the :math:`n`-th observed event's
     parameters. Using Bayes' theorem, we can obtain the posterior
     :math:`p(\Lambda\mid\text{data})` by multiplying the likelihood by a prior
     :math:`\pi(\Lambda)`.
@@ -235,7 +235,7 @@ class BayesianHierarchicalModel:
         r"""The likelihood function for the inhomogeneous Poisson process.
 
         .. math::
-            p(\Lambda\mid\text{data})
+            \log p(\Lambda\mid\text{data}) \propto \log\pi(\Lambda) + \log\mathcal{L}(\Lambda)
 
         :param x: Recovered parameters.
         :param data: Data provided by the user/sampler.
