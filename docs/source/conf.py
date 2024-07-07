@@ -33,6 +33,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.todo",
     "nbsphinx",
+    "sphinx_gallery.load_style",
     "sphinxcontrib.jquery",
     "sphinx.ext.doctest",
     "sphinx.ext.imgconverter",
@@ -42,7 +43,6 @@ extensions = [
     "sphinx_search.extension",
     "sphinx.ext.linkcode",
     "matplotlib.sphinxext.plot_directive",
-    "myst_nb",
     "sphinx_remove_toctrees",
     "sphinx_copybutton",
     "sphinx_design",
@@ -50,11 +50,8 @@ extensions = [
     "sphinxcontrib.youtube",
     "sphinx_examples",
     "sphinx_tabs.tabs",
-    # "sphinx_thebe",
     "sphinx_togglebutton",
-    # "sphinxcontrib.bibtex",
     "sphinxext.opengraph",
-    # For the kitchen sink
     "sphinx.ext.todo",
 ]
 
@@ -114,14 +111,6 @@ autosummary_generate = True
 napolean_use_rtype = False
 
 
-# -- Options for myst ----------------------------------------------
-myst_heading_anchors = 3  # auto-generate 3 levels of heading anchors
-myst_enable_extensions = ["dollarmath"]
-nb_execution_mode = "force"
-nb_execution_allow_errors = False
-nb_merge_streams = True
-
-
 # do not prepend module name to functions
 add_module_names = False
 
@@ -157,3 +146,6 @@ def linkcode_resolve(domain, info):
     filename = os.path.relpath(filename, start=os.path.dirname(jax.__file__))
     lines = f"#L{linenum}-L{linenum + len(source)}" if linenum else ""
     return f"https://github.com/gwkokab/gwkokab/blob/main/gwkokab/{filename}{lines}"
+
+
+os.system("cp -r ../../examples .")
