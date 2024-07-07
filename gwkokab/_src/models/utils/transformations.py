@@ -65,7 +65,7 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         f: (m_1, q)\to (m_1, m_1q)
 
     .. math::
-        det(J_f) = m_1
+        \mathrm{det}(J_f) = m_1
     """
 
     domain = positive_decreasing_vector
@@ -85,7 +85,6 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         return jnp.stack((m1, q), axis=-1)
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
-        # log(|det(J)|) = log(m1)
         return jnp.log(x[..., 0])
 
     def forward_shape(self, shape) -> Tuple[int, ...]:
@@ -110,7 +109,7 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         f: (m_1, m_2)\to \left(\frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}}, \frac{m_1m_2}{(m_1+m_2)^{2}}\right)
 
     .. math::
-        det(J_f)=\frac{2}{5}M_c\eta q\left(\frac{1-q}{1+q}\right)
+        \mathrm{det}(J_f)=\frac{2}{5}M_c\eta q\left(\frac{1-q}{1+q}\right)
     """
 
     domain = positive_decreasing_vector
@@ -166,7 +165,7 @@ class DeltaToSymmetricMassRatio(Transform):
         \delta = f^{-1}(\eta) = \sqrt{1-4\eta}
 
     .. math::
-        det(J_f) = -\frac{\delta}{2}
+        \mathrm{det}(J_f) = -\frac{\delta}{2}
     """
 
     domain = constraints.interval(0.0, 1.0)
@@ -190,7 +189,7 @@ class DeltaToSymmetricMassRatio(Transform):
 class ComponentMassesToChirpMassAndDelta(Transform):
     r"""
     .. math::
-        f: (m_1, m_2) -> (M_c, \delta)
+        f: (m_1, m_2) \to (M_c, \delta)
 
     .. math::
         M_c = \frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}}
@@ -199,7 +198,7 @@ class ComponentMassesToChirpMassAndDelta(Transform):
         \delta = \frac{m_1-m_2}{m1+m_2}
 
     .. math::
-        det(J_f) = -\frac{4M_c}{5(m_1+m_2)^2}
+        \mathrm{det}(J_f) = -\frac{4M_c}{5(m_1+m_2)^2}
     """
 
     domain = positive_decreasing_vector
