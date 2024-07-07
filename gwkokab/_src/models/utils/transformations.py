@@ -20,24 +20,45 @@ from typing_extensions import Tuple
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import constraints
-from numpyro.distributions.constraints import Constraint
 from numpyro.distributions.transforms import (
+    AbsTransform,
     biject_to,
     ComposeTransform,
-    ExpTransform,
     OrderedTransform,
+    PowerTransform,
+    ReshapeTransform,
     Transform,
 )
 
-from ...utils.transformations import m1_m2_to_Mc_eta, mass_ratio, Mc_eta_to_m1_m2
+from ...utils.transformations import (
+    chirp_mass,
+    delta_m,
+    m1_m2_to_Mc_eta,
+    mass_ratio,
+    Mc_delta_to_m1_m2,
+    Mc_eta_to_m1_m2,
+    total_mass,
+)
 from .constraints import (
-    chirp_mass_symmetric_mass_ratio_sandwich,
-    mass_ratio_mass_sandwich,
-    mass_sandwich,
+    decreasing_vector,
+    increasing_vector,
+    positive_decreasing_vector,
+    positive_increasing_vector,
+    strictly_decreasing_vector,
+    strictly_increasing_vector,
+    unique_intervals,
 )
 
 
-class PrimaryMassMassRatioToComponentMassesTransform(Transform):
+__all__ = [
+    "ComponentMassesToChirpMassAndSymmetricMassRatio",
+    "ComponentMassesToChirpMassAndDelta",
+    "DeltaToSymmetricMassRatio",
+    "PrimaryMassAndMassRatioToComponentMassesTransform",
+]
+
+
+class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
     r"""Transforms a primary mass and mass ratio to component masses.
 
     .. math::
@@ -47,17 +68,8 @@ class PrimaryMassMassRatioToComponentMassesTransform(Transform):
         det(J_f) = m_1
     """
 
-    def __init__(self, mmin: Array, mmax: Array) -> None:
-        self.mmin = mmin
-        self.mmax = mmax
-
-    @property
-    def domain(self) -> Constraint:
-        return mass_ratio_mass_sandwich(mmin=self.mmin, mmax=self.mmax)
-
-    @property
-    def codomain(self) -> Constraint:
-        return mass_sandwich(mmin=self.mmin, mmax=self.mmax)
+    domain = positive_decreasing_vector
+    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
 
     def __call__(self, x: Array):
         m1 = x[..., 0]
@@ -83,10 +95,10 @@ class PrimaryMassMassRatioToComponentMassesTransform(Transform):
         return shape
 
     def tree_flatten(self):
-        return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
+        return (), ((), dict())
 
     def __eq__(self, other):
-        if not isinstance(other, PrimaryMassMassRatioToComponentMassesTransform):
+        if not isinstance(other, PrimaryMassAndMassRatioToComponentMassesTransform):
             return False
         return self.domain == other.domain
 
@@ -101,8 +113,8 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         det(J_f)=\frac{2}{5}M_c\eta q\left(\frac{1-q}{1+q}\right)
     """
 
-    domain = mass_sandwich(0.0, jnp.inf)
-    codomain = chirp_mass_symmetric_mass_ratio_sandwich
+    domain = positive_decreasing_vector
+    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 0.25))
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -175,37 +187,85 @@ class DeltaToSymmetricMassRatio(Transform):
         return (), ((), dict())
 
 
-@biject_to.register(mass_ratio_mass_sandwich)
-def _mass_ratio_mass_sandwich_bijector(constraint):
+class ComponentMassesToChirpMassAndDelta(Transform):
+    r"""
+    .. math::
+        f: (m_1, m_2) -> (M_c, \delta)
+
+    .. math::
+        M_c = \frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}}
+
+    .. math::
+        \delta = \frac{m_1-m_2}{m1+m_2}
+
+    .. math::
+        det(J_f) = -\frac{4M_c}{5(m_1+m_2)^2}
+    """
+
+    domain = positive_decreasing_vector
+    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+
+    def __call__(self, x):
+        m1 = x[..., 0]
+        m2 = x[..., 1]
+        Mc = chirp_mass(m1=m1, m2=m2)
+        delta = delta_m(m1=m1, m2=m2)
+        return jnp.stack((Mc, delta), axis=-1)
+
+    def _inverse(self, y):
+        Mc = y[..., 0]
+        delta = y[..., 1]
+        m1, m2 = Mc_delta_to_m1_m2(Mc=Mc, delta=delta)
+        return jnp.stack((m1, m2), axis=-1)
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        m1 = x[..., 0]
+        m2 = x[..., 1]
+        M = total_mass(m1=m1, m2=m2)
+        log_Mc = jnp.log(y[..., 0])
+        log_detJ = jnp.log(0.8)
+        log_detJ = jnp.add(log_detJ, log_Mc)
+        log_detJ = jnp.add(log_detJ, jnp.multiply(-2.0, jnp.log(M)))
+        return log_detJ
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+
+@biject_to.register(unique_intervals)
+def _transform_to_unique_intervals(constraint):
     return ComposeTransform(
         [
-            PrimaryMassMassRatioToComponentMassesTransform(
-                mmin=constraint.mmin, mmax=constraint.mmax
+            ReshapeTransform(
+                forward_shape=constraint.lower_bounds.shape,
+                inverse_shape=(constraint.lower_bounds.size,),
             ),
-            OrderedTransform(),
-            ExpTransform(),
         ]
     )
 
 
-# TODO: tests not passing for this bijector
-# @biject_to.register(mass_sandwich)
-# def _mass_sandwich_bijector(constraint):
-#     return ComposeTransform(
-#         [
-#             PermuteTransform(jnp.array([1, 0])).inv,
-#             ComponentMassesToChirpMassAndSymmetricMassRatio().inv,
-#             OrderedTransform(),
-#             SoftplusTransform(),
-#         ]
-#     )
+@biject_to.register(type(positive_decreasing_vector))
+@biject_to.register(type(decreasing_vector))
+@biject_to.register(type(strictly_decreasing_vector))
+def _transform_to_positive_ordered_vector(constraint):
+    """I want things to be positive and in decreasing order."""
+    return ComposeTransform(
+        [
+            AbsTransform(),
+            OrderedTransform(),
+            PowerTransform(-1.0),
+        ]
+    )
 
-# @biject_to.register(type(chirp_mass_symmetric_mass_ratio_sandwich))
-# def _chirp_mass_symmetric_mass_ratio_sandwich_bijector(constraint):
-#     return ComposeTransform(
-#         [
-#             ComponentMassesToChirpMassAndSymmetricMassRatio(),
-#             OrderedTransform().inv,
-#             ExpTransform(),
-#         ]
-#     )
+
+@biject_to.register(type(positive_increasing_vector))
+@biject_to.register(type(increasing_vector))
+@biject_to.register(type(strictly_increasing_vector))
+def _transform_to_positive_ordered_vector(constraint):
+    """I want things to be positive and in decreasing order."""
+    return ComposeTransform(
+        [
+            AbsTransform(),
+            OrderedTransform(),
+        ]
+    )

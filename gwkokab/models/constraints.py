@@ -14,9 +14,15 @@
 
 
 from gwkokab._src.models.utils.constraints import (
-    chirp_mass_symmetric_mass_ratio_sandwich as chirp_mass_symmetric_mass_ratio_sandwich,
+    decreasing_vector as decreasing_vector,
     greater_than_equal_to as greater_than_equal_to,
+    increasing_vector as increasing_vector,
     less_than_equal_to as less_than_equal_to,
     mass_ratio_mass_sandwich as mass_ratio_mass_sandwich,
     mass_sandwich as mass_sandwich,
+    positive_decreasing_vector as positive_decreasing_vector,
+    positive_increasing_vector as positive_increasing_vector,
+    strictly_decreasing_vector as strictly_decreasing_vector,
+    strictly_increasing_vector as strictly_increasing_vector,
+    unique_intervals as unique_intervals,
 )

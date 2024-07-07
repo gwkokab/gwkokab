@@ -14,19 +14,30 @@
 
 
 from jax import numpy as jnp
-from numpyro.distributions import constraints
+from numpyro.distributions.constraints import (
+    _SingletonConstraint,
+    Constraint,
+    independent,
+    positive,
+)
 
 
 __all__ = [
-    "chirp_mass_symmetric_mass_ratio_sandwich",
+    "decreasing_vector",
     "greater_than_equal_to",
+    "increasing_vector",
     "less_than_equal_to",
     "mass_ratio_mass_sandwich",
     "mass_sandwich",
+    "positive_decreasing_vector",
+    "positive_increasing_vector",
+    "strictly_decreasing_vector",
+    "strictly_increasing_vector",
+    "unique_intervals",
 ]
 
 
-class _GreaterThanEqualTo(constraints.Constraint):
+class _GreaterThanEqualTo(Constraint):
     r"""Constrain values to be greater than or equal to a given value."""
 
     def __init__(self, lower_bound: float):
@@ -42,7 +53,7 @@ class _GreaterThanEqualTo(constraints.Constraint):
         return (self.lower_bound,), (("lower_bound",), dict())
 
 
-class _LessThanEqualTo(constraints.Constraint):
+class _LessThanEqualTo(Constraint):
     r"""Constrain values to be less than or equal to a given value."""
 
     def __init__(self, upper_bound: float):
@@ -58,7 +69,7 @@ class _LessThanEqualTo(constraints.Constraint):
         return (self.upper_bound,), (("upper_bound",), dict())
 
 
-class _MassSandwichConstraint(constraints.Constraint):
+class _MassSandwichConstraint(Constraint):
     r"""Constrain mass values to lie within a sandwiched interval.
 
     $$m_{\text{min}} \leq m_2 \leq m_1 \leq m_{\text{max}}$$
@@ -86,7 +97,7 @@ class _MassSandwichConstraint(constraints.Constraint):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
 
-class _MassRationMassSandwichConstraint(constraints.Constraint):
+class _MassRationMassSandwichConstraint(Constraint):
     r"""Constrain primary mass to lie within a sandwiched interval
     and the mass ratio to lie within a given interval. This is a
     transformed version of the :class:`_MassSandwichConstraint`.
@@ -121,32 +132,150 @@ class _MassRationMassSandwichConstraint(constraints.Constraint):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
 
-class _ChirpMassSymmetricMassRatioConstraint(constraints.Constraint):
-    r"""Constraint for chirp mass and symmetric mass ratio.
-    
-    .. math ::
-        \begin{align*}
-            0 < M_c \\
-            0 < \eta \leq \frac{1}{4}
-        \end{align*}
-    """
+class _UniqueIntervals(Constraint):
+    """A constraint representing a set of unique intervals for a single dimension."""
+
+    event_dim = 1
+
+    def __init__(self, lower_bounds, upper_bounds) -> None:
+        assert isinstance(lower_bounds, (list, tuple, jnp.ndarray))
+        assert isinstance(upper_bounds, (list, tuple, jnp.ndarray))
+        assert len(lower_bounds) == len(upper_bounds), (
+            f"lower_bounds and upper_bounds must have the same length, "
+            f"but got {len(lower_bounds)} and {len(upper_bounds)}"
+        )
+        self.lower_bounds = jnp.asarray(lower_bounds)
+        self.upper_bounds = jnp.asarray(upper_bounds)
+
+    def __call__(self, x):
+        r"""Check if the input is within the specified intervals
+
+        .. math::
+            \bigwedge_{i=1}^{n} (x_i \in [a_i, b_i])
+
+        :param x: The input to be checked.
+        """
+        less_than = jnp.all(x <= self.upper_bounds, axis=-1)
+        greater_than = jnp.all(x >= self.lower_bounds, axis=-1)
+        return less_than & greater_than
+
+    def feasible_like(self, prototype):
+        return jnp.broadcast_to(
+            (self.lower_bounds + self.upper_bounds) / 2, jnp.shape(prototype)
+        )
+
+    def tree_flatten(self):
+        return (self.lower_bounds, self.upper_bounds), (
+            ("lower_bounds", "upper_bounds"),
+            dict(),
+        )
+
+    def __eq__(self, other):
+        if not isinstance(other, _UniqueIntervals):
+            return False
+        return jnp.array_equal(self.lower_bounds, other.lower_bounds) & jnp.array_equal(
+            self.upper_bounds, other.upper_bounds
+        )
+
+
+class _IncreasingVector(_SingletonConstraint):
+    r"""Constrain values to be increasing, i.e. x[i] <= x[i+1] for all i."""
 
     event_dim = 1
 
     def __call__(self, x):
-        Mc = x[..., 0]
-        eta = x[..., 1]
-        mask = jnp.greater(Mc, 0.0)
-        mask = jnp.logical_and(mask, jnp.greater(eta, 0.0))
-        mask = jnp.logical_and(mask, jnp.less_equal(eta, 0.25))
-        return mask
+        return jnp.all(x[..., 1:] >= x[..., :-1], axis=-1)
 
     def tree_flatten(self):
         return (), ((), dict())
 
+    def __eq__(self, other):
+        return isinstance(other, _IncreasingVector)
 
-chirp_mass_symmetric_mass_ratio_sandwich = _ChirpMassSymmetricMassRatioConstraint()
+
+class _DecreasingVector(_SingletonConstraint):
+    r"""Constrain values to be decreasing, i.e. x[i] >= x[i+1] for all i."""
+
+    event_dim = 1
+
+    def __call__(self, x):
+        return jnp.all(x[..., 1:] <= x[..., :-1], axis=-1)
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, _DecreasingVector)
+
+
+class _StrictlyIncreasingVector(_SingletonConstraint):
+    r"""Constrain values to be strictly increasing, i.e. x[i] < x[i+1] for all i."""
+
+    event_dim = 1
+
+    def __call__(self, x):
+        return jnp.all(x[..., 1:] > x[..., :-1], axis=-1)
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, _StrictlyIncreasingVector)
+
+
+class _StrictlyDecreasingVector(_SingletonConstraint):
+    r"""Constrain values to be strictly decreasing, i.e. x[i] > x[i+1] for all i."""
+
+    event_dim = 1
+
+    def __call__(self, x):
+        return jnp.all(x[..., 1:] < x[..., :-1], axis=-1)
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, _StrictlyDecreasingVector)
+
+
+class _PositiveIncreasingVector(_SingletonConstraint):
+    r"""Constrain values to be positive and increasing, i.e. x[i] <= x[i+1] for all i."""
+
+    event_dim = 1
+
+    def __call__(self, x):
+        return increasing_vector.check(x) & independent(positive, 1).check(x)
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, _PositiveIncreasingVector)
+
+
+class _PositiveDecreasingVector(_SingletonConstraint):
+    r"""Constrain values to be positive and decreasing, i.e. x[i] >= x[i+1] for all i."""
+
+    event_dim = 1
+
+    def __call__(self, x):
+        return decreasing_vector.check(x) & independent(positive, 1).check(x)
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, _PositiveDecreasingVector)
+
+
 greater_than_equal_to = _GreaterThanEqualTo
 less_than_equal_to = _LessThanEqualTo
 mass_sandwich = _MassSandwichConstraint
 mass_ratio_mass_sandwich = _MassRationMassSandwichConstraint
+unique_intervals = _UniqueIntervals
+increasing_vector = _IncreasingVector()
+decreasing_vector = _DecreasingVector()
+strictly_increasing_vector = _StrictlyIncreasingVector()
+strictly_decreasing_vector = _StrictlyDecreasingVector()
+positive_increasing_vector = _PositiveIncreasingVector()
+positive_decreasing_vector = _PositiveDecreasingVector()

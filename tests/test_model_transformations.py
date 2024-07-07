@@ -8,21 +8,16 @@ import pytest
 from jax import jacfwd, random, vmap
 from numpyro.distributions.transforms import biject_to
 
+from gwkokab.models import constraints
 from gwkokab.models.transformations import (
     DeltaToSymmetricMassRatio,
-    PrimaryMassMassRatioToComponentMassesTransform,
 )
 
 
 @pytest.mark.parametrize(
     "transform, shape",
     [
-        (
-            PrimaryMassMassRatioToComponentMassesTransform(10, 50),
-            (2,),
-        ),
         (DeltaToSymmetricMassRatio(), ()),
-        # (ComponentMassesToChirpMassAndSymmetricMassRatio(), (2,)),
     ],
 )
 def test_bijective_transforms(transform, shape):
@@ -59,3 +54,26 @@ def test_bijective_transforms(transform, shape):
         )
         slogdet = jnp.linalg.slogdet(jac)
         assert jnp.allclose(log_abs_det_jacobian, slogdet.logabsdet, atol=atol)
+
+
+@pytest.mark.parametrize(
+    "constraint, shape",
+    [
+        (constraints.unique_intervals((-10, -8, -6, -4), (4, 6, 8, 10)), (4,)),
+        (constraints.positive_decreasing_vector, (5,)),
+        (constraints.decreasing_vector, (5,)),
+        (constraints.strictly_decreasing_vector, (5,)),
+        (constraints.positive_increasing_vector, (5,)),
+        (constraints.increasing_vector, (5,)),
+        (constraints.strictly_increasing_vector, (5,)),
+    ],
+    ids=str,
+)
+def test_biject_to(constraint, shape):
+    batch_shape = (13, 19)
+    unconstrained = random.normal(random.key(93), batch_shape + shape)
+    constrained = biject_to(constraint)(unconstrained)
+    passed = constraint.check(constrained)
+    expected_shape = constrained.shape[: constrained.ndim - constraint.event_dim]
+    assert passed.shape == expected_shape
+    assert jnp.all(passed)
