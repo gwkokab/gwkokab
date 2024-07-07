@@ -31,11 +31,11 @@ class BayesianHierarchicalModel:
     r"""This class is used to provide a likelihood function for the
     inhomogeneous Poisson process. The likelihood is given by,
 
-    $$
+    .. math::
         \log\mathcal{L}(\Lambda) \propto -\mu(\Lambda)
         +\log\sum_{n=1}^N \int \ell_n(\lambda) \rho(\lambda\mid\Lambda)
         \mathrm{d}\lambda
-    $$
+
 
     where, $\displaystyle\rho(\lambda\mid\Lambda) =
     \frac{\mathrm{d}N}{\mathrm{d}V\mathrm{d}t \mathrm{d}\lambda}$ is the merger
@@ -46,21 +46,19 @@ class BayesianHierarchicalModel:
     $p(\Lambda\mid\text{data})$ by multiplying the likelihood by a prior
     $\pi(\Lambda)$.
 
-    $$
+    .. math::
         p(\Lambda\mid\text{data}) \propto \pi(\Lambda) \mathcal{L}(\Lambda)
-    $$
 
     The integral inside the main likelihood expression is then evaluated via
     Monte Carlo as
 
-    $$
+    .. math::
         \int \ell_n(\lambda) \rho(\lambda\mid\Lambda) \mathrm{d}\lambda \propto
         \int \frac{p(\lambda | \mathrm{data}_n)}{\pi_n(\lambda)}
         \rho(\lambda\mid\Lambda) \mathrm{d}\lambda \approx
         \frac{1}{N_{\mathrm{samples}}}
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
-    $$
     """
 
     def __init__(
@@ -162,10 +160,9 @@ class BayesianHierarchicalModel:
         r"""This function calculates the integral inside the term
         $\exp(\Lambda)$ in the likelihood function. The integral is given by,
 
-        $$
+        .. math::
             \mu(\Lambda) =
             \int \mathrm{VT}(\lambda)\rho(\lambda\mid\Lambda) \mathrm{d}\lambda
-        $$
 
         :param rparams: Parameters for the model.
         :return: Integral.
@@ -237,7 +234,8 @@ class BayesianHierarchicalModel:
     def log_posterior(self, x: Array, data: Optional[dict] = None) -> Array:
         r"""The likelihood function for the inhomogeneous Poisson process.
 
-        $$p(\Lambda\mid\text{data})$$
+        .. math::
+            p(\Lambda\mid\text{data})
 
         :param x: Recovered parameters.
         :param data: Data provided by the user/sampler.

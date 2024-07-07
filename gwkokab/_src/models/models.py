@@ -49,7 +49,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
     from the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog](https://arxiv.org/abs/2010.14533).
 
-    $$
+    .. math::
         \begin{align*}
             p(m_1) &\propto \begin{cases}
                 m_1^{-\alpha_1}S(m_1\mid m_{\text{min}},\delta_m)
@@ -60,7 +60,6 @@ class BrokenPowerLawMassModel(dist.Distribution):
             \end{cases} \\
             p(q\mid m_1) &\propto q^{\beta_q}S(m_1q\mid m_{\text{min}},\delta_m)
         \end{align*}
-    $$
       
     Where $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel,
     defined in [`gwkokab.models.utils.smoothing.
@@ -163,7 +162,6 @@ class BrokenPowerLawMassModel(dist.Distribution):
         r"""Log probability of primary mass model.
         
         .. math::
-
             \log p(m_1) = \begin{cases}
                 \log S(m_1\mid m_{\text{min}},\delta_m) 
                 - \log Z_{\text{primary}}
@@ -255,7 +253,7 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.Multivariat
     the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog](https://arxiv.org/abs/2010.14533).
     
-    $$
+    .. math::
         \left(\chi_{\text{eff}}, \chi_{p}\right) \sim \mathcal{N}\left(
             \begin{bmatrix}
                 \mu_{\text{eff}} \\ \mu_{p}
@@ -265,7 +263,6 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.Multivariat
                 \rho \sigma_{\text{eff}} \sigma_{p} & \sigma_{p}^2
             \end{bmatrix}
         \right)
-    $$
     
     where $\chi_{\text{eff}}$ is the effective spin and
     $\chi_{\text{eff}}\in[-1,1]$ and $\chi_{p}$ is the precessing spin and
@@ -305,11 +302,10 @@ def IndependentSpinOrientationGaussianIsotropic(
     distributed components. See Eq. (4) of [Determining the population
     properties of spinning black holes](https://arxiv.org/abs/1704.08370).
 
-    $$
+    .. math::
         p(z_1,z_2\mid\zeta,\sigma_1,\sigma_2) = \frac{1-\zeta}{4} +
         \zeta\mathbb{I}_{[-1,1]}(z_1)\mathbb{I}_{[-1,1]}(z_2)
         \mathcal{N}(z_1\mid 1,\sigma_1)\mathcal{N}(z_2\mid 1,\sigma_2)
-    $$
 
     where $\mathbb{I}(\cdot)$ is the indicator function.
 
@@ -340,27 +336,23 @@ class MultiPeakMassModel(dist.Distribution):
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog](https://arxiv.org/abs/2010.14533).
 
-    $$
+    .. math::
         p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},m_{\text{max}},
         \mu,\sigma)\propto \left[(1-\lambda)m_1^{-\alpha}
         \Theta(m_\text{max}-m_1)
         +\lambda\lambda_1\varphi\left(\frac{m_1-\mu_1}{\sigma_1}\right)
         +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}\right)
         \right]S(m_1\mid m_{\text{min}},\delta)
-    $$
 
-    $$
+    .. math::
         p(q\mid \beta, m_1,m_{\text{min}},\delta)\propto
         q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
-    $$
 
     Where,
 
-    $$
+    .. math::
         \varphi(x)=\frac{1}{\sigma\sqrt{2\pi}}
         \exp{\left(\displaystyle-\frac{x^{2}}{2}\right)}
-    $$
-
 
     $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel,
     defined in [`gwkokab.models.utils.smoothing
@@ -475,7 +467,7 @@ class MultiPeakMassModel(dist.Distribution):
     def _log_prob_primary_mass_model(self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
 
-        $$
+        .. math::
             \begin{multline*}
                 p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},
                 m_{\text{max}},\mu,\sigma)\propto\\
@@ -484,7 +476,6 @@ class MultiPeakMassModel(dist.Distribution):
                 +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}
                 \right)\right]S(m_1\mid m_{\text{min}},\delta)
             \end{multline*}
-        $$
         
         :param m1: primary mass
         :return: log probability of primary mass
@@ -527,10 +518,9 @@ class MultiPeakMassModel(dist.Distribution):
     ) -> Array | Real:
         r"""Log probability of mass ratio model
 
-        $$
+        .. math::
             \log p(q\mid m_1) = \beta \log q +
             \log S(m_1q\mid m_{\text{min}},\delta_m)
-        $$
 
         :param m1: primary mass
         :param q: mass ratio
@@ -626,7 +616,7 @@ class PowerLawPeakMassModel(dist.Distribution):
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog](https://arxiv.org/abs/2010.14533).
 
-    $$
+    .. math::
         \begin{align*}
             p(m_1\mid\lambda,\alpha,\delta,m_{\text{min}},m_{\text{max}},
             \mu,\sigma)
@@ -638,7 +628,6 @@ class PowerLawPeakMassModel(dist.Distribution):
             p(q\mid \beta, m_1,m_{\text{min}},\delta)
             &\propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
         \end{align*}
-    $$
         
     Where $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel, defined
     in [`gwkokab.models.utils.smoothing
@@ -827,16 +816,16 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     modelling primary mass and conditional mass ratio
     distribution.
 
-    $$p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)$$
+    .. math::
+        p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
     
-    $$
+    .. math::
         \begin{align*}
             p(m_1\mid\alpha)&
             \propto m_1^{\alpha},\qquad m_{\text{min}}\leq m_1\leq m_{\max}\\
             p(q\mid m_1,\beta)&
             \propto q^{\beta},\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
         \end{align*}
-    $$
     """
 
     arg_constraints = {
@@ -920,27 +909,25 @@ class TruncatedPowerLaw(dist.Distribution):
         interchangeably. This class is the implementation of power law that has
         been restricted over a closed interval.
 
-    $$  
+    .. math::  
         p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=
         \begin{cases}
             \displaystyle\frac{x^{\alpha}}{\mathcal{Z}}
             & 0<x_{\text{min}}\leq x\leq x_{\text{max}}\\
             0 & \text{otherwise}
         \end{cases}
-    $$
 
     where $\mathcal{Z}$ is the normalization constant and $\alpha$ is the power
     law index. $x_{\text{min}}$ and $x_{\text{max}}$ are the lower and upper
     truncation limits, respectively. The normalization constant is given by,
     
-    $$
+    .. math::
         \mathcal{Z}:=\begin{cases}
             \log{x_{\text{max}}}-\log{x_{\text{min}}} & \alpha = -1 \\
             \displaystyle
             \frac{x_{\text{max}}^{1+\alpha}-x_{\text{min}}^{1+\alpha}}{1+\alpha}
             & \text{otherwise}
         \end{cases}
-    $$
     """
 
     arg_constraints = {
@@ -1030,10 +1017,9 @@ class Wysocki2019MassModel(dist.Distribution):
     equation 7 of the [Reconstructing phenomenological distributions of compact
     binaries via gravitational wave observations](https://arxiv.org/abs/1805.06442).
 
-    $$
+    .. math::
         p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
         \frac{m_1^{-\alpha}}{m_1-m_{\text{min}}}
-    $$
     """
 
     arg_constraints = {

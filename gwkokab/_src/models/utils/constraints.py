@@ -72,7 +72,8 @@ class _LessThanEqualTo(Constraint):
 class _MassSandwichConstraint(Constraint):
     r"""Constrain mass values to lie within a sandwiched interval.
 
-    $$m_{\text{min}} \leq m_2 \leq m_1 \leq m_{\text{max}}$$
+    .. math::
+        m_{\text{min}} \leq m_2 \leq m_1 \leq m_{\text{max}}
     """
 
     event_dim = 1
@@ -102,12 +103,11 @@ class _MassRationMassSandwichConstraint(Constraint):
     and the mass ratio to lie within a given interval. This is a
     transformed version of the :class:`_MassSandwichConstraint`.
     
-    $$
+    .. math::
         \begin{align*}
             m_{\text{min}}             & \leq m_1 \leq m_{\max} \\
             \frac{m_{\text{min}}}{m_1} & \leq q   \leq 1
         \end{align*}
-    $$
     """
 
     event_dim = 1

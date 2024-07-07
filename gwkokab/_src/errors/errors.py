@@ -31,7 +31,9 @@ def normal_error(
 ) -> Array:
     r"""Add normal error to the given values.
 
-    $$x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale})$$
+    .. math::
+
+        x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale})
 
     :param x: given values
     :param size: number of samples
@@ -60,7 +62,8 @@ def truncated_normal_error(
 ) -> Array:
     r"""Add truncated normal error to the given values.
 
-    $$x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale}) \cap [lower, upper]$$
+    .. math::
+        x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale}) \cap [lower, upper]
 
     :param x: given values
     :param size: number of samples
@@ -83,7 +86,8 @@ def uniform_error(
 ) -> Array:
     r"""Add uniform error to the given values.
 
-    $$x' \sim x+\mathcal{U}(a=lower, b=upper)$$
+    .. math::
+        x' \sim x+\mathcal{U}(a=lower, b=upper)
 
     :param x: given values
     :param size: number of samples
@@ -111,15 +115,13 @@ def banana_error_m1_m2(
     error. It adds errors in the chirp mass and symmetric mass ratio and then
     converts back to masses.
 
-    $$
+    .. math::
+
         M_{c} = M_{c}^{T}
         \left[1+\alpha\frac{12}{\rho}\left(r_{0}+r\right)\right]
-    $$
 
-    $$
         \eta = \eta^{T}
         \left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
-    $$
 
     :param x: given values as m1 and m2
     :param size: number of samples
