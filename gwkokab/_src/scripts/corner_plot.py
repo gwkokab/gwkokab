@@ -108,7 +108,7 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--truth-color",
         help="color of the truth values in the corner plot",
-        default="#F1C40F",
+        default="red",
         type=str,
     )
     parser.add_argument(
