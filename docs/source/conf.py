@@ -82,6 +82,8 @@ html_theme_options = {
     "use_repository_button": True,  # add a "link to repository" button
     "navigation_with_keys": False,
     "use_download_button": True,
+    "collapse_navbar": True,
+    "home_page_in_toc": True,
 }
 
 
