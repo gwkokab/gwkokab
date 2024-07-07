@@ -83,10 +83,17 @@ dev = [
 ]
 
 docs = [
-    'mkdocs',
-    'mkdocstrings',
-    'mkdocs-material',
-    'mkdocs-include-markdown-plugin',
+    'nbsphinx',
+    'readthedocs-sphinx-search',
+    'sphinx',
+    'sphinx_book_theme',
+    'sphinx_copybutton',
+    'sphinxcontrib-bibtex',
+    'sphinxcontrib-napoleon',
+    'sphinxcontrib-programoutput',
+    'sphinxcontrib-spelling',
+    'sphinxcontrib-trio',
+    'sphinxcontrib-websupport'
 ]
 
 [project.urls]

@@ -43,7 +43,7 @@ repos:
         language: pygrep
         types: [text]
         exclude: LICENSE
-        exclude_types: [python, bib, gitignore, jupyter]
+        exclude_types: [python, bib, gitignore, jupyter, makefile]
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4
     hooks:
