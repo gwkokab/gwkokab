@@ -46,6 +46,7 @@ class Parameter(object):
         assert isinstance(
             prior, dist.Distribution
         ), "Prior must be a numpyro.distributions.Distribution object."
+        prior._validate_args = True
         self._prior = prior
         self._name = name
 
