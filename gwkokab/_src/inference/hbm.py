@@ -37,14 +37,14 @@ class BayesianHierarchicalModel:
         \mathrm{d}\lambda
 
 
-    where, $\displaystyle\rho(\lambda\mid\Lambda) =
-    \frac{\mathrm{d}N}{\mathrm{d}V\mathrm{d}t \mathrm{d}\lambda}$ is the merger
-    rate density for a population parameterized by $\Lambda$, $\mu(\Lambda)$ is
+    where, :math:`\displaystyle\rho(\lambda\mid\Lambda) =
+    \frac{\mathrm{d}N}{\mathrm{d}V\mathrm{d}t \mathrm{d}\lambda}` is the merger
+    rate density for a population parameterized by :math:`\Lambda`, :math:`\mu(\Lambda)` is
     the expected number of detected mergers for that population, and
-    $\ell_n(\lambda)$ is the likelihood for the $n$th observed event's
+    :math:`\ell_n(\lambda)` is the likelihood for the :math:`n`th observed event's
     parameters. Using Bayes' theorem, we can obtain the posterior
-    $p(\Lambda\mid\text{data})$ by multiplying the likelihood by a prior
-    $\pi(\Lambda)$.
+    :math:`p(\Lambda\mid\text{data})` by multiplying the likelihood by a prior
+    :math:`\pi(\Lambda)`.
 
     .. math::
         p(\Lambda\mid\text{data}) \propto \pi(\Lambda) \mathcal{L}(\Lambda)
@@ -158,7 +158,7 @@ class BayesianHierarchicalModel:
 
     def exp_rate_integral(self, x: Array) -> Array:
         r"""This function calculates the integral inside the term
-        $\exp(\Lambda)$ in the likelihood function. The integral is given by,
+        :math:`\exp(\Lambda)` in the likelihood function. The integral is given by,
 
         .. math::
             \mu(\Lambda) =

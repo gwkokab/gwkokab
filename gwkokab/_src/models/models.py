@@ -61,10 +61,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
             p(q\mid m_1) &\propto q^{\beta_q}S(m_1q\mid m_{\text{min}},\delta_m)
         \end{align*}
       
-    Where $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel,
-    defined in [`gwkokab.models.utils.smoothing.
-    smoothing_kernel`]
-    (utils.html#gwkokab.models.utils.smoothing.smoothing_kernel).
+    Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel.
     """
 
     arg_constraints = {
@@ -97,8 +94,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
         :param mmax: Maximum mass
         :param mbreak: Break mass
         :param delta: Smoothing parameter
-        :param default_params: If `True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If `False`, the
+        :param default_params: If :code:`True`, the model will use the default
+            parameters i.e. primary mass and secondary mass. If :code:`False`, the
             model will use primary mass and mass ratio.
         """
         (
@@ -264,9 +261,9 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.Multivariat
             \end{bmatrix}
         \right)
     
-    where $\chi_{\text{eff}}$ is the effective spin and
-    $\chi_{\text{eff}}\in[-1,1]$ and $\chi_{p}$ is the precessing spin and
-    $\chi_{p}\in[0,1]$.
+    where :math:`\chi_{\text{eff}}` is the effective spin and
+    :math:`\chi_{\text{eff}}\in[-1,1]` and :math:`\chi_{p}` is the precessing spin and
+    :math:`\chi_{p}\in[0,1]`.
 
     :param mu_eff: mean of the effective spin
     :param sigma_eff: standard deviation of the effective spin
@@ -307,7 +304,7 @@ def IndependentSpinOrientationGaussianIsotropic(
         \zeta\mathbb{I}_{[-1,1]}(z_1)\mathbb{I}_{[-1,1]}(z_2)
         \mathcal{N}(z_1\mid 1,\sigma_1)\mathcal{N}(z_2\mid 1,\sigma_2)
 
-    where $\mathbb{I}(\cdot)$ is the indicator function.
+    where :math:`\mathbb{I}(\cdot)` is the indicator function.
 
     :param zeta: The mixing probability of the second component.
     :param sigma1: The standard deviation of the first component.
@@ -354,11 +351,8 @@ class MultiPeakMassModel(dist.Distribution):
         \varphi(x)=\frac{1}{\sigma\sqrt{2\pi}}
         \exp{\left(\displaystyle-\frac{x^{2}}{2}\right)}
 
-    $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel,
-    defined in [`gwkokab.models.utils.smoothing
-    .smoothing_kernel`]
-    (utils.html#gwkokab.models.utils.smoothing.smoothing_kernel),
-    and $\Theta$ is the Heaviside step function.
+    :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
+    and :math:`\Theta` is the Heaviside step function.
     """
 
     arg_constraints = {
@@ -404,8 +398,8 @@ class MultiPeakMassModel(dist.Distribution):
         :param sigma1: Standard deviation of first Gaussian component
         :param mu2: Mean of second Gaussian component
         :param sigma2: Standard deviation of second Gaussian component
-        :param default_params: If `True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If `False`, the
+        :param default_params: If :code:`True`, the model will use the default
+            parameters i.e. primary mass and secondary mass. If :code:`False`, the
             model will use primary mass and mass ratio.
         """
         (
@@ -572,26 +566,11 @@ class MultiPeakMassModel(dist.Distribution):
 def NDistribution(
     distribution: dist.Distribution, n: Int, **params
 ) -> dist.MixtureGeneral:
-    """Mixture of any $n$ distributions.
-
-    ```python
-    >>> distribution = NDistribution(
-    ...     distribution=dist.MultivariateNormal,
-    ...     n=4,
-    ...     loc_0=jnp.array([2.0, 2.0]),
-    ...     covariance_matrix_0=jnp.eye(2),
-    ...     loc_1=jnp.array([-2.0, -2.0]),
-    ...     covariance_matrix_1=jnp.eye(2),
-    ...     loc_2=jnp.array([-2.0, 2.0]),
-    ...     covariance_matrix_2=jnp.eye(2),
-    ...     loc_3=jnp.array([2.0, -2.0]),
-    ...     covariance_matrix_3=jnp.eye(2),
-    ... )
-    ```
+    """Mixture of any :math:`n` distributions.
 
     :param distribution: distribution to mix
     :param n: number of components
-    :return: Mixture of $n$ distributions
+    :return: Mixture of :math:`n` distributions
     """
     arg_names = distribution.arg_constraints.keys()
     mixing_dist = dist.Categorical(probs=jnp.divide(jnp.ones(n), n), validate_args=True)
@@ -629,10 +608,8 @@ class PowerLawPeakMassModel(dist.Distribution):
             &\propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
         \end{align*}
         
-    Where $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel, defined
-    in [`gwkokab.models.utils.smoothing
-    .smoothing_kernel`](utils.html#gwkokab.models.utils.smoothing.smoothing_kernel),
-    and $\Theta$ is the Heaviside step function.
+    Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
+    and :math:`\Theta` is the Heaviside step function.
     """
 
     arg_constraints = {
@@ -667,8 +644,8 @@ class PowerLawPeakMassModel(dist.Distribution):
         :param mmax: Maximum mass
         :param mu: Mean of Gaussian component
         :param sigma: Standard deviation of Gaussian component
-        :param default_params: If `True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If `False`, the
+        :param default_params: If :code:`True`, the model will use the default
+            parameters i.e. primary mass and secondary mass. If :code:`False`, the
             model will use primary mass and mass ratio.
         """
         (
@@ -843,8 +820,8 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         :param beta: Power law index for mass ratio
         :param mmin: Minimum mass
         :param mmax: Maximum mass
-        :param default_params: If `True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If `False`, the
+        :param default_params: If :code:`True`, the model will use the default
+            parameters i.e. primary mass and secondary mass. If :code:`False`, the
             model will use primary mass and mass ratio.
         """
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(
@@ -917,8 +894,8 @@ class TruncatedPowerLaw(dist.Distribution):
             0 & \text{otherwise}
         \end{cases}
 
-    where $\mathcal{Z}$ is the normalization constant and $\alpha$ is the power
-    law index. $x_{\text{min}}$ and $x_{\text{max}}$ are the lower and upper
+    where :math:`\mathcal{Z}` is the normalization constant and :math:`\alpha` is the power
+    law index. :math:`x_{\text{min}}` and :math:`x_{\text{max}}` are the lower and upper
     truncation limits, respectively. The normalization constant is given by,
     
     .. math::
