@@ -16,89 +16,10 @@
 from __future__ import annotations
 
 import RIFT.lalsimutils as lalsimutils
-from jax import numpy as jnp, random as jrd, vmap
+from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, Float, Int
 
 from ..utils.transformations import chirp_mass, symmetric_mass_ratio
-
-
-def normal_error(
-    x: Array,
-    size: Int,
-    key: Array,
-    *,
-    scale: Float,
-) -> Array:
-    r"""Add normal error to the given values.
-
-    .. math::
-
-        x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale})
-
-    :param x: given values
-    :param size: number of samples
-    :param scale: standard deviation of the normal distribution
-    :return: error values
-    """
-    return vmap(
-        lambda x_: jrd.normal(
-            key=key,
-            shape=(size,),
-            dtype=x.dtype,
-        )
-        * scale
-        + x_
-    )(x)
-
-
-def truncated_normal_error(
-    x: Array,
-    size: Int,
-    key: Array,
-    *,
-    scale: Float,
-    lower: Float = 0.0,
-    upper: Float = 1.0,
-) -> Array:
-    r"""Add truncated normal error to the given values.
-
-    .. math::
-        x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale}) \cap [lower, upper]
-
-    :param x: given values
-    :param size: number of samples
-    :param scale: standard deviation of the normal distribution
-    :param lower: lower bound of the truncated normal distribution
-    :param upper: upper bound of the truncated normal distribution
-    :return: error values
-    """
-    return vmap(
-        lambda x_: jrd.truncated_normal(
-            key=key, lower=lower, upper=upper, shape=(size,)
-        )
-        * scale
-        + x_
-    )(x)
-
-
-def uniform_error(
-    x: Array, size: Int, key: Array, *, lower: Float, upper: Float
-) -> Array:
-    r"""Add uniform error to the given values.
-
-    .. math::
-        x' \sim x+\mathcal{U}(a=lower, b=upper)
-
-    :param x: given values
-    :param size: number of samples
-    :param scale:
-    :param lower: lower bound of the uniform distribution
-    :param upper: upper bound of the uniform distribution
-    :return: error values
-    """
-    return vmap(
-        lambda x_: jrd.uniform(key=key, shape=(size,), minval=lower, maxval=upper) + x_
-    )(x)
 
 
 def banana_error_m1_m2(
