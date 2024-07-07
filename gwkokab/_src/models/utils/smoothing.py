@@ -24,9 +24,9 @@ from jaxtyping import Array, Real
 def smoothing_kernel(
     mass: Array | Real, mass_min: Array | Real, delta: Array | Real
 ) -> Array | Real:
-    r"""See equation B4 in [Population Properties of Compact Objects from the
-    Second LIGO-Virgo Gravitational-Wave Transient Catalog
-    ](https://arxiv.org/abs/2010.14533).
+    r"""See equation B4 in `Population Properties of Compact Objects from the
+    Second LIGO-Virgo Gravitational-Wave Transient Catalog 
+    <https://arxiv.org/abs/2010.14533>`_.
     
     .. math::
         S(m\mid m_{\min}, \delta) = \begin{cases}

@@ -110,8 +110,8 @@ def banana_error_m1_m2(
     scale_eta: Float = 1.0,
 ) -> Array:
     r"""Add banana error to the given values. Section 3 of the
-    [Model-independent inference on compact-binary
-    observations](https://doi.org/10.1093/mnras/stw2883) discusses the banana
+    `Model-independent inference on compact-binary
+    observations <https://doi.org/10.1093/mnras/stw2883>`_ discusses the banana
     error. It adds errors in the chirp mass and symmetric mass ratio and then
     converts back to masses.
 

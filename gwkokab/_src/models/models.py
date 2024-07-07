@@ -45,9 +45,9 @@ __all__ = [
 
 
 class BrokenPowerLawMassModel(dist.Distribution):
-    r"""See equation (B7) and (B6) in [Population Properties of Compact Objects
+    r"""See equation (B7) and (B6) in `Population Properties of Compact Objects
     from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog](https://arxiv.org/abs/2010.14533).
+    Catalog <https://arxiv.org/abs/2010.14533>`_.
 
     .. math::
         \begin{align*}
@@ -246,9 +246,9 @@ class BrokenPowerLawMassModel(dist.Distribution):
 
 def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.MultivariateNormal:
     r"""Bivariate normal distribution for the effective and precessing spins.
-    See Eq. (D3) and (D4) in [Population Properties of Compact Objects from
+    See Eq. (D3) and (D4) in `Population Properties of Compact Objects from
     the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog](https://arxiv.org/abs/2010.14533).
+    Catalog <https://arxiv.org/abs/2010.14533>`_.
     
     .. math::
         \left(\chi_{\text{eff}}, \chi_{p}\right) \sim \mathcal{N}\left(
@@ -296,8 +296,8 @@ def IndependentSpinOrientationGaussianIsotropic(
     zeta, sigma1, sigma2
 ) -> dist.MixtureGeneral:
     r"""A mixture model of spin orientations with isotropic and normally
-    distributed components. See Eq. (4) of [Determining the population
-    properties of spinning black holes](https://arxiv.org/abs/1704.08370).
+    distributed components. See Eq. (4) of `Determining the population
+    properties of spinning black holes <https://arxiv.org/abs/1704.08370>`_.
 
     .. math::
         p(z_1,z_2\mid\zeta,\sigma_1,\sigma_2) = \frac{1-\zeta}{4} +
@@ -329,9 +329,9 @@ def IndependentSpinOrientationGaussianIsotropic(
 
 
 class MultiPeakMassModel(dist.Distribution):
-    r"""See equation (B9) and (B6) in [Population Properties of Compact
+    r"""See equation (B9) and (B6) in `Population Properties of Compact
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog](https://arxiv.org/abs/2010.14533).
+    Catalog <https://arxiv.org/abs/2010.14533>`_.
 
     .. math::
         p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},m_{\text{max}},
@@ -591,9 +591,9 @@ def NDistribution(
 
 
 class PowerLawPeakMassModel(dist.Distribution):
-    r"""See equation (B3) and (B6) in [Population Properties of Compact
+    r"""See equation (B3) and (B6) in `Population Properties of Compact
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog](https://arxiv.org/abs/2010.14533).
+    Catalog <https://arxiv.org/abs/2010.14533>`_.
 
     .. math::
         \begin{align*}
@@ -991,8 +991,8 @@ class TruncatedPowerLaw(dist.Distribution):
 
 class Wysocki2019MassModel(dist.Distribution):
     r"""It is a double side truncated power law distribution, as described in
-    equation 7 of the [Reconstructing phenomenological distributions of compact
-    binaries via gravitational wave observations](https://arxiv.org/abs/1805.06442).
+    equation 7 of the `Reconstructing phenomenological distributions of compact
+    binaries via gravitational wave observations <https://arxiv.org/abs/1805.06442>`_.
 
     .. math::
         p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
