@@ -7,6 +7,7 @@
 *.synctex.gz
 playground.py
 *.zip
+.DS_Store
 
 # data ignore
 *realization*
