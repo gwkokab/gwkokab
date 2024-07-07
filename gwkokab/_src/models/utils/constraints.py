@@ -133,7 +133,11 @@ class _MassRationMassSandwichConstraint(Constraint):
 
 
 class _UniqueIntervals(Constraint):
-    """A constraint representing a set of unique intervals for a single dimension."""
+    r"""A constraint representing a set of unique intervals for a single dimension.
+
+    .. math::
+        \bigwedge_{i=1}^{n} (x_i \in [a_i, b_i])
+    """
 
     event_dim = 1
 
@@ -179,7 +183,7 @@ class _UniqueIntervals(Constraint):
 
 
 class _IncreasingVector(_SingletonConstraint):
-    r"""Constrain values to be increasing, i.e. x[i] <= x[i+1] for all i."""
+    r"""Constrain values to be increasing, i.e. :math:`\forall i<j,x_i\leq x_j`."""
 
     event_dim = 1
 
@@ -194,7 +198,7 @@ class _IncreasingVector(_SingletonConstraint):
 
 
 class _DecreasingVector(_SingletonConstraint):
-    r"""Constrain values to be decreasing, i.e. x[i] >= x[i+1] for all i."""
+    r"""Constrain values to be decreasing, i.e. :math:`\forall i<j, x_i \geq x_j`."""
 
     event_dim = 1
 
@@ -209,7 +213,7 @@ class _DecreasingVector(_SingletonConstraint):
 
 
 class _StrictlyIncreasingVector(_SingletonConstraint):
-    r"""Constrain values to be strictly increasing, i.e. x[i] < x[i+1] for all i."""
+    r"""Constrain values to be strictly increasing, i.e. :math:`\forall i<j, x_i < x_j`."""
 
     event_dim = 1
 
@@ -224,7 +228,7 @@ class _StrictlyIncreasingVector(_SingletonConstraint):
 
 
 class _StrictlyDecreasingVector(_SingletonConstraint):
-    r"""Constrain values to be strictly decreasing, i.e. x[i] > x[i+1] for all i."""
+    r"""Constrain values to be strictly decreasing, i.e. :math:`\forall i<j,x_i > x_j`."""
 
     event_dim = 1
 
@@ -239,7 +243,7 @@ class _StrictlyDecreasingVector(_SingletonConstraint):
 
 
 class _PositiveIncreasingVector(_SingletonConstraint):
-    r"""Constrain values to be positive and increasing, i.e. x[i] <= x[i+1] for all i."""
+    r"""Constrain values to be positive and increasing, i.e. :math:`\forall i<j, x_i \leq x_j`."""
 
     event_dim = 1
 
@@ -254,7 +258,7 @@ class _PositiveIncreasingVector(_SingletonConstraint):
 
 
 class _PositiveDecreasingVector(_SingletonConstraint):
-    r"""Constrain values to be positive and decreasing, i.e. x[i] >= x[i+1] for all i."""
+    r"""Constrain values to be positive and decreasing, i.e. :math:`\forall i<j, x_i \geq x_j`."""
 
     event_dim = 1
 

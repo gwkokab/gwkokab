@@ -28,6 +28,7 @@ GWKokab is a JAX-based gravitational-wave population inference toolkit. It is de
 
    models
    inference
+   constraints
 
 .. toctree::
    :hidden:
