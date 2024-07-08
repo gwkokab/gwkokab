@@ -1,5 +1,9 @@
 Constraints
 ===========
+Numpyro provides a set of constraints (:class:`numpyro.distributions.constraints.Constraint`) that can be used to restrict the support of a distribution. We have defined couple of constraints which are not available in Numpyro.
+
+.. attention::
+    Uptill the release of :code:`gwkokab-0.0.1`, :code:`less_than_equal_to` and :code:`greater_than_equal_to` were not available in Numpyro. They have been added in the nightly version in the `PR #1822 <https://github.com/pyro-ppl/numpyro/pull/1822>`_ and `PR #1793 <https://github.com/pyro-ppl/numpyro/pull/1793>`_.
 
 .. autodata:: gwkokab._src.models.utils.constraints.decreasing_vector
     :no-value:

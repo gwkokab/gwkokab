@@ -1,7 +1,7 @@
 Scalar Transformations
 ======================
 
-Scalar Transformations are versatile functions that accept scalar values (:code:`int`, :code:`float`) or scalar arrays (:code:`numpy.ndarray`, :code:`jax.numpy.ndarray`) to perform various transformations. These functions simplify code by consolidating common operations into four categories:
+Scalar Transformations are versatile functions that accept scalar values (:class:`int`, :class:`float`) or scalar arrays (:class:`numpy.ndarray`, :class:`jax.Array`) to perform various transformations. These functions simplify code by consolidating common operations into four categories:
 
 - Mass Transformations
 - Spin Transformations

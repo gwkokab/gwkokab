@@ -150,3 +150,12 @@ def linkcode_resolve(domain, info):
 
 
 os.system("cp -r ../../examples .")
+
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "jax": ("https://jax.readthedocs.io/en/latest/", None),
+    "typing_extensions": ("https://typing-extensions.readthedocs.io/en/latest/", None),
+    "numpyro": ("https://num.pyro.ai/en/stable/", None),
+}
