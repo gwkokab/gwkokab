@@ -52,54 +52,97 @@ __all__ = [
 
 
 def m1_times_m2(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        f(m_1, m_2) = m_1m_2
+    """
     return jnp.multiply(m1, m2)
 
 
 def total_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        f(m_1, m_2) = m_1 + m_2
+    """
     return jnp.add(m1, m2)
 
 
 def mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        q(m_1, m_2) = \frac{m_2}{m_1}
+    """
     return jnp.divide(m2, m1)
 
 
 def chirp_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        M_c(m_1, m_2) = \frac{(m_1m_2)^{3/5}}{(m_1 + m_2)^{1/5}}
+    """
     M = total_mass(m1=m1, m2=m2)
     m1m2 = m1_times_m2(m1=m1, m2=m2)
     return jnp.multiply(jnp.power(m1m2, 0.6), jnp.power(M, -0.2))
 
 
 def symmetric_mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        \eta(m_1, m_2) = \frac{m_1m_2}{(m_1 + m_2)^2}
+    """
     M = total_mass(m1=m1, m2=m2)
     m1m2 = m1_times_m2(m1=m1, m2=m2)
     return jnp.multiply(m1m2, jnp.power(M, -2.0))
 
 
 def reduced_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        M_r(m_1, m_2) = \frac{m_1m_2}{(m_1 + m_2)}
+    """
     M = total_mass(m1=m1, m2=m2)
     m1m2 = m1_times_m2(m1=m1, m2=m2)
     return jnp.divide(m1m2, M)
 
 
 def delta_m(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        \delta_m(m_1, m_2) = \frac{m_1 - m_2}{m_1 + m_2}
+    """
     diff = jnp.subtract(m1, m2)
     M = total_mass(m1=m1, m2=m2)
     return jnp.divide(diff, M)
 
 
 def delta_m_to_symmetric_mass_ratio(*, delta_m: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        \eta(\delta_m) = \frac{1 - \delta_m^2}{4}
+    """
     delta_m_sq = jnp.square(delta_m)  # delta_m^2
     eta = jnp.multiply(0.25, jnp.subtract(1, delta_m_sq))  # (1 - delta_m^2) / 4
     return eta
 
 
 def symmetric_mass_ratio_to_delta_m(*, eta: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        \delta_m(\eta) = \sqrt{1 - 4\eta}
+    """
     eta_4 = jnp.multiply(eta, 4)  #  eta*4
     delta_m = jnp.sqrt(jnp.subtract(1, eta_4))  # sqrt(1 - 4 * eta)
     return delta_m
 
 
 def m1_m2_ordering(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
+    r"""
+    .. math::
+        f(m_1, m_2) = \begin{cases}
+            (m_1, m_2) & \text{if } m_1 \geq m_2 \\
+            (m_2, m_1) & \text{otherwise}
+        \end{cases}
+    """
     i_sorted = m1 >= m2
     m1_sorted = jnp.where(i_sorted, m1, m2)
     m2_sorted = jnp.where(i_sorted, m2, m1)
@@ -107,6 +150,10 @@ def m1_m2_ordering(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]
 
 
 def m_det_z_to_m_source(*, m_det: Array | Real, z: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        m_{\text{source}}(m_{\text{det}}, z) = \frac{m_{\text{det}}}{1 + z}
+    """
     return jnp.divide(
         m_det,
         jnp.add(1.0, z),  # 1 + z
@@ -114,6 +161,10 @@ def m_det_z_to_m_source(*, m_det: Array | Real, z: Array | Real) -> Array | Real
 
 
 def m_source_z_to_m_det(*, m_source: Array | Real, z: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        m_{\text{det}}(m_{\text{source}}, z) = m_{\text{source}}(1 + z)
+    """
     return jnp.multiply(
         m_source,
         jnp.add(1.0, z),  # 1 + z
@@ -121,10 +172,18 @@ def m_source_z_to_m_det(*, m_source: Array | Real, z: Array | Real) -> Array | R
 
 
 def m1_q_to_m2(*, m1: Array | Real, q: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        m_2(m_1, q) = m_1q
+    """
     return jnp.multiply(m1, q)  # m2 = m1 * q
 
 
 def m2_q_to_m1(*, m2: Array | Real, q: Array | Real) -> Array | Real:
+    r"""
+    .. math::
+        m_1(m_2, q) = \frac{m_2}{q}
+    """
     return jnp.divide(m2, q)  # m1 = m2 / q
 
 

@@ -29,6 +29,8 @@ from .utils import save_data_from_sampler
 
 
 class flowMChandler(object):
+    r"""Handler class for running flowMC."""
+
     def __init__(
         self,
         logpdf: Callable,
@@ -48,6 +50,11 @@ class flowMChandler(object):
         self.data = data
 
     def make_local_sampler(self) -> ProposalBase:
+        """Make a local sampler based on the given arguments.
+
+        :raises ValueError: If the sampler is not recognized.
+        :return: A local sampler.
+        """
         sampler_name = self.local_sampler_kwargs["sampler"]
         if sampler_name not in ["flowHMC", "GaussianRandomWalk", "HMC", "MALA"]:
             raise ValueError("Invalid sampler")
@@ -55,6 +62,11 @@ class flowMChandler(object):
         return eval(sampler_name)(self.logpdf, **self.local_sampler_kwargs)
 
     def make_nf_model(self) -> NFModel:
+        """Make a normalizing flow model based on the given arguments.
+
+        :raises ValueError: If the model is not recognized.
+        :return: A normalizing flow model.
+        """
         model_name = self.nf_model_kwargs["model"]
         if model_name not in ["RealNVP", "MaskedCouplingRQSpline"]:
             raise ValueError("Invalid model")
@@ -62,6 +74,10 @@ class flowMChandler(object):
         return eval(model_name)(**self.nf_model_kwargs)
 
     def make_sampler(self) -> Sampler:
+        """Make a sampler based on the given arguments.
+
+        :return: A sampler.
+        """
         return Sampler(
             local_sampler=self.make_local_sampler(),
             nf_model=self.make_nf_model(),
@@ -69,6 +85,7 @@ class flowMChandler(object):
         )
 
     def run(self) -> None:
+        """Run the flowMC sampler and save the data."""
         sampler = self.make_sampler()
         sampler.sample(self.initial_position, self.data)
         save_data_from_sampler(sampler, **self.data_dump_kwargs)
