@@ -69,6 +69,8 @@ html_static_path = ["_static"]
 #
 html_css_files = ["style.css"]
 html_theme = "sphinx_book_theme"
+html_logo = "_static/logo.png"
+html_favicon = "_static/favicon.png"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
