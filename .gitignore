@@ -8,7 +8,7 @@
 playground.py
 *.zip
 docs/source/examples
-
+docs/source/_autosummary
 # data ignore
 *realization*
 *.dat

@@ -111,6 +111,9 @@ pygments_style = None
 autosummary_generate = True
 napolean_use_rtype = False
 
+# Remove auto-generated API docs from sidebars. They take too long to build.
+remove_from_toctrees = ["_autosummary/*"]
+
 
 # do not prepend module name to functions
 add_module_names = False
