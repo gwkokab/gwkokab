@@ -158,4 +158,5 @@ intersphinx_mapping = {
     "jax": ("https://jax.readthedocs.io/en/latest/", None),
     "typing_extensions": ("https://typing-extensions.readthedocs.io/en/latest/", None),
     "numpyro": ("https://num.pyro.ai/en/stable/", None),
+    "jaxtyping": ("https://docs.kidger.site/jaxtyping/", None),
 }

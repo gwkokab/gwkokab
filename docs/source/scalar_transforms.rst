@@ -5,7 +5,7 @@ Scalar Transformations are versatile functions that accept scalar values (:class
 
 - Mass Transformations
 - Spin Transformations
-- Heterogenous Transformations
+- Heterogeneous Transformations
 - Coordinate Transformations
 
 Mass Transformations
@@ -107,7 +107,7 @@ Spin Magnitudes to Effective Spin
 
 
 
-Heterogenous Transformations
+Heterogeneous Transformations
 ----------------------------
 Heterogeneous Transformations include functions that combine various types of data, such as mass, spin magnitudes, and angles, to derive complex parameters. These transformations are crucial for integrating multiple aspects of physical systems to obtain comprehensive results.
 
