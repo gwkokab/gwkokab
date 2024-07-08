@@ -1,6 +1,10 @@
-# GWKokab
+<div align="center">
+<img src="images/logo.png" alt="logo" width="440px" height="80px"></img>
+</div>
 
-## A JAX-based gravitational-wave population inference toolkit
+<h2 align="center">
+A JAX-based gravitational-wave population inference toolkit
+</h2>
 
 ![GitHub License](https://img.shields.io/github/license/gwkokab/gwkokab)
 [![Python package](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml/badge.svg?branch=main)](https://github.com/gwkokab/gwkokab/actions/workflows/python-package.yml)
