@@ -1,3 +1,18 @@
+#  Copyright 2023 The GWKokab Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+
 from __future__ import annotations
 
 from functools import partial
@@ -30,11 +45,11 @@ __all__ = [
 
 
 class BrokenPowerLawMassModel(dist.Distribution):
-    r"""See equation (B7) and (B6) in [Population Properties of Compact Objects
+    r"""See equation (B7) and (B6) in `Population Properties of Compact Objects
     from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog](https://arxiv.org/abs/2010.14533).
+    Catalog <https://arxiv.org/abs/2010.14533>`_.
 
-    $$
+    .. math::
         \begin{align*}
             p(m_1) &\propto \begin{cases}
                 m_1^{-\alpha_1}S(m_1\mid m_{\text{min}},\delta_m)
@@ -45,12 +60,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
             \end{cases} \\
             p(q\mid m_1) &\propto q^{\beta_q}S(m_1q\mid m_{\text{min}},\delta_m)
         \end{align*}
-    $$
       
-    Where $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel,
-    defined in [`gwkokab.models.utils.smoothing.
-    smoothing_kernel`]
-    (utils.html#gwkokab.models.utils.smoothing.smoothing_kernel).
+    Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel.
     """
 
     arg_constraints = {
@@ -83,8 +94,8 @@ class BrokenPowerLawMassModel(dist.Distribution):
         :param mmax: Maximum mass
         :param mbreak: Break mass
         :param delta: Smoothing parameter
-        :param default_params: If `True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If `False`, the
+        :param default_params: If :code:`True`, the model will use the default
+            parameters i.e. primary mass and secondary mass. If :code:`False`, the
             model will use primary mass and mass ratio.
         """
         (
@@ -148,7 +159,6 @@ class BrokenPowerLawMassModel(dist.Distribution):
         r"""Log probability of primary mass model.
         
         .. math::
-
             \log p(m_1) = \begin{cases}
                 \log S(m_1\mid m_{\text{min}},\delta_m) 
                 - \log Z_{\text{primary}}
@@ -236,11 +246,11 @@ class BrokenPowerLawMassModel(dist.Distribution):
 
 def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.MultivariateNormal:
     r"""Bivariate normal distribution for the effective and precessing spins.
-    See Eq. (D3) and (D4) in [Population Properties of Compact Objects from
+    See Eq. (D3) and (D4) in `Population Properties of Compact Objects from
     the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog](https://arxiv.org/abs/2010.14533).
+    Catalog <https://arxiv.org/abs/2010.14533>`_.
     
-    $$
+    .. math::
         \left(\chi_{\text{eff}}, \chi_{p}\right) \sim \mathcal{N}\left(
             \begin{bmatrix}
                 \mu_{\text{eff}} \\ \mu_{p}
@@ -250,11 +260,10 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.Multivariat
                 \rho \sigma_{\text{eff}} \sigma_{p} & \sigma_{p}^2
             \end{bmatrix}
         \right)
-    $$
     
-    where $\chi_{\text{eff}}$ is the effective spin and
-    $\chi_{\text{eff}}\in[-1,1]$ and $\chi_{p}$ is the precessing spin and
-    $\chi_{p}\in[0,1]$.
+    where :math:`\chi_{\text{eff}}` is the effective spin and
+    :math:`\chi_{\text{eff}}\in[-1,1]` and :math:`\chi_{p}` is the precessing spin and
+    :math:`\chi_{p}\in[0,1]`.
 
     :param mu_eff: mean of the effective spin
     :param sigma_eff: standard deviation of the effective spin
@@ -287,16 +296,15 @@ def IndependentSpinOrientationGaussianIsotropic(
     zeta, sigma1, sigma2
 ) -> dist.MixtureGeneral:
     r"""A mixture model of spin orientations with isotropic and normally
-    distributed components. See Eq. (4) of [Determining the population
-    properties of spinning black holes](https://arxiv.org/abs/1704.08370).
+    distributed components. See Eq. (4) of `Determining the population
+    properties of spinning black holes <https://arxiv.org/abs/1704.08370>`_.
 
-    $$
+    .. math::
         p(z_1,z_2\mid\zeta,\sigma_1,\sigma_2) = \frac{1-\zeta}{4} +
         \zeta\mathbb{I}_{[-1,1]}(z_1)\mathbb{I}_{[-1,1]}(z_2)
         \mathcal{N}(z_1\mid 1,\sigma_1)\mathcal{N}(z_2\mid 1,\sigma_2)
-    $$
 
-    where $\mathbb{I}(\cdot)$ is the indicator function.
+    where :math:`\mathbb{I}(\cdot)` is the indicator function.
 
     :param zeta: The mixing probability of the second component.
     :param sigma1: The standard deviation of the first component.
@@ -321,37 +329,30 @@ def IndependentSpinOrientationGaussianIsotropic(
 
 
 class MultiPeakMassModel(dist.Distribution):
-    r"""See equation (B9) and (B6) in [Population Properties of Compact
+    r"""See equation (B9) and (B6) in `Population Properties of Compact
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog](https://arxiv.org/abs/2010.14533).
+    Catalog <https://arxiv.org/abs/2010.14533>`_.
 
-    $$
+    .. math::
         p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},m_{\text{max}},
         \mu,\sigma)\propto \left[(1-\lambda)m_1^{-\alpha}
         \Theta(m_\text{max}-m_1)
         +\lambda\lambda_1\varphi\left(\frac{m_1-\mu_1}{\sigma_1}\right)
         +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}\right)
         \right]S(m_1\mid m_{\text{min}},\delta)
-    $$
 
-    $$
+    .. math::
         p(q\mid \beta, m_1,m_{\text{min}},\delta)\propto
         q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
-    $$
 
     Where,
 
-    $$
+    .. math::
         \varphi(x)=\frac{1}{\sigma\sqrt{2\pi}}
         \exp{\left(\displaystyle-\frac{x^{2}}{2}\right)}
-    $$
 
-
-    $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel,
-    defined in [`gwkokab.models.utils.smoothing
-    .smoothing_kernel`]
-    (utils.html#gwkokab.models.utils.smoothing.smoothing_kernel),
-    and $\Theta$ is the Heaviside step function.
+    :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
+    and :math:`\Theta` is the Heaviside step function.
     """
 
     arg_constraints = {
@@ -397,8 +398,8 @@ class MultiPeakMassModel(dist.Distribution):
         :param sigma1: Standard deviation of first Gaussian component
         :param mu2: Mean of second Gaussian component
         :param sigma2: Standard deviation of second Gaussian component
-        :param default_params: If `True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If `False`, the
+        :param default_params: If :code:`True`, the model will use the default
+            parameters i.e. primary mass and secondary mass. If :code:`False`, the
             model will use primary mass and mass ratio.
         """
         (
@@ -460,7 +461,7 @@ class MultiPeakMassModel(dist.Distribution):
     def _log_prob_primary_mass_model(self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
 
-        $$
+        .. math::
             \begin{multline*}
                 p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},
                 m_{\text{max}},\mu,\sigma)\propto\\
@@ -469,7 +470,6 @@ class MultiPeakMassModel(dist.Distribution):
                 +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}
                 \right)\right]S(m_1\mid m_{\text{min}},\delta)
             \end{multline*}
-        $$
         
         :param m1: primary mass
         :return: log probability of primary mass
@@ -512,10 +512,9 @@ class MultiPeakMassModel(dist.Distribution):
     ) -> Array | Real:
         r"""Log probability of mass ratio model
 
-        $$
+        .. math::
             \log p(q\mid m_1) = \beta \log q +
             \log S(m_1q\mid m_{\text{min}},\delta_m)
-        $$
 
         :param m1: primary mass
         :param q: mass ratio
@@ -567,26 +566,11 @@ class MultiPeakMassModel(dist.Distribution):
 def NDistribution(
     distribution: dist.Distribution, n: Int, **params
 ) -> dist.MixtureGeneral:
-    """Mixture of any $n$ distributions.
-
-    ```python
-    >>> distribution = NDistribution(
-    ...     distribution=dist.MultivariateNormal,
-    ...     n=4,
-    ...     loc_0=jnp.array([2.0, 2.0]),
-    ...     covariance_matrix_0=jnp.eye(2),
-    ...     loc_1=jnp.array([-2.0, -2.0]),
-    ...     covariance_matrix_1=jnp.eye(2),
-    ...     loc_2=jnp.array([-2.0, 2.0]),
-    ...     covariance_matrix_2=jnp.eye(2),
-    ...     loc_3=jnp.array([2.0, -2.0]),
-    ...     covariance_matrix_3=jnp.eye(2),
-    ... )
-    ```
+    """Mixture of any :math:`n` distributions.
 
     :param distribution: distribution to mix
     :param n: number of components
-    :return: Mixture of $n$ distributions
+    :return: Mixture of :math:`n` distributions
     """
     arg_names = distribution.arg_constraints.keys()
     mixing_dist = dist.Categorical(probs=jnp.divide(jnp.ones(n), n), validate_args=True)
@@ -607,11 +591,11 @@ def NDistribution(
 
 
 class PowerLawPeakMassModel(dist.Distribution):
-    r"""See equation (B3) and (B6) in [Population Properties of Compact
+    r"""See equation (B3) and (B6) in `Population Properties of Compact
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog](https://arxiv.org/abs/2010.14533).
+    Catalog <https://arxiv.org/abs/2010.14533>`_.
 
-    $$
+    .. math::
         \begin{align*}
             p(m_1\mid\lambda,\alpha,\delta,m_{\text{min}},m_{\text{max}},
             \mu,\sigma)
@@ -623,12 +607,9 @@ class PowerLawPeakMassModel(dist.Distribution):
             p(q\mid \beta, m_1,m_{\text{min}},\delta)
             &\propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
         \end{align*}
-    $$
         
-    Where $S(m\mid m_{\text{min}},\delta_m)$ is the smoothing kernel, defined
-    in [`gwkokab.models.utils.smoothing
-    .smoothing_kernel`](utils.html#gwkokab.models.utils.smoothing.smoothing_kernel),
-    and $\Theta$ is the Heaviside step function.
+    Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
+    and :math:`\Theta` is the Heaviside step function.
     """
 
     arg_constraints = {
@@ -663,8 +644,8 @@ class PowerLawPeakMassModel(dist.Distribution):
         :param mmax: Maximum mass
         :param mu: Mean of Gaussian component
         :param sigma: Standard deviation of Gaussian component
-        :param default_params: If `True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If `False`, the
+        :param default_params: If :code:`True`, the model will use the default
+            parameters i.e. primary mass and secondary mass. If :code:`False`, the
             model will use primary mass and mass ratio.
         """
         (
@@ -812,16 +793,16 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     modelling primary mass and conditional mass ratio
     distribution.
 
-    $$p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)$$
+    .. math::
+        p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
     
-    $$
+    .. math::
         \begin{align*}
             p(m_1\mid\alpha)&
             \propto m_1^{\alpha},\qquad m_{\text{min}}\leq m_1\leq m_{\max}\\
             p(q\mid m_1,\beta)&
             \propto q^{\beta},\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
         \end{align*}
-    $$
     """
 
     arg_constraints = {
@@ -839,8 +820,8 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         :param beta: Power law index for mass ratio
         :param mmin: Minimum mass
         :param mmax: Maximum mass
-        :param default_params: If `True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If `False`, the
+        :param default_params: If :code:`True`, the model will use the default
+            parameters i.e. primary mass and secondary mass. If :code:`False`, the
             model will use primary mass and mass ratio.
         """
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(
@@ -899,33 +880,31 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
 class TruncatedPowerLaw(dist.Distribution):
     r"""A generic double side truncated power law distribution.
     
-    !!! note
+    .. note::
         There are many different definition of Power Law that include
         exponential cut-offs and interval cut-offs.  They are just
         interchangeably. This class is the implementation of power law that has
         been restricted over a closed interval.
 
-    $$  
+    .. math::  
         p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=
         \begin{cases}
             \displaystyle\frac{x^{\alpha}}{\mathcal{Z}}
             & 0<x_{\text{min}}\leq x\leq x_{\text{max}}\\
             0 & \text{otherwise}
         \end{cases}
-    $$
 
-    where $\mathcal{Z}$ is the normalization constant and $\alpha$ is the power
-    law index. $x_{\text{min}}$ and $x_{\text{max}}$ are the lower and upper
+    where :math:`\mathcal{Z}` is the normalization constant and :math:`\alpha` is the power
+    law index. :math:`x_{\text{min}}` and :math:`x_{\text{max}}` are the lower and upper
     truncation limits, respectively. The normalization constant is given by,
     
-    $$
+    .. math::
         \mathcal{Z}:=\begin{cases}
             \log{x_{\text{max}}}-\log{x_{\text{min}}} & \alpha = -1 \\
             \displaystyle
             \frac{x_{\text{max}}^{1+\alpha}-x_{\text{min}}^{1+\alpha}}{1+\alpha}
             & \text{otherwise}
         \end{cases}
-    $$
     """
 
     arg_constraints = {
@@ -1012,13 +991,12 @@ class TruncatedPowerLaw(dist.Distribution):
 
 class Wysocki2019MassModel(dist.Distribution):
     r"""It is a double side truncated power law distribution, as described in
-    equation 7 of the [Reconstructing phenomenological distributions of compact
-    binaries via gravitational wave observations](https://arxiv.org/abs/1805.06442).
+    equation 7 of the `Reconstructing phenomenological distributions of compact
+    binaries via gravitational wave observations <https://arxiv.org/abs/1805.06442>`_.
 
-    $$
+    .. math::
         p(m_1,m_2\mid\alpha,m_{\text{min}},m_{\text{max}},M_{\text{max}})\propto
         \frac{m_1^{-\alpha}}{m_1-m_{\text{min}}}
-    $$
     """
 
     arg_constraints = {

@@ -16,85 +16,10 @@
 from __future__ import annotations
 
 import RIFT.lalsimutils as lalsimutils
-from jax import numpy as jnp, random as jrd, vmap
+from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, Float, Int
 
 from ..utils.transformations import chirp_mass, symmetric_mass_ratio
-
-
-def normal_error(
-    x: Array,
-    size: Int,
-    key: Array,
-    *,
-    scale: Float,
-) -> Array:
-    r"""Add normal error to the given values.
-
-    $$x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale})$$
-
-    :param x: given values
-    :param size: number of samples
-    :param scale: standard deviation of the normal distribution
-    :return: error values
-    """
-    return vmap(
-        lambda x_: jrd.normal(
-            key=key,
-            shape=(size,),
-            dtype=x.dtype,
-        )
-        * scale
-        + x_
-    )(x)
-
-
-def truncated_normal_error(
-    x: Array,
-    size: Int,
-    key: Array,
-    *,
-    scale: Float,
-    lower: Float = 0.0,
-    upper: Float = 1.0,
-) -> Array:
-    r"""Add truncated normal error to the given values.
-
-    $$x' \sim \mathcal{N}(\mu=x, \sigma=\text{scale}) \cap [lower, upper]$$
-
-    :param x: given values
-    :param size: number of samples
-    :param scale: standard deviation of the normal distribution
-    :param lower: lower bound of the truncated normal distribution
-    :param upper: upper bound of the truncated normal distribution
-    :return: error values
-    """
-    return vmap(
-        lambda x_: jrd.truncated_normal(
-            key=key, lower=lower, upper=upper, shape=(size,)
-        )
-        * scale
-        + x_
-    )(x)
-
-
-def uniform_error(
-    x: Array, size: Int, key: Array, *, lower: Float, upper: Float
-) -> Array:
-    r"""Add uniform error to the given values.
-
-    $$x' \sim x+\mathcal{U}(a=lower, b=upper)$$
-
-    :param x: given values
-    :param size: number of samples
-    :param scale:
-    :param lower: lower bound of the uniform distribution
-    :param upper: upper bound of the uniform distribution
-    :return: error values
-    """
-    return vmap(
-        lambda x_: jrd.uniform(key=key, shape=(size,), minval=lower, maxval=upper) + x_
-    )(x)
 
 
 def banana_error_m1_m2(
@@ -106,20 +31,18 @@ def banana_error_m1_m2(
     scale_eta: Float = 1.0,
 ) -> Array:
     r"""Add banana error to the given values. Section 3 of the
-    [Model-independent inference on compact-binary
-    observations](https://doi.org/10.1093/mnras/stw2883) discusses the banana
+    `Model-independent inference on compact-binary
+    observations <https://doi.org/10.1093/mnras/stw2883>`_ discusses the banana
     error. It adds errors in the chirp mass and symmetric mass ratio and then
     converts back to masses.
 
-    $$
+    .. math::
+
         M_{c} = M_{c}^{T}
         \left[1+\alpha\frac{12}{\rho}\left(r_{0}+r\right)\right]
-    $$
 
-    $$
         \eta = \eta^{T}
         \left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
-    $$
 
     :param x: given values as m1 and m2
     :param size: number of samples
