@@ -26,7 +26,6 @@ from . import (
     models as models,
     parameters as parameters,
     population as population,
-    priors as priors,
     utils as utils,
     vts as vts,
 )
