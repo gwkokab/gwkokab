@@ -30,8 +30,4 @@ pytest
 pytest-xdist
 
 # Packages used for notebook execution
-# matplotlib
-# scikit-learn
-# numpy
-# rich[jupyter]
-# .[ci] # Install jax from the current directory; jaxlib from pypi.
+. # GWKokab from current directory
