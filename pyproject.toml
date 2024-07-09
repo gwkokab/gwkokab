@@ -83,6 +83,7 @@ dev = [
 ]
 
 docs = [
+    'ipython',
     'nbsphinx',
     'readthedocs-sphinx-search',
     'sphinx',
@@ -93,7 +94,17 @@ docs = [
     'sphinxcontrib-programoutput',
     'sphinxcontrib-spelling',
     'sphinxcontrib-trio',
-    'sphinxcontrib-websupport'
+    'sphinxcontrib-websupport',
+    'sphinx_gallery',
+    'sphinxcontrib-jquery',
+    'sphinx_remove_toctrees',
+    'sphinx_design',
+    'ablog',
+    'sphinxcontrib-youtube',
+    'sphinx_examples',
+    'sphinx_tabs',
+    'sphinx_togglebutton',
+    'sphinxext-opengraph',
 ]
 
 [project.urls]

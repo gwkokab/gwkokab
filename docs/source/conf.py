@@ -104,6 +104,8 @@ language = "en"
 exclude_patterns = [
     ".ipynb_checkpoints",
     ".DS_Store",
+    "_build",
+    "**.ipynb_checkpoints",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
