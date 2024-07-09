@@ -128,7 +128,7 @@ autodoc_type_aliases = {
 
 
 def linkcode_resolve(domain, info):
-    import jax
+    import gwkokab
 
     if domain != "py":
         return None
@@ -149,7 +149,7 @@ def linkcode_resolve(domain, info):
         source, linenum = inspect.getsourcelines(obj)
     except Exception:
         return None
-    filename = os.path.relpath(filename, start=os.path.dirname(jax.__file__))
+    filename = os.path.relpath(filename, start=os.path.dirname(gwkokab.__file__))
     lines = f"#L{linenum}-L{linenum + len(source)}" if linenum else ""
     return f"https://github.com/gwkokab/gwkokab/blob/main/gwkokab/{filename}{lines}"
 
