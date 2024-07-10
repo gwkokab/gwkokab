@@ -61,25 +61,20 @@ keywords = [
     "monte-carlo",
     "astrophysics",
     "markov-chain",
-    "deep-learning",
     "machine-learning",
     "bayesian-inference",
-    "importlib_metadata",
     "probabilistic-programming",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "mypy",
     "ruff",
     "trio",
     "wheel",
     "twine",
     "isort",
     "pytest",
-    "pyright",
     "pre-commit",
-    "pytest-cov",
 ]
 
 docs = [
@@ -89,22 +84,7 @@ docs = [
     'readthedocs-sphinx-search',
     'sphinx_book_theme',
     'sphinx_copybutton',
-    'sphinxcontrib-bibtex',
-    'sphinxcontrib-napoleon',
-    'sphinxcontrib-programoutput',
-    'sphinxcontrib-spelling',
-    'sphinxcontrib-trio',
-    'sphinxcontrib-websupport',
-    'sphinx_gallery',
-    'sphinxcontrib-jquery',
     'sphinx_remove_toctrees',
-    'sphinx_design',
-    'ablog',
-    'sphinxcontrib-youtube',
-    'sphinx_examples',
-    'sphinx_tabs',
-    'sphinx_togglebutton',
-    'sphinxext-opengraph',
 ]
 
 [project.urls]

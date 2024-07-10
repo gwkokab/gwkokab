@@ -28,31 +28,16 @@ release = "0.0.1"
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
-    "sphinx.ext.todo",
     "nbsphinx",
-    "sphinx_gallery.load_style",
-    "sphinxcontrib.jquery",
     "sphinx.ext.doctest",
-    "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
-    # "sphinx_gallery.gen_gallery",
     "sphinx_search.extension",
     "sphinx.ext.linkcode",
-    "matplotlib.sphinxext.plot_directive",
     "sphinx_remove_toctrees",
     "sphinx_copybutton",
-    "sphinx_design",
-    "ablog",
-    "sphinxcontrib.youtube",
-    "sphinx_examples",
-    "sphinx_tabs.tabs",
-    "sphinx_togglebutton",
-    "sphinxext.opengraph",
-    "sphinx.ext.todo",
 ]
 
 
