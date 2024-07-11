@@ -14,7 +14,6 @@ import os
 import sys
 
 
-os.environ["SPHINX_BUILD"] = "1"
 sys.path.insert(0, os.path.abspath("../.."))
 
 
@@ -31,6 +30,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
     "nbsphinx",
+    "myst_parser",
     "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
@@ -40,10 +40,15 @@ extensions = [
     "sphinx_copybutton",
 ]
 
-
+autodoc_inherit_docstrings = True
 templates_path = ["_templates"]
-
-
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".txt": "markdown",
+    ".ipynb": "jupyter_notebook",
+    ".md": "markdown",
+}
+nbsphinx_execute = "never"
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
@@ -66,7 +71,6 @@ html_theme_options = {
     "use_repository_button": True,  # add a "link to repository" button
     "navigation_with_keys": False,
     "use_download_button": True,
-    "use_issues_button": True,
 }
 
 
@@ -92,7 +96,7 @@ exclude_patterns = [
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+pygments_style = "sphinx"
 
 
 autosummary_generate = True
