@@ -24,9 +24,7 @@ from numpyro.distributions.constraints import (
 
 __all__ = [
     "decreasing_vector",
-    "greater_than_equal_to",
     "increasing_vector",
-    "less_than_equal_to",
     "mass_ratio_mass_sandwich",
     "mass_sandwich",
     "positive_decreasing_vector",
@@ -35,38 +33,6 @@ __all__ = [
     "strictly_increasing_vector",
     "unique_intervals",
 ]
-
-
-class _GreaterThanEqualTo(Constraint):
-    r"""Constrain values to be greater than or equal to a given value."""
-
-    def __init__(self, lower_bound: float):
-        r"""
-        :param lower_bound: The lower bound.
-        """
-        self.lower_bound = lower_bound
-
-    def __call__(self, x):
-        return x >= self.lower_bound
-
-    def tree_flatten(self):
-        return (self.lower_bound,), (("lower_bound",), dict())
-
-
-class _LessThanEqualTo(Constraint):
-    r"""Constrain values to be less than or equal to a given value."""
-
-    def __init__(self, upper_bound: float):
-        """
-        :param upper_bound: The upper bound.
-        """
-        self.upper_bound = upper_bound
-
-    def __call__(self, x):
-        return x <= self.upper_bound
-
-    def tree_flatten(self):
-        return (self.upper_bound,), (("upper_bound",), dict())
 
 
 class _MassSandwichConstraint(Constraint):
@@ -272,8 +238,6 @@ class _PositiveDecreasingVector(_SingletonConstraint):
         return isinstance(other, _PositiveDecreasingVector)
 
 
-greater_than_equal_to = _GreaterThanEqualTo
-less_than_equal_to = _LessThanEqualTo
 mass_sandwich = _MassSandwichConstraint
 mass_ratio_mass_sandwich = _MassRationMassSandwichConstraint
 unique_intervals = _UniqueIntervals
