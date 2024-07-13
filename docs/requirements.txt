@@ -7,15 +7,28 @@ sphinx-remove-toctrees
 sphinx-design
 sphinxext-rediraffe
 myst-nb>=1.0.0
-
+myst_parser
+nbsphinx
+readthedocs-sphinx-search
+sphinx_book_theme
+sphinxcontrib-bibtex
+sphinxcontrib-napoleon
+sphinxcontrib-programoutput
+sphinxcontrib-spelling
+sphinxcontrib-trio
+sphinxcontrib-websupport
+sphinx_gallery
+sphinxcontrib-jquery
+ablog
+sphinxcontrib-youtube
+sphinx_examples
+sphinx_tabs
+sphinx_togglebutton
+sphinxext-opengraph
 # Packages used for CI tests.
 flatbuffers
 pytest
 pytest-xdist
 
 # Packages used for notebook execution
-# matplotlib
-# scikit-learn
-# numpy
-# rich[jupyter]
-# .[ci] # Install jax from the current directory; jaxlib from pypi.
+. # GWKokab from current directory

@@ -30,7 +30,7 @@ div.green-background pre {
 
 /* Python code block comments */
 html[data-theme="light"] .highlight span.c1 {
-  color: #fa8d59;
+  color: #c35d14;
 }
 
 /* Python code traceback and exception */
@@ -40,4 +40,15 @@ html[data-theme="light"] .highlight span.gt {
 
 html[data-theme="light"] .highlight span.gr {
   color: #ff0000;
+}
+
+html[data-theme="dark"],
+html[data-theme="light"] a:hover {
+  color: #fd7014;
+}
+
+html[data-theme="light"],
+html[data-theme="dark"] {
+  --pst-font-size-base: none;
+  --pst-color-secondary: #fd7014;
 }

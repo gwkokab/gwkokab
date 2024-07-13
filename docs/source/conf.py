@@ -14,7 +14,6 @@ import os
 import sys
 
 
-os.environ["SPHINX_BUILD"] = "1"
 sys.path.insert(0, os.path.abspath("../.."))
 
 
@@ -28,37 +27,28 @@ release = "0.0.1"
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
-    "sphinx.ext.todo",
     "nbsphinx",
-    "sphinx_gallery.load_style",
-    "sphinxcontrib.jquery",
+    "myst_parser",
     "sphinx.ext.doctest",
-    "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
-    # "sphinx_gallery.gen_gallery",
     "sphinx_search.extension",
     "sphinx.ext.linkcode",
-    "matplotlib.sphinxext.plot_directive",
     "sphinx_remove_toctrees",
     "sphinx_copybutton",
-    "sphinx_design",
-    "ablog",
-    "sphinxcontrib.youtube",
-    "sphinx_examples",
-    "sphinx_tabs.tabs",
-    "sphinx_togglebutton",
-    "sphinxext.opengraph",
-    "sphinx.ext.todo",
 ]
 
-
+autodoc_inherit_docstrings = True
 templates_path = ["_templates"]
-
-
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".txt": "markdown",
+    ".ipynb": "jupyter_notebook",
+    ".md": "markdown",
+}
+nbsphinx_execute = "never"
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
@@ -81,9 +71,6 @@ html_theme_options = {
     "use_repository_button": True,  # add a "link to repository" button
     "navigation_with_keys": False,
     "use_download_button": True,
-    # "collapse_navbar": True,
-    "home_page_in_toc": True,
-    "use_issues_button": True,
 }
 
 
@@ -104,10 +91,12 @@ language = "en"
 exclude_patterns = [
     ".ipynb_checkpoints",
     ".DS_Store",
+    "_build",
+    "**.ipynb_checkpoints",
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = None
+pygments_style = "sphinx"
 
 
 autosummary_generate = True
@@ -128,7 +117,7 @@ autodoc_type_aliases = {
 
 
 def linkcode_resolve(domain, info):
-    import jax
+    import gwkokab
 
     if domain != "py":
         return None
@@ -149,7 +138,7 @@ def linkcode_resolve(domain, info):
         source, linenum = inspect.getsourcelines(obj)
     except Exception:
         return None
-    filename = os.path.relpath(filename, start=os.path.dirname(jax.__file__))
+    filename = os.path.relpath(filename, start=os.path.dirname(gwkokab.__file__))
     lines = f"#L{linenum}-L{linenum + len(source)}" if linenum else ""
     return f"https://github.com/gwkokab/gwkokab/blob/main/gwkokab/{filename}{lines}"
 

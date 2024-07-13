@@ -38,5 +38,8 @@ GWKokab is a JAX-based gravitational-wave population inference toolkit. It is de
    :hidden:
    :maxdepth: 2
    :caption: Further resources
-   
+
+   dev_docs/index
    gwkokab
+   gwk_scripts
+   changelog

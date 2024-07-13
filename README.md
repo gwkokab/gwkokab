@@ -1,5 +1,5 @@
 <div align="center">
-<img src="docs/source/_static/logo.png" alt="logo" width="400px" height="90px"></img>
+<img src="https://raw.githubusercontent.com/gwkokab/gwkokab/main/docs/source/_static/logo.png" alt="logo" width="400px" height="90px"></img>
 </div>
 
 <h2 align="center">

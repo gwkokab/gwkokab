@@ -16,9 +16,8 @@
 from functools import partial
 from typing_extensions import Optional
 
-from numpyro import distributions as dist
-
-from ..priors.priors import UnnormalizedUniformOnRealLine
+from numpyro.distributions import Distribution, ImproperUniform
+from numpyro.distributions.constraints import real
 
 
 class Parameter(object):
@@ -36,15 +35,15 @@ class Parameter(object):
         self,
         *,
         name: str,
-        prior: Optional[dist.Distribution] = None,
-        default_prior: Optional[dist.Distribution] = None,
+        prior: Optional[Distribution] = None,
+        default_prior: Optional[Distribution] = None,
     ) -> None:
         if prior is None and default_prior is None:
             raise ValueError("Prior distribution must be provided.")
         if prior is None:
             prior = default_prior
         assert isinstance(
-            prior, dist.Distribution
+            prior, Distribution
         ), "Prior must be a numpyro.distributions.Distribution object."
         prior._validate_args = True
         self._prior = prior
@@ -55,7 +54,7 @@ class Parameter(object):
         return self._name
 
     @property
-    def prior(self) -> dist.Distribution:
+    def prior(self) -> Distribution:
         return self._prior
 
     def __repr__(self) -> str:
@@ -82,7 +81,7 @@ class Parameter(object):
 
 
 def ncopy(
-    n: int, params: list[str], priors: dict[dist.Distribution]
+    n: int, params: list[str], priors: dict[str, Distribution]
 ) -> dict[str, Parameter]:
     """Creates n copies of the parameters.
 
@@ -110,115 +109,161 @@ def ncopy(
 PRIMARY_MASS_SOURCE = partial(
     Parameter,
     name="mass_1_source",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 SECONDARY_MASS_SOURCE = partial(
     Parameter,
     name="mass_2_source",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 PRIMARY_MASS_DETECTED = partial(
     Parameter,
     name="mass_1",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 SECONDARY_MASS_DETECTED = partial(
     Parameter,
     name="mass_2",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 MASS_RATIO = partial(
     Parameter,
     name="mass_ratio",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 CHIRP_MASS = partial(
     Parameter,
     name="chirp_mass",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 SYMMETRIC_MASS_RATIO = partial(
     Parameter,
     name="symmetric_mass_ratio",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 REDUCED_MASS = partial(
     Parameter,
     name="reduced_mass",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 ECCENTRICITY = partial(
     Parameter,
     name="ecc",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 PRIMARY_SPIN_MAGNITUDE = partial(
     Parameter,
     name="a1",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 SECONDARY_SPIN_MAGNITUDE = partial(
     Parameter,
     name="a2",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 PRIMARY_SPIN_X = partial(
     Parameter,
     name="spin_1x",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 PRIMARY_SPIN_Y = partial(
     Parameter,
     name="spin_1y",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 PRIMARY_SPIN_Z = partial(
     Parameter,
     name="spin_1z",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 SECONDARY_SPIN_X = partial(
     Parameter,
     name="spin_2x",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 SECONDARY_SPIN_Y = partial(
     Parameter,
     name="spin_2y",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 SECONDARY_SPIN_Z = partial(
     Parameter,
     name="spin_2z",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 TILE_1 = partial(
     Parameter,
     name="tile_1",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 TILE_2 = partial(
     Parameter,
     name="tile_2",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 EFFECTIVE_SPIN_MAGNITUDE = partial(
     Parameter,
     name="chi_eff",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 COS_TILE_1 = partial(
     Parameter,
     name="tile_1",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 COS_TILE_2 = partial(
     Parameter,
     name="tile_2",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )
 REDSHIFT = partial(
     Parameter,
     name="redshift",
-    default_prior=UnnormalizedUniformOnRealLine(),
+    default_prior=ImproperUniform(
+        support=real, batch_shape=(), event_shape=(), validate_args=True
+    ),
 )

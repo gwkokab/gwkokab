@@ -60,7 +60,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
             \end{cases} \\
             p(q\mid m_1) &\propto q^{\beta_q}S(m_1q\mid m_{\text{min}},\delta_m)
         \end{align*}
-      
+
     Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel.
     """
 
@@ -157,20 +157,20 @@ class BrokenPowerLawMassModel(dist.Distribution):
     @partial(jit, static_argnums=(0,))
     def _log_prob_primary_mass_model(self, m1: Array | Real) -> Array | Real:
         r"""Log probability of primary mass model.
-        
+
         .. math::
             \log p(m_1) = \begin{cases}
-                \log S(m_1\mid m_{\text{min}},\delta_m) 
+                \log S(m_1\mid m_{\text{min}},\delta_m)
                 - \log Z_{\text{primary}}
-                - \alpha_1 \log m_1 
+                - \alpha_1 \log m_1
                 & \text{if } m_{\min} \leq m_1 < m_{\text{break}} \\
-                \log S(m_1\mid m_{\text{min}},\delta_m) 
+                \log S(m_1\mid m_{\text{min}},\delta_m)
                 - \log Z_{\text{primary}}
-                - \alpha_2 \log m_1 
+                - \alpha_2 \log m_1
                 & \text{if } m_{\text{break}} < m_1 \leq m_{\max}
             \end{cases}
-            
-        :param m1: primary mass 
+
+        :param m1: primary mass
         :return: log probability of primary mass
         """
         conditions = [
@@ -249,7 +249,7 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.Multivariat
     See Eq. (D3) and (D4) in `Population Properties of Compact Objects from
     the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog <https://arxiv.org/abs/2010.14533>`_.
-    
+
     .. math::
         \left(\chi_{\text{eff}}, \chi_{p}\right) \sim \mathcal{N}\left(
             \begin{bmatrix}
@@ -260,7 +260,7 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.Multivariat
                 \rho \sigma_{\text{eff}} \sigma_{p} & \sigma_{p}^2
             \end{bmatrix}
         \right)
-    
+
     where :math:`\chi_{\text{eff}}` is the effective spin and
     :math:`\chi_{\text{eff}}\in[-1,1]` and :math:`\chi_{p}` is the precessing spin and
     :math:`\chi_{p}\in[0,1]`.
@@ -470,7 +470,7 @@ class MultiPeakMassModel(dist.Distribution):
                 +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}
                 \right)\right]S(m_1\mid m_{\text{min}},\delta)
             \end{multline*}
-        
+
         :param m1: primary mass
         :return: log probability of primary mass
         """
@@ -607,7 +607,7 @@ class PowerLawPeakMassModel(dist.Distribution):
             p(q\mid \beta, m_1,m_{\text{min}},\delta)
             &\propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
         \end{align*}
-        
+
     Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
     and :math:`\Theta` is the Heaviside step function.
     """
@@ -795,7 +795,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
 
     .. math::
         p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
-    
+
     .. math::
         \begin{align*}
             p(m_1\mid\alpha)&
@@ -879,14 +879,14 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
 
 class TruncatedPowerLaw(dist.Distribution):
     r"""A generic double side truncated power law distribution.
-    
+
     .. note::
         There are many different definition of Power Law that include
         exponential cut-offs and interval cut-offs.  They are just
         interchangeably. This class is the implementation of power law that has
         been restricted over a closed interval.
 
-    .. math::  
+    .. math::
         p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=
         \begin{cases}
             \displaystyle\frac{x^{\alpha}}{\mathcal{Z}}
@@ -897,7 +897,7 @@ class TruncatedPowerLaw(dist.Distribution):
     where :math:`\mathcal{Z}` is the normalization constant and :math:`\alpha` is the power
     law index. :math:`x_{\text{min}}` and :math:`x_{\text{max}}` are the lower and upper
     truncation limits, respectively. The normalization constant is given by,
-    
+
     .. math::
         \mathcal{Z}:=\begin{cases}
             \log{x_{\text{max}}}-\log{x_{\text{min}}} & \alpha = -1 \\

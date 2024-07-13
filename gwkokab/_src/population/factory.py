@@ -35,6 +35,8 @@ __all__ = ["PopulationFactory"]
 
 
 class PopulationFactory:
+    r"""Class with methods equipped to generate population and realizations."""
+
     INJECTIONS_DIR: str = "injections"
     REALIZATIONS_DIR: str = "realization_{}"
 

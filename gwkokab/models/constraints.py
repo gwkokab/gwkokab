@@ -15,9 +15,7 @@
 
 from gwkokab._src.models.utils.constraints import (
     decreasing_vector as decreasing_vector,
-    greater_than_equal_to as greater_than_equal_to,
     increasing_vector as increasing_vector,
-    less_than_equal_to as less_than_equal_to,
     mass_ratio_mass_sandwich as mass_ratio_mass_sandwich,
     mass_sandwich as mass_sandwich,
     positive_decreasing_vector as positive_decreasing_vector,
