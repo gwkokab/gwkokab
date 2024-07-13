@@ -185,7 +185,7 @@ class BayesianHierarchicalModel:
         ]
         return jnp.mean(jnp.exp(self.logVT(samples)))
 
-    def log_likelihood(self, x: Array, data: Optional[dict] = None) -> Array:
+    def log_likelihood(self, x: Array, data: dict) -> Array:
         """The log likelihood function for the inhomogeneous Poisson process.
 
         :param x: Recovered parameters.

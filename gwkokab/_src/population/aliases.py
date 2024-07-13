@@ -21,6 +21,18 @@ from jaxtyping import Array, Float, Int
 
 @dataclass(frozen=True)
 class PopInfo:
+    r"""Meta data class for the population.
+
+    :param ROOT_DIR: The root directory of the population.
+    :param EVENT_FILENAME: The name of the event file.
+    :param CONFIG_FILENAME: The name of the configuration file.
+    :param RATE: The rate of the population.
+    :param TIME: The time of the population.
+    :param LOG_VT: The log-vt function.
+    :param VT_PARAMS: The parameters of the log-vt function.
+    :param NUM_REALIZATIONS: The number of realizations.
+    """
+
     ROOT_DIR: str
     EVENT_FILENAME: str
     CONFIG_FILENAME: str
@@ -33,8 +45,16 @@ class PopInfo:
 
 @dataclass(frozen=True)
 class NoisePopInfo:
+    r"""Meta data class for the noise population.
+
+    :param ROOT_DIR: The root directory of the population.
+    :param EVENT_FILENAME: The name of the event file.
+    :param CONFIG_FILENAME: The name of the configuration file.
+    :param RATE: The rate of the population.
+    """
+
     FILENAME_REGEX: str
     OUTPUT_DIR: str
     HEADER: list[str]
     SIZE: Int
-    ERROR_FUNCS: dict[tuple[Int, Callable[[Float, Int], Array]]]
+    ERROR_FUNCS: dict[tuple[str, ...], tuple[Int, Callable[[Float, Int], Array]]]

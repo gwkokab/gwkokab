@@ -39,9 +39,7 @@ Constraints
     :toctree: _autosummary
 
     decreasing_vector
-    greater_than_equal_to
     increasing_vector
-    less_than_equal_to
     mass_ratio_mass_sandwich
     mass_sandwich
     positive_decreasing_vector

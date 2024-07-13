@@ -81,7 +81,7 @@ class Parameter(object):
 
 
 def ncopy(
-    n: int, params: list[str], priors: dict[Distribution]
+    n: int, params: list[str], priors: dict[str, Distribution]
 ) -> dict[str, Parameter]:
     """Creates n copies of the parameters.
 
