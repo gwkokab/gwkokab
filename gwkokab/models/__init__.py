@@ -24,6 +24,3 @@ from gwkokab._src.models.models import (
     TruncatedPowerLaw as TruncatedPowerLaw,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
-from gwkokab._src.models.utils.jointdistribution import (
-    JointDistribution as JointDistribution,
-)

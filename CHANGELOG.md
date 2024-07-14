@@ -17,6 +17,7 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
 * Constraints related to closed intervals, for details, see [PR#125](https://github.com/gwkokab/gwkokab/pull/125).
 * Bijective transformations on different mass coordinates, for details, see [PR#125](https://github.com/gwkokab/gwkokab/pull/125).
+* Wrapper for scaling models.
 
 ## gwkokab 0.0.1 (Jul 5, 2024)
 
