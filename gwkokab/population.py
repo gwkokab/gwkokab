@@ -13,9 +13,8 @@
 #  limitations under the License.
 
 
-from gwkokab._src.population.aliases import (
-    NoisePopInfo as NoisePopInfo,
-    PopInfo as PopInfo,
+from gwkokab._src.population.factory import (
+    error_magazine as error_magazine,
+    popfactory as popfactory,
+    popmodel_magazine as popmodel_magazine,
 )
-from gwkokab._src.population.factory import PopulationFactory as PopulationFactory
-from gwkokab._src.population.noisefactory import run_noise_factory as run_noise_factory
