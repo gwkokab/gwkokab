@@ -18,6 +18,9 @@ from numpyro.distributions import Distribution, Unit
 from .jointdistribution import JointDistribution
 
 
+__all__ = ["gwk_magazine", "add_log_factor"]
+
+
 def add_log_factor(name, model=None):
     r"""Adds log factor to logarithm of the probability of the model,
     equivalent to multiplying the model by the factor.
@@ -53,3 +56,38 @@ def add_log_factor(name, model=None):
         return JointDistribution(log_rate_factor_dist, model(*args, **kwargs))
 
     return rate_times_model
+
+
+class ModelRegistry(object):
+    r"""Decorator class to register models and their parameters"""
+
+    def __init__(self) -> None:
+        self._registry = {}
+
+    @property
+    def registry(self) -> dict:
+        r"""Hashmap of registered models and their parameters."""
+        return self._registry
+
+    def register(self, parameter, model=None):
+        r"""Registers a model with the parameter(s) it yields."""
+        if isinstance(parameter, str):
+            parameter = (parameter,)
+        elif isinstance(parameter, tuple):
+            assert all(isinstance(p, str) for p in parameter)
+        else:
+            raise ValueError("Parameter must be a string or tuple of strings")
+
+        self._registry[parameter] = model
+        return model
+
+    def __call__(self, parameter):
+        try:
+            model = self._registry[parameter]
+        except KeyError as e:
+            raise NotImplementedError from e
+
+        return model(parameter)
+
+
+gwk_magazine = ModelRegistry()

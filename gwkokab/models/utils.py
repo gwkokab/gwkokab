@@ -16,4 +16,7 @@
 from gwkokab._src.models.utils.jointdistribution import (
     JointDistribution as JointDistribution,
 )
-from gwkokab._src.models.utils.wrappers import add_log_factor as add_log_factor
+from gwkokab._src.models.utils.wrappers import (
+    add_log_factor as add_log_factor,
+    gwk_magazine as gwk_magazine,
+)
