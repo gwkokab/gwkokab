@@ -13,4 +13,7 @@
 #  limitations under the License.
 
 
-from gwkokab.utils import math as math, transformations as transformations
+from gwkokab._src.utils.math import (
+    beta_dist_concentrations_to_mean_variance as beta_dist_concentrations_to_mean_variance,
+    beta_dist_mean_variance_to_concentrations as beta_dist_mean_variance_to_concentrations,
+)
