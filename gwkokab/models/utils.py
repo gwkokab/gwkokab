@@ -13,8 +13,10 @@
 #  limitations under the License.
 
 
-from gwkokab._src.population.factory import (
-    error_magazine as error_magazine,
-    popfactory as popfactory,
-    popmodel_magazine as popmodel_magazine,
+from gwkokab._src.models.utils.jointdistribution import (
+    JointDistribution as JointDistribution,
+)
+from gwkokab._src.models.utils.wrappers import (
+    add_log_factor as add_log_factor,
+    gwk_magazine as gwk_magazine,
 )

@@ -23,11 +23,14 @@ Models
 Utilities
 ---------
 
+.. automodule:: gwkokab.models.utils
+
 .. autosummary::
     :nosignatures:
     :toctree: _autosummary
 
     JointDistribution
+    add_log_factor
 
 Constraints
 -----------
