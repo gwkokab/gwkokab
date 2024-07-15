@@ -71,6 +71,8 @@ class ModelRegistry(object):
 
     def register(self, parameter, model=None):
         r"""Registers a model with the parameter(s) it yields."""
+        if model is None:
+            return lambda model: self.register(parameter, model)
         if isinstance(parameter, str):
             parameter = (parameter,)
         elif isinstance(parameter, tuple):
