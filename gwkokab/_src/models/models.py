@@ -21,7 +21,15 @@ import numpy as np
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.scipy.stats import norm, uniform
 from jaxtyping import Array, Int, Real
-from numpyro import distributions as dist
+from numpyro.distributions import (
+    Categorical,
+    constraints,
+    Distribution,
+    MixtureGeneral,
+    MultivariateNormal,
+    TruncatedNormal,
+    Uniform,
+)
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
@@ -44,7 +52,7 @@ __all__ = [
 ]
 
 
-class BrokenPowerLawMassModel(dist.Distribution):
+class BrokenPowerLawMassModel(Distribution):
     r"""See equation (B7) and (B6) in `Population Properties of Compact Objects
     from the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog <https://arxiv.org/abs/2010.14533>`_.
@@ -65,13 +73,13 @@ class BrokenPowerLawMassModel(dist.Distribution):
     """
 
     arg_constraints = {
-        "alpha1": dist.constraints.real,
-        "alpha2": dist.constraints.real,
-        "beta_q": dist.constraints.real,
-        "mmin": dist.constraints.dependent,
-        "mmax": dist.constraints.dependent,
-        "mbreak": dist.constraints.positive,
-        "delta": dist.constraints.positive,
+        "alpha1": constraints.real,
+        "alpha2": constraints.real,
+        "beta_q": constraints.real,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
+        "mbreak": constraints.positive,
+        "delta": constraints.positive,
     }
     reparametrized_params = [
         "alpha1",
@@ -82,7 +90,17 @@ class BrokenPowerLawMassModel(dist.Distribution):
         "mbreak",
         "delta",
     ]
-    pytree_aux_fields = ("_logZ", "_support")
+    pytree_aux_fields = ("_support",)
+    pytree_data_fields = (
+        "alpha1",
+        "alpha2",
+        "beta_q",
+        "mmin",
+        "mmax",
+        "mbreak",
+        "delta",
+        "_logZ",
+    )
 
     def __init__(self, alpha1, alpha2, beta_q, mmin, mmax, mbreak, delta):
         r"""
@@ -136,7 +154,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         )
         self._normalization()
 
-    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
         return self._support
 
@@ -244,7 +262,7 @@ class BrokenPowerLawMassModel(dist.Distribution):
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
-def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.MultivariateNormal:
+def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> MultivariateNormal:
     r"""Bivariate normal distribution for the effective and precessing spins.
     See Eq. (D3) and (D4) in `Population Properties of Compact Objects from
     the Second LIGO-Virgo Gravitational-Wave Transient
@@ -274,7 +292,7 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.Multivariat
     :return: Multivariate normal distribution for the effective and precessing
         spins
     """
-    return dist.MultivariateNormal(
+    return MultivariateNormal(
         loc=jnp.array([mu_eff, mu_p]),
         covariance_matrix=jnp.array(
             [
@@ -292,9 +310,7 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> dist.Multivariat
     )
 
 
-def IndependentSpinOrientationGaussianIsotropic(
-    zeta, sigma1, sigma2
-) -> dist.MixtureGeneral:
+def IndependentSpinOrientationGaussianIsotropic(zeta, sigma1, sigma2) -> MixtureGeneral:
     r"""A mixture model of spin orientations with isotropic and normally
     distributed components. See Eq. (4) of `Determining the population
     properties of spinning black holes <https://arxiv.org/abs/1704.08370>`_.
@@ -312,23 +328,23 @@ def IndependentSpinOrientationGaussianIsotropic(
     :return: Mixture model of spin orientations.
     """
     mixing_probs = jnp.array([1 - zeta, zeta])
-    component_0_dist = dist.Uniform(low=-1, high=1, validate_args=True)
-    component_1_dist = dist.TruncatedNormal(
+    component_0_dist = Uniform(low=-1, high=1, validate_args=True)
+    component_1_dist = TruncatedNormal(
         loc=1.0,
         scale=jnp.array([sigma1, sigma2]),
         low=-1,
         high=1,
         validate_args=True,
     )
-    return dist.MixtureGeneral(
-        mixing_distribution=dist.Categorical(probs=mixing_probs),
+    return MixtureGeneral(
+        mixing_distribution=Categorical(probs=mixing_probs),
         component_distributions=[component_0_dist, component_1_dist],
-        support=dist.constraints.real,
+        support=constraints.real,
         validate_args=True,
     )
 
 
-class MultiPeakMassModel(dist.Distribution):
+class MultiPeakMassModel(Distribution):
     r"""See equation (B9) and (B6) in `Population Properties of Compact
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog <https://arxiv.org/abs/2010.14533>`_.
@@ -356,17 +372,17 @@ class MultiPeakMassModel(dist.Distribution):
     """
 
     arg_constraints = {
-        "alpha": dist.constraints.real,
-        "beta": dist.constraints.real,
-        "lam": dist.constraints.interval(0, 1),
-        "lam1": dist.constraints.interval(0, 1),
-        "delta": dist.constraints.positive,
-        "mmin": dist.constraints.dependent,
-        "mmax": dist.constraints.dependent,
-        "mu1": dist.constraints.positive,
-        "sigma1": dist.constraints.positive,
-        "mu2": dist.constraints.positive,
-        "sigma2": dist.constraints.positive,
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "lam": constraints.interval(0, 1),
+        "lam1": constraints.interval(0, 1),
+        "delta": constraints.positive,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
+        "mu1": constraints.positive,
+        "sigma1": constraints.positive,
+        "mu2": constraints.positive,
+        "sigma2": constraints.positive,
     }
     reparametrized_params = [
         "alpha",
@@ -381,7 +397,21 @@ class MultiPeakMassModel(dist.Distribution):
         "mu2",
         "sigma2",
     ]
-    pytree_aux_fields = ("_logZ", "_support")
+    pytree_aux_fields = ("_support",)
+    pytree_data_fields = (
+        "alpha",
+        "beta",
+        "lam",
+        "lam1",
+        "delta",
+        "mmin",
+        "mmax",
+        "mu1",
+        "sigma1",
+        "mu2",
+        "sigma2",
+        "_logZ",
+    )
 
     def __init__(
         self, alpha, beta, lam, lam1, delta, mmin, mmax, mu1, sigma1, mu2, sigma2
@@ -439,7 +469,7 @@ class MultiPeakMassModel(dist.Distribution):
 
         self._normalization()
 
-    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
         return self._support
 
@@ -563,9 +593,7 @@ class MultiPeakMassModel(dist.Distribution):
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
-def NDistribution(
-    distribution: dist.Distribution, n: Int, **params
-) -> dist.MixtureGeneral:
+def NDistribution(distribution: Distribution, n: Int, **params) -> MixtureGeneral:
     """Mixture of any :math:`n` distributions.
 
     :param distribution: distribution to mix
@@ -573,7 +601,7 @@ def NDistribution(
     :return: Mixture of :math:`n` distributions
     """
     arg_names = distribution.arg_constraints.keys()
-    mixing_dist = dist.Categorical(probs=jnp.divide(jnp.ones(n), n), validate_args=True)
+    mixing_dist = Categorical(probs=jnp.divide(jnp.ones(n), n), validate_args=True)
     args_per_component = [
         {arg: params.get(f"{arg}_{i}") for arg in arg_names} for i in range(n)
     ]
@@ -582,7 +610,7 @@ def NDistribution(
         args_per_component,
         is_leaf=lambda x: isinstance(x, dict),
     )
-    return dist.MixtureGeneral(
+    return MixtureGeneral(
         mixing_dist,
         component_dists,
         support=distribution.support,
@@ -590,7 +618,7 @@ def NDistribution(
     )
 
 
-class PowerLawPeakMassModel(dist.Distribution):
+class PowerLawPeakMassModel(Distribution):
     r"""See equation (B3) and (B6) in `Population Properties of Compact
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog <https://arxiv.org/abs/2010.14533>`_.
@@ -613,14 +641,14 @@ class PowerLawPeakMassModel(dist.Distribution):
     """
 
     arg_constraints = {
-        "alpha": dist.constraints.real,
-        "beta": dist.constraints.real,
-        "lam": dist.constraints.interval(0, 1),
-        "delta": dist.constraints.real,
-        "mmin": dist.constraints.dependent,
-        "mmax": dist.constraints.dependent,
-        "mu": dist.constraints.real,
-        "sigma": dist.constraints.positive,
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "lam": constraints.interval(0, 1),
+        "delta": constraints.real,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
+        "mu": constraints.real,
+        "sigma": constraints.positive,
     }
     reparametrized_params = [
         "alpha",
@@ -632,7 +660,18 @@ class PowerLawPeakMassModel(dist.Distribution):
         "mu",
         "sigma",
     ]
-    pytree_aux_fields = ("_logZ", "_support")
+    pytree_aux_fields = ("_support",)
+    pytree_data_fields = (
+        "alpha",
+        "beta",
+        "lam",
+        "delta",
+        "mmin",
+        "mmax",
+        "mu",
+        "sigma",
+        "_logZ",
+    )
 
     def __init__(self, alpha, beta, lam, delta, mmin, mmax, mu, sigma) -> None:
         r"""
@@ -677,7 +716,7 @@ class PowerLawPeakMassModel(dist.Distribution):
 
         self._normalization()
 
-    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
         return self._support
 
@@ -788,7 +827,7 @@ class PowerLawPeakMassModel(dist.Distribution):
         return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
-class PowerLawPrimaryMassRatio(dist.Distribution):
+class PowerLawPrimaryMassRatio(Distribution):
     r"""Power law model for two-dimensional mass distribution,
     modelling primary mass and conditional mass ratio
     distribution.
@@ -806,10 +845,10 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
     """
 
     arg_constraints = {
-        "alpha": dist.constraints.real,
-        "beta": dist.constraints.real,
-        "mmin": dist.constraints.dependent,
-        "mmax": dist.constraints.dependent,
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
@@ -837,7 +876,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
             validate_args=True,
         )
 
-    @dist.constraints.dependent_property(is_discrete=False, event_dim=1)
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self):
         return self._support
 
@@ -877,7 +916,7 @@ class PowerLawPrimaryMassRatio(dist.Distribution):
         return jnp.column_stack((m1, q))
 
 
-class TruncatedPowerLaw(dist.Distribution):
+class TruncatedPowerLaw(Distribution):
     r"""A generic double side truncated power law distribution.
 
     .. note::
@@ -908,15 +947,15 @@ class TruncatedPowerLaw(dist.Distribution):
     """
 
     arg_constraints = {
-        "alpha": dist.constraints.real,
-        "low": dist.constraints.positive,
-        "high": dist.constraints.positive,
+        "alpha": constraints.real,
+        "low": constraints.positive,
+        "high": constraints.positive,
     }
     reparametrized_params = ["low", "high", "alpha"]
 
     def __init__(self, alpha, low=0.0, high=1.0, validate_args=None):
         self.low, self.high, self.alpha = promote_shapes(low, high, alpha)
-        self._support = dist.constraints.interval(low, high)
+        self._support = constraints.interval(low, high)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(low),
             jnp.shape(high),
@@ -926,7 +965,7 @@ class TruncatedPowerLaw(dist.Distribution):
             batch_shape=batch_shape, validate_args=validate_args
         )
 
-    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
         return self._support
 
@@ -989,7 +1028,7 @@ class TruncatedPowerLaw(dist.Distribution):
         return jnp.where(jnp.equal(self.alpha, -1.0), icdf_neg1, icdf)
 
 
-class Wysocki2019MassModel(dist.Distribution):
+class Wysocki2019MassModel(Distribution):
     r"""It is a double side truncated power law distribution, as described in
     equation 7 of the `Reconstructing phenomenological distributions of compact
     binaries via gravitational wave observations <https://arxiv.org/abs/1805.06442>`_.
@@ -1000,9 +1039,9 @@ class Wysocki2019MassModel(dist.Distribution):
     """
 
     arg_constraints = {
-        "alpha_m": dist.constraints.real,
-        "mmin": dist.constraints.dependent,
-        "mmax": dist.constraints.dependent,
+        "alpha_m": constraints.real,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
     }
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
@@ -1026,7 +1065,7 @@ class Wysocki2019MassModel(dist.Distribution):
             validate_args=True,
         )
 
-    @dist.constraints.dependent_property(is_discrete=False, event_dim=0)
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
         return self._support
 
