@@ -14,20 +14,17 @@
 
 from __future__ import annotations
 
-import glob
 import os
 import warnings
 from typing_extensions import Callable, Optional, Self
 
 import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
+from jax.nn import softmax
 from jaxtyping import Array, Bool, Float, Int, PRNGKeyArray
-from numpyro.distributions import *
-from numpyro.distributions.constraints import *
+from numpyro.distributions import Distribution
 from numpyro.util import is_prng_key
 
-from ..models import *
-from ..models.utils.constraints import *
 from ..models.utils.jointdistribution import JointDistribution
 from ..models.utils.wrappers import ModelRegistry
 
@@ -42,7 +39,7 @@ class PopulationFactory:
     r"""Class with methods equipped to generate population for each
     realizations and adding errors in it."""
 
-    injections_dir: str = "injections"
+    injection_filename: str = "injections"
     realizations_dir: str = "realization_{}"
     error_dir: str = "posteriors"
     root_dir: str = "data"
@@ -61,6 +58,16 @@ class PopulationFactory:
         assert self.analysis_time is None, "ANALYSIS_TIME is not provided."
         assert self.log_VT_fn is None, "LOG_VT is not provided."
         assert self.VT_params is None, "VT_PARAMS is not provided."
+
+        if not self.event_filename.endswith(".dat"):
+            self.event_filename += ".dat"
+        else:
+            raise ValueError("Event filename should have .dat extension.")
+
+        if not self.injection_filename.endswith(".dat"):
+            self.injection_filename += ".dat"
+        else:
+            raise ValueError("Injection filename should have .dat extension.")
 
     def __init__(self) -> None:
         self.check_params()
@@ -137,9 +144,8 @@ class PopulationFactory:
             ]
         )
 
-        vt = jnp.exp(self.log_VT_fn(value).flatten())
+        vt = softmax(self.log_VT_fn(value).flatten())
         vt = jnp.nan_to_num(vt, nan=0.0)
-        vt /= jnp.sum(vt)
         _, key = jrd.split(keys[-1])
         index = jrd.choice(
             key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
@@ -151,9 +157,6 @@ class PopulationFactory:
 
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
-        if key is None:
-            key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
-        assert is_prng_key(key)
         size = self.rate
         self.pre_process()
         if self.log_VT_fn is not None:
@@ -181,44 +184,25 @@ class PopulationFactory:
                 self.root_dir, self.realizations_dir.format(i)
             )
             os.makedirs(realizations_path, exist_ok=True)
-            injection_filename = os.path.join(realizations_path, "injections.dat")
+            injections_file_path = os.path.join(
+                realizations_path, self.injection_filename
+            )
             np.savetxt(
-                injection_filename,
+                injections_file_path,
                 population,
                 comments="#",
                 header=" ".join(self.headers),
             )
 
-            injection_path = os.path.join(realizations_path, self.injections_dir)
-            os.makedirs(injection_path, exist_ok=True)
-            for j in range(population.shape[0]):
-                injection_filename = os.path.join(
-                    injection_path,
-                    self.event_filename.format(j) + ".dat",
-                )
-                np.savetxt(
-                    injection_filename,
-                    population[j].reshape(1, -1),
-                    comments="#",
-                    header=" ".join(self.headers),
-                )
-
-    def _add_error(self, index, *, key: PRNGKeyArray) -> None:
+    def _add_error(self, realization_number, *, key: PRNGKeyArray) -> None:
         r"""Adds error to the realizations' population."""
         realizations_path = os.path.join(
-            self.root_dir, self.realizations_dir.format(index)
-        )
-        injection_path = os.path.join(realizations_path, self.injections_dir)
-        filenames = glob.glob(
-            os.path.join(injection_path, self.event_filename.format("*") + ".dat")
-        )
-
-        output_dir = os.path.join(
-            realizations_path, self.error_dir, self.event_filename
+            self.root_dir, self.realizations_dir.format(realization_number)
         )
 
         heads: list[list[int]] = []
         error_fns: list[Callable] = []
+
         for head, err_fn in error_magazine.registry.items():
             _head = []
             for h in head:
@@ -227,16 +211,19 @@ class PopulationFactory:
             heads.append(_head)
             error_fns.append(err_fn)
 
-        index = 0
+        output_dir = os.path.join(
+            realizations_path, self.error_dir, self.event_filename
+        )
 
-        if key is None:
-            key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
+        os.makedirs(os.path.join(realizations_path, self.error_dir), exist_ok=True)
 
-        keys = jrd.split(key, len(filenames) * len(heads))
+        injections_file_path = os.path.join(realizations_path, self.injection_filename)
+        data_inj = np.loadtxt(injections_file_path)
+        keys = jrd.split(key, data_inj.shape[0] * len(heads))
 
-        for filename in filenames:
+        for index in range(data_inj.shape[0]):
             noisey_data = np.empty((self.error_size, len(self.headers)))
-            data = np.loadtxt(filename)
+            data = data_inj[index]
             i = 0
             for head, err_fn in zip(heads, error_fns):
                 noisey_data_i: Array = err_fn(
@@ -249,28 +236,25 @@ class PopulationFactory:
             nan_mask = np.isnan(noisey_data).any(axis=1)
             masked_noisey_data = noisey_data[~nan_mask]
             count = np.count_nonzero(masked_noisey_data)
-            if count == 0:
+            if count < 2:
                 warnings.warn(
-                    f"Skipping file {index} due to all NaN values",
+                    f"Skipping file {index} due to all NaN values or insufficient data.",
                     category=UserWarning,
                 )
-                index += 1
                 continue
-            if masked_noisey_data.shape[0] == 1:
-                masked_noisey_data = masked_noisey_data.reshape(1, -1)
-            os.makedirs(os.path.dirname(output_dir.format(index)), exist_ok=True)
             np.savetxt(
                 output_dir.format(index),
                 masked_noisey_data,
                 header=" ".join(self.headers),
                 comments="#",
             )
-            index += 1
 
     def produce(self, key: Optional[PRNGKeyArray] = None) -> None:
         r"""Generate realizations and add errors to the populations."""
         if key is None:
             key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
+        else:
+            assert is_prng_key(key)
         self._generate_realizations(key)
         keys = jrd.split(key, self.num_realizations)
         for i in range(self.num_realizations):
