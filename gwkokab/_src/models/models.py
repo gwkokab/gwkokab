@@ -37,10 +37,12 @@ from numpyro.util import is_prng_key
 
 from ..utils.math import beta_dist_mean_variance_to_concentrations
 from ..utils.transformations import m1_q_to_m2
-from .utils import numerical_inverse_transform_sampling
-from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
-from .utils.jointdistribution import JointDistribution
-from .utils.smoothing import smoothing_kernel
+from .constraints import mass_ratio_mass_sandwich, mass_sandwich
+from .utils import (
+    JointDistribution,
+    numerical_inverse_transform_sampling,
+    smoothing_kernel,
+)
 
 
 __all__ = [

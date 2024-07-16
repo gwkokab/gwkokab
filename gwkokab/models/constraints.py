@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 
-from gwkokab._src.models.utils.constraints import (
+from gwkokab._src.models.constraints import (
     decreasing_vector as decreasing_vector,
     increasing_vector as increasing_vector,
     mass_ratio_mass_sandwich as mass_ratio_mass_sandwich,

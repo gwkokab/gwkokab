@@ -22,7 +22,7 @@ from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Float
 
-from ..models.utils.jointdistribution import JointDistribution
+from ..models.utils import JointDistribution
 from .utils import ModelPack
 
 

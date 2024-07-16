@@ -15,7 +15,7 @@
 
 from numpyro.distributions import Distribution, Unit
 
-from .jointdistribution import JointDistribution
+from .utils import JointDistribution
 
 
 __all__ = ["gwk_magazine", "add_log_factor"]
