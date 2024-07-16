@@ -14,6 +14,7 @@ Models
     GaussianSpinModel
     IndependentSpinOrientationGaussianIsotropic
     MultiPeakMassModel
+    MultiSpinModel
     NDistribution
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
