@@ -22,20 +22,24 @@ from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.scipy.stats import norm, uniform
 from jaxtyping import Array, Int, Real
 from numpyro.distributions import (
+    Beta,
     Categorical,
     constraints,
     Distribution,
     MixtureGeneral,
     MultivariateNormal,
+    Normal,
     TruncatedNormal,
     Uniform,
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
+from ..utils.math import beta_dist_mean_variance_to_concentrations
 from ..utils.transformations import m1_q_to_m2
 from .utils import numerical_inverse_transform_sampling
 from .utils.constraints import mass_ratio_mass_sandwich, mass_sandwich
+from .utils.jointdistribution import JointDistribution
 from .utils.smoothing import smoothing_kernel
 
 
@@ -44,6 +48,7 @@ __all__ = [
     "GaussianSpinModel",
     "IndependentSpinOrientationGaussianIsotropic",
     "MultiPeakMassModel",
+    "MultiSpinModel",
     "NDistribution",
     "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
@@ -1096,3 +1101,210 @@ class Wysocki2019MassModel(Distribution):
             key, shape=sample_shape + self.batch_shape, minval=self.mmin, maxval=m1
         )
         return jnp.column_stack((m1, m2))
+
+
+def MultiSpinModel(
+    alpha_m,
+    beta_m,
+    mmin,
+    mmax,
+    mean_chi_1_pl,
+    var_chi_1_pl,
+    mean_chi_2_pl,
+    var_chi_2_pl,
+    std_dev_title_1_pl,
+    std_dev_title_2_pl,
+    mean_m1,
+    std_dev_m1,
+    mean_m2,
+    std_dev_m2,
+    mean_chi_1_g,
+    var_chi_1_g,
+    mean_chi_2_g,
+    var_chi_2_g,
+    std_dev_title_1_g,
+    std_dev_title_2_g,
+) -> MixtureGeneral:
+    r"""For details see Appendix D3 of `Population Properties of Compact Objects from
+    the Second LIGO-Virgo Gravitational-Wave Transient
+    Catalog <https://iopscience.iop.org/article/10.3847/2041-8213/abe949>`_. The 
+    Power-law component is given by,
+
+    .. math::
+        \begin{multline}
+            p_{pl}(\lambda\mid\Lambda_{pl})=m_1^{\alpha_m}q^{\beta_m}
+            \operatorname{Beta}(\chi_1\mid\mu_{\chi_1, pl},\sigma_{\chi_1, pl})
+            \operatorname{Beta}(\chi_2\mid\mu_{\chi_2, pl},\sigma_{\chi_2, pl})\\
+            \mathcal{N}_{[-1,1]}(t_1\mid\mu=0,\sigma_{1, pl})
+            \mathcal{N}_{[-1,1]}(t_2\mid\mu=0,\sigma_{2, pl})
+        \end{multline}
+        
+    where :math:`\lambda=(m_1,m_2,\chi_1,\chi_2,t_1,t_2)` and :math:`\Lambda_{pl}=(
+    \alpha_m, \beta_m, m_{\text{min}}, m_{\text{max}}, \mu_{\chi_1, pl}, 
+    \sigma_{\chi_1, pl}, \mu_{\chi_2, pl}, \sigma_{\chi_2, pl}, \sigma_{1, pl},
+    \sigma_{2, pl})` is the set of hyperparameters for the power-law component. The
+    Gaussian component is given by,
+
+    .. math::
+        \begin{multline}
+            p_{g}(\lambda\mid\Lambda_{g})=\mathcal{N}\left(m_1\mid\mu_{m_1}, \sigma_{m_1}\right)
+            \mathcal{N}\left(m_2\mid\mu_{m_2}, \sigma_{m_2}\right)\\
+            \operatorname{Beta}(\chi_1\mid\mu_{\chi_1, g},\sigma_{\chi_1, g})
+            \operatorname{Beta}(\chi_2\mid\mu_{\chi_2, g},\sigma_{\chi_2, g})\\
+            \mathcal{N}_{[-1,1]}(t_1\mid\mu=0,\sigma_{1, g})
+            \mathcal{N}_{[-1,1]}(t_2\mid\mu=0,\sigma_{2, g})
+        \end{multline}
+        
+    where :math:`\Lambda_{g}=(\mu_{m_1}, \sigma_{m_1}, \mu_{m_2}, \sigma_{m_2},
+    \mu_{\chi_1, g}, \sigma_{\chi_1, g}, \mu_{\chi_2, g}, \sigma_{\chi_2, g},
+    \sigma_{1, g}, \sigma_{2, g})` is the set of hyperparameters for the Gaussian
+    component. They are mixed with equal weights,
+        
+    .. math::
+        
+        p(\lambda,\mid\Lambda_{pl}\cup\Lambda_{g})=
+        \frac{1}{2}p_{pl}(\lambda,\mid\Lambda)+\frac{1}{2}p_{g}(\lambda,\mid\Lambda)
+        
+    .. note::
+        In original formulation, each component is scaled up by their respective rate 
+        :math:`\mathcal{R}_{pl}` and :math:`\mathcal{R}_{g}`. However to streamline
+        the implementation with :mod:`numpyro`, we are not scaling each component with
+        their respective rate. Instead, we will deal this in Log-likelihood function.
+
+
+    :param alpha_m: Power-law slope of the primary mass distribution for the low-mass 
+        subpopulation
+    :param beta_m: Power-law slope of the mass ratio distribution for the low-mass 
+        subpopulation
+    :param mmin: Minimum mass of the primary mass distribution for the low-mass 
+        subpopulation
+    :param mmax: Maximum mass of the primary mass distribution for the low-mass 
+        subpopulation
+    :param mean_chi_1_pl: Mean of the beta distribution of primary spin magnitudes for 
+        the low-mass subpopulation
+    :param var_chi_1_pl: Variance of the beta distribution of primary spin magnitudes 
+        for the low-mass subpopulation
+    :param mean_chi_2_pl: Mean of the beta distribution of secondary spin magnitudes 
+        for the low-mass subpopulation
+    :param var_chi_2_pl: Variance of the beta distribution of secondary spin 
+        magnitudes for the low-mass subpopulation
+    :param std_dev_title_1_pl: Width of the Truncated Gaussian distribution of the 
+        cosine of the primary spin-tilt angle for the low-mass subpopulation
+    :param std_dev_title_2_pl: Width of the Truncated Gaussian distribution of cos(
+        secondary spin-tilt angle) for the low-mass subpopulation
+    :param mean_m1: Centroid of the primary mass distribution for the high-mass 
+        subpopulation
+    :param std_dev_m1: Width of the primary mass distribution for the high-mass 
+        subpopulation
+    :param mean_m2: Centroid of the secondary mass distribution for the high-mass 
+        subpopulation
+    :param std_dev_m2: Width of the secondary mass distribution for the high-mass 
+        subpopulation
+    :param mean_chi_1_g: Mean of the beta distribution of primary spin magnitudes for 
+        the high-mass subpopulation
+    :param var_chi_1_g: Variance of the beta distribution of primary spin magnitudes 
+        for the high-mass subpopulation
+    :param mean_chi_2_g: Width of the Truncated Gaussian distribution of cos(primary 
+        spin-tilt angle) for the high-mass subpopulation
+    :param var_chi_2_g: Mean of the beta distribution of secondary spin magnitudes for 
+        the high-mass subpopulation
+    :param std_dev_title_1_g: Variance of the beta distribution of secondary spin 
+        magnitudes for the high-mass subpopulation
+    :param std_dev_title_2_g: Width of the Truncated Gaussian distribution of cos(
+        secondary spin-tilt angle) for the high-mass subpopulation
+    """
+    alpha_chi_1_pl, beta_chi_1_pl = beta_dist_mean_variance_to_concentrations(
+        mean_chi_1_pl, var_chi_1_pl
+    )
+    alpha_chi_2_pl, beta_chi_2_pl = beta_dist_mean_variance_to_concentrations(
+        mean_chi_2_pl, var_chi_2_pl
+    )
+    alpha_chi_1_g, beta_chi_1_g = beta_dist_mean_variance_to_concentrations(
+        mean_chi_1_g, var_chi_1_g
+    )
+    alpha_chi_2_g, beta_chi_2_g = beta_dist_mean_variance_to_concentrations(
+        mean_chi_2_g, var_chi_2_g
+    )
+
+    ######################
+    # POWERLAW COMPONENT #
+    ######################
+
+    powerlaw = PowerLawPrimaryMassRatio(
+        alpha=alpha_m, beta=beta_m, mmin=mmin, mmax=mmax
+    )
+    chi1_dist_pl = Beta(
+        concentration1=alpha_chi_1_pl,
+        concentration0=beta_chi_1_pl,
+        validate_args=True,
+    )
+    chi2_dist_pl = Beta(
+        concentration1=alpha_chi_2_pl,
+        concentration0=beta_chi_2_pl,
+        validate_args=True,
+    )
+    cos_tilt1_dist_pl = TruncatedNormal(
+        loc=0,
+        scale=std_dev_title_1_pl,
+        low=-1,
+        high=1,
+        validate_args=True,
+    )
+    cos_tilt2_dist_pl = TruncatedNormal(
+        loc=0,
+        scale=std_dev_title_2_pl,
+        low=-1,
+        high=1,
+        validate_args=True,
+    )
+
+    powerlaw_component = JointDistribution(
+        powerlaw, chi1_dist_pl, chi2_dist_pl, cos_tilt1_dist_pl, cos_tilt2_dist_pl
+    )
+
+    ######################
+    # GAUSSIAN COMPONENT #
+    ######################
+
+    m1_dist_g = Normal(loc=mean_m1, scale=std_dev_m1, validate_args=True)
+    m2_dist_g = Normal(loc=mean_m2, scale=std_dev_m2, validate_args=True)
+    chi1_dist_g = Beta(
+        concentration1=alpha_chi_1_g,
+        concentration0=beta_chi_1_g,
+        validate_args=True,
+    )
+    chi2_dist_g = Beta(
+        concentration1=alpha_chi_2_g,
+        concentration0=beta_chi_2_g,
+        validate_args=True,
+    )
+    cos_tilt1_dist_g = TruncatedNormal(
+        loc=0,
+        scale=std_dev_title_1_g,
+        low=-1,
+        high=1,
+        validate_args=True,
+    )
+    cos_tilt2_dist_g = TruncatedNormal(
+        loc=0,
+        scale=std_dev_title_2_g,
+        low=-1,
+        high=1,
+        validate_args=True,
+    )
+
+    gaussian_component = JointDistribution(
+        m1_dist_g,
+        m2_dist_g,
+        chi1_dist_g,
+        chi2_dist_g,
+        cos_tilt1_dist_g,
+        cos_tilt2_dist_g,
+    )
+
+    return MixtureGeneral(
+        mixing_distribution=Categorical(probs=jnp.array([0.5, 0.5])),
+        component_distributions=[powerlaw_component, gaussian_component],
+        support=constraints.real,
+        validate_args=True,
+    )

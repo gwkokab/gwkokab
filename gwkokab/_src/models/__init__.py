@@ -18,6 +18,7 @@ from .models import (
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
     MultiPeakMassModel as MultiPeakMassModel,
+    MultiSpinModel as MultiSpinModel,
     NDistribution as NDistribution,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
