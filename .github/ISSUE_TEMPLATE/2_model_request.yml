@@ -24,3 +24,10 @@ body:
       description: "If the model is from a paper, please provide the equation number or section."
     validations:
       required: true
+  - type: textarea
+    attributes:
+      label: Additional Information
+      description: >-
+        Provide any additional information that may be helpful in understanding the model.
+    validations:
+      required: false
