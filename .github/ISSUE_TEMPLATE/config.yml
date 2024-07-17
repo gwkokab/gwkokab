@@ -1,5 +1,11 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
   - name: Have questions or need support?
     url: https://github.com/gwkokab/gwkokab/discussions
     about: Please ask questions on the Discussions tab
+  - name: Top-Ranking Issues
+    url: https://github.com/gwkokab/gwkokab/issues/62
+    about: See an overview of the most popular GWKokab issues
+  - name: Community Feedback
+    url: https://github.com/gwkokab/gwkokab/discussions/139
+    about: A central location for kind words about GWKokab

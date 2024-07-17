@@ -1,31 +1,20 @@
-# This template is borrowed from https://github.com/google/jax/blob/main/.github/ISSUE_TEMPLATE/bug-report.yml
----
 name: Bug report
 description: >-
   Report a bug or unexpected behavior to help us improve the package
 labels:
-  - bug
+  - "bug :lady_beetle:"
 
 body:
-  - type: markdown
+  - type: checkboxes
     attributes:
-      value: >
-        ## Thank you for helping us improve GWKokab!
-
-        * Please first verify that your issue is not already reported using the
-        [Issue search][issue search].
-
-        * If you are asking a question or seeking support, please
-        consider [starting a discussion][Discussions].
-
-        * If you prefer a non-templated issue report, click [here][Raw report].
-
-
-        [Discussions]: https://github.com/gwkokab/gwkokab/discussions
-
-        [issue search]: https://github.com/gwkokab/gwkokab/search?q=is%3Aissue&type=issues
-
-        [Raw report]: https://github.com/gwkokab/gwkokab/issues/new
+      label: Check for existing issues
+      description: >-
+        Check the backlog of issues to reduce the chances of creating duplicates; if an 
+        issue already exists, place a `+1` (👍) on it. If you prefer a non-templated 
+        issue report, click [here](https://github.com/gwkokab/gwkokab/issues/new).
+      options:
+        - label: Completed
+          required: true
   - type: textarea
     attributes:
       label: Description
@@ -61,6 +50,6 @@ body:
       description: >-
         If you are using an NVIDIA GPU, what is the output of the `nvidia-smi` command?
       placeholder: |
-        ```
-        ...
+        ```bash
+        # for codeblocks, use triple backticks
         ```
