@@ -23,13 +23,17 @@ from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array, Int, PRNGKeyArray, Real
 from numpyro import distributions as dist
+from numpyro.distributions import Beta, TruncatedNormal
 from numpyro.util import is_prng_key
+
+from ..utils.math import beta_dist_mean_variance_to_concentrations
 
 
 __all__ = [
     "JointDistribution",
     "numerical_inverse_transform_sampling",
     "smoothing_kernel",
+    "get_spin_magnitude_and_misalignment_dist",
 ]
 
 
@@ -160,3 +164,47 @@ def smoothing_kernel(
         ),
     ]
     return jnp.select(conditions, choices, default=jnp.ones_like(mass))
+
+
+def get_spin_magnitude_and_misalignment_dist(
+    mean_chi1,
+    variance_chi1,
+    mean_chi2,
+    variance_chi2,
+    mean_tilt_1,
+    std_dev_tilt_1,
+    mean_tilt_2,
+    std_dev_tilt_2,
+):
+    r"""This is a helper function to reduce the lines of code in the
+    :func:`MultiSpinModel` and :func:`MultiSourceModel`.
+    """
+    concentrations_chi1 = beta_dist_mean_variance_to_concentrations(
+        mean_chi1, variance_chi1
+    )
+    concentrations_chi2 = beta_dist_mean_variance_to_concentrations(
+        mean_chi2, variance_chi2
+    )
+    chi1_dist_pl = Beta(
+        *concentrations_chi1,
+        validate_args=True,
+    )
+    chi2_dist_pl = Beta(
+        *concentrations_chi2,
+        validate_args=True,
+    )
+    cos_tilt1_dist_pl = TruncatedNormal(
+        loc=mean_tilt_1,
+        scale=std_dev_tilt_1,
+        low=-1,
+        high=1,
+        validate_args=True,
+    )
+    cos_tilt2_dist_pl = TruncatedNormal(
+        loc=mean_tilt_2,
+        scale=std_dev_tilt_2,
+        low=-1,
+        high=1,
+        validate_args=True,
+    )
+    return chi1_dist_pl, chi2_dist_pl, cos_tilt1_dist_pl, cos_tilt2_dist_pl

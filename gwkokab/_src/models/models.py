@@ -22,7 +22,6 @@ from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.scipy.stats import norm, uniform
 from jaxtyping import Array, Int, Real
 from numpyro.distributions import (
-    Beta,
     Categorical,
     constraints,
     Distribution,
@@ -35,10 +34,10 @@ from numpyro.distributions import (
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
-from ..utils.math import beta_dist_mean_variance_to_concentrations
 from ..utils.transformations import m1_q_to_m2
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
+    get_spin_magnitude_and_misalignment_dist,
     JointDistribution,
     numerical_inverse_transform_sampling,
     smoothing_kernel,
@@ -46,10 +45,10 @@ from .utils import (
 
 
 __all__ = [
-    "BrokenPowerLawMassModel",
-    "GaussianSpinModel",
-    "IndependentSpinOrientationGaussianIsotropic",
-    "MultiPeakMassModel",
+    get_spin_magnitude_and_misalignment_dist,
+    JointDistribution,
+    numerical_inverse_transform_sampling,
+    smoothing_kernel,
     "MultiSpinModel",
     "NDistribution",
     "PowerLawPeakMassModel",
@@ -1179,19 +1178,6 @@ def MultiSpinModel(
     :param std_dev_title_2_g: Width of the Truncated Gaussian distribution of cos(
         secondary spin-tilt angle) for the high-mass subpopulation
     """
-    alpha_chi_1_pl, beta_chi_1_pl = beta_dist_mean_variance_to_concentrations(
-        mean_chi_1_pl, var_chi_1_pl
-    )
-    alpha_chi_2_pl, beta_chi_2_pl = beta_dist_mean_variance_to_concentrations(
-        mean_chi_2_pl, var_chi_2_pl
-    )
-    alpha_chi_1_g, beta_chi_1_g = beta_dist_mean_variance_to_concentrations(
-        mean_chi_1_g, var_chi_1_g
-    )
-    alpha_chi_2_g, beta_chi_2_g = beta_dist_mean_variance_to_concentrations(
-        mean_chi_2_g, var_chi_2_g
-    )
-
     ######################
     # POWERLAW COMPONENT #
     ######################
@@ -1199,33 +1185,18 @@ def MultiSpinModel(
     powerlaw = PowerLawPrimaryMassRatio(
         alpha=alpha_m, beta=beta_m, mmin=mmin, mmax=mmax
     )
-    chi1_dist_pl = Beta(
-        concentration1=alpha_chi_1_pl,
-        concentration0=beta_chi_1_pl,
-        validate_args=True,
-    )
-    chi2_dist_pl = Beta(
-        concentration1=alpha_chi_2_pl,
-        concentration0=beta_chi_2_pl,
-        validate_args=True,
-    )
-    cos_tilt1_dist_pl = TruncatedNormal(
-        loc=1,
-        scale=std_dev_title_1_pl,
-        low=-1,
-        high=1,
-        validate_args=True,
-    )
-    cos_tilt2_dist_pl = TruncatedNormal(
-        loc=1,
-        scale=std_dev_title_2_pl,
-        low=-1,
-        high=1,
-        validate_args=True,
-    )
-
     powerlaw_component = JointDistribution(
-        powerlaw, chi1_dist_pl, chi2_dist_pl, cos_tilt1_dist_pl, cos_tilt2_dist_pl
+        powerlaw,
+        *get_spin_magnitude_and_misalignment_dist(
+            mean_chi1=mean_chi_1_pl,
+            variance_chi1=var_chi_1_pl,
+            mean_chi2=mean_chi_2_pl,
+            variance_chi2=var_chi_2_pl,
+            mean_tilt_1=1.0,
+            std_dev_tilt_1=std_dev_title_1_pl,
+            mean_tilt_2=1.0,
+            std_dev_tilt_2=std_dev_title_2_pl,
+        ),
     )
 
     ######################
@@ -1234,43 +1205,243 @@ def MultiSpinModel(
 
     m1_dist_g = Normal(loc=mean_m1, scale=std_dev_m1, validate_args=True)
     m2_dist_g = Normal(loc=mean_m2, scale=std_dev_m2, validate_args=True)
-    chi1_dist_g = Beta(
-        concentration1=alpha_chi_1_g,
-        concentration0=beta_chi_1_g,
-        validate_args=True,
-    )
-    chi2_dist_g = Beta(
-        concentration1=alpha_chi_2_g,
-        concentration0=beta_chi_2_g,
-        validate_args=True,
-    )
-    cos_tilt1_dist_g = TruncatedNormal(
-        loc=1,
-        scale=std_dev_title_1_g,
-        low=-1,
-        high=1,
-        validate_args=True,
-    )
-    cos_tilt2_dist_g = TruncatedNormal(
-        loc=1,
-        scale=std_dev_title_2_g,
-        low=-1,
-        high=1,
-        validate_args=True,
-    )
-
     gaussian_component = JointDistribution(
         m1_dist_g,
         m2_dist_g,
-        chi1_dist_g,
-        chi2_dist_g,
-        cos_tilt1_dist_g,
-        cos_tilt2_dist_g,
+        *get_spin_magnitude_and_misalignment_dist(
+            mean_chi1=mean_chi_1_g,
+            variance_chi1=var_chi_1_g,
+            mean_chi2=mean_chi_2_g,
+            variance_chi2=var_chi_2_g,
+            mean_tilt_1=1.0,
+            std_dev_tilt_1=std_dev_title_1_g,
+            mean_tilt_2=1.0,
+            std_dev_tilt_2=std_dev_title_2_g,
+        ),
     )
 
     return MixtureGeneral(
-        mixing_distribution=Categorical(probs=jnp.array([0.5, 0.5])),
+        mixing_distribution=Categorical(probs=jnp.ones(2) / 2.0, validate_args=True),
         component_distributions=[powerlaw_component, gaussian_component],
+        support=constraints.real,
+        validate_args=True,
+    )
+
+
+def MultiSourceModel(
+    # BBH Powerlaw params
+    alpha_BBH,
+    beta_BBH,
+    mmin_BBH,
+    mmax_BBH,
+    mean_chi_1_pl_BBH,
+    var_chi_1_pl_BBH,
+    mean_chi_2_pl_BBH,
+    var_chi_2_pl_BBH,
+    std_dev_title_1_pl_BBH,
+    std_dev_title_2_pl_BBH,
+    # BBH Gaussian params
+    mean_m1_BBH,
+    std_dev_m1_BBH,
+    mean_m2_BBH,
+    std_dev_m2_BBH,
+    mean_chi_1_g_BBH,
+    var_chi_1_g_BBH,
+    mean_chi_2_g_BBH,
+    var_chi_2_g_BBH,
+    std_dev_title_1_g_BBH,
+    std_dev_title_2_g_BBH,
+    # BHNS params
+    mean_m_BHNS,
+    std_dev_m_BHNS,
+    mean_chi_BH_BHNS,
+    var_chi_BH_BHNS,
+    mean_chi_NS_BHNS,
+    var_chi_NS_BHNS,
+    std_dev_title_BH_BHNS,
+    std_dev_title_NS_BHNS,
+    # BNS params
+    mean_m_NS,
+    std_dev_m_NS,
+    mmax_NS,
+    mean_chi_1_BNS,
+    var_chi_1_BNS,
+    mean_chi_2_BNS,
+    var_chi_2_BNS,
+    std_dev_title_1_BNS,
+    std_dev_title_2_BNS,
+) -> MixtureGeneral:
+    r"""See details in Appendix D3 of `Population of Merging Compact Binaries Inferred
+    Using Gravitational Waves through
+    GWTC-3 <https://doi.org/10.1103/PhysRevX.13.011048>`_.
+
+    .. note::
+        In original formulation, each component is scaled up by their respective rate
+        :math:`\mathcal{R}_{\mathrm{BBH},pl}`, :math:`\mathcal{R}_{\mathrm{BBH},g}`,
+        :math:`\mathcal{R}_{\mathrm{NSBH}}` and :math:`\mathcal{R}_{\mathrm{BNS}}`.
+        However to streamline the implementation with :mod:`NumPyro`, we are not
+        scaling each component with their respective rate. Instead, we will deal this
+        in Log-likelihood function.
+
+
+    :param alpha_BBH: Primary mass spectral index for the BBH power-law subpopulation
+    :param beta_BBH: Mass ratio spectral index for the BBH power-law subpopulation
+    :param mmin_BBH: Minimum mass of the BBH power-law subpopulation
+    :param mmax_BBH: Maximum mass of the BBH power-law subpopulation
+    :param mean_chi_1_pl_BBH: Mean of the beta distribution of primary spin
+        magnitudes for the BBH Gaussian subpopulation
+    :param var_chi_1_pl_BBH: Variance of the beta distribution of primary spin
+        magnitudes for the BBH Gaussian subpopulation
+    :param mean_chi_2_pl_BBH: Mean of the beta distribution of secondary spin
+        magnitudes for the BBH Gaussian subpopulation
+    :param var_chi_2_pl_BBH: Variance of the beta distribution of secondary spin
+        magnitudes for the BBH Gaussian subpopulation
+    :param std_dev_title_1_pl_BBH: Width of truncated Gaussian, determining typical
+        primary spin misalignment for the BBH Gaussian subpopulation
+    :param std_dev_title_2_pl_BBH: Width of truncated Gaussian, determining typical
+        secondary spin misalignment for the BBH Gaussian subpopulation
+    :param mean_m1_BBH: Centroid of the primary mass distribution for the BBH
+        Gaussian subpopulation
+    :param std_dev_m1_BBH: Width of the primary mass distribution for the BBH
+        Gaussian subpopulation
+    :param mean_m2_BBH: Centroid of the secondary mass distribution for the BBH
+        Gaussian subpopulation
+    :param std_dev_m2_BBH: Width of the secondary mass distribution for the BBH
+        Gaussian subpopulation
+    :param mean_chi_1_g_BBH: Mean of the beta distribution of primary spin magnitudes
+        for the BBH Gaussian subpopulation
+    :param var_chi_1_g_BBH: Variance of the beta distribution of primary spin
+        magnitudes for the BBH Gaussian subpopulation
+    :param mean_chi_2_g_BBH: Mean of the beta distribution of secondary spin
+        magnitudes for the BBH Gaussian subpopulation
+    :param var_chi_2_g_BBH: Variance of the beta distribution of secondary spin
+        magnitudes for the BBH Gaussian subpopulation
+    :param std_dev_title_1_g_BBH: Width of truncated Gaussian determining typical
+        primary spin misalignment for the BBH Gaussian subpopulation
+    :param std_dev_title_2_g_BBH: Width of truncated Gaussian determining typical
+        secondary spin misalignment for the BBH Gaussian subpopulation
+    :param mean_m_BHNS: Centroid of the BH mass distribution for the NSBH
+    :param std_dev_m_BHNS: Width of the BH mass distribution for the NSBH
+    :param mean_chi_BH_BHNS: Mean of the beta distribution of spin magnitudes for the
+        BH in the NSBH subpopulation
+    :param var_chi_BH_BHNS: Variance of the beta distribution of spin magnitudes for
+        the BH in the NSBH subpopulation
+    :param mean_chi_NS_BHNS: Mean of the beta distribution of spin magnitudes for the
+        NS in the NSBH subpopulation
+    :param var_chi_NS_BHNS: Variance of the beta distribution of spin magnitudes for
+        the NS in the NSBH subpopulation
+    :param std_dev_title_BH_BHNS: Width of truncated Gaussian determining typical
+        primary (secondary) spin misalignment for the BH in the NSBH subpopulation
+    :param std_dev_title_NS_BHNS: Width of truncated Gaussian determining typical
+        primary (secondary) spin misalignment for the NS in the NSBH subpopulation
+    :param mean_m_NS: Centroid of the NS mass distribution
+    :param std_dev_m_NS: Width of the NS mass distribution
+    :param mmax_NS: Maximum mass of all NSs
+    :param mean_chi_1_BNS: Mean of the beta distribution of primary spin magnitudes in
+        the BNS subpopulation
+    :param var_chi_1_BNS: Variance of the beta distribution of primary spin magnitudes
+        in the BNS subpopulation
+    :param mean_chi_2_BNS: Mean of the beta distribution of secondary spin magnitudes
+        in the BNS subpopulation
+    :param var_chi_2_BNS: Variance of the beta distribution of secondary spin magnitudes
+        in the BNS subpopulation
+    :param std_dev_title_1_BNS: Width of truncated Gaussian determining typical primary
+        spin misalignment in the BNS subpopulation
+    :param std_dev_title_2_BNS: Width of truncated Gaussian determining typical
+        secondary spin misalignment in the BNS subpopulation
+    """
+    ##########################
+    # BBH POWERLAW COMPONENT #
+    ##########################
+
+    powerlaw_BBH = PowerLawPrimaryMassRatio(
+        alpha=alpha_BBH, beta=beta_BBH, mmin=mmin_BBH, mmax=mmax_BBH
+    )
+    powerlaw_BBH_component = JointDistribution(
+        powerlaw_BBH,
+        *get_spin_magnitude_and_misalignment_dist(
+            mean_chi1=mean_chi_1_pl_BBH,
+            variance_chi1=var_chi_1_pl_BBH,
+            mean_chi2=mean_chi_2_pl_BBH,
+            variance_chi2=var_chi_2_pl_BBH,
+            mean_tilt_1=1.0,
+            std_dev_tilt_1=std_dev_title_1_pl_BBH,
+            mean_tilt_2=1.0,
+            std_dev_tilt_2=std_dev_title_2_pl_BBH,
+        ),
+    )
+
+    ##########################
+    # BBH GAUSSIAN COMPONENT #
+    ##########################
+
+    m1_dist_g_BBH = Normal(loc=mean_m1_BBH, scale=std_dev_m1_BBH, validate_args=True)
+    m2_dist_g_BBH = Normal(loc=mean_m2_BBH, scale=std_dev_m2_BBH, validate_args=True)
+    gaussian_BBH_component = JointDistribution(
+        m1_dist_g_BBH,
+        m2_dist_g_BBH,
+        *get_spin_magnitude_and_misalignment_dist(
+            mean_chi1=mean_chi_1_g_BBH,
+            variance_chi1=var_chi_1_g_BBH,
+            mean_chi2=mean_chi_2_g_BBH,
+            variance_chi2=var_chi_2_g_BBH,
+            mean_tilt_1=1.0,
+            std_dev_tilt_1=std_dev_title_1_g_BBH,
+            mean_tilt_2=1.0,
+            std_dev_tilt_2=std_dev_title_2_g_BBH,
+        ),
+    )
+
+    ###########################
+    # BHNS GAUSSIAN COMPONENT #
+    ###########################
+
+    m_dist_BH_BHNS = Normal(loc=mean_m_BHNS, scale=std_dev_m_BHNS, validate_args=True)
+    m_dist_NS_BHNS = TruncatedNormal(
+        loc=mean_m_NS, scale=std_dev_m_NS, high=mmax_NS, validate_args=True
+    )
+    BHNS_component = JointDistribution(
+        m_dist_BH_BHNS,
+        m_dist_NS_BHNS,
+        *get_spin_magnitude_and_misalignment_dist(
+            mean_chi1=mean_chi_BH_BHNS,
+            variance_chi1=var_chi_BH_BHNS,
+            mean_chi2=mean_chi_NS_BHNS,
+            variance_chi2=var_chi_NS_BHNS,
+            mean_tilt_1=1.0,
+            std_dev_tilt_1=std_dev_title_BH_BHNS,
+            mean_tilt_2=1.0,
+            std_dev_tilt_2=std_dev_title_NS_BHNS,
+        ),
+    )
+
+    #########################
+    # NS GAUSSIAN COMPONENT #
+    #########################
+
+    BNS_component = JointDistribution(
+        m_dist_NS_BHNS,
+        m_dist_NS_BHNS,
+        *get_spin_magnitude_and_misalignment_dist(
+            mean_chi1=mean_chi_1_BNS,
+            variance_chi1=var_chi_1_BNS,
+            mean_chi2=mean_chi_2_BNS,
+            variance_chi2=var_chi_2_BNS,
+            mean_tilt_1=1.0,
+            std_dev_tilt_1=std_dev_title_1_BNS,
+            mean_tilt_2=1.0,
+            std_dev_tilt_2=std_dev_title_2_BNS,
+        ),
+    )
+
+    return MixtureGeneral(
+        mixing_distribution=Categorical(probs=jnp.ones(4) / 4.0, validate_args=True),
+        component_distributions=[
+            powerlaw_BBH_component,
+            gaussian_BBH_component,
+            BHNS_component,
+            BNS_component,
+        ],
         support=constraints.real,
         validate_args=True,
     )
