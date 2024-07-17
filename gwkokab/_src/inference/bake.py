@@ -15,9 +15,8 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing import Any
-from typing_extensions import Self, Tuple
+from typing_extensions import Callable, Self
 
 from numpyro.distributions import Distribution
 
@@ -32,41 +31,28 @@ def get_numpyro_dist_repr(dist: Distribution) -> str:
     return fmtstring
 
 
-def classify_params(**kwds: Any) -> Tuple[dict, dict]:
-    constants = dict()
-    variables = dict()
-    for key, value in kwds.items():
-        if isinstance(value, Distribution):
-            variables[key] = value
-        elif isinstance(value, (int, float)):
-            constants[key] = value
-        else:
-            raise ValueError(
-                f"Parameter {key} has an invalid type {type(value)}: {value}"
-            )
-    return constants, variables
-
-
 class Bake(object):
-    def __init__(self, dist: Distribution) -> None:
+    def __init__(self, dist: Distribution | Callable[[], Distribution]) -> None:
         self.dist = dist
 
     def __call__(self, **kwds: Any) -> Self:
-        constants, variables = classify_params(**kwds)
-        if not variables:
-            initialized_dist = self.dist(**constants)
-        else:
-            initialized_dist = partial(self.dist, **constants)
-        self.dist = initialized_dist
+        constants = dict()
+        variables = dict()
+        for key, value in kwds.items():
+            if isinstance(value, Distribution):
+                variables[key] = value
+            elif isinstance(value, (int, float)):
+                constants[key] = value
+            else:
+                raise ValueError(
+                    f"Parameter {key} has an invalid type {type(value)}: {value}"
+                )
         self.constants = constants
         self.variables = variables
         return self
 
     def __repr__(self) -> str:
-        if isinstance(self.dist, partial):
-            fmtstring = self.dist.func.__name__
-        else:
-            fmtstring = self.dist.__class__.__name__
+        fmtstring = self.dist.__name__
         fmtstring += "("
         if self.constants:
             for key, value in self.constants.items():
