@@ -1127,90 +1127,54 @@ def MultiSpinModel(
     std_dev_title_1_g,
     std_dev_title_2_g,
 ) -> MixtureGeneral:
-    r"""For details see Appendix D3 of `Population Properties of Compact Objects from
+    r"""See details Appendix D3 of `Population Properties of Compact Objects from
     the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog <https://iopscience.iop.org/article/10.3847/2041-8213/abe949>`_. The 
-    Power-law component is given by,
+    Catalog <https://iopscience.iop.org/article/10.3847/2041-8213/abe949>`_.
 
-    .. math::
-        \begin{multline}
-            p_{pl}(\lambda\mid\Lambda_{pl})=m_1^{\alpha_m}q^{\beta_m}
-            \operatorname{Beta}(\chi_1\mid\mu_{\chi_1, pl},\sigma_{\chi_1, pl})
-            \operatorname{Beta}(\chi_2\mid\mu_{\chi_2, pl},\sigma_{\chi_2, pl})\\
-            \mathcal{N}_{[-1,1]}(t_1\mid\mu=0,\sigma_{1, pl})
-            \mathcal{N}_{[-1,1]}(t_2\mid\mu=0,\sigma_{2, pl})
-        \end{multline}
-        
-    where :math:`\lambda=(m_1,m_2,\chi_1,\chi_2,t_1,t_2)` and :math:`\Lambda_{pl}=(
-    \alpha_m, \beta_m, m_{\text{min}}, m_{\text{max}}, \mu_{\chi_1, pl}, 
-    \sigma_{\chi_1, pl}, \mu_{\chi_2, pl}, \sigma_{\chi_2, pl}, \sigma_{1, pl},
-    \sigma_{2, pl})` is the set of hyperparameters for the power-law component. The
-    Gaussian component is given by,
-
-    .. math::
-        \begin{multline}
-            p_{g}(\lambda\mid\Lambda_{g})=\mathcal{N}\left(m_1\mid\mu_{m_1}, \sigma_{m_1}\right)
-            \mathcal{N}\left(m_2\mid\mu_{m_2}, \sigma_{m_2}\right)\\
-            \operatorname{Beta}(\chi_1\mid\mu_{\chi_1, g},\sigma_{\chi_1, g})
-            \operatorname{Beta}(\chi_2\mid\mu_{\chi_2, g},\sigma_{\chi_2, g})\\
-            \mathcal{N}_{[-1,1]}(t_1\mid\mu=0,\sigma_{1, g})
-            \mathcal{N}_{[-1,1]}(t_2\mid\mu=0,\sigma_{2, g})
-        \end{multline}
-        
-    where :math:`\Lambda_{g}=(\mu_{m_1}, \sigma_{m_1}, \mu_{m_2}, \sigma_{m_2},
-    \mu_{\chi_1, g}, \sigma_{\chi_1, g}, \mu_{\chi_2, g}, \sigma_{\chi_2, g},
-    \sigma_{1, g}, \sigma_{2, g})` is the set of hyperparameters for the Gaussian
-    component. They are mixed with equal weights,
-        
-    .. math::
-        
-        p(\lambda,\mid\Lambda_{pl}\cup\Lambda_{g})=
-        \frac{1}{2}p_{pl}(\lambda,\mid\Lambda)+\frac{1}{2}p_{g}(\lambda,\mid\Lambda)
-        
     .. note::
-        In original formulation, each component is scaled up by their respective rate 
+        In original formulation, each component is scaled up by their respective rate
         :math:`\mathcal{R}_{pl}` and :math:`\mathcal{R}_{g}`. However to streamline
         the implementation with :mod:`numpyro`, we are not scaling each component with
         their respective rate. Instead, we will deal this in Log-likelihood function.
 
 
-    :param alpha_m: Power-law slope of the primary mass distribution for the low-mass 
+    :param alpha_m: Power-law slope of the primary mass distribution for the low-mass
         subpopulation
-    :param beta_m: Power-law slope of the mass ratio distribution for the low-mass 
+    :param beta_m: Power-law slope of the mass ratio distribution for the low-mass
         subpopulation
-    :param mmin: Minimum mass of the primary mass distribution for the low-mass 
+    :param mmin: Minimum mass of the primary mass distribution for the low-mass
         subpopulation
-    :param mmax: Maximum mass of the primary mass distribution for the low-mass 
+    :param mmax: Maximum mass of the primary mass distribution for the low-mass
         subpopulation
-    :param mean_chi_1_pl: Mean of the beta distribution of primary spin magnitudes for 
+    :param mean_chi_1_pl: Mean of the beta distribution of primary spin magnitudes for
         the low-mass subpopulation
-    :param var_chi_1_pl: Variance of the beta distribution of primary spin magnitudes 
+    :param var_chi_1_pl: Variance of the beta distribution of primary spin magnitudes
         for the low-mass subpopulation
-    :param mean_chi_2_pl: Mean of the beta distribution of secondary spin magnitudes 
+    :param mean_chi_2_pl: Mean of the beta distribution of secondary spin magnitudes
         for the low-mass subpopulation
-    :param var_chi_2_pl: Variance of the beta distribution of secondary spin 
+    :param var_chi_2_pl: Variance of the beta distribution of secondary spin
         magnitudes for the low-mass subpopulation
-    :param std_dev_title_1_pl: Width of the Truncated Gaussian distribution of the 
+    :param std_dev_title_1_pl: Width of the Truncated Gaussian distribution of the
         cosine of the primary spin-tilt angle for the low-mass subpopulation
     :param std_dev_title_2_pl: Width of the Truncated Gaussian distribution of cos(
         secondary spin-tilt angle) for the low-mass subpopulation
-    :param mean_m1: Centroid of the primary mass distribution for the high-mass 
+    :param mean_m1: Centroid of the primary mass distribution for the high-mass
         subpopulation
-    :param std_dev_m1: Width of the primary mass distribution for the high-mass 
+    :param std_dev_m1: Width of the primary mass distribution for the high-mass
         subpopulation
-    :param mean_m2: Centroid of the secondary mass distribution for the high-mass 
+    :param mean_m2: Centroid of the secondary mass distribution for the high-mass
         subpopulation
-    :param std_dev_m2: Width of the secondary mass distribution for the high-mass 
+    :param std_dev_m2: Width of the secondary mass distribution for the high-mass
         subpopulation
-    :param mean_chi_1_g: Mean of the beta distribution of primary spin magnitudes for 
+    :param mean_chi_1_g: Mean of the beta distribution of primary spin magnitudes for
         the high-mass subpopulation
-    :param var_chi_1_g: Variance of the beta distribution of primary spin magnitudes 
+    :param var_chi_1_g: Variance of the beta distribution of primary spin magnitudes
         for the high-mass subpopulation
-    :param mean_chi_2_g: Width of the Truncated Gaussian distribution of cos(primary 
+    :param mean_chi_2_g: Width of the Truncated Gaussian distribution of cos(primary
         spin-tilt angle) for the high-mass subpopulation
-    :param var_chi_2_g: Mean of the beta distribution of secondary spin magnitudes for 
+    :param var_chi_2_g: Mean of the beta distribution of secondary spin magnitudes for
         the high-mass subpopulation
-    :param std_dev_title_1_g: Variance of the beta distribution of secondary spin 
+    :param std_dev_title_1_g: Variance of the beta distribution of secondary spin
         magnitudes for the high-mass subpopulation
     :param std_dev_title_2_g: Width of the Truncated Gaussian distribution of cos(
         secondary spin-tilt angle) for the high-mass subpopulation
@@ -1246,14 +1210,14 @@ def MultiSpinModel(
         validate_args=True,
     )
     cos_tilt1_dist_pl = TruncatedNormal(
-        loc=0,
+        loc=1,
         scale=std_dev_title_1_pl,
         low=-1,
         high=1,
         validate_args=True,
     )
     cos_tilt2_dist_pl = TruncatedNormal(
-        loc=0,
+        loc=1,
         scale=std_dev_title_2_pl,
         low=-1,
         high=1,
@@ -1281,14 +1245,14 @@ def MultiSpinModel(
         validate_args=True,
     )
     cos_tilt1_dist_g = TruncatedNormal(
-        loc=0,
+        loc=1,
         scale=std_dev_title_1_g,
         low=-1,
         high=1,
         validate_args=True,
     )
     cos_tilt2_dist_g = TruncatedNormal(
-        loc=0,
+        loc=1,
         scale=std_dev_title_2_g,
         low=-1,
         high=1,
