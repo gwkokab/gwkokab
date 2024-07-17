@@ -8,12 +8,12 @@ on:
     branches: ['main', 'dev']
     paths:
       - "**/*.py"
-      - ".github/workflows/python-package.yml"
+      - ".github/workflows/ci.yml"
   pull_request:
     branches: ['main', 'dev']
     paths:
       - "**/*.py"
-      - ".github/workflows/python-package.yml"
+      - ".github/workflows/ci.yml"
 
 jobs:
   lint:
