@@ -12,12 +12,13 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
 from .models import (
     BrokenPowerLawMassModel as BrokenPowerLawMassModel,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
     MultiPeakMassModel as MultiPeakMassModel,
+    MultiSourceModel as MultiSourceModel,
+    MultiSpinModel as MultiSpinModel,
     NDistribution as NDistribution,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,

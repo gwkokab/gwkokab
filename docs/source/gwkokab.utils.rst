@@ -1,6 +1,17 @@
 ``gwkokab.utils``
 =================
 
+``gwkokab.utils.math``
+---------------------------------
+
+.. automodule:: gwkokab.utils.math
+
+.. autosummary::
+    :nosignatures:
+    :toctree: _autosummary
+
+    beta_dist_concentrations_to_mean_variance
+    beta_dist_mean_variance_to_concentrations
 
 ``gwkokab.utils.transformations``
 ---------------------------------

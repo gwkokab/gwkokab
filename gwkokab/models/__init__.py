@@ -12,15 +12,23 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-
+from gwkokab._src.models import wrappers as wrappers
 from gwkokab._src.models.models import (
     BrokenPowerLawMassModel as BrokenPowerLawMassModel,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
     MultiPeakMassModel as MultiPeakMassModel,
+    MultiSourceModel as MultiSourceModel,
+    MultiSpinModel as MultiSpinModel,
     NDistribution as NDistribution,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
     TruncatedPowerLaw as TruncatedPowerLaw,
     Wysocki2019MassModel as Wysocki2019MassModel,
+)
+
+from . import (
+    constraints as constraints,
+    transformations as transformations,
+    utils as utils,
 )

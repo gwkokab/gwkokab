@@ -25,8 +25,8 @@ from jaxtyping import Array, Bool, Float, Int, PRNGKeyArray
 from numpyro.distributions import Distribution
 from numpyro.util import is_prng_key
 
-from ..models.utils.jointdistribution import JointDistribution
-from ..models.utils.wrappers import ModelRegistry
+from ..models.utils import JointDistribution
+from ..models.wrappers import ModelRegistry
 
 
 __all__ = ["popfactory", "popmodel_magazine", "error_magazine"]

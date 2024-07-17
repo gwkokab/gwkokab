@@ -22,6 +22,9 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 * Bijective transformations on different mass coordinates, for details, see [PR#125](https://github.com/gwkokab/gwkokab/pull/125).
 * Wrapper for scaling models.
 * Model registration and retrieval. `gwkokab.population.popmodel_magazine` and `gwkokab.population.error_magazine` are introduced to register the population model and error models, respectively.
+* New models:
+  * `MultiSourceModel`
+  * `MultiSpinModel`
 
 ## gwkokab 0.0.1 (Jul 5, 2024)
 
