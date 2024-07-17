@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 
+from .bake import Bake as Bake
 from .flowMChandler import flowMChandler as flowMChandler
 from .hbm import BayesianHierarchicalModel as BayesianHierarchicalModel
 from .utils import (

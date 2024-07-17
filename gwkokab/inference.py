@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 
+from gwkokab._src.inference.bake import Bake as Bake
 from gwkokab._src.inference.flowMChandler import flowMChandler as flowMChandler
 from gwkokab._src.inference.hbm import (
     BayesianHierarchicalModel as BayesianHierarchicalModel,
