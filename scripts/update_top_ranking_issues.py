@@ -18,7 +18,7 @@ app: Typer = typer.Typer()
 DATETIME_FORMAT: str = "%m/%d/%Y %I:%M %p"
 CORE_LABELS: set[str] = {
     "documentation :scroll:",
-    "enhancement :nail_care:",
+    "enhancement :sparkles:",
     "experimental :test_tube:",
     "bug :lady_beetle:",
     "design  enhancement :pinched_fingers: :ok_hand:",

@@ -1,0 +1,31 @@
+# This template is borrowed from https://github.com/google/jax/blob/main/.github/ISSUE_TEMPLATE/bug-report.yml
+---
+name: Feature request
+description: >-
+  Suggest a new feature or enhancement for GWKokab.
+labels:
+  - "enhancement :sparkles:"
+
+body:
+  - type: checkboxes
+    attributes:
+      label: Check for existing issues
+      description: >-
+        Check the backlog of issues to reduce the chances of creating duplicates; if an 
+        issue already exists, place a `+1` (👍) on it. If you prefer a non-templated 
+        issue report, click [here](https://github.com/gwkokab/gwkokab/issues/new).
+      options:
+        - label: Completed
+          required: true
+  - type: textarea
+    attributes:
+      label: Description
+      description: >-
+        A concise description of the feature.
+      placeholder: |
+        Text may use markdown formatting.
+        ```python
+        # for codeblocks, use triple backticks
+        ```
+    validations:
+      required: true
