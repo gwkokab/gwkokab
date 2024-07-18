@@ -15,9 +15,11 @@
 
 from __future__ import annotations
 
-from typing import Any
-from typing_extensions import Callable, Self
+from functools import partial
+from typing_extensions import Any, Callable, Dict, Self, Tuple
 
+from jax import random as jrd
+from jax.tree_util import register_pytree_node_class
 from numpyro.distributions import Distribution
 
 
@@ -31,14 +33,15 @@ def get_numpyro_dist_repr(dist: Distribution) -> str:
     return fmtstring
 
 
+@register_pytree_node_class
 class Bake(object):
     def __init__(self, dist: Distribution | Callable[[], Distribution]) -> None:
         self.dist = dist
 
-    def __call__(self, **kwds: Any) -> Self:
-        constants = dict()
-        variables = dict()
-        for key, value in kwds.items():
+    def __call__(self, **kwargs: Any) -> Self:
+        constants: Dict[str, int | float] = dict()
+        variables: Dict[str, Distribution] = dict()
+        for key, value in kwargs.items():
             if isinstance(value, Distribution):
                 variables[key] = value
             elif isinstance(value, (int, float)):
@@ -50,6 +53,19 @@ class Bake(object):
         self.constants = constants
         self.variables = variables
         return self
+
+    def get_dist(self) -> Tuple[Dict[str, Distribution], Callable[[], Distribution]]:
+        return self.variables, partial(self.dist, **self.constants)
+
+    def get_dummy(self) -> Distribution:
+        key = jrd.PRNGKey(0)
+        return self.dist(
+            **self.constants,
+            **{
+                name: prior.sample(key=key, sample_shape=())
+                for name, prior in self.variables.items()
+            },
+        )
 
     def __repr__(self) -> str:
         fmtstring = self.dist.__name__
@@ -64,3 +80,10 @@ class Bake(object):
             fmtstring = fmtstring[:-2]
         fmtstring += ")"
         return fmtstring
+
+    def tree_flatten(self):
+        return (self.variables, self.constants), None
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        return cls(*children)
