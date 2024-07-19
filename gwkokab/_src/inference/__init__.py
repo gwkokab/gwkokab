@@ -15,7 +15,7 @@
 
 from .bake import Bake as Bake
 from .flowMChandler import flowMChandler as flowMChandler
-from .hbm import BayesianHierarchicalModel as BayesianHierarchicalModel
+from .poissonlikelihood import poisson_likelihood as poisson_likelihood
 from .utils import (
     ModelPack as ModelPack,
     save_data_from_sampler as save_data_from_sampler,
