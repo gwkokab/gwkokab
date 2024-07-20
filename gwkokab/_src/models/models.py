@@ -28,6 +28,7 @@ from numpyro.distributions import (
     MixtureGeneral,
     MultivariateNormal,
     Normal,
+    TransformedDistribution,
     TruncatedNormal,
     Uniform,
 )
@@ -36,6 +37,7 @@ from numpyro.util import is_prng_key
 
 from ..utils.transformations import m1_q_to_m2
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
+from .transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .utils import (
     get_spin_magnitude_and_misalignment_dist,
     JointDistribution,
@@ -1182,8 +1184,12 @@ def MultiSpinModel(
     # POWERLAW COMPONENT #
     ######################
 
-    powerlaw = PowerLawPrimaryMassRatio(
-        alpha=alpha_m, beta=beta_m, mmin=mmin, mmax=mmax
+    powerlaw = TransformedDistribution(
+        base_distribution=PowerLawPrimaryMassRatio(
+            alpha=alpha_m, beta=beta_m, mmin=mmin, mmax=mmax
+        ),
+        transforms=[PrimaryMassAndMassRatioToComponentMassesTransform()],
+        validate_args=True,
     )
     powerlaw_component = JointDistribution(
         powerlaw,
@@ -1354,8 +1360,12 @@ def MultiSourceModel(
     # BBH POWERLAW COMPONENT #
     ##########################
 
-    powerlaw_BBH = PowerLawPrimaryMassRatio(
-        alpha=alpha_BBH, beta=beta_BBH, mmin=mmin_BBH, mmax=mmax_BBH
+    powerlaw_BBH = TransformedDistribution(
+        base_distribution=PowerLawPrimaryMassRatio(
+            alpha=alpha_BBH, beta=beta_BBH, mmin=mmin_BBH, mmax=mmax_BBH
+        ),
+        transforms=[PrimaryMassAndMassRatioToComponentMassesTransform()],
+        validate_args=True,
     )
     powerlaw_BBH_component = JointDistribution(
         powerlaw_BBH,
