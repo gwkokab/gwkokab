@@ -15,6 +15,8 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 * The directory containing individual injections is removed from the synthetic data generation process.
 * `gwkokab.population.PopFactory` is removed from public API, instead, an instance of the class is provided in `gwkokab.population` module.
 * `gwkokab.population.NoisePopInfo`, `gwkokab.population.PopInfo` and `gwkokab.population.run_noise_factory` are removed.
+* `gwkokab.inference.BayesianHierarchicalModel` in favor of `gwkokab.inference.PoissonLikelihood`
+* `gwkokab.inference.ModelPack` removed.
 
 **New features**
 
@@ -25,7 +27,10 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 * New models:
   * `MultiSourceModel`
   * `MultiSpinModel`
-
+* New API for inference, compatible with `gwkokab.inference.flowMChandler`
+  * `gwkokab.inference.PoissonLikelihood`
+  * `gwkokab.inference.Bake`
+  
 ## gwkokab 0.0.1 (Jul 5, 2024)
 
 * Initial release.
