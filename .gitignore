@@ -12,6 +12,7 @@ docs/source/_autosummary
 # data ignore
 *realization*
 *.dat
+**/*.eqx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
