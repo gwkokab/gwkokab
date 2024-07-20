@@ -29,6 +29,8 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.viewcode",
     "sphinx.ext.autosummary",
+    "sphinx_tabs.tabs",
+    "sphinx_design",
     "nbsphinx",
     "myst_parser",
     "sphinx.ext.doctest",
@@ -96,7 +98,7 @@ exclude_patterns = [
 ]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = "sphinx"
+pygments_style = "default"
 
 
 autosummary_generate = True
