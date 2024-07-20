@@ -22,8 +22,7 @@ import jax
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array, Int, PRNGKeyArray, Real
-from numpyro import distributions as dist
-from numpyro.distributions import Beta, TruncatedNormal
+from numpyro.distributions import Beta, Distribution, TruncatedNormal
 from numpyro.util import is_prng_key
 
 from ..utils.math import beta_dist_mean_variance_to_concentrations
@@ -37,10 +36,12 @@ __all__ = [
 ]
 
 
-class JointDistribution(dist.Distribution):
+class JointDistribution(Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
-    def __init__(self, *marginal_distributions: dist.Distribution) -> None:
+    pytree_aux_fields = ("marginal_distributions",)
+
+    def __init__(self, *marginal_distributions: Distribution) -> None:
         r"""
         :param marginal_distributions: A sequence of marginal distributions.
         """
@@ -68,7 +69,7 @@ class JointDistribution(dist.Distribution):
             lambda d, v: d.log_prob(value[..., v]),
             self.marginal_distributions,
             self.shaped_values,
-            is_leaf=lambda x: isinstance(x, dist.Distribution),
+            is_leaf=lambda x: isinstance(x, Distribution),
         )
         log_probs = jtr.reduce(
             lambda x, y: x + y,
@@ -84,7 +85,7 @@ class JointDistribution(dist.Distribution):
             lambda d, k: d.sample(k, sample_shape).reshape(*sample_shape, -1),
             self.marginal_distributions,
             keys,
-            is_leaf=lambda x: isinstance(x, dist.Distribution),
+            is_leaf=lambda x: isinstance(x, Distribution),
         )
         samples = jnp.concatenate(samples, axis=-1)
         return samples
