@@ -6,8 +6,7 @@
 .. autosummary::
     :nosignatures:
     :toctree: _autosummary
-
+        
+    Bake
     flowMChandler
-    BayesianHierarchicalModel
-    ModelPack
-    save_data_from_sampler
+    poisson_likelihood
