@@ -18,7 +18,3 @@ from gwkokab._src.inference.flowMChandler import flowMChandler as flowMChandler
 from gwkokab._src.inference.poissonlikelihood import (
     poisson_likelihood as poisson_likelihood,
 )
-from gwkokab._src.inference.utils import (
-    ModelPack as ModelPack,
-    save_data_from_sampler as save_data_from_sampler,
-)

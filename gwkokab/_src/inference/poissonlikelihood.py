@@ -31,6 +31,9 @@ from ..parameters.parameters import Parameter
 from .bake import Bake
 
 
+__all__ = ["poisson_likelihood"]
+
+
 class PoissonLikelihood(object):
     r"""This class is used to provide a likelihood function for the
     inhomogeneous Poisson process. The likelihood is given by,
@@ -120,7 +123,9 @@ class PoissonLikelihood(object):
         self.variables_index = {
             key: self.total_pop + i for i, key in enumerate(self.variables.keys())
         }
-        self.vt_params: List[Int] = [args_name.index(param) for param in self.vt_params]
+        self.vt_params_index: List[Int] = [
+            args_name.index(param) for param in self.vt_params
+        ]
 
         self.ref_priors = JointDistribution(*map(lambda x: x.prior, params))
         self.priors = JointDistribution(*log_rates_prior, *self.variables.values())
@@ -139,7 +144,7 @@ class PoissonLikelihood(object):
         """
         N = 1 << 13
         samples = model.sample(jrd.PRNGKey(np.random.randint(1, 2**32 - 1)), (N,))[
-            ..., self.vt_params
+            ..., self.vt_params_index
         ]
         return self.time * rate * jnp.mean(jnp.exp(self.logVT(samples)))
 
