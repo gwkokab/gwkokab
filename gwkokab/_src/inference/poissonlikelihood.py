@@ -144,7 +144,9 @@ class PoissonLikelihood(object):
         return self.time * rate * jnp.mean(jnp.exp(self.logVT(samples)))
 
     def log_likelihood_single_rate(self, x: Array, data: dict) -> Array:
-        model = self.model(**{name: x[..., i] for name, i in self.variables_index})
+        model = self.model(
+            **{name: x[..., i] for name, i in self.variables_index.items()}
+        )
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
