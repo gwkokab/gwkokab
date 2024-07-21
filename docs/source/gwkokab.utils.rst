@@ -1,16 +1,8 @@
 ``gwkokab.utils``
 =================
 
-``gwkokab.abstract``
---------------------
-
-.. automodule:: gwkokab.utils.abstract
-
-.. autoclass:: PyTreeABC
-    :members:
-
 ``gwkokab.utils.math``
-----------------------
+---------------------------------
 
 .. automodule:: gwkokab.utils.math
 
