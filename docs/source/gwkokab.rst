@@ -6,7 +6,6 @@ GWKokab public API
 .. toctree::
    :maxdepth: 1
 
-   gwkokab.abstract
    gwkokab.errors
    gwkokab.inference
    gwkokab.models
