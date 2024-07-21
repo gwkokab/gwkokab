@@ -26,7 +26,7 @@ class PyTreeABC:
     r"""Abstract base class for PyTree objects. It is taken from the implementation of
     :class:`numpyro.distributions.distribution.Distribution`
     `implementation
-    <https://github.com/pyro-ppl/numpyro/blob/f6eb6ce152bd8e903dd56eeb5909ae0b59e24abe/numpyro/distributions/distribution.py#L103-L218>`_
+    <https://github.com/pyro-ppl/numpyro/blob/f6eb6ce152bd8e903dd56eeb5909ae0b59e24abe/numpyro/distributions/distribution.py#L103-L218>`_.
     """
 
     pytree_data_fields = ()
@@ -64,8 +64,8 @@ class PyTreeABC:
 
     def tree_flatten(self) -> Tuple[Iterable[PyTree], Hashable]:
         r"""
-        return: A JAX PyTree of values representing the object, and
-            Data that will be treated as constant through JAX operations.
+        return: A JAX PyTree of values representing the object, and Data that will be
+        treated as constant through JAX operations.
         """
         all_pytree_data_fields_names = type(self).gather_pytree_data_fields()
         all_pytree_data_fields_vals = tuple(
@@ -81,11 +81,8 @@ class PyTreeABC:
     def tree_unflatten(cls, aux_data: Hashable, params: Iterable[PyTree]) -> PyTree:
         """
         :param aux_data: Data that will be treated as constant through JAX operations.
-        :type aux_data: Hashable
         :param params: A JAX PyTree of values from which the object is constructed.
-        :type params: Iterable[PyTree]
         :return: A constructed object.
-        :rtype: PyTree
         """
         pytree_data_fields = cls.gather_pytree_data_fields()
         pytree_aux_fields = cls.gather_pytree_aux_fields()

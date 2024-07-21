@@ -13,4 +13,4 @@
 #  limitations under the License.
 
 
-from gwkokab._src.abstract.pytreeabc import PyTreeABC as PyTreeABC
+from gwkokab._src.utils.abstract.pytreeabc import PyTreeABC as PyTreeABC
