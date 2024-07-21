@@ -30,7 +30,8 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 * New API for inference, compatible with `gwkokab.inference.flowMChandler`
   * `gwkokab.inference.PoissonLikelihood`
   * `gwkokab.inference.Bake`
-  
+* Abstraction for PyTrees in `gwkokab.utils.abstract.PyTreeABC`.
+
 ## gwkokab 0.0.1 (Jul 5, 2024)
 
 * Initial release.
