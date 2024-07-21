@@ -23,7 +23,6 @@ from numpyro.distributions import (
     CategoricalProbs,
     Distribution,
     MixtureGeneral,
-    MixtureSameFamily,
 )
 
 from ..models.utils import JointDistribution
@@ -100,7 +99,7 @@ class PoissonLikelihood(object):
         if self.is_multi_rate_model:
             dummy_model = model.get_dummy()
             assert isinstance(
-                dummy_model, (MixtureGeneral, MixtureSameFamily)
+                dummy_model, MixtureGeneral
             ), "Model must be a mixture model for multi-rate models."
             assert len(log_rates_prior) == len(
                 log_rates_prior
@@ -189,7 +188,7 @@ class PoissonLikelihood(object):
         log_sum_of_rates = jax.nn.logsumexp(log_rates, axis=-1)
         mixing_probs = jax.nn.softmax(log_rates, axis=-1)
 
-        model.mixing_distribution = CategoricalProbs(probs=mixing_probs)
+        model._mixing_distribution = CategoricalProbs(probs=mixing_probs)
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
