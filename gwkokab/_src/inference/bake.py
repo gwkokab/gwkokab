@@ -150,8 +150,14 @@ class Bake(object):
         return fmtstring
 
     def tree_flatten(self):
-        return (self.variables, self.constants), None
+        return (self.dist, self.variables, self.constants), None
 
     @classmethod
     def tree_unflatten(cls, aux_data, children):
-        return cls(*children)
+        del aux_data
+        obj = cls.__new__(cls)
+        setattr(obj, "dist", children[0])
+        setattr(obj, "variables", children[1])
+        setattr(obj, "constants", children[2])
+        Bake.__init__(obj)
+        return obj

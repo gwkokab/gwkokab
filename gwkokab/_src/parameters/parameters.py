@@ -16,11 +16,13 @@
 from functools import partial
 from typing_extensions import Optional
 
+from jax.tree_util import register_pytree_node_class
 from numpyro.distributions import Distribution, ImproperUniform
 from numpyro.distributions.constraints import real
 
 
-class Parameter(object):
+@register_pytree_node_class
+class Parameter:
     """Initializes a Parameter object.
 
     :param name: Name of the parameter.
@@ -78,6 +80,17 @@ class Parameter(object):
         if not isinstance(other, Parameter):
             return False
         return self.name == other.name and self.prior == other.prior
+
+    def tree_flatten(self):
+        return (), {
+            "name": self.name,
+            "prior": self.prior,
+        }
+
+    @classmethod
+    def tree_unflatten(cls, aux_data, children):
+        del children
+        return cls(**aux_data)
 
 
 def ncopy(

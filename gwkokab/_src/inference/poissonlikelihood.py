@@ -18,6 +18,7 @@ from typing_extensions import Callable, List, Optional, Sequence
 import jax
 import numpy as np
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
+from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Float, Int
 from numpyro.distributions import (
     CategoricalProbs,
@@ -33,7 +34,8 @@ from .bake import Bake
 __all__ = ["poisson_likelihood"]
 
 
-class PoissonLikelihood(object):
+@register_pytree_node_class
+class PoissonLikelihood:
     r"""This class is used to provide a likelihood function for the
     inhomogeneous Poisson process. The likelihood is given by,
 
@@ -76,6 +78,36 @@ class PoissonLikelihood(object):
     logVT: Optional[Callable[[], Array]] = None
     time: Float = 1.0
     is_multi_rate_model: bool = False
+
+    def tree_flatten(self) -> tuple:
+        children = ()
+        aux_data_keys = [
+            "vt_params",
+            "is_multi_rate_model",
+            "total_pop",
+            "variables",
+            "model",
+            "variables_index",
+            "priors",
+            "vt_params_index",
+            "time",
+            "logVT",
+            "ref_priors",
+        ]
+        aux_data = {}
+        for k in aux_data_keys:
+            aux_data[k] = getattr(self, k)
+        return children, aux_data
+
+    @classmethod
+    def tree_unflatten(cls, aux_data: dict, children: tuple) -> "PoissonLikelihood":
+        del children
+        obj = cls.__new__(cls)
+        for k, v in aux_data.items():
+            if v is not None:
+                setattr(obj, k, v)
+        PoissonLikelihood.__init__(obj)
+        return obj
 
     def pre_process(self) -> None:
         """Pre-process the parameters before setting the model."""
