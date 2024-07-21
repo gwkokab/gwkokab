@@ -16,13 +16,17 @@ from __future__ import annotations
 
 import os
 import warnings
-from typing_extensions import Callable, Optional, Self
+from typing_extensions import Callable, List, Optional, Self
 
 import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softmax
 from jaxtyping import Array, Bool, Float, Int, PRNGKeyArray
-from numpyro.distributions import Distribution
+from numpyro.distributions import (
+    CategoricalProbs,
+    Distribution,
+    MixtureGeneral,
+)
 from numpyro.util import is_prng_key
 
 from ..models.utils import JointDistribution
@@ -47,7 +51,7 @@ class PopulationFactory:
     num_realizations: Int = 5
     error_size: Int = 2_000
     constraint: Callable[[Array], Bool] = lambda x: jnp.ones(x.shape[0], dtype=bool)
-    rate: Optional[Float] = None
+    rate: Optional[Float | List[Float]] = None
     analysis_time: Optional[Float] = None
     log_VT_fn: Optional[Callable[[Array], Array]] = None
     VT_params: Optional[list[str]] = None
@@ -75,78 +79,65 @@ class PopulationFactory:
     def pre_process(self) -> None:
         """Pre processes the data for the generation of population."""
         models = popmodel_magazine.registry
-        self.models = list(models.values())
+        models_values = list(models.values())
+        self.is_multi_rate_model = (
+            isinstance(self.rate, list)
+            and len(self.rate) > 1
+            and len(models.values()) == 1
+        )
+
+        if self.is_multi_rate_model:
+            assert isinstance(
+                models_values[0], MixtureGeneral
+            ), "Model must be a mixture model for multi-rate models."
+            assert len(models_values[0].component_distributions) == len(
+                self.rate
+            ), "Number of components in the model must be equal to the number of rates."
+
+        if self.is_multi_rate_model:
+            self.model = models_values[0]
+        else:
+            self.model = JointDistribution(*models_values)
 
         headers: list[str] = []
         for output_var in models.keys():
             headers.extend(output_var)
         self.headers = headers
 
-        self.vt_param_dist = None
-        self.vt_selection_mask = None
+        self.vt_selection_mask = [headers.index(param) for param in self.VT_params]
 
-        if self.log_VT_fn is not None:
-            vt_models: list[Distribution] = []
-            vt_selection_mask: list[int] = []
-            vt_params = list(self.VT_params)
-
-            k = 0
-            for i, output_var in enumerate(models.keys()):
-                flag = False
-                for out in output_var:
-                    if out in vt_params:
-                        index = output_var.index(out) + k
-                        vt_selection_mask.append(index)
-                        vt_models.append(self.models[i])
-                        flag = True
-                if flag:
-                    k += len(output_var)
-
-            self.vt_param_dist = JointDistribution(*vt_models)
-            self.vt_selection_mask = vt_selection_mask
-
-    def exp_rate(self: Self, *, key: PRNGKeyArray) -> Float:
+    def exp_rate(
+        self: Self, *, key: PRNGKeyArray, rate: Float, model: Distribution
+    ) -> Float:
         r"""Calculates the expected rate."""
         N = int(1e4)
-        value = self.vt_param_dist.sample(key, (N,))[..., self.vt_selection_mask]
+        value = model.sample(key, (N,))[..., self.vt_selection_mask]
         return (
             self.analysis_time
-            * self.rate
+            * rate
             * jnp.mean(jnp.exp(self.log_VT_fn(value).flatten()))
         )
 
     def _generate_population(self, size: Int, *, key: PRNGKeyArray) -> Array:
         r"""Generate population for a realization."""
-        keys = list(jrd.split(key, len(self.models)))
+
         if self.log_VT_fn is not None:
             old_size = size
             size += int(1e5)
-        population = jtr.map(
-            lambda model, key: model.sample(key, (size,)).reshape(size, -1),
-            self.models,
-            keys,
-            is_leaf=lambda x: isinstance(x, Distribution),
-        )
 
-        population = jtr.reduce(
-            lambda x, y: jnp.concatenate((x, y), axis=-1), population
-        )
-
+        population = self.model.sample(key, (size,))
         population = population[self.constraint(population)]
 
         if self.log_VT_fn is None:
             return population
 
-        value = jnp.column_stack(
-            [
-                population[:, self.headers.index(vt_params)]
-                for vt_params in self.VT_params
-            ]
-        )
+        _, key = jrd.split(key)
+
+        value = population[..., self.vt_selection_mask]
 
         vt = softmax(self.log_VT_fn(value).flatten())
         vt = jnp.nan_to_num(vt, nan=0.0)
-        _, key = jrd.split(keys[-1])
+        _, key = jrd.split(key)
         index = jrd.choice(
             key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
         )
@@ -160,9 +151,30 @@ class PopulationFactory:
         size = self.rate
         self.pre_process()
         if self.log_VT_fn is not None:
-            poisson_key, rate_key = jrd.split(key)
-            size: Int = int(jrd.poisson(poisson_key, self.exp_rate(key=rate_key)))
-            key = rate_key
+            if self.is_multi_rate_model:
+                total_rate = sum(self.rate)
+                rate_list = [rate / total_rate for rate in self.rate]
+                rate = jnp.array(rate_list)
+                self.model._mixing_distribution = CategoricalProbs(probs=rate)
+                keys = list(jrd.split(key, len(self.rate)))
+                exp_rates = jtr.map(
+                    lambda model, k, rate: self.exp_rate(key=k, rate=rate, model=model),
+                    self.model.component_distributions,
+                    keys,
+                    self.rate,
+                    is_leaf=lambda x: isinstance(x, Distribution),
+                )
+                _, key = jrd.split(keys[-1])
+                size = int(jrd.poisson(key, sum(exp_rates)))
+            else:
+                poisson_key, rate_key = jrd.split(key)
+                size: Int = int(
+                    jrd.poisson(
+                        poisson_key,
+                        self.exp_rate(key=rate_key, rate=self.rate, model=self.model),
+                    )
+                )
+                key = rate_key
         if size == 0:
             raise ValueError(
                 "Population size is zero. This can be a result of following:\n"
