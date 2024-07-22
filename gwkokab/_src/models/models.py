@@ -691,9 +691,6 @@ class PowerLawPeakMassModel(Distribution):
         :param mmax: Maximum mass
         :param mu: Mean of Gaussian component
         :param sigma: Standard deviation of Gaussian component
-        :param default_params: If :code:`True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If :code:`False`, the
-            model will use primary mass and mass ratio.
         """
         (
             self.alpha,
@@ -885,7 +882,7 @@ class PowerLawPrimaryMassRatio(Distribution):
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
-    def support(self):
+    def support(self) -> constraints.Constraint:
         return self._support
 
     @validate_sample
@@ -974,7 +971,7 @@ class TruncatedPowerLaw(Distribution):
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
+    def support(self) -> constraints.Constraint:
         return self._support
 
     def sample(self, key, sample_shape=()):
