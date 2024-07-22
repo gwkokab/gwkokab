@@ -2,7 +2,7 @@
 
 Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
-## gwkokab 0.0.2
+## gwkokab 0.1.0
 
 **Breaking changes**
 

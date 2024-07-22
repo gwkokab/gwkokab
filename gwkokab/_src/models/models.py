@@ -163,7 +163,7 @@ class BrokenPowerLawMassModel(Distribution):
         self._normalization()
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
+    def support(self) -> constraints.Constraint:
         return self._support
 
     def _normalization(self):
@@ -478,7 +478,7 @@ class MultiPeakMassModel(Distribution):
         self._normalization()
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
+    def support(self) -> constraints.Constraint:
         return self._support
 
     def _normalization(self):
@@ -725,7 +725,7 @@ class PowerLawPeakMassModel(Distribution):
         self._normalization()
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
+    def support(self) -> constraints.Constraint:
         return self._support
 
     def _normalization(self):
@@ -1074,7 +1074,7 @@ class Wysocki2019MassModel(Distribution):
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
+    def support(self) -> constraints.Constraint:
         return self._support
 
     @validate_sample

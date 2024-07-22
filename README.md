@@ -9,7 +9,7 @@ A JAX-based gravitational-wave population inference toolkit
 </h2>
 
 [**Installation**](https://gwkokab.readthedocs.io/en/latest/installation.html) |
-[**Documentation**](<https://gwkokab.readthedocs.io/>) |
+[**Documentation**](https://gwkokab.readthedocs.io/) |
 [**Citing GWKokab**](#citing-gwkokab)
 
 ![GitHub License](https://img.shields.io/github/license/gwkokab/gwkokab)
