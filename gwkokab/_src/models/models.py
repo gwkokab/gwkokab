@@ -1229,7 +1229,7 @@ def MultiSpinModel(
     return MixtureGeneral(
         mixing_distribution=Categorical(probs=jnp.ones(2) / 2.0, validate_args=True),
         component_distributions=[powerlaw_component, gaussian_component],
-        support=constraints.real,
+        support=constraints.real_vector,
         validate_args=True,
     )
 
@@ -1452,6 +1452,6 @@ def MultiSourceModel(
             BHNS_component,
             BNS_component,
         ],
-        support=constraints.real,
+        support=constraints.real_vector,
         validate_args=True,
     )
