@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 
-from typing_extensions import Callable, List, Optional, Sequence
+from typing_extensions import Callable, List, Optional, Sequence, Union
 
 import jax
 import numpy as np
@@ -124,6 +124,7 @@ class PoissonLikelihood:
     ) -> None:
         assert model is not None, "Model must be provided."
         assert log_rates_prior is not None, "Rate prior must be provided."
+        assert params, "Params must be provided."
         if isinstance(log_rates_prior, Distribution):
             log_rates_prior = [log_rates_prior]
         if self.is_multi_rate_model:
