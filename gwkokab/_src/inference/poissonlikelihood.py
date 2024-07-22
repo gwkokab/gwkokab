@@ -94,9 +94,7 @@ class PoissonLikelihood:
             "logVT",
             "ref_priors",
         ]
-        aux_data = {}
-        for k in aux_data_keys:
-            aux_data[k] = getattr(self, k)
+        aux_data = {k: getattr(self, k) for k in aux_data_keys}
         return children, aux_data
 
     @classmethod
