@@ -74,7 +74,7 @@ class PoissonLikelihood:
     :param is_multi_rate_model: Flag to indicate if the model is multi-rate.
     """
 
-    vt_params: Optional[Parameter | Sequence[str] | Sequence[Parameter]] = None
+    vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
     logVT: Optional[Callable[[], Array]] = None
     time: Float = 1.0
     is_multi_rate_model: bool = False
