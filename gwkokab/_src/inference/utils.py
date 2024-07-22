@@ -15,24 +15,12 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
-from typing_extensions import Any, Optional
+from typing_extensions import Optional
 
 import numpy as np
 from flowMC.Sampler import Sampler
 from jax import random as jrd
 from jaxtyping import Int
-from numpyro import distributions as dist
-
-from ..parameters.parameters import Parameter
-
-
-@dataclass(frozen=True)
-class ModelPack:
-    name: dist.Distribution
-    output: list[Parameter]
-    parameters_to_recover: list[Parameter]
-    arguments: dict[str, Any] = field(default_factory=dict)
 
 
 def save_data_from_sampler(

@@ -13,8 +13,8 @@
 #  limitations under the License.
 
 
-from gwkokab._src.inference.bake import Bake as Bake
-from gwkokab._src.inference.flowMChandler import flowMChandler as flowMChandler
-from gwkokab._src.inference.poissonlikelihood import (
-    poisson_likelihood as poisson_likelihood,
+from gwkokab._src.models.utils import JointDistribution as JointDistribution
+from gwkokab._src.models.wrappers import (
+    add_log_factor as add_log_factor,
+    gwk_magazine as gwk_magazine,
 )

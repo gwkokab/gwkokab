@@ -14,6 +14,8 @@ Models
     GaussianSpinModel
     IndependentSpinOrientationGaussianIsotropic
     MultiPeakMassModel
+    MultiSourceModel
+    MultiSpinModel
     NDistribution
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
@@ -23,11 +25,14 @@ Models
 Utilities
 ---------
 
+.. automodule:: gwkokab.models.utils
+
 .. autosummary::
     :nosignatures:
     :toctree: _autosummary
 
     JointDistribution
+    add_log_factor
 
 Constraints
 -----------

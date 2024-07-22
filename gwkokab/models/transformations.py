@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 
-from gwkokab._src.models.utils.transformations import (
+from gwkokab._src.models.transformations import (
     ComponentMassesToChirpMassAndDelta as ComponentMassesToChirpMassAndDelta,
     ComponentMassesToChirpMassAndSymmetricMassRatio as ComponentMassesToChirpMassAndSymmetricMassRatio,
     DeltaToSymmetricMassRatio as DeltaToSymmetricMassRatio,
