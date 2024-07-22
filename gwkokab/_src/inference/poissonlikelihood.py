@@ -210,7 +210,7 @@ class PoissonLikelihood:
 
     def log_likelihood_multi_rate(self, x: Array, data: dict) -> Array:
         model: MixtureGeneral = self.model(
-            **{name: x[..., i] for name, i in self.variables_index}
+            **{name: x[..., i] for name, i in self.variables_index.items()}
         )
 
         log_rates = jnp.divide(
