@@ -231,13 +231,13 @@ class PoissonLikelihood:
 
         log_likelihood += data["N"] * log_sum_of_rates
 
-        rates = jnp.exp(log_rates)  # rates = e^log_rates
+        rates = list(jnp.exp(log_rates))  # rates = e^log_rates
 
         expected_rates = jtr.reduce(
-            lambda x, y: x
-            + self.exp_rate_integral(rates[..., y], model.component_distributions[y]),
-            jnp.arange(self.total_pop),
+            lambda x, y: x + self.exp_rate_integral(*y),
+            list(zip(rates, model._component_distributions)),
             0.0,
+            is_leaf=lambda x: isinstance(x, tuple),
         )
 
         return log_likelihood - expected_rates
