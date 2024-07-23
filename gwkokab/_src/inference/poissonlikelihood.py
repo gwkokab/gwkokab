@@ -74,7 +74,7 @@ class PoissonLikelihood:
     :param is_multi_rate_model: Flag to indicate if the model is multi-rate.
     """
 
-    vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
+    _vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
     logVT: Optional[Callable[[], Array]] = None
     time: Float = 1.0
     is_multi_rate_model: bool = False
@@ -82,7 +82,7 @@ class PoissonLikelihood:
     def tree_flatten(self) -> tuple:
         children = ()
         aux_data_keys = [
-            "vt_params",
+            "_vt_params",
             "is_multi_rate_model",
             "total_pop",
             "variables",
@@ -107,24 +107,35 @@ class PoissonLikelihood:
         PoissonLikelihood.__init__(obj)
         return obj
 
-    def pre_process(self) -> None:
+    @property
+    def vt_params(
+        self,
+    ) -> Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]]:
+        return self._vt_params
+
+    @vt_params.setter
+    def vt_params(
+        self, params: Union[Parameter, Sequence[str], Sequence[Parameter]]
+    ) -> None:
         """Pre-process the parameters before setting the model."""
-        if isinstance(self.vt_params, Parameter):
-            self.vt_params = (self.vt_params.name,)
-        elif all(isinstance(param, Parameter) for param in self.vt_params):
-            self.vt_params = tuple(map(lambda x: x.name, self.vt_params))
+        if isinstance(params, Parameter):
+            params = (params.name,)
+        elif all(isinstance(param, Parameter) for param in params):
+            params = tuple(map(lambda x: x.name, params))
+        self._vt_params = params
 
     def set_model(
         self,
         /,
-        params: Sequence[Parameter],
+        params: Optional[Sequence[Parameter]] = None,
         log_rates_prior: Optional[Distribution | Sequence[Distribution]] = None,
         *,
         model: Optional[Bake] = None,
     ) -> None:
         assert model is not None, "Model must be provided."
         assert log_rates_prior is not None, "Rate prior must be provided."
-        assert params, "Params must be provided."
+        assert params is not None, "Params must be provided."
+
         if isinstance(log_rates_prior, Distribution):
             log_rates_prior = [log_rates_prior]
         if self.is_multi_rate_model:
@@ -142,20 +153,20 @@ class PoissonLikelihood:
             ), "Single population model must have one rate prior."
             self.total_pop = 1
 
-        self.pre_process()
-
         args_name = list(map(lambda x: x.name, params))
+        if self._vt_params is None:
+            raise ValueError("VT parameters must be provided.")
         assert all(
-            param in args_name for param in self.vt_params
-        ), f"Missing parameters: {self.vt_params} in {args_name}"
+            param in args_name for param in self._vt_params
+        ), f"Missing parameters: {self._vt_params} in {args_name}"
+        self.vt_params_index: List[Int] = list(
+            map(lambda x: args_name.index(x), self._vt_params)
+        )
 
         self.variables, self.model = model.get_dist()
         self.variables_index = {
             key: self.total_pop + i for i, key in enumerate(self.variables.keys())
         }
-        self.vt_params_index: List[Int] = [
-            args_name.index(param) for param in self.vt_params
-        ]
 
         self.ref_priors = JointDistribution(*map(lambda x: x.prior, params))
         self.priors = JointDistribution(*log_rates_prior, *self.variables.values())
@@ -231,13 +242,13 @@ class PoissonLikelihood:
 
         log_likelihood += data["N"] * log_sum_of_rates
 
-        rates = jnp.exp(log_rates)  # rates = e^log_rates
+        rates = list(jnp.exp(log_rates))  # rates = e^log_rates
 
         expected_rates = jtr.reduce(
-            lambda x, y: x
-            + self.exp_rate_integral(rates[..., y], model.component_distributions[y]),
-            jnp.arange(self.total_pop),
+            lambda x, y: x + self.exp_rate_integral(*y),
+            list(zip(rates, model._component_distributions)),
             0.0,
+            is_leaf=lambda x: isinstance(x, tuple),
         )
 
         return log_likelihood - expected_rates
