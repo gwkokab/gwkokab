@@ -17,6 +17,7 @@ Models
     MultiSourceModel
     MultiSpinModel
     NDistribution
+    NPowerLawMGaussian
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
     TruncatedPowerLaw
