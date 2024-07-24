@@ -28,6 +28,8 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
   * `MultiSourceModel`
   * `MultiSpinModel`
   * `NPowerLawMGaussian`
+  * `NPowerLawMGaussianWithDefaultSpin`
+  * `NPowerLawMGaussianWithSpinMisalignment`
 * New API for inference, compatible with `gwkokab.inference.flowMChandler`
   * `gwkokab.inference.PoissonLikelihood`
   * `gwkokab.inference.Bake`

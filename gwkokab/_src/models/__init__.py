@@ -22,6 +22,7 @@ from .models import (
     NDistribution as NDistribution,
     NPowerLawMGaussian as NPowerLawMGaussian,
     NPowerLawMGaussianWithDefaultSpin as NPowerLawMGaussianWithDefaultSpin,
+    NPowerLawMGaussianWithSpinMisalignment as NPowerLawMGaussianWithSpinMisalignment,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
     TruncatedPowerLaw as TruncatedPowerLaw,
