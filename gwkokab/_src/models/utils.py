@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from functools import partial
-from typing_extensions import Callable
+from typing_extensions import Callable, Tuple
 
 import jax
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr
@@ -33,6 +33,8 @@ __all__ = [
     "numerical_inverse_transform_sampling",
     "smoothing_kernel",
     "get_spin_magnitude_and_misalignment_dist",
+    "get_default_spin_magnitude_dists",
+    "get_spin_misalignment_dist",
 ]
 
 
@@ -167,6 +169,49 @@ def smoothing_kernel(
     return jnp.select(conditions, choices, default=jnp.ones_like(mass))
 
 
+def get_default_spin_magnitude_dists(
+    mean_chi1,
+    variance_chi1,
+    mean_chi2,
+    variance_chi2,
+):
+    concentrations_chi1 = beta_dist_mean_variance_to_concentrations(
+        mean_chi1, variance_chi1
+    )
+    concentrations_chi2 = beta_dist_mean_variance_to_concentrations(
+        mean_chi2, variance_chi2
+    )
+    chi1_dist = Beta(
+        *concentrations_chi1,
+        validate_args=True,
+    )
+    chi2_dist = Beta(
+        *concentrations_chi2,
+        validate_args=True,
+    )
+    return chi1_dist, chi2_dist
+
+
+def get_spin_misalignment_dist(
+    mean_tilt_1, std_dev_tilt_1, mean_tilt_2, std_dev_tilt_2
+) -> Tuple[TruncatedNormal]:
+    cos_tilt1_dist = TruncatedNormal(
+        loc=mean_tilt_1,
+        scale=std_dev_tilt_1,
+        low=-1,
+        high=1,
+        validate_args=True,
+    )
+    cos_tilt2_dist = TruncatedNormal(
+        loc=mean_tilt_2,
+        scale=std_dev_tilt_2,
+        low=-1,
+        high=1,
+        validate_args=True,
+    )
+    return cos_tilt1_dist, cos_tilt2_dist
+
+
 def get_spin_magnitude_and_misalignment_dist(
     mean_chi1,
     variance_chi1,
@@ -176,7 +221,7 @@ def get_spin_magnitude_and_misalignment_dist(
     std_dev_tilt_1,
     mean_tilt_2,
     std_dev_tilt_2,
-):
+) -> Tuple[Distribution]:
     r"""This is a helper function to reduce the lines of code in the
     :func:`MultiSpinModel` and :func:`MultiSourceModel`.
     """
@@ -186,26 +231,26 @@ def get_spin_magnitude_and_misalignment_dist(
     concentrations_chi2 = beta_dist_mean_variance_to_concentrations(
         mean_chi2, variance_chi2
     )
-    chi1_dist_pl = Beta(
+    chi1_dist = Beta(
         *concentrations_chi1,
         validate_args=True,
     )
-    chi2_dist_pl = Beta(
+    chi2_dist = Beta(
         *concentrations_chi2,
         validate_args=True,
     )
-    cos_tilt1_dist_pl = TruncatedNormal(
+    cos_tilt1_dist = TruncatedNormal(
         loc=mean_tilt_1,
         scale=std_dev_tilt_1,
         low=-1,
         high=1,
         validate_args=True,
     )
-    cos_tilt2_dist_pl = TruncatedNormal(
+    cos_tilt2_dist = TruncatedNormal(
         loc=mean_tilt_2,
         scale=std_dev_tilt_2,
         low=-1,
         high=1,
         validate_args=True,
     )
-    return chi1_dist_pl, chi2_dist_pl, cos_tilt1_dist_pl, cos_tilt2_dist_pl
+    return chi1_dist, chi2_dist, cos_tilt1_dist, cos_tilt2_dist

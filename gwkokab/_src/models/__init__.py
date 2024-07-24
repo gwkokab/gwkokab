@@ -20,6 +20,7 @@ from .models import (
     MultiSourceModel as MultiSourceModel,
     MultiSpinModel as MultiSpinModel,
     NDistribution as NDistribution,
+    NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment as NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
     TruncatedPowerLaw as TruncatedPowerLaw,
