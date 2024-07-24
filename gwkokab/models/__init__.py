@@ -22,6 +22,7 @@ from gwkokab._src.models.models import (
     MultiSpinModel as MultiSpinModel,
     NDistribution as NDistribution,
     NPowerLawMGaussian as NPowerLawMGaussian,
+    NPowerLawMGaussianWithDefaultSpin as NPowerLawMGaussianWithDefaultSpin,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
     TruncatedPowerLaw as TruncatedPowerLaw,

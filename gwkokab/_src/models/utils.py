@@ -33,6 +33,7 @@ __all__ = [
     "numerical_inverse_transform_sampling",
     "smoothing_kernel",
     "get_spin_magnitude_and_misalignment_dist",
+    "get_default_spin_magnitude_dists",
 ]
 
 
@@ -167,6 +168,29 @@ def smoothing_kernel(
     return jnp.select(conditions, choices, default=jnp.ones_like(mass))
 
 
+def get_default_spin_magnitude_dists(
+    mean_chi1,
+    variance_chi1,
+    mean_chi2,
+    variance_chi2,
+):
+    concentrations_chi1 = beta_dist_mean_variance_to_concentrations(
+        mean_chi1, variance_chi1
+    )
+    concentrations_chi2 = beta_dist_mean_variance_to_concentrations(
+        mean_chi2, variance_chi2
+    )
+    chi1_dist = Beta(
+        *concentrations_chi1,
+        validate_args=True,
+    )
+    chi2_dist = Beta(
+        *concentrations_chi2,
+        validate_args=True,
+    )
+    return chi1_dist, chi2_dist
+
+
 def get_spin_magnitude_and_misalignment_dist(
     mean_chi1,
     variance_chi1,
@@ -186,26 +210,26 @@ def get_spin_magnitude_and_misalignment_dist(
     concentrations_chi2 = beta_dist_mean_variance_to_concentrations(
         mean_chi2, variance_chi2
     )
-    chi1_dist_pl = Beta(
+    chi1_dist = Beta(
         *concentrations_chi1,
         validate_args=True,
     )
-    chi2_dist_pl = Beta(
+    chi2_dist = Beta(
         *concentrations_chi2,
         validate_args=True,
     )
-    cos_tilt1_dist_pl = TruncatedNormal(
+    cos_tilt1_dist = TruncatedNormal(
         loc=mean_tilt_1,
         scale=std_dev_tilt_1,
         low=-1,
         high=1,
         validate_args=True,
     )
-    cos_tilt2_dist_pl = TruncatedNormal(
+    cos_tilt2_dist = TruncatedNormal(
         loc=mean_tilt_2,
         scale=std_dev_tilt_2,
         low=-1,
         high=1,
         validate_args=True,
     )
-    return chi1_dist_pl, chi2_dist_pl, cos_tilt1_dist_pl, cos_tilt2_dist_pl
+    return chi1_dist, chi2_dist, cos_tilt1_dist, cos_tilt2_dist

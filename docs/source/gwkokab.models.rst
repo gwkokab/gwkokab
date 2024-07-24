@@ -18,6 +18,7 @@ Models
     MultiSpinModel
     NDistribution
     NPowerLawMGaussian
+    NPowerLawMGaussianWithDefaultSpin
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
     TruncatedPowerLaw
