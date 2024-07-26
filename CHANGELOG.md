@@ -3,6 +3,7 @@
 Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
 ## gwkokab 0.1.0 (July 27, 2024)
+* `gwkokab.inference.BayesianHierarchicalModel` is deprecated in favor of `gwkokab.inference.PoissonLikelihood`
 
 **Breaking changes**
 
