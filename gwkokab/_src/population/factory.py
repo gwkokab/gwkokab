@@ -28,12 +28,22 @@ from numpyro.distributions import (
     MixtureGeneral,
 )
 from numpyro.util import is_prng_key
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeRemainingColumn,
+)
 
 from ..models.utils import JointDistribution
 from ..models.wrappers import ModelRegistry
 
 
 __all__ = ["popfactory", "popmodel_magazine", "error_magazine"]
+
+PROGRESS_BAR_TEXT_WITDH = 25
 
 popmodel_magazine = ModelRegistry()
 error_magazine = ModelRegistry()
@@ -55,6 +65,7 @@ class PopulationFactory:
     analysis_time: Optional[Float] = None
     log_VT_fn: Optional[Callable[[Array], Array]] = None
     VT_params: Optional[list[str]] = None
+    verbose: bool = True
 
     def check_params(self) -> None:
         r"""Check if the parameters are provided."""
@@ -186,25 +197,43 @@ class PopulationFactory:
             )
         pop_keys = jrd.split(key, self.num_realizations)
         os.makedirs(self.root_dir, exist_ok=True)
-        for i in range(self.num_realizations):
-            population = self._generate_population(size, key=pop_keys[i])
+        with Progress(
+            SpinnerColumn(),
+            TextColumn(
+                "[bold blue]Injections".ljust(PROGRESS_BAR_TEXT_WITDH),
+                justify="left",
+            ),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.2f}%",
+            "•",
+            TimeRemainingColumn(elapsed_when_finished=True),
+            "•",
+            MofNCompleteColumn(separator=" realizations out of "),
+            disable=not self.verbose,
+        ) as progress:
+            realization_task = progress.add_task(
+                "Generating realizations", total=self.num_realizations
+            )
+            for i in range(self.num_realizations):
+                population = self._generate_population(size, key=pop_keys[i])
 
-            if population.shape == ():
-                continue
+                if population.shape == ():
+                    continue
 
-            realizations_path = os.path.join(
-                self.root_dir, self.realizations_dir.format(i)
-            )
-            os.makedirs(realizations_path, exist_ok=True)
-            injections_file_path = os.path.join(
-                realizations_path, self.injection_filename
-            )
-            np.savetxt(
-                injections_file_path,
-                population,
-                comments="#",
-                header=" ".join(self.headers),
-            )
+                realizations_path = os.path.join(
+                    self.root_dir, self.realizations_dir.format(i)
+                )
+                os.makedirs(realizations_path, exist_ok=True)
+                injections_file_path = os.path.join(
+                    realizations_path, self.injection_filename
+                )
+                np.savetxt(
+                    injections_file_path,
+                    population,
+                    comments="#",
+                    header=" ".join(self.headers),
+                )
+                progress.advance(realization_task, 1)
 
     def _add_error(self, realization_number, *, key: PRNGKeyArray) -> None:
         r"""Adds error to the realizations' population."""
@@ -269,8 +298,24 @@ class PopulationFactory:
             assert is_prng_key(key)
         self._generate_realizations(key)
         keys = jrd.split(key, self.num_realizations)
-        for i in range(self.num_realizations):
-            self._add_error(i, key=keys[i])
+        with Progress(
+            SpinnerColumn(),
+            TextColumn(
+                "[bold blue]Errors".ljust(PROGRESS_BAR_TEXT_WITDH),
+                justify="left",
+            ),
+            BarColumn(bar_width=40),
+            "[progress.percentage]{task.percentage:>3.2f}%",
+            "•",
+            TimeRemainingColumn(elapsed_when_finished=True),
+            "•",
+            MofNCompleteColumn(separator=" realizations out of "),
+            disable=not self.verbose,
+        ) as progress:
+            adding_error_task = progress.add_task("Errors", total=self.num_realizations)
+            for i in range(self.num_realizations):
+                self._add_error(i, key=keys[i])
+                progress.advance(adding_error_task, 1)
 
 
 popfactory = PopulationFactory()
