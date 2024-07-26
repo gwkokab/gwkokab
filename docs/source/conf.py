@@ -17,10 +17,13 @@ import sys
 sys.path.insert(0, os.path.abspath("../.."))
 
 
+from gwkokab import __version__
+
+
 project = "GWKokab"
 copyright = "2024, Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
 author = "Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
-release = "0.0.1"
+release = __version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

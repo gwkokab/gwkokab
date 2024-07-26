@@ -2,7 +2,8 @@
 
 Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
-## gwkokab 0.1.0
+## gwkokab 0.1.0 (July 27, 2024)
+* `gwkokab.inference.BayesianHierarchicalModel` is deprecated in favor of `gwkokab.inference.PoissonLikelihood`
 
 **Breaking changes**
 
@@ -31,6 +32,7 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 * New API for inference, compatible with `gwkokab.inference.flowMChandler`
   * `gwkokab.inference.PoissonLikelihood`
   * `gwkokab.inference.Bake`
+* Progress Bar for the synthetic data generation process.
   
 ## gwkokab 0.0.1 (Jul 5, 2024)
 
