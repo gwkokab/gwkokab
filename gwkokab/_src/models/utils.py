@@ -15,11 +15,10 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing_extensions import Callable, Tuple
 
 import jax
-from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr
+from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array, Int, PRNGKeyArray, Real
 from numpyro.distributions import Beta, Distribution, TruncatedNormal
@@ -133,7 +132,6 @@ def numerical_inverse_transform_sampling(
     return samples  # inverse transform sampling
 
 
-@partial(jit, inline=True)
 def smoothing_kernel(
     mass: Array | Real, mass_min: Array | Real, delta: Array | Real
 ) -> Array | Real:
@@ -155,18 +153,31 @@ def smoothing_kernel(
     :param delta: small mass difference
     :return: smoothing kernel value
     """
+    mass_min_shifted = jnp.add(mass_min, delta)
+    if jnp.less_equal(delta, 0.0) or jnp.greater_equal(mass, mass_min_shifted):
+        return jnp.ones(shape=mass.shape)
+    if jnp.less_equal(mass_min, 0.0):
+        return jnp.zeros(shape=mass.shape)
+
+    shifted_mass = jnp.nan_to_num(
+        jnp.divide(jnp.subtract(mass, mass_min), delta), nan=0.0
+    )
+    shifted_mass = jnp.clip(shifted_mass, 1e-6, 1.0 - 1e-6)
+    neg_exponent = jnp.subtract(
+        jnp.reciprocal(jnp.subtract(1.0, shifted_mass)),
+        jnp.reciprocal(shifted_mass),
+    )
+    window = jax.scipy.special.expit(neg_exponent)
     conditions = [
-        mass < mass_min,
-        (mass_min <= mass) & (mass < mass_min + delta),
-    ]
-    choices = [
-        jnp.zeros_like(mass),
-        jnp.reciprocal(
-            1
-            + jnp.exp((delta / (mass - mass_min)) + (delta / (mass - mass_min - delta)))
+        jnp.less(mass, mass_min),
+        jnp.logical_and(
+            jnp.less_equal(mass_min, mass),
+            jnp.less_equal(mass, mass_min_shifted),
         ),
+        jnp.greater(mass, mass_min_shifted),
     ]
-    return jnp.select(conditions, choices, default=jnp.ones_like(mass))
+    choices = [jnp.zeros(mass.shape), window, jnp.ones(mass.shape)]
+    return jnp.select(conditions, choices, default=jnp.zeros(mass.shape))
 
 
 def get_default_spin_magnitude_dists(
