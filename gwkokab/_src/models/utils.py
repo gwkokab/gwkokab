@@ -34,6 +34,7 @@ __all__ = [
     "get_default_spin_magnitude_dists",
     "get_spin_misalignment_dist",
     "doubly_truncated_powerlaw_log_prob",
+    "doubly_truncated_powerlaw_icdf",
 ]
 
 
@@ -221,9 +222,11 @@ def get_spin_magnitude_and_misalignment_dist(
 
 def doubly_truncated_powerlaw_log_prob(value, alpha, low, high):
     def logp_neg1(value):
-        logp_neg1_val = jnp.add(jnp.log(value), jnp.log(high))
-        logp_neg1_val = jnp.subtract(jnp.log(low), logp_neg1_val)
-        return logp_neg1_val
+        logp_neg1_val = jnp.divide(high, low)
+        logp_neg1_val = jnp.log(logp_neg1_val)
+        logp_neg1_val = jnp.multiply(value, logp_neg1_val)
+        logp_neg1_val = jnp.log(logp_neg1_val)
+        return jnp.negative(logp_neg1_val)
 
     def logp(value):
         log_value = jnp.log(value)
@@ -241,3 +244,24 @@ def doubly_truncated_powerlaw_log_prob(value, alpha, low, high):
         return logp
 
     return jnp.where(jnp.equal(alpha, -1.0), logp_neg1(value), logp(value))
+
+
+def doubly_truncated_powerlaw_icdf(q, alpha, low, high):
+    def icdf(q):
+        beta = jnp.add(1.0, alpha)
+        low_pow_beta = jnp.power(low, beta)
+        high_pow_beta = jnp.power(high, beta)
+        icdf = jnp.multiply(q, jnp.subtract(high_pow_beta, low_pow_beta))
+        icdf = jnp.add(low_pow_beta, icdf)
+        icdf = jnp.power(icdf, jnp.reciprocal(beta))
+        return icdf
+
+    def icdf_neg1(q):
+        icdf_neg1 = jnp.divide(high, low)
+        icdf_neg1 = jnp.log(icdf_neg1)
+        icdf_neg1 = jnp.multiply(q, icdf_neg1)
+        icdf_neg1 = jnp.exp(icdf_neg1)
+        icdf_neg1 = jnp.multiply(low, icdf_neg1)
+        return icdf_neg1
+
+    return jnp.where(jnp.equal(alpha, -1.0), icdf_neg1(q), icdf(q))
