@@ -40,6 +40,7 @@ from ..utils.transformations import m1_q_to_m2
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .utils import (
+    doubly_truncated_powerlaw_icdf,
     doubly_truncated_powerlaw_log_prob,
     get_default_spin_magnitude_dists,
     get_spin_magnitude_and_misalignment_dist,
@@ -60,7 +61,6 @@ __all__ = [
     "NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment",
     "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
-    "TruncatedPowerLaw",
     "Wysocki2019MassModel",
 ]
 
@@ -722,128 +722,37 @@ class PowerLawPrimaryMassRatio(Distribution):
     def log_prob(self, value):
         m1 = value[..., 0]
         q = value[..., 1]
-        log_prob_m1 = TruncatedPowerLaw(
+        log_prob_m1 = doubly_truncated_powerlaw_log_prob(
+            value=m1,
             alpha=self.alpha,
             low=self.mmin,
             high=self.mmax,
-            validate_args=True,
-        ).log_prob(m1)
-        log_prob_q = TruncatedPowerLaw(
+        )
+        log_prob_q = doubly_truncated_powerlaw_log_prob(
+            value=q,
             alpha=self.beta,
             low=jnp.divide(self.mmin, m1),
             high=1.0,
-            validate_args=True,
-        ).log_prob(q)
+        )
         return jnp.add(log_prob_m1, log_prob_q)
 
     def sample(self, key, sample_shape=()):
-        m1 = TruncatedPowerLaw(
+        u = jrd.uniform(key, shape=(2,) + sample_shape + self.batch_shape)
+        u1 = u[0]
+        u2 = u[1]
+        m1 = doubly_truncated_powerlaw_icdf(
+            q=u1,
             alpha=self.alpha,
             low=self.mmin,
             high=self.mmax,
-            validate_args=True,
-        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
-        key = jrd.split(key)[1]
-        q = TruncatedPowerLaw(
+        )
+        q = doubly_truncated_powerlaw_icdf(
+            q=u2,
             alpha=self.beta,
             low=jnp.divide(self.mmin, m1),
             high=1.0,
-            validate_args=True,
-        ).sample(key=key, sample_shape=())
-
+        )
         return jnp.column_stack((m1, q))
-
-
-class TruncatedPowerLaw(Distribution):
-    r"""A generic double side truncated power law distribution.
-
-    .. note::
-        There are many different definition of Power Law that include
-        exponential cut-offs and interval cut-offs.  They are just
-        interchangeably. This class is the implementation of power law that has
-        been restricted over a closed interval.
-
-    .. math::
-        p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=
-        \begin{cases}
-            \displaystyle\frac{x^{\alpha}}{\mathcal{Z}}
-            & 0<x_{\text{min}}\leq x\leq x_{\text{max}}\\
-            0 & \text{otherwise}
-        \end{cases}
-
-    where :math:`\mathcal{Z}` is the normalization constant and :math:`\alpha` is the power
-    law index. :math:`x_{\text{min}}` and :math:`x_{\text{max}}` are the lower and upper
-    truncation limits, respectively. The normalization constant is given by,
-
-    .. math::
-        \mathcal{Z}:=\begin{cases}
-            \log{x_{\text{max}}}-\log{x_{\text{min}}} & \alpha = -1 \\
-            \displaystyle
-            \frac{x_{\text{max}}^{1+\alpha}-x_{\text{min}}^{1+\alpha}}{1+\alpha}
-            & \text{otherwise}
-        \end{cases}
-    """
-
-    arg_constraints = {
-        "alpha": constraints.real,
-        "low": constraints.positive,
-        "high": constraints.positive,
-    }
-    reparametrized_params = ["low", "high", "alpha"]
-
-    def __init__(self, alpha, low=0.0, high=1.0, validate_args=None):
-        self.low, self.high, self.alpha = promote_shapes(low, high, alpha)
-        self._support = constraints.interval(low, high)
-        batch_shape = lax.broadcast_shapes(
-            jnp.shape(low),
-            jnp.shape(high),
-            jnp.shape(alpha),
-        )
-        super(TruncatedPowerLaw, self).__init__(
-            batch_shape=batch_shape, validate_args=validate_args
-        )
-
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self) -> constraints.Constraint:
-        return self._support
-
-    def sample(self, key, sample_shape=()):
-        assert is_prng_key(key)
-        return self.icdf(jrd.uniform(key, shape=sample_shape + self.batch_shape))
-
-    @validate_sample
-    def log_prob(self, value):
-        return doubly_truncated_powerlaw_log_prob(
-            value=value, alpha=self.alpha, low=self.low, high=self.high
-        )
-
-    def cdf(self, value):
-        beta = jnp.add(1.0, self.alpha)
-        cdf = jnp.atleast_1d(value**beta - self.low**beta) / (
-            self.high**beta - self.low**beta
-        )
-        cdf_neg1 = (jnp.log(value) - jnp.log(self.low)) / (
-            jnp.log(self.high) - jnp.log(self.low)
-        )
-        cdf = jnp.where(jnp.equal(self.alpha, -1.0), cdf_neg1, cdf)
-        cdf = jnp.minimum(cdf, 1.0)
-        cdf = jnp.maximum(cdf, 0.0)
-        return cdf
-
-    def icdf(self, q):
-        beta = jnp.add(1.0, self.alpha)
-        low_pow_beta = jnp.power(self.low, beta)
-        high_pow_beta = jnp.power(self.high, beta)
-        icdf = jnp.multiply(q, jnp.subtract(high_pow_beta, low_pow_beta))
-        icdf = jnp.add(low_pow_beta, icdf)
-        icdf = jnp.power(icdf, jnp.reciprocal(beta))
-
-        icdf_neg1 = jnp.divide(self.high, self.low)
-        icdf_neg1 = jnp.log(icdf_neg1)
-        icdf_neg1 = jnp.multiply(q, icdf_neg1)
-        icdf_neg1 = jnp.exp(icdf_neg1)
-        icdf_neg1 = jnp.multiply(self.low, icdf_neg1)
-        return jnp.where(jnp.equal(self.alpha, -1.0), icdf_neg1, icdf)
 
 
 class Wysocki2019MassModel(Distribution):
@@ -891,24 +800,19 @@ class Wysocki2019MassModel(Distribution):
     def log_prob(self, value):
         m1 = value[..., 0]
         m2 = value[..., 1]
-        log_prob_m1 = TruncatedPowerLaw(
-            alpha=jnp.negative(self.alpha_m),
-            low=self.mmin,
-            high=self.mmax,
-            validate_args=True,
-        ).log_prob(m1)
+        log_prob_m1 = doubly_truncated_powerlaw_log_prob(
+            value=m1, alpha=jnp.negative(self.alpha_m), low=self.mmin, high=self.mmax
+        )
         log_prob_m2_given_m1 = uniform.logpdf(
             m2, loc=self.mmin, scale=jnp.subtract(m1, self.mmin)
         )
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self, key, sample_shape=()) -> Array:
-        m1 = TruncatedPowerLaw(
-            alpha=jnp.negative(self.alpha_m),
-            low=self.mmin,
-            high=self.mmax,
-            validate_args=True,
-        ).sample(key=key, sample_shape=sample_shape + self.batch_shape)
+        u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
+        m1 = doubly_truncated_powerlaw_icdf(
+            q=u, alpha=jnp.negative(self.alpha_m), low=self.mmin, high=self.mmax
+        )
         key = jrd.split(key)[1]
         m2 = jrd.uniform(
             key, shape=sample_shape + self.batch_shape, minval=self.mmin, maxval=m1
