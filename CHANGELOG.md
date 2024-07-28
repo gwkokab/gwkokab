@@ -2,11 +2,17 @@
 
 Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
+## gwkokab 0.1.1
+
+**New Design**
+
+* Introduced a refined base class for smoothed mass distribution models, enhancing functionality and maintainability.
+
 ## gwkokab 0.1.0 (July 27, 2024)
-* `gwkokab.inference.BayesianHierarchicalModel` is deprecated in favor of `gwkokab.inference.PoissonLikelihood`
 
 **Breaking changes**
 
+* `gwkokab.inference.BayesianHierarchicalModel` is deprecated in favor of `gwkokab.inference.PoissonLikelihood`
 * `gwkokab.priors.UnnormalizedUniform` deprecated in favor of `numpyro.distributions.ImproperUniform`.
 * Trivial errors are removed from `gwkokab.errors` module.
   * `normal_error`
