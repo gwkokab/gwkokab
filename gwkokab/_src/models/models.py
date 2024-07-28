@@ -21,7 +21,7 @@ import jax
 import numpy as np
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.scipy.special import expit, logsumexp
-from jax.scipy.stats import norm, uniform
+from jax.scipy.stats import norm, truncnorm, uniform
 from jaxtyping import Array, Int, Real
 from numpyro.distributions import (
     CategoricalProbs,
@@ -664,7 +664,7 @@ def NDistribution(distribution: Distribution, n: Int, **params) -> MixtureGenera
     )
 
 
-class PowerLawPeakMassModel(Distribution):
+class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
     r"""See equation (B3) and (B6) in `Population Properties of Compact
     Objects from the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog <https://arxiv.org/abs/2010.14533>`_.
@@ -689,10 +689,8 @@ class PowerLawPeakMassModel(Distribution):
     arg_constraints = {
         "alpha": constraints.real,
         "beta": constraints.real,
-        "lam": constraints.interval(0, 1),
-        "delta": constraints.real,
-        "mmin": constraints.dependent,
-        "mmax": constraints.dependent,
+        "lam": constraints.unit_interval,
+        "delta_m": constraints.real,
         "mu": constraints.real,
         "sigma": constraints.positive,
     }
@@ -700,31 +698,25 @@ class PowerLawPeakMassModel(Distribution):
         "alpha",
         "beta",
         "lam",
-        "delta",
-        "mmin",
-        "mmax",
+        "delta_m",
         "mu",
         "sigma",
     ]
-    pytree_aux_fields = ("_support",)
     pytree_data_fields = (
         "alpha",
         "beta",
         "lam",
-        "delta",
-        "mmin",
-        "mmax",
+        "delta_m",
         "mu",
         "sigma",
-        "_logZ",
     )
 
-    def __init__(self, alpha, beta, lam, delta, mmin, mmax, mu, sigma) -> None:
+    def __init__(self, alpha, beta, lam, delta_m, mmin, mmax, mu, sigma) -> None:
         r"""
         :param alpha: Power-law index for primary mass model
         :param beta: Power-law index for mass ratio model
         :param lam: Fraction of Gaussian component
-        :param delta: Smoothing parameter
+        :param delta_m: Smoothing parameter
         :param mmin: Minimum mass
         :param mmax: Maximum mass
         :param mu: Mean of Gaussian component
@@ -734,140 +726,44 @@ class PowerLawPeakMassModel(Distribution):
             self.alpha,
             self.beta,
             self.lam,
-            self.delta,
-            self.mmin,
-            self.mmax,
+            self.delta_m,
             self.mu,
             self.sigma,
-        ) = promote_shapes(alpha, beta, lam, delta, mmin, mmax, mu, sigma)
+        ) = promote_shapes(alpha, beta, lam, delta_m, mu, sigma)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
             jnp.shape(beta),
             jnp.shape(lam),
-            jnp.shape(delta),
-            jnp.shape(mmin),
-            jnp.shape(mmax),
+            jnp.shape(delta_m),
             jnp.shape(mu),
             jnp.shape(sigma),
         )
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(PowerLawPeakMassModel, self).__init__(
+            mmin=mmin,
+            mmax=mmax,
             batch_shape=batch_shape,
             event_shape=(2,),
-            validate_args=True,
         )
 
-        self._normalization()
-
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self) -> constraints.Constraint:
-        return self._support
-
-    def _normalization(self):
-        """Precomputes the normalization constant for the primary mass model
-        and mass ratio model using Monte Carlo integration.
-        """
-        num_samples = 20_000
-        self._logZ = jnp.zeros_like(self.mmin)
-        samples = self.sample(
-            jrd.PRNGKey(np.random.randint(0, 2**32 - 1)), (num_samples,)
-        )
-        log_prob = self.log_prob(samples)
-        prob = jnp.exp(log_prob)
-        volume = jnp.prod(jnp.subtract(self.mmax, self.mmin))
-        self._logZ = jnp.add(jnp.log(jnp.mean(prob, axis=-1)), jnp.log(volume))
-
-    @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self, m1: Array | Real) -> Array | Real:
-        r"""Log probability of primary mass model.
-
-        .. math::
-
-            p(m_1\mid\lambda,\alpha,\delta,m_{\text{min}},m_{\text{max}},
-            \mu,\sigma) \propto \left[(1-\lambda)m_1^{-\alpha}
-            \Theta(m_\text{max}-m_1)
-            +\frac{\lambda}{\sigma\sqrt{2\pi}}
-            e^{-\frac{1}{2}\left(\frac{m_1-\mu}{\sigma}\right)^{2}}\right]
-            S(m_1\mid m_{\text{min}},\delta)
-
-        :param m1: primary mass
-        :return: log probability of primary mass
-        """
-        gaussian_term = jnp.exp(
-            jnp.add(jnp.log(self.lam), norm.logpdf(m1, self.mu, self.sigma))
-        )
-        powerlaw_term = jnp.where(
-            jnp.less(m1, self.mmax),
-            jnp.exp(
-                jnp.subtract(
-                    jnp.log(jnp.subtract(1, self.lam)),
-                    jnp.multiply(self.alpha, jnp.log(m1)),
-                )
+    def log_primary_model(self, m1):
+        gaussian_term = jnp.add(
+            jnp.log(self.lam),
+            truncnorm.logpdf(
+                m1,
+                a=self.mmin,
+                b=self.mmax,
+                loc=self.mu,
+                scale=self.sigma,
             ),
-            jnp.zeros_like(m1),
         )
-        log_prob_val = jnp.add(powerlaw_term, gaussian_term)
-        log_prob_val = jnp.log(log_prob_val)
-        log_prob_val = jnp.add(
-            log_prob_val, jnp.log(smoothing_kernel(m1, self.mmin, self.delta))
+        powerlaw_term = jnp.add(
+            jnp.log1p(-self.lam),
+            doubly_truncated_powerlaw_log_prob(
+                value=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
+            ),
         )
+        log_prob_val = jnp.logaddexp(powerlaw_term, gaussian_term)
         return log_prob_val
-
-    @partial(jit, static_argnums=(0,))
-    def _log_prob_mass_ratio_model(
-        self, m1: Array | Real, q: Array | Real
-    ) -> Array | Real:
-        r"""Log probability of mass ratio model
-
-        .. math::
-
-            \log p(q\mid m_1) = \beta \log q +
-            \log S(m_1q\mid m_{\text{min}},\delta_m)
-
-        :param m1: primary mass
-        :param q: mass ratio
-        :return: log probability of mass ratio model
-        """
-        log_smoothing_val = jnp.log(
-            smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, self.delta)
-        )
-        log_prob_val = jnp.multiply(self.beta, jnp.log(q))
-        return jnp.add(log_prob_val, log_smoothing_val)
-
-    @validate_sample
-    def log_prob(self, value):
-        m1 = value[..., 0]
-        q = value[..., 1]
-        log_prob_m1 = self._log_prob_primary_mass_model(m1)
-        log_prob_q = self._log_prob_mass_ratio_model(m1, q)
-        return jnp.subtract(jnp.add(log_prob_m1, log_prob_q), self._logZ)
-
-    def sample(self, key, sample_shape=()):
-        flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
-
-        m1 = numerical_inverse_transform_sampling(
-            logpdf=self._log_prob_primary_mass_model,
-            limits=(self.mmin, self.mmax),
-            sample_shape=(flattened_sample_shape,),
-            key=key,
-            batch_shape=self.batch_shape,
-            n_grid_points=1000,
-        )
-
-        keys = jrd.split(key, m1.shape)
-
-        q = vmap(
-            lambda _m1, _k: numerical_inverse_transform_sampling(
-                logpdf=partial(self._log_prob_mass_ratio_model, _m1),
-                limits=(jnp.divide(self.mmin, _m1), 1.0),
-                sample_shape=(),
-                key=_k,
-                batch_shape=self.batch_shape,
-                n_grid_points=1000,
-            )
-        )(m1, keys)
-
-        return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
 class PowerLawPrimaryMassRatio(Distribution):
