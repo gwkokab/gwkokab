@@ -17,8 +17,10 @@ from __future__ import annotations
 
 from functools import partial
 
+import jax
 import numpy as np
 from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr, vmap
+from jax.scipy.special import expit, logsumexp
 from jax.scipy.stats import norm, uniform
 from jaxtyping import Array, Int, Real
 from numpyro.distributions import (
@@ -39,12 +41,12 @@ from ..utils.transformations import m1_q_to_m2
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .utils import (
+    doubly_truncated_powerlaw_log_prob,
     get_default_spin_magnitude_dists,
     get_spin_magnitude_and_misalignment_dist,
     get_spin_misalignment_dist,
     JointDistribution,
     numerical_inverse_transform_sampling,
-    smoothing_kernel,
 )
 
 
@@ -64,7 +66,144 @@ __all__ = [
 ]
 
 
-class BrokenPowerLawMassModel(Distribution):
+class _BaseSmoothedMassDistribution(Distribution):
+    arg_constraints = {
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
+    }
+
+    def __init__(self, mmin, mmax, *, batch_shape, event_shape):
+        mmin, mmax = promote_shapes(mmin, mmax)
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(mmin), jnp.shape(mmax), batch_shape
+        )
+        self.mmin = mmin
+        self.mmax = mmax
+        super(_BaseSmoothedMassDistribution, self).__init__(
+            batch_shape, event_shape, validate_args=True
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self) -> constraints.Constraint:
+        return mass_ratio_mass_sandwich(self.mmin, self.mmax)
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        q = value[..., 1]
+        log_prob_m1_val = self.log_prob_m1(m1)
+        log_prob_q_val = self.log_prob_q(m1, q, self.beta_q, self.delta_m)
+        return jnp.add(log_prob_m1_val, log_prob_q_val)
+
+    def log_prob_m1(self, m1):
+        log_prob_m_val = self.__class__.log_primary_model(self, m1)
+        log_prob_m_val = jnp.add(
+            log_prob_m_val,
+            jnp.log(self.smoothing_kernel(m1, self.mmin, self.delta_m)),
+        )
+        log_norm = self.log_norm_p_m1(self.delta_m)
+        log_prob_m_val = jnp.subtract(log_prob_m_val, log_norm)
+        return log_prob_m_val
+
+    def log_prob_q(self, m1, q, beta, delta_m):
+        log_prob_q_val = doubly_truncated_powerlaw_log_prob(
+            q,
+            beta,
+            jnp.divide(self.mmin, m1),
+            1.0,
+        )
+        log_prob_q_val = jnp.add(
+            log_prob_q_val,
+            jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, delta_m)),
+        )
+        log_norm = self.log_norm_p_q(beta, m1, delta_m)
+        log_prob_q_val = jnp.subtract(log_prob_q_val, log_norm)
+        return log_prob_q_val
+
+    def log_norm_p_m1(self, delta_m):
+        m1s = jrd.uniform(
+            jrd.PRNGKey(0), shape=(1000,), minval=self.mmin, maxval=self.mmax
+        )
+        log_prob_m_val = self.__class__.log_primary_model(self, m1s)
+        log_prob_m_val = jnp.add(
+            log_prob_m_val,
+            jnp.log(self.smoothing_kernel(m1s, self.mmin, delta_m)),
+        )
+        log_norm = logsumexp(log_prob_m_val) - jnp.log(m1s.shape[0])
+        return log_norm
+
+    def log_norm_p_q(self, beta, mmin, delta_m):
+        m1s = jrd.uniform(
+            jrd.PRNGKey(0),
+            shape=(1000,) + mmin.shape,
+            minval=self.mmin,
+            maxval=self.mmax,
+        )
+        qs = jrd.uniform(
+            jrd.PRNGKey(1), shape=(1000,) + mmin.shape, minval=0.001, maxval=1
+        )
+        log_prob_q_val = doubly_truncated_powerlaw_log_prob(
+            qs, beta, jnp.divide(mmin, m1s), 1.0
+        )
+        log_prob_q_val = jnp.nan_to_num(log_prob_q_val, nan=-jnp.inf)
+        log_prob_q_val = jnp.add(
+            log_prob_q_val,
+            jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1s, q=qs), mmin, delta_m)),
+        )
+        log_norm = logsumexp(log_prob_q_val) - jnp.log(m1s.shape[0])
+        return log_norm
+
+    @staticmethod
+    def smoothing_kernel(
+        mass: Array | Real, mass_min: Array | Real, delta: Array | Real
+    ) -> Array | Real:
+        r"""See equation B4 in `Population Properties of Compact Objects from the
+        Second LIGO-Virgo Gravitational-Wave Transient Catalog 
+        <https://arxiv.org/abs/2010.14533>`_.
+        
+        .. math::
+            S(m\mid m_{\min}, \delta) = \begin{cases}
+                0 & \text{if } m < m_{\min}, \\
+                \left[\displaystyle 1 + \exp\left(\frac{\delta}{m}
+                +\frac{\delta}{m-\delta}\right)\r# if jnp.all(jnp.less_equal(delta, 0.0)) or jnp.all(
+        #     jnp.greater_equal(mass, mass_min_shifted)
+        # ):
+        #     return jnp.ones(shape=mass.shape)
+        # if jnp.all(jnp.less_equal(mass_min, 0.0)):
+        #     return jnp.zeros(shape=mass.shape)ight]^{-1}
+                & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
+                1 & \text{if } m \geq m_{\min} + \delta
+            \end{cases}
+    
+        :param mass: mass of the primary black hole
+        :param mass_min: minimum mass of the primary black hole
+        :param delta: small mass difference
+        :return: smoothing kernel value
+        """
+        mass_min_shifted = jnp.add(mass_min, delta)
+
+        shifted_mass = jnp.nan_to_num(
+            jnp.divide(jnp.subtract(mass, mass_min), delta), nan=0.0
+        )
+        shifted_mass = jnp.clip(shifted_mass, 1e-6, 1.0 - 1e-6)
+        neg_exponent = jnp.subtract(
+            jnp.reciprocal(jnp.subtract(1.0, shifted_mass)),
+            jnp.reciprocal(shifted_mass),
+        )
+        window = expit(neg_exponent)
+        conditions = [
+            jnp.less(mass, mass_min),
+            jnp.logical_and(
+                jnp.less_equal(mass_min, mass),
+                jnp.less_equal(mass, mass_min_shifted),
+            ),
+            jnp.greater(mass, mass_min_shifted),
+        ]
+        choices = [jnp.zeros(mass.shape), window, jnp.ones(mass.shape)]
+        return jnp.select(conditions, choices, default=jnp.zeros(mass.shape))
+
+
+class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
     r"""See equation (B7) and (B6) in `Population Properties of Compact Objects
     from the Second LIGO-Virgo Gravitational-Wave Transient
     Catalog <https://arxiv.org/abs/2010.14533>`_.
@@ -88,10 +227,8 @@ class BrokenPowerLawMassModel(Distribution):
         "alpha1": constraints.real,
         "alpha2": constraints.real,
         "beta_q": constraints.real,
-        "mmin": constraints.dependent,
-        "mmax": constraints.dependent,
-        "mbreak": constraints.positive,
-        "delta": constraints.positive,
+        "break_fraction": constraints.unit_interval,
+        "delta_m": constraints.positive,
     }
     reparametrized_params = [
         "alpha1",
@@ -99,22 +236,20 @@ class BrokenPowerLawMassModel(Distribution):
         "beta_q",
         "mmin",
         "mmax",
-        "mbreak",
-        "delta",
+        "break_fraction",
+        "delta_m",
     ]
-    pytree_aux_fields = ("_support",)
     pytree_data_fields = (
         "alpha1",
         "alpha2",
         "beta_q",
         "mmin",
         "mmax",
-        "mbreak",
-        "delta",
-        "_logZ",
+        "break_fraction",
+        "delta_m",
     )
 
-    def __init__(self, alpha1, alpha2, beta_q, mmin, mmax, mbreak, delta):
+    def __init__(self, alpha1, alpha2, beta_q, mmin, mmax, break_fraction, delta_m):
         r"""
         :param alpha1: Power-law index for first component of primary mass model
         :param alpha2: Power-law index for second component of primary mass
@@ -132,146 +267,45 @@ class BrokenPowerLawMassModel(Distribution):
             self.alpha1,
             self.alpha2,
             self.beta_q,
-            self.mmin,
-            self.mmax,
-            self.mbreak,
-            self.delta,
-        ) = promote_shapes(alpha1, alpha2, beta_q, mmin, mmax, mbreak, delta)
+            self.break_fraction,
+            self.delta_m,
+        ) = promote_shapes(alpha1, alpha2, beta_q, break_fraction, delta_m)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha1),
             jnp.shape(alpha2),
             jnp.shape(beta_q),
-            jnp.shape(mmin),
-            jnp.shape(mmax),
-            jnp.shape(mbreak),
-            jnp.shape(delta),
+            jnp.shape(break_fraction),
+            jnp.shape(delta_m),
         )
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(BrokenPowerLawMassModel, self).__init__(
-            batch_shape=batch_shape,
-            event_shape=(2,),
-            validate_args=True,
-        )
-        self.alpha1_powerlaw = TruncatedPowerLaw(
-            alpha=jnp.negative(self.alpha1),
-            low=self.mmin,
-            high=self.mbreak,
-            validate_args=True,
-        )
-        self.alpha2_powerlaw = TruncatedPowerLaw(
-            alpha=jnp.negative(self.alpha2),
-            low=self.mbreak,
-            high=self.mmax,
-            validate_args=True,
-        )
-        self._normalization()
-
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self) -> constraints.Constraint:
-        return self._support
-
-    def _normalization(self):
-        """Precomputes the normalization constant for the primary mass model
-        and mass ratio model using Monte Carlo integration.
-        """
-        num_samples = 20_000
-        self._logZ = jnp.zeros_like(self.mmin)
-        samples = self.sample(
-            jrd.PRNGKey(np.random.randint(0, 2**32 - 1)), (num_samples,)
-        )
-        log_prob = self.log_prob(samples)
-        prob = jnp.exp(log_prob)
-        volume = jnp.prod(jnp.subtract(self.mmax, self.mmin))
-        self._logZ = jnp.add(jnp.log(jnp.mean(prob, axis=-1)), jnp.log(volume))
-
-    @partial(jit, static_argnums=(0,))
-    def _log_prob_primary_mass_model(self, m1: Array | Real) -> Array | Real:
-        r"""Log probability of primary mass model.
-
-        .. math::
-            \log p(m_1) = \begin{cases}
-                \log S(m_1\mid m_{\text{min}},\delta_m)
-                - \log Z_{\text{primary}}
-                - \alpha_1 \log m_1
-                & \text{if } m_{\min} \leq m_1 < m_{\text{break}} \\
-                \log S(m_1\mid m_{\text{min}},\delta_m)
-                - \log Z_{\text{primary}}
-                - \alpha_2 \log m_1
-                & \text{if } m_{\text{break}} < m_1 \leq m_{\max}
-            \end{cases}
-
-        :param m1: primary mass
-        :return: log probability of primary mass
-        """
-        conditions = [
-            (self.mmin <= m1) & (m1 < self.mbreak),
-            (self.mbreak <= m1) & (m1 <= self.mmax),
-        ]
-        log_smoothing_val = jnp.log(smoothing_kernel(m1, self.mmin, self.delta))
-        log_probs = [
-            jnp.add(log_smoothing_val, self.alpha1_powerlaw.log_prob(m1)),
-            jnp.add(log_smoothing_val, self.alpha2_powerlaw.log_prob(m1)),
-        ]
-        return jnp.select(conditions, log_probs, default=jnp.full_like(m1, -jnp.inf))
-
-    @partial(jit, static_argnums=(0,))
-    def _log_prob_mass_ratio_model(
-        self, m1: Array | Real, q: Array | Real
-    ) -> Array | Real:
-        r"""Log probability of mass ratio model
-
-        .. math::
-
-            \log p(q\mid m_1) = \beta_q \log q +
-            \log S(m_1q\mid m_{\text{min}},\delta_m)
-
-        :param m1: primary mass
-        :param q: mass ratio
-        :return: log probability of mass ratio model
-        """
-        log_smoothing_val = jnp.log(
-            smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, self.delta)
-        )
-        log_val = jnp.log(q)
-        log_val = jnp.multiply(self.beta_q, log_val)
-        return jnp.add(log_val, log_smoothing_val)
-
-    @validate_sample
-    def log_prob(self, value):
-        m1 = value[..., 0]
-        q = value[..., 1]
-        log_prob_m1 = self._log_prob_primary_mass_model(m1)
-        log_prob_q = self._log_prob_mass_ratio_model(m1, q)
-        log_val = jnp.add(log_prob_m1, log_prob_q)
-        return jnp.subtract(log_val, self._logZ)
-
-    def sample(self, key, sample_shape=()):
-        assert is_prng_key(key)
-        flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
-
-        m1 = numerical_inverse_transform_sampling(
-            logpdf=self._log_prob_primary_mass_model,
-            limits=(self.mmin, self.mmax),
-            sample_shape=(flattened_sample_shape,),
-            key=key,
-            batch_shape=self.batch_shape,
-            n_grid_points=1000,
+            mmin=mmin, mmax=mmax, batch_shape=batch_shape, event_shape=(2,)
         )
 
-        keys = jrd.split(key, m1.shape)
+    def log_primary_model(self, mass):
+        mbreak = jnp.add(
+            self.mmin,
+            jnp.multiply(self.break_fraction, jnp.subtract(self.mmax, self.mmin)),
+        )
 
-        q = vmap(
-            lambda _m1, _k: numerical_inverse_transform_sampling(
-                logpdf=partial(self._log_prob_mass_ratio_model, _m1),
-                limits=(jnp.divide(self.mmin, _m1), 1.0),
-                sample_shape=(),
-                key=_k,
-                batch_shape=self.batch_shape,
-                n_grid_points=1000,
-            )
-        )(m1, keys)
+        log_correction = doubly_truncated_powerlaw_log_prob(
+            value=mbreak, alpha=-self.alpha2, low=mbreak, high=self.mmax
+        ) - doubly_truncated_powerlaw_log_prob(
+            value=mbreak, alpha=-self.alpha1, low=self.mmin, high=mbreak
+        )
 
-        return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
+        log_low_part = doubly_truncated_powerlaw_log_prob(
+            value=mass, alpha=-self.alpha1, low=self.mmin, high=mbreak
+        )
+
+        log_high_part = doubly_truncated_powerlaw_log_prob(
+            value=mass, alpha=-self.alpha2, low=mbreak, high=self.mmax
+        )
+
+        log_prob_val = (log_low_part + log_correction) * jnp.less(
+            mass, mbreak
+        ) + log_high_part * jnp.greater_equal(mass, mbreak)
+
+        return log_prob_val - jax.nn.softplus(log_correction)
 
 
 def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> MultivariateNormal:
@@ -984,29 +1018,9 @@ class TruncatedPowerLaw(Distribution):
 
     @validate_sample
     def log_prob(self, value):
-        def logp_neg1(value):
-            logp_neg1_val = jnp.add(jnp.log(value), jnp.log(self.high))
-            logp_neg1_val = jnp.subtract(jnp.log(self.low), logp_neg1_val)
-            return logp_neg1_val
-
-        def logp(value):
-            log_value = jnp.log(value)
-            logp = jnp.multiply(self.alpha, log_value)
-            beta = jnp.add(1.0, self.alpha)
-            logp = jnp.add(
-                logp,
-                jnp.log(
-                    jnp.divide(
-                        beta,
-                        jnp.subtract(
-                            jnp.power(self.high, beta), jnp.power(self.low, beta)
-                        ),
-                    )
-                ),
-            )
-            return logp
-
-        return jnp.where(jnp.equal(self.alpha, -1.0), logp_neg1(value), logp(value))
+        return doubly_truncated_powerlaw_log_prob(
+            value=value, alpha=self.alpha, low=self.low, high=self.high
+        )
 
     def cdf(self, value):
         beta = jnp.add(1.0, self.alpha)

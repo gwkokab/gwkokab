@@ -20,7 +20,7 @@ from typing_extensions import Callable, Tuple
 import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
-from jaxtyping import Array, Int, PRNGKeyArray, Real
+from jaxtyping import Array, Int, PRNGKeyArray
 from numpyro.distributions import Beta, Distribution, TruncatedNormal
 from numpyro.util import is_prng_key
 
@@ -30,10 +30,10 @@ from ..utils.math import beta_dist_mean_variance_to_concentrations
 __all__ = [
     "JointDistribution",
     "numerical_inverse_transform_sampling",
-    "smoothing_kernel",
     "get_spin_magnitude_and_misalignment_dist",
     "get_default_spin_magnitude_dists",
     "get_spin_misalignment_dist",
+    "doubly_truncated_powerlaw_log_prob",
 ]
 
 
@@ -132,54 +132,6 @@ def numerical_inverse_transform_sampling(
     return samples  # inverse transform sampling
 
 
-def smoothing_kernel(
-    mass: Array | Real, mass_min: Array | Real, delta: Array | Real
-) -> Array | Real:
-    r"""See equation B4 in `Population Properties of Compact Objects from the
-    Second LIGO-Virgo Gravitational-Wave Transient Catalog 
-    <https://arxiv.org/abs/2010.14533>`_.
-    
-    .. math::
-        S(m\mid m_{\min}, \delta) = \begin{cases}
-            0 & \text{if } m < m_{\min}, \\
-            \left[\displaystyle 1 + \exp\left(\frac{\delta}{m}
-            +\frac{\delta}{m-\delta}\right)\right]^{-1}
-            & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
-            1 & \text{if } m \geq m_{\min} + \delta
-        \end{cases}
-
-    :param mass: mass of the primary black hole
-    :param mass_min: minimum mass of the primary black hole
-    :param delta: small mass difference
-    :return: smoothing kernel value
-    """
-    mass_min_shifted = jnp.add(mass_min, delta)
-    if jnp.less_equal(delta, 0.0) or jnp.greater_equal(mass, mass_min_shifted):
-        return jnp.ones(shape=mass.shape)
-    if jnp.less_equal(mass_min, 0.0):
-        return jnp.zeros(shape=mass.shape)
-
-    shifted_mass = jnp.nan_to_num(
-        jnp.divide(jnp.subtract(mass, mass_min), delta), nan=0.0
-    )
-    shifted_mass = jnp.clip(shifted_mass, 1e-6, 1.0 - 1e-6)
-    neg_exponent = jnp.subtract(
-        jnp.reciprocal(jnp.subtract(1.0, shifted_mass)),
-        jnp.reciprocal(shifted_mass),
-    )
-    window = jax.scipy.special.expit(neg_exponent)
-    conditions = [
-        jnp.less(mass, mass_min),
-        jnp.logical_and(
-            jnp.less_equal(mass_min, mass),
-            jnp.less_equal(mass, mass_min_shifted),
-        ),
-        jnp.greater(mass, mass_min_shifted),
-    ]
-    choices = [jnp.zeros(mass.shape), window, jnp.ones(mass.shape)]
-    return jnp.select(conditions, choices, default=jnp.zeros(mass.shape))
-
-
 def get_default_spin_magnitude_dists(
     mean_chi1,
     variance_chi1,
@@ -265,3 +217,27 @@ def get_spin_magnitude_and_misalignment_dist(
         validate_args=True,
     )
     return chi1_dist, chi2_dist, cos_tilt1_dist, cos_tilt2_dist
+
+
+def doubly_truncated_powerlaw_log_prob(value, alpha, low, high):
+    def logp_neg1(value):
+        logp_neg1_val = jnp.add(jnp.log(value), jnp.log(high))
+        logp_neg1_val = jnp.subtract(jnp.log(low), logp_neg1_val)
+        return logp_neg1_val
+
+    def logp(value):
+        log_value = jnp.log(value)
+        logp = jnp.multiply(alpha, log_value)
+        beta = jnp.add(1.0, alpha)
+        logp = jnp.add(
+            logp,
+            jnp.log(
+                jnp.divide(
+                    beta,
+                    jnp.subtract(jnp.power(high, beta), jnp.power(low, beta)),
+                )
+            ),
+        )
+        return logp
+
+    return jnp.where(jnp.equal(alpha, -1.0), logp_neg1(value), logp(value))
