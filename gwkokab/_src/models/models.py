@@ -15,8 +15,10 @@
 
 from __future__ import annotations
 
+from functools import partial
+
 import jax
-from jax import lax, numpy as jnp, random as jrd, tree as jtr
+from jax import lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.scipy.special import expit, logsumexp
 from jax.scipy.stats import truncnorm, uniform
 from jaxtyping import Array, Int, Real
@@ -43,6 +45,7 @@ from .utils import (
     get_spin_magnitude_and_misalignment_dist,
     get_spin_misalignment_dist,
     JointDistribution,
+    numerical_inverse_transform_sampling,
 )
 
 
@@ -63,18 +66,17 @@ __all__ = [
 
 
 class _BaseSmoothedMassDistribution(Distribution):
-    arg_constraints = {
-        "mmin": constraints.dependent,
-        "mmax": constraints.dependent,
-    }
-
-    def __init__(self, mmin, mmax, *, batch_shape, event_shape):
-        mmin, mmax = promote_shapes(mmin, mmax)
-        batch_shape = lax.broadcast_shapes(
-            jnp.shape(mmin), jnp.shape(mmax), batch_shape
+    def __init__(self, beta_q, delta_m, mmin, mmax, *, batch_shape, event_shape):
+        self.beta_q, self.delta_m, self.mmin, self.mmax = promote_shapes(
+            beta_q, delta_m, mmin, mmax
         )
-        self.mmin = mmin
-        self.mmax = mmax
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(beta_q),
+            jnp.shape(delta_m),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            batch_shape,
+        )
         super(_BaseSmoothedMassDistribution, self).__init__(
             batch_shape, event_shape, validate_args=True
         )
@@ -88,71 +90,65 @@ class _BaseSmoothedMassDistribution(Distribution):
         m1 = value[..., 0]
         q = value[..., 1]
         log_prob_m1_val = self.log_prob_m1(m1)
-        log_prob_q_val = self.log_prob_q(m1, q, self.beta_q, self.delta_m)
+        log_prob_q_val = self.log_prob_q(m1, q)
         return jnp.add(log_prob_m1_val, log_prob_q_val)
 
     def log_prob_m1(self, m1):
         log_prob_m_val = self.__class__.log_primary_model(self, m1)
-        log_prob_m_val = jnp.add(
-            log_prob_m_val,
-            jnp.log(self.smoothing_kernel(m1, self.mmin, self.delta_m)),
-        )
-        log_norm = self.log_norm_p_m1(self.delta_m)
+        log_prob_m_val = jnp.add(log_prob_m_val, jnp.log(self.smoothing_kernel(m1)))
+        log_norm = self.log_norm_p_m1()
         log_prob_m_val = jnp.subtract(log_prob_m_val, log_norm)
         return log_prob_m_val
 
-    def log_prob_q(self, m1, q, beta, delta_m):
+    def log_prob_q(self, m1, q):
         log_prob_q_val = doubly_truncated_powerlaw_log_prob(
             q,
-            beta,
+            self.beta_q,
             jnp.divide(self.mmin, m1),
             1.0,
         )
         log_prob_q_val = jnp.add(
             log_prob_q_val,
-            jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1, q=q), self.mmin, delta_m)),
+            jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1, q=q))),
         )
-        log_norm = self.log_norm_p_q(beta, m1, delta_m)
+        log_norm = self.log_norm_p_q()
         log_prob_q_val = jnp.subtract(log_prob_q_val, log_norm)
         return log_prob_q_val
 
-    def log_norm_p_m1(self, delta_m):
+    def log_norm_p_m1(self):
         m1s = jrd.uniform(
             jrd.PRNGKey(0), shape=(1000,), minval=self.mmin, maxval=self.mmax
         )
         log_prob_m_val = self.__class__.log_primary_model(self, m1s)
         log_prob_m_val = jnp.add(
             log_prob_m_val,
-            jnp.log(self.smoothing_kernel(m1s, self.mmin, delta_m)),
+            jnp.log(self.smoothing_kernel(m1s)),
         )
         log_norm = logsumexp(log_prob_m_val) - jnp.log(m1s.shape[0])
         return log_norm
 
-    def log_norm_p_q(self, beta, mmin, delta_m):
+    def log_norm_p_q(self):
         m1s = jrd.uniform(
             jrd.PRNGKey(0),
-            shape=(1000,) + mmin.shape,
+            shape=(1000,) + self.batch_shape,
             minval=self.mmin,
             maxval=self.mmax,
         )
         qs = jrd.uniform(
-            jrd.PRNGKey(1), shape=(1000,) + mmin.shape, minval=0.001, maxval=1
+            jrd.PRNGKey(1), shape=(1000,) + self.batch_shape, minval=0.001, maxval=1
         )
         log_prob_q_val = doubly_truncated_powerlaw_log_prob(
-            qs, beta, jnp.divide(mmin, m1s), 1.0
+            qs, self.beta_q, jnp.divide(self.mmin, m1s), 1.0
         )
         log_prob_q_val = jnp.nan_to_num(log_prob_q_val, nan=-jnp.inf)
         log_prob_q_val = jnp.add(
             log_prob_q_val,
-            jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1s, q=qs), mmin, delta_m)),
+            jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1s, q=qs))),
         )
         log_norm = logsumexp(log_prob_q_val) - jnp.log(m1s.shape[0])
         return log_norm
 
-    @staticmethod
-    def smoothing_kernel(
-        mass: Array | Real, mass_min: Array | Real, delta: Array | Real
-    ) -> Array | Real:
+    def smoothing_kernel(self, mass: Array | Real) -> Array | Real:
         r"""See equation B4 in `Population Properties of Compact Objects from the
         Second LIGO-Virgo Gravitational-Wave Transient Catalog 
         <https://arxiv.org/abs/2010.14533>`_.
@@ -161,12 +157,7 @@ class _BaseSmoothedMassDistribution(Distribution):
             S(m\mid m_{\min}, \delta) = \begin{cases}
                 0 & \text{if } m < m_{\min}, \\
                 \left[\displaystyle 1 + \exp\left(\frac{\delta}{m}
-                +\frac{\delta}{m-\delta}\right)\r# if jnp.all(jnp.less_equal(delta, 0.0)) or jnp.all(
-        #     jnp.greater_equal(mass, mass_min_shifted)
-        # ):
-        #     return jnp.ones(shape=mass.shape)
-        # if jnp.all(jnp.less_equal(mass_min, 0.0)):
-        #     return jnp.zeros(shape=mass.shape)ight]^{-1}
+                +\frac{\delta}{m-\delta}\right)\right]^{-1}
                 & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
                 1 & \text{if } m \geq m_{\min} + \delta
             \end{cases}
@@ -176,10 +167,10 @@ class _BaseSmoothedMassDistribution(Distribution):
         :param delta: small mass difference
         :return: smoothing kernel value
         """
-        mass_min_shifted = jnp.add(mass_min, delta)
+        mass_min_shifted = jnp.add(self.mmin, self.delta_m)
 
         shifted_mass = jnp.nan_to_num(
-            jnp.divide(jnp.subtract(mass, mass_min), delta), nan=0.0
+            jnp.divide(jnp.subtract(mass, self.mmin), self.delta_m), nan=0.0
         )
         shifted_mass = jnp.clip(shifted_mass, 1e-6, 1.0 - 1e-6)
         neg_exponent = jnp.subtract(
@@ -188,15 +179,43 @@ class _BaseSmoothedMassDistribution(Distribution):
         )
         window = expit(neg_exponent)
         conditions = [
-            jnp.less(mass, mass_min),
+            jnp.less(mass, self.mmin),
             jnp.logical_and(
-                jnp.less_equal(mass_min, mass),
+                jnp.less_equal(self.mmin, mass),
                 jnp.less_equal(mass, mass_min_shifted),
             ),
             jnp.greater(mass, mass_min_shifted),
         ]
         choices = [jnp.zeros(mass.shape), window, jnp.ones(mass.shape)]
         return jnp.select(conditions, choices, default=jnp.zeros(mass.shape))
+
+    def sample(self, key, sample_shape=()):
+        assert is_prng_key(key)
+        flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
+
+        m1 = numerical_inverse_transform_sampling(
+            logpdf=self.log_prob_m1,
+            limits=(self.mmin, self.mmax),
+            sample_shape=(flattened_sample_shape,),
+            key=key,
+            batch_shape=self.batch_shape,
+            n_grid_points=1000,
+        )
+
+        key = jrd.split(key, m1.shape)
+
+        q = vmap(
+            lambda _m1, _k: numerical_inverse_transform_sampling(
+                logpdf=partial(self.log_prob_q, _m1),
+                limits=(jnp.divide(self.mmin, _m1), 1.0),
+                sample_shape=(),
+                key=_k,
+                batch_shape=self.batch_shape,
+                n_grid_points=1000,
+            )
+        )(m1, key)
+
+        return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
 
 
 class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
@@ -223,6 +242,8 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
         "alpha1": constraints.real,
         "alpha2": constraints.real,
         "beta_q": constraints.real,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
         "break_fraction": constraints.unit_interval,
         "delta_m": constraints.positive,
     }
@@ -255,26 +276,22 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
         :param mmax: Maximum mass
         :param mbreak: Break mass
         :param delta: Smoothing parameter
-        :param default_params: If :code:`True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If :code:`False`, the
-            model will use primary mass and mass ratio.
         """
-        (
-            self.alpha1,
-            self.alpha2,
-            self.beta_q,
-            self.break_fraction,
-            self.delta_m,
-        ) = promote_shapes(alpha1, alpha2, beta_q, break_fraction, delta_m)
+        (self.alpha1, self.alpha2, self.break_fraction) = promote_shapes(
+            alpha1, alpha2, break_fraction
+        )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha1),
             jnp.shape(alpha2),
-            jnp.shape(beta_q),
             jnp.shape(break_fraction),
-            jnp.shape(delta_m),
         )
         super(BrokenPowerLawMassModel, self).__init__(
-            mmin=mmin, mmax=mmax, batch_shape=batch_shape, event_shape=(2,)
+            beta_q=beta_q,
+            delta_m=delta_m,
+            mmin=mmin,
+            mmax=mmax,
+            batch_shape=batch_shape,
+            event_shape=(2,),
         )
 
     def log_primary_model(self, mass):
@@ -418,6 +435,8 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
         "beta": constraints.real,
         "lam": constraints.unit_interval,
         "lam1": constraints.unit_interval,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
         "delta_m": constraints.positive,
         "mu1": constraints.positive,
         "sigma1": constraints.positive,
@@ -466,9 +485,6 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
         :param sigma1: Standard deviation of first Gaussian component
         :param mu2: Mean of second Gaussian component
         :param sigma2: Standard deviation of second Gaussian component
-        :param default_params: If :code:`True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If :code:`False`, the
-            model will use primary mass and mass ratio.
         """
         (
             self.alpha,
@@ -610,23 +626,18 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
         :param mu: Mean of Gaussian component
         :param sigma: Standard deviation of Gaussian component
         """
-        (
-            self.alpha,
-            self.beta,
-            self.lam,
-            self.delta_m,
-            self.mu,
-            self.sigma,
-        ) = promote_shapes(alpha, beta, lam, delta_m, mu, sigma)
+        self.alpha, self.lam, self.mu, self.sigma = promote_shapes(
+            alpha, lam, mu, sigma
+        )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
-            jnp.shape(beta),
             jnp.shape(lam),
-            jnp.shape(delta_m),
             jnp.shape(mu),
             jnp.shape(sigma),
         )
         super(PowerLawPeakMassModel, self).__init__(
+            beta_q=beta,
+            delta_m=delta_m,
             mmin=mmin,
             mmax=mmax,
             batch_shape=batch_shape,
