@@ -66,7 +66,12 @@ We have used :class:`numpyro.distributions.transforms.Transform` to define trans
     :nosignatures:
     :toctree: _autosummary
 
+    ComponentMassesAndRedshiftToDetectedMassAndRedshift
+    ComponentMassesAndRedshiftToMassRatioAndSecondaryMass
+    ComponentMassesAndRedshiftToPrimaryMassAndMassRatio
+    ComponentMassesAndRedshiftToTotalMassAndMassRatio
     ComponentMassesToChirpMassAndDelta
     ComponentMassesToChirpMassAndSymmetricMassRatio
     DeltaToSymmetricMassRatio
     PrimaryMassAndMassRatioToComponentMassesTransform
+    SourceMassAndRedshiftToDetectedMassAndRedshift
