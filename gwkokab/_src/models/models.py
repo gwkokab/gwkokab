@@ -55,6 +55,7 @@ __all__ = [
     "BrokenPowerLawMassModel",
     "GaussianSpinModel",
     "IndependentSpinOrientationGaussianIsotropic",
+    "MassGapModel",
     "MultiPeakMassModel",
     "MultiSourceModel",
     "MultiSpinModel",
@@ -1378,6 +1379,9 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
 
 
 class MassGapModel(Distribution):
+    r"""See Eq. (2) of `No evidence for a dip in the binary black hole mass spectrum
+    <http://arxiv.org/abs/2406.11111>`_."""
+
     arg_constraints = {
         "alpha": constraints.real,
         "lam": constraints.unit_interval,
@@ -1491,6 +1495,10 @@ class MassGapModel(Distribution):
             batch_shape, event_shape=(2,), validate_args=True
         )
 
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        return mass_sandwich(self.mmin, self.mmax)
+
     def log_notch_filter(self, mass):
         if jnp.all(
             jnp.logical_or(
@@ -1549,30 +1557,28 @@ class MassGapModel(Distribution):
         return jnp.select(conditions, choices, default=jnp.zeros(mass.shape))
 
     def log_prob_three_component_single(self, m_i):
-        gaussian_term_1 = jnp.add(jnp.log(self.lam), jnp.log(self.lam1))
-        gaussian_term_1 = jnp.add(
-            gaussian_term_1,
-            truncnorm.logpdf(
-                m_i, a=self.mmin, b=self.mmax, loc=self.mu1, scale=self.sigma1
-            ),
+        component_probs = jnp.stack(
+            [
+                doubly_truncated_powerlaw_log_prob(
+                    value=m_i, alpha=-self.alpha, low=self.mmin, high=self.mmax
+                ),
+                truncnorm.logpdf(
+                    m_i, a=self.mmin, b=self.mmax, loc=self.mu1, scale=self.sigma1
+                ),
+                truncnorm.logpdf(
+                    m_i, a=self.mmin, b=self.mmax, loc=self.mu2, scale=self.sigma2
+                ),
+            ],
+            axis=-1,
         )
-
-        gaussian_term_2 = jnp.add(jnp.log(self.lam), jnp.log1p(-self.lam1))
-        gaussian_term_2 = jnp.add(
-            gaussian_term_2,
-            truncnorm.logpdf(
-                m_i, a=self.mmin, b=self.mmax, loc=self.mu2, scale=self.sigma2
-            ),
+        mixing_probs = jnp.array(
+            [
+                jnp.log1p(-self.lam),
+                jnp.log(self.lam) + jnp.log(self.lam1),
+                jnp.log(self.lam) + jnp.log1p(-self.lam1),
+            ]
         )
-
-        powerlaw_term = jnp.add(
-            jnp.log1p(-self.lam),
-            doubly_truncated_powerlaw_log_prob(
-                value=m_i, alpha=-self.alpha, low=self.mmin, high=self.mmax
-            ),
-        )
-        log_prob_val = jnp.logaddexp(powerlaw_term, gaussian_term_1)
-        log_prob_val = jnp.add(log_prob_val, jnp.exp(gaussian_term_2))
+        log_prob_val = logsumexp(component_probs + mixing_probs)
         return log_prob_val
 
     def log_prob_mi(self, m_i):
@@ -1599,8 +1605,8 @@ class MassGapModel(Distribution):
     def log_prob(self, value):
         m1 = value[..., 0]
         m2 = value[..., 1]
-        log_prob_val = self.log_norm_mi(m1)
-        log_prob_val += self.log_norm_mi(m2)
+        log_prob_val = self.log_prob_mi(m1)
+        log_prob_val += self.log_prob_mi(m2)
         log_prob_val += doubly_truncated_powerlaw_log_prob(
             value=jnp.divide(m2, m1),
             alpha=self.beta_q,
