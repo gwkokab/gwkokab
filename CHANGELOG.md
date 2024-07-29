@@ -12,6 +12,12 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
 * New models:
   * `MassGapModel`
+* New transforms:
+  * `ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+  * `ComponentMassesAndRedshiftToPrimaryMassAndMassRatio`
+  * `ComponentMassesAndRedshiftToMassRatioAndSecondaryMass`
+  * `ComponentMassesAndRedshiftToTotalMassAndMassRatio`
+  * `SourceMassAndRedshiftToDetectedMassAndRedshift`
 
 **New Design**
 

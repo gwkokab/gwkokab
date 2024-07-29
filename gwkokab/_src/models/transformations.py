@@ -34,6 +34,9 @@ from ...utils.transformations import (
     chirp_mass,
     delta_m,
     m1_m2_to_Mc_eta,
+    m1_q_to_m2,
+    m2_q_to_m1,
+    M_q_to_m1_m2,
     mass_ratio,
     Mc_delta_to_m1_m2,
     Mc_eta_to_m1_m2,
@@ -51,10 +54,15 @@ from .constraints import (
 
 
 __all__ = [
-    "ComponentMassesToChirpMassAndSymmetricMassRatio",
+    "ComponentMassesAndRedshiftToDetectedMassAndRedshift",
+    "ComponentMassesAndRedshiftToMassRatioAndSecondaryMass",
+    "ComponentMassesAndRedshiftToPrimaryMassAndMassRatio",
+    "ComponentMassesAndRedshiftToTotalMassAndMassRatio",
     "ComponentMassesToChirpMassAndDelta",
+    "ComponentMassesToChirpMassAndSymmetricMassRatio",
     "DeltaToSymmetricMassRatio",
     "PrimaryMassAndMassRatioToComponentMassesTransform",
+    "SourceMassAndRedshiftToDetectedMassAndRedshift",
 ]
 
 
@@ -110,6 +118,14 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
 
     .. math::
         \mathrm{det}(J_f)=\frac{2}{5}M_c\eta q\left(\frac{1-q}{1+q}\right)
+
+    .. seealso::
+
+        :class:`ComponentMassesToChirpMassAndDelta`
+        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        :class:`ComponentMassesAndRedshiftToPrimaryMassAndMassRatio`
+        :class:`ComponentMassesAndRedshiftToMassRatioAndSecondaryMass`
+        :class:`ComponentMassesAndRedshiftToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -157,7 +173,8 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
 
 
 class DeltaToSymmetricMassRatio(Transform):
-    r"""
+    r"""Transforms delta to symmetric mass ratio.
+
     .. math::
         \eta = f(\delta) = \frac{1-\delta^2}{4}
 
@@ -187,7 +204,8 @@ class DeltaToSymmetricMassRatio(Transform):
 
 
 class ComponentMassesToChirpMassAndDelta(Transform):
-    r"""
+    r"""Transforms component masses to chirp mass and delta.
+
     .. math::
         f: (m_1, m_2) \to (M_c, \delta)
 
@@ -199,6 +217,14 @@ class ComponentMassesToChirpMassAndDelta(Transform):
 
     .. math::
         \mathrm{det}(J_f) = -\frac{4M_c}{5(m_1+m_2)^2}
+
+    .. seealso::
+
+        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        :class:`ComponentMassesAndRedshiftToPrimaryMassAndMassRatio`
+        :class:`ComponentMassesAndRedshiftToMassRatioAndSecondaryMass`
+        :class:`ComponentMassesAndRedshiftToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -226,6 +252,178 @@ class ComponentMassesToChirpMassAndDelta(Transform):
         log_detJ = jnp.add(log_detJ, log_Mc)
         log_detJ = jnp.add(log_detJ, jnp.multiply(-2.0, jnp.log(M)))
         return log_detJ
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+
+class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
+    r"""Transforms source mass and redshift to detected mass and redshift."""
+
+    domain = unique_intervals((0.0, 0.0), (jnp.inf, jnp.inf))
+    codomain = unique_intervals((0.0, 0.0), (jnp.inf, jnp.inf))
+
+    def __call__(self, x):
+        m_source = x[..., 0]
+        z = x[..., 1]
+        m_detected = m_source * (1 + z)
+        return jnp.stack((m_detected, z), axis=-1)
+
+    def _inverse(self, y):
+        m_detected = y[..., 0]
+        z = y[..., 1]
+        m_source = m_detected / (1 + z)
+        return jnp.stack((m_source, z), axis=-1)
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        z = x[..., 1]
+        return jnp.log(1 + z)
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+
+class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
+    r"""Transforms component masses and redshift to detected masses and redshift.
+
+    .. seealso::
+
+        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        :class:`ComponentMassesToChirpMassAndDelta`
+        :class:`ComponentMassesAndRedshiftToPrimaryMassAndMassRatio`
+        :class:`ComponentMassesAndRedshiftToMassRatioAndSecondaryMass`
+        :class:`ComponentMassesAndRedshiftToTotalMassAndMassRatio`
+    """
+
+    domain = unique_intervals((0.0, 0.0, 0.0), (jnp.inf, jnp.inf, jnp.inf))
+    codomain = unique_intervals((0.0, 0.0, 0.0), (jnp.inf, jnp.inf, jnp.inf))
+
+    def __call__(self, x):
+        m1_source = x[..., 0]
+        m2_source = x[..., 1]
+        z = x[..., 2]
+        m1_detected = m1_source * (1 + z)
+        m2_detected = m2_source * (1 + z)
+        return jnp.stack((m1_detected, m2_detected, z), axis=-1)
+
+    def _inverse(self, y):
+        m1_detected = y[..., 0]
+        m2_detected = y[..., 1]
+        z = y[..., 2]
+        m1_source = m1_detected / (1 + z)
+        m2_source = m2_detected / (1 + z)
+        return jnp.stack((m1_source, m2_source, z), axis=-1)
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        z = x[..., 1]
+        return 2 * jnp.log(1 + z)
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+
+class ComponentMassesAndRedshiftToPrimaryMassAndMassRatio(Transform):
+    r"""Transforms component masses and redshift to primary mass and mass ratio.
+
+    .. seealso::
+
+        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        :class:`ComponentMassesToChirpMassAndDelta`
+        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        :class:`ComponentMassesAndRedshiftToMassRatioAndSecondaryMass`
+        :class:`ComponentMassesAndRedshiftToTotalMassAndMassRatio`
+    """
+
+    domain = positive_decreasing_vector
+    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+
+    def __call__(self, x):
+        m1 = x[..., 0]
+        m2 = x[..., 1]
+        q = mass_ratio(m1=m1, m2=m2)
+        return jnp.stack((m1, q), axis=-1)
+
+    def _inverse(self, y):
+        m1 = y[..., 0]
+        q = y[..., 1]
+        m2 = m1_q_to_m2(m1=m1, q=q)
+        return jnp.stack((m1, m2), axis=-1)
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        return -jnp.log(x[..., 0])
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+
+class ComponentMassesAndRedshiftToMassRatioAndSecondaryMass(Transform):
+    r"""Transforms component masses and redshift to mass ratio and secondary mass.
+
+    .. seealso::
+
+        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        :class:`ComponentMassesToChirpMassAndDelta`
+        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        :class:`ComponentMassesAndRedshiftToPrimaryMassAndMassRatio`
+        :class:`ComponentMassesAndRedshiftToTotalMassAndMassRatio`
+    """
+
+    domain = positive_decreasing_vector
+    codomain = unique_intervals((0.0, 0.0), (1.0, jnp.inf))
+
+    def __call__(self, x):
+        m1 = x[..., 0]
+        m2 = x[..., 1]
+        q = mass_ratio(m1=m1, m2=m2)
+        return jnp.stack((q, m2), axis=-1)
+
+    def _inverse(self, y):
+        q = y[..., 0]
+        m2 = y[..., 1]
+        m1 = m2_q_to_m1(m2=m2, q=q)
+        return jnp.stack((m1, m2), axis=-1)
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        m2 = x[..., 1]
+        q = y[..., 0]
+        return jnp.log(m2) + 2 * jnp.log(q)
+
+    def tree_flatten(self):
+        return (), ((), dict())
+
+
+class ComponentMassesAndRedshiftToTotalMassAndMassRatio(Transform):
+    r"""Transforms component masses and redshift to total mass and mass ratio.
+
+    .. seealso::
+
+        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        :class:`ComponentMassesToChirpMassAndDelta`
+        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        :class:`ComponentMassesAndRedshiftToPrimaryMassAndMassRatio`
+        :class:`ComponentMassesAndRedshiftToMassRatioAndSecondaryMass`
+    """
+
+    domain = positive_decreasing_vector
+    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+
+    def __call__(self, x):
+        m1 = x[..., 0]
+        m2 = x[..., 1]
+        M = total_mass(m1=m1, m2=m2)
+        q = mass_ratio(m1=m1, m2=m2)
+        return jnp.stack((M, q), axis=-1)
+
+    def _inverse(self, y):
+        M = y[..., 0]
+        q = y[..., 1]
+        m1, m2 = M_q_to_m1_m2(M=M, q=q)
+        return jnp.stack((m1, m2), axis=-1)
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        m2 = x[..., 1]
+        q = y[..., 1]
+        return jnp.log(m2) + jnp.log(q) + jnp.log(1 + q)
 
     def tree_flatten(self):
         return (), ((), dict())
