@@ -5,7 +5,7 @@
 </div>
 
 <h2 align="center">
-A JAX-based gravitational-wave population inference toolkit ✴️
+A JAX-based gravitational-wave population inference toolkit for parametric models.✴️
 </h2>
 
 [**Installation**](https://gwkokab.readthedocs.io/en/latest/installation.html) |
