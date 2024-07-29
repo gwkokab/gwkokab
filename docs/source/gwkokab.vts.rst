@@ -1,7 +1,6 @@
 ``gwkokab.vts``
 ===============
 
-
 ``gwkokab.vts.neuralvt``
 -------------------------
 

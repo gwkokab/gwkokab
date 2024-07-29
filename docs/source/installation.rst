@@ -1,19 +1,19 @@
 Installation
 ============
 
-GWKokab_ is available on PyPI_ and can be easily installed using pip. For optimal setup,
-it is recommended to install GWKokab_ in a virtual environment. You can install GWKokab_
-with the following command:
+GWKokab_ is available on PyPI_ and can be easily installed using pip. For optimal
+setup, it is recommended to install GWKokab_ in a virtual environment. You can
+install GWKokab_ with the following command:
 
 .. tab-set::
 
-    .. tab-item:: Stable Release
+    .. tab-item:: Stable Release 📦
 
         .. code-block:: bash
         
             pip install --upgrade gwkokab
 
-    .. tab-item:: Nightly
+    .. tab-item:: Nightly 🍺
 
         .. code-block:: bash
             
@@ -26,7 +26,7 @@ with the following command:
 
 .. tab-set::
 
-    .. tab-item:: CPU
+    .. tab-item:: CPU 🐢
 
         GWKokab assumes default accelerator is CPU, so you do not need to install JAX_ 
         separately. However, if you want to install JAX_ separately, you can do so with
@@ -36,7 +36,7 @@ with the following command:
         
             pip install -U jax
     
-    .. tab-item:: GPU
+    .. tab-item:: GPU 🚀
 
         If you plan to leverage CUDA_ for enhanced performance, you'll need to install
         a specific version of JAX_ with this command:
@@ -45,7 +45,7 @@ with the following command:
         
             pip install -U "jax[cuda12]"
     
-    .. tab-item:: TPU
+    .. tab-item:: TPU ⚡
 
         .. code-block:: bash
         

@@ -21,7 +21,6 @@ Models
     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
-    TruncatedPowerLaw
     Wysocki2019MassModel
 
 Utilities
@@ -58,7 +57,11 @@ Constraints
 Transformations
 ---------------
 
-We have used :class:`numpyro.distributions.transforms.Transform` to define transformations between different parameterizations of the same model. This allows us to sample from a distribution with a simple parameterization and then transform the samples to the desired parameterization. The transformations are defined in the following classes.
+We have used :class:`numpyro.distributions.transforms.Transform` to define
+transformations between different parameterizations of the same model. This allows us to
+sample from a distribution with a simple parameterization and then transform the samples
+to the desired parameterization. The transformations are defined in the following
+classes.
 
 .. automodule:: gwkokab.models.transformations
 
