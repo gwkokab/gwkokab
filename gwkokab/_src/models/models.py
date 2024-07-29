@@ -1380,7 +1380,25 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
 
 class MassGapModel(Distribution):
     r"""See Eq. (2) of `No evidence for a dip in the binary black hole mass spectrum
-    <http://arxiv.org/abs/2406.11111>`_."""
+    <http://arxiv.org/abs/2406.11111>`_.
+
+    :param alpha: Spectral-index of power-law component
+    :param lam: Fraction of masses in Gaussian peaks
+    :param lam1: Fraction of peak-masses in lower-mass peak
+    :param mu1: Location of lower-mass peak
+    :param sigma1: Width of lower-mass peak
+    :param mu2: Location of upper-mass peak
+    :param sigma2: Width of upper-mass peak
+    :param gamma_low: Lower-edge location of gap
+    :param gamma_high: Upper-edge location of gap
+    :param eta_low: Sharpness of gap's lower-edge
+    :param eta_high: Sharpness of gap's upper-edge
+    :param depth_of_gap: Depth of gap
+    :param mmin: Maximum allowed mass
+    :param mmax: Minimum allowed mass
+    :param delta_m: Length of minimum-mass roll-off
+    :param beta_q: Power-law index of pairing function
+    """
 
     arg_constraints = {
         "alpha": constraints.real,
