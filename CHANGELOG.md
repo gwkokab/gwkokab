@@ -8,6 +8,11 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
 * `TruncatedPowerLaw` is removed from the public API.
 
+**New features**
+
+* New models:
+  * `MassGapModel`
+
 **New Design**
 
 * Introduced a refined base class for smoothed mass distribution models, enhancing functionality and maintainability.

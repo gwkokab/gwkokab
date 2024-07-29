@@ -19,6 +19,7 @@ from functools import partial
 
 import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr, vmap
+from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
 from jax.scipy.stats import truncnorm, uniform
 from jaxtyping import Array, Int, Real
@@ -54,6 +55,7 @@ __all__ = [
     "BrokenPowerLawMassModel",
     "GaussianSpinModel",
     "IndependentSpinOrientationGaussianIsotropic",
+    "MassGapModel",
     "MultiPeakMassModel",
     "MultiSourceModel",
     "MultiSpinModel",
@@ -124,7 +126,11 @@ class _BaseSmoothedMassDistribution(Distribution):
             log_prob_m_val,
             jnp.log(self.smoothing_kernel(m1s)),
         )
-        log_norm = logsumexp(log_prob_m_val) - jnp.log(m1s.shape[0])
+        log_norm = (
+            logsumexp(log_prob_m_val)
+            - jnp.log(m1s.shape[0])
+            + jnp.log(jnp.prod(self.mmax - self.mmin))
+        )
         return log_norm
 
     def log_norm_p_q(self):
@@ -145,7 +151,9 @@ class _BaseSmoothedMassDistribution(Distribution):
             log_prob_q_val,
             jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1s, q=qs))),
         )
-        log_norm = logsumexp(log_prob_q_val) - jnp.log(m1s.shape[0])
+        log_norm = (
+            logsumexp(log_prob_q_val) - jnp.log(m1s.shape[0]) + jnp.log(1.0 - 0.001)
+        )
         return log_norm
 
     def smoothing_kernel(self, mass: Array | Real) -> Array | Real:
@@ -1368,3 +1376,241 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
         support=constraints.real_vector,
         validate_args=True,
     )
+
+
+class MassGapModel(Distribution):
+    r"""See Eq. (2) of `No evidence for a dip in the binary black hole mass spectrum
+    <http://arxiv.org/abs/2406.11111>`_."""
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "lam": constraints.unit_interval,
+        "lam1": constraints.unit_interval,
+        "mu1": constraints.positive,
+        "sigma1": constraints.positive,
+        "mu2": constraints.positive,
+        "sigma2": constraints.positive,
+        "gamma_low": constraints.real,
+        "gamma_high": constraints.real,
+        "eta_low": constraints.real,
+        "eta_high": constraints.real,
+        "depth_of_gap": constraints.unit_interval,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
+        "delta_m": constraints.positive,
+        "beta_q": constraints.real,
+    }
+    reparametrized_params = [
+        "alpha",
+        "lam",
+        "lam1",
+        "mu1",
+        "sigma1",
+        "mu2",
+        "sigma2",
+        "gamma_low",
+        "gamma_high",
+        "eta_low",
+        "eta_high",
+        "depth_of_gap",
+        "mmin",
+        "mmax",
+        "delta_m",
+        "beta_q",
+    ]
+
+    def __init__(
+        self,
+        alpha,
+        lam,
+        lam1,
+        mu1,
+        sigma1,
+        mu2,
+        sigma2,
+        gamma_low,
+        gamma_high,
+        eta_low,
+        eta_high,
+        depth_of_gap,
+        mmin,
+        mmax,
+        delta_m,
+        beta_q,
+    ):
+        (
+            self.alpha,
+            self.lam,
+            self.lam1,
+            self.mu1,
+            self.sigma1,
+            self.mu2,
+            self.sigma2,
+            self.gamma_low,
+            self.gamma_high,
+            self.eta_low,
+            self.eta_high,
+            self.depth_of_gap,
+            self.mmin,
+            self.mmax,
+            self.delta_m,
+            self.beta_q,
+        ) = promote_shapes(
+            alpha,
+            lam,
+            lam1,
+            mu1,
+            sigma1,
+            mu2,
+            sigma2,
+            gamma_low,
+            gamma_high,
+            eta_low,
+            eta_high,
+            depth_of_gap,
+            mmin,
+            mmax,
+            delta_m,
+            beta_q,
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha),
+            jnp.shape(lam),
+            jnp.shape(lam1),
+            jnp.shape(mu1),
+            jnp.shape(sigma1),
+            jnp.shape(mu2),
+            jnp.shape(sigma2),
+            jnp.shape(gamma_low),
+            jnp.shape(gamma_high),
+            jnp.shape(eta_low),
+            jnp.shape(eta_high),
+            jnp.shape(depth_of_gap),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(delta_m),
+            jnp.shape(beta_q),
+        )
+        super(MassGapModel, self).__init__(
+            batch_shape, event_shape=(2,), validate_args=True
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        return mass_sandwich(self.mmin, self.mmax)
+
+    def log_notch_filter(self, mass):
+        if jnp.all(
+            jnp.logical_or(
+                jnp.equal(self.depth_of_gap, 0.0),
+                jnp.equal(self.gamma_low, self.gamma_high),
+            )
+        ):
+            return jnp.ones_like(mass)
+        log_m = jnp.log(mass)
+        log_gamma_low = jnp.log(self.gamma_low)
+        log_gamma_high = jnp.log(self.gamma_high)
+        notch_filter_val = (
+            jnp.log(self.depth_of_gap)
+            - softplus(self.eta_low * (log_m - log_gamma_low))
+            - softplus(self.eta_high * (log_gamma_high - log_m))
+        )
+        return jnp.log(-jnp.expm1(notch_filter_val))
+
+    def smoothing_kernel(self, mass: Array | Real) -> Array | Real:
+        r"""See equation B4 in `Population Properties of Compact Objects from the
+        Second LIGO-Virgo Gravitational-Wave Transient Catalog 
+        <https://arxiv.org/abs/2010.14533>`_.
+        
+        .. math::
+            S(m\mid m_{\min}, \delta) = \begin{cases}
+                0 & \text{if } m < m_{\min}, \\
+                \left[\displaystyle 1 + \exp\left(\frac{\delta}{m}
+                +\frac{\delta}{m-\delta}\right)\right]^{-1}
+                & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
+                1 & \text{if } m \geq m_{\min} + \delta
+            \end{cases}
+    
+        :param mass: mass of the primary black hole
+        :return: smoothing kernel value
+        """
+        mass_min_shifted = jnp.add(self.mmin, self.delta_m)
+
+        shifted_mass = jnp.nan_to_num(
+            jnp.divide(jnp.subtract(mass, self.mmin), self.delta_m), nan=0.0
+        )
+        shifted_mass = jnp.clip(shifted_mass, 1e-6, 1.0 - 1e-6)
+        neg_exponent = jnp.subtract(
+            jnp.reciprocal(jnp.subtract(1.0, shifted_mass)),
+            jnp.reciprocal(shifted_mass),
+        )
+        window = expit(neg_exponent)
+        conditions = [
+            jnp.less(mass, self.mmin),
+            jnp.logical_and(
+                jnp.less_equal(self.mmin, mass),
+                jnp.less_equal(mass, mass_min_shifted),
+            ),
+            jnp.greater(mass, mass_min_shifted),
+        ]
+        choices = [jnp.zeros(mass.shape), window, jnp.ones(mass.shape)]
+        return jnp.select(conditions, choices, default=jnp.zeros(mass.shape))
+
+    def log_prob_three_component_single(self, m_i):
+        component_probs = jnp.stack(
+            [
+                doubly_truncated_powerlaw_log_prob(
+                    value=m_i, alpha=-self.alpha, low=self.mmin, high=self.mmax
+                ),
+                truncnorm.logpdf(
+                    m_i, a=self.mmin, b=self.mmax, loc=self.mu1, scale=self.sigma1
+                ),
+                truncnorm.logpdf(
+                    m_i, a=self.mmin, b=self.mmax, loc=self.mu2, scale=self.sigma2
+                ),
+            ],
+            axis=-1,
+        )
+        mixing_probs = jnp.array(
+            [
+                jnp.log1p(-self.lam),
+                jnp.log(self.lam) + jnp.log(self.lam1),
+                jnp.log(self.lam) + jnp.log1p(-self.lam1),
+            ]
+        )
+        log_prob_val = logsumexp(component_probs + mixing_probs)
+        return log_prob_val
+
+    def log_prob_mi(self, m_i):
+        log_prob_mi_val = self.log_prob_three_component_single(m_i=m_i)
+        log_prob_mi_val += self.log_notch_filter(m_i)
+        log_prob_mi_val += jnp.log(self.smoothing_kernel(m_i))
+        log_prob_mi_val -= self.log_norm_mi()
+        return log_prob_mi_val
+
+    def log_norm_mi(self):
+        m_i = jrd.uniform(
+            jrd.PRNGKey(0), shape=(10000,), minval=self.mmin, maxval=self.mmax
+        )
+        log_prob_mi_val = self.log_prob_three_component_single(m_i=m_i)
+        log_prob_mi_val += self.log_notch_filter(m_i)
+        log_prob_mi_val += jnp.log(self.smoothing_kernel(m_i))
+        return (
+            logsumexp(log_prob_mi_val)
+            - jnp.log(m_i.shape[0])
+            + jnp.log(jnp.prod(self.mmax - self.mmin))
+        )
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        m2 = value[..., 1]
+        log_prob_val = self.log_prob_mi(m1)
+        log_prob_val += self.log_prob_mi(m2)
+        log_prob_val += doubly_truncated_powerlaw_log_prob(
+            value=jnp.divide(m2, m1),
+            alpha=self.beta_q,
+            low=jnp.divide(self.mmin, self.mmax),
+            high=1.0,
+        )
+        return log_prob_val
