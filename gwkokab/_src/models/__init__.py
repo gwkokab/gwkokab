@@ -16,6 +16,7 @@ from .models import (
     BrokenPowerLawMassModel as BrokenPowerLawMassModel,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
+    MassGapModel as MassGapModel,
     MultiPeakMassModel as MultiPeakMassModel,
     MultiSourceModel as MultiSourceModel,
     MultiSpinModel as MultiSpinModel,
@@ -23,6 +24,5 @@ from .models import (
     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment as NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
-    TruncatedPowerLaw as TruncatedPowerLaw,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )

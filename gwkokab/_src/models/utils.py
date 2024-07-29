@@ -15,13 +15,12 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing_extensions import Callable, Tuple
 
 import jax
-from jax import jit, lax, numpy as jnp, random as jrd, tree as jtr
+from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
-from jaxtyping import Array, Int, PRNGKeyArray, Real
+from jaxtyping import Array, Int, PRNGKeyArray
 from numpyro.distributions import Beta, Distribution, TruncatedNormal
 from numpyro.util import is_prng_key
 
@@ -31,10 +30,11 @@ from ..utils.math import beta_dist_mean_variance_to_concentrations
 __all__ = [
     "JointDistribution",
     "numerical_inverse_transform_sampling",
-    "smoothing_kernel",
     "get_spin_magnitude_and_misalignment_dist",
     "get_default_spin_magnitude_dists",
     "get_spin_misalignment_dist",
+    "doubly_truncated_powerlaw_log_prob",
+    "doubly_truncated_powerlaw_icdf",
 ]
 
 
@@ -133,42 +133,6 @@ def numerical_inverse_transform_sampling(
     return samples  # inverse transform sampling
 
 
-@partial(jit, inline=True)
-def smoothing_kernel(
-    mass: Array | Real, mass_min: Array | Real, delta: Array | Real
-) -> Array | Real:
-    r"""See equation B4 in `Population Properties of Compact Objects from the
-    Second LIGO-Virgo Gravitational-Wave Transient Catalog 
-    <https://arxiv.org/abs/2010.14533>`_.
-    
-    .. math::
-        S(m\mid m_{\min}, \delta) = \begin{cases}
-            0 & \text{if } m < m_{\min}, \\
-            \left[\displaystyle 1 + \exp\left(\frac{\delta}{m}
-            +\frac{\delta}{m-\delta}\right)\right]^{-1}
-            & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
-            1 & \text{if } m \geq m_{\min} + \delta
-        \end{cases}
-
-    :param mass: mass of the primary black hole
-    :param mass_min: minimum mass of the primary black hole
-    :param delta: small mass difference
-    :return: smoothing kernel value
-    """
-    conditions = [
-        mass < mass_min,
-        (mass_min <= mass) & (mass < mass_min + delta),
-    ]
-    choices = [
-        jnp.zeros_like(mass),
-        jnp.reciprocal(
-            1
-            + jnp.exp((delta / (mass - mass_min)) + (delta / (mass - mass_min - delta)))
-        ),
-    ]
-    return jnp.select(conditions, choices, default=jnp.ones_like(mass))
-
-
 def get_default_spin_magnitude_dists(
     mean_chi1,
     variance_chi1,
@@ -254,3 +218,50 @@ def get_spin_magnitude_and_misalignment_dist(
         validate_args=True,
     )
     return chi1_dist, chi2_dist, cos_tilt1_dist, cos_tilt2_dist
+
+
+def doubly_truncated_powerlaw_log_prob(value, alpha, low, high):
+    def logp_neg1(value):
+        logp_neg1_val = jnp.divide(high, low)
+        logp_neg1_val = jnp.log(logp_neg1_val)
+        logp_neg1_val = jnp.multiply(value, logp_neg1_val)
+        logp_neg1_val = jnp.log(logp_neg1_val)
+        return jnp.negative(logp_neg1_val)
+
+    def logp(value):
+        log_value = jnp.log(value)
+        logp = jnp.multiply(alpha, log_value)
+        beta = jnp.add(1.0, alpha)
+        logp = jnp.add(
+            logp,
+            jnp.log(
+                jnp.divide(
+                    beta,
+                    jnp.subtract(jnp.power(high, beta), jnp.power(low, beta)),
+                )
+            ),
+        )
+        return logp
+
+    return jnp.where(jnp.equal(alpha, -1.0), logp_neg1(value), logp(value))
+
+
+def doubly_truncated_powerlaw_icdf(q, alpha, low, high):
+    def icdf(q):
+        beta = jnp.add(1.0, alpha)
+        low_pow_beta = jnp.power(low, beta)
+        high_pow_beta = jnp.power(high, beta)
+        icdf = jnp.multiply(q, jnp.subtract(high_pow_beta, low_pow_beta))
+        icdf = jnp.add(low_pow_beta, icdf)
+        icdf = jnp.power(icdf, jnp.reciprocal(beta))
+        return icdf
+
+    def icdf_neg1(q):
+        icdf_neg1 = jnp.divide(high, low)
+        icdf_neg1 = jnp.log(icdf_neg1)
+        icdf_neg1 = jnp.multiply(q, icdf_neg1)
+        icdf_neg1 = jnp.exp(icdf_neg1)
+        icdf_neg1 = jnp.multiply(low, icdf_neg1)
+        return icdf_neg1
+
+    return jnp.where(jnp.equal(alpha, -1.0), icdf_neg1(q), icdf(q))

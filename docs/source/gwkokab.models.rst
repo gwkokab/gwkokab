@@ -13,6 +13,7 @@ Models
     BrokenPowerLawMassModel
     GaussianSpinModel
     IndependentSpinOrientationGaussianIsotropic
+    MassGapModel
     MultiPeakMassModel
     MultiSourceModel
     MultiSpinModel
