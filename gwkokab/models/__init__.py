@@ -15,6 +15,7 @@
 from gwkokab._src.models import wrappers as wrappers
 from gwkokab._src.models.models import (
     BrokenPowerLawMassModel as BrokenPowerLawMassModel,
+    FlexibleMixtureModel as FlexibleMixtureModel,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
     MassGapModel as MassGapModel,
@@ -25,6 +26,7 @@ from gwkokab._src.models.models import (
     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment as NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
+    TruncatedPowerLaw as TruncatedPowerLaw,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
 
