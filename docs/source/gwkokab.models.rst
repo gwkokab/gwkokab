@@ -11,6 +11,7 @@ Models
     :toctree: _autosummary
 
     BrokenPowerLawMassModel
+    FlexibleMixtureModel
     GaussianSpinModel
     IndependentSpinOrientationGaussianIsotropic
     MassGapModel
@@ -21,6 +22,7 @@ Models
     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
+    TruncatedPowerLaw
     Wysocki2019MassModel
 
 Utilities

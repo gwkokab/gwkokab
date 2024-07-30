@@ -16,7 +16,9 @@
 from __future__ import annotations
 
 from functools import partial
+from typing_extensions import Optional
 
+import chex
 import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr, vmap
 from jax.nn import softplus
@@ -38,7 +40,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
 from ..utils.transformations import m1_q_to_m2
-from .constraints import mass_ratio_mass_sandwich, mass_sandwich
+from .constraints import mass_ratio_mass_sandwich, mass_sandwich, unique_intervals
 from .transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .utils import (
     doubly_truncated_powerlaw_icdf,
@@ -53,6 +55,7 @@ from .utils import (
 
 __all__ = [
     "BrokenPowerLawMassModel",
+    "FlexibleMixtureModel",
     "GaussianSpinModel",
     "IndependentSpinOrientationGaussianIsotropic",
     "MassGapModel",
@@ -63,6 +66,7 @@ __all__ = [
     "NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment",
     "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
+    "TruncatedPowerLaw",
     "Wysocki2019MassModel",
 ]
 
@@ -1632,3 +1636,145 @@ class MassGapModel(Distribution):
             high=1.0,
         )
         return log_prob_val
+
+
+class TruncatedPowerLaw(Distribution):
+    r"""A generic double side truncated power law distribution.
+
+    .. note::
+        There are many different definition of Power Law that include
+        exponential cut-offs and interval cut-offs.  They are just
+        interchangeably. This class is the implementation of power law that has
+        been restricted over a closed interval.
+
+    .. math::
+        p(x\mid\alpha, x_{\text{min}}, x_{\text{max}}):=
+        \begin{cases}
+            \displaystyle\frac{x^{\alpha}}{\mathcal{Z}}
+            & 0<x_{\text{min}}\leq x\leq x_{\text{max}}\\
+            0 & \text{otherwise}
+        \end{cases}
+
+    where :math:`\mathcal{Z}` is the normalization constant and :math:`\alpha` is the power
+    law index. :math:`x_{\text{min}}` and :math:`x_{\text{max}}` are the lower and upper
+    truncation limits, respectively. The normalization constant is given by,
+
+    .. math::
+        \mathcal{Z}:=\begin{cases}
+            \log{x_{\text{max}}}-\log{x_{\text{min}}} & \alpha = -1 \\
+            \displaystyle
+            \frac{x_{\text{max}}^{1+\alpha}-x_{\text{min}}^{1+\alpha}}{1+\alpha}
+            & \text{otherwise}
+        \end{cases}
+    """
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "low": constraints.dependent,
+        "high": constraints.dependent,
+    }
+    reparametrized_params = ["low", "high", "alpha"]
+
+    def __init__(self, alpha, low=0.0, high=1.0, validate_args=None):
+        self.low, self.high, self.alpha = promote_shapes(low, high, alpha)
+        self._support = constraints.interval(low, high)
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(low),
+            jnp.shape(high),
+            jnp.shape(alpha),
+        )
+        super(TruncatedPowerLaw, self).__init__(
+            batch_shape=batch_shape, validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value):
+        return doubly_truncated_powerlaw_log_prob(
+            value=value, alpha=self.alpha, low=self.low, high=self.high
+        )
+
+    def sample(self, key, sample_shape=()):
+        assert is_prng_key(key)
+        u = jrd.uniform(key, shape=sample_shape + self.batch_shape + self.event_shape)
+        return doubly_truncated_powerlaw_icdf(
+            u, alpha=self.alpha, low=self.low, high=self.high
+        )
+
+
+def FlexibleMixtureModel(
+    N: int,
+    weights: Array,
+    mu_Mc: Optional[Real] = None,
+    sigma_Mc: Optional[Real] = None,
+    mu_sz: Optional[Real] = None,
+    sigma_sz: Optional[Real] = None,
+    alpha_q: Optional[Real] = None,
+    q_min: Optional[Real] = None,
+    **params,
+) -> MixtureGeneral:
+    r"""Eq. (B9) of `Population of Merging Compact Binaries Inferred Using
+    Gravitational Waves through GWTC-3 <https://doi.org/10.1103/PhysRevX.13.011048>`_.
+
+    .. math::
+        p(\mathcal{M},q,s_{1z},s_{2z}\mid\lambda) = \sum_{i=1}^{N} w_i
+        \mathcal{N}(\mathcal{M}\mid \mu^\mathcal{M}_i,\sigma^\mathcal{M}_i)
+        \mathcal{P}(q\mid \alpha^q_i,q^{\min}_i,1)
+        \mathcal{N}(s_{1z}\mid \mu^{s_z}_i,\sigma^{s_z}_i)
+        \mathcal{N}(s_{2z}\mid \mu^{s_z}_i,\sigma^{s_z}_i)
+
+    where :math:`w_i` is the weight for the ith component and :math:`p_i(\theta)` is the
+
+    :param N: Number of components
+    :param weights: weights for each component
+    :param mu_Mc_i: ith value for :code:`mu_Mc`
+    :param sigma_Mc_i: ith value for :code:`sigma_Mc`
+    :param mu_sz_i: ith value for :code:`mu_sz`
+    :param sigma_sz_i: ith value for :code:`sigma_sz`
+    :param alpha_q_i: ith value for :code:`alpha_q`
+    :param q_min_i: ith value for :code:`q_min`
+    :param mu_Mc: default value for :code:`mu_Mc`
+    :param sigma_Mc: default value for :code:`sigma_Mc`
+    :param mu_sz: default value for :code:`mu_sz`
+    :param sigma_sz: default value for :code:`sigma_sz`
+    :param alpha_q: default value for :code:`alpha_q`
+    :param q_min: default value for :code:`q_min`
+    """
+    chex.assert_axis_dimension(weights, 0, N)
+    ranges = list(range(N))
+    mu_Mc_list = jtr.map(lambda i: params.get(f"mu_Mc_{i}", mu_Mc), ranges)
+    sigma_Mc_list = jtr.map(lambda i: params.get(f"sigma_Mc_{i}", sigma_Mc), ranges)
+    mu_sz_list = jtr.map(lambda i: params.get(f"mu_sz_{i}", mu_sz), ranges)
+    sigma_sz_list = jtr.map(lambda i: params.get(f"sigma_sz_{i}", sigma_sz), ranges)
+    alpha_q_list = jtr.map(lambda i: params.get(f"alpha_q_{i}", alpha_q), ranges)
+    q_min_list = jtr.map(lambda i: params.get(f"q_min_{i}", q_min), ranges)
+
+    component_dists = jtr.map(
+        lambda mu_Mc_i,
+        sigma_Mc_i,
+        mu_sz_i,
+        sigma_sz_i,
+        alpha_q_i,
+        q_min_i: JointDistribution(
+            Normal(loc=mu_Mc_i, scale=sigma_Mc_i, validate_args=True),
+            TruncatedPowerLaw(alpha=alpha_q_i, low=q_min_i, high=1.0),
+            Normal(loc=mu_sz_i, scale=sigma_sz_i, validate_args=True),
+            Normal(loc=mu_sz_i, scale=sigma_sz_i, validate_args=True),
+        ),
+        mu_Mc_list,
+        sigma_Mc_list,
+        mu_sz_list,
+        sigma_sz_list,
+        alpha_q_list,
+        q_min_list,
+    )
+
+    return MixtureGeneral(
+        mixing_distribution=CategoricalProbs(probs=weights, validate_args=True),
+        component_distributions=component_dists,
+        support=unique_intervals((0.0, 0.0, -1.0, -1.0), (jnp.inf, 1.0, 1.0, 1.0)),
+        validate_args=True,
+    )

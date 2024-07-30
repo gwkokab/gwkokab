@@ -15,7 +15,7 @@ authors = [
     { name = "Richard O'Shaughnessy", email = "richardoshaughnessyrossma@gmail.com" },
 ]
 name = "gwkokab"
-version = "0.1.0"
+version = "0.1.1.dev"
 maintainers = [
     { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
     { name = "Muhammad Zeeshan", email = "m.zeeshan5885@gmail.com" },
@@ -35,56 +35,49 @@ classifiers = [
     "Operating System :: Microsoft :: Windows",
 ]
 dependencies = [
-    "rich",
-    "h5py",
-    "rift",
-    "numpy<2",
-    "polars",
-    "flowmc",
-    "plotly",
-    "numpyro",
-    "seaborn",
-    "jaxtyping",
-    "jax>=0.4.0",
-    "setuptools",
-    "mplcursors",
-    "jaxlib>=0.4.0",
+    "chex",
     "configargparse",
+    "flowmc",
+    "h5py",
+    "jax>=0.4.0",
+    "jaxlib>=0.4.0",
+    "jaxtyping",
     "matplotlib>=3.8.0",
+    "mplcursors",
+    "numpy<2",
+    "numpyro",
+    "plotly",
+    "polars",
+    "rich",
+    "rift",
+    "seaborn",
+    "setuptools",
     "typing_extensions",
 ]
 keywords = [
-    "jax",
-    "astronomy",
-    "scientific",
-    "statistics",
-    "monte-carlo",
     "astrophysics",
-    "markov-chain",
-    "machine-learning",
     "bayesian-inference",
-    "probabilistic-programming",
+    "jax",
 ]
 
 [project.optional-dependencies]
 dev = [
+    "pre-commit",
+    "pytest",
     "ruff",
     "trio",
-    "wheel",
     "twine",
-    "isort",
-    "pytest",
-    "pre-commit",
+    "wheel",
 ]
 
 docs = [
-    'ipython',
-    'sphinx',
-    'nbsphinx',
-    'readthedocs-sphinx-search',
-    'sphinx_book_theme',
-    'sphinx_copybutton',
-    'sphinx_remove_toctrees',
+    "ipython",
+    "nbsphinx",
+    "readthedocs-sphinx-search",
+    "sphinx_book_theme",
+    "sphinx_copybutton",
+    "sphinx_remove_toctrees",
+    "sphinx",
 ]
 
 [project.urls]
@@ -105,10 +98,6 @@ gwk_fancy_scatter3d = "gwkokab._src.scripts.fancy_scatter3d:main"
 gwk_joint_plot = "gwkokab._src.scripts.joint_plot:main"
 gwk_ppd_plot = "gwkokab._src.scripts.ppd_plot:main"
 gwk_ppd_and_confidence_plot = "gwkokab._src.scripts.ppd_confidence_plot:main"
-
-[tool.pyright]
-reportIncompatibleMethodOverride = true
-include = ["gwkokab"]
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]

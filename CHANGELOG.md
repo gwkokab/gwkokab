@@ -6,7 +6,6 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
 **Breaking changes**
 
-* `TruncatedPowerLaw` is removed from the public API.
 * Following parameters are renamed:
   * `COS_TILE_1`
   * `COS_TILE_2`
@@ -17,6 +16,7 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
 * New models:
   * `MassGapModel`
+  * `FlexibleMixtureModel`
 * New transforms:
   * `ComponentMassesAndRedshiftToDetectedMassAndRedshift`
   * `ComponentMassesAndRedshiftToPrimaryMassAndMassRatio`
