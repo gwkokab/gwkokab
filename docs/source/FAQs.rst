@@ -13,7 +13,7 @@ How to write my own population model?
 -------------------------------------
 
 GWKokab is designed to be flexible and user-friendly. To create your own population
-model, you can subclass the :class:`numpyro.distributions.distribution.Distribution`
+model, you can subclass the :class:`~numpyro.distributions.distribution.Distribution`
 class. If you need to generate a population and run inference, you should implement
 both the :meth:`sample` and :meth:`log_prob` methods. However, if you only need to run
 inference, you can just implement the :meth:`log_prob` method.

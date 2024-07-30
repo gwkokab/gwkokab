@@ -13,8 +13,7 @@
 #  limitations under the License.
 
 
-from functools import partial
-from typing_extensions import Optional
+from typing_extensions import Self
 
 from jax.tree_util import register_pytree_node_class
 from numpyro.distributions import Distribution, ImproperUniform
@@ -23,40 +22,39 @@ from numpyro.distributions.constraints import real
 
 @register_pytree_node_class
 class Parameter:
-    """Initializes a Parameter object.
+    r"""Initializes a Parameter object. Default prior is an
+    :class:`~numpyro.distributions.distribution.ImproperUniform` distribution.
+
+    Lets define chirp mass parameter with :class:`~numpyro.distributions.continuous.Uniform`
+    prior from 1 to 10 as follows:
+
+    .. code-block:: python
+
+        >>> from numpyro.distributions import Uniform
+        >>> chirp_mass = Parameter(name="chirp_mass")(Uniform(1, 10))
 
     :param name: Name of the parameter.
-    :param prior: Distribution object representing the prior distribution of
-        the parameter, defaults to None
-    :param default_prior: Default prior distribution of the parameter, defaults
-        to None
-    :raises ValueError: If prior distribution is not provided
     """
 
-    def __init__(
-        self,
-        *,
-        name: str,
-        prior: Optional[Distribution] = None,
-        default_prior: Optional[Distribution] = None,
-    ) -> None:
-        if prior is None and default_prior is None:
-            raise ValueError("Prior distribution must be provided.")
-        if prior is None:
-            prior = default_prior
-        assert isinstance(
-            prior, Distribution
-        ), "Prior must be a numpyro.distributions.Distribution object."
+    def __init__(self, *, name: str) -> None:
+        self._prior = ImproperUniform(
+            support=real, batch_shape=(), event_shape=(), validate_args=True
+        )
+        self._name = name
+
+    def __call__(self, prior: Distribution) -> Self:
         prior._validate_args = True
         self._prior = prior
-        self._name = name
+        return self
 
     @property
     def name(self) -> str:
+        r"""Name of the parameter."""
         return self._name
 
     @property
     def prior(self) -> Distribution:
+        r"""Prior distribution of the parameter."""
         return self._prior
 
     def __repr__(self) -> str:
@@ -119,164 +117,26 @@ def ncopy(
 # TODO: Add more parameters as needed.
 
 
-PRIMARY_MASS_SOURCE = partial(
-    Parameter,
-    name="mass_1_source",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-SECONDARY_MASS_SOURCE = partial(
-    Parameter,
-    name="mass_2_source",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-PRIMARY_MASS_DETECTED = partial(
-    Parameter,
-    name="mass_1",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-SECONDARY_MASS_DETECTED = partial(
-    Parameter,
-    name="mass_2",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-MASS_RATIO = partial(
-    Parameter,
-    name="mass_ratio",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-CHIRP_MASS = partial(
-    Parameter,
-    name="chirp_mass",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-SYMMETRIC_MASS_RATIO = partial(
-    Parameter,
-    name="symmetric_mass_ratio",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-REDUCED_MASS = partial(
-    Parameter,
-    name="reduced_mass",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-ECCENTRICITY = partial(
-    Parameter,
-    name="ecc",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-PRIMARY_SPIN_MAGNITUDE = partial(
-    Parameter,
-    name="a1",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-SECONDARY_SPIN_MAGNITUDE = partial(
-    Parameter,
-    name="a2",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-PRIMARY_SPIN_X = partial(
-    Parameter,
-    name="spin_1x",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-PRIMARY_SPIN_Y = partial(
-    Parameter,
-    name="spin_1y",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-PRIMARY_SPIN_Z = partial(
-    Parameter,
-    name="spin_1z",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-SECONDARY_SPIN_X = partial(
-    Parameter,
-    name="spin_2x",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-SECONDARY_SPIN_Y = partial(
-    Parameter,
-    name="spin_2y",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-SECONDARY_SPIN_Z = partial(
-    Parameter,
-    name="spin_2z",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-TILE_1 = partial(
-    Parameter,
-    name="tile_1",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-TILE_2 = partial(
-    Parameter,
-    name="tile_2",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-EFFECTIVE_SPIN_MAGNITUDE = partial(
-    Parameter,
-    name="chi_eff",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-COS_TILE_1 = partial(
-    Parameter,
-    name="tile_1",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-COS_TILE_2 = partial(
-    Parameter,
-    name="tile_2",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
-REDSHIFT = partial(
-    Parameter,
-    name="redshift",
-    default_prior=ImproperUniform(
-        support=real, batch_shape=(), event_shape=(), validate_args=True
-    ),
-)
+PRIMARY_MASS_SOURCE = Parameter(name="mass_1_source")
+SECONDARY_MASS_SOURCE = Parameter(name="mass_2_source")
+PRIMARY_MASS_DETECTED = Parameter(name="mass_1")
+SECONDARY_MASS_DETECTED = Parameter(name="mass_2")
+MASS_RATIO = Parameter(name="mass_ratio")
+CHIRP_MASS = Parameter(name="chirp_mass")
+SYMMETRIC_MASS_RATIO = Parameter(name="symmetric_mass_ratio")
+REDUCED_MASS = Parameter(name="reduced_mass")
+ECCENTRICITY = Parameter(name="ecc")
+PRIMARY_SPIN_MAGNITUDE = Parameter(name="a_1")
+SECONDARY_SPIN_MAGNITUDE = Parameter(name="a_2")
+PRIMARY_SPIN_X = Parameter(name="spin_1x")
+PRIMARY_SPIN_Y = Parameter(name="spin_1y")
+PRIMARY_SPIN_Z = Parameter(name="spin_1z")
+SECONDARY_SPIN_X = Parameter(name="spin_2x")
+SECONDARY_SPIN_Y = Parameter(name="spin_2y")
+SECONDARY_SPIN_Z = Parameter(name="spin_2z")
+TILT_1 = Parameter(name="tile_1")
+TILT_2 = Parameter(name="tile_2")
+EFFECTIVE_SPIN_MAGNITUDE = Parameter(name="chi_eff")
+COS_TILT_1 = Parameter(name="tile_1")
+COS_TILT_2 = Parameter(name="tile_2")
+REDSHIFT = Parameter(name="redshift")

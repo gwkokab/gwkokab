@@ -29,8 +29,8 @@ Predefined Parameter
     :toctree: _autosummary
 
     CHIRP_MASS
-    COS_TILE_1
-    COS_TILE_2
+    COS_TILT_1
+    COS_TILT_2
     ECCENTRICITY
     EFFECTIVE_SPIN_MAGNITUDE
     MASS_RATIO
@@ -49,7 +49,7 @@ Predefined Parameter
     SECONDARY_SPIN_Y
     SECONDARY_SPIN_Z
     SYMMETRIC_MASS_RATIO
-    TILE_1
-    TILE_2
+    TILT_1
+    TILT_2
 
 .. currentmodule:: gwkokab.parameters
