@@ -291,9 +291,7 @@ def get_highest_ranking_issues_lines(
             highest_ranking_issues_lines.append(f"\n## {label}\n")
 
             for i, issue_data in enumerate(issue_data):
-                markdown_bullet_point: str = (
-                    f"{issue_data.url} ({issue_data.like_count} :thumbsup:)"
-                )
+                markdown_bullet_point: str = f"{issue_data.url} ({issue_data.like_count} :eight_pointed_black_star:)"
 
                 markdown_bullet_point = f"{i + 1}. {markdown_bullet_point}"
                 highest_ranking_issues_lines.append(markdown_bullet_point)
