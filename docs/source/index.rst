@@ -18,7 +18,7 @@ population inference studies. This helps scientists draw statistical conclusions
 the astrophysical population of CBC events based on observed data. The models cover
 various aspects of CBC sources, including mass distribution, spin, and redshift.
 
-Built with :class:`numpyro.distributions.distribution.Distribution` objects, these 
+Built with :class:`~numpyro.distributions.distribution.Distribution` objects, these 
 models leverage NumPyro's integration with JAX_ for automatic differentiation and GPU
 acceleration, ensuring mathematical rigor and computational efficiency for large-scale
 simulations and analyses.

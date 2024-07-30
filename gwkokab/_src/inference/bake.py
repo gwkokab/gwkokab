@@ -44,7 +44,7 @@ def get_numpyro_dist_repr(dist: Distribution) -> str:
 class Bake(object):
     r"""It is designed to be a simple and flexible way to define a
     distribution for the inference. It has a similar interface to the
-    :class:`numpyro.distributions.distribution.Distribution` class, but it allows for
+    :class:`~numpyro.distributions.distribution.Distribution` class, but it allows for
     the parameters of the distribution to be fixed or variable.
 
     We can define a :class:`numpyro.distributions.truncated.TruncatedNormal`
