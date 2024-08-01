@@ -1,3 +1,5 @@
+name: Update all top ranking issues
+
 on:
   schedule:
     - cron: "0 */12 * * *"
