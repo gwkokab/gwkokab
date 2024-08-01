@@ -444,7 +444,7 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
 
     arg_constraints = {
         "alpha": constraints.real,
-        "beta": constraints.real,
+        "beta_q": constraints.real,
         "lam": constraints.unit_interval,
         "lam1": constraints.unit_interval,
         "mmin": constraints.dependent,
@@ -457,7 +457,7 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
     }
     reparametrized_params = [
         "alpha",
-        "beta",
+        "beta_q",
         "lam",
         "lam1",
         "delta_m",
@@ -470,7 +470,7 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
     ]
     pytree_data_fields = (
         "alpha",
-        "beta",
+        "beta_q",
         "lam",
         "lam1",
         "delta_m",
@@ -483,11 +483,11 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
     )
 
     def __init__(
-        self, alpha, beta, lam, lam1, delta_m, mmin, mmax, mu1, sigma1, mu2, sigma2
+        self, alpha, beta_q, lam, lam1, delta_m, mmin, mmax, mu1, sigma1, mu2, sigma2
     ):
         r"""
         :param alpha: Power-law index for primary mass model
-        :param beta: Power-law index for mass ratio model
+        :param beta_q: Power-law index for mass ratio model
         :param lam: weight for power-law component
         :param lam1: weight for first Gaussian component
         :param delta_m: Smoothing parameter
@@ -517,7 +517,7 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
             jnp.shape(sigma2),
         )
         super(MultiPeakMassModel, self).__init__(
-            beta_q=beta,
+            beta_q=beta_q,
             delta_m=delta_m,
             mmin=mmin,
             mmax=mmax,
@@ -602,7 +602,7 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
 
     arg_constraints = {
         "alpha": constraints.real,
-        "beta": constraints.real,
+        "beta_q": constraints.real,
         "lam": constraints.unit_interval,
         "delta_m": constraints.real,
         "mu": constraints.real,
@@ -610,7 +610,7 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
     }
     reparametrized_params = [
         "alpha",
-        "beta",
+        "beta_q",
         "lam",
         "delta_m",
         "mu",
@@ -618,17 +618,17 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
     ]
     pytree_data_fields = (
         "alpha",
-        "beta",
+        "beta_q",
         "lam",
         "delta_m",
         "mu",
         "sigma",
     )
 
-    def __init__(self, alpha, beta, lam, delta_m, mmin, mmax, mu, sigma) -> None:
+    def __init__(self, alpha, beta_q, lam, delta_m, mmin, mmax, mu, sigma) -> None:
         r"""
         :param alpha: Power-law index for primary mass model
-        :param beta: Power-law index for mass ratio model
+        :param beta_q: Power-law index for mass ratio model
         :param lam: Fraction of Gaussian component
         :param delta_m: Smoothing parameter
         :param mmin: Minimum mass
@@ -646,7 +646,7 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
             jnp.shape(sigma),
         )
         super(PowerLawPeakMassModel, self).__init__(
-            beta_q=beta,
+            beta_q=beta_q,
             delta_m=delta_m,
             mmin=mmin,
             mmax=mmax,
