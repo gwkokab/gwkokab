@@ -500,27 +500,25 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
         """
         (
             self.alpha,
-            self.beta,
             self.lam,
             self.lam1,
-            self.delta_m,
             self.mu1,
             self.sigma1,
             self.mu2,
             self.sigma2,
-        ) = promote_shapes(alpha, beta, lam, lam1, delta_m, mu1, sigma1, mu2, sigma2)
+        ) = promote_shapes(alpha, lam, lam1, mu1, sigma1, mu2, sigma2)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
-            jnp.shape(beta),
             jnp.shape(lam),
             jnp.shape(lam1),
-            jnp.shape(delta_m),
             jnp.shape(mu1),
             jnp.shape(sigma1),
             jnp.shape(mu2),
             jnp.shape(sigma2),
         )
         super(MultiPeakMassModel, self).__init__(
+            beta_q=beta,
+            delta_m=delta_m,
             mmin=mmin,
             mmax=mmax,
             batch_shape=batch_shape,
