@@ -1,7 +1,12 @@
+name: Update all top ranking issues
+
 on:
   schedule:
     - cron: "0 */12 * * *"
   workflow_dispatch:
+
+permissions:
+  issues: write
 
 jobs:
   update_top_ranking_issues:
@@ -14,5 +19,7 @@ jobs:
           python-version: "3.11"
           architecture: "x64"
           cache: "pip"
-      - run: pip install -r scripts/requirements.txt
-      - run: python scripts/update_top_ranking_issues.py --github-token ${{ secrets.GITHUB_TOKEN }} --issue-reference-number 62
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+      - name: Update top ranking issues
+        run: python scripts/update_top_ranking_issues.py --github-token ${{ secrets.GITHUB_TOKEN }} --issue-reference-number 62
