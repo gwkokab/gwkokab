@@ -20,14 +20,10 @@ import numpy as np
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Float, Int
-from numpyro.distributions import (
-    CategoricalProbs,
-    Distribution,
-    MixtureGeneral,
-)
+from numpyro.distributions import CategoricalProbs, Distribution, MixtureGeneral
 
 from ..models.utils import JointDistribution
-from ..parameters.parameters import Parameter
+from ..parameters import DEFAULT_PRIORS, Parameter
 from .bake import Bake
 
 
@@ -88,7 +84,7 @@ class PoissonLikelihood:
             "variables",
             "model",
             "variables_index",
-            "priors",
+            "vt_params_unif_rvs" "priors",
             "vt_params_index",
             "time",
             "logVT",
@@ -162,6 +158,9 @@ class PoissonLikelihood:
         self.vt_params_index: List[Int] = list(
             map(lambda x: args_name.index(x), self._vt_params)
         )
+        self.vt_params_unif_rvs = JointDistribution(
+            *map(lambda x: DEFAULT_PRIORS[x], self._vt_params)
+        )
 
         self.variables, self.model = model.get_dist()
         self.variables_index = {
@@ -184,10 +183,18 @@ class PoissonLikelihood:
         :return: Integral.
         """
         N = 1 << 13
-        samples = model.sample(jrd.PRNGKey(np.random.randint(1, 2**32 - 1)), (N,))[
-            ..., self.vt_params_index
-        ]
-        return self.time * rate * jnp.mean(jnp.exp(self.logVT(samples)))
+        key = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
+        try:
+            samples = model.sample(key, (N,))[..., self.vt_params_index]
+            volume = 1.0
+        except AttributeError:
+            samples = self.vt_params_unif_rvs.sample(key, (N,))
+            volume = jtr.reduce(
+                lambda x, y: x * (y.high - y.low),
+                1.0,
+                self.vt_params_unif_rvs.marginal_distributions,
+            )
+        return volume * self.time * rate * jnp.mean(jnp.exp(self.logVT(samples)))
 
     def log_likelihood_single_rate(self, x: Array, data: dict) -> Array:
         model = self.model(
