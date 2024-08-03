@@ -13,10 +13,11 @@
 #  limitations under the License.
 
 
-from gwkokab._src.parameters import (
+from gwkokab._src.parameters.parameters import (
     CHIRP_MASS as CHIRP_MASS,
     COS_TILT_1 as COS_TILT_1,
     COS_TILT_2 as COS_TILT_2,
+    DEFAULT_PRIORS as DEFAULT_PRIORS,
     ECCENTRICITY as ECCENTRICITY,
     EFFECTIVE_SPIN_MAGNITUDE as EFFECTIVE_SPIN_MAGNITUDE,
     MASS_RATIO as MASS_RATIO,
