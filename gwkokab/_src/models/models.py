@@ -1532,13 +1532,6 @@ class MassGapModel(Distribution):
         return mass_sandwich(self.mmin, self.mmax)
 
     def log_notch_filter(self, mass):
-        if jnp.all(
-            jnp.logical_or(
-                jnp.equal(self.depth_of_gap, 0.0),
-                jnp.equal(self.gamma_low, self.gamma_high),
-            )
-        ):
-            return jnp.ones_like(mass)
         log_m = jnp.log(mass)
         log_gamma_low = jnp.log(self.gamma_low)
         log_gamma_high = jnp.log(self.gamma_high)
