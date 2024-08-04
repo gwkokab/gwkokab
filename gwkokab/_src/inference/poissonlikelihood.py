@@ -19,7 +19,7 @@ import jax
 import numpy as np
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
-from jaxtyping import Array, Float, Int
+from jaxtyping import Array, Float, Int, PRNGKeyArray
 from numpyro.distributions import (
     CategoricalProbs,
     Distribution,
@@ -69,31 +69,38 @@ class PoissonLikelihood:
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
 
-    :param vt_params: Parameters for the VT function.
+    :param custom_vt: Custom VT function to use.
+    :param is_multi_rate_model: Flag to indicate if the model is multi-rate.
     :param logVT: Log of the VT function.
     :param time: Time interval for the Poisson process.
-    :param is_multi_rate_model: Flag to indicate if the model is multi-rate.
+    :param vt_method: Method to use for the VT function. Options are `uniform`, `model`, and `custom`.
+    :param vt_params: Parameters for the VT function.
     """
 
+    _vt_method: Optional[str] = None
     _vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
+    custom_vt: Optional[Callable[[Int, PRNGKeyArray, Distribution], Array]] = None
+    is_multi_rate_model: bool = False
     logVT: Optional[Callable[[], Array]] = None
     time: Float = 1.0
-    is_multi_rate_model: bool = False
 
     def tree_flatten(self) -> tuple:
         children = ()
         aux_data_keys = [
+            "_vt_method",
             "_vt_params",
+            "custom_vt",
             "is_multi_rate_model",
-            "total_pop",
-            "variables",
-            "model",
-            "variables_index",
-            "vt_params_unif_rvs" "priors",
-            "vt_params_index",
-            "time",
             "logVT",
+            "model",
             "ref_priors",
+            "time",
+            "total_pop",
+            "variables_index",
+            "variables",
+            "vt_params_index",
+            "vt_params_unif_rvs",
+            "priors",
         ]
         aux_data = {k: getattr(self, k) for k in aux_data_keys}
         return children, aux_data
@@ -124,6 +131,15 @@ class PoissonLikelihood:
         elif all(isinstance(param, Parameter) for param in params):
             params = tuple(map(lambda x: x.name, params))
         self._vt_params = params
+
+    @property
+    def vt_method(self) -> Optional[str]:
+        return self._vt_method
+
+    @vt_method.setter
+    def vt_method(self, method: str) -> None:
+        assert method in ["uniform", "model", "custom"], "Invalid VT method."
+        self._vt_method = method
 
     def set_model(
         self,
@@ -175,20 +191,17 @@ class PoissonLikelihood:
         self.ref_priors = JointDistribution(*map(lambda x: x.prior, params))
         self.priors = JointDistribution(*log_rates_prior, *self.variables.values())
 
-    def exp_rate_integral(self, rate: Array, model: Distribution) -> Array:
-        r"""This function calculates the integral inside the term
-        :math:`\exp(\Lambda)` in the likelihood function. The integral is given by,
+    def exp_rate_integral_uniform_samples(
+        self, N: int, key: PRNGKeyArray, model: Distribution
+    ) -> Array:
+        r"""This method approximates the Monte-Carlo integral by sampling from the
+        uniform distribution.
 
-        .. math::
-            \mu(\Lambda) =
-            \int \mathrm{VT}(\lambda)\rho(\lambda\mid\Lambda) \mathrm{d}\lambda
-
-        :param rate: Rate of the Poisson process.
-        :param model: Distribution.
+        :param N: Number of samples.
+        :param key: PRNG key.
+        :param model: :math:`\rho(\lambda\mid\Lambda)`.
         :return: Integral.
         """
-        N = 1 << 13
-        key = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
         samples = self.vt_params_unif_rvs.sample(key, (N,))
         volume = jtr.reduce(
             lambda x, y: x * (y.high - y.low),
@@ -199,7 +212,40 @@ class PoissonLikelihood:
         logpdf = model.log_prob(samples) + self.logVT(
             samples[..., self.vt_params_index]
         )
-        return volume * self.time * rate * jnp.mean(jnp.exp(logpdf))
+        return volume * jnp.mean(jnp.exp(logpdf))
+
+    def exp_rate_integral_model_samples(
+        self, N: int, key: PRNGKeyArray, model: Distribution
+    ) -> Array:
+        r"""This method approximates the Monte-Carlo integral by sampling from the model.
+
+        :param N: Number of samples.
+        :param key: PRNG key.
+        :param model: :math:`\rho(\lambda\mid\Lambda)`.
+        :return: Integral.
+        """
+        samples = model.sample(key, (N,))[..., self.vt_params_index]
+        return jnp.mean(jnp.exp(self.logVT(samples)))
+
+    def exp_rate_integral(self, model: Distribution) -> Array:
+        r"""This function calculates the integral inside the term
+        :math:`\exp(\Lambda)` in the likelihood function. The integral is given by,
+
+        .. math::
+            \mu(\Lambda) =
+            \int \mathrm{VT}(\lambda)\rho(\lambda\mid\Lambda) \mathrm{d}\lambda
+
+        :param model: Distribution.
+        :return: Integral.
+        """
+        N = 1 << 13
+        key = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
+        if self.vt_method == "uniform":
+            return self.exp_rate_integral_uniform_samples(N, key, model)
+        elif self.vt_method == "model":
+            return self.exp_rate_integral_model_samples(N, key, model)
+        elif self.vt_method == "custom":
+            return self.custom_vt(N, key, model)
 
     def log_likelihood_single_rate(self, x: Array, data: dict) -> Array:
         model = self.model(
@@ -222,11 +268,10 @@ class PoissonLikelihood:
 
         rate = jnp.exp(log_rate)  # rate = e^log_rate
 
-        return log_likelihood - lax.cond(
+        return log_likelihood - self.time * rate * lax.cond(
             jnp.isinf(log_likelihood),
-            lambda r, m: 0.0,
-            lambda r, m: self.exp_rate_integral(r, m),
-            rate,
+            lambda m: 0.0,
+            lambda m: self.exp_rate_integral(m),
             model,
         )
 
@@ -257,7 +302,7 @@ class PoissonLikelihood:
         rates = list(jnp.exp(log_rates))  # rates = e^log_rates
 
         expected_rates = jtr.reduce(
-            lambda x, y: x + self.exp_rate_integral(*y),
+            lambda x, y: x + y[0] * self.exp_rate_integral(y[1]),
             list(zip(rates, model._component_distributions)),
             0.0,
             is_leaf=lambda x: isinstance(x, tuple),
