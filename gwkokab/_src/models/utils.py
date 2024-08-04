@@ -41,7 +41,7 @@ __all__ = [
 class JointDistribution(Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
-    pytree_aux_fields = ("marginal_distributions",)
+    pytree_aux_fields = ("marginal_distributions", "shaped_values")
 
     def __init__(self, *marginal_distributions: Distribution) -> None:
         r"""
