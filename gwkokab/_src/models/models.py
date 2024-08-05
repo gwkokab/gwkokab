@@ -72,17 +72,7 @@ __all__ = [
 
 
 class _BaseSmoothedMassDistribution(Distribution):
-    def __init__(self, beta_q, delta_m, mmin, mmax, *, batch_shape, event_shape):
-        self.beta_q, self.delta_m, self.mmin, self.mmax = promote_shapes(
-            beta_q, delta_m, mmin, mmax
-        )
-        batch_shape = lax.broadcast_shapes(
-            jnp.shape(beta_q),
-            jnp.shape(delta_m),
-            jnp.shape(mmin),
-            jnp.shape(mmax),
-            batch_shape,
-        )
+    def __init__(self, *, batch_shape, event_shape):
         super(_BaseSmoothedMassDistribution, self).__init__(
             batch_shape, event_shape, validate_args=True
         )
@@ -289,21 +279,26 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
         :param mbreak: Break mass
         :param delta: Smoothing parameter
         """
-        (self.alpha1, self.alpha2, self.break_fraction) = promote_shapes(
-            alpha1, alpha2, break_fraction
-        )
+        (
+            self.alpha1,
+            self.alpha2,
+            self.beta_q,
+            self.mmin,
+            self.mmax,
+            self.break_fraction,
+            self.delta_m,
+        ) = promote_shapes(alpha1, alpha2, beta_q, mmin, mmax, break_fraction, delta_m)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha1),
             jnp.shape(alpha2),
+            jnp.shape(beta_q),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
             jnp.shape(break_fraction),
+            jnp.shape(delta_m),
         )
         super(BrokenPowerLawMassModel, self).__init__(
-            beta_q=beta_q,
-            delta_m=delta_m,
-            mmin=mmin,
-            mmax=mmax,
-            batch_shape=batch_shape,
-            event_shape=(2,),
+            batch_shape=batch_shape, event_shape=(2,)
         )
 
     def log_primary_model(self, mass):
@@ -444,7 +439,7 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
 
     arg_constraints = {
         "alpha": constraints.real,
-        "beta": constraints.real,
+        "beta_q": constraints.real,
         "lam": constraints.unit_interval,
         "lam1": constraints.unit_interval,
         "mmin": constraints.dependent,
@@ -457,7 +452,7 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
     }
     reparametrized_params = [
         "alpha",
-        "beta",
+        "beta_q",
         "lam",
         "lam1",
         "delta_m",
@@ -470,7 +465,7 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
     ]
     pytree_data_fields = (
         "alpha",
-        "beta",
+        "beta_q",
         "lam",
         "lam1",
         "delta_m",
@@ -483,11 +478,11 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
     )
 
     def __init__(
-        self, alpha, beta, lam, lam1, delta_m, mmin, mmax, mu1, sigma1, mu2, sigma2
+        self, alpha, beta_q, lam, lam1, delta_m, mmin, mmax, mu1, sigma1, mu2, sigma2
     ):
         r"""
         :param alpha: Power-law index for primary mass model
-        :param beta: Power-law index for mass ratio model
+        :param beta_q: Power-law index for mass ratio model
         :param lam: weight for power-law component
         :param lam1: weight for first Gaussian component
         :param delta_m: Smoothing parameter
@@ -500,29 +495,34 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
         """
         (
             self.alpha,
+            self.beta_q,
             self.lam,
             self.lam1,
+            self.delta_m,
+            self.mmin,
+            self.mmax,
             self.mu1,
             self.sigma1,
             self.mu2,
             self.sigma2,
-        ) = promote_shapes(alpha, lam, lam1, mu1, sigma1, mu2, sigma2)
+        ) = promote_shapes(
+            alpha, beta_q, lam, lam1, delta_m, mmin, mmax, mu1, sigma1, mu2, sigma2
+        )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
+            jnp.shape(beta_q),
             jnp.shape(lam),
             jnp.shape(lam1),
+            jnp.shape(delta_m),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
             jnp.shape(mu1),
             jnp.shape(sigma1),
             jnp.shape(mu2),
             jnp.shape(sigma2),
         )
         super(MultiPeakMassModel, self).__init__(
-            beta_q=beta,
-            delta_m=delta_m,
-            mmin=mmin,
-            mmax=mmax,
-            batch_shape=batch_shape,
-            event_shape=(2,),
+            batch_shape=batch_shape, event_shape=(2,)
         )
 
     def log_primary_model(self, m1):
@@ -602,33 +602,39 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
 
     arg_constraints = {
         "alpha": constraints.real,
-        "beta": constraints.real,
+        "beta_q": constraints.real,
         "lam": constraints.unit_interval,
         "delta_m": constraints.real,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
         "mu": constraints.real,
         "sigma": constraints.positive,
     }
     reparametrized_params = [
         "alpha",
-        "beta",
+        "beta_q",
         "lam",
         "delta_m",
+        "mmin",
+        "mmax",
         "mu",
         "sigma",
     ]
     pytree_data_fields = (
         "alpha",
-        "beta",
+        "beta_q",
         "lam",
         "delta_m",
+        "mmin",
+        "mmax",
         "mu",
         "sigma",
     )
 
-    def __init__(self, alpha, beta, lam, delta_m, mmin, mmax, mu, sigma) -> None:
+    def __init__(self, alpha, beta_q, lam, delta_m, mmin, mmax, mu, sigma) -> None:
         r"""
         :param alpha: Power-law index for primary mass model
-        :param beta: Power-law index for mass ratio model
+        :param beta_q: Power-law index for mass ratio model
         :param lam: Fraction of Gaussian component
         :param delta_m: Smoothing parameter
         :param mmin: Minimum mass
@@ -636,22 +642,28 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
         :param mu: Mean of Gaussian component
         :param sigma: Standard deviation of Gaussian component
         """
-        self.alpha, self.lam, self.mu, self.sigma = promote_shapes(
-            alpha, lam, mu, sigma
-        )
+        (
+            self.alpha,
+            self.beta_q,
+            self.lam,
+            self.delta_m,
+            self.mmin,
+            self.mmax,
+            self.mu,
+            self.sigma,
+        ) = promote_shapes(alpha, beta_q, lam, delta_m, mmin, mmax, mu, sigma)
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
+            jnp.shape(beta_q),
             jnp.shape(lam),
+            jnp.shape(delta_m),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
             jnp.shape(mu),
             jnp.shape(sigma),
         )
         super(PowerLawPeakMassModel, self).__init__(
-            beta_q=beta,
-            delta_m=delta_m,
-            mmin=mmin,
-            mmax=mmax,
-            batch_shape=batch_shape,
-            event_shape=(2,),
+            batch_shape=batch_shape, event_shape=(2,)
         )
 
     def log_primary_model(self, m1):
@@ -1520,13 +1532,6 @@ class MassGapModel(Distribution):
         return mass_sandwich(self.mmin, self.mmax)
 
     def log_notch_filter(self, mass):
-        if jnp.all(
-            jnp.logical_or(
-                jnp.equal(self.depth_of_gap, 0.0),
-                jnp.equal(self.gamma_low, self.gamma_high),
-            )
-        ):
-            return jnp.ones_like(mass)
         log_m = jnp.log(mass)
         log_gamma_low = jnp.log(self.gamma_low)
         log_gamma_high = jnp.log(self.gamma_high)
