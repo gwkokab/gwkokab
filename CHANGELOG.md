@@ -19,9 +19,9 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
   * `FlexibleMixtureModel`
 * New transforms:
   * `ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-  * `ComponentMassesAndRedshiftToPrimaryMassAndMassRatio`
-  * `ComponentMassesAndRedshiftToMassRatioAndSecondaryMass`
-  * `ComponentMassesAndRedshiftToTotalMassAndMassRatio`
+  * `ComponentMassesToMassRatioAndSecondaryMass`
+  * `ComponentMassesToPrimaryMassAndMassRatio`
+  * `ComponentMassesToTotalMassAndMassRatio`
   * `SourceMassAndRedshiftToDetectedMassAndRedshift`
 
 **New Design**
