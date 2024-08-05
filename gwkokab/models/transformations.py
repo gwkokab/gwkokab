@@ -15,11 +15,11 @@
 
 from gwkokab._src.models.transformations import (
     ComponentMassesAndRedshiftToDetectedMassAndRedshift as ComponentMassesAndRedshiftToDetectedMassAndRedshift,
-    ComponentMassesAndRedshiftToMassRatioAndSecondaryMass as ComponentMassesAndRedshiftToMassRatioAndSecondaryMass,
-    ComponentMassesAndRedshiftToPrimaryMassAndMassRatio as ComponentMassesAndRedshiftToPrimaryMassAndMassRatio,
-    ComponentMassesAndRedshiftToTotalMassAndMassRatio as ComponentMassesAndRedshiftToTotalMassAndMassRatio,
     ComponentMassesToChirpMassAndDelta as ComponentMassesToChirpMassAndDelta,
     ComponentMassesToChirpMassAndSymmetricMassRatio as ComponentMassesToChirpMassAndSymmetricMassRatio,
+    ComponentMassesToMassRatioAndSecondaryMass as ComponentMassesToMassRatioAndSecondaryMass,
+    ComponentMassesToPrimaryMassAndMassRatio as ComponentMassesToPrimaryMassAndMassRatio,
+    ComponentMassesToTotalMassAndMassRatio as ComponentMassesToTotalMassAndMassRatio,
     DeltaToSymmetricMassRatio as DeltaToSymmetricMassRatio,
     PrimaryMassAndMassRatioToComponentMassesTransform as PrimaryMassAndMassRatioToComponentMassesTransform,
     SourceMassAndRedshiftToDetectedMassAndRedshift as SourceMassAndRedshiftToDetectedMassAndRedshift,

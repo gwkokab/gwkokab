@@ -72,11 +72,11 @@ classes.
     :toctree: _autosummary
 
     ComponentMassesAndRedshiftToDetectedMassAndRedshift
-    ComponentMassesAndRedshiftToMassRatioAndSecondaryMass
-    ComponentMassesAndRedshiftToPrimaryMassAndMassRatio
-    ComponentMassesAndRedshiftToTotalMassAndMassRatio
+    ComponentMassesToTotalMassAndMassRatio
     ComponentMassesToChirpMassAndDelta
     ComponentMassesToChirpMassAndSymmetricMassRatio
+    ComponentMassesToMassRatioAndSecondaryMass
+    ComponentMassesToPrimaryMassAndMassRatio
     DeltaToSymmetricMassRatio
     PrimaryMassAndMassRatioToComponentMassesTransform
     SourceMassAndRedshiftToDetectedMassAndRedshift
