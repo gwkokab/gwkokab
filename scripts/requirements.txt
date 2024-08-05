@@ -1,4 +1,4 @@
-mypy==1.6.0
+mypy==1.11.1
 PyGithub==2.3.0
 pytz==2022.1
 ruff==0.3.4
