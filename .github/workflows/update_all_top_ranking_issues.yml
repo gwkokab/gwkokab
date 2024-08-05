@@ -2,7 +2,7 @@ name: Update all top ranking issues
 
 on:
   schedule:
-    - cron: "0 */12 * * *"
+    - cron: "0 0 * * *" # every day at 00:00 UTC
   workflow_dispatch:
 
 permissions:
