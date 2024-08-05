@@ -1,34 +1,6 @@
-absl-py
-ipython>=8.8.0 # 8.7.0 has ipython3 lexer error
-sphinx>=7.3.2 # 7.3.0 breaks sphinx-book-theme
-sphinx-book-theme>=1.0.1 # Older versions fail to pin pydata-sphinx-theme
-sphinx-copybutton>=0.5.0
-sphinx-remove-toctrees
-sphinx-design
-sphinxext-rediraffe
-myst-nb>=1.0.0
-myst_parser
-nbsphinx
-readthedocs-sphinx-search
-sphinx_book_theme
-sphinxcontrib-bibtex
-sphinxcontrib-napoleon
-sphinxcontrib-programoutput
-sphinxcontrib-spelling
-sphinxcontrib-trio
-sphinxcontrib-websupport
-sphinx_gallery
-sphinxcontrib-jquery
-ablog
-sphinxcontrib-youtube
-sphinx_examples
-sphinx_tabs
-sphinx_togglebutton
-sphinxext-opengraph
-# Packages used for CI tests.
 flatbuffers
 pytest
 pytest-xdist
 
 # Packages used for notebook execution
-. # GWKokab from current directory
+.[docs] # GWKokab from the current directory
