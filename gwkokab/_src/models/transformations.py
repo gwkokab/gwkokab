@@ -40,6 +40,7 @@ from ...utils.transformations import (
     mass_ratio,
     Mc_delta_to_m1_m2,
     Mc_eta_to_m1_m2,
+    symmetric_mass_ratio_to_delta_m,
     total_mass,
 )
 from .constraints import (
@@ -117,7 +118,7 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         f: (m_1, m_2)\to \left(\frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}}, \frac{m_1m_2}{(m_1+m_2)^{2}}\right)
 
     .. math::
-        \mathrm{det}(J_f)=\frac{2}{5}M_c\eta q\left(\frac{1-q}{1+q}\right)
+        \mathrm{det}(J_f)=\frac{\delta_m\mathcal{M}}{m_1+m_2}
 
     .. seealso::
 
@@ -147,14 +148,12 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         m1 = x[..., 0]
         m2 = x[..., 1]
         log_Mc = jnp.log(y[..., 0])
-        log_eta = jnp.log(y[..., 1])
-        q = mass_ratio(m1=m1, m2=m2)
-        log_detJ = jnp.log(0.4)
-        log_detJ = jnp.add(log_detJ, log_Mc)
-        log_detJ = jnp.add(log_detJ, log_eta)
-        log_detJ = jnp.add(log_detJ, jnp.log(q))
-        log_detJ = jnp.add(log_detJ, jnp.log(jnp.subtract(1.0, q)))
-        log_detJ = jnp.subtract(log_detJ, jnp.log(jnp.add(1.0, q)))
+        delta_m = symmetric_mass_ratio_to_delta_m(eta=y[..., 1])
+        log_delta_m = jnp.log(delta_m)
+        log_M = jnp.log(total_mass(m1=m1, m2=m2))
+
+        log_detJ = jnp.add(log_delta_m, log_Mc)
+        log_detJ = jnp.subtract(log_detJ, log_M)
         return log_detJ
 
     def forward_shape(self, shape) -> Tuple[int, ...]:
@@ -216,7 +215,7 @@ class ComponentMassesToChirpMassAndDelta(Transform):
         \delta = \frac{m_1-m_2}{m1+m_2}
 
     .. math::
-        \mathrm{det}(J_f) = -\frac{4M_c}{5(m_1+m_2)^2}
+        \mathrm{det}(J_f) = -\frac{2M_c}{(m_1+m_2)^2}
 
     .. seealso::
 
@@ -248,7 +247,7 @@ class ComponentMassesToChirpMassAndDelta(Transform):
         m2 = x[..., 1]
         M = total_mass(m1=m1, m2=m2)
         log_Mc = jnp.log(y[..., 0])
-        log_detJ = jnp.log(0.8)
+        log_detJ = jnp.log(2.0)
         log_detJ = jnp.add(log_detJ, log_Mc)
         log_detJ = jnp.add(log_detJ, jnp.multiply(-2.0, jnp.log(M)))
         return log_detJ
@@ -384,9 +383,9 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
-        m2 = x[..., 1]
+        m1 = x[..., 0]
         q = y[..., 0]
-        return jnp.log(m2) + 2 * jnp.log(q)
+        return jnp.log(q) - jnp.log(m1)
 
     def tree_flatten(self):
         return (), ((), dict())
