@@ -671,8 +671,8 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
             jnp.log(self.lam),
             truncnorm.logpdf(
                 m1,
-                a=self.mmin,
-                b=self.mmax,
+                a=(self.mmin - self.mu) / self.sigma,
+                b=(self.mmax - self.mu) / self.sigma,
                 loc=self.mu,
                 scale=self.sigma,
             ),
