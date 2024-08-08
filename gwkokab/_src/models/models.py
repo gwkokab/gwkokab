@@ -530,7 +530,11 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
         gaussian_term_1 = jnp.add(
             gaussian_term_1,
             truncnorm.logpdf(
-                m1, a=self.mmin, b=self.mmax, loc=self.mu1, scale=self.sigma1
+                m1,
+                a=(self.mmin - self.mu1) / self.sigma1,
+                b=(self.mmax - self.mu1) / self.sigma1,
+                loc=self.mu1,
+                scale=self.sigma1,
             ),
         )
 
@@ -538,7 +542,11 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
         gaussian_term_2 = jnp.add(
             gaussian_term_2,
             truncnorm.logpdf(
-                m1, a=self.mmin, b=self.mmax, loc=self.mu2, scale=self.sigma2
+                m1,
+                a=(self.mmin - self.mu2) / self.sigma2,
+                b=(self.mmax - self.mu2) / self.sigma2,
+                loc=self.mu2,
+                scale=self.sigma2,
             ),
         )
 
@@ -1588,10 +1596,18 @@ class MassGapModel(Distribution):
                     value=m_i, alpha=-self.alpha, low=self.mmin, high=self.mmax
                 ),
                 truncnorm.logpdf(
-                    m_i, a=self.mmin, b=self.mmax, loc=self.mu1, scale=self.sigma1
+                    m_i,
+                    a=(self.mmin - self.mu1) / self.sigma1,
+                    b=(self.mmax - self.mu1) / self.sigma1,
+                    loc=self.mu1,
+                    scale=self.sigma1,
                 ),
                 truncnorm.logpdf(
-                    m_i, a=self.mmin, b=self.mmax, loc=self.mu2, scale=self.sigma2
+                    m_i,
+                    a=(self.mmin - self.mu2) / self.sigma2,
+                    b=(self.mmax - self.mu2) / self.sigma2,
+                    loc=self.mu2,
+                    scale=self.sigma2,
                 ),
             ],
             axis=-1,
