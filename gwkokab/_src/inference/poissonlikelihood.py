@@ -82,6 +82,7 @@ class PoissonLikelihood:
     custom_vt: Optional[Callable[[Int, PRNGKeyArray, Distribution], Array]] = None
     is_multi_rate_model: bool = False
     logVT: Optional[Callable[[], Array]] = None
+    scale_factor: Float = 1.0
     time: Float = 1.0
 
     def tree_flatten(self) -> tuple:
@@ -95,6 +96,7 @@ class PoissonLikelihood:
             "model",
             "ref_priors",
             "time",
+            "scale_factor",
             "total_pop",
             "variables_index",
             "variables",
@@ -241,11 +243,15 @@ class PoissonLikelihood:
         N = 1 << 13
         key = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
         if self.vt_method == "uniform":
-            return self.exp_rate_integral_uniform_samples(N, key, model)
+            vt_value = self.exp_rate_integral_uniform_samples(N, key, model)
         elif self.vt_method == "model":
-            return self.exp_rate_integral_model_samples(N, key, model)
+            vt_value = self.exp_rate_integral_model_samples(N, key, model)
         elif self.vt_method == "custom":
-            return self.custom_vt(N, key, model)
+            vt_value = self.custom_vt(N, key, model)
+        else:
+            raise ValueError("Invalid VT method.")
+        vt_value *= self.time * self.scale_factor
+        return vt_value
 
     def log_likelihood_single_rate(self, x: Array, data: dict) -> Array:
         model = self.model(
@@ -268,7 +274,7 @@ class PoissonLikelihood:
 
         rate = jnp.exp(log_rate)  # rate = e^log_rate
 
-        return log_likelihood - self.time * rate * lax.cond(
+        return log_likelihood - rate * lax.cond(
             jnp.isinf(log_likelihood),
             lambda m: 0.0,
             lambda m: self.exp_rate_integral(m),

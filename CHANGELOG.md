@@ -23,6 +23,7 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
   * `ComponentMassesToPrimaryMassAndMassRatio`
   * `ComponentMassesToTotalMassAndMassRatio`
   * `SourceMassAndRedshiftToDetectedMassAndRedshift`
+* scaling factor in vt, during inference and synthetic data generation.
 
 **New Design**
 
