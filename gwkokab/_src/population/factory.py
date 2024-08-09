@@ -53,19 +53,20 @@ class PopulationFactory:
     r"""Class with methods equipped to generate population for each
     realizations and adding errors in it."""
 
-    injection_filename: str = "injections"
-    realizations_dir: str = "realization_{}"
-    error_dir: str = "posteriors"
-    root_dir: str = "data"
-    event_filename: str = "event_{}"
-    num_realizations: Int = 5
-    error_size: Int = 2_000
-    constraint: Callable[[Array], Bool] = lambda x: jnp.ones(x.shape[0], dtype=bool)
-    rate: Optional[Float | List[Float]] = None
     analysis_time: Optional[Float] = None
+    constraint: Callable[[Array], Bool] = lambda x: jnp.ones(x.shape[0], dtype=bool)
+    error_dir: str = "posteriors"
+    error_size: Int = 2_000
+    event_filename: str = "event_{}"
+    injection_filename: str = "injections"
     log_VT_fn: Optional[Callable[[Array], Array]] = None
-    VT_params: Optional[list[str]] = None
+    num_realizations: Int = 5
+    rate: Optional[Float | List[Float]] = None
+    realizations_dir: str = "realization_{}"
+    root_dir: str = "data"
+    scale_factor: float = 1.0
     verbose: bool = True
+    VT_params: Optional[list[str]] = None
 
     def check_params(self) -> None:
         r"""Check if the parameters are provided."""
@@ -125,6 +126,7 @@ class PopulationFactory:
         value = model.sample(key, (N,))[..., self.vt_selection_mask]
         return (
             self.analysis_time
+            * self.scale_factor
             * rate
             * jnp.mean(jnp.exp(self.log_VT_fn(value).flatten()))
         )
