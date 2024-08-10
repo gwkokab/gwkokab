@@ -41,7 +41,9 @@ def add_log_factor(name, model=None):
         ...     return Normal(loc, scale, validate_args=True)
 
         >>> xx = jrd.uniform(jrd.PRNGKey(0), (100,))
-        >>> model1 = model_by_function(log_rate=2.0, loc=10.0, scale=2.0, validate_args=True)
+        >>> model1 = model_by_function(
+        ...     log_rate=2.0, loc=10.0, scale=2.0, validate_args=True
+        ... )
         >>> model2 = model_by_decorator(log_rate=2.0, loc=10.0, scale=2.0)
         >>> assert jnp.equal(model1.log_prob(xx), model2.log_prob(xx))
 
