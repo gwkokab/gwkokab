@@ -2,11 +2,8 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-py-modules = ["gwkokab"]
-
 [tool.setuptools.packages]
-find = {}
+find = { where = ["src/"] }
 
 [project]
 authors = [
@@ -22,7 +19,7 @@ maintainers = [
 description = "A JAX-based gravitational-wave population inference toolkit for parametric models"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
@@ -31,7 +28,9 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
@@ -52,7 +51,13 @@ dependencies = [
     "seaborn==0.13.2",
     "typing_extensions==4.12.2",
 ]
-keywords = ["astrophysics", "bayesian-inference", "jax"]
+keywords = [
+    "astrophysics",
+    "bayesian-inference",
+    "jax",
+    "neutron-stars",
+    "gravitational-waves",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -76,23 +81,23 @@ docs = [
 ]
 
 [project.urls]
+Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
+Discussion = "https://github.com/gwkokab/gwkokab/discussions"
 Homepage = "https://github.com/gwkokab/gwkokab"
 Issues = "https://github.com/gwkokab/gwkokab/issues"
-Discussion = "https://github.com/gwkokab/gwkokab/discussions"
-Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
 
 [project.scripts]
-gwk_scatter2d = "gwkokab._src.scripts.scatter2d:main"
-gwk_scatter3d = "gwkokab._src.scripts.scatter3d:main"
 gwk_batch_scatter2d = "gwkokab._src.scripts.batch_scatter2d:main"
 gwk_batch_scatter3d = "gwkokab._src.scripts.batch_scatter3d:main"
-gwk_corner_plot = "gwkokab._src.scripts.corner_plot:main"
 gwk_chain_plot = "gwkokab._src.scripts.chain_plot:main"
 gwk_confidence_plot = "gwkokab._src.scripts.confidence_plot:main"
+gwk_corner_plot = "gwkokab._src.scripts.corner_plot:main"
 gwk_fancy_scatter3d = "gwkokab._src.scripts.fancy_scatter3d:main"
 gwk_joint_plot = "gwkokab._src.scripts.joint_plot:main"
-gwk_ppd_plot = "gwkokab._src.scripts.ppd_plot:main"
 gwk_ppd_and_confidence_plot = "gwkokab._src.scripts.ppd_confidence_plot:main"
+gwk_ppd_plot = "gwkokab._src.scripts.ppd_plot:main"
+gwk_scatter2d = "gwkokab._src.scripts.scatter2d:main"
+gwk_scatter3d = "gwkokab._src.scripts.scatter3d:main"
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]
