@@ -1,6 +1,20 @@
+#  Copyright 2023 The GWKokab Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 from __future__ import annotations
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser
 
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import Wysocki2019MassModel
@@ -14,6 +28,8 @@ from gwkokab.vts.neuralvt import load_model
 from jax import numpy as jnp, vmap
 from jaxtyping import Array, Bool
 from numpyro import distributions as dist
+
+from ..utils import genie_parser
 
 
 m1_source = PRIMARY_MASS_SOURCE.name
@@ -40,50 +56,51 @@ def make_parser() -> ArgumentParser:
 
     :return: the command line argument parser
     """
-    parser = ArgumentParser(
-        description="Generate a population of compact binary coalescences.",
-        formatter_class=ArgumentDefaultsHelpFormatter,
-        epilog="This script generates a population of compact binary coalescences.",
-    )
-    parser.add_argument(
+    parser = genie_parser.get_parser()
+    parser.description = "Generate a population of CBCs"
+    parser.epilog = "This script generates a population of CBCs"
+
+    model_group = parser.add_argument_group("Model Options")
+
+    model_group.add_argument(
         "--alpha_m",
         help="Power-law index of the mass distribution.",
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--mmin",
         help="Minimum mass of the mass distribution.",
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--mmax",
         help="Maximum mass of the mass distribution.",
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--scale",
         help="Scale of the eccentricity distribution.",
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--loc",
         help="Location of the eccentricity distribution.",
         default=0.0,
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--low",
         help="Lower bound of the eccentricity distribution.",
         default=0.0,
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--high",
         help="Upper bound of the eccentricity distribution.",
         default=1.0,
@@ -91,77 +108,43 @@ def make_parser() -> ArgumentParser:
         required=True,
     )
 
-    parser.add_argument(
+    model_group.add_argument(
         "--err_scale_Mc",
         help="Scale of the error in chirp mass.",
         default=1.0,
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--err_scale_eta",
         help="Scale of the error in symmetric mass ratio.",
         default=1.0,
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--err_loc",
         help="Location of the error in eccentricity.",
         default=0.0,
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--err_scale",
         help="Scale of the error in eccentricity.",
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--err_low",
         help="Lower bound of the error in eccentricity.",
         default=0.0,
         type=float,
         required=True,
     )
-    parser.add_argument(
+    model_group.add_argument(
         "--err_high",
         help="Upper bound of the error in eccentricity.",
-        type=float,
-        required=True,
-    )
-
-    parser.add_argument(
-        "--vt_path",
-        help="Path to the neural VT",
-        type=str,
-        required=True,
-    )
-    parser.add_argument(
-        "--analysis_time",
-        help="Analysis time of the VT",
-        default=0.0,
-        type=float,
-        required=True,
-    )
-    parser.add_argument(
-        "--error_size",
-        help="Size of the error.",
-        default=2000,
-        type=int,
-        required=True,
-    )
-    parser.add_argument(
-        "--num_realizations",
-        help="Number of realizations.",
-        default=5,
-        type=int,
-        required=True,
-    )
-    parser.add_argument(
-        "--rate",
-        help="Rate of binary mergers.",
         type=float,
         required=True,
     )
