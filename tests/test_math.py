@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from gwkokab.utils.math import (
     beta_dist_concentrations_to_mean_variance,
     beta_dist_mean_variance_to_concentrations,
