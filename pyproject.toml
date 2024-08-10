@@ -101,6 +101,7 @@ gwk_scatter2d = "gwkokab._src.scripts.scatter2d:main"
 gwk_scatter3d = "gwkokab._src.scripts.scatter3d:main"
 # Kokab scripts
 kokab_genie_ecc_matter = "kokab.ecc_matters.genie:main"
+kokab_genie_single_gaussians = "kokab.single_gaussians.genie:main"
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]
