@@ -1,7 +1,7 @@
 from argparse import ArgumentParser
 
 from gwkokab.errors import banana_error_m1_m2
-from gwkokab.models import PowerLawPeakMassModel
+from gwkokab.models import PowerLawPrimaryMassRatio
 from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 from gwkokab.utils.transformations import m1_q_to_m2, mass_ratio
@@ -40,29 +40,18 @@ def constraint(x: Array) -> Bool:
 
 def make_parser() -> ArgumentParser:
     parser = genie_parser.get_parser()
+
     model_group = parser.add_argument_group("Model Options")
 
     model_group.add_argument(
         "--alpha",
-        help="Power-law index for primary mass model",
+        help="Power law index for primary mass",
         type=float,
         required=True,
     )
     model_group.add_argument(
-        "--beta_q",
-        help="Power-law index for mass ratio model",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--lam",
-        help="Fraction of Gaussian component",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--delta_m",
-        help="Smoothing parameter",
+        "--beta",
+        help="Power law index for mass ratio",
         type=float,
         required=True,
     )
@@ -75,18 +64,6 @@ def make_parser() -> ArgumentParser:
     model_group.add_argument(
         "--mmax",
         help="Maximum mass",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--mu",
-        help="Mean of Gaussian component",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--sigma",
-        help="Standard deviation of Gaussian component",
         type=float,
         required=True,
     )
@@ -117,15 +94,11 @@ def main() -> None:
 
     popmodel_magazine.register(
         (m1_source_name, mass_ratio_name),
-        PowerLawPeakMassModel(
+        PowerLawPrimaryMassRatio(
             alpha=args.alpha,
-            beta_q=args.beta_q,
-            lam=args.lam,
-            delta_m=args.delta_m,
+            beta=args.beta,
             mmin=args.mmin,
             mmax=args.mmax,
-            mu=args.mu,
-            sigma=args.sigma,
         ),
     )
 
