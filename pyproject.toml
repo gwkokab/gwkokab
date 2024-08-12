@@ -69,7 +69,7 @@ dev = [
 
 docs = [
     "ipython==8.26.0",
-    "myst-parser==3.0.1",
+    "myst-parser==4.0.0",
     "nbsphinx==0.9.4",
     "readthedocs-sphinx-search==0.3.2",
     "sphinx-book-theme==1.1.3",
