@@ -232,7 +232,6 @@ class PopulationFactory:
                 np.savetxt(
                     injections_file_path,
                     population,
-                    comments="#",
                     header=" ".join(self.headers),
                 )
                 progress.advance(realization_task, 1)
@@ -289,7 +288,6 @@ class PopulationFactory:
                 output_dir.format(index),
                 masked_noisey_data,
                 header=" ".join(self.headers),
-                comments="#",
             )
 
     def produce(self, key: Optional[PRNGKeyArray] = None) -> None:
