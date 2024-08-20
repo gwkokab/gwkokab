@@ -11,6 +11,7 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
   * `COS_TILE_2`
   * `TILE_1`
   * `TILE_2`
+* Most assisting commands have been shifter from using index to column names.
 
 **New features**
 

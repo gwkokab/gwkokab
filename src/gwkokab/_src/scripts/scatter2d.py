@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import argparse
 
-import numpy as np
+import polars as pl
 from matplotlib import pyplot as plt
 
 
@@ -49,17 +49,17 @@ def make_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "-x",
-        "--x-value-column-index",
-        help="index of the x-axis values",
+        "--x-value-column-name",
+        help="name of the x-axis values",
         required=True,
-        type=int,
+        type=str,
     )
     parser.add_argument(
         "-y",
-        "--y-value-column-index",
-        help="index of the y-axis values",
+        "--y-value-column-name",
+        help="name of the y-axis values",
         required=True,
-        type=int,
+        type=str,
     )
     parser.add_argument(
         "-t",
@@ -90,9 +90,9 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    data = np.loadtxt(args.data.name)
-    x = data[:, args.x_value_column_index]
-    y = data[:, args.y_value_column_index]
+    data = pl.read_csv(args.data.name, has_header=True, separator=" ")
+    x = data[args.x_value_column_name].to_numpy()
+    y = data[args.y_value_column_name].to_numpy()
 
     plt.scatter(x, y)
     plt.xlabel(args.xlabel)
