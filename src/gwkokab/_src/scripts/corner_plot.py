@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 
 import corner
-import numpy as np
+import polars as pl
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -126,7 +126,7 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    data = np.loadtxt(args.data.name)
+    data = pl.read_csv(args.data.name, has_header=True, separator=" ").to_numpy()
     figure = corner.corner(
         data,
         labels=args.labels,

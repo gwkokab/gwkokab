@@ -232,8 +232,8 @@ class PopulationFactory:
                 np.savetxt(
                     injections_file_path,
                     population,
-                    comments="#",
                     header=" ".join(self.headers),
+                    comments="",  # To remove the default comment character '#'
                 )
                 progress.advance(realization_task, 1)
 
@@ -261,7 +261,7 @@ class PopulationFactory:
         os.makedirs(os.path.join(realizations_path, self.error_dir), exist_ok=True)
 
         injections_file_path = os.path.join(realizations_path, self.injection_filename)
-        data_inj = np.loadtxt(injections_file_path)
+        data_inj = np.loadtxt(injections_file_path, skiprows=1)
         keys = jrd.split(key, data_inj.shape[0] * len(heads))
 
         for index in range(data_inj.shape[0]):
@@ -289,7 +289,7 @@ class PopulationFactory:
                 output_dir.format(index),
                 masked_noisey_data,
                 header=" ".join(self.headers),
-                comments="#",
+                comments="",  # To remove the default comment character '#'
             )
 
     def produce(self, key: Optional[PRNGKeyArray] = None) -> None:

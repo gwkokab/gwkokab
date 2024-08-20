@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import argparse
 
-import numpy as np
+import polars as pl
 import seaborn as sns
 
 
@@ -43,17 +43,17 @@ def make_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "-x",
-        "--x-column",
-        help="column index for x-axis",
+        "--x-column-name",
+        help="column name for x-axis",
         required=True,
-        type=int,
+        type=str,
     )
     parser.add_argument(
         "-y",
-        "--y-column",
-        help="column index for y-axis",
+        "--y-column-name",
+        help="column name for y-axis",
         required=True,
-        type=int,
+        type=str,
     )
     parser.add_argument(
         "-xl",
@@ -104,11 +104,11 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    data = np.loadtxt(args.data.name)
+    data = pl.read_csv(args.data.name, has_header=True, separator=" ")
 
     g = sns.jointplot(
-        x=data[:, args.x_column],
-        y=data[:, args.y_column],
+        x=data[args.x_column_name].to_numpy(),
+        y=data[args.y_column_name].to_numpy(),
         marginal_ticks=True,
         ratio=2,
     )
