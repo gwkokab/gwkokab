@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import Wysocki2019MassModel
@@ -56,7 +56,8 @@ def make_parser() -> ArgumentParser:
 
     :return: the command line argument parser
     """
-    parser = genie_parser.get_parser()
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = genie_parser.get_parser(parser)
     parser.description = "Generate a population of CBCs"
     parser.epilog = "This script generates a population of CBCs"
 

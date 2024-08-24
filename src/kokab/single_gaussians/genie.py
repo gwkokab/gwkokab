@@ -1,4 +1,18 @@
-from argparse import ArgumentParser
+#  Copyright 2023 The GWKokab Authors
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
@@ -35,7 +49,8 @@ def single_gaussian_model(
 
 
 def make_parser() -> ArgumentParser:
-    parser = genie_parser.get_parser()
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = genie_parser.get_parser(parser)
 
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(

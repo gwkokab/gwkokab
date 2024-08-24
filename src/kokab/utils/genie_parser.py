@@ -13,17 +13,15 @@
 #  limitations under the License.
 
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser
 
 
-def get_parser() -> ArgumentParser:
-    """Create the command line argument parser.
+def get_parser(parser: ArgumentParser) -> ArgumentParser:
+    """Populate the command line argument parser with the arguments for the Genie script.
 
-    This function creates the command line argument parser and returns it.
-
+    :param parser: Parser to add the arguments to
     :return: the command line argument parser
     """
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 
     genie_group = parser.add_argument_group("Genie Options")
 
