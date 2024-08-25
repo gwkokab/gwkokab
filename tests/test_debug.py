@@ -12,21 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from __future__ import annotations
 
-import importlib.metadata
-
-
-__version__ = importlib.metadata.version("gwkokab")
+import gwkokab
+from gwkokab.debug import enable_debugging
 
 
-from . import (
-    debug as debug,
-    errors as errors,
-    inference as inference,
-    models as models,
-    parameters as parameters,
-    population as population,
-    utils as utils,
-    vts as vts,
-)
+def test_enable_debugging():
+    assert gwkokab._src.debug._debug.DEBUG is False
+    enable_debugging()
+    assert gwkokab._src.debug._debug.DEBUG is True
