@@ -44,7 +44,7 @@ dependencies = [
     "mplcursors==0.5.3",
     "numpy<2",
     "numpyro==0.15.2",
-    "plotly==5.23.0",
+    "plotly==5.24.0",
     "polars==1.5.0",
     "rich==13.7.1",
     "RIFT==0.0.15.11",
