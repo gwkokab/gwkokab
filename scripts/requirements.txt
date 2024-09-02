@@ -1,5 +1,5 @@
 mypy==1.11.2
-PyGithub==2.3.0
+PyGithub==2.4.0
 pytz==2024.1
 ruff==0.6.2
 typer==0.12.5
