@@ -14,7 +14,7 @@ jobs:
     if: github.repository_owner == 'gwkokab'
     steps:
       - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
-      - uses: actions/setup-python@39cd14951b08e74b54015e9e001cdefcf80e669f # v5
+      - uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v5
         with:
           python-version: "3.11"
           architecture: "x64"
