@@ -39,7 +39,7 @@ dependencies = [
     "h5py==3.11.0",
     "jax==0.4.31",
     "jaxlib==0.4.31",
-    "jaxtyping==0.2.33",
+    "jaxtyping==0.2.34",
     "matplotlib==3.9.2",
     "mplcursors==0.5.3",
     "numpy<2",
