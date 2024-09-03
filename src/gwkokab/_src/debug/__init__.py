@@ -13,4 +13,8 @@
 #  limitations under the License.
 
 
-from ._debug import debug as debug, enable_debugging as enable_debugging
+from ._debug import (
+    debug as debug,
+    debug_mode as debug_mode,
+    enable_debugging as enable_debugging,
+)

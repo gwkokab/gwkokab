@@ -27,6 +27,11 @@ def enable_debugging() -> None:
     DEBUG = True
 
 
+def debug_mode() -> bool:
+    r"""Returns the current debugging mode."""
+    return DEBUG
+
+
 def debug(func) -> Callable:
     r"""A decorator that prints the arguments and return value of a function when
     :code:`DEBUG` is :code:`True`.
@@ -37,17 +42,11 @@ def debug(func) -> Callable:
     """
 
     def wrapper(*args, **kwargs):
-        if DEBUG:
-            jax.debug.print(
-                "Calling {func_name} with arguments {args_fmt} and {kwargs_fmt}",
-                func_name=func.__name__,
-                args_fmt=args,
-                kwargs_fmt=kwargs,
-            )
         result = func(*args, **kwargs)
         if DEBUG:
             jax.debug.print(
-                "{func_name} returned {result_fmt}",
+                "\033[32mGWKokab Calling {func_name} with arguments {args_fmt} "
+                "and {kwargs_fmt} returned {result_fmt}",
                 func_name=func.__name__,
                 result_fmt=result,
             )
