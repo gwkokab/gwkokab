@@ -352,6 +352,7 @@ class PoissonLikelihood:
         """
         log_prior = self.priors.log_prob(x)
         if debug_mode():
+            jax.debug.print("parameters: {x}", x=x)
             jax.debug.print("log_prior: {lp}", lp=log_prior)
         return log_prior + lax.cond(
             jnp.isinf(log_prior),
