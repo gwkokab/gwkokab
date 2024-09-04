@@ -25,6 +25,7 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
   * `ComponentMassesToTotalMassAndMassRatio`
   * `SourceMassAndRedshiftToDetectedMassAndRedshift`
 * scaling factor in vt, during inference and synthetic data generation.
+* Debug mode for inference.
 
 **New Design**
 
