@@ -27,7 +27,7 @@ from numpyro.distributions import (
     Uniform,
 )
 
-from ..debug import debug_mode
+from ..debug import debug_flush, debug_mode
 from ..models.utils import JointDistribution
 from ..parameters import DEFAULT_PRIORS, Parameter
 from .bake import Bake
@@ -252,8 +252,7 @@ class PoissonLikelihood:
         else:
             raise ValueError("Invalid VT method.")
         vt_value *= self.time * self.scale_factor
-        if debug_mode():
-            jax.debug.print("exp_rate_integral: {vt_value}", vt_value=vt_value)
+        debug_flush("exp_rate_integral: {vt_value}", vt_value=vt_value)
         return vt_value
 
     def log_likelihood_single_rate(self, x: Array, data: dict) -> Array:
@@ -269,14 +268,13 @@ class PoissonLikelihood:
             0.0,
         )
 
-        if debug_mode():
-            jax.debug.print("model_log_likelihood: {mll}", mll=log_likelihood)
-
         log_rate = jnp.divide(
             x[..., 0], jnp.log10(jnp.e)
         )  # log_rate = log10_rate / log10(e)
 
         log_likelihood += data["N"] * log_rate
+
+        debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
         rate = jnp.exp(log_rate)  # rate = e^log_rate
 
@@ -311,8 +309,7 @@ class PoissonLikelihood:
 
         log_likelihood += data["N"] * log_sum_of_rates
 
-        if debug_mode():
-            jax.debug.print("model_log_likelihood: {mll}", mll=log_likelihood)
+        debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
         rates = list(jnp.exp(log_rates))  # rates = e^log_rates
 
@@ -334,10 +331,17 @@ class PoissonLikelihood:
         """
         if self.is_multi_rate_model:
             log_likelihood = self.log_likelihood_multi_rate(x, data)
+            if debug_mode():
+                pdict = {name: x[..., i] for name, i in self.variables_index.items()}
+                pdict["log_rates"] = x[..., 0 : self.total_pop]
+                debug_flush("parameters: {pdict}", pdict=pdict)
         else:
             log_likelihood = self.log_likelihood_single_rate(x, data)
-        if debug_mode():
-            jax.debug.print("log_likelihood: {ll}", ll=log_likelihood)
+            if debug_mode():
+                pdict = {name: x[..., i] for name, i in self.variables_index.items()}
+                pdict["log_rate"] = x[..., 0]
+                debug_flush("parameters: {pdict}", pdict=pdict)
+        debug_flush("log_likelihood: {ll}", ll=log_likelihood)
         return log_likelihood
 
     def log_posterior(self, x: Array, data: Optional[dict] = None) -> Array:
@@ -351,12 +355,7 @@ class PoissonLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.priors.log_prob(x)
-        if debug_mode():
-            jax.debug.print(
-                "parameters: {pdict}",
-                pdict={name: x[..., i] for name, i in self.variables_index.items()},
-            )
-            jax.debug.print("log_prior: {lp}", lp=log_prior)
+        debug_flush("log_prior: {lp}", lp=log_prior)
         return log_prior + lax.cond(
             jnp.isinf(log_prior),
             lambda x_, d_: 0.0,

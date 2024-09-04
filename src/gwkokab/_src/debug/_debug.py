@@ -32,6 +32,23 @@ def debug_mode() -> bool:
     return DEBUG
 
 
+def debug_flush(fmt_str: str, **kwargs) -> None:
+    """Flushes the debug message to the console.
+
+    .. note::
+        This function will only print message in debug mode.
+
+    .. code:: python
+
+        >>> debug_flush("Hello, {name}!", name="world")
+        Hello, world!
+
+    :param fmt_str: The format string for the debug message.
+    """
+    if debug_mode():
+        jax.debug.print("\033[32mGWKokab " + fmt_str, **kwargs)
+
+
 def debug(func) -> Callable:
     r"""A decorator that prints the arguments and return value of a function when
     :code:`DEBUG` is :code:`True`.
@@ -43,7 +60,7 @@ def debug(func) -> Callable:
 
     def wrapper(*args, **kwargs):
         result = func(*args, **kwargs)
-        if DEBUG:
+        if debug_mode():
             jax.debug.print(
                 "\033[32mGWKokab Calling {func_name} with arguments {args_fmt} "
                 "and {kwargs_fmt} returned {result_fmt}",
