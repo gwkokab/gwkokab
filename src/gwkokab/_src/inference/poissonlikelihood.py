@@ -27,6 +27,7 @@ from numpyro.distributions import (
     Uniform,
 )
 
+from ..debug import debug_flush, debug_mode
 from ..models.utils import JointDistribution
 from ..parameters import DEFAULT_PRIORS, Parameter
 from .bake import Bake
@@ -251,6 +252,7 @@ class PoissonLikelihood:
         else:
             raise ValueError("Invalid VT method.")
         vt_value *= self.time * self.scale_factor
+        debug_flush("exp_rate_integral: {vt_value}", vt_value=vt_value)
         return vt_value
 
     def log_likelihood_single_rate(self, x: Array, data: dict) -> Array:
@@ -272,11 +274,13 @@ class PoissonLikelihood:
 
         log_likelihood += data["N"] * log_rate
 
+        debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
+
         rate = jnp.exp(log_rate)  # rate = e^log_rate
 
         return log_likelihood - rate * lax.cond(
             jnp.isinf(log_likelihood),
-            lambda m: 0.0,
+            lambda _: 0.0,
             lambda m: self.exp_rate_integral(m),
             model,
         )
@@ -305,6 +309,8 @@ class PoissonLikelihood:
 
         log_likelihood += data["N"] * log_sum_of_rates
 
+        debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
+
         rates = list(jnp.exp(log_rates))  # rates = e^log_rates
 
         expected_rates = jtr.reduce(
@@ -324,8 +330,19 @@ class PoissonLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         if self.is_multi_rate_model:
-            return self.log_likelihood_multi_rate(x, data)
-        return self.log_likelihood_single_rate(x, data)
+            log_likelihood = self.log_likelihood_multi_rate(x, data)
+            if debug_mode():
+                pdict = {name: x[..., i] for name, i in self.variables_index.items()}
+                pdict["log_rates"] = x[..., 0 : self.total_pop]
+                debug_flush("parameters: {pdict}", pdict=pdict)
+        else:
+            log_likelihood = self.log_likelihood_single_rate(x, data)
+            if debug_mode():
+                pdict = {name: x[..., i] for name, i in self.variables_index.items()}
+                pdict["log_rate"] = x[..., 0]
+                debug_flush("parameters: {pdict}", pdict=pdict)
+        debug_flush("log_likelihood: {ll}", ll=log_likelihood)
+        return log_likelihood
 
     def log_posterior(self, x: Array, data: Optional[dict] = None) -> Array:
         r"""The likelihood function for the inhomogeneous Poisson process.
@@ -338,6 +355,7 @@ class PoissonLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.priors.log_prob(x)
+        debug_flush("log_prior: {lp}", lp=log_prior)
         return log_prior + lax.cond(
             jnp.isinf(log_prior),
             lambda x_, d_: 0.0,

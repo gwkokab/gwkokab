@@ -21,6 +21,7 @@ __version__ = importlib.metadata.version("gwkokab")
 
 
 from . import (
+    debug as debug,
     errors as errors,
     inference as inference,
     models as models,
