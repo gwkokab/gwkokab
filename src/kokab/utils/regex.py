@@ -26,7 +26,7 @@ def matches_regex(pattern: str, string: str) -> bool:
     :param string: string to match
     :return: :code:`True` if the string matches the pattern, `code`:False: otherwise
     """
-    return bool(re.match(pattern, string))
+    return bool(re.fullmatch(pattern, string))
 
 
 def match_all(
