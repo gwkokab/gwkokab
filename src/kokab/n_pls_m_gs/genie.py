@@ -18,8 +18,6 @@ from __future__ import annotations
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
-from jax import vmap
-from jaxtyping import Array, Bool
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
@@ -33,10 +31,11 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
-from gwkokab.vts.neuralvt import load_model
 
 from ..utils import genie_parser
+from ..utils.common import expand_arguments
 from ..utils.regex import match_all
+from .common import constraint, get_logVT
 
 
 m1_source_name = PRIMARY_MASS_SOURCE.name
@@ -45,43 +44,6 @@ chi1_name = PRIMARY_SPIN_MAGNITUDE.name
 chi2_name = SECONDARY_SPIN_MAGNITUDE.name
 cos_tilt_1_name = COS_TILT_1.name
 cos_tilt_2_name = COS_TILT_2.name
-
-
-def get_logVT(vt_path):
-    _, logVT = load_model(vt_path)
-
-    def m1m2_trimmed_logVT(x: Array) -> Array:
-        m1m2 = x[..., 0:2]
-        return vmap(logVT)(m1m2)
-
-    return m1m2_trimmed_logVT
-
-
-def constraint(x: Array) -> Bool:
-    m1 = x[..., 0]
-    m2 = x[..., 1]
-    chi1 = x[..., 2]
-    chi2 = x[..., 3]
-    cos_tilt_1 = x[..., 4]
-    cos_tilt_2 = x[..., 5]
-
-    mask = m1 > 0.0
-    mask &= m2 > 0.0
-    mask &= m1 >= m2
-
-    mask &= chi1 >= 0.0
-    mask &= chi1 <= 1.0
-
-    mask &= chi2 >= 0.0
-    mask &= chi2 <= 1.0
-
-    mask &= cos_tilt_1 >= -1.0
-    mask &= cos_tilt_1 <= 1.0
-
-    mask &= cos_tilt_2 >= -1.0
-    mask &= cos_tilt_2 <= 1.0
-
-    return mask
 
 
 def make_parser() -> ArgumentParser:
@@ -122,29 +84,27 @@ def main() -> None:
     N_pl = model_json["N_pl"]
     N_g = model_json["N_g"]
 
-    extend_args = lambda arg, n: list(map(lambda i: arg + f"_{i}", range(n)))
-
     model_param = match_all(
-        extend_args("alpha", N_pl)
-        + extend_args("beta", N_pl)
-        + extend_args("mmin", N_pl)
-        + extend_args("mmax", N_pl)
-        + extend_args("mean_chi1_pl", N_pl)
-        + extend_args("mean_chi2_pl", N_pl)
-        + extend_args("std_dev_tilt1_pl", N_pl)
-        + extend_args("std_dev_tilt2_pl", N_pl)
-        + extend_args("variance_chi1_pl", N_pl)
-        + extend_args("variance_chi2_pl", N_pl)
-        + extend_args("loc_m1", N_g)
-        + extend_args("loc_m2", N_g)
-        + extend_args("scale_m1", N_g)
-        + extend_args("scale_m2", N_g)
-        + extend_args("mean_chi1_g", N_g)
-        + extend_args("mean_chi2_g", N_g)
-        + extend_args("std_dev_tilt1_g", N_g)
-        + extend_args("std_dev_tilt2_g", N_g)
-        + extend_args("variance_chi1_g", N_g)
-        + extend_args("variance_chi2_g", N_g),
+        expand_arguments("alpha", N_pl)
+        + expand_arguments("beta", N_pl)
+        + expand_arguments("mmin", N_pl)
+        + expand_arguments("mmax", N_pl)
+        + expand_arguments("mean_chi1_pl", N_pl)
+        + expand_arguments("mean_chi2_pl", N_pl)
+        + expand_arguments("std_dev_tilt1_pl", N_pl)
+        + expand_arguments("std_dev_tilt2_pl", N_pl)
+        + expand_arguments("variance_chi1_pl", N_pl)
+        + expand_arguments("variance_chi2_pl", N_pl)
+        + expand_arguments("loc_m1", N_g)
+        + expand_arguments("loc_m2", N_g)
+        + expand_arguments("scale_m1", N_g)
+        + expand_arguments("scale_m2", N_g)
+        + expand_arguments("mean_chi1_g", N_g)
+        + expand_arguments("mean_chi2_g", N_g)
+        + expand_arguments("std_dev_tilt1_g", N_g)
+        + expand_arguments("std_dev_tilt2_g", N_g)
+        + expand_arguments("variance_chi1_g", N_g)
+        + expand_arguments("variance_chi2_g", N_g),
         model_json,
     )
 

@@ -38,6 +38,13 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     sage_group.add_argument(
+        "--posterior-columns",
+        help="Columns of the posterior samples.",
+        nargs="+",
+        type=str,
+        required=True,
+    )
+    sage_group.add_argument(
         "--analysis_time",
         help="Analysis time of the VT",
         default=0.0,

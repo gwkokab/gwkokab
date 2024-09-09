@@ -102,6 +102,8 @@ genie_n_pls_m_gs = "kokab.n_pls_m_gs.genie:main"
 genie_powerlaw_peak = "kokab.powerlawpeak.genie:main"
 genie_powerlaw_primary_mass_ratio = "kokab.powerlawprimarymassratio.genie:main"
 genie_single_gaussians = "kokab.single_gaussians.genie:main"
+# Sage scripts
+sage_n_pls_m_gs = "kokab.n_pls_m_gs.sage:main"
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]
