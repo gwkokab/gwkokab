@@ -18,6 +18,10 @@ from __future__ import annotations
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
+from jax import vmap
+from jaxtyping import Array, Bool
+from numpyro import distributions as dist
+
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment
 from gwkokab.parameters import (
@@ -30,9 +34,6 @@ from gwkokab.parameters import (
 )
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 from gwkokab.vts.neuralvt import load_model
-from jax import vmap
-from jaxtyping import Array, Bool
-from numpyro import distributions as dist
 
 from ..utils import genie_parser
 from ..utils.regex import match_all

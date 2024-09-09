@@ -14,6 +14,8 @@
 
 import numpy as np
 import pytest
+from jax import numpy as jnp
+
 from gwkokab.utils.transformations import (
     cart_to_polar,
     cart_to_spherical,
@@ -45,7 +47,6 @@ from gwkokab.utils.transformations import (
     symmetric_mass_ratio_to_delta_m,
     total_mass,
 )
-from jax import numpy as jnp
 
 
 _primary_masses = np.unique(np.random.uniform(0.5, 200, 13))

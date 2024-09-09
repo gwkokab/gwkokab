@@ -17,6 +17,10 @@ from __future__ import annotations
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
+from jax import numpy as jnp, vmap
+from jaxtyping import Array, Bool
+from numpyro import distributions as dist
+
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import Wysocki2019MassModel
 from gwkokab.parameters import (
@@ -26,9 +30,6 @@ from gwkokab.parameters import (
 )
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 from gwkokab.vts.neuralvt import load_model
-from jax import numpy as jnp, vmap
-from jaxtyping import Array, Bool
-from numpyro import distributions as dist
 
 from ..utils import genie_parser
 

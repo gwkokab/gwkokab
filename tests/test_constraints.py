@@ -6,8 +6,9 @@ from collections import namedtuple
 import jax
 import jax.numpy as jnp
 import pytest
-from gwkokab.models import constraints
 from jax import jit, vmap
+
+from gwkokab.models import constraints
 
 
 _a = jnp.asarray
