@@ -17,13 +17,14 @@ from __future__ import annotations
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
+from jax import numpy as jnp, vmap
+from jaxtyping import Array, Bool
+from numpyro.distributions import MultivariateNormal
+
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 from gwkokab.vts.neuralvt import load_model
-from jax import numpy as jnp, vmap
-from jaxtyping import Array, Bool
-from numpyro.distributions import MultivariateNormal
 
 from ..utils import genie_parser
 

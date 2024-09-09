@@ -5,12 +5,13 @@ import math
 
 import jax.numpy as jnp
 import pytest
+from jax import jacfwd, random, vmap
+from numpyro.distributions.transforms import biject_to
+
 from gwkokab.models import constraints
 from gwkokab.models.transformations import (
     DeltaToSymmetricMassRatio,
 )
-from jax import jacfwd, random, vmap
-from numpyro.distributions.transforms import biject_to
 
 
 @pytest.mark.parametrize(
