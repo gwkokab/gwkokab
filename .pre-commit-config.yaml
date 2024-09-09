@@ -1,7 +1,7 @@
 files: gwkokab||scripts||tests||examples
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.5.7"
+    rev: "v0.6.4"
     hooks:
       - id: ruff
         args: [--fix]
@@ -21,7 +21,14 @@ repos:
     hooks:
       - id: codespell
         stages: [commit, commit-msg]
-        args: [--ignore-words-list, precessing, --ignore-words-list, multline, --check-filenames]
+        args:
+          [
+            --ignore-words-list,
+            "statics,socio-economic,precessing",
+            --check-filenames,
+            --skip,
+            "*.ipynb",
+          ]
   - repo: local
     hooks:
       - id: no-bracket-links
@@ -43,7 +50,7 @@ repos:
         language: pygrep
         types: [text]
         exclude: LICENSE
-        exclude_types: [python, bib, gitignore, jupyter, makefile, rst]
+        exclude_types: [python, bib, gitignore, jupyter, makefile, rst, yaml]
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.18.4
     hooks:
