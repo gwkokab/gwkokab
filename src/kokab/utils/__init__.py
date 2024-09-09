@@ -12,4 +12,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-from . import genie_parser as genie_parser, regex as regex
+from . import common as common, genie_parser as genie_parser, regex as regex
