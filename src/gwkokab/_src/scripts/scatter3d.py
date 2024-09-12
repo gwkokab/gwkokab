@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 
 import mplcursors
-import polars as pl
+import pandas as pd
 from matplotlib import pyplot as plt
 
 
@@ -132,7 +132,7 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    data = pl.read_csv(args.data.name, has_header=True, separator=" ")
+    data = pd.read_csv(args.data.name, delimiter=" ")
     x = data[args.x_value_column_name].to_numpy()
     y = data[args.y_value_column_name].to_numpy()
     z = data[args.z_value_column_name].to_numpy()

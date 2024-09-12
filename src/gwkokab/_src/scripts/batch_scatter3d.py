@@ -19,7 +19,7 @@ import argparse
 import glob
 
 import mplcursors
-import polars as pl
+import pandas as pd
 from matplotlib import pyplot as plt
 
 
@@ -153,7 +153,7 @@ def main() -> None:
     ax = fig.add_subplot(111, projection="3d")
 
     for file_path in file_list:
-        data = pl.read_csv(file_path, has_header=True, separator=" ")
+        data = pd.read_csv(file_path, delimiter=" ")
         x = data[args.x_value_column_name].to_numpy()
         y = data[args.y_value_column_name].to_numpy()
         z = data[args.z_value_column_name].to_numpy()

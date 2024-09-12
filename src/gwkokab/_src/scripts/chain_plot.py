@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 import glob
 
-import polars as pl
+import pandas as pd
 from matplotlib import pyplot as plt
 
 
@@ -115,7 +115,7 @@ def main() -> None:
     fig, ax = plt.subplots(n_dim, 1, figsize=figsize, sharex=True)
     if n_dim == 1:
         for file in files:
-            data = pl.read_csv(file, has_header=True, separator=" ").to_numpy()
+            data = pd.read_csv(file, delimiter=" ").to_numpy()
             ax.plot(
                 data,
                 alpha=args.alpha,
@@ -123,7 +123,7 @@ def main() -> None:
             ax.set_ylabel(args.labels[0])
     else:
         for file in files:
-            data = pl.read_csv(file, has_header=True, separator=" ").to_numpy()
+            data = pd.read_csv(file, delimiter=" ").to_numpy()
             for j, data_ in enumerate(data.T):
                 ax[j].plot(
                     data_,

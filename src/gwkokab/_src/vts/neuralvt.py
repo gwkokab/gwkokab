@@ -25,7 +25,7 @@ import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import optax
-import polars as pl
+import pandas as pd
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, Float, PRNGKeyArray, PyTree
 from numpyro.util import is_prng_key
@@ -78,7 +78,7 @@ def compute_accuracy(model: PyTree, x: Float[Array, ""], y: Float[Array, ""]) ->
     return jnp.mean(jnp.square(y - y_pred))
 
 
-def read_data(data_path: str) -> pl.DataFrame:
+def read_data(data_path: str) -> pd.DataFrame:
     """Read the data from the given path.
 
     :param data_path: path to the data
@@ -86,10 +86,8 @@ def read_data(data_path: str) -> pl.DataFrame:
     """
     with h5py.File(data_path, "r") as vt_file:
         keys = list(vt_file.keys())
-        df = pl.DataFrame(
-            data={
-                key: pl.Series(key, np.array(vt_file[key]).flatten()) for key in keys
-            },
+        df = pd.DataFrame(
+            data={key: np.array(vt_file[key]).flatten() for key in keys},
         )
     return df
 
