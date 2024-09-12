@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 import glob
 
-import polars as pl
+import pandas as pd
 from matplotlib import pyplot as plt
 
 
@@ -115,7 +115,7 @@ def main() -> None:
     file_list = glob.glob(args.data_regex)
 
     for file_path in file_list:
-        data = pl.read_csv(file_path, has_header=True, separator=" ")
+        data = pd.read_csv(file_path, delimiter=" ")
         x = data[args.x_value_column_name].to_numpy()
         y = data[args.y_value_column_name].to_numpy()
 
