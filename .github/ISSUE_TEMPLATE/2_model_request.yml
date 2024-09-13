@@ -1,7 +1,7 @@
 name: Model Request
 description: Request a model
 title: "<name_of_model>"
-labels: ["enhancement :sparkles:"]
+labels: ["enhancement"]
 body:
   - type: checkboxes
     attributes:

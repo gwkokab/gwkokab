@@ -4,7 +4,7 @@ name: Feature request
 description: >-
   Suggest a new feature or enhancement for GWKokab.
 labels:
-  - "enhancement :sparkles:"
+  - "enhancement"
 
 body:
   - type: checkboxes
