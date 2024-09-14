@@ -51,16 +51,15 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         type=float,
     )
     sage_group.add_argument(
-        "--n-chains",
-        help="Number of chains.",
-        default=5,
-        type=int,
-    )
-    sage_group.add_argument(
         "--seed",
         help="Seed for the random number generator.",
         default=37,
         type=int,
+    )
+    sage_group.add_argument(
+        "--verbose",
+        help="Verbose output.",
+        action="store_true",
     )
 
     flowMC_group = parser.add_argument_group("flowMC Options")
@@ -70,6 +69,14 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Path to a JSON file containing the flowMC options. It should contains"
         "keys: local_sampler_kwargs, nf_model_kwargs, sampler_kwargs, data_dump_kwargs,"
         " and their respective values.",
+    )
+
+    prior_group = parser.add_argument_group("Prior Options")
+    prior_group.add_argument(
+        "--prior-json",
+        type=str,
+        help="Path to a JSON file containing the prior distributions.",
+        required=True,
     )
 
     return parser

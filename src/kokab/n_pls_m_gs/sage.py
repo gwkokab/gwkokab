@@ -24,6 +24,7 @@ import pandas as pd
 from jax import random as jrd
 from numpyro.distributions import Uniform
 
+from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
 from gwkokab.models import (
     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
@@ -38,7 +39,7 @@ from gwkokab.parameters import (
 )
 
 from ..utils import sage_parser
-from ..utils.common import expand_arguments
+from ..utils.common import expand_arguments, flowMC_json_read_and_process
 from ..utils.regex import match_all
 from .common import get_logVT
 
@@ -59,14 +60,6 @@ def make_parser() -> ArgumentParser:
         help="Number of Gaussian components in the mass model.",
     )
 
-    prior_group = parser.add_argument_group("Prior Options")
-    prior_group.add_argument(
-        "--prior-json",
-        type=str,
-        help="Path to a JSON file containing the prior distributions.",
-        required=True,
-    )
-
     return parser
 
 
@@ -81,24 +74,22 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
+    if args.verbose:
+        enable_debugging()
+
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
-    N_CHAINS = args.n_chains
+    KEY1, KEY2, KEY3 = jrd.split(KEY, 3)
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
     VT_PARAMS = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
     ANALYSIS_TIME = args.analysis_time
 
-    with open(args.flowMC_json, "r") as f:
-        flowMC_json = json.load(f)
+    FLOWMC_HANDLER_KWARGS = flowMC_json_read_and_process(args.flowMC_json)
 
-    FLOWMC_HANDLER_KWARGS = {
-        "local_sampler_kwargs": flowMC_json["local_sampler_kwargs"],
-        "nf_model_kwargs": flowMC_json["nf_model_kwargs"],
-        "sampler_kwargs": flowMC_json["sampler_kwargs"],
-        "data_dump_kwargs": flowMC_json["data_dump_kwargs"],
-    }
+    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
+    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
     posteriors = glob(POSTERIOR_REGEX)
     data_set = {
@@ -116,8 +107,6 @@ def main() -> None:
 
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
-
-    assert prior_dict.get("log_rate") is not None, "Prior for log_rate is required."
 
     prior_param = match_all(
         expand_arguments("alpha", N_pl)
@@ -143,11 +132,21 @@ def main() -> None:
         prior_dict,
     )
 
+    log_rate_prior_param = match_all(
+        expand_arguments("log_rate", N_pl + N_g), prior_dict
+    )
+
     for key, value in prior_param.items():
         if isinstance(value, list):
             if len(value) != 2:
                 raise ValueError(f"Invalid prior value for {key}: {value}")
             prior_param[key] = Uniform(value[0], value[1], validate_args=True)
+
+    for key, value in log_rate_prior_param.items():
+        if isinstance(value, list):
+            if len(value) != 2:
+                raise ValueError(f"Invalid prior value for {key}: {value}")
+            log_rate_prior_param[key] = Uniform(value[0], value[1], validate_args=True)
 
     model = Bake(NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment)(
         N_pl=N_pl,
@@ -155,10 +154,11 @@ def main() -> None:
         **prior_param,
     )
 
-    poisson_likelihood.vt_params = VT_PARAMS
+    poisson_likelihood.is_multi_rate_model = True
     poisson_likelihood.logVT = get_logVT(VT_FILENAME)
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
+    poisson_likelihood.vt_params = VT_PARAMS
 
     poisson_likelihood.set_model(
         (
@@ -169,16 +169,19 @@ def main() -> None:
             COS_TILT_1,
             COS_TILT_2,
         ),
-        [
-            Uniform(low_log_rate, high_log_rate, validate_args=True)
-            for low_log_rate, high_log_rate in expand_arguments("log_rate", N_pl + N_g)
-        ],
+        [log_rate_prior_param[r] for r in expand_arguments("log_rate", N_pl + N_g)],
         model=model,
     )
 
-    _, KEY = jrd.split(KEY)
+    N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
+    initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))
 
-    initial_position = poisson_likelihood.priors.sample(KEY, (N_CHAINS,))
+    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[0]
+    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[0]
+
+    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = expand_arguments(
+        "log_rate", N_pl + N_g
+    ) + list(model.variables.keys())
 
     handler = flowMChandler(
         logpdf=poisson_likelihood.log_posterior,

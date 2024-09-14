@@ -40,6 +40,9 @@ def match_all(
     """
     matches = {}
     for string in strings:
+        if pattern_dict_with_val.get(string):  # Exact match
+            matches[string] = pattern_dict_with_val[string]
+            continue
         for pattern, value in pattern_dict_with_val.items():
             if matches_regex(pattern, string):
                 matches[string] = value
