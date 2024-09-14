@@ -83,7 +83,6 @@ def main() -> None:
     args = parser.parse_args()
 
     SEED = args.seed
-    N_DIM = args.n_dim
     KEY = jrd.PRNGKey(SEED)
     N_CHAINS = args.n_chains
     POSTERIOR_REGEX = args.posterior_regex
@@ -92,56 +91,14 @@ def main() -> None:
     VT_PARAMS = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
     ANALYSIS_TIME = args.analysis_time
 
-    LOCAL_MALA_SAMPLER_KWARGS = {
-        "sampler": "MALA",
-        "step_size": args.step_size,
-        "jit": args.jit,
-    }
+    with open(args.flowMC_json, "r") as f:
+        flowMC_json = json.load(f)
 
-    NF_MODEL_KWARGS = {
-        "key": KEY,
-        "model": "MaskedCouplingRQSpline",
-        "n_layers": args.n_layers,
-        "hidden_size": args.hidden_size,
-        "num_bins": args.num_bins,
-        "n_features": N_DIM,
-    }
-
-    _, KEY = jrd.split(KEY)
-    SAMPLER_KWARGS = {
-        "n_dim": N_DIM,
-        "rng_key": KEY,
-        "data": None,
-        "n_chains": N_CHAINS,
-        "n_local_steps": args.n_local_steps,
-        "n_global_steps": args.n_global_steps,
-        "n_loop_training": args.n_loop_training,
-        "n_loop_production": args.n_loop_production,
-        "batch_size": args.batch_size,
-        "n_epochs": args.n_epochs,
-        "learning_rate": args.learning_rate,
-        "momentum": args.momentum,
-        "precompile": args.precompile,
-        "verbose": args.verbose,
-        "use_global": args.use_global,
-        "logging": args.logging,
-        "outdir": "inf-plots",
-        # "train_thinning":,
-        # "output_thinning":,
-        # "n_max_examples":,
-        # "n_flow_sample":,
-    }
-
-    DATA_DUMP_KWARGS = {
-        "out_dir": "sampler_data",
-        "labels": [
-            r"$\log(\mathcal{R})$",
-            r"$\alpha_m$",
-            r"$m_\min$",
-            r"$m_\max$",
-            r"$\sigma_\varepsilon$",
-        ],
-        "n_samples": 20000,
+    FLOWMC_HANDLER_KWARGS = {
+        "local_sampler_kwargs": flowMC_json["local_sampler_kwargs"],
+        "nf_model_kwargs": flowMC_json["nf_model_kwargs"],
+        "sampler_kwargs": flowMC_json["sampler_kwargs"],
+        "data_dump_kwargs": flowMC_json["data_dump_kwargs"],
     }
 
     posteriors = glob(POSTERIOR_REGEX)
@@ -161,13 +118,7 @@ def main() -> None:
             "N": len(posteriors),
         }
 
-    FLOWMC_HANDLER_KWARGS = {
-        "local_sampler_kwargs": LOCAL_MALA_SAMPLER_KWARGS,
-        "nf_model_kwargs": NF_MODEL_KWARGS,
-        "sampler_kwargs": SAMPLER_KWARGS,
-        "data_dump_kwargs": DATA_DUMP_KWARGS,
-        "data": data_set,
-    }
+    FLOWMC_HANDLER_KWARGS["data"] = data_set
 
     N_pl = args.n_pl
     N_g = args.n_g

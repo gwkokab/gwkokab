@@ -47,175 +47,29 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     sage_group.add_argument(
         "--analysis_time",
         help="Analysis time of the VT",
-        default=0.0,
+        default=1.0,
         type=float,
-        required=True,
     )
     sage_group.add_argument(
         "--n-chains",
         help="Number of chains.",
         default=5,
         type=int,
-        required=True,
     )
     sage_group.add_argument(
         "--seed",
         help="Seed for the random number generator.",
         default=37,
         type=int,
-        required=True,
-    )
-    sage_group.add_argument(
-        "--n-dim",
-        help="Number of dimensions.",
-        type=int,
-        required=True,
     )
 
-    local_sampler_group = parser.add_argument_group(
-        "Local Sampler Options",
-        description="At the moment we are only supporting MALA Sampler.",
-    )
+    flowMC_group = parser.add_argument_group("flowMC Options")
 
-    local_sampler_group.add_argument(
-        "--step-size",
-        help="Step size for the MALA sampler.",
-        type=float,
-        default=1e-2,
-        required=True,
-    )
-    local_sampler_group.add_argument(
-        "--jit",
-        help="Just-in-time compilation.",
-        action="store_true",
-    )
-
-    global_sampler_group = parser.add_argument_group(
-        "Global Sampler Options",
-        description="At the moment we are only supporting MaskedCouplingRQSpline Model.",
-    )
-
-    global_sampler_group.add_argument(
-        "--n-layers",
-        help="Number of layers in the model.",
-        type=int,
-        default=5,
-        required=True,
-    )
-    global_sampler_group.add_argument(
-        "--hidden-size",
-        help="Hidden size of the model.",
-        type=int,
-        nargs="+",
-        default=[32, 32],
-        required=True,
-    )
-    global_sampler_group.add_argument(
-        "--num-bins",
-        help="Number of bins in the model.",
-        type=int,
-        default=8,
-        required=True,
-    )
-
-    sampler_group = parser.add_argument_group("Sampler Options")
-
-    sampler_group.add_argument(
-        "--n-local-steps",
-        help="Number of local steps.",
-        type=int,
-        default=100,
-        required=True,
-    )
-    sampler_group.add_argument(
-        "--n-global-steps",
-        help="Number of global steps.",
-        type=int,
-        default=100,
-        required=True,
-    )
-    sampler_group.add_argument(
-        "--n-loop-training",
-        help="Number of loop training.",
-        type=int,
-        default=10,
-        required=True,
-    )
-    sampler_group.add_argument(
-        "--n-loop-production",
-        help="Number of loop production.",
-        type=int,
-        default=10,
-        required=True,
-    )
-    sampler_group.add_argument(
-        "--batch-size",
-        help="Batch size.",
-        type=int,
-        default=10000,
-        required=True,
-    )
-    sampler_group.add_argument(
-        "--n-epochs",
-        help="Number of epochs.",
-        type=int,
-        default=5,
-        required=True,
-    )
-    sampler_group.add_argument(
-        "--learning-rate",
-        help="Learning rate.",
-        type=float,
-        default=0.001,
-    )
-    sampler_group.add_argument(
-        "--momentum",
-        help="Momentum.",
-        type=float,
-        default=0.9,
-    )
-    sampler_group.add_argument(
-        "--precompile",
-        help="Precompile the model.",
-        action="store_true",
-        default=False,
-    )
-    sampler_group.add_argument(
-        "--verbose",
-        help="Verbose.",
-        action="store_true",
-        default=False,
-    )
-    sampler_group.add_argument(
-        "--use-global",
-        help="Use global.",
-        action="store_true",
-    )
-    sampler_group.add_argument(
-        "--logging",
-        help="Logging.",
-        action="store_true",
-    )
-
-    data_dump_group = parser.add_argument_group("Data Dump Options")
-
-    data_dump_group.add_argument(
-        "--out-dir",
-        help="Output directory.",
-        type=str,
-        default="sampler_data",
-    )
-    data_dump_group.add_argument(
-        "--labels",
-        help="Labels for the data.",
-        type=str,
-        nargs="+",
-    )
-    data_dump_group.add_argument(
-        "--n-samples",
-        help="Number of samples.",
-        type=int,
-        default=20000,
+    flowMC_group.add_argument(
+        "--flowMC-json",
+        help="Path to a JSON file containing the flowMC options. It should contains"
+        "keys: local_sampler_kwargs, nf_model_kwargs, sampler_kwargs, data_dump_kwargs,"
+        " and their respective values.",
     )
 
     return parser
