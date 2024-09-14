@@ -20,8 +20,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-import numpy as np
-import polars as pl
+import pandas as pd
 from jax import random as jrd
 from numpyro.distributions import Uniform
 
@@ -102,21 +101,13 @@ def main() -> None:
     }
 
     posteriors = glob(POSTERIOR_REGEX)
-    try:
-        data_set = {
-            "data": [
-                pl.read_csv(event, has_header=True, separator=" ")[
-                    POSTERIOR_COLUMNS
-                ].to_numpy()
-                for event in posteriors
-            ],
-            "N": len(posteriors),
-        }
-    except Exception:
-        data_set = {
-            "data": [np.loadtxt(event, skiprows=1) for event in posteriors],
-            "N": len(posteriors),
-        }
+    data_set = {
+        "data": [
+            pd.read_csv(event, delimiter=" ")[POSTERIOR_COLUMNS].to_numpy()
+            for event in posteriors
+        ],
+        "N": len(posteriors),
+    }
 
     FLOWMC_HANDLER_KWARGS["data"] = data_set
 
