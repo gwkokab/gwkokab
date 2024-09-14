@@ -169,8 +169,6 @@ def main() -> None:
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
 
-    low_log_rate, high_log_rate = prior_dict["log_rate"]
-
     poisson_likelihood.set_model(
         (
             PRIMARY_MASS_SOURCE,
@@ -182,7 +180,7 @@ def main() -> None:
         ),
         [
             Uniform(low_log_rate, high_log_rate, validate_args=True)
-            for _ in range(N_pl + N_pl)
+            for low_log_rate, high_log_rate in expand_arguments("log_rate", N_pl + N_g)
         ],
         model=model,
     )
