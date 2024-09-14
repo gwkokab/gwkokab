@@ -16,20 +16,12 @@ from typer import Typer
 app: Typer = typer.Typer()
 
 DATETIME_FORMAT: str = "%m/%d/%Y %I:%M %p"
-CORE_LABELS: set[str] = {
-    "documentation :scroll:",
-    "enhancement :sparkles:",
-    "experimental :test_tube:",
-    "bug :lady_beetle:",
-    "design  enhancement :pinched_fingers: :ok_hand:",
-}
+CORE_LABELS: set[str] = {"documentation", "enhancement", "experimental", "bug"}
 # A set of labels for adding in labels that we want present in the final
 # report, but that we don't want being defined as a core label, since issues
 # with without core labels are flagged as errors.
-ADDITIONAL_LABELS: set[str] = {
-    "help wanted :rescue_worker_helmet:",
-}
-IGNORED_LABEL_TEXT: str = "meta :see_no_evil:"
+ADDITIONAL_LABELS: set[str] = {"help wanted"}
+IGNORED_LABEL_TEXT: str = "meta"
 ISSUES_PER_LABEL: int = 20
 
 

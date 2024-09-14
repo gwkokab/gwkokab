@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import argparse
 
-import polars as pl
+import pandas as pd
 import seaborn as sns
 
 
@@ -104,7 +104,7 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    data = pl.read_csv(args.data.name, has_header=True, separator=" ")
+    data = pd.read_csv(args.data.name, delimiter=" ")
 
     g = sns.jointplot(
         x=data[args.x_column_name].to_numpy(),
