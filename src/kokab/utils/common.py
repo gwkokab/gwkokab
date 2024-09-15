@@ -72,11 +72,18 @@ def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> di
     :param posterior_columns: list of posterior columns
     :return: dictionary of posterior data
     """
+    data_list = []
+    for event in filenames:
+        df = pd.read_csv(event, delimiter=" ")
+        missing_columns = set(posterior_columns) - set(df.columns)
+        if missing_columns:
+            raise KeyError(
+                f"The file '{event}' is missing required columns: {missing_columns}"
+            )
+        data = df[posterior_columns].to_numpy()
+        data_list.append(data)
     data_set = {
-        "data": [
-            pd.read_csv(event, delimiter=" ")[posterior_columns].to_numpy()
-            for event in filenames
-        ],
+        "data": data_list,
         "N": len(filenames),
     }
     return data_set
