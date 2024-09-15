@@ -21,4 +21,5 @@ coverage:
   precision: 2
 
 comment:
-  layout: "diff, flags, files"
+  layout: "condensed_header, condensed_files, condensed_footer"
+  hide_project_coverage: TRUE
