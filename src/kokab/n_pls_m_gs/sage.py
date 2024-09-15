@@ -20,9 +20,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-import pandas as pd
 from jax import random as jrd
-from numpyro.distributions import Uniform
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
@@ -39,8 +37,12 @@ from gwkokab.parameters import (
 )
 
 from ..utils import sage_parser
-from ..utils.common import expand_arguments, flowMC_json_read_and_process
-from ..utils.regex import match_all
+from ..utils.common import (
+    expand_arguments,
+    flowMC_json_read_and_process,
+    get_posterior_data,
+    get_processed_priors,
+)
 from .common import get_logVT
 
 
@@ -91,16 +93,9 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
-    posteriors = glob(POSTERIOR_REGEX)
-    data_set = {
-        "data": [
-            pd.read_csv(event, delimiter=" ")[POSTERIOR_COLUMNS].to_numpy()
-            for event in posteriors
-        ],
-        "N": len(posteriors),
-    }
-
-    FLOWMC_HANDLER_KWARGS["data"] = data_set
+    FLOWMC_HANDLER_KWARGS["data"] = get_posterior_data(
+        glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS
+    )
 
     N_pl = args.n_pl
     N_g = args.n_g
@@ -108,7 +103,7 @@ def main() -> None:
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
 
-    prior_param = match_all(
+    model_prior_param = get_processed_priors(
         expand_arguments("alpha", N_pl)
         + expand_arguments("beta", N_pl)
         + expand_arguments("mmin", N_pl)
@@ -132,26 +127,14 @@ def main() -> None:
         prior_dict,
     )
 
-    log_rate_prior_param = match_all(
+    log_rate_prior_param = get_processed_priors(
         expand_arguments("log_rate", N_pl + N_g), prior_dict
     )
-
-    for key, value in prior_param.items():
-        if isinstance(value, list):
-            if len(value) != 2:
-                raise ValueError(f"Invalid prior value for {key}: {value}")
-            prior_param[key] = Uniform(value[0], value[1], validate_args=True)
-
-    for key, value in log_rate_prior_param.items():
-        if isinstance(value, list):
-            if len(value) != 2:
-                raise ValueError(f"Invalid prior value for {key}: {value}")
-            log_rate_prior_param[key] = Uniform(value[0], value[1], validate_args=True)
 
     model = Bake(NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment)(
         N_pl=N_pl,
         N_g=N_g,
-        **prior_param,
+        **model_prior_param,
     )
 
     poisson_likelihood.is_multi_rate_model = True
@@ -176,8 +159,8 @@ def main() -> None:
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
     initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))
 
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[0]
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[0]
+    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
+    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
     FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = expand_arguments(
         "log_rate", N_pl + N_g

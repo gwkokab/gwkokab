@@ -18,6 +18,11 @@ from __future__ import annotations
 import json
 from typing_extensions import List
 
+import pandas as pd
+from numpyro.distributions import Uniform
+
+from .regex import match_all
+
 
 def expand_arguments(arg: str, n: int) -> List[str]:
     r"""Extend the argument with a number of strings.
@@ -56,3 +61,39 @@ def flowMC_json_read_and_process(json_file: str) -> dict:
     flowMC_json["sampler_kwargs"]["verbose"] = False
 
     return flowMC_json
+
+
+def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> dict:
+    r"""Get the posterior data from a list of files.
+
+    :param filenames: list of filenames
+    :param posterior_columns: list of posterior columns
+    :return: dictionary of posterior data
+    """
+    data_set = {
+        "data": [
+            pd.read_csv(event, delimiter=" ")[posterior_columns].to_numpy()
+            for event in filenames
+        ],
+        "N": len(filenames),
+    }
+    return data_set
+
+
+def get_processed_priors(params: List[str], priors: dict) -> dict:
+    r"""Get the processed priors from a list of parameters.
+
+    :param params: list of parameters
+    :param priors: dictionary of priors
+    :raises ValueError: if the prior value is invalid
+    :return: dictionary of processed priors
+    """
+    matched_prior_params = match_all(params, priors)
+    for key, value in matched_prior_params.items():
+        if isinstance(value, list):
+            if len(value) != 2:
+                raise ValueError(f"Invalid prior value for {key}: {value}")
+            matched_prior_params[key] = Uniform(
+                low=value[0], high=value[1], validate_args=True
+            )
+    return matched_prior_params
