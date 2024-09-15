@@ -36,7 +36,7 @@ def expand_arguments(arg: str, n: int) -> List[str]:
     :param n: number of strings to extend
     :return: list of extended arguments
     """
-    return list(map(lambda i: arg + f"_{i}", range(n)))
+    return [f"{arg}_{i}" for i in range(n)]
 
 
 def flowMC_json_read_and_process(json_file: str) -> dict:
@@ -46,19 +46,21 @@ def flowMC_json_read_and_process(json_file: str) -> dict:
     with open(json_file, "r") as f:
         flowMC_json = json.load(f)
 
-    flowMC_json["data_dump_kwargs"]["out_dir"] = "sampler_data"
+    key_key_value = [
+        ("data_dump_kwargs", "out_dir", "sampler_data"),
+        ("local_sampler_kwargs", "jit", True),
+        ("local_sampler_kwargs", "sampler", "MALA"),
+        ("nf_model_kwargs", "model", "MaskedCouplingRQSpline"),
+        ("sampler_kwargs", "data", None),
+        ("sampler_kwargs", "logging", True),
+        ("sampler_kwargs", "outdir", "inf-plot"),
+        ("sampler_kwargs", "precompile", False),
+        ("sampler_kwargs", "use_global", True),
+        ("sampler_kwargs", "verbose", False),
+    ]
 
-    flowMC_json["local_sampler_kwargs"]["jit"] = True
-    flowMC_json["local_sampler_kwargs"]["sampler"] = "MALA"
-
-    flowMC_json["nf_model_kwargs"]["model"] = "MaskedCouplingRQSpline"
-
-    flowMC_json["sampler_kwargs"]["data"] = None
-    flowMC_json["sampler_kwargs"]["logging"] = True
-    flowMC_json["sampler_kwargs"]["outdir"] = "inf-plot"
-    flowMC_json["sampler_kwargs"]["precompile"] = False
-    flowMC_json["sampler_kwargs"]["use_global"] = True
-    flowMC_json["sampler_kwargs"]["verbose"] = False
+    for key1, key2, value in key_key_value:
+        flowMC_json[key1][key2] = value
 
     return flowMC_json
 
