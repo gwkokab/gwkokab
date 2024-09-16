@@ -1324,42 +1324,22 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
         )
 
     if N_g > 0:
-        g_args_per_component = [
-            {
-                "loc": jnp.array(
-                    [
-                        params.get(f"loc_m1_{i}", params.get("loc_m1")),
-                        params.get(f"loc_m2_{i}", params.get("loc_m2")),
-                    ]
-                ),
-                "covariance_matrix": jnp.array(
-                    [
-                        [
-                            jnp.square(
-                                params.get(f"scale_m1_{i}", params.get("scale_m1"))
-                            ),
-                            0.0,
-                        ],
-                        [
-                            0.0,
-                            jnp.square(
-                                params.get(f"scale_m2_{i}", params.get("scale_m2"))
-                            ),
-                        ],
-                    ]
-                ),
-            }
+        g_m1 = [
+            Normal(
+                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                validate_args=True,
+            )
             for i in range(N_g)
         ]
-        gaussians = jtr.map(
-            lambda x: MultivariateNormal(
-                loc=x["loc"],
-                covariance_matrix=x["covariance_matrix"],
+        g_m2 = [
+            Normal(
+                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
                 validate_args=True,
-            ),
-            g_args_per_component,
-            is_leaf=lambda x: isinstance(x, dict),
-        )
+            )
+            for i in range(N_g)
+        ]
         chis_g = [
             get_default_spin_magnitude_dists(
                 mean_chi1=params.get(f"mean_chi1_g_{i}", params.get("mean_chi1_g")),
@@ -1387,8 +1367,9 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
             for i in range(N_g)
         ]
         g_component_dist = jtr.map(
-            lambda g, chis, tilts: JointDistribution(g, *chis, *tilts),
-            gaussians,
+            lambda gm1, gm2, chis, tilts: JointDistribution(gm1, gm2, *chis, *tilts),
+            g_m1,
+            g_m2,
             chis_g,
             tilts_g,
             is_leaf=lambda x: isinstance(x, Distribution),
@@ -1502,42 +1483,22 @@ def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGe
         )
 
     if N_g > 0:
-        g_args_per_component = [
-            {
-                "loc": jnp.array(
-                    [
-                        params.get(f"loc_m1_{i}", params.get("loc_m1")),
-                        params.get(f"loc_m2_{i}", params.get("loc_m2")),
-                    ]
-                ),
-                "covariance_matrix": jnp.array(
-                    [
-                        [
-                            jnp.square(
-                                params.get(f"scale_m1_{i}", params.get("scale_m1"))
-                            ),
-                            0.0,
-                        ],
-                        [
-                            0.0,
-                            jnp.square(
-                                params.get(f"scale_m2_{i}", params.get("scale_m2"))
-                            ),
-                        ],
-                    ]
-                ),
-            }
+        g_m1 = [
+            Normal(
+                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                validate_args=True,
+            )
             for i in range(N_g)
         ]
-        gaussians = jtr.map(
-            lambda x: MultivariateNormal(
-                loc=x["loc"],
-                covariance_matrix=x["covariance_matrix"],
+        g_m2 = [
+            Normal(
+                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
                 validate_args=True,
-            ),
-            g_args_per_component,
-            is_leaf=lambda x: isinstance(x, dict),
-        )
+            )
+            for i in range(N_g)
+        ]
 
         chis_g = [
             get_default_spin_magnitude_dists(
@@ -1554,8 +1515,9 @@ def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGe
         ]
 
         g_component_dist = jtr.map(
-            lambda g, chis: JointDistribution(g, *chis),
-            gaussians,
+            lambda gm1, gm2, chis: JointDistribution(gm1, gm2, *chis),
+            g_m1,
+            g_m2,
             chis_g,
             is_leaf=lambda x: isinstance(x, Distribution),
         )
@@ -1654,42 +1616,22 @@ def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGenera
         )
 
     if N_g > 0:
-        g_args_per_component = [
-            {
-                "loc": jnp.array(
-                    [
-                        params.get(f"loc_m1_{i}", params.get("loc_m1")),
-                        params.get(f"loc_m2_{i}", params.get("loc_m2")),
-                    ]
-                ),
-                "covariance_matrix": jnp.array(
-                    [
-                        [
-                            jnp.square(
-                                params.get(f"scale_m1_{i}", params.get("scale_m1"))
-                            ),
-                            0.0,
-                        ],
-                        [
-                            0.0,
-                            jnp.square(
-                                params.get(f"scale_m2_{i}", params.get("scale_m2"))
-                            ),
-                        ],
-                    ]
-                ),
-            }
+        g_m1 = [
+            Normal(
+                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                validate_args=True,
+            )
             for i in range(N_g)
         ]
-        gaussians = jtr.map(
-            lambda x: MultivariateNormal(
-                loc=x["loc"],
-                covariance_matrix=x["covariance_matrix"],
+        g_m2 = [
+            Normal(
+                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
                 validate_args=True,
-            ),
-            g_args_per_component,
-            is_leaf=lambda x: isinstance(x, dict),
-        )
+            )
+            for i in range(N_g)
+        ]
 
         tilts_g = [
             get_spin_misalignment_dist(
@@ -1705,8 +1647,9 @@ def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGenera
             for i in range(N_g)
         ]
         g_component_dist = jtr.map(
-            lambda g, tilts: JointDistribution(g, *tilts),
-            gaussians,
+            lambda gm1, gm2, tilts: JointDistribution(gm1, gm2, *tilts),
+            g_m1,
+            g_m2,
             tilts_g,
             is_leaf=lambda x: isinstance(x, Distribution),
         )
@@ -1774,41 +1717,27 @@ def NPowerLawMGaussian(N_pl, N_g, **params) -> MixtureGeneral:
         )
 
     if N_g > 0:
-        g_args_per_component = [
-            {
-                "loc": jnp.array(
-                    [
-                        params.get(f"loc_m1_{i}", params.get("loc_m1")),
-                        params.get(f"loc_m2_{i}", params.get("loc_m2")),
-                    ]
-                ),
-                "covariance_matrix": jnp.array(
-                    [
-                        [
-                            jnp.square(
-                                params.get(f"scale_m1_{i}", params.get("scale_m1"))
-                            ),
-                            0.0,
-                        ],
-                        [
-                            0.0,
-                            jnp.square(
-                                params.get(f"scale_m2_{i}", params.get("scale_m2"))
-                            ),
-                        ],
-                    ]
-                ),
-            }
+        g_m1 = [
+            Normal(
+                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+        g_m2 = [
+            Normal(
+                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
+                validate_args=True,
+            )
             for i in range(N_g)
         ]
         g_component_dist = jtr.map(
-            lambda x: MultivariateNormal(
-                loc=x["loc"],
-                covariance_matrix=x["covariance_matrix"],
-                validate_args=True,
-            ),
-            g_args_per_component,
-            is_leaf=lambda x: isinstance(x, dict),
+            lambda gm1, gm2: JointDistribution(gm1, gm2),
+            g_m1,
+            g_m2,
+            is_leaf=lambda x: isinstance(x, Distribution),
         )
 
     if N_pl == 0 and N_g != 0:
