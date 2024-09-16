@@ -16,10 +16,11 @@ Models
     IndependentSpinOrientationGaussianIsotropic
     MassGapModel
     MultiPeakMassModel
-    MultiSourceModel
-    MultiSpinModel
     NDistribution
+    NPowerLawMGaussian
+    NPowerLawMGaussianWithDefaultSpinMagnitude
     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment
+    NPowerLawMGaussianWithSpinMisalignment
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
     TruncatedPowerLaw

@@ -46,7 +46,6 @@ from .utils import (
     doubly_truncated_powerlaw_icdf,
     doubly_truncated_powerlaw_log_prob,
     get_default_spin_magnitude_dists,
-    get_spin_magnitude_and_misalignment_dist,
     get_spin_misalignment_dist,
     JointDistribution,
     numerical_inverse_transform_sampling,
@@ -60,10 +59,11 @@ __all__ = [
     "IndependentSpinOrientationGaussianIsotropic",
     "MassGapModel",
     "MultiPeakMassModel",
-    "MultiSourceModel",
-    "MultiSpinModel",
     "NDistribution",
+    "NPowerLawMGaussian",
+    "NPowerLawMGaussianWithDefaultSpinMagnitude",
     "NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment",
+    "NPowerLawMGaussianWithSpinMisalignment",
     "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
     "TruncatedPowerLaw",
@@ -850,361 +850,6 @@ class Wysocki2019MassModel(Distribution):
         return jnp.column_stack((m1, m2))
 
 
-def MultiSpinModel(
-    alpha_m,
-    beta_m,
-    mmin,
-    mmax,
-    mean_chi_1_pl,
-    var_chi_1_pl,
-    mean_chi_2_pl,
-    var_chi_2_pl,
-    std_dev_title_1_pl,
-    std_dev_title_2_pl,
-    mean_m1,
-    std_dev_m1,
-    mean_m2,
-    std_dev_m2,
-    mean_chi_1_g,
-    var_chi_1_g,
-    mean_chi_2_g,
-    var_chi_2_g,
-    std_dev_title_1_g,
-    std_dev_title_2_g,
-) -> MixtureGeneral:
-    r"""See details Appendix D3 of `Population Properties of Compact Objects from
-    the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog <https://iopscience.iop.org/article/10.3847/2041-8213/abe949>`_.
-
-    .. note::
-        In original formulation, each component is scaled up by their respective rate
-        :math:`\mathcal{R}_{pl}` and :math:`\mathcal{R}_{g}`. However to streamline
-        the implementation with :mod:`numpyro`, we are not scaling each component with
-        their respective rate. Instead, we will deal this in Log-likelihood function.
-
-
-    :param alpha_m: Power-law slope of the primary mass distribution for the low-mass
-        subpopulation
-    :param beta_m: Power-law slope of the mass ratio distribution for the low-mass
-        subpopulation
-    :param mmin: Minimum mass of the primary mass distribution for the low-mass
-        subpopulation
-    :param mmax: Maximum mass of the primary mass distribution for the low-mass
-        subpopulation
-    :param mean_chi_1_pl: Mean of the beta distribution of primary spin magnitudes for
-        the low-mass subpopulation
-    :param var_chi_1_pl: Variance of the beta distribution of primary spin magnitudes
-        for the low-mass subpopulation
-    :param mean_chi_2_pl: Mean of the beta distribution of secondary spin magnitudes
-        for the low-mass subpopulation
-    :param var_chi_2_pl: Variance of the beta distribution of secondary spin
-        magnitudes for the low-mass subpopulation
-    :param std_dev_title_1_pl: Width of the Truncated Gaussian distribution of the
-        cosine of the primary spin-tilt angle for the low-mass subpopulation
-    :param std_dev_title_2_pl: Width of the Truncated Gaussian distribution of cos(
-        secondary spin-tilt angle) for the low-mass subpopulation
-    :param mean_m1: Centroid of the primary mass distribution for the high-mass
-        subpopulation
-    :param std_dev_m1: Width of the primary mass distribution for the high-mass
-        subpopulation
-    :param mean_m2: Centroid of the secondary mass distribution for the high-mass
-        subpopulation
-    :param std_dev_m2: Width of the secondary mass distribution for the high-mass
-        subpopulation
-    :param mean_chi_1_g: Mean of the beta distribution of primary spin magnitudes for
-        the high-mass subpopulation
-    :param var_chi_1_g: Variance of the beta distribution of primary spin magnitudes
-        for the high-mass subpopulation
-    :param mean_chi_2_g: Width of the Truncated Gaussian distribution of cos(primary
-        spin-tilt angle) for the high-mass subpopulation
-    :param var_chi_2_g: Mean of the beta distribution of secondary spin magnitudes for
-        the high-mass subpopulation
-    :param std_dev_title_1_g: Variance of the beta distribution of secondary spin
-        magnitudes for the high-mass subpopulation
-    :param std_dev_title_2_g: Width of the Truncated Gaussian distribution of cos(
-        secondary spin-tilt angle) for the high-mass subpopulation
-    """
-    ######################
-    # POWERLAW COMPONENT #
-    ######################
-
-    powerlaw = TransformedDistribution(
-        base_distribution=PowerLawPrimaryMassRatio(
-            alpha=alpha_m, beta=beta_m, mmin=mmin, mmax=mmax
-        ),
-        transforms=[PrimaryMassAndMassRatioToComponentMassesTransform()],
-        validate_args=True,
-    )
-    powerlaw_component = JointDistribution(
-        powerlaw,
-        *get_spin_magnitude_and_misalignment_dist(
-            mean_chi1=mean_chi_1_pl,
-            variance_chi1=var_chi_1_pl,
-            mean_chi2=mean_chi_2_pl,
-            variance_chi2=var_chi_2_pl,
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=std_dev_title_1_pl,
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=std_dev_title_2_pl,
-        ),
-    )
-
-    ######################
-    # GAUSSIAN COMPONENT #
-    ######################
-
-    m1_dist_g = Normal(loc=mean_m1, scale=std_dev_m1, validate_args=True)
-    m2_dist_g = Normal(loc=mean_m2, scale=std_dev_m2, validate_args=True)
-    gaussian_component = JointDistribution(
-        m1_dist_g,
-        m2_dist_g,
-        *get_spin_magnitude_and_misalignment_dist(
-            mean_chi1=mean_chi_1_g,
-            variance_chi1=var_chi_1_g,
-            mean_chi2=mean_chi_2_g,
-            variance_chi2=var_chi_2_g,
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=std_dev_title_1_g,
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=std_dev_title_2_g,
-        ),
-    )
-
-    return MixtureGeneral(
-        mixing_distribution=CategoricalProbs(
-            probs=jnp.ones(2) / 2.0, validate_args=True
-        ),
-        component_distributions=[powerlaw_component, gaussian_component],
-        support=constraints.real_vector,
-        validate_args=True,
-    )
-
-
-def MultiSourceModel(
-    # BBH Powerlaw params
-    alpha_BBH,
-    beta_BBH,
-    mmin_BBH,
-    mmax_BBH,
-    mean_chi_1_pl_BBH,
-    var_chi_1_pl_BBH,
-    mean_chi_2_pl_BBH,
-    var_chi_2_pl_BBH,
-    std_dev_title_1_pl_BBH,
-    std_dev_title_2_pl_BBH,
-    # BBH Gaussian params
-    mean_m1_BBH,
-    std_dev_m1_BBH,
-    mean_m2_BBH,
-    std_dev_m2_BBH,
-    mean_chi_1_g_BBH,
-    var_chi_1_g_BBH,
-    mean_chi_2_g_BBH,
-    var_chi_2_g_BBH,
-    std_dev_title_1_g_BBH,
-    std_dev_title_2_g_BBH,
-    # BHNS params
-    mean_m_BHNS,
-    std_dev_m_BHNS,
-    mean_chi_BH_BHNS,
-    var_chi_BH_BHNS,
-    mean_chi_NS_BHNS,
-    var_chi_NS_BHNS,
-    std_dev_title_BH_BHNS,
-    std_dev_title_NS_BHNS,
-    # BNS params
-    mean_m_NS,
-    std_dev_m_NS,
-    mmax_NS,
-    mean_chi_1_BNS,
-    var_chi_1_BNS,
-    mean_chi_2_BNS,
-    var_chi_2_BNS,
-    std_dev_title_1_BNS,
-    std_dev_title_2_BNS,
-) -> MixtureGeneral:
-    r"""See details in Appendix D3 of `Population of Merging Compact Binaries Inferred
-    Using Gravitational Waves through
-    GWTC-3 <https://doi.org/10.1103/PhysRevX.13.011048>`_.
-
-    .. note::
-        In original formulation, each component is scaled up by their respective rate
-        :math:`\mathcal{R}_{\mathrm{BBH},pl}`, :math:`\mathcal{R}_{\mathrm{BBH},g}`,
-        :math:`\mathcal{R}_{\mathrm{NSBH}}` and :math:`\mathcal{R}_{\mathrm{BNS}}`.
-        However to streamline the implementation with :mod:`NumPyro`, we are not
-        scaling each component with their respective rate. Instead, we will deal this
-        in Log-likelihood function.
-
-
-    :param alpha_BBH: Primary mass spectral index for the BBH power-law subpopulation
-    :param beta_BBH: Mass ratio spectral index for the BBH power-law subpopulation
-    :param mmin_BBH: Minimum mass of the BBH power-law subpopulation
-    :param mmax_BBH: Maximum mass of the BBH power-law subpopulation
-    :param mean_chi_1_pl_BBH: Mean of the beta distribution of primary spin
-        magnitudes for the BBH Gaussian subpopulation
-    :param var_chi_1_pl_BBH: Variance of the beta distribution of primary spin
-        magnitudes for the BBH Gaussian subpopulation
-    :param mean_chi_2_pl_BBH: Mean of the beta distribution of secondary spin
-        magnitudes for the BBH Gaussian subpopulation
-    :param var_chi_2_pl_BBH: Variance of the beta distribution of secondary spin
-        magnitudes for the BBH Gaussian subpopulation
-    :param std_dev_title_1_pl_BBH: Width of truncated Gaussian, determining typical
-        primary spin misalignment for the BBH Gaussian subpopulation
-    :param std_dev_title_2_pl_BBH: Width of truncated Gaussian, determining typical
-        secondary spin misalignment for the BBH Gaussian subpopulation
-    :param mean_m1_BBH: Centroid of the primary mass distribution for the BBH
-        Gaussian subpopulation
-    :param std_dev_m1_BBH: Width of the primary mass distribution for the BBH
-        Gaussian subpopulation
-    :param mean_m2_BBH: Centroid of the secondary mass distribution for the BBH
-        Gaussian subpopulation
-    :param std_dev_m2_BBH: Width of the secondary mass distribution for the BBH
-        Gaussian subpopulation
-    :param mean_chi_1_g_BBH: Mean of the beta distribution of primary spin magnitudes
-        for the BBH Gaussian subpopulation
-    :param var_chi_1_g_BBH: Variance of the beta distribution of primary spin
-        magnitudes for the BBH Gaussian subpopulation
-    :param mean_chi_2_g_BBH: Mean of the beta distribution of secondary spin
-        magnitudes for the BBH Gaussian subpopulation
-    :param var_chi_2_g_BBH: Variance of the beta distribution of secondary spin
-        magnitudes for the BBH Gaussian subpopulation
-    :param std_dev_title_1_g_BBH: Width of truncated Gaussian determining typical
-        primary spin misalignment for the BBH Gaussian subpopulation
-    :param std_dev_title_2_g_BBH: Width of truncated Gaussian determining typical
-        secondary spin misalignment for the BBH Gaussian subpopulation
-    :param mean_m_BHNS: Centroid of the BH mass distribution for the NSBH
-    :param std_dev_m_BHNS: Width of the BH mass distribution for the NSBH
-    :param mean_chi_BH_BHNS: Mean of the beta distribution of spin magnitudes for the
-        BH in the NSBH subpopulation
-    :param var_chi_BH_BHNS: Variance of the beta distribution of spin magnitudes for
-        the BH in the NSBH subpopulation
-    :param mean_chi_NS_BHNS: Mean of the beta distribution of spin magnitudes for the
-        NS in the NSBH subpopulation
-    :param var_chi_NS_BHNS: Variance of the beta distribution of spin magnitudes for
-        the NS in the NSBH subpopulation
-    :param std_dev_title_BH_BHNS: Width of truncated Gaussian determining typical
-        primary (secondary) spin misalignment for the BH in the NSBH subpopulation
-    :param std_dev_title_NS_BHNS: Width of truncated Gaussian determining typical
-        primary (secondary) spin misalignment for the NS in the NSBH subpopulation
-    :param mean_m_NS: Centroid of the NS mass distribution
-    :param std_dev_m_NS: Width of the NS mass distribution
-    :param mmax_NS: Maximum mass of all NSs
-    :param mean_chi_1_BNS: Mean of the beta distribution of primary spin magnitudes in
-        the BNS subpopulation
-    :param var_chi_1_BNS: Variance of the beta distribution of primary spin magnitudes
-        in the BNS subpopulation
-    :param mean_chi_2_BNS: Mean of the beta distribution of secondary spin magnitudes
-        in the BNS subpopulation
-    :param var_chi_2_BNS: Variance of the beta distribution of secondary spin magnitudes
-        in the BNS subpopulation
-    :param std_dev_title_1_BNS: Width of truncated Gaussian determining typical primary
-        spin misalignment in the BNS subpopulation
-    :param std_dev_title_2_BNS: Width of truncated Gaussian determining typical
-        secondary spin misalignment in the BNS subpopulation
-    """
-    ##########################
-    # BBH POWERLAW COMPONENT #
-    ##########################
-
-    powerlaw_BBH = TransformedDistribution(
-        base_distribution=PowerLawPrimaryMassRatio(
-            alpha=alpha_BBH, beta=beta_BBH, mmin=mmin_BBH, mmax=mmax_BBH
-        ),
-        transforms=[PrimaryMassAndMassRatioToComponentMassesTransform()],
-        validate_args=True,
-    )
-    powerlaw_BBH_component = JointDistribution(
-        powerlaw_BBH,
-        *get_spin_magnitude_and_misalignment_dist(
-            mean_chi1=mean_chi_1_pl_BBH,
-            variance_chi1=var_chi_1_pl_BBH,
-            mean_chi2=mean_chi_2_pl_BBH,
-            variance_chi2=var_chi_2_pl_BBH,
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=std_dev_title_1_pl_BBH,
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=std_dev_title_2_pl_BBH,
-        ),
-    )
-
-    ##########################
-    # BBH GAUSSIAN COMPONENT #
-    ##########################
-
-    m1_dist_g_BBH = Normal(loc=mean_m1_BBH, scale=std_dev_m1_BBH, validate_args=True)
-    m2_dist_g_BBH = Normal(loc=mean_m2_BBH, scale=std_dev_m2_BBH, validate_args=True)
-    gaussian_BBH_component = JointDistribution(
-        m1_dist_g_BBH,
-        m2_dist_g_BBH,
-        *get_spin_magnitude_and_misalignment_dist(
-            mean_chi1=mean_chi_1_g_BBH,
-            variance_chi1=var_chi_1_g_BBH,
-            mean_chi2=mean_chi_2_g_BBH,
-            variance_chi2=var_chi_2_g_BBH,
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=std_dev_title_1_g_BBH,
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=std_dev_title_2_g_BBH,
-        ),
-    )
-
-    ###########################
-    # BHNS GAUSSIAN COMPONENT #
-    ###########################
-
-    m_dist_BH_BHNS = Normal(loc=mean_m_BHNS, scale=std_dev_m_BHNS, validate_args=True)
-    m_dist_NS_BHNS = TruncatedNormal(
-        loc=mean_m_NS, scale=std_dev_m_NS, high=mmax_NS, validate_args=True
-    )
-    BHNS_component = JointDistribution(
-        m_dist_BH_BHNS,
-        m_dist_NS_BHNS,
-        *get_spin_magnitude_and_misalignment_dist(
-            mean_chi1=mean_chi_BH_BHNS,
-            variance_chi1=var_chi_BH_BHNS,
-            mean_chi2=mean_chi_NS_BHNS,
-            variance_chi2=var_chi_NS_BHNS,
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=std_dev_title_BH_BHNS,
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=std_dev_title_NS_BHNS,
-        ),
-    )
-
-    #########################
-    # NS GAUSSIAN COMPONENT #
-    #########################
-
-    BNS_component = JointDistribution(
-        m_dist_NS_BHNS,
-        m_dist_NS_BHNS,
-        *get_spin_magnitude_and_misalignment_dist(
-            mean_chi1=mean_chi_1_BNS,
-            variance_chi1=var_chi_1_BNS,
-            mean_chi2=mean_chi_2_BNS,
-            variance_chi2=var_chi_2_BNS,
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=std_dev_title_1_BNS,
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=std_dev_title_2_BNS,
-        ),
-    )
-
-    return MixtureGeneral(
-        mixing_distribution=CategoricalProbs(
-            probs=jnp.ones(4) / 4.0, validate_args=True
-        ),
-        component_distributions=[
-            powerlaw_BBH_component,
-            gaussian_BBH_component,
-            BHNS_component,
-            BNS_component,
-        ],
-        support=constraints.real_vector,
-        validate_args=True,
-    )
-
-
 def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
     N_pl, N_g, **params
 ) -> MixtureGeneral:
@@ -1272,125 +917,480 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
     :param std_dev_tilt2_g: default value for :code:`std_dev_tilt2_g`
     :return: Mixture of N power-law and M Gaussians
     """
-    pl_arg_names = PowerLawPrimaryMassRatio.arg_constraints.keys()
-    pl_args_per_component = [
-        {arg: params.get(f"{arg}_{i}", params.get(arg)) for arg in pl_arg_names}
-        for i in range(N_pl)
-    ]
-    powerlaws = jtr.map(
-        lambda x: TransformedDistribution(
-            base_distribution=PowerLawPrimaryMassRatio(**x),
-            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-        ),
-        pl_args_per_component,
-        is_leaf=lambda x: isinstance(x, dict),
-    )
+    if N_pl > 0:
+        pl_arg_names = PowerLawPrimaryMassRatio.arg_constraints.keys()
+        pl_args_per_component = [
+            {arg: params.get(f"{arg}_{i}", params.get(arg)) for arg in pl_arg_names}
+            for i in range(N_pl)
+        ]
+        powerlaws = jtr.map(
+            lambda x: TransformedDistribution(
+                base_distribution=PowerLawPrimaryMassRatio(**x),
+                transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            ),
+            pl_args_per_component,
+            is_leaf=lambda x: isinstance(x, dict),
+        )
+        chis_pl = [
+            get_default_spin_magnitude_dists(
+                mean_chi1=params.get(f"mean_chi1_pl_{i}", params.get("mean_chi1_pl")),
+                variance_chi1=params.get(
+                    f"variance_chi1_pl_{i}", params.get("variance_chi1_pl")
+                ),
+                mean_chi2=params.get(f"mean_chi2_pl_{i}", params.get("mean_chi2_pl")),
+                variance_chi2=params.get(
+                    f"variance_chi2_pl_{i}", params.get("variance_chi2_pl")
+                ),
+            )
+            for i in range(N_pl)
+        ]
+        tilts_pl = [
+            get_spin_misalignment_dist(
+                mean_tilt_1=1.0,
+                std_dev_tilt_1=params.get(
+                    f"std_dev_tilt1_pl_{i}", params.get("std_dev_tilt1_pl")
+                ),
+                mean_tilt_2=1.0,
+                std_dev_tilt_2=params.get(
+                    f"std_dev_tilt2_pl_{i}", params.get("std_dev_tilt2_pl")
+                ),
+            )
+            for i in range(N_pl)
+        ]
+        pl_component_dist = jtr.map(
+            lambda pl, chis, tilts: JointDistribution(pl, *chis, *tilts),
+            powerlaws,
+            chis_pl,
+            tilts_pl,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
 
-    g_args_per_component = [
-        {
-            "loc": jnp.array(
-                [
-                    params.get(f"loc_m1_{i}", params.get("loc_m1")),
-                    params.get(f"loc_m2_{i}", params.get("loc_m2")),
-                ]
-            ),
-            "covariance_matrix": jnp.array(
-                [
-                    [
-                        jnp.square(params.get(f"scale_m1_{i}", params.get("scale_m1"))),
-                        0.0,
-                    ],
-                    [
-                        0.0,
-                        jnp.square(params.get(f"scale_m2_{i}", params.get("scale_m2"))),
-                    ],
-                ]
-            ),
-        }
-        for i in range(N_g)
-    ]
-    gaussians = jtr.map(
-        lambda x: MultivariateNormal(
-            loc=x["loc"], covariance_matrix=x["covariance_matrix"], validate_args=True
-        ),
-        g_args_per_component,
-        is_leaf=lambda x: isinstance(x, dict),
-    )
+    if N_g > 0:
+        g_m1 = [
+            Normal(
+                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+        g_m2 = [
+            Normal(
+                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+        chis_g = [
+            get_default_spin_magnitude_dists(
+                mean_chi1=params.get(f"mean_chi1_g_{i}", params.get("mean_chi1_g")),
+                variance_chi1=params.get(
+                    f"variance_chi1_g_{i}", params.get("variance_chi1_g")
+                ),
+                mean_chi2=params.get(f"mean_chi2_g_{i}", params.get("mean_chi2_g")),
+                variance_chi2=params.get(
+                    f"variance_chi2_g_{i}", params.get("variance_chi2_g")
+                ),
+            )
+            for i in range(N_g)
+        ]
+        tilts_g = [
+            get_spin_misalignment_dist(
+                mean_tilt_1=1.0,
+                std_dev_tilt_1=params.get(
+                    f"std_dev_tilt1_g_{i}", params.get("std_dev_tilt1_g")
+                ),
+                mean_tilt_2=1.0,
+                std_dev_tilt_2=params.get(
+                    f"std_dev_tilt2_g_{i}", params.get("std_dev_tilt2_g")
+                ),
+            )
+            for i in range(N_g)
+        ]
+        g_component_dist = jtr.map(
+            lambda gm1, gm2, chis, tilts: JointDistribution(gm1, gm2, *chis, *tilts),
+            g_m1,
+            g_m2,
+            chis_g,
+            tilts_g,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
 
-    chis_pl = [
-        get_default_spin_magnitude_dists(
-            mean_chi1=params.get(f"mean_chi1_pl_{i}", params.get("mean_chi1_pl")),
-            variance_chi1=params.get(
-                f"variance_chi1_pl_{i}", params.get("variance_chi1_pl")
-            ),
-            mean_chi2=params.get(f"mean_chi2_pl_{i}", params.get("mean_chi2_pl")),
-            variance_chi2=params.get(
-                f"variance_chi2_pl_{i}", params.get("variance_chi2_pl")
-            ),
-        )
-        for i in range(N_pl)
-    ]
-    chis_g = [
-        get_default_spin_magnitude_dists(
-            mean_chi1=params.get(f"mean_chi1_g_{i}", params.get("mean_chi1_g")),
-            variance_chi1=params.get(
-                f"variance_chi1_g_{i}", params.get("variance_chi1_g")
-            ),
-            mean_chi2=params.get(f"mean_chi2_g_{i}", params.get("mean_chi2_g")),
-            variance_chi2=params.get(
-                f"variance_chi2_g_{i}", params.get("variance_chi2_g")
-            ),
-        )
-        for i in range(N_g)
-    ]
-
-    tilts_pl = [
-        get_spin_misalignment_dist(
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=params.get(
-                f"std_dev_tilt1_pl_{i}", params.get("std_dev_tilt1_pl")
-            ),
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=params.get(
-                f"std_dev_tilt2_pl_{i}", params.get("std_dev_tilt2_pl")
-            ),
-        )
-        for i in range(N_pl)
-    ]
-    tilts_g = [
-        get_spin_misalignment_dist(
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=params.get(
-                f"std_dev_tilt1_g_{i}", params.get("std_dev_tilt1_g")
-            ),
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=params.get(
-                f"std_dev_tilt2_g_{i}", params.get("std_dev_tilt2_g")
-            ),
-        )
-        for i in range(N_g)
-    ]
+    if N_pl == 0 and N_g != 0:
+        component_dists = g_component_dist
+    elif N_g == 0 and N_pl != 0:
+        component_dists = pl_component_dist
+    else:
+        component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
     mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
 
-    pl_component_dist = jtr.map(
-        lambda pl, chis, tilts: JointDistribution(pl, *chis, *tilts),
-        powerlaws,
-        chis_pl,
-        tilts_pl,
-        is_leaf=lambda x: isinstance(x, Distribution),
+    return MixtureGeneral(
+        mixing_dist,
+        component_dists,
+        support=constraints.real_vector,
+        validate_args=True,
     )
 
-    g_component_dist = jtr.map(
-        lambda g, chis, tilts: JointDistribution(g, *chis, *tilts),
-        gaussians,
-        chis_g,
-        tilts_g,
-        is_leaf=lambda x: isinstance(x, Distribution),
+
+def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGeneral:
+    r"""Mixture of N power-law and M Gaussians.
+
+    :param N_pl: number of power-law components
+    :param N_g: number of Gaussian components
+    :param alpha_i: Power law index for primary mass for ith component, where
+        :math:`0\leq i < N_{pl}`
+    :param beta_i: Power law index for mass ratio for ith component, where
+        :math:`0\leq i < N_{pl}`
+    :param mmin_i: Minimum mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param mmax_i: Maximum mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param mean_chi1_pl_i: Mean of the beta distribution of primary spin magnitudes for
+        ith component, where :math:`0\leq i < N_{pl}`
+    :param variance_chi1_pl_i: Variance of the beta distribution of primary spin
+        magnitudes for ith component, where :math:`0\leq i < N_{pl}`
+    :param mean_chi2_pl_i: Mean of the beta distribution of secondary spin magnitudes
+        for ith component, where :math:`0\leq i < N_{pl}`
+    :param variance_chi2_pl_i: Variance of the beta distribution of secondary spin
+        magnitudes for ith component, where :math:`0\leq i < N_{pl}`
+    :param loc_m1_i: Mean of the primary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param scale_m1_i: Width of the primary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param loc_m2_i: Mean of the secondary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param scale_m2_i: Width of the secondary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param mean_chi1_g_i: Mean of the beta distribution of primary spin magnitudes for
+        ith component, where :math:`0\leq i < N_{g}`
+    :param variance_chi1_g_i: Variance of the beta distribution of primary spin
+        magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param mean_chi2_g_i: Mean of the beta distribution of secondary spin magnitudes for
+        ith component, where :math:`0\leq i < N_{g}`
+    :param variance_chi2_g_i: Variance of the beta distribution of secondary spin
+        magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param alpha: default value for :code:`alpha`
+    :param beta: default value for :code:`beta`
+    :param mmin: default value for :code:`mmin`
+    :param mmax: default value for :code:`mmax`
+    :param mean_chi1_pl: default value for :code:`mean_chi1_pl`
+    :param variance_chi1_pl: default value for :code:`variance_chi1_pl`
+    :param mean_chi2_pl: default value for :code:`mean_chi2_pl`
+    :param variance_chi2_pl: default value for :code:`variance_chi2_pl`
+    :param loc_m1: default value for :code:`loc_m1`
+    :param scale_m1: default value for :code:`scale_m1`
+    :param loc_m2: default value for :code:`loc_m2`
+    :param scale_m2: default value for :code:`scale_m2`
+    :param mean_chi1_g: default value for :code:`mean_chi1_g`
+    :param variance_chi1_g: default value for :code:`variance_chi1_g`
+    :param mean_chi2_g: default value for :code:`mean_chi2_g`
+    :param variance_chi2_g: default value for :code:`variance_chi2_g`
+    :return: Mixture of N power-law and M Gaussians
+    """
+    if N_pl > 0:
+        pl_arg_names = PowerLawPrimaryMassRatio.arg_constraints.keys()
+        pl_args_per_component = [
+            {arg: params.get(f"{arg}_{i}", params.get(arg)) for arg in pl_arg_names}
+            for i in range(N_pl)
+        ]
+        powerlaws = jtr.map(
+            lambda x: TransformedDistribution(
+                base_distribution=PowerLawPrimaryMassRatio(**x),
+                transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            ),
+            pl_args_per_component,
+            is_leaf=lambda x: isinstance(x, dict),
+        )
+
+        chis_pl = [
+            get_default_spin_magnitude_dists(
+                mean_chi1=params.get(f"mean_chi1_pl_{i}", params.get("mean_chi1_pl")),
+                variance_chi1=params.get(
+                    f"variance_chi1_pl_{i}", params.get("variance_chi1_pl")
+                ),
+                mean_chi2=params.get(f"mean_chi2_pl_{i}", params.get("mean_chi2_pl")),
+                variance_chi2=params.get(
+                    f"variance_chi2_pl_{i}", params.get("variance_chi2_pl")
+                ),
+            )
+            for i in range(N_pl)
+        ]
+
+        pl_component_dist = jtr.map(
+            lambda pl, chis: JointDistribution(pl, *chis),
+            powerlaws,
+            chis_pl,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
+
+    if N_g > 0:
+        g_m1 = [
+            Normal(
+                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+        g_m2 = [
+            Normal(
+                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+
+        chis_g = [
+            get_default_spin_magnitude_dists(
+                mean_chi1=params.get(f"mean_chi1_g_{i}", params.get("mean_chi1_g")),
+                variance_chi1=params.get(
+                    f"variance_chi1_g_{i}", params.get("variance_chi1_g")
+                ),
+                mean_chi2=params.get(f"mean_chi2_g_{i}", params.get("mean_chi2_g")),
+                variance_chi2=params.get(
+                    f"variance_chi2_g_{i}", params.get("variance_chi2_g")
+                ),
+            )
+            for i in range(N_g)
+        ]
+
+        g_component_dist = jtr.map(
+            lambda gm1, gm2, chis: JointDistribution(gm1, gm2, *chis),
+            g_m1,
+            g_m2,
+            chis_g,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
+
+    if N_pl == 0 and N_g != 0:
+        component_dists = g_component_dist
+    elif N_g == 0 and N_pl != 0:
+        component_dists = pl_component_dist
+    else:
+        component_dists = pl_component_dist + g_component_dist
+
+    N = N_pl + N_g
+    mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
+
+    return MixtureGeneral(
+        mixing_dist,
+        component_dists,
+        support=constraints.real_vector,
+        validate_args=True,
     )
 
-    component_dists = pl_component_dist + g_component_dist
+
+def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGeneral:
+    r"""Mixture of N power-law and M Gaussians.
+
+    :param N_pl: number of power-law components
+    :param N_g: number of Gaussian components
+    :param alpha_i: Power law index for primary mass for ith component, where
+        :math:`0\leq i < N_{pl}`
+    :param beta_i: Power law index for mass ratio for ith component, where
+        :math:`0\leq i < N_{pl}`
+    :param mmin_i: Minimum mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param mmax_i: Maximum mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param std_dev_tilt1_pl_i: Standard deviation of the tilt distribution of primary
+        tilt for ith component, where :math:`0\leq i < N_{pl}`
+    :param std_dev_tilt2_pl_i: Standard deviation of the tilt distribution of secondary
+        tilt for ith component, where :math:`0\leq i < N_{pl}`
+    :param loc_m1_i: Mean of the primary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param scale_m1_i: Width of the primary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param loc_m2_i: Mean of the secondary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param scale_m2_i: Width of the secondary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param std_dev_tilt1_g_i: Variance of the beta distribution of primary spin
+        magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param std_dev_tilt2_g_i: Variance of the beta distribution of secondary spin
+        magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param alpha: default value for :code:`alpha`
+    :param beta: default value for :code:`beta`
+    :param mmin: default value for :code:`mmin`
+    :param mmax: default value for :code:`mmax`
+    :param std_dev_tilt1_pl: default value for :code:`std_dev_tilt1_pl`
+    :param std_dev_tilt2_pl: default value for :code:`std_dev_tilt2_pl`
+    :param loc_m1: default value for :code:`loc_m1`
+    :param scale_m1: default value for :code:`scale_m1`
+    :param loc_m2: default value for :code:`loc_m2`
+    :param scale_m2: default value for :code:`scale_m2`
+    :param std_dev_tilt1_g: default value for :code:`std_dev_tilt1_g`
+    :param std_dev_tilt2_g: default value for :code:`std_dev_tilt2_g`
+    :return: Mixture of N power-law and M Gaussians
+    """
+    if N_pl > 0:
+        pl_arg_names = PowerLawPrimaryMassRatio.arg_constraints.keys()
+        pl_args_per_component = [
+            {arg: params.get(f"{arg}_{i}", params.get(arg)) for arg in pl_arg_names}
+            for i in range(N_pl)
+        ]
+        powerlaws = jtr.map(
+            lambda x: TransformedDistribution(
+                base_distribution=PowerLawPrimaryMassRatio(**x),
+                transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            ),
+            pl_args_per_component,
+            is_leaf=lambda x: isinstance(x, dict),
+        )
+        tilts_pl = [
+            get_spin_misalignment_dist(
+                mean_tilt_1=1.0,
+                std_dev_tilt_1=params.get(
+                    f"std_dev_tilt1_pl_{i}", params.get("std_dev_tilt1_pl")
+                ),
+                mean_tilt_2=1.0,
+                std_dev_tilt_2=params.get(
+                    f"std_dev_tilt2_pl_{i}", params.get("std_dev_tilt2_pl")
+                ),
+            )
+            for i in range(N_pl)
+        ]
+        pl_component_dist = jtr.map(
+            lambda pl, tilts: JointDistribution(pl, *tilts),
+            powerlaws,
+            tilts_pl,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
+
+    if N_g > 0:
+        g_m1 = [
+            Normal(
+                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+        g_m2 = [
+            Normal(
+                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+
+        tilts_g = [
+            get_spin_misalignment_dist(
+                mean_tilt_1=1.0,
+                std_dev_tilt_1=params.get(
+                    f"std_dev_tilt1_g_{i}", params.get("std_dev_tilt1_g")
+                ),
+                mean_tilt_2=1.0,
+                std_dev_tilt_2=params.get(
+                    f"std_dev_tilt2_g_{i}", params.get("std_dev_tilt2_g")
+                ),
+            )
+            for i in range(N_g)
+        ]
+        g_component_dist = jtr.map(
+            lambda gm1, gm2, tilts: JointDistribution(gm1, gm2, *tilts),
+            g_m1,
+            g_m2,
+            tilts_g,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
+
+    if N_pl == 0 and N_g != 0:
+        component_dists = g_component_dist
+    elif N_g == 0 and N_pl != 0:
+        component_dists = pl_component_dist
+    else:
+        component_dists = pl_component_dist + g_component_dist
+
+    N = N_pl + N_g
+    mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
+
+    return MixtureGeneral(
+        mixing_dist,
+        component_dists,
+        support=constraints.real_vector,
+        validate_args=True,
+    )
+
+
+def NPowerLawMGaussian(N_pl, N_g, **params) -> MixtureGeneral:
+    r"""Mixture of N power-law and M Gaussians.
+
+    :param N_pl: number of power-law components
+    :param N_g: number of Gaussian components
+    :param alpha_i: Power law index for primary mass for ith component, where
+        :math:`0\leq i < N_{pl}`
+    :param beta_i: Power law index for mass ratio for ith component, where
+        :math:`0\leq i < N_{pl}`
+    :param mmin_i: Minimum mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param mmax_i: Maximum mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param loc_m1_i: Mean of the primary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param scale_m1_i: Width of the primary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param loc_m2_i: Mean of the secondary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param scale_m2_i: Width of the secondary mass distribution for ith component, where
+        :math:`0\leq i < N_{g}`
+    :param alpha: default value for :code:`alpha`
+    :param beta: default value for :code:`beta`
+    :param mmin: default value for :code:`mmin`
+    :param mmax: default value for :code:`mmax`
+    :param loc_m1: default value for :code:`loc_m1`
+    :param scale_m1: default value for :code:`scale_m1`
+    :param loc_m2: default value for :code:`loc_m2`
+    :param scale_m2: default value for :code:`scale_m2`
+    :return: Mixture of N power-law and M Gaussians
+    """
+    if N_pl > 0:
+        pl_arg_names = PowerLawPrimaryMassRatio.arg_constraints.keys()
+        pl_args_per_component = [
+            {arg: params.get(f"{arg}_{i}", params.get(arg)) for arg in pl_arg_names}
+            for i in range(N_pl)
+        ]
+        pl_component_dist = jtr.map(
+            lambda x: TransformedDistribution(
+                base_distribution=PowerLawPrimaryMassRatio(**x),
+                transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            ),
+            pl_args_per_component,
+            is_leaf=lambda x: isinstance(x, dict),
+        )
+
+    if N_g > 0:
+        g_m1 = [
+            Normal(
+                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+        g_m2 = [
+            Normal(
+                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
+                validate_args=True,
+            )
+            for i in range(N_g)
+        ]
+        g_component_dist = jtr.map(
+            lambda gm1, gm2: JointDistribution(gm1, gm2),
+            g_m1,
+            g_m2,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
+
+    if N_pl == 0 and N_g != 0:
+        component_dists = g_component_dist
+    elif N_g == 0 and N_pl != 0:
+        component_dists = pl_component_dist
+    else:
+        component_dists = pl_component_dist + g_component_dist
+
+    N = N_pl + N_g
+    mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
 
     return MixtureGeneral(
         mixing_dist,
