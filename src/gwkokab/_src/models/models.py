@@ -63,6 +63,7 @@ __all__ = [
     "MultiSourceModel",
     "MultiSpinModel",
     "NDistribution",
+    "NPowerLawMGaussianWithDefaultSpinMagnitude",
     "NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment",
     "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
