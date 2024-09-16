@@ -1275,125 +1275,134 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
     :param std_dev_tilt2_g: default value for :code:`std_dev_tilt2_g`
     :return: Mixture of N power-law and M Gaussians
     """
-    pl_arg_names = PowerLawPrimaryMassRatio.arg_constraints.keys()
-    pl_args_per_component = [
-        {arg: params.get(f"{arg}_{i}", params.get(arg)) for arg in pl_arg_names}
-        for i in range(N_pl)
-    ]
-    powerlaws = jtr.map(
-        lambda x: TransformedDistribution(
-            base_distribution=PowerLawPrimaryMassRatio(**x),
-            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-        ),
-        pl_args_per_component,
-        is_leaf=lambda x: isinstance(x, dict),
-    )
-
-    g_args_per_component = [
-        {
-            "loc": jnp.array(
-                [
-                    params.get(f"loc_m1_{i}", params.get("loc_m1")),
-                    params.get(f"loc_m2_{i}", params.get("loc_m2")),
-                ]
+    if N_pl > 0:
+        pl_arg_names = PowerLawPrimaryMassRatio.arg_constraints.keys()
+        pl_args_per_component = [
+            {arg: params.get(f"{arg}_{i}", params.get(arg)) for arg in pl_arg_names}
+            for i in range(N_pl)
+        ]
+        powerlaws = jtr.map(
+            lambda x: TransformedDistribution(
+                base_distribution=PowerLawPrimaryMassRatio(**x),
+                transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             ),
-            "covariance_matrix": jnp.array(
-                [
+            pl_args_per_component,
+            is_leaf=lambda x: isinstance(x, dict),
+        )
+        chis_pl = [
+            get_default_spin_magnitude_dists(
+                mean_chi1=params.get(f"mean_chi1_pl_{i}", params.get("mean_chi1_pl")),
+                variance_chi1=params.get(
+                    f"variance_chi1_pl_{i}", params.get("variance_chi1_pl")
+                ),
+                mean_chi2=params.get(f"mean_chi2_pl_{i}", params.get("mean_chi2_pl")),
+                variance_chi2=params.get(
+                    f"variance_chi2_pl_{i}", params.get("variance_chi2_pl")
+                ),
+            )
+            for i in range(N_pl)
+        ]
+        tilts_pl = [
+            get_spin_misalignment_dist(
+                mean_tilt_1=1.0,
+                std_dev_tilt_1=params.get(
+                    f"std_dev_tilt1_pl_{i}", params.get("std_dev_tilt1_pl")
+                ),
+                mean_tilt_2=1.0,
+                std_dev_tilt_2=params.get(
+                    f"std_dev_tilt2_pl_{i}", params.get("std_dev_tilt2_pl")
+                ),
+            )
+            for i in range(N_pl)
+        ]
+        pl_component_dist = jtr.map(
+            lambda pl, chis, tilts: JointDistribution(pl, *chis, *tilts),
+            powerlaws,
+            chis_pl,
+            tilts_pl,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
+
+    if N_g > 0:
+        g_args_per_component = [
+            {
+                "loc": jnp.array(
                     [
-                        jnp.square(params.get(f"scale_m1_{i}", params.get("scale_m1"))),
-                        0.0,
-                    ],
+                        params.get(f"loc_m1_{i}", params.get("loc_m1")),
+                        params.get(f"loc_m2_{i}", params.get("loc_m2")),
+                    ]
+                ),
+                "covariance_matrix": jnp.array(
                     [
-                        0.0,
-                        jnp.square(params.get(f"scale_m2_{i}", params.get("scale_m2"))),
-                    ],
-                ]
+                        [
+                            jnp.square(
+                                params.get(f"scale_m1_{i}", params.get("scale_m1"))
+                            ),
+                            0.0,
+                        ],
+                        [
+                            0.0,
+                            jnp.square(
+                                params.get(f"scale_m2_{i}", params.get("scale_m2"))
+                            ),
+                        ],
+                    ]
+                ),
+            }
+            for i in range(N_g)
+        ]
+        gaussians = jtr.map(
+            lambda x: MultivariateNormal(
+                loc=x["loc"],
+                covariance_matrix=x["covariance_matrix"],
+                validate_args=True,
             ),
-        }
-        for i in range(N_g)
-    ]
-    gaussians = jtr.map(
-        lambda x: MultivariateNormal(
-            loc=x["loc"], covariance_matrix=x["covariance_matrix"], validate_args=True
-        ),
-        g_args_per_component,
-        is_leaf=lambda x: isinstance(x, dict),
-    )
+            g_args_per_component,
+            is_leaf=lambda x: isinstance(x, dict),
+        )
+        chis_g = [
+            get_default_spin_magnitude_dists(
+                mean_chi1=params.get(f"mean_chi1_g_{i}", params.get("mean_chi1_g")),
+                variance_chi1=params.get(
+                    f"variance_chi1_g_{i}", params.get("variance_chi1_g")
+                ),
+                mean_chi2=params.get(f"mean_chi2_g_{i}", params.get("mean_chi2_g")),
+                variance_chi2=params.get(
+                    f"variance_chi2_g_{i}", params.get("variance_chi2_g")
+                ),
+            )
+            for i in range(N_g)
+        ]
+        tilts_g = [
+            get_spin_misalignment_dist(
+                mean_tilt_1=1.0,
+                std_dev_tilt_1=params.get(
+                    f"std_dev_tilt1_g_{i}", params.get("std_dev_tilt1_g")
+                ),
+                mean_tilt_2=1.0,
+                std_dev_tilt_2=params.get(
+                    f"std_dev_tilt2_g_{i}", params.get("std_dev_tilt2_g")
+                ),
+            )
+            for i in range(N_g)
+        ]
+        g_component_dist = jtr.map(
+            lambda g, chis, tilts: JointDistribution(g, *chis, *tilts),
+            gaussians,
+            chis_g,
+            tilts_g,
+            is_leaf=lambda x: isinstance(x, Distribution),
+        )
 
-    chis_pl = [
-        get_default_spin_magnitude_dists(
-            mean_chi1=params.get(f"mean_chi1_pl_{i}", params.get("mean_chi1_pl")),
-            variance_chi1=params.get(
-                f"variance_chi1_pl_{i}", params.get("variance_chi1_pl")
-            ),
-            mean_chi2=params.get(f"mean_chi2_pl_{i}", params.get("mean_chi2_pl")),
-            variance_chi2=params.get(
-                f"variance_chi2_pl_{i}", params.get("variance_chi2_pl")
-            ),
-        )
-        for i in range(N_pl)
-    ]
-    chis_g = [
-        get_default_spin_magnitude_dists(
-            mean_chi1=params.get(f"mean_chi1_g_{i}", params.get("mean_chi1_g")),
-            variance_chi1=params.get(
-                f"variance_chi1_g_{i}", params.get("variance_chi1_g")
-            ),
-            mean_chi2=params.get(f"mean_chi2_g_{i}", params.get("mean_chi2_g")),
-            variance_chi2=params.get(
-                f"variance_chi2_g_{i}", params.get("variance_chi2_g")
-            ),
-        )
-        for i in range(N_g)
-    ]
-
-    tilts_pl = [
-        get_spin_misalignment_dist(
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=params.get(
-                f"std_dev_tilt1_pl_{i}", params.get("std_dev_tilt1_pl")
-            ),
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=params.get(
-                f"std_dev_tilt2_pl_{i}", params.get("std_dev_tilt2_pl")
-            ),
-        )
-        for i in range(N_pl)
-    ]
-    tilts_g = [
-        get_spin_misalignment_dist(
-            mean_tilt_1=1.0,
-            std_dev_tilt_1=params.get(
-                f"std_dev_tilt1_g_{i}", params.get("std_dev_tilt1_g")
-            ),
-            mean_tilt_2=1.0,
-            std_dev_tilt_2=params.get(
-                f"std_dev_tilt2_g_{i}", params.get("std_dev_tilt2_g")
-            ),
-        )
-        for i in range(N_g)
-    ]
+    if N_pl == 0 and N_g != 0:
+        component_dists = g_component_dist
+    elif N_g == 0 and N_pl != 0:
+        component_dists = pl_component_dist
+    else:
+        component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
     mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
-
-    pl_component_dist = jtr.map(
-        lambda pl, chis, tilts: JointDistribution(pl, *chis, *tilts),
-        powerlaws,
-        chis_pl,
-        tilts_pl,
-        is_leaf=lambda x: isinstance(x, Distribution),
-    )
-
-    g_component_dist = jtr.map(
-        lambda g, chis, tilts: JointDistribution(g, *chis, *tilts),
-        gaussians,
-        chis_g,
-        tilts_g,
-        is_leaf=lambda x: isinstance(x, Distribution),
-    )
-
-    component_dists = pl_component_dist + g_component_dist
 
     return MixtureGeneral(
         mixing_dist,
