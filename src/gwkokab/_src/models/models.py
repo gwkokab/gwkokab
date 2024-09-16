@@ -927,6 +927,7 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
             lambda x: TransformedDistribution(
                 base_distribution=PowerLawPrimaryMassRatio(**x),
                 transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+                validate_args=True,
             ),
             pl_args_per_component,
             is_leaf=lambda x: isinstance(x, dict),
@@ -1098,6 +1099,7 @@ def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGe
             lambda x: TransformedDistribution(
                 base_distribution=PowerLawPrimaryMassRatio(**x),
                 transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+                validate_args=True,
             ),
             pl_args_per_component,
             is_leaf=lambda x: isinstance(x, dict),
@@ -1233,6 +1235,7 @@ def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGenera
             lambda x: TransformedDistribution(
                 base_distribution=PowerLawPrimaryMassRatio(**x),
                 transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+                validate_args=True,
             ),
             pl_args_per_component,
             is_leaf=lambda x: isinstance(x, dict),
@@ -1353,6 +1356,7 @@ def NPowerLawMGaussian(N_pl, N_g, **params) -> MixtureGeneral:
             lambda x: TransformedDistribution(
                 base_distribution=PowerLawPrimaryMassRatio(**x),
                 transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+                validate_args=True,
             ),
             pl_args_per_component,
             is_leaf=lambda x: isinstance(x, dict),
