@@ -25,7 +25,9 @@ from jax import random as jrd
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
 from gwkokab.models import (
+    NPowerLawMGaussianWithDefaultSpinMagnitude,
     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
+    NPowerLawMGaussianWithSpinMisalignment,
 )
 from gwkokab.parameters import (
     COS_TILT_1,
@@ -60,6 +62,16 @@ def make_parser() -> ArgumentParser:
         "--n-g",
         type=int,
         help="Number of Gaussian components in the mass model.",
+    )
+    model_group.add_argument(
+        "--no-spin",
+        action="store_true",
+        help="Do not include spin parameters in the model.",
+    )
+    model_group.add_argument(
+        "--no-tilt",
+        action="store_true",
+        help="Do not include tilt parameters in the model.",
     )
 
     return parser
@@ -100,41 +112,93 @@ def main() -> None:
     N_pl = args.n_pl
     N_g = args.n_g
 
+    has_spin = not args.no_spin
+    has_tilt = not args.no_tilt
+
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
 
-    model_prior_param = get_processed_priors(
-        expand_arguments("alpha", N_pl)
-        + expand_arguments("beta", N_pl)
-        + expand_arguments("mmin", N_pl)
-        + expand_arguments("mmax", N_pl)
-        + expand_arguments("mean_chi1_pl", N_pl)
-        + expand_arguments("mean_chi2_pl", N_pl)
-        + expand_arguments("std_dev_tilt1_pl", N_pl)
-        + expand_arguments("std_dev_tilt2_pl", N_pl)
-        + expand_arguments("variance_chi1_pl", N_pl)
-        + expand_arguments("variance_chi2_pl", N_pl)
-        + expand_arguments("loc_m1", N_g)
-        + expand_arguments("loc_m2", N_g)
-        + expand_arguments("scale_m1", N_g)
-        + expand_arguments("scale_m2", N_g)
-        + expand_arguments("mean_chi1_g", N_g)
-        + expand_arguments("mean_chi2_g", N_g)
-        + expand_arguments("std_dev_tilt1_g", N_g)
-        + expand_arguments("std_dev_tilt2_g", N_g)
-        + expand_arguments("variance_chi1_g", N_g)
-        + expand_arguments("variance_chi2_g", N_g),
-        prior_dict,
-    )
+    if has_spin and has_tilt:
+        model_prior_param = get_processed_priors(
+            expand_arguments("alpha", N_pl)
+            + expand_arguments("beta", N_pl)
+            + expand_arguments("mmin", N_pl)
+            + expand_arguments("mmax", N_pl)
+            + expand_arguments("mean_chi1_pl", N_pl)
+            + expand_arguments("mean_chi2_pl", N_pl)
+            + expand_arguments("std_dev_tilt1_pl", N_pl)
+            + expand_arguments("std_dev_tilt2_pl", N_pl)
+            + expand_arguments("variance_chi1_pl", N_pl)
+            + expand_arguments("variance_chi2_pl", N_pl)
+            + expand_arguments("loc_m1", N_g)
+            + expand_arguments("loc_m2", N_g)
+            + expand_arguments("scale_m1", N_g)
+            + expand_arguments("scale_m2", N_g)
+            + expand_arguments("mean_chi1_g", N_g)
+            + expand_arguments("mean_chi2_g", N_g)
+            + expand_arguments("std_dev_tilt1_g", N_g)
+            + expand_arguments("std_dev_tilt2_g", N_g)
+            + expand_arguments("variance_chi1_g", N_g)
+            + expand_arguments("variance_chi2_g", N_g),
+            prior_dict,
+        )
+
+        model = Bake(NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment)(
+            N_pl=N_pl,
+            N_g=N_g,
+            **model_prior_param,
+        )
+    elif has_spin:
+        model_prior_param = get_processed_priors(
+            expand_arguments("alpha", N_pl)
+            + expand_arguments("beta", N_pl)
+            + expand_arguments("mmin", N_pl)
+            + expand_arguments("mmax", N_pl)
+            + expand_arguments("mean_chi1_pl", N_pl)
+            + expand_arguments("mean_chi2_pl", N_pl)
+            + expand_arguments("variance_chi1_pl", N_pl)
+            + expand_arguments("variance_chi2_pl", N_pl)
+            + expand_arguments("loc_m1", N_g)
+            + expand_arguments("loc_m2", N_g)
+            + expand_arguments("scale_m1", N_g)
+            + expand_arguments("scale_m2", N_g)
+            + expand_arguments("mean_chi1_g", N_g)
+            + expand_arguments("mean_chi2_g", N_g)
+            + expand_arguments("variance_chi1_g", N_g)
+            + expand_arguments("variance_chi2_g", N_g),
+            prior_dict,
+        )
+
+        model = Bake(NPowerLawMGaussianWithDefaultSpinMagnitude)(
+            N_pl=N_pl,
+            N_g=N_g,
+            **model_prior_param,
+        )
+    else:
+        model_prior_param = get_processed_priors(
+            expand_arguments("alpha", N_pl)
+            + expand_arguments("beta", N_pl)
+            + expand_arguments("mmin", N_pl)
+            + expand_arguments("mmax", N_pl)
+            + expand_arguments("std_dev_tilt1_pl", N_pl)
+            + expand_arguments("std_dev_tilt2_pl", N_pl)
+            + expand_arguments("loc_m1", N_g)
+            + expand_arguments("loc_m2", N_g)
+            + expand_arguments("scale_m1", N_g)
+            + expand_arguments("scale_m2", N_g)
+            + expand_arguments("std_dev_tilt1_g", N_g)
+            + expand_arguments("std_dev_tilt2_g", N_g),
+            prior_dict,
+        )
+
+        model = Bake(NPowerLawMGaussianWithSpinMisalignment)(
+            N_pl=N_pl,
+            N_g=N_g,
+            **model_prior_param,
+        )
 
     log_rate_prior_param = get_processed_priors(
         expand_arguments("log_rate", N_pl + N_g), prior_dict
-    )
-
-    model = Bake(NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment)(
-        N_pl=N_pl,
-        N_g=N_g,
-        **model_prior_param,
     )
 
     poisson_likelihood.is_multi_rate_model = True
