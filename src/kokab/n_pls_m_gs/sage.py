@@ -25,6 +25,7 @@ from jax import random as jrd
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
 from gwkokab.models import (
+    NPowerLawMGaussian,
     NPowerLawMGaussianWithDefaultSpinMagnitude,
     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
     NPowerLawMGaussianWithSpinMisalignment,
@@ -188,7 +189,7 @@ def main() -> None:
             N_g=N_g,
             **model_prior_param,
         )
-    else:
+    elif has_tilt:
         parameters = (
             PRIMARY_MASS_SOURCE,
             SECONDARY_MASS_SOURCE,
@@ -212,6 +213,25 @@ def main() -> None:
         )
 
         model = Bake(NPowerLawMGaussianWithSpinMisalignment)(
+            N_pl=N_pl,
+            N_g=N_g,
+            **model_prior_param,
+        )
+    else:
+        parameters = (PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE)
+        model_prior_param = get_processed_priors(
+            expand_arguments("alpha", N_pl)
+            + expand_arguments("beta", N_pl)
+            + expand_arguments("mmin", N_pl)
+            + expand_arguments("mmax", N_pl)
+            + expand_arguments("loc_m1", N_g)
+            + expand_arguments("loc_m2", N_g)
+            + expand_arguments("scale_m1", N_g)
+            + expand_arguments("scale_m2", N_g),
+            prior_dict,
+        )
+
+        model = Bake(NPowerLawMGaussian)(
             N_pl=N_pl,
             N_g=N_g,
             **model_prior_param,
