@@ -119,6 +119,14 @@ def main() -> None:
         prior_dict = json.load(f)
 
     if has_spin and has_tilt:
+        parameters = (
+            PRIMARY_MASS_SOURCE,
+            SECONDARY_MASS_SOURCE,
+            PRIMARY_SPIN_MAGNITUDE,
+            SECONDARY_SPIN_MAGNITUDE,
+            COS_TILT_1,
+            COS_TILT_2,
+        )
         model_prior_param = get_processed_priors(
             expand_arguments("alpha", N_pl)
             + expand_arguments("beta", N_pl)
@@ -149,6 +157,12 @@ def main() -> None:
             **model_prior_param,
         )
     elif has_spin:
+        parameters = (
+            PRIMARY_MASS_SOURCE,
+            SECONDARY_MASS_SOURCE,
+            PRIMARY_SPIN_MAGNITUDE,
+            SECONDARY_SPIN_MAGNITUDE,
+        )
         model_prior_param = get_processed_priors(
             expand_arguments("alpha", N_pl)
             + expand_arguments("beta", N_pl)
@@ -175,6 +189,12 @@ def main() -> None:
             **model_prior_param,
         )
     else:
+        parameters = (
+            PRIMARY_MASS_SOURCE,
+            SECONDARY_MASS_SOURCE,
+            COS_TILT_1,
+            COS_TILT_2,
+        )
         model_prior_param = get_processed_priors(
             expand_arguments("alpha", N_pl)
             + expand_arguments("beta", N_pl)
@@ -208,14 +228,7 @@ def main() -> None:
     poisson_likelihood.vt_params = VT_PARAMS
 
     poisson_likelihood.set_model(
-        (
-            PRIMARY_MASS_SOURCE,
-            SECONDARY_MASS_SOURCE,
-            PRIMARY_SPIN_MAGNITUDE,
-            SECONDARY_SPIN_MAGNITUDE,
-            COS_TILT_1,
-            COS_TILT_2,
-        ),
+        parameters,
         [log_rate_prior_param[r] for r in expand_arguments("log_rate", N_pl + N_g)],
         model=model,
     )
