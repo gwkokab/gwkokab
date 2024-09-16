@@ -20,8 +20,6 @@ from gwkokab._src.models.models import (
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
     MassGapModel as MassGapModel,
     MultiPeakMassModel as MultiPeakMassModel,
-    MultiSourceModel as MultiSourceModel,
-    MultiSpinModel as MultiSpinModel,
     NDistribution as NDistribution,
     NPowerLawMGaussian as NPowerLawMGaussian,
     NPowerLawMGaussianWithDefaultSpinMagnitude as NPowerLawMGaussianWithDefaultSpinMagnitude,

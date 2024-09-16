@@ -28,13 +28,12 @@ from ..utils.math import beta_dist_mean_variance_to_concentrations
 
 
 __all__ = [
-    "JointDistribution",
-    "numerical_inverse_transform_sampling",
-    "get_spin_magnitude_and_misalignment_dist",
+    "doubly_truncated_powerlaw_icdf",
+    "doubly_truncated_powerlaw_log_prob",
     "get_default_spin_magnitude_dists",
     "get_spin_misalignment_dist",
-    "doubly_truncated_powerlaw_log_prob",
-    "doubly_truncated_powerlaw_icdf",
+    "JointDistribution",
+    "numerical_inverse_transform_sampling",
 ]
 
 
@@ -174,50 +173,6 @@ def get_spin_misalignment_dist(
         validate_args=True,
     )
     return cos_tilt1_dist, cos_tilt2_dist
-
-
-def get_spin_magnitude_and_misalignment_dist(
-    mean_chi1,
-    variance_chi1,
-    mean_chi2,
-    variance_chi2,
-    mean_tilt_1,
-    std_dev_tilt_1,
-    mean_tilt_2,
-    std_dev_tilt_2,
-) -> Tuple[Distribution]:
-    r"""This is a helper function to reduce the lines of code in the
-    :func:`MultiSpinModel` and :func:`MultiSourceModel`.
-    """
-    concentrations_chi1 = beta_dist_mean_variance_to_concentrations(
-        mean_chi1, variance_chi1
-    )
-    concentrations_chi2 = beta_dist_mean_variance_to_concentrations(
-        mean_chi2, variance_chi2
-    )
-    chi1_dist = Beta(
-        *concentrations_chi1,
-        validate_args=True,
-    )
-    chi2_dist = Beta(
-        *concentrations_chi2,
-        validate_args=True,
-    )
-    cos_tilt1_dist = TruncatedNormal(
-        loc=mean_tilt_1,
-        scale=std_dev_tilt_1,
-        low=-1,
-        high=1,
-        validate_args=True,
-    )
-    cos_tilt2_dist = TruncatedNormal(
-        loc=mean_tilt_2,
-        scale=std_dev_tilt_2,
-        low=-1,
-        high=1,
-        validate_args=True,
-    )
-    return chi1_dist, chi2_dist, cos_tilt1_dist, cos_tilt2_dist
 
 
 def doubly_truncated_powerlaw_log_prob(value, alpha, low, high):

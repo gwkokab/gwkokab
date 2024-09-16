@@ -12,6 +12,9 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
   * `TILE_1`
   * `TILE_2`
 * Most assisting commands have been shifter from using index to column names.
+* Following models have been depreciated,
+  * `MultiSourceModel`
+  * `MultiSpinModel`
 
 **New features**
 
