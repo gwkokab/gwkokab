@@ -126,7 +126,7 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    data = pd.read_csv(args.data.name, delimiter=" ").to_numpy()
+    data = pd.read_csv(args.data.name, delimiter=" ", skiprows=1).to_numpy()
     figure = corner.corner(
         data,
         labels=args.labels,
