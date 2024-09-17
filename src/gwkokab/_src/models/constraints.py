@@ -125,8 +125,8 @@ class _UniqueIntervals(Constraint):
 
         :param x: The input to be checked.
         """
-        less_than = jnp.all(x <= self.upper_bounds, axis=-1)
-        greater_than = jnp.all(x >= self.lower_bounds, axis=-1)
+        less_than = jnp.all(x <= self.upper_bounds, axis=self.event_dim)
+        greater_than = jnp.all(x >= self.lower_bounds, axis=self.event_dim)
         return less_than & greater_than
 
     def feasible_like(self, prototype):
