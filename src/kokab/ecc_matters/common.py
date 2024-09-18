@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#     https://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,14 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ignore:
-  - "scripts/**"
 
-coverage:
-  range: 60..95
-  round: nearest
-  precision: 2
+from __future__ import annotations
 
-comment:
-  layout: "condensed_header, condensed_files, condensed_footer"
-  behavior: default
+from jaxtyping import Array, Bool
+
+
+def constraint(x: Array) -> Bool:
+    m1 = x[..., 0]
+    m2 = x[..., 1]
+    ecc = x[..., 2]
+    mask = m2 <= m1
+    mask &= m2 > 0.0
+    mask &= m1 > 0.0
+    mask &= ecc >= 0.0
+    mask &= ecc <= 1.0
+    return mask

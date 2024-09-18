@@ -77,8 +77,8 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         \mathrm{det}(J_f) = m_1
     """
 
-    domain = positive_decreasing_vector
-    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+    domain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+    codomain = positive_decreasing_vector
 
     def __call__(self, x: Array):
         m1 = x[..., 0]
@@ -91,10 +91,12 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         m1 = y[..., 0]
         m2 = y[..., 1]
         q = mass_ratio(m2=m2, m1=m1)
-        return jnp.stack((m1, q), axis=-1)
+        m1q = jnp.stack((m1, q), axis=-1)
+        return m1q
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
-        return jnp.log(x[..., 0])
+        abs_m1 = jnp.abs(x[..., 0])
+        return jnp.log(abs_m1)
 
     def forward_shape(self, shape) -> Tuple[int, ...]:
         return shape
