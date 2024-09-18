@@ -43,7 +43,7 @@ dependencies = [
     "matplotlib==3.9.2",
     "mplcursors==0.5.3",
     "numpy<2",
-    "numpyro==0.15.2",
+    "numpyro==0.15.3",
     "pandas==2.2.2",
     "plotly==5.24.0",
     "rich==13.8.0",
