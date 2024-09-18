@@ -27,7 +27,6 @@ from gwkokab._src.models.models import (
     NPowerLawMGaussianWithSpinMisalignment as NPowerLawMGaussianWithSpinMisalignment,
     PowerLawPeakMassModel as PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
-    TruncatedPowerLaw as TruncatedPowerLaw,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
 
