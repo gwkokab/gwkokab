@@ -18,7 +18,6 @@ from __future__ import annotations
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from jax import numpy as jnp, vmap
-from jaxtyping import Array, Bool
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
@@ -32,23 +31,12 @@ from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 from gwkokab.vts.neuralvt import load_model
 
 from ..utils import genie_parser
+from .common import constraint
 
 
 m1_source = PRIMARY_MASS_SOURCE.name
 m2_source = SECONDARY_MASS_SOURCE.name
 ecc = ECCENTRICITY.name
-
-
-def constraint(x: Array) -> Bool:
-    m1 = x[..., 0]
-    m2 = x[..., 1]
-    ecc = x[..., 2]
-    mask = m2 <= m1
-    mask &= m2 > 0.0
-    mask &= m1 > 0.0
-    mask &= ecc >= 0.0
-    mask &= ecc <= 1.0
-    return mask
 
 
 def make_parser() -> ArgumentParser:

@@ -45,7 +45,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     sage_group.add_argument(
-        "--analysis_time",
+        "--analysis-time",
         help="Analysis time of the VT",
         default=1.0,
         type=float,
