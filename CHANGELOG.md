@@ -15,6 +15,7 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 * Following models have been depreciated,
   * `MultiSourceModel`
   * `MultiSpinModel`
+  * `TruncatedPowerLaw`
 
 **New features**
 

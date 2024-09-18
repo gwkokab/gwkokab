@@ -23,7 +23,6 @@ Models
     NPowerLawMGaussianWithSpinMisalignment
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
-    TruncatedPowerLaw
     Wysocki2019MassModel
 
 Utilities

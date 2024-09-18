@@ -28,8 +28,6 @@ from ..utils.math import beta_dist_mean_variance_to_concentrations
 
 
 __all__ = [
-    "doubly_truncated_powerlaw_icdf",
-    "doubly_truncated_powerlaw_log_prob",
     "get_default_spin_magnitude_dists",
     "get_spin_misalignment_dist",
     "JointDistribution",
@@ -173,50 +171,3 @@ def get_spin_misalignment_dist(
         validate_args=True,
     )
     return cos_tilt1_dist, cos_tilt2_dist
-
-
-def doubly_truncated_powerlaw_log_prob(value, alpha, low, high):
-    def logp_neg1(value):
-        logp_neg1_val = jnp.divide(high, low)
-        logp_neg1_val = jnp.log(logp_neg1_val)
-        logp_neg1_val = jnp.multiply(value, logp_neg1_val)
-        logp_neg1_val = jnp.log(logp_neg1_val)
-        return jnp.negative(logp_neg1_val)
-
-    def logp(value):
-        log_value = jnp.log(value)
-        logp = jnp.multiply(alpha, log_value)
-        beta = jnp.add(1.0, alpha)
-        logp = jnp.add(
-            logp,
-            jnp.log(
-                jnp.divide(
-                    beta,
-                    jnp.subtract(jnp.power(high, beta), jnp.power(low, beta)),
-                )
-            ),
-        )
-        return logp
-
-    return jnp.where(jnp.equal(alpha, -1.0), logp_neg1(value), logp(value))
-
-
-def doubly_truncated_powerlaw_icdf(q, alpha, low, high):
-    def icdf(q):
-        beta = jnp.add(1.0, alpha)
-        low_pow_beta = jnp.power(low, beta)
-        high_pow_beta = jnp.power(high, beta)
-        icdf = jnp.multiply(q, jnp.subtract(high_pow_beta, low_pow_beta))
-        icdf = jnp.add(low_pow_beta, icdf)
-        icdf = jnp.power(icdf, jnp.reciprocal(beta))
-        return icdf
-
-    def icdf_neg1(q):
-        icdf_neg1 = jnp.divide(high, low)
-        icdf_neg1 = jnp.log(icdf_neg1)
-        icdf_neg1 = jnp.multiply(q, icdf_neg1)
-        icdf_neg1 = jnp.exp(icdf_neg1)
-        icdf_neg1 = jnp.multiply(low, icdf_neg1)
-        return icdf_neg1
-
-    return jnp.where(jnp.equal(alpha, -1.0), icdf_neg1(q), icdf(q))
