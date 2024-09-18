@@ -38,7 +38,7 @@ dependencies = [
     "flowMC==0.3.4",
     "h5py==3.11.0",
     "jax==0.4.33",
-    "jaxlib==0.4.31",
+    "jaxlib==0.4.33",
     "jaxtyping==0.2.34",
     "matplotlib==3.9.2",
     "mplcursors==0.5.3",
