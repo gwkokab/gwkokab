@@ -107,7 +107,7 @@ def main() -> None:
 
     poisson_likelihood.set_model(
         (PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY),
-        log_rate_prior_param,
+        log_rate_prior_param["log_rate"],
         model=model,
     )
 
