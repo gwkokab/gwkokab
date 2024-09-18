@@ -99,7 +99,7 @@ def main() -> None:
     _, logVT = load_model(VT_FILENAME)
     logVT = vmap(logVT)
 
-    poisson_likelihood.is_multi_rate_model = True
+    poisson_likelihood.is_multi_rate_model = False
     poisson_likelihood.logVT = logVT
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
