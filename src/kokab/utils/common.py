@@ -105,4 +105,7 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
             matched_prior_params[key] = Uniform(
                 low=value[0], high=value[1], validate_args=True
             )
+    for param in params:
+        if param not in matched_prior_params:
+            raise ValueError(f"Missing prior for {param}")
     return matched_prior_params

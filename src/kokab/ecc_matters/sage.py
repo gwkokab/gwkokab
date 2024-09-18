@@ -45,14 +45,10 @@ def make_parser() -> ArgumentParser:
     return parser
 
 
-def EccentricityMattersModel(
-    alpha_m, mmin, mmax, scale, loc, low, high
-) -> JointDistribution:
+def EccentricityMattersModel(alpha_m, mmin, mmax, scale) -> JointDistribution:
     return JointDistribution(
         Wysocki2019MassModel(alpha_m=alpha_m, mmin=mmin, mmax=mmax),
-        dist.TruncatedNormal(
-            scale=scale, loc=loc, low=low, high=high, validate_args=True
-        ),
+        dist.HalfNormal(scale=scale, validate_args=True),
     )
 
 
@@ -92,7 +88,7 @@ def main() -> None:
         prior_dict = json.load(f)
 
     model_prior_param = get_processed_priors(
-        ["alpha_m", "mmin", "mmax", "scale", "loc", "low", "high"],
+        ["alpha_m", "mmin", "mmax", "scale"],
         prior_dict,
     )
 
