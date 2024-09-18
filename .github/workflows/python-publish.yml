@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.1.7
       - name: Set up Python
         uses: actions/setup-python@v5.2.0
         with:
@@ -32,7 +32,7 @@ jobs:
       - name: Build package
         run: python -m build
       - name: Publish package
-        uses: pypa/gh-action-pypi-publish@v1.10.0
+        uses: pypa/gh-action-pypi-publish@v1.10.1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}

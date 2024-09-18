@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository_owner == 'gwkokab'
     steps:
-      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v4
-      - uses: actions/setup-python@70dcb22d269dc9546a5d97f4b11548f130526421 # v5
+      - uses: actions/checkout@6d193bf28034eafb982f37bd894289fe649468fc # v4
+      - uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v5
         with:
           python-version: "3.11"
           architecture: "x64"
