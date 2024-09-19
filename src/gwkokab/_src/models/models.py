@@ -70,9 +70,9 @@ __all__ = [
 
 
 class _BaseSmoothedMassDistribution(Distribution):
-    def __init__(self, *, batch_shape, event_shape):
+    def __init__(self, *, batch_shape, event_shape, validate_args=None):
         super(_BaseSmoothedMassDistribution, self).__init__(
-            batch_shape, event_shape, validate_args=True
+            batch_shape, event_shape, validate_args=validate_args
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
@@ -134,7 +134,7 @@ class _BaseSmoothedMassDistribution(Distribution):
         )
         log_prob_q_val = DoublyTruncatedPowerLaw(
             self.beta_q, jnp.divide(self.mmin, m1s), 1.0
-        )
+        ).log_prob(qs)
         log_prob_q_val = jnp.nan_to_num(log_prob_q_val, nan=-jnp.inf)
         log_prob_q_val = jnp.add(
             log_prob_q_val,
@@ -196,7 +196,7 @@ class _BaseSmoothedMassDistribution(Distribution):
             sample_shape=(flattened_sample_shape,),
             key=key,
             batch_shape=self.batch_shape,
-            n_grid_points=1000,
+            n_grid_points=500,
         )
 
         key = jrd.split(key, m1.shape)
@@ -208,11 +208,11 @@ class _BaseSmoothedMassDistribution(Distribution):
                 sample_shape=(),
                 key=_k,
                 batch_shape=self.batch_shape,
-                n_grid_points=1000,
+                n_grid_points=500,
             )
         )(m1, key)
 
-        return jnp.column_stack([m1, q]).reshape(sample_shape + self.event_shape)
+        return jnp.stack([m1, q], axis=-1).reshape(sample_shape + self.event_shape)
 
 
 class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
@@ -263,7 +263,18 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
         "delta_m",
     )
 
-    def __init__(self, alpha1, alpha2, beta_q, mmin, mmax, break_fraction, delta_m):
+    def __init__(
+        self,
+        alpha1,
+        alpha2,
+        beta_q,
+        mmin,
+        mmax,
+        break_fraction,
+        delta_m,
+        *,
+        validate_args=None,
+    ):
         r"""
         :param alpha1: Power-law index for first component of primary mass model
         :param alpha2: Power-law index for second component of primary mass
@@ -293,7 +304,7 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
             jnp.shape(delta_m),
         )
         super(BrokenPowerLawMassModel, self).__init__(
-            batch_shape=batch_shape, event_shape=(2,)
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
     def log_primary_model(self, mass):
@@ -323,7 +334,9 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
         return log_prob_val - jax.nn.softplus(log_correction)
 
 
-def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> MultivariateNormal:
+def GaussianSpinModel(
+    mu_eff, sigma_eff, mu_p, sigma_p, rho, *, validate_args=None
+) -> MultivariateNormal:
     r"""Bivariate normal distribution for the effective and precessing spins.
     See Eq. (D3) and (D4) in `Population Properties of Compact Objects from
     the Second LIGO-Virgo Gravitational-Wave Transient
@@ -367,11 +380,13 @@ def GaussianSpinModel(mu_eff, sigma_eff, mu_p, sigma_p, rho) -> MultivariateNorm
                 ],
             ]
         ),
-        validate_args=True,
+        validate_args=validate_args,
     )
 
 
-def IndependentSpinOrientationGaussianIsotropic(zeta, sigma1, sigma2) -> MixtureGeneral:
+def IndependentSpinOrientationGaussianIsotropic(
+    zeta, sigma1, sigma2, *, validate_args=None
+) -> MixtureGeneral:
     r"""A mixture model of spin orientations with isotropic and normally
     distributed components. See Eq. (4) of `Determining the population
     properties of spinning black holes <https://arxiv.org/abs/1704.08370>`_.
@@ -389,19 +404,21 @@ def IndependentSpinOrientationGaussianIsotropic(zeta, sigma1, sigma2) -> Mixture
     :return: Mixture model of spin orientations.
     """
     mixing_probs = jnp.array([1 - zeta, zeta])
-    component_0_dist = Uniform(low=-1, high=1, validate_args=True)
+    component_0_dist = Uniform(low=-1, high=1, validate_args=validate_args)
     component_1_dist = TruncatedNormal(
         loc=1.0,
         scale=jnp.array([sigma1, sigma2]),
         low=-1,
         high=1,
-        validate_args=True,
+        validate_args=validate_args,
     )
     return MixtureGeneral(
-        mixing_distribution=CategoricalProbs(probs=mixing_probs, validate_args=True),
+        mixing_distribution=CategoricalProbs(
+            probs=mixing_probs, validate_args=validate_args
+        ),
         component_distributions=[component_0_dist, component_1_dist],
         support=constraints.real,
-        validate_args=True,
+        validate_args=validate_args,
     )
 
 
@@ -473,7 +490,20 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
     )
 
     def __init__(
-        self, alpha, beta_q, lam, lam1, delta_m, mmin, mmax, mu1, sigma1, mu2, sigma2
+        self,
+        alpha,
+        beta_q,
+        lam,
+        lam1,
+        delta_m,
+        mmin,
+        mmax,
+        mu1,
+        sigma1,
+        mu2,
+        sigma2,
+        *,
+        validate_args=None,
     ):
         r"""
         :param alpha: Power-law index for primary mass model
@@ -517,7 +547,7 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
             jnp.shape(sigma2),
         )
         super(MultiPeakMassModel, self).__init__(
-            batch_shape=batch_shape, event_shape=(2,)
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
     def log_primary_model(self, m1):
@@ -556,7 +586,9 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
         return log_prob_val
 
 
-def NDistribution(distribution: Distribution, n: Int, **params) -> MixtureGeneral:
+def NDistribution(
+    distribution: Distribution, n: Int, *, validate_args=None, **params
+) -> MixtureGeneral:
     """Mixture of any :math:`n` distributions.
 
     :param distribution: distribution to mix
@@ -564,7 +596,9 @@ def NDistribution(distribution: Distribution, n: Int, **params) -> MixtureGenera
     :return: Mixture of :math:`n` distributions
     """
     arg_names = distribution.arg_constraints.keys()
-    mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(n), n), validate_args=True)
+    mixing_dist = CategoricalProbs(
+        probs=jnp.divide(jnp.ones(n), n), validate_args=validate_args
+    )
     args_per_component = [
         {arg: params.get(f"{arg}_{i}") for arg in arg_names} for i in range(n)
     ]
@@ -577,7 +611,7 @@ def NDistribution(distribution: Distribution, n: Int, **params) -> MixtureGenera
         mixing_dist,
         component_dists,
         support=distribution.support,
-        validate_args=True,
+        validate_args=validate_args,
     )
 
 
@@ -634,7 +668,9 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
         "sigma",
     )
 
-    def __init__(self, alpha, beta_q, lam, delta_m, mmin, mmax, mu, sigma) -> None:
+    def __init__(
+        self, alpha, beta_q, lam, delta_m, mmin, mmax, mu, sigma, *, validate_args=None
+    ) -> None:
         r"""
         :param alpha: Power-law index for primary mass model
         :param beta_q: Power-law index for mass ratio model
@@ -666,7 +702,7 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
             jnp.shape(sigma),
         )
         super(PowerLawPeakMassModel, self).__init__(
-            batch_shape=batch_shape, event_shape=(2,)
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
     def log_primary_model(self, m1):
@@ -716,7 +752,7 @@ class PowerLawPrimaryMassRatio(Distribution):
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha, beta, mmin, mmax) -> None:
+    def __init__(self, alpha, beta, mmin, mmax, *, validate_args=None) -> None:
         """
         :param alpha: Power law index for primary mass
         :param beta: Power law index for mass ratio
@@ -734,9 +770,7 @@ class PowerLawPrimaryMassRatio(Distribution):
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(PowerLawPrimaryMassRatio, self).__init__(
-            batch_shape=batch_shape,
-            event_shape=(2,),
-            validate_args=True,
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
@@ -760,9 +794,9 @@ class PowerLawPrimaryMassRatio(Distribution):
         return jnp.add(log_prob_m1, log_prob_q)
 
     def sample(self, key, sample_shape=()):
-        u = jrd.uniform(key, shape=(2,) + sample_shape + self.batch_shape)
-        u1 = u[0]
-        u2 = u[1]
+        key1, key2 = jrd.split(key)
+        u1 = jrd.uniform(key1, shape=sample_shape + self.batch_shape)
+        u2 = jrd.uniform(key2, shape=sample_shape + self.batch_shape)
         m1 = DoublyTruncatedPowerLaw(
             alpha=self.alpha,
             low=self.mmin,
@@ -773,7 +807,7 @@ class PowerLawPrimaryMassRatio(Distribution):
             low=jnp.divide(self.mmin, m1),
             high=1.0,
         ).icdf(u2)
-        return jnp.column_stack((m1, q))
+        return jnp.stack((m1, q), axis=-1)
 
 
 class Wysocki2019MassModel(Distribution):
@@ -794,7 +828,7 @@ class Wysocki2019MassModel(Distribution):
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha_m, mmin, mmax) -> None:
+    def __init__(self, alpha_m, mmin, mmax, *, validate_args=None) -> None:
         r"""
         :param alpha_m: index of the power law distribution
         :param mmin: lower mass limit
@@ -808,9 +842,7 @@ class Wysocki2019MassModel(Distribution):
         )
         self._support = mass_sandwich(mmin, mmax)
         super(Wysocki2019MassModel, self).__init__(
-            batch_shape=batch_shape,
-            event_shape=(2,),
-            validate_args=True,
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
@@ -830,19 +862,19 @@ class Wysocki2019MassModel(Distribution):
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self, key, sample_shape=()) -> Array:
-        u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
+        key1, key2 = jrd.split(key)
+        u = jrd.uniform(key1, shape=sample_shape + self.batch_shape)
         m1 = DoublyTruncatedPowerLaw(
             alpha=jnp.negative(self.alpha_m), low=self.mmin, high=self.mmax
         ).icdf(u)
-        key = jrd.split(key)[1]
         m2 = jrd.uniform(
-            key, shape=sample_shape + self.batch_shape, minval=self.mmin, maxval=m1
+            key2, shape=sample_shape + self.batch_shape, minval=self.mmin, maxval=m1
         )
-        return jnp.column_stack((m1, m2))
+        return jnp.stack((m1, m2), axis=-1)
 
 
 def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
-    N_pl, N_g, **params
+    N_pl, N_g, *, validate_args=None, **params
 ) -> MixtureGeneral:
     r"""Mixture of N power-law and M Gaussians.
 
@@ -918,7 +950,7 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
             lambda x: TransformedDistribution(
                 base_distribution=PowerLawPrimaryMassRatio(**x),
                 transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-                validate_args=True,
+                validate_args=validate_args,
             ),
             pl_args_per_component,
             is_leaf=lambda x: isinstance(x, dict),
@@ -962,7 +994,7 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
             Normal(
                 loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
                 scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
-                validate_args=True,
+                validate_args=validate_args,
             )
             for i in range(N_g)
         ]
@@ -970,7 +1002,7 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
             Normal(
                 loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
                 scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
-                validate_args=True,
+                validate_args=validate_args,
             )
             for i in range(N_g)
         ]
@@ -1017,17 +1049,21 @@ def NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment(
         component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
-    mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
+    mixing_dist = CategoricalProbs(
+        probs=jnp.divide(jnp.ones(N), N), validate_args=validate_args
+    )
 
     return MixtureGeneral(
         mixing_dist,
         component_dists,
         support=constraints.real_vector,
-        validate_args=True,
+        validate_args=validate_args,
     )
 
 
-def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGeneral:
+def NPowerLawMGaussianWithDefaultSpinMagnitude(
+    N_pl, N_g, *, validate_args=None, **params
+) -> MixtureGeneral:
     r"""Mixture of N power-law and M Gaussians.
 
     :param N_pl: number of power-law components
@@ -1090,7 +1126,7 @@ def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGe
             lambda x: TransformedDistribution(
                 base_distribution=PowerLawPrimaryMassRatio(**x),
                 transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-                validate_args=True,
+                validate_args=validate_args,
             ),
             pl_args_per_component,
             is_leaf=lambda x: isinstance(x, dict),
@@ -1122,7 +1158,7 @@ def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGe
             Normal(
                 loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
                 scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
-                validate_args=True,
+                validate_args=validate_args,
             )
             for i in range(N_g)
         ]
@@ -1130,7 +1166,7 @@ def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGe
             Normal(
                 loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
                 scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
-                validate_args=True,
+                validate_args=validate_args,
             )
             for i in range(N_g)
         ]
@@ -1165,17 +1201,21 @@ def NPowerLawMGaussianWithDefaultSpinMagnitude(N_pl, N_g, **params) -> MixtureGe
         component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
-    mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
+    mixing_dist = CategoricalProbs(
+        probs=jnp.divide(jnp.ones(N), N), validate_args=validate_args
+    )
 
     return MixtureGeneral(
         mixing_dist,
         component_dists,
         support=constraints.real_vector,
-        validate_args=True,
+        validate_args=validate_args,
     )
 
 
-def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGeneral:
+def NPowerLawMGaussianWithSpinMisalignment(
+    N_pl, N_g, *, validate_args=None, **params
+) -> MixtureGeneral:
     r"""Mixture of N power-law and M Gaussians.
 
     :param N_pl: number of power-law components
@@ -1226,7 +1266,7 @@ def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGenera
             lambda x: TransformedDistribution(
                 base_distribution=PowerLawPrimaryMassRatio(**x),
                 transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-                validate_args=True,
+                validate_args=validate_args,
             ),
             pl_args_per_component,
             is_leaf=lambda x: isinstance(x, dict),
@@ -1256,7 +1296,7 @@ def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGenera
             Normal(
                 loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
                 scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
-                validate_args=True,
+                validate_args=validate_args,
             )
             for i in range(N_g)
         ]
@@ -1264,7 +1304,7 @@ def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGenera
             Normal(
                 loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
                 scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
-                validate_args=True,
+                validate_args=validate_args,
             )
             for i in range(N_g)
         ]
@@ -1298,17 +1338,19 @@ def NPowerLawMGaussianWithSpinMisalignment(N_pl, N_g, **params) -> MixtureGenera
         component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
-    mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
+    mixing_dist = CategoricalProbs(
+        probs=jnp.divide(jnp.ones(N), N), validate_args=validate_args
+    )
 
     return MixtureGeneral(
         mixing_dist,
         component_dists,
         support=constraints.real_vector,
-        validate_args=True,
+        validate_args=validate_args,
     )
 
 
-def NPowerLawMGaussian(N_pl, N_g, **params) -> MixtureGeneral:
+def NPowerLawMGaussian(N_pl, N_g, *, validate_args=None, **params) -> MixtureGeneral:
     r"""Mixture of N power-law and M Gaussians.
 
     :param N_pl: number of power-law components
@@ -1347,7 +1389,7 @@ def NPowerLawMGaussian(N_pl, N_g, **params) -> MixtureGeneral:
             lambda x: TransformedDistribution(
                 base_distribution=PowerLawPrimaryMassRatio(**x),
                 transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-                validate_args=True,
+                validate_args=validate_args,
             ),
             pl_args_per_component,
             is_leaf=lambda x: isinstance(x, dict),
@@ -1358,7 +1400,7 @@ def NPowerLawMGaussian(N_pl, N_g, **params) -> MixtureGeneral:
             Normal(
                 loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
                 scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
-                validate_args=True,
+                validate_args=validate_args,
             )
             for i in range(N_g)
         ]
@@ -1366,7 +1408,7 @@ def NPowerLawMGaussian(N_pl, N_g, **params) -> MixtureGeneral:
             Normal(
                 loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
                 scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
-                validate_args=True,
+                validate_args=validate_args,
             )
             for i in range(N_g)
         ]
@@ -1385,13 +1427,15 @@ def NPowerLawMGaussian(N_pl, N_g, **params) -> MixtureGeneral:
         component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
-    mixing_dist = CategoricalProbs(probs=jnp.divide(jnp.ones(N), N), validate_args=True)
+    mixing_dist = CategoricalProbs(
+        probs=jnp.divide(jnp.ones(N), N), validate_args=validate_args
+    )
 
     return MixtureGeneral(
         mixing_dist,
         component_dists,
         support=constraints.real_vector,
-        validate_args=True,
+        validate_args=validate_args,
     )
 
 
@@ -1472,6 +1516,8 @@ class MassGapModel(Distribution):
         mmax,
         delta_m,
         beta_q,
+        *,
+        validate_args=None,
     ):
         (
             self.alpha,
@@ -1527,7 +1573,7 @@ class MassGapModel(Distribution):
             jnp.shape(beta_q),
         )
         super(MassGapModel, self).__init__(
-            batch_shape, event_shape=(2,), validate_args=True
+            batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
@@ -1660,6 +1706,8 @@ def FlexibleMixtureModel(
     sigma_sz: Optional[Real] = None,
     alpha_q: Optional[Real] = None,
     q_min: Optional[Real] = None,
+    *,
+    validate_args=None,
     **params,
 ) -> MixtureGeneral:
     r"""Eq. (B9) of `Population of Merging Compact Binaries Inferred Using
@@ -1705,10 +1753,10 @@ def FlexibleMixtureModel(
         sigma_sz_i,
         alpha_q_i,
         q_min_i: JointDistribution(
-            Normal(loc=mu_Mc_i, scale=sigma_Mc_i, validate_args=True),
+            Normal(loc=mu_Mc_i, scale=sigma_Mc_i, validate_args=validate_args),
             DoublyTruncatedPowerLaw(alpha=alpha_q_i, low=q_min_i, high=1.0),
-            Normal(loc=mu_sz_i, scale=sigma_sz_i, validate_args=True),
-            Normal(loc=mu_sz_i, scale=sigma_sz_i, validate_args=True),
+            Normal(loc=mu_sz_i, scale=sigma_sz_i, validate_args=validate_args),
+            Normal(loc=mu_sz_i, scale=sigma_sz_i, validate_args=validate_args),
         ),
         mu_Mc_list,
         sigma_Mc_list,
@@ -1719,8 +1767,10 @@ def FlexibleMixtureModel(
     )
 
     return MixtureGeneral(
-        mixing_distribution=CategoricalProbs(probs=weights, validate_args=True),
+        mixing_distribution=CategoricalProbs(
+            probs=weights, validate_args=validate_args
+        ),
         component_distributions=component_dists,
         support=unique_intervals((0.0, 0.0, -1.0, -1.0), (jnp.inf, 1.0, 1.0, 1.0)),
-        validate_args=True,
+        validate_args=validate_args,
     )
