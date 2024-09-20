@@ -69,23 +69,9 @@ jobs:
       - name: Test with pytest
         run: |
           pytest -v --cov-report= --cov=src/gwkokab tests/
-          coverage lcov -o coverage/lcov.info
-      - name: Collect coverage
-        uses: coverallsapp/github-action@master
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          flag-name: ${{ matrix.python-version }}
-          parallel: true
-  finish:
-    needs:
-      - test
-    runs-on: ubuntu-latest
-    steps:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          fail_ci_if_error: true
-          files: ./coverage.xml
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
