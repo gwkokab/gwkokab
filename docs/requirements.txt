@@ -1,4 +1,3 @@
-flatbuffers
 pytest
 pytest-xdist
 
