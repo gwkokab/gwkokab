@@ -64,7 +64,7 @@ class _MassSandwichConstraint(Constraint):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
 
-class _MassRationMassSandwichConstraint(Constraint):
+class _MassRatioMassSandwichConstraint(Constraint):
     r"""Constrain primary mass to lie within a sandwiched interval
     and the mass ratio to lie within a given interval. This is a
     transformed version of the :class:`_MassSandwichConstraint`.
@@ -239,7 +239,7 @@ class _PositiveDecreasingVector(_SingletonConstraint):
 
 
 mass_sandwich = _MassSandwichConstraint
-mass_ratio_mass_sandwich = _MassRationMassSandwichConstraint
+mass_ratio_mass_sandwich = _MassRatioMassSandwichConstraint
 unique_intervals = _UniqueIntervals
 increasing_vector = _IncreasingVector()
 decreasing_vector = _DecreasingVector()
