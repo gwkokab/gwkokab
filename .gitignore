@@ -1,3 +1,7 @@
+# codecov ignore
+**/.coverage
+coverage
+
 # temp ignores
 *.aux
 *.fdb_latexmk
