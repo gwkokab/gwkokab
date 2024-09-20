@@ -1,4 +1,5 @@
 flatbuffers
+pandoc
 pytest
 pytest-xdist
 
