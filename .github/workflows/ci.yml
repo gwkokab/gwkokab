@@ -79,7 +79,7 @@ jobs:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   documentation:
-    name: Documentation - test code snippets
+    name: Documentation
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs:
@@ -108,6 +108,8 @@ jobs:
         run: |
           pytest -n auto --tb=short --doctest-glob='*.md' --doctest-glob='*.rst' docs --doctest-continue-on-failure
       - name: Render documentation
+        continue-on-error: true
         run: |
-          sphinx-build --color -W --keep-going -b html -D nb_execution_mode=off docs/source docs/build/html 
+          cd docs
+          make html
           

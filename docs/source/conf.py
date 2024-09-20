@@ -29,20 +29,23 @@ release = __version__
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.viewcode",
-    "sphinx.ext.autosummary",
-    "sphinx_tabs.tabs",
-    "sphinx_design",
-    "nbsphinx",
+    "IPython.sphinxext.ipython_console_highlighting",
     "myst_parser",
-    "sphinx.ext.doctest",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.mathjax",
-    "sphinx_search.extension",
-    "sphinx.ext.linkcode",
-    "sphinx_remove_toctrees",
+    "nbsphinx",
     "sphinx_copybutton",
+    "sphinx_design",
+    "sphinx_remove_toctrees",
+    "sphinx_search.extension",
+    "sphinx_tabs.tabs",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.doctest",
+    "sphinx.ext.githubpages",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.linkcode",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.todo",
+    "sphinx.ext.viewcode",
 ]
 
 autodoc_inherit_docstrings = True
@@ -53,7 +56,7 @@ source_suffix = {
     ".ipynb": "jupyter_notebook",
     ".md": "markdown",
 }
-nbsphinx_execute = "never"
+
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
@@ -115,8 +118,8 @@ remove_from_toctrees = ["_autosummary/*"]
 add_module_names = False
 
 autodoc_type_aliases = {
-    "Iterable": "Iterable",
     "ArrayLike": "ArrayLike",
+    "Iterable": "Iterable",
     "Numeric": "Numeric",
 }
 
@@ -152,10 +155,10 @@ os.system("cp -r ../../examples .")
 
 
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3/", None),
-    "numpy": ("https://numpy.org/doc/stable/", None),
     "jax": ("https://jax.readthedocs.io/en/latest/", None),
-    "typing_extensions": ("https://typing-extensions.readthedocs.io/en/latest/", None),
-    "numpyro": ("https://num.pyro.ai/en/stable/", None),
     "jaxtyping": ("https://docs.kidger.site/jaxtyping/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "numpyro": ("https://num.pyro.ai/en/stable/", None),
+    "python": ("https://docs.python.org/3/", None),
+    "typing_extensions": ("https://typing-extensions.readthedocs.io/en/latest/", None),
 }
