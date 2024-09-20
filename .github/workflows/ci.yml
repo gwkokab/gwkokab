@@ -81,8 +81,11 @@ jobs:
       - test
     runs-on: ubuntu-latest
     steps:
-      - name: Upload coverage
-        uses: coverallsapp/github-action@master
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          parallel-finished: true
+          fail_ci_if_error: true
+          files: ./coverage.xml
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
