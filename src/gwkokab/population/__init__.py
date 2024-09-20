@@ -13,9 +13,7 @@
 # limitations under the License.
 
 
-from ._debug import (
-    debug as debug,
-    debug_flush as debug_flush,
-    debug_mode as debug_mode,
-    enable_debugging as enable_debugging,
-)
+from ._factory import error_magazine, popfactory, popmodel_magazine
+
+
+__all__ = ["error_magazine", "popfactory", "popmodel_magazine"]

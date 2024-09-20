@@ -18,7 +18,7 @@ from __future__ import annotations
 from jax import vmap
 from jaxtyping import Array, Bool
 
-from gwkokab.vts.neuralvt import load_model
+from gwkokab.vts._neuralvt import load_model
 
 
 def get_logVT(vt_path):

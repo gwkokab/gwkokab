@@ -13,4 +13,7 @@
 #  limitations under the License.
 
 
-from gwkokab._src.vts import neuralvt as neuralvt
+from ._neuralvt import load_model, save_model, train_regressor
+
+
+__all__ = ["load_model", "save_model", "train_regressor"]

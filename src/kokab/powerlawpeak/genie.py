@@ -1,16 +1,16 @@
-#  Copyright 2023 The GWKokab Authors
+# Copyright 2023 The GWKokab Authors
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from gwkokab.models import PowerLawPeakMassModel
 from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 from gwkokab.utils.transformations import m1_q_to_m2, mass_ratio
-from gwkokab.vts.neuralvt import load_model
+from gwkokab.vts._neuralvt import load_model
 
 from ..utils import genie_parser
 
