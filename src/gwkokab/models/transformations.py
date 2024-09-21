@@ -394,7 +394,7 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
 
 
 class ComponentMassesToTotalMassAndMassRatio(Transform):
-    r"""Transforms component masses and redshift to total mass and mass ratio.
+    r"""Transforms component masses to total mass and mass ratio.
 
     .. seealso::
 
