@@ -145,7 +145,7 @@ class _UniqueIntervals(Constraint):
     def __eq__(self, other):
         if not isinstance(other, _UniqueIntervals):
             return False
-        return jnp.array_equal(self.lower_bounds, other.lower_bounds) & jnp.array_equal(
+        return jnp.array_equal(self.lower_bounds, other.lower_bounds) and jnp.array_equal(
             self.upper_bounds, other.upper_bounds
         )
 
