@@ -119,6 +119,7 @@ class _UniqueIntervals(Constraint):
             )
         self.lower_bounds = jnp.asarray(lower_bounds)
         self.upper_bounds = jnp.asarray(upper_bounds)
+
     def __call__(self, x):
         r"""Check if the input is within the specified intervals
 
@@ -145,9 +146,9 @@ class _UniqueIntervals(Constraint):
     def __eq__(self, other):
         if not isinstance(other, _UniqueIntervals):
             return False
-        return jnp.array_equal(self.lower_bounds, other.lower_bounds) and jnp.array_equal(
-            self.upper_bounds, other.upper_bounds
-        )
+        return jnp.array_equal(
+            self.lower_bounds, other.lower_bounds
+        ) and jnp.array_equal(self.upper_bounds, other.upper_bounds)
 
 
 class _IncreasingVector(_SingletonConstraint):

@@ -25,7 +25,7 @@ from gwkokab.models import PowerLawPeakMassModel
 from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 from gwkokab.utils.transformations import m1_q_to_m2, mass_ratio
-from gwkokab.vts._neuralvt import load_model
+from gwkokab.vts import load_model
 
 from ..utils import genie_parser
 

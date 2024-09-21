@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, random as jrd
-from jaxtyping import Array, Float, Int
+from jaxtyping import Array, PRNGKeyArray
 
 from .utils.transformations import chirp_mass, symmetric_mass_ratio
 
@@ -28,7 +28,7 @@ __all__ = ["banana_error_m1_m2"]
 def banana_error_m1_m2(
     x: Array,
     size: int,
-    key: jrd.KeyArray,
+    key: PRNGKeyArray,
     *,
     scale_Mc: float = 1.0,
     scale_eta: float = 1.0,
@@ -81,8 +81,8 @@ def banana_error_m1_m2(
 
     alpha = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
 
-    Mc = Mc_true * (1.0 + alpha * (r0 + r))
-    eta = eta_true * (1.0 + 0.03 * (12 / rho) * (r0p + rp))
+    Mc = Mc_true * (1.0 + alpha * (12.0 / rho) * (r0 + r))
+    eta = eta_true * (1.0 + 0.03 * (12.0 / rho) * (r0p + rp))
 
     etaV = 1.0 - 4.0 * eta
     etaV_sqrt = jnp.where(etaV >= 0, jnp.sqrt(etaV), jnp.nan)

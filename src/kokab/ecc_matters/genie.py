@@ -28,7 +28,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
 )
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
-from gwkokab.vts._neuralvt import load_model
+from gwkokab.vts import load_model
 
 from ..utils import genie_parser
 from .common import constraint
