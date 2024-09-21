@@ -63,6 +63,13 @@ class _MassSandwichConstraint(Constraint):
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _MassSandwichConstraint):
+            return False
+        return jnp.array_equal(self.mmin, other.mmin) & jnp.array_equal(
+            self.mmax, other.mmax
+        )
+
 
 class _MassRatioMassSandwichConstraint(Constraint):
     r"""Constrain primary mass to lie within a sandwiched interval
@@ -96,6 +103,13 @@ class _MassRatioMassSandwichConstraint(Constraint):
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _MassRatioMassSandwichConstraint):
+            return False
+        return jnp.array_equal(self.mmin, other.mmin) & jnp.array_equal(
+            self.mmax, other.mmax
+        )
 
 
 class _UniqueIntervals(Constraint):
@@ -146,9 +160,9 @@ class _UniqueIntervals(Constraint):
     def __eq__(self, other):
         if not isinstance(other, _UniqueIntervals):
             return False
-        return jnp.array_equal(
-            self.lower_bounds, other.lower_bounds
-        ) and jnp.array_equal(self.upper_bounds, other.upper_bounds)
+        return jnp.array_equal(self.lower_bounds, other.lower_bounds) & jnp.array_equal(
+            self.upper_bounds, other.upper_bounds
+        )
 
 
 class _IncreasingVector(_SingletonConstraint):
