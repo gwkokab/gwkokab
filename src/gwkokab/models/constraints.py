@@ -108,15 +108,17 @@ class _UniqueIntervals(Constraint):
     event_dim = 1
 
     def __init__(self, lower_bounds, upper_bounds) -> None:
-        assert isinstance(lower_bounds, (list, tuple, jnp.ndarray))
-        assert isinstance(upper_bounds, (list, tuple, jnp.ndarray))
-        assert len(lower_bounds) == len(upper_bounds), (
-            f"lower_bounds and upper_bounds must have the same length, "
-            f"but got {len(lower_bounds)} and {len(upper_bounds)}"
-        )
+        if not isinstance(lower_bounds, (list, tuple, jnp.ndarray)):
+            raise TypeError("lower_bounds must be a list, tuple, or jnp.ndarray")
+        if not isinstance(upper_bounds, (list, tuple, jnp.ndarray)):
+            raise TypeError("upper_bounds must be a list, tuple, or jnp.ndarray")
+        if len(lower_bounds) != len(upper_bounds):
+            raise ValueError(
+                f"lower_bounds and upper_bounds must have the same length, "
+                f"but got {len(lower_bounds)} and {len(upper_bounds)}"
+            )
         self.lower_bounds = jnp.asarray(lower_bounds)
         self.upper_bounds = jnp.asarray(upper_bounds)
-
     def __call__(self, x):
         r"""Check if the input is within the specified intervals
 
