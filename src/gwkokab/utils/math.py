@@ -61,14 +61,19 @@ def beta_dist_mean_variance_to_concentrations(
     :param variance: The variance :math:`\sigma^2` of the beta distribution.
     :return: The shape parameters :math:`\alpha` and :math:`\beta` of the beta distribution.
     """
-    alpha = jnp.subtract(1.0, mean)
-    alpha = jnp.multiply(mean, alpha)
-    alpha = jnp.divide(alpha, variance)
-    alpha = jnp.subtract(alpha, 1.0)
-    alpha = jnp.multiply(mean, alpha)
+    r"""Let :math:`\mu` and :math:`\sigma^2` be the mean and variance of a beta
+    distribution. This function returns the shape parameters :math:`\alpha` and
+    :math:`\beta` of the distribution. Then concentrations are given by:
 
-    beta = jnp.reciprocal(mean)
-    beta = jnp.subtract(beta, 1.0)
-    beta = jnp.multiply(alpha, beta)
+    .. math::
+        \alpha = \mu \left(\frac{\mu(1 - \mu)}{\sigma^2} - 1\right)\qquad
+        \beta = \alpha\left(\frac{1}{\mu}-1\right)
 
+    :param mean: The mean :math:`\mu` of the beta distribution.
+    :param variance: The variance :math:`\sigma^2` of the beta distribution.
+    :return: The shape parameters :math:`\alpha` and :math:`\beta` of the beta distribution.
+    """
+    alpha = mean * ((mean * (1 - mean) / variance) - 1)
+    beta = alpha * ((1 - mean) / mean)
+    return alpha, beta
     return alpha, beta
