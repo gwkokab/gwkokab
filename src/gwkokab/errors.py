@@ -27,11 +27,11 @@ __all__ = ["banana_error_m1_m2"]
 
 def banana_error_m1_m2(
     x: Array,
-    size: Int,
-    key: Array,
+    size: int,
+    key: jrd.KeyArray,
     *,
-    scale_Mc: Float = 1.0,
-    scale_eta: Float = 1.0,
+    scale_Mc: float = 1.0,
+    scale_eta: float = 1.0,
 ) -> Array:
     r"""Add banana error to the given values. Section 3 of the
     `Model-independent inference on compact-binary
