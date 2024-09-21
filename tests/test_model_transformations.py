@@ -197,8 +197,8 @@ def test_bijective_transforms(transform, shape):
         (constraints.positive_increasing_vector, (5,)),
         (constraints.increasing_vector, (5,)),
         (constraints.strictly_increasing_vector, (5,)),
-        # (constraints.mass_ratio_mass_sandwich,),
-        # (constraints.mass_sandwich,),
+        (constraints.mass_sandwich(10.0, 50.0), (2,)),
+        (constraints.mass_ratio_mass_sandwich(10.0, 50.0), (2,)),
     ],
     ids=str,
 )
