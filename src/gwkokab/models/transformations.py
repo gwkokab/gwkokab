@@ -15,8 +15,6 @@
 
 from __future__ import annotations
 
-from typing_extensions import Tuple
-
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import constraints
@@ -98,12 +96,6 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         abs_m1 = jnp.abs(x[..., 0])
         return jnp.log(abs_m1)
 
-    def forward_shape(self, shape) -> Tuple[int, ...]:
-        return shape
-
-    def inverse_shape(self, shape) -> Tuple[int, ...]:
-        return shape
-
     def tree_flatten(self):
         return (), ((), dict())
 
@@ -158,12 +150,6 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         log_detJ = jnp.subtract(log_detJ, log_M)
         return log_detJ
 
-    def forward_shape(self, shape) -> Tuple[int, ...]:
-        return shape
-
-    def inverse_shape(self, shape) -> Tuple[int, ...]:
-        return shape
-
     def tree_flatten(self):
         return (), ((), dict())
 
@@ -202,6 +188,9 @@ class DeltaToSymmetricMassRatio(Transform):
 
     def tree_flatten(self):
         return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
 
 
 class ComponentMassesToChirpMassAndDelta(Transform):
@@ -257,6 +246,9 @@ class ComponentMassesToChirpMassAndDelta(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
 
 class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
     r"""Transforms source mass and redshift to detected mass and redshift."""
@@ -282,6 +274,9 @@ class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
 
     def tree_flatten(self):
         return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
 
 
 class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
@@ -322,6 +317,9 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
 
 class ComponentMassesToPrimaryMassAndMassRatio(Transform):
     r"""Transforms component masses and redshift to primary mass and mass ratio.
@@ -355,6 +353,9 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
 
     def tree_flatten(self):
         return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
 
 
 class ComponentMassesToMassRatioAndSecondaryMass(Transform):
@@ -391,6 +392,9 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
 
     def tree_flatten(self):
         return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
 
 
 class ComponentMassesToTotalMassAndMassRatio(Transform):
@@ -429,16 +433,15 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
 
 @biject_to.register(unique_intervals)
 def _transform_to_unique_intervals(constraint):
-    return ComposeTransform(
-        [
-            ReshapeTransform(
-                forward_shape=constraint.lower_bounds.shape,
-                inverse_shape=(constraint.lower_bounds.size,),
-            ),
-        ]
+    return ReshapeTransform(
+        forward_shape=constraint.lower_bounds.shape,
+        inverse_shape=constraint.lower_bounds.shape,
     )
 
 
