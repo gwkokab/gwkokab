@@ -28,7 +28,7 @@ from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
 from gwkokab.models import Wysocki2019MassModel
 from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
-from gwkokab.vts.neuralvt import load_model
+from gwkokab.vts import load_model
 
 from ..utils import sage_parser
 from ..utils.common import (

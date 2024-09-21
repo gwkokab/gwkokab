@@ -35,7 +35,6 @@ Utilities
     :toctree: _autosummary
 
     JointDistribution
-    add_log_factor
 
 Constraints
 -----------

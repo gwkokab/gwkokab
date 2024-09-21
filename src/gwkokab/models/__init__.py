@@ -1,37 +1,54 @@
-#  Copyright 2023 The GWKokab Authors
+# Copyright 2023 The GWKokab Authors
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from gwkokab._src.models import wrappers as wrappers
-from gwkokab._src.models.models import (
-    BrokenPowerLawMassModel as BrokenPowerLawMassModel,
-    FlexibleMixtureModel as FlexibleMixtureModel,
-    GaussianSpinModel as GaussianSpinModel,
-    IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
-    MassGapModel as MassGapModel,
-    MultiPeakMassModel as MultiPeakMassModel,
-    NDistribution as NDistribution,
-    NPowerLawMGaussian as NPowerLawMGaussian,
-    NPowerLawMGaussianWithDefaultSpinMagnitude as NPowerLawMGaussianWithDefaultSpinMagnitude,
-    NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment as NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
-    NPowerLawMGaussianWithSpinMisalignment as NPowerLawMGaussianWithSpinMisalignment,
-    PowerLawPeakMassModel as PowerLawPeakMassModel,
-    PowerLawPrimaryMassRatio as PowerLawPrimaryMassRatio,
-    Wysocki2019MassModel as Wysocki2019MassModel,
+
+from . import constraints, transformations, utils, wrappers
+from ._models import (
+    BrokenPowerLawMassModel,
+    FlexibleMixtureModel,
+    GaussianSpinModel,
+    IndependentSpinOrientationGaussianIsotropic,
+    MassGapModel,
+    MultiPeakMassModel,
+    NDistribution,
+    NPowerLawMGaussian,
+    NPowerLawMGaussianWithDefaultSpinMagnitude,
+    NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
+    NPowerLawMGaussianWithSpinMisalignment,
+    PowerLawPeakMassModel,
+    PowerLawPrimaryMassRatio,
+    Wysocki2019MassModel,
 )
 
-from . import (
-    constraints as constraints,
-    transformations as transformations,
-    utils as utils,
-)
+
+__all__ = [
+    "constraints",
+    "transformations",
+    "utils",
+    "wrappers",
+    "BrokenPowerLawMassModel",
+    "FlexibleMixtureModel",
+    "GaussianSpinModel",
+    "IndependentSpinOrientationGaussianIsotropic",
+    "MassGapModel",
+    "MultiPeakMassModel",
+    "NDistribution",
+    "NPowerLawMGaussian",
+    "NPowerLawMGaussianWithDefaultSpinMagnitude",
+    "NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment",
+    "NPowerLawMGaussianWithSpinMisalignment",
+    "PowerLawPeakMassModel",
+    "PowerLawPrimaryMassRatio",
+    "Wysocki2019MassModel",
+]

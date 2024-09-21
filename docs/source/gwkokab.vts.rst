@@ -4,7 +4,7 @@
 ``gwkokab.vts.neuralvt``
 -------------------------
 
-.. automodule:: gwkokab.vts.neuralvt
+.. automodule:: gwkokab.vts._neuralvt
 
 .. autosummary::
     :nosignatures:
