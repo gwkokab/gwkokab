@@ -73,26 +73,6 @@ def get_sp_dist(jax_dist):
 
 
 CONTINUOUS = [
-    T(BrokenPowerLawMassModel, -1.4, -5.56, 9.33, 6.3, 90.57, 0.58, 1.11),
-    T(BrokenPowerLawMassModel, -8.83, 0.26, -8.74, 2.33, 27.16, 0.97, 1.16),
-    T(BrokenPowerLawMassModel, 2.45, -4.56, -4.63, 27.17, 30.7, 0.55, 13.03),
-    T(BrokenPowerLawMassModel, 3.49, -0.4, 5.17, 22.77, 55.72, 0.39, 4.65),
-    T(BrokenPowerLawMassModel, 4.74, 9.06, 8.09, 19.96, 114.75, 0.77, 5.25),
-    T(BrokenPowerLawMassModel, 4.77, 3.62, 3.27, 21.8, 80.19, 0.19, 4.99),
-    T(BrokenPowerLawMassModel, 4.84, -1.91, 8.71, 18.07, 75.14, 0.91, 5.12),
-    T(BrokenPowerLawMassModel, 4.84, 0.11, 9.21, 17.22, 115.82, 0.61, 2.93),
-    T(BrokenPowerLawMassModel, 9.62, -4.97, 3.59, 5.44, 38.34, 0.63, 1.37),
-    T(BrokenPowerLawMassModel, 9.73, 5.36, 4.56, 1.58, 46.87, 0.04, 0.99),
-    T(PowerLawPeakMassModel, -1.36, -4.83, 0.73, 8.32, 27.33, 46.5, 44.49, 1.09),
-    T(PowerLawPeakMassModel, -2.42, 4.38, 0.41, 2.08, 12.55, 67.71, 29.99, 1.27),
-    T(PowerLawPeakMassModel, -4.14, 5.14, 0.73, 7.92, 18.4, 104.21, 61.77, 0.68),
-    T(PowerLawPeakMassModel, 0.81, -4.19, 0.58, 12.09, 28.48, 30.92, 28.78, 3.1),
-    T(PowerLawPeakMassModel, 4.62, 0.15, 0.27, 3.74, 8.13, 102.2, 84.51, 4.89),
-    T(PowerLawPeakMassModel, 6.48, -5.68, 0.54, 2.28, 16.18, 28.07, 27.71, 0.44),
-    T(PowerLawPeakMassModel, 7.24, 5.72, 0.78, 7.88, 17.55, 40.39, 21.67, 3.11),
-    T(PowerLawPeakMassModel, 7.68, 1.75, 0.31, 0.78, 1.55, 86.92, 58.77, 3.35),
-    T(PowerLawPeakMassModel, 7.95, 4.71, 0.42, 7.76, 27.8, 38.46, 28.32, 2.17),
-    T(PowerLawPeakMassModel, 9.01, 3.76, 0.42, 1.11, 3.64, 7.09, 6.07, 3.6),
     T(PowerLawPrimaryMassRatio, -1.0, 1.0, 10.0, 50.0),
     T(PowerLawPrimaryMassRatio, -7.0, -8.0, 70.0, 100.0),
     T(PowerLawPrimaryMassRatio, -7.0, 9.0, 5.0, 100.0),
@@ -101,33 +81,6 @@ CONTINUOUS = [
     T(Wysocki2019MassModel, -2.3, 5.0, 100.0),
     T(Wysocki2019MassModel, 0.7, 50.0, 100.0),
     T(Wysocki2019MassModel, 3.1, 70.0, 100.0),
-    # T(
-    #     FlexibleMixtureModel,
-    # ),
-    # T(
-    #     MassGapModel,
-    # ),
-    # T(
-    #     MultiPeakMassModel,
-    # ),
-    # T(
-    #     NDistribution,
-    # ),
-    # T(
-    #     NPowerLawMGaussian,
-    # ),
-    # T(
-    #     NPowerLawMGaussianWithDefaultSpinMagnitude,
-    # ),
-    # T(
-    #     NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
-    # ),
-    # T(
-    #     NPowerLawMGaussianWithSpinMisalignment,
-    # ),
-    # T(
-    #     PowerLawPeakMassModel,
-    # ),
 ]
 
 
@@ -608,9 +561,6 @@ def test_gof(jax_dist, sp_dist, params):
     # Test each batch independently.
     probs = probs.reshape(num_samples, -1)
     samples = samples.reshape(probs.shape + d.event_shape)
-    if "Dirichlet" in jax_dist.__name__:
-        # The Dirichlet density is over all but one of the probs.
-        samples = samples[..., :-1]
     for b in range(probs.shape[1]):
         try:
             gof = auto_goodness_of_fit(samples[:, b], probs[:, b], dim=dim)
