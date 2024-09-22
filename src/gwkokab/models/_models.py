@@ -819,7 +819,7 @@ class PowerLawPrimaryMassRatio(Distribution):
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
-    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self) -> constraints.Constraint:
         return self._support
 
