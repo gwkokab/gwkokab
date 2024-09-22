@@ -195,18 +195,16 @@ class _BaseSmoothedMassDistribution(Distribution):
             n_grid_points=500,
         )
 
-        key = jrd.split(key, m1.shape)
-
         q = vmap(
-            lambda _m1, _k: numerical_inverse_transform_sampling(
+            lambda _m1: numerical_inverse_transform_sampling(
                 logpdf=partial(self.log_prob_q, _m1),
                 limits=(jnp.divide(self.mmin, _m1), 1.0),
                 sample_shape=(),
-                key=_k,
+                key=key,
                 batch_shape=self.batch_shape,
                 n_grid_points=500,
             )
-        )(m1, key)
+        )(m1)
 
         return jnp.stack([m1, q], axis=-1).reshape(sample_shape + self.event_shape)
 
@@ -844,21 +842,19 @@ class PowerLawPrimaryMassRatio(Distribution):
         return jnp.add(log_prob_m1, log_prob_q)
 
     def sample(self, key, sample_shape=()):
-        key1, key2 = jrd.split(key)
-        u1 = jrd.uniform(key1, shape=sample_shape + self.batch_shape)
-        u2 = jrd.uniform(key2, shape=sample_shape + self.batch_shape)
+        u = jrd.uniform(key, shape=sample_shape)
         m1 = DoublyTruncatedPowerLaw(
             alpha=self.alpha,
             low=self.mmin,
             high=self.mmax,
             validate_args=self._validate_args,
-        ).icdf(u1)
+        ).icdf(u)
         q = DoublyTruncatedPowerLaw(
             alpha=self.beta,
             low=jnp.divide(self.mmin, m1),
             high=1.0,
             validate_args=self._validate_args,
-        ).icdf(u2)
+        ).icdf(u)
         return jnp.stack((m1, q), axis=-1)
 
 
@@ -917,17 +913,14 @@ class Wysocki2019MassModel(Distribution):
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self, key, sample_shape=()) -> Array:
-        key1, key2 = jrd.split(key)
-        u = jrd.uniform(key1, shape=sample_shape + self.batch_shape)
+        u = jrd.uniform(key, shape=sample_shape)
         m1 = DoublyTruncatedPowerLaw(
             alpha=jnp.negative(self.alpha_m),
             low=self.mmin,
             high=self.mmax,
             validate_args=self._validate_args,
         ).icdf(u)
-        m2 = jrd.uniform(
-            key2, shape=sample_shape + self.batch_shape, minval=self.mmin, maxval=m1
-        )
+        m2 = jrd.uniform(key, shape=sample_shape, minval=self.mmin, maxval=m1)
         return jnp.stack((m1, m2), axis=-1)
 
 

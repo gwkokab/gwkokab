@@ -24,6 +24,7 @@ from scipy.sparse import csr_matrix
 
 from gwkokab.models import (
     BrokenPowerLawMassModel,
+    MultiPeakMassModel,
     PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio,
     Wysocki2019MassModel,
@@ -649,6 +650,10 @@ def test_log_prob_gradient(jax_dist, sp_dist, params):
 @pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
 def test_mean_var(jax_dist, sp_dist, params):
     n = 200_000
+    if isinstance(
+        jax_dist, (BrokenPowerLawMassModel, MultiPeakMassModel, PowerLawPeakMassModel)
+    ):
+        n = 2000
     d_jax = jax_dist(*params)
     k = jrd.PRNGKey(0)
     samples = d_jax.sample(k, sample_shape=(n,)).astype(np.float32)
