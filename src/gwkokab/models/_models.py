@@ -764,8 +764,8 @@ class PowerLawPrimaryMassRatio(Distribution):
     arg_constraints = {
         "alpha": constraints.real,
         "beta": constraints.real,
-        "mmin": constraints.dependent,
-        "mmax": constraints.dependent,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
@@ -830,8 +830,8 @@ class Wysocki2019MassModel(Distribution):
 
     arg_constraints = {
         "alpha_m": constraints.real,
-        "mmin": constraints.dependent,
-        "mmax": constraints.dependent,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
     }
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
