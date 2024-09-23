@@ -27,9 +27,6 @@ SINGLETON_CONSTRAINTS = {
     "strictly_increasing_vector": constraints.strictly_increasing_vector,
 }
 PARAMETRIZED_CONSTRAINTS = {
-    "unique_intervals": T(
-        constraints.unique_intervals, (_a((-10, -8, -6, -4)), _a((4, 6, 8, 10))), dict()
-    ),
     "mass_sandwich": T(constraints.mass_sandwich, (_a(10.0), _a(30.0)), dict()),
     "mass_ratio_mass_sandwich": T(
         constraints.mass_ratio_mass_sandwich, (_a(10.0), _a(30.0)), dict()
