@@ -175,7 +175,7 @@ def gen_values_within_bounds(constraint, size, key=jrd.PRNGKey(11)):
         x = jrd.normal(key, size)
         x = jnp.abs(x)
         x = jax.nn.sigmoid(x)
-        x = jnp.sort(x, axis=-1, descending=True)
+        x = jnp.sort(x, axis=-1)[..., ::-1]
         x *= jnp.broadcast_to(constraint.mmax, size) - jnp.broadcast_to(
             constraint.mmin, size
         )
