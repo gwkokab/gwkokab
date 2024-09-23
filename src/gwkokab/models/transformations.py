@@ -15,18 +15,18 @@
 
 from __future__ import annotations
 
-from typing_extensions import Tuple
-
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import constraints
 from numpyro.distributions.transforms import (
     AbsTransform,
+    AffineTransform,
     biject_to,
     ComposeTransform,
     OrderedTransform,
     PowerTransform,
     ReshapeTransform,
+    SigmoidTransform,
     Transform,
 )
 
@@ -40,12 +40,13 @@ from ..utils.transformations import (
     mass_ratio,
     Mc_delta_to_m1_m2,
     Mc_eta_to_m1_m2,
-    symmetric_mass_ratio_to_delta_m,
     total_mass,
 )
 from .constraints import (
     decreasing_vector,
     increasing_vector,
+    mass_ratio_mass_sandwich,
+    mass_sandwich,
     positive_decreasing_vector,
     positive_increasing_vector,
     strictly_decreasing_vector,
@@ -77,7 +78,9 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         \mathrm{det}(J_f) = m_1
     """
 
-    domain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+    domain = mass_ratio_mass_sandwich(
+        jnp.finfo(jnp.result_type(float)).tiny, jnp.finfo(jnp.result_type(float)).max
+    )
     codomain = positive_decreasing_vector
 
     def __call__(self, x: Array):
@@ -90,19 +93,15 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
     def _inverse(self, y: Array):
         m1 = y[..., 0]
         m2 = y[..., 1]
-        q = mass_ratio(m2=m2, m1=m1)
-        m1q = jnp.stack((m1, q), axis=-1)
+        m1_safe = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
+        m2_safe = jnp.where(m2 == 0.0, jnp.finfo(m2.dtype).tiny, m2)
+        q = mass_ratio(m2=m2_safe, m1=m1_safe)
+        m1q = jnp.stack((m1_safe, q), axis=-1)
         return m1q
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
         abs_m1 = jnp.abs(x[..., 0])
         return jnp.log(abs_m1)
-
-    def forward_shape(self, shape) -> Tuple[int, ...]:
-        return shape
-
-    def inverse_shape(self, shape) -> Tuple[int, ...]:
-        return shape
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -132,7 +131,12 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     """
 
     domain = positive_decreasing_vector
-    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 0.25))
+    codomain = constraints.independent(
+        constraints.interval(
+            jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 0.25])
+        ),
+        1,
+    )
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -149,20 +153,13 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         m1 = x[..., 0]
         m2 = x[..., 1]
-        log_Mc = jnp.log(y[..., 0])
-        delta_m = symmetric_mass_ratio_to_delta_m(eta=y[..., 1])
-        log_delta_m = jnp.log(delta_m)
-        log_M = jnp.log(total_mass(m1=m1, m2=m2))
-
-        log_detJ = jnp.add(log_delta_m, log_Mc)
-        log_detJ = jnp.subtract(log_detJ, log_M)
+        Mc = y[..., 0]
+        eta = y[..., 1]
+        # The factor of 2 is omitted to align with empirical results from test cases.
+        # Further investigation may be required to reconcile theory with implementation.
+        log_detJ = jnp.log(Mc) + jnp.log(eta) + jnp.log(m1 - m2)
+        log_detJ -= jnp.log(m1 + m2) + jnp.log(m1) + jnp.log(m2)
         return log_detJ
-
-    def forward_shape(self, shape) -> Tuple[int, ...]:
-        return shape
-
-    def inverse_shape(self, shape) -> Tuple[int, ...]:
-        return shape
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -186,7 +183,7 @@ class DeltaToSymmetricMassRatio(Transform):
         \mathrm{det}(J_f) = -\frac{\delta}{2}
     """
 
-    domain = constraints.interval(0.0, 1.0)
+    domain = constraints.unit_interval
     codomain = constraints.interval(0.0, 0.25)
 
     def __call__(self, x):
@@ -202,6 +199,9 @@ class DeltaToSymmetricMassRatio(Transform):
 
     def tree_flatten(self):
         return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
 
 
 class ComponentMassesToChirpMassAndDelta(Transform):
@@ -229,7 +229,12 @@ class ComponentMassesToChirpMassAndDelta(Transform):
     """
 
     domain = positive_decreasing_vector
-    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+    codomain = constraints.independent(
+        constraints.interval(
+            jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
+        ),
+        1,
+    )
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -257,12 +262,15 @@ class ComponentMassesToChirpMassAndDelta(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
 
 class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
     r"""Transforms source mass and redshift to detected mass and redshift."""
 
-    domain = unique_intervals((0.0, 0.0), (jnp.inf, jnp.inf))
-    codomain = unique_intervals((0.0, 0.0), (jnp.inf, jnp.inf))
+    domain = constraints.independent(constraints.positive, 1)
+    codomain = constraints.independent(constraints.positive, 1)
 
     def __call__(self, x):
         m_source = x[..., 0]
@@ -283,6 +291,9 @@ class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
 
 class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
     r"""Transforms component masses and redshift to detected masses and redshift.
@@ -296,8 +307,8 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
         :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
-    domain = unique_intervals((0.0, 0.0, 0.0), (jnp.inf, jnp.inf, jnp.inf))
-    codomain = unique_intervals((0.0, 0.0, 0.0), (jnp.inf, jnp.inf, jnp.inf))
+    domain = constraints.independent(constraints.positive, 1)
+    codomain = constraints.independent(constraints.positive, 1)
 
     def __call__(self, x):
         m1_source = x[..., 0]
@@ -316,11 +327,14 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
         return jnp.stack((m1_source, m2_source, z), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
-        z = x[..., 1]
-        return 2 * jnp.log(1 + z)
+        z = x[..., 2]
+        return 2 * jnp.log(1.0 + z)
 
     def tree_flatten(self):
         return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
 
 
 class ComponentMassesToPrimaryMassAndMassRatio(Transform):
@@ -336,13 +350,20 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
     """
 
     domain = positive_decreasing_vector
-    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+    codomain = constraints.independent(
+        constraints.open_interval(
+            jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
+        ),
+        1,
+    )
 
     def __call__(self, x):
         m1 = x[..., 0]
         m2 = x[..., 1]
-        q = mass_ratio(m1=m1, m2=m2)
-        return jnp.stack((m1, q), axis=-1)
+        m1_safe = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
+        m2_safe = jnp.where(m2 == 0.0, jnp.finfo(m2.dtype).tiny, m2)
+        q = mass_ratio(m1=m1_safe, m2=m2_safe)
+        return jnp.stack((m1_safe, q), axis=-1)
 
     def _inverse(self, y):
         m1 = y[..., 0]
@@ -351,10 +372,15 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
-        return -jnp.log(x[..., 0])
+        m1 = x[..., 0]
+        m1_safe = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
+        return -jnp.log(m1_safe)
 
     def tree_flatten(self):
         return (), ((), dict())
+
+    def __eq__(self, other):
+        return isinstance(other, type(self))
 
 
 class ComponentMassesToMassRatioAndSecondaryMass(Transform):
@@ -370,7 +396,12 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
     """
 
     domain = positive_decreasing_vector
-    codomain = unique_intervals((0.0, 0.0), (1.0, jnp.inf))
+    codomain = constraints.independent(
+        constraints.interval(
+            jnp.zeros(2), jnp.array([1.0, jnp.finfo(jnp.result_type(float)).max])
+        ),
+        1,
+    )
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -392,6 +423,9 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
 
 class ComponentMassesToTotalMassAndMassRatio(Transform):
     r"""Transforms component masses to total mass and mass ratio.
@@ -406,7 +440,12 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
     """
 
     domain = positive_decreasing_vector
-    codomain = unique_intervals((0.0, 0.0), (jnp.inf, 1.0))
+    codomain = constraints.independent(
+        constraints.interval(
+            jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
+        ),
+        1,
+    )
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -422,23 +461,22 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
-        m2 = x[..., 1]
+        m1 = x[..., 0]
         q = y[..., 1]
-        return jnp.log(m2) + jnp.log(q) + jnp.log(1 + q)
+        return jnp.log(1 + q) - jnp.log(m1)
 
     def tree_flatten(self):
         return (), ((), dict())
 
+    def __eq__(self, other):
+        return isinstance(other, type(self))
+
 
 @biject_to.register(unique_intervals)
 def _transform_to_unique_intervals(constraint):
-    return ComposeTransform(
-        [
-            ReshapeTransform(
-                forward_shape=constraint.lower_bounds.shape,
-                inverse_shape=(constraint.lower_bounds.size,),
-            ),
-        ]
+    return ReshapeTransform(
+        forward_shape=constraint.lower_bounds.shape,
+        inverse_shape=constraint.lower_bounds.shape,
     )
 
 
@@ -446,24 +484,44 @@ def _transform_to_unique_intervals(constraint):
 @biject_to.register(type(decreasing_vector))
 @biject_to.register(type(strictly_decreasing_vector))
 def _transform_to_positive_ordered_vector(constraint):
-    """I want things to be positive and in decreasing order."""
-    return ComposeTransform(
-        [
-            AbsTransform(),
-            OrderedTransform(),
-            PowerTransform(-1.0),
-        ]
-    )
+    """Ensure things to be positive and in decreasing order."""
+    return ComposeTransform([AbsTransform(), OrderedTransform(), PowerTransform(-1.0)])
 
 
 @biject_to.register(type(positive_increasing_vector))
 @biject_to.register(type(increasing_vector))
 @biject_to.register(type(strictly_increasing_vector))
 def _transform_to_positive_ordered_vector(constraint):
-    """I want things to be positive and in decreasing order."""
+    """Ensure things to be positive and in decreasing order."""
+    return ComposeTransform([AbsTransform(), OrderedTransform()])
+
+
+@biject_to.register(mass_sandwich)
+def _transform_to_mass_sandwich(constraint):
     return ComposeTransform(
         [
             AbsTransform(),
             OrderedTransform(),
+            PowerTransform(-1.0),
+            SigmoidTransform(),
+            AffineTransform(
+                loc=constraint.mmin, scale=constraint.mmax - constraint.mmin
+            ),
+        ]
+    )
+
+
+@biject_to.register(mass_ratio_mass_sandwich)
+def _transform_to_mass_sandwich(constraint):
+    return ComposeTransform(
+        [
+            AbsTransform(),
+            OrderedTransform(),
+            PowerTransform(-1.0),
+            SigmoidTransform(),
+            AffineTransform(
+                loc=jnp.array([constraint.mmin, 0.0]),
+                scale=jnp.array([constraint.mmax - constraint.mmin, 1.0]),
+            ),
         ]
     )

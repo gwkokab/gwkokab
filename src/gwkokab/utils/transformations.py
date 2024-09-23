@@ -252,7 +252,9 @@ def Mc_delta_chieff_chiminus_to_chi1z_chi2z(
 
 def Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Array]:
     delta_sq = jnp.subtract(1, jnp.multiply(4.0, eta))  # 1 - 4 * eta
-    delta_sq = jnp.maximum(delta_sq, 0.0)  # to avoid negative values
+    delta_sq = jnp.maximum(
+        delta_sq, jnp.zeros_like(delta_sq)
+    )  # to avoid negative values
     delta = jnp.sqrt(delta_sq)  # sqrt(1 - 4 * eta)
     half_Mc = jnp.multiply(0.5, Mc)  # Mc/2
     eta_pow_neg_point_six = jnp.power(eta, -0.6)  # eta^-0.6
