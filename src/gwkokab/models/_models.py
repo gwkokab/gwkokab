@@ -41,7 +41,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
 from ..utils.transformations import m1_q_to_m2
-from .constraints import mass_ratio_mass_sandwich, mass_sandwich, unique_intervals
+from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .utils import (
     get_default_spin_magnitude_dists,
@@ -1828,6 +1828,11 @@ def FlexibleMixtureModel(
             probs=weights, validate_args=validate_args
         ),
         component_distributions=component_dists,
-        support=unique_intervals((0.0, 0.0, -1.0, -1.0), (jnp.inf, 1.0, 1.0, 1.0)),
+        support=constraints.independent(
+            constraints.interval(
+                jnp.array([0.0, 0.0, -1.0, -1.0]), jnp.array([jnp.inf, 1.0, 1.0, 1.0])
+            ),
+            1,
+        ),
         validate_args=validate_args,
     )

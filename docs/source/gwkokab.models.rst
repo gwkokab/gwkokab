@@ -53,7 +53,6 @@ Constraints
     positive_increasing_vector
     strictly_decreasing_vector
     strictly_increasing_vector
-    unique_intervals
 
 Transformations
 ---------------

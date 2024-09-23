@@ -25,7 +25,6 @@ from numpyro.distributions.transforms import (
     ComposeTransform,
     OrderedTransform,
     PowerTransform,
-    ReshapeTransform,
     SigmoidTransform,
     Transform,
 )
@@ -51,7 +50,6 @@ from .constraints import (
     positive_increasing_vector,
     strictly_decreasing_vector,
     strictly_increasing_vector,
-    unique_intervals,
 )
 
 
@@ -470,14 +468,6 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
 
     def __eq__(self, other):
         return isinstance(other, type(self))
-
-
-@biject_to.register(unique_intervals)
-def _transform_to_unique_intervals(constraint):
-    return ReshapeTransform(
-        forward_shape=constraint.lower_bounds.shape,
-        inverse_shape=constraint.lower_bounds.shape,
-    )
 
 
 @biject_to.register(type(positive_decreasing_vector))

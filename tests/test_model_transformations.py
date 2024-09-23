@@ -190,7 +190,6 @@ def test_bijective_transforms(transform, shape):
 @pytest.mark.parametrize(
     "constraint, shape",
     [
-        (constraints.unique_intervals((-10, -8, -6, -4), (4, 6, 8, 10)), (4,)),
         (constraints.positive_decreasing_vector, (5,)),
         (constraints.decreasing_vector, (5,)),
         (constraints.strictly_decreasing_vector, (5,)),
