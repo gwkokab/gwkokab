@@ -155,8 +155,8 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         m2 = x[..., 1]
         Mc = y[..., 0]
         eta = y[..., 1]
-        # In my calculation there is a factor of 2, but it is failing the test cases
-        # after removing it, it is passing the test cases. So, I am removing it.
+        # The factor of 2 is omitted to align with empirical results from test cases.
+        # Further investigation may be required to reconcile theory with implementation.
         log_detJ = jnp.log(Mc) + jnp.log(eta) + jnp.log(m1 - m2)
         log_detJ -= jnp.log(m1 + m2) + jnp.log(m1) + jnp.log(m2)
         return log_detJ
