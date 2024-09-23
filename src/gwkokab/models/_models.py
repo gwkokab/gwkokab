@@ -44,6 +44,8 @@ from ..utils.transformations import m1_q_to_m2
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .utils import (
+    doubly_truncated_power_law_icdf,
+    doubly_truncated_power_law_log_prob,
     get_default_spin_magnitude_dists,
     get_spin_misalignment_dist,
     JointDistribution,
@@ -85,12 +87,9 @@ class _BaseSmoothedMassDistribution(Distribution):
         return log_prob_m_val
 
     def log_prob_q(self, m1, q):
-        log_prob_q_val = DoublyTruncatedPowerLaw(
-            alpha=self.beta_q,
-            low=jnp.divide(self.mmin, m1),
-            high=1.0,
-            validate_args=self._validate_args,
-        ).log_prob(q)
+        log_prob_q_val = doubly_truncated_power_law_log_prob(
+            x=q, alpha=self.beta_q, low=jnp.divide(self.mmin, m1), high=1.0
+        )
         log_prob_q_val = jnp.add(
             log_prob_q_val,
             jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1, q=q))),
@@ -125,12 +124,9 @@ class _BaseSmoothedMassDistribution(Distribution):
         qs = jrd.uniform(
             jrd.PRNGKey(1), shape=(1000,) + self.batch_shape, minval=0.001, maxval=1
         )
-        log_prob_q_val = DoublyTruncatedPowerLaw(
-            self.beta_q,
-            jnp.divide(self.mmin, m1s),
-            1.0,
-            validate_args=self._validate_args,
-        ).log_prob(qs)
+        log_prob_q_val = doubly_truncated_power_law_log_prob(
+            x=qs, alpha=self.beta_q, low=jnp.divide(self.mmin, m1s), high=1.0
+        )
         log_prob_q_val = jnp.nan_to_num(log_prob_q_val, nan=-jnp.inf)
         log_prob_q_val = jnp.add(
             log_prob_q_val,
@@ -258,11 +254,7 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
         "mbreak",
         "log_correction",
     )
-    pytree_aux_fields = (
-        "_pl_neg_alpha1_mmin_mbreak",
-        "_pl_neg_alpha2_mbreak_mmax",
-        "_support",
-    )
+    pytree_aux_fields = ("_support",)
 
     def __init__(
         self,
@@ -308,30 +300,12 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
             self.mmin,
             jnp.multiply(self.break_fraction, jnp.subtract(self.mmax, self.mmin)),
         )
-        self.log_correction = DoublyTruncatedPowerLaw(
-            alpha=-self.alpha2,
-            low=self.mbreak,
-            high=self.mmax,
-            validate_args=validate_args,
-        ).log_prob(self.mbreak) - DoublyTruncatedPowerLaw(
-            alpha=-self.alpha1,
-            low=self.mmin,
-            high=self.mbreak,
-            validate_args=validate_args,
-        ).log_prob(self.mbreak)
+        self.log_correction = doubly_truncated_power_law_log_prob(
+            x=self.mbreak, alpha=-self.alpha2, low=self.mbreak, high=self.mmax
+        ) - doubly_truncated_power_law_log_prob(
+            x=self.mbreak, alpha=-self.alpha1, low=self.mmin, high=self.mbreak
+        )
 
-        self._pl_neg_alpha1_mmin_mbreak = DoublyTruncatedPowerLaw(
-            alpha=-self.alpha1,
-            low=self.mmin,
-            high=self.mbreak,
-            validate_args=validate_args,
-        )
-        self._pl_neg_alpha2_mbreak_mmax = DoublyTruncatedPowerLaw(
-            alpha=-self.alpha2,
-            low=self.mbreak,
-            high=self.mmax,
-            validate_args=validate_args,
-        )
         self._support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
         super(BrokenPowerLawMassModel, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
@@ -342,8 +316,12 @@ class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
         return self._support
 
     def log_primary_model(self, value):
-        log_low_part = self._pl_neg_alpha1_mmin_mbreak.log_prob(value)
-        log_high_part = self._pl_neg_alpha2_mbreak_mmax.log_prob(value)
+        log_low_part = doubly_truncated_power_law_log_prob(
+            x=value, alpha=-self.alpha1, low=self.mmin, high=self.mbreak
+        )
+        log_high_part = doubly_truncated_power_law_log_prob(
+            x=value, alpha=-self.alpha2, low=self.mbreak, high=self.mmax
+        )
         log_prob_val = (log_low_part + self.log_correction) * jnp.less(
             value, self.mbreak
         ) + log_high_part * jnp.greater_equal(value, self.mbreak)
@@ -603,12 +581,9 @@ class MultiPeakMassModel(_BaseSmoothedMassDistribution):
 
         powerlaw_term = jnp.add(
             jnp.log1p(-self.lam),
-            DoublyTruncatedPowerLaw(
-                alpha=-self.alpha,
-                low=self.mmin,
-                high=self.mmax,
-                validate_args=self._validate_args,
-            ).log_prob(m1),
+            doubly_truncated_power_law_log_prob(
+                x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
+            ),
         )
         log_prob_val = jnp.logaddexp(powerlaw_term, gaussian_term_1)
         log_prob_val = jnp.add(log_prob_val, jnp.exp(gaussian_term_2))
@@ -757,12 +732,9 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
         )
         powerlaw_term = jnp.add(
             jnp.log1p(-self.lam),
-            DoublyTruncatedPowerLaw(
-                alpha=-self.alpha,
-                low=self.mmin,
-                high=self.mmax,
-                validate_args=self._validate_args,
-            ).log_prob(m1),
+            doubly_truncated_power_law_log_prob(
+                x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
+            ),
         )
         log_prob_val = jnp.logaddexp(powerlaw_term, gaussian_term)
         return log_prob_val
@@ -827,34 +799,22 @@ class PowerLawPrimaryMassRatio(Distribution):
     def log_prob(self, value):
         m1 = value[..., 0]
         q = value[..., 1]
-        log_prob_m1 = DoublyTruncatedPowerLaw(
-            alpha=self.alpha,
-            low=self.mmin,
-            high=self.mmax,
-            validate_args=self._validate_args,
-        ).log_prob(m1)
-        log_prob_q = DoublyTruncatedPowerLaw(
-            alpha=self.beta,
-            low=jnp.divide(self.mmin, m1),
-            high=1.0,
-            validate_args=self._validate_args,
-        ).log_prob(q)
+        log_prob_m1 = doubly_truncated_power_law_log_prob(
+            x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+        )
+        log_prob_q = doubly_truncated_power_law_log_prob(
+            x=q, alpha=self.beta, low=jnp.divide(self.mmin, m1), high=1.0
+        )
         return jnp.add(log_prob_m1, log_prob_q)
 
     def sample(self, key, sample_shape=()):
         u = jrd.uniform(key, shape=sample_shape)
-        m1 = DoublyTruncatedPowerLaw(
-            alpha=self.alpha,
-            low=self.mmin,
-            high=self.mmax,
-            validate_args=self._validate_args,
-        ).icdf(u)
-        q = DoublyTruncatedPowerLaw(
-            alpha=self.beta,
-            low=jnp.divide(self.mmin, m1),
-            high=1.0,
-            validate_args=self._validate_args,
-        ).icdf(u)
+        m1 = doubly_truncated_power_law_icdf(
+            q=u, alpha=self.alpha, low=self.mmin, high=self.mmax
+        )
+        q = doubly_truncated_power_law_icdf(
+            q=u, alpha=self.beta, low=jnp.divide(self.mmin, m1), high=1.0
+        )
         return jnp.stack((m1, q), axis=-1)
 
 
@@ -901,12 +861,9 @@ class Wysocki2019MassModel(Distribution):
     def log_prob(self, value):
         m1 = value[..., 0]
         m2 = value[..., 1]
-        log_prob_m1 = DoublyTruncatedPowerLaw(
-            alpha=jnp.negative(self.alpha_m),
-            low=self.mmin,
-            high=self.mmax,
-            validate_args=self._validate_args,
-        ).log_prob(m1)
+        log_prob_m1 = doubly_truncated_power_law_log_prob(
+            x=m1, alpha=jnp.negative(self.alpha_m), low=self.mmin, high=self.mmax
+        )
         log_prob_m2_given_m1 = uniform.logpdf(
             m2, loc=self.mmin, scale=jnp.subtract(m1, self.mmin)
         )
@@ -914,12 +871,9 @@ class Wysocki2019MassModel(Distribution):
 
     def sample(self, key, sample_shape=()) -> Array:
         u = jrd.uniform(key, shape=sample_shape)
-        m1 = DoublyTruncatedPowerLaw(
-            alpha=jnp.negative(self.alpha_m),
-            low=self.mmin,
-            high=self.mmax,
-            validate_args=self._validate_args,
-        ).icdf(u)
+        m1 = doubly_truncated_power_law_icdf(
+            q=u, alpha=jnp.negative(self.alpha_m), low=self.mmin, high=self.mmax
+        )
         m2 = jrd.uniform(key, shape=sample_shape, minval=self.mmin, maxval=m1)
         return jnp.stack((m1, m2), axis=-1)
 
@@ -1684,12 +1638,9 @@ class MassGapModel(Distribution):
     def log_prob_three_component_single(self, m_i):
         component_probs = jnp.stack(
             [
-                DoublyTruncatedPowerLaw(
-                    alpha=-self.alpha,
-                    low=self.mmin,
-                    high=self.mmax,
-                    validate_args=self._validate_args,
-                ).log_prob(m_i),
+                doubly_truncated_power_law_log_prob(
+                    x=m_i, alpha=-self.alpha, low=self.mmin, high=self.mmax
+                ),
                 truncnorm.logpdf(
                     m_i,
                     a=(self.mmin - self.mu1) / self.sigma1,
@@ -1743,12 +1694,12 @@ class MassGapModel(Distribution):
         m2 = value[..., 1]
         log_prob_val = self.log_prob_mi(m1)
         log_prob_val += self.log_prob_mi(m2)
-        log_prob_val += DoublyTruncatedPowerLaw(
+        log_prob_val += doubly_truncated_power_law_log_prob(
+            x=jnp.divide(m2, m1),
             alpha=self.beta_q,
             low=jnp.divide(self.mmin, self.mmax),
             high=1.0,
-            validate_args=self._validate_args,
-        ).log_prob(jnp.divide(m2, m1))
+        )
         return log_prob_val
 
 
