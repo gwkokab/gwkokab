@@ -42,7 +42,7 @@ def banana_error_m1_m2(
     .. math::
 
         M_{c} = M_{c}^{T}
-        \left[1+\alpha\frac{12}{\rho}\left(r_{0}+r\right)\right]
+        \left[1+\beta\frac{12}{\rho}\left(r_{0}+r\right)\right]
 
         \eta = \eta^{T}
         \left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
@@ -79,9 +79,9 @@ def banana_error_m1_m2(
         1.5 * 0.3 * (v_PN_param / v_PN_param_max) ** (7.0) / snr_fac
     )
 
-    alpha = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
+    beta = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
 
-    Mc = Mc_true * (1.0 + alpha * (12.0 / rho) * (r0 + r))
+    Mc = Mc_true * (1.0 + beta * (r0 + r))
     eta = eta_true * (1.0 + 0.03 * (12.0 / rho) * (r0p + rp))
 
     etaV = 1.0 - 4.0 * eta
