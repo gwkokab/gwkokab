@@ -17,43 +17,20 @@ from __future__ import annotations
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
-from jax import numpy as jnp, vmap
-from jaxtyping import Array, Bool
+from jax import numpy as jnp
 
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import PowerLawPrimaryMassRatio
 from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 from gwkokab.utils.transformations import m1_q_to_m2, mass_ratio
-from gwkokab.vts import load_model
 
 from ..utils import genie_parser
+from .common import constraint, get_logVT
 
 
 m1_source_name = PRIMARY_MASS_SOURCE.name
 mass_ratio_name = MASS_RATIO.name
-
-
-def get_logVT(vt_path):
-    _, logVT = load_model(vt_path)
-
-    def m1q_logVT(x: Array) -> Array:
-        m1 = x[..., 0]
-        q = x[..., 1]
-        m2 = m1_q_to_m2(m1=m1, q=q)
-        m1m2 = jnp.column_stack([m1, m2])
-        return vmap(logVT)(m1m2)
-
-    return m1q_logVT
-
-
-def constraint(x: Array) -> Bool:
-    m1 = x[..., 0]
-    q = x[..., 1]
-    mask = m1 > 0.0
-    mask &= q >= 0.0
-    mask &= q <= 1.0
-    return mask
 
 
 def make_parser() -> ArgumentParser:
