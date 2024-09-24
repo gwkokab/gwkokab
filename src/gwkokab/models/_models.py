@@ -127,7 +127,6 @@ class _BaseSmoothedMassDistribution(Distribution):
         log_prob_q_val = doubly_truncated_power_law_log_prob(
             x=qs, alpha=self.beta_q, low=jnp.divide(self.mmin, m1s), high=1.0
         )
-        log_prob_q_val = jnp.nan_to_num(log_prob_q_val, nan=-jnp.inf)
         log_prob_q_val = jnp.add(
             log_prob_q_val,
             jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1s, q=qs))),
@@ -191,16 +190,18 @@ class _BaseSmoothedMassDistribution(Distribution):
             n_grid_points=500,
         )
 
+        keys = jrd.split(key, m1.shape)
+
         q = vmap(
-            lambda _m1: numerical_inverse_transform_sampling(
+            lambda _m1, _k: numerical_inverse_transform_sampling(
                 logpdf=partial(self.log_prob_q, _m1),
                 limits=(jnp.divide(self.mmin, _m1), 1.0),
                 sample_shape=(),
-                key=key,
+                key=_k,
                 batch_shape=self.batch_shape,
                 n_grid_points=500,
             )
-        )(m1)
+        )(m1, keys)
 
         return jnp.stack([m1, q], axis=-1).reshape(sample_shape + self.event_shape)
 
@@ -808,12 +809,14 @@ class PowerLawPrimaryMassRatio(Distribution):
         return jnp.add(log_prob_m1, log_prob_q)
 
     def sample(self, key, sample_shape=()):
-        u = jrd.uniform(key, shape=sample_shape)
+        key_m1, key_q = jrd.split(key)
+        u_m1 = jrd.uniform(key_m1, shape=sample_shape)
+        u_q = jrd.uniform(key_q, shape=sample_shape)
         m1 = doubly_truncated_power_law_icdf(
-            q=u, alpha=self.alpha, low=self.mmin, high=self.mmax
+            q=u_m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
         q = doubly_truncated_power_law_icdf(
-            q=u, alpha=self.beta, low=jnp.divide(self.mmin, m1), high=1.0
+            q=u_q, alpha=self.beta, low=jnp.divide(self.mmin, m1), high=1.0
         )
         return jnp.stack((m1, q), axis=-1)
 
@@ -870,11 +873,12 @@ class Wysocki2019MassModel(Distribution):
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self, key, sample_shape=()) -> Array:
-        u = jrd.uniform(key, shape=sample_shape)
+        key_m1, key_m2 = jrd.split(key)
+        u_m1 = jrd.uniform(key_m1, shape=sample_shape)
         m1 = doubly_truncated_power_law_icdf(
-            q=u, alpha=jnp.negative(self.alpha_m), low=self.mmin, high=self.mmax
+            q=u_m1, alpha=-self.alpha_m, low=self.mmin, high=self.mmax
         )
-        m2 = jrd.uniform(key, shape=sample_shape, minval=self.mmin, maxval=m1)
+        m2 = jrd.uniform(key_m2, shape=sample_shape, minval=self.mmin, maxval=m1)
         return jnp.stack((m1, m2), axis=-1)
 
 
