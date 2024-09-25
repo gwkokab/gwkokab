@@ -803,8 +803,18 @@ class PowerLawPrimaryMassRatio(Distribution):
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
-        log_prob_q = doubly_truncated_power_law_log_prob(
-            x=q, alpha=self.beta, low=jnp.divide(self.mmin, m1), high=1.0
+        # as low approaches to high, mathematically it shoots off to infinity
+        # And autograd does not behave nicely around limiting values.
+        # These two links provide the solution to the problem.
+        # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
+        # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
+        mmin_over_m1 = jnp.where(self.mmin < m1, jnp.divide(self.mmin, m1), 0.0)
+        log_prob_q = jnp.where(
+            self.mmin < m1,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=mmin_over_m1, high=1.0
+            ),
+            -jnp.inf,
         )
         return jnp.add(log_prob_m1, log_prob_q)
 

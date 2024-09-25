@@ -91,10 +91,8 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
     def _inverse(self, y: Array):
         m1 = y[..., 0]
         m2 = y[..., 1]
-        m1_safe = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
-        m2_safe = jnp.where(m2 == 0.0, jnp.finfo(m2.dtype).tiny, m2)
-        q = mass_ratio(m2=m2_safe, m1=m1_safe)
-        m1q = jnp.stack((m1_safe, q), axis=-1)
+        q = mass_ratio(m2=m2, m1=m1)
+        m1q = jnp.stack((m1, q), axis=-1)
         return m1q
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):

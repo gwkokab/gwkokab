@@ -39,7 +39,8 @@ def mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
     .. math::
         q(m_1, m_2) = \frac{m_2}{m_1}
     """
-    return jnp.divide(m2, m1)
+    safe_m1 = jnp.where(m1 == 0.0, 1.0, m1)
+    return jnp.where(m1 == 0.0, -jnp.inf, jnp.divide(m2, safe_m1))
 
 
 def chirp_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
