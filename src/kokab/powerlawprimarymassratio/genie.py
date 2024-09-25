@@ -27,7 +27,12 @@ from gwkokab.utils.transformations import m1_q_to_m2, mass_ratio
 from gwkokab.vts import load_model
 
 from ..utils import genie_parser
-from .common import constraint, get_logVT, TransformedPowerLawPrimaryMassRatio
+from .common import (
+    constraint_m1m2,
+    constraint_m1q,
+    get_logVT,
+    TransformedPowerLawPrimaryMassRatio,
+)
 
 
 m1_source_name = PRIMARY_MASS_SOURCE.name
@@ -117,8 +122,10 @@ def main() -> None:
             ),
         )
 
-        popfactory.log_VT_fn = vmap(load_model(args.vt_path)[1])
+        _, logVT = load_model(args.vt_path)
+        popfactory.log_VT_fn = vmap(logVT)
         popfactory.VT_params = [m1_source_name, m2_source_name]
+        popfactory.constraint = constraint_m1m2
     else:
         popmodel_magazine.register(
             (m1_source_name, mass_ratio_name),
@@ -150,9 +157,9 @@ def main() -> None:
 
         popfactory.log_VT_fn = get_logVT(args.vt_path)
         popfactory.VT_params = [m1_source_name, mass_ratio_name]
+        popfactory.constraint = constraint_m1q
 
     popfactory.analysis_time = args.analysis_time
-    popfactory.constraint = constraint
     popfactory.error_size = args.error_size
     popfactory.num_realizations = args.num_realizations
     popfactory.rate = args.rate

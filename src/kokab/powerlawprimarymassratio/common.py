@@ -40,12 +40,20 @@ def get_logVT(vt_path):
     return m1q_logVT
 
 
-def constraint(x: Array) -> Bool:
+def constraint_m1q(x: Array) -> Bool:
     m1 = x[..., 0]
     q = x[..., 1]
     mask = m1 > 0.0
     mask &= q >= 0.0
     mask &= q <= 1.0
+    return mask
+
+
+def constraint_m1m2(x: Array) -> Bool:
+    m1 = x[..., 0]
+    m2 = x[..., 1]
+    mask = m2 > 0.0
+    mask &= m1 >= m2
     return mask
 
 
