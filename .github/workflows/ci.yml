@@ -15,14 +15,6 @@ on:
       - "**/*.py"
       - ".github/workflows/ci.yml"
 
-env:
-  CXX: g++-9
-  CC: gcc-9
-  # See coveralls-python - Github Actions support:
-  # https://github.com/TheKevJames/coveralls-python/blob/master/docs/usage/configuration.rst#github-actions-support
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  COVERALLS_SERVICE_NAME: github
-
 jobs:
   lint:
     name: Lint with ruff (py ${{ matrix.python-version }} on ${{ matrix.os }})
@@ -47,6 +39,7 @@ jobs:
       run: |
           python -m pip install --upgrade pip
           python -m pip install ruff
+          pip freeze
     - name: Lint with ruff
       run: |
           ruff check .
@@ -76,19 +69,14 @@ jobs:
       - name: Install dependencies
         run: |
             python -m pip install --upgrade pip
-            python -m pip install pytest pytest-cov pytest-xdist coveralls
+            python -m pip install pytest
             python -m pip install .
             pip freeze
       - name: Test with pytest
         env:
           PY_COLORS: 1
         run: |
-          pytest -vs --cov=src/gwkokab --cov-config .coveragerc 
-      - name: Submit to coveralls
-        run: coveralls --service=github || true
-        env:
-          COVERALLS_PARALLEL: true
-          COVERALLS_FLAG_NAME: ${{ matrix.test-name }}
+          pytest -vs tests
 
   documentation:
     name: Documentation
@@ -124,22 +112,3 @@ jobs:
         run: |
           cd docs
           make html
-  finish:
-    needs:
-      - test
-      - documentation
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: 
-          - "3.11"
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Coveralls Finished
-        run: |
-          python -m pip install --upgrade coveralls
-          coveralls --service=github --finish || true
