@@ -17,7 +17,12 @@ from __future__ import annotations
 
 from jax import numpy as jnp, vmap
 from jaxtyping import Array, Bool
+from numpyro.distributions import TransformedDistribution
 
+from gwkokab.models import PowerLawPrimaryMassRatio
+from gwkokab.models.transformations import (
+    PrimaryMassAndMassRatioToComponentMassesTransform,
+)
 from gwkokab.utils.transformations import m1_q_to_m2
 from gwkokab.vts import load_model
 
@@ -35,10 +40,37 @@ def get_logVT(vt_path):
     return m1q_logVT
 
 
-def constraint(x: Array) -> Bool:
+def constraint_m1q(x: Array) -> Bool:
     m1 = x[..., 0]
     q = x[..., 1]
     mask = m1 > 0.0
     mask &= q >= 0.0
     mask &= q <= 1.0
     return mask
+
+
+def constraint_m1m2(x: Array) -> Bool:
+    m1 = x[..., 0]
+    m2 = x[..., 1]
+    mask = m2 > 0.0
+    mask &= m1 >= m2
+    return mask
+
+
+def TransformedPowerLawPrimaryMassRatio(
+    alpha, beta, mmin, mmax
+) -> TransformedDistribution:
+    r"""Transformed Power Law Primary Mass Ratio model.
+
+    :param alpha: Power law index
+    :param beta: Power law index
+    :param mmin: Minimum mass
+    :param mmax: Maximum mass
+    :return: Transformed distribution
+    """
+    return TransformedDistribution(
+        base_distribution=PowerLawPrimaryMassRatio(
+            alpha=alpha, beta=beta, mmin=mmin, mmax=mmax
+        ),
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+    )

@@ -20,14 +20,13 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-from jax import random as jrd
-from numpyro import distributions as dist
+from jax import random as jrd, vmap
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
-from gwkokab.models import PowerLawPrimaryMassRatio, Wysocki2019MassModel
-from gwkokab.models.utils import JointDistribution
-from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE
+from gwkokab.models import PowerLawPrimaryMassRatio
+from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.vts import load_model
 
 from ..utils import sage_parser
 from ..utils.common import (
@@ -35,21 +34,22 @@ from ..utils.common import (
     get_posterior_data,
     get_processed_priors,
 )
-from .common import get_logVT
+from .common import get_logVT, TransformedPowerLawPrimaryMassRatio
 
 
 def make_parser() -> ArgumentParser:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = sage_parser.get_parser(parser)
 
-    return parser
+    model_group = parser.add_argument_group("Model Options")
 
-
-def EccentricityMattersModel(alpha_m, mmin, mmax, scale) -> JointDistribution:
-    return JointDistribution(
-        Wysocki2019MassModel(alpha_m=alpha_m, mmin=mmin, mmax=mmax),
-        dist.HalfNormal(scale=scale, validate_args=True),
+    model_group.add_argument(
+        "--use-m1m2",
+        action="store_true",
+        help="Use m1 and m2 as model parameters.",
     )
+
+    return parser
 
 
 def main() -> None:
@@ -72,7 +72,6 @@ def main() -> None:
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
-    VT_PARAMS = [PRIMARY_MASS_SOURCE.name, MASS_RATIO.name]
     ANALYSIS_TIME = args.analysis_time
 
     FLOWMC_HANDLER_KWARGS = flowMC_json_read_and_process(args.flowMC_json)
@@ -91,11 +90,21 @@ def main() -> None:
         ["alpha", "beta", "mmin", "mmax"], prior_dict
     )
 
-    model = Bake(PowerLawPrimaryMassRatio)(**model_prior_param)
+    use_m1m2 = args.use_m1m2
+
+    if use_m1m2:
+        VT_PARAMS = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+        parameters = (PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE)
+        model = Bake(TransformedPowerLawPrimaryMassRatio)(**model_prior_param)
+        _, logVT = load_model(VT_FILENAME)
+        logVT = vmap(logVT)
+    else:
+        VT_PARAMS = [PRIMARY_MASS_SOURCE.name, MASS_RATIO.name]
+        parameters = (PRIMARY_MASS_SOURCE, MASS_RATIO)
+        model = Bake(PowerLawPrimaryMassRatio)(**model_prior_param)
+        logVT = get_logVT(VT_FILENAME)
 
     log_rate_prior_param = get_processed_priors(["log_rate"], prior_dict)
-
-    logVT = get_logVT(VT_FILENAME)
 
     poisson_likelihood.is_multi_rate_model = False
     poisson_likelihood.logVT = logVT
@@ -104,7 +113,7 @@ def main() -> None:
     poisson_likelihood.vt_params = VT_PARAMS
 
     poisson_likelihood.set_model(
-        (PRIMARY_MASS_SOURCE, MASS_RATIO),
+        parameters,
         log_rate_prior_param["log_rate"],
         model=model,
     )
