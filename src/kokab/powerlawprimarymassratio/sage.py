@@ -21,14 +21,10 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
 from jax import random as jrd, vmap
-from numpyro.distributions import TransformedDistribution
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
 from gwkokab.models import PowerLawPrimaryMassRatio
-from gwkokab.models.transformations import (
-    PrimaryMassAndMassRatioToComponentMassesTransform,
-)
 from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.vts import load_model
 
@@ -38,26 +34,7 @@ from ..utils.common import (
     get_posterior_data,
     get_processed_priors,
 )
-from .common import get_logVT
-
-
-def TransformedPowerLawPrimaryMassRatio(
-    alpha, beta, mmin, mmax
-) -> TransformedDistribution:
-    r"""Transformed Power Law Primary Mass Ratio model.
-
-    :param alpha: Power law index
-    :param beta: Power law index
-    :param mmin: Minimum mass
-    :param mmax: Maximum mass
-    :return: Transformed distribution
-    """
-    return TransformedDistribution(
-        base_distribution=PowerLawPrimaryMassRatio(
-            alpha=alpha, beta=beta, mmin=mmin, mmax=mmax
-        ),
-        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-    )
+from .common import get_logVT, TransformedPowerLawPrimaryMassRatio
 
 
 def make_parser() -> ArgumentParser:
