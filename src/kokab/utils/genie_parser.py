@@ -15,6 +15,12 @@
 
 from argparse import ArgumentParser
 
+from numpyro.distributions.distribution import enable_validation
+
+
+# Global enable validation for all distributions
+enable_validation()
+
 
 def get_parser(parser: ArgumentParser) -> ArgumentParser:
     """Populate the command line argument parser with the arguments for the Genie script.
