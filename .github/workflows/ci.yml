@@ -82,7 +82,7 @@ jobs:
         env:
           PY_COLORS: 1
         run: |
-          pytest -v --cov=src/gwkokab --cov-config .coveragerc tests/
+          pytest -vs --cov=src/gwkokab --cov-config .coveragerc --stage ${{ matrix.test-name }}-${{ matrix.python-version }}
       - name: Submit to coveralls
         run: coveralls --service=github || true
         env:
