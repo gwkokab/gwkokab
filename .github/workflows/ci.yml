@@ -15,6 +15,14 @@ on:
       - "**/*.py"
       - ".github/workflows/ci.yml"
 
+env:
+  CXX: g++-9
+  CC: gcc-9
+  # See coveralls-python - Github Actions support:
+  # https://github.com/TheKevJames/coveralls-python/blob/master/docs/usage/configuration.rst#github-actions-support
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  COVERALLS_SERVICE_NAME: github
+
 jobs:
   lint:
     name: Lint with ruff (py ${{ matrix.python-version }} on ${{ matrix.os }})
