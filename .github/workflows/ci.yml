@@ -76,13 +76,14 @@ jobs:
       - name: Install dependencies
         run: |
             python -m pip install --upgrade pip
-            python -m pip install pytest pytest-cov coveralls
+            python -m pip install pytest pytest-cov pytest-xdist coveralls
             python -m pip install .
+            pip freeze
       - name: Test with pytest
         env:
           PY_COLORS: 1
         run: |
-          pytest -vs --cov=src/gwkokab --cov-config .coveragerc --stage ${{ matrix.test-name }}-${{ matrix.python-version }}
+          pytest -vs --cov=src/gwkokab --cov-config .coveragerc 
       - name: Submit to coveralls
         run: coveralls --service=github || true
         env:
@@ -110,6 +111,7 @@ jobs:
         run: |
             sudo apt install pandoc
             python -m pip install -r docs/requirements.txt
+            pip freeze
       - name: Test documentation
         env:
           XLA_FLAGS: "--xla_force_host_platform_device_count=8"
