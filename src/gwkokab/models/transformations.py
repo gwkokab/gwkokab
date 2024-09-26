@@ -96,7 +96,9 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         return m1q
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
-        abs_m1 = jnp.abs(x[..., 0])
+        m1 = x[..., 0]
+        zero_safe_m1 = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
+        abs_m1 = jnp.where(m1 < 0.0, -m1, zero_safe_m1)
         return jnp.log(abs_m1)
 
     def tree_flatten(self):
