@@ -40,23 +40,20 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     genie_group.add_argument(
         "--analysis_time",
         help="Analysis time of the VT",
-        default=0.0,
+        default=1.0,
         type=float,
-        required=True,
     )
     genie_group.add_argument(
         "--error_size",
         help="Size of the error.",
         default=2000,
         type=int,
-        required=True,
     )
     genie_group.add_argument(
         "--num_realizations",
         help="Number of realizations.",
         default=5,
         type=int,
-        required=True,
     )
     genie_group.add_argument(
         "--rate",

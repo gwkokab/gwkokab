@@ -80,21 +80,18 @@ def make_parser() -> ArgumentParser:
     model_group.add_argument(
         "--loc",
         help="Location of the eccentricity distribution.",
-        default=0.0,
         type=float,
         required=True,
     )
     model_group.add_argument(
         "--low",
         help="Lower bound of the eccentricity distribution.",
-        default=0.0,
         type=float,
         required=True,
     )
     model_group.add_argument(
         "--high",
         help="Upper bound of the eccentricity distribution.",
-        default=1.0,
         type=float,
         required=True,
     )
@@ -106,21 +103,18 @@ def make_parser() -> ArgumentParser:
         help="Scale of the error in chirp mass.",
         default=1.0,
         type=float,
-        required=True,
     )
     err_group.add_argument(
         "--err_scale_eta",
         help="Scale of the error in symmetric mass ratio.",
         default=1.0,
         type=float,
-        required=True,
     )
     err_group.add_argument(
         "--err_loc",
         help="Location of the error in eccentricity.",
         default=0.0,
         type=float,
-        required=True,
     )
     err_group.add_argument(
         "--err_scale",

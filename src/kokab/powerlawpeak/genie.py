@@ -116,14 +116,12 @@ def make_parser() -> ArgumentParser:
         help="Scale of the error in chirp mass.",
         default=1.0,
         type=float,
-        required=True,
     )
     err_group.add_argument(
         "--err_scale_eta",
         help="Scale of the error in symmetric mass ratio.",
         default=1.0,
         type=float,
-        required=True,
     )
 
     return parser
