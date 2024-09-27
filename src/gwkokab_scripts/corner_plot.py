@@ -46,7 +46,6 @@ def make_parser() -> argparse.ArgumentParser:
         "--labels",
         nargs="+",
         help="labels for the corner plot",
-        required=False,
         default=None,
     )
     parser.add_argument(
