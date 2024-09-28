@@ -21,7 +21,6 @@ from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Float, Int, PRNGKeyArray
 from numpyro.distributions import (
-    CategoricalProbs,
     Distribution,
     MixtureGeneral,
     Uniform,
@@ -290,32 +289,29 @@ class PoissonLikelihood:
             **{name: x[..., i] for name, i in self.variables_index.items()}
         )
 
-        log_rates = jnp.divide(
-            x[..., 0 : self.total_pop], jnp.log10(jnp.e)
-        )  # log_rate = log10_rate / log10(e)
-
-        log_sum_of_rates = jax.nn.logsumexp(log_rates, axis=-1)
-        mixing_probs = jax.nn.softmax(log_rates, axis=-1)
-
-        model._mixing_distribution = CategoricalProbs(probs=mixing_probs)
+        # log_rate = log10_rate / log10(e)
+        log_rates = jnp.divide(x[..., 0 : self.total_pop], jnp.log10(jnp.e))
+        rates = jnp.exp(log_rates)
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
-            + jax.nn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y))
+            + jax.nn.logsumexp(
+                log_rates
+                - self.ref_priors.log_prob(y)
+                + jnp.asarray(
+                    [model_i.log_prob(y) for model_i in model._component_distributions]
+                )
+            )
             - jnp.log(y.shape[0]),
             data["data"],
             0.0,
         )
 
-        log_likelihood += data["N"] * log_sum_of_rates
-
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
-
-        rates = list(jnp.exp(log_rates))  # rates = e^log_rates
 
         expected_rates = jtr.reduce(
             lambda x, y: x + y[0] * self.exp_rate_integral(y[1]),
-            list(zip(rates, model._component_distributions)),
+            list(zip(list(rates), model._component_distributions)),
             0.0,
             is_leaf=lambda x: isinstance(x, tuple),
         )
