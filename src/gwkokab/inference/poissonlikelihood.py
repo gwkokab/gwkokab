@@ -291,30 +291,36 @@ class PoissonLikelihood:
 
         # log_rate = log10_rate / log10(e)
         log_rates = jnp.divide(x[..., 0 : self.total_pop], jnp.log10(jnp.e))
-        rates = jnp.exp(log_rates)
+
+        def _single_event_log_likelihood(y: Array) -> Array:
+            pi_lambda = self.ref_priors.log_prob(y)
+            probs = jnp.asarray(
+                [
+                    model_i.log_prob(y) - pi_lambda
+                    for model_i in model._component_distributions
+                ]
+            )
+            return jax.nn.logsumexp(log_rates + probs) - jnp.log(y.shape[0])
 
         log_likelihood = jtr.reduce(
-            lambda x, y: x
-            + jax.nn.logsumexp(
-                log_rates
-                - self.ref_priors.log_prob(y)
-                + jnp.asarray(
-                    [model_i.log_prob(y) for model_i in model._component_distributions]
-                )
-            )
-            - jnp.log(y.shape[0]),
+            lambda x, y: x + _single_event_log_likelihood(y),
             data["data"],
             0.0,
         )
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        expected_rates = jtr.reduce(
-            lambda x, y: x + y[0] * self.exp_rate_integral(y[1]),
-            list(zip(list(rates), model._component_distributions)),
-            0.0,
-            is_leaf=lambda x: isinstance(x, tuple),
+        expected_rates = jnp.dot(
+            jnp.exp(log_rates),
+            jnp.asarray(
+                [
+                    self.exp_rate_integral(model_i)
+                    for model_i in model._component_distributions
+                ]
+            ),
         )
+
+        debug_flush("expected_rate={expr}", expr=expected_rates)
 
         return log_likelihood - expected_rates
 
