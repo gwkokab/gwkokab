@@ -294,11 +294,12 @@ class PoissonLikelihood:
 
         def _single_event_log_likelihood(y: Array) -> Array:
             pi_lambda = self.ref_priors.log_prob(y)
-            probs = jnp.asarray(
+            probs = jnp.stack(
                 [
                     model_i.log_prob(y) - pi_lambda
                     for model_i in model._component_distributions
-                ]
+                ],
+                axis=-1,
             )
             return jax.nn.logsumexp(log_rates + probs) - jnp.log(y.shape[0])
 
