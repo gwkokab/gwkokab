@@ -34,9 +34,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "chex==0.1.86",
+    "chex==0.1.87",
     "flowMC==0.3.4",
-    "h5py==3.11.0",
+    "h5py==3.12.1",
     "jax==0.4.33",
     "jaxlib==0.4.33",
     "jaxtyping==0.2.34",
@@ -44,7 +44,7 @@ dependencies = [
     "mplcursors==0.5.3",
     "numpy<2",
     "numpyro==0.15.3",
-    "pandas==2.2.2",
+    "pandas==2.2.3",
     "plotly==5.24.0",
     "rich==13.8.0",
     "RIFT==0.0.15.11",
@@ -63,7 +63,7 @@ keywords = [
 dev = [
     "pre-commit==3.8.0",
     "pytest==8.3.3",
-    "ruff==0.6.5",
+    "ruff==0.6.8",
     "setuptools==75.1.0",
 ]
 
