@@ -36,7 +36,7 @@ classifiers = [
 dependencies = [
     "chex==0.1.87",
     "flowMC==0.3.4",
-    "h5py==3.11.0",
+    "h5py==3.12.1",
     "jax==0.4.33",
     "jaxlib==0.4.33",
     "jaxtyping==0.2.34",
