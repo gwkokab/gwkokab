@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.repository_owner == 'gwkokab'
     steps:
-      - uses: actions/checkout@6d193bf28034eafb982f37bd894289fe649468fc # v4
+      - uses: actions/checkout@d632683dd7b4114ad314bca15554477dd762a938 # v4
       - uses: actions/setup-python@e9aba2c848f5ebd159c070c61ea2c4e2b122355e # v5
         with:
           python-version: "3.11"
