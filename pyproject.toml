@@ -34,7 +34,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
-    "chex==0.1.86",
+    "chex==0.1.87",
     "flowMC==0.3.4",
     "h5py==3.11.0",
     "jax==0.4.33",
