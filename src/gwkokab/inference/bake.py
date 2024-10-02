@@ -18,7 +18,7 @@ from __future__ import annotations
 from functools import partial
 from typing_extensions import Any, Callable, Dict, Self, Tuple
 
-from jax import random as jrd
+from jax import lax, random as jrd
 from jax.tree_util import register_pytree_node_class
 from numpyro.distributions import Distribution
 
@@ -102,7 +102,7 @@ class Bake(object):
             if isinstance(value, Distribution):
                 variables[key] = value
             elif isinstance(value, (int, float)):
-                constants[key] = value
+                constants[key] = lax.stop_gradient(value)
             else:
                 raise ValueError(
                     f"Parameter {key} has an invalid type {type(value)}: {value}"
