@@ -21,6 +21,7 @@ from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Float, Int, PRNGKeyArray
 from numpyro.distributions import (
+    CategoricalProbs,
     Distribution,
     MixtureGeneral,
     Uniform,
@@ -162,8 +163,8 @@ class PoissonLikelihood:
             assert isinstance(
                 dummy_model, MixtureGeneral
             ), "Model must be a mixture model for multi-rate models."
-            assert len(log_rates_prior) == len(
-                log_rates_prior
+            assert (
+                len(log_rates_prior) == dummy_model._mixture_size
             ), "Number of rate priors must match the number of sub-populations."
             self.total_pop = len(log_rates_prior)
         else:
@@ -291,20 +292,16 @@ class PoissonLikelihood:
 
         # log_rate = log10_rate / log10(e)
         log_rates = jnp.divide(x[..., 0 : self.total_pop], jnp.log10(jnp.e))
+        rates = jnp.exp(log_rates)
+        total_rate = rates.sum(-1)
+        safe_total_rate = jnp.where(total_rate == 0.0, 1.0, total_rate)
 
-        def _single_event_log_likelihood(y: Array) -> Array:
-            pi_lambda = self.ref_priors.log_prob(y)
-            probs = jnp.stack(
-                [
-                    model_i.log_prob(y) - pi_lambda
-                    for model_i in model._component_distributions
-                ],
-                axis=-1,
-            )
-            return jax.nn.logsumexp(log_rates + probs) - jnp.log(y.shape[0])
+        model._mixing_distribution = CategoricalProbs(probs=rates / safe_total_rate)
 
         log_likelihood = jtr.reduce(
-            lambda x, y: x + _single_event_log_likelihood(y),
+            lambda x, y: x
+            + jax.nn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
+            - jnp.log(y.shape[0]),
             data["data"],
             0.0,
         )
@@ -312,7 +309,7 @@ class PoissonLikelihood:
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
         expected_rates = jnp.dot(
-            jnp.exp(log_rates),
+            rates,
             jnp.asarray(
                 [
                     self.exp_rate_integral(model_i)
@@ -359,13 +356,7 @@ class PoissonLikelihood:
         """
         log_prior = self.priors.log_prob(x)
         debug_flush("log_prior: {lp}", lp=log_prior)
-        return log_prior + lax.cond(
-            jnp.isinf(log_prior),
-            lambda x_, d_: 0.0,
-            lambda x_, d_: self.log_likelihood(x_, d_),
-            x,
-            data,
-        )
+        return log_prior + self.log_likelihood(x, data)
 
 
 poisson_likelihood = PoissonLikelihood()
