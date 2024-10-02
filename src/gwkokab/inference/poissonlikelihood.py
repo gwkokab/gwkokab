@@ -15,9 +15,9 @@
 
 from typing_extensions import Callable, List, Optional, Sequence, Union
 
-import jax
 import numpy as np
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
+from jax.nn import log_softmax, logsumexp
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Float, Int, PRNGKeyArray
 from numpyro.distributions import (
@@ -262,7 +262,7 @@ class PoissonLikelihood:
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
-            + jax.nn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y))
+            + logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y))
             - jnp.log(y.shape[0]),
             data["data"],
             0.0,
@@ -298,10 +298,28 @@ class PoissonLikelihood:
 
         model._mixing_distribution = CategoricalProbs(probs=rates / safe_total_rate)
 
+        def _log_likelihood_single_event(y: Array) -> Array:
+            # Numpyro's MixtureGeneral does not support weights that do not sum to 1.
+            # To bypass this constraint we have used this mathematical jugaad to remove
+            # the weights that are normalized and add back the log of rates.
+            sum_log_probs = (
+                log_rates  # Adding back the log of rates to scale each component to their rate
+                + model.component_log_probs(y)  # log of the component probabilities
+                - log_softmax(
+                    model.mixing_distribution.logits
+                )  # removing the normalized weights
+            )
+            safe_sum_log_probs = jnp.where(
+                jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
+            )
+            mixture_log_prob = logsumexp(safe_sum_log_probs, axis=-1)
+            log_likelihood_single_event = logsumexp(
+                mixture_log_prob - self.ref_priors.log_prob(y), axis=-1
+            ) - jnp.log(y.shape[0])
+            return log_likelihood_single_event
+
         log_likelihood = jtr.reduce(
-            lambda x, y: x
-            + jax.nn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
-            - jnp.log(y.shape[0]),
+            lambda x, y: x + _log_likelihood_single_event(y),
             data["data"],
             0.0,
         )
