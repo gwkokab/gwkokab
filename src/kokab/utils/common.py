@@ -72,6 +72,8 @@ def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> di
     :param posterior_columns: list of posterior columns
     :return: dictionary of posterior data
     """
+    if len(filenames) == 0:
+        raise ValueError("No files found to read posterior data")
     data_list = []
     for event in filenames:
         df = pd.read_csv(event, delimiter=" ")
