@@ -18,16 +18,15 @@ from argparse import ArgumentParser
 from numpyro.distributions.distribution import enable_validation
 
 
-# Global enable validation for all distributions
-enable_validation()
-
-
 def get_parser(parser: ArgumentParser) -> ArgumentParser:
     """Populate the command line argument parser with the arguments for the Sage script.
 
     :param parser: Parser to add the arguments to
     :return: the command line argument parser
     """
+
+    # Global enable validation for all distributions
+    enable_validation()
 
     sage_group = parser.add_argument_group("Sage Options")
 
