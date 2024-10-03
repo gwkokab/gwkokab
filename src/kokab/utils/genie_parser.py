@@ -57,6 +57,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     genie_group.add_argument(
         "--rate",
         help="Rate of binary mergers.",
+        nargs="+",
         type=float,
         required=True,
     )
