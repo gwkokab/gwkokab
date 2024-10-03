@@ -186,10 +186,13 @@ class PoissonLikelihood:
             *map(lambda x: DEFAULT_PRIORS[x], args_name)
         )
 
-        self.variables, self.model = model.get_dist()
+        self.variables, duplicates, self.model = model.get_dist()
         self.variables_index = {
             key: self.total_pop + i for i, key in enumerate(self.variables.keys())
         }
+
+        for key, value in duplicates.items():
+            self.variables_index[key] = self.variables_index[value]
 
         self.ref_priors = JointDistribution(*map(lambda x: x.prior, params))
         self.priors = JointDistribution(*log_rates_prior, *self.variables.values())
