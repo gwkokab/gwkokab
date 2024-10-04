@@ -109,6 +109,7 @@ class PopulationFactory:
         if self.is_multi_rate_model:
             self.model = models_values[0]
         else:
+            self.rate = self.rate[0]
             self.model = JointDistribution(*models_values)
 
         headers: list[str] = []
