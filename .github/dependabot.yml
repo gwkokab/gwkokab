@@ -9,8 +9,6 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "monthly"
-    ignore:
-      - dependency-name: "numpy"
     open-pull-requests-limit: 100
   - package-ecosystem: "github-actions"
     directory: "/"
