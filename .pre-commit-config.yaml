@@ -1,7 +1,7 @@
 ci:
   autoupdate_schedule: quarterly
 
-default_stages: [commit]
+default_stages: [pre-commit]
 
 default_install_hook_types: [pre-commit, commit-msg]
 
@@ -27,7 +27,7 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
-        stages: [commit, commit-msg]
+        stages: [pre-commit, commit-msg]
         args: [--ignore-words-list, "statics,socio-economic,precessing", --check-filenames, --skip, "*.ipynb"]
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.20.0
