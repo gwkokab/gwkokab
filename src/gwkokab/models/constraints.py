@@ -75,7 +75,7 @@ class _MassRatioMassSandwichConstraint(Constraint):
     r"""Constrain primary mass to lie within a sandwiched interval
     and the mass ratio to lie within a given interval. This is a
     transformed version of the :class:`_MassSandwichConstraint`.
-    
+
     .. math::
         \begin{align*}
             m_{\text{min}}             & \leq m_1 \leq m_{\max} \\

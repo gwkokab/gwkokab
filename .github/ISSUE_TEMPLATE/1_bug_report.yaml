@@ -9,9 +9,7 @@ body:
     attributes:
       label: Check for existing issues
       description: >-
-        Check the backlog of issues to reduce the chances of creating duplicates; if an 
-        issue already exists, place a `+1` (👍) on it. If you prefer a non-templated 
-        issue report, click [here](https://github.com/gwkokab/gwkokab/issues/new).
+        Check the backlog of issues to reduce the chances of creating duplicates; if an  issue already exists, place a `+1` (👍) on it. If you prefer a non-templated  issue report, click [here](https://github.com/gwkokab/gwkokab/issues/new).
       options:
         - label: Completed
           required: true
@@ -19,8 +17,7 @@ body:
     attributes:
       label: Description
       description: >-
-        A concise description of the bug, preferably including self-contained
-        code to reproduce the issue.
+        A concise description of the bug, preferably including self-contained code to reproduce the issue.
       placeholder: |
         Text may use markdown formatting.
         ```python

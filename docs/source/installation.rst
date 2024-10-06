@@ -10,13 +10,13 @@ install GWKokab_ with the following command:
     .. tab-item:: Stable Release 📦
 
         .. code-block:: bash
-        
+
             pip install --upgrade gwkokab
 
     .. tab-item:: Nightly 🍺
 
         .. code-block:: bash
-            
+
             pip install --upgrade git+https://github.com/gwkokab/gwkokab
 
 
@@ -28,27 +28,27 @@ with the following command:
 
     .. tab-item:: CPU 🐢
 
-        GWKokab assumes default accelerator is CPU, so you do not need to install JAX_ 
+        GWKokab assumes default accelerator is CPU, so you do not need to install JAX_
         separately. However, if you want to install JAX_ separately, you can do so with
         the following command:
 
         .. code-block:: bash
-        
+
             pip install -U jax
-    
+
     .. tab-item:: GPU 🚀
 
         If you plan to leverage CUDA_ for enhanced performance, you'll need to install
         a specific version of JAX_ with this command:
 
         .. code-block:: bash
-        
+
             pip install -U "jax[cuda12]"
-    
+
     .. tab-item:: TPU ⚡
 
         .. code-block:: bash
-        
+
             pip install -U "jax[tpu]" -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
 
 If you are not a Linux user, you may check the support for you platform in the

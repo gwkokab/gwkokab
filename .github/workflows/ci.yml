@@ -30,21 +30,21 @@ jobs:
           - "3.12"
 
     steps:
-    - uses: actions/checkout@v4.2.0
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5.2.0
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
+      - uses: actions/checkout@v4.2.0
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
           python -m pip install --upgrade pip
           python -m pip install ruff
           pip freeze
-    - name: Lint with ruff
-      run: |
+      - name: Lint with ruff
+        run: |
           ruff check .
           ruff format . --check
-    
+
   test:
     name: "build (py ${{ matrix.python-version }} on ${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
@@ -68,10 +68,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-            python -m pip install --upgrade pip
-            python -m pip install pytest
-            python -m pip install .
-            pip freeze
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          python -m pip install .
+          pip freeze
       - name: Test with pytest
         env:
           PY_COLORS: 1
@@ -86,7 +86,7 @@ jobs:
       - lint
     strategy:
       matrix:
-        python-version: 
+        python-version:
           - '3.11'
 
     steps:
@@ -97,9 +97,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-            sudo apt install pandoc
-            python -m pip install -r docs/requirements.txt
-            pip freeze
+          sudo apt install pandoc
+          python -m pip install -r docs/requirements.txt
+          pip freeze
       - name: Test documentation
         env:
           XLA_FLAGS: "--xla_force_host_platform_device_count=8"
