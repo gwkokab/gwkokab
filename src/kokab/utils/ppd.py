@@ -30,9 +30,11 @@ def compute_ppd(
 ) -> Float[Array, "..."]:
     r"""Compute the posterior predictive distribution (PPD) of a model.
 
+    The function evaluates the PPD over a grid defined by the provided parameter ranges.
+
     :param logpdf: A callable that computes the log-probability density function of the model.
-    :param ranges: A list of tuples containing the ranges of the parameters to evaluate the PPD.
-    :return: The PPD of the model.
+    :param ranges: A list of tuples `(start, end, num_points)` for each parameter, defining the grid over which to compute the PPD.
+    :return: The PPD of the model as a multidimensional array corresponding to the parameter grid.
     """
     max_axis = int(np.argmax([n for _, _, n in ranges]))
 
