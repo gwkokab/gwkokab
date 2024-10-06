@@ -23,64 +23,12 @@ from jax.tree_util import register_pytree_node_class
 from numpyro.distributions import Distribution
 
 
-def get_numpyro_dist_repr(dist: Distribution) -> str:
-    r"""Return a string representation of a numpyro distribution.
-
-    :param dist: A numpyro distribution
-    :type dist: Distribution
-    :return: A string representation of the distribution
-    :rtype: str
-    """
-    fmtstring = dist.__class__.__name__
-    fmtstring += "("
-    fmtstring += ", ".join(
-        [f"{v}={dist.__getattribute__(v)}" for v in dist.arg_constraints.keys()]
-    )
-    fmtstring += ")"
-    return fmtstring
-
-
 @register_pytree_node_class
 class Bake(object):
     r"""It is designed to be a simple and flexible way to define a
     distribution for the inference. It has a similar interface to the
     :class:`~numpyro.distributions.distribution.Distribution` class, but it allows for
     the parameters of the distribution to be fixed or variable.
-
-    We can define a :class:`numpyro.distributions.truncated.TruncatedNormal`
-    distribution with variable `scale` that has uniform prior from :code:`0` to
-    :code:`10`, and fixed :code:`loc`, :code:`low`, and :code:`high` parameters as
-    follows:
-
-    .. tab-set::
-
-        .. tab-item:: Standard
-
-            .. code-block:: python
-
-                >>> from numpyro.distributions import TruncatedNormal, Uniform
-                >>> standard_model = TruncatedNormal(
-                ...    loc=0.0,
-                ...    scale=0.05,
-                ...    low=0.0,
-                ...    high=10.0,
-                ... )
-                >>> print(standard_model)
-                <numpyro.distributions.truncated.TwoSidedTruncatedDistribution object at 0x7fabaa6acb50>
-
-        .. tab-item:: Bake
-
-            .. code-block:: python
-
-                >>> from numpyro.distributions import TruncatedNormal, Uniform
-                >>> baked_model = Bake(TruncatedNormal)(
-                ...    loc=0.0,
-                ...    scale=Uniform(0.0, 10.0),
-                ...    low=0.0,
-                ...    high=10.0,
-                ... )
-                >>> print(baked_model)
-                TruncatedNormal(loc=0.0, low=0.0, high=10.0, scale=Uniform(low=0.0, high=10.0))
 
     :param dist: A distribution or a function that returns a distribution
     :type dist: Distribution | Callable[[], Distribution]
@@ -98,27 +46,39 @@ class Bake(object):
         """
         constants: Dict[str, int | float] = dict()
         variables: Dict[str, Distribution] = dict()
+        duplicates: Dict[str, str] = dict()
         for key, value in kwargs.items():
             if isinstance(value, Distribution):
                 variables[key] = value
             elif isinstance(value, (int, float)):
                 constants[key] = lax.stop_gradient(value)
+            elif isinstance(value, str):
+                continue
             else:
                 raise ValueError(
                     f"Parameter {key} has an invalid type {type(value)}: {value}"
                 )
+        for key, value in kwargs.items():
+            if isinstance(value, str):
+                if value in constants:
+                    constants[key] = constants[value]
+                elif value in variables:
+                    duplicates[key] = value
         self.constants = constants
         self.variables = variables
+        self.duplicates = duplicates
         return self
 
-    def get_dist(self) -> Tuple[Dict[str, Distribution], Callable[[], Distribution]]:
+    def get_dist(
+        self,
+    ) -> Tuple[Dict[str, Distribution], Dict[str, str], Callable[[], Distribution]]:
         r"""Return the distribution with the fixed parameters set.
 
         :return: A tuple containing the distribution with the fixed parameters set and a
             function that returns the distribution with the fixed parameters set.
-        :rtype: Tuple[Dict[str, Distribution], Callable[[], Distribution]]
+        :rtype: Tuple[Dict[str, Distribution], Dict[str, str], Callable[[], Distribution]]
         """
-        return self.variables, partial(self.dist, **self.constants)
+        return self.variables, self.duplicates, partial(self.dist, **self.constants)
 
     def get_dummy(self) -> Distribution:
         r"""Return a dummy distribution for debug and testing purposes.
@@ -127,30 +87,15 @@ class Bake(object):
         :rtype: Distribution
         """
         key = jrd.PRNGKey(0)
-        return self.dist(
-            **self.constants,
-            **{
-                name: prior.sample(key=key, sample_shape=())
-                for name, prior in self.variables.items()
-            },
-        )
-
-    def __repr__(self) -> str:
-        fmtstring = self.dist.__name__
-        fmtstring += "("
-        if self.constants:
-            for key, value in self.constants.items():
-                fmtstring += f"{key}={value}, "
-        if self.variables:
-            for key, value in self.variables.items():
-                fmtstring += f"{key}={get_numpyro_dist_repr(value)}, "
-        if fmtstring.endswith(", "):
-            fmtstring = fmtstring[:-2]
-        fmtstring += ")"
-        return fmtstring
+        variables = {
+            name: prior.sample(key=key, sample_shape=())
+            for name, prior in self.variables.items()
+        }
+        duplicates = {name: variables[value] for name, value in self.duplicates.items()}
+        return self.dist(**self.constants, **variables, **duplicates)
 
     def tree_flatten(self):
-        return (self.dist, self.variables, self.constants), None
+        return (self.dist, self.variables, self.constants, self.duplicates), None
 
     @classmethod
     def tree_unflatten(cls, aux_data, children):
@@ -159,5 +104,6 @@ class Bake(object):
         setattr(obj, "dist", children[0])
         setattr(obj, "variables", children[1])
         setattr(obj, "constants", children[2])
+        setattr(obj, "duplicates", children[3])
         Bake.__init__(obj)
         return obj

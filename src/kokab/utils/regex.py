@@ -39,12 +39,21 @@ def match_all(
     :return: dictionary of matched patterns with values
     """
     matches = {}
+    duplicates = []
     for string in strings:
         if pattern_dict_with_val.get(string):  # Exact match
-            matches[string] = pattern_dict_with_val[string]
+            matched_string = pattern_dict_with_val[string]
+            # Check for duplicates and if the value they are duplicated with is not parsed yet
+            # then add them to duplicates list to be parsed later, else add them to matches
+            if isinstance(matched_string, str) and matches.get(matched_string) is None:
+                duplicates.append(string)
+            else:
+                matches[string] = matched_string
             continue
         for pattern, value in pattern_dict_with_val.items():
             if matches_regex(pattern, string):
                 matches[string] = value
                 break
+    for duplicate in duplicates:
+        matches[duplicate] = matches[pattern_dict_with_val[duplicate]]
     return matches
