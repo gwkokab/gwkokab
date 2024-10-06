@@ -1,7 +1,14 @@
-files: gwkokab||scripts||tests||examples
+ci:
+  autoupdate_schedule: quarterly
+
+default_stages: [commit]
+
+default_install_hook_types: [pre-commit, commit-msg]
+
+files: src||scripts||tests||examples
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.6.4"
+    rev: "v0.6.9"
     hooks:
       - id: ruff
         args: [--fix]
@@ -9,26 +16,40 @@ repos:
       - id: ruff-format # formatter
         types_or: [python, pyi, jupyter]
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.41.0
+    rev: v0.42.0
     hooks:
       - id: markdownlint
         # MD013: line length
         # MD033: no inline HTML
         # MD041: first line in a file should be a top-level heading
-        args: [--disable, MD013, MD033, MD041, "--"]
+        args: [--disable, MD013, MD033, MD041, MD024 "--"]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
       - id: codespell
         stages: [commit, commit-msg]
-        args:
-          [
-            --ignore-words-list,
-            "statics,socio-economic,precessing",
-            --check-filenames,
-            --skip,
-            "*.ipynb",
-          ]
+        args: [--ignore-words-list, "statics,socio-economic,precessing", --check-filenames, --skip, "*.ipynb"]
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.20.0
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/google/yamlfmt
+    rev: v0.13.0
+    hooks:
+      - id: yamlfmt
+        args: [-formatter, retain_line_breaks=true]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-case-conflict
+      - id: check-symlinks
+      - id: check-yaml
+      - id: destroyed-symlinks
+      - id: end-of-file-fixer
+        exclude_types: [svg]
+      - id: forbid-new-submodules
+      - id: mixed-line-ending
+      - id: trailing-whitespace
   - repo: local
     hooks:
       - id: no-bracket-links
@@ -51,7 +72,3 @@ repos:
         types: [text]
         exclude: LICENSE
         exclude_types: [python, bib, gitignore, jupyter, makefile, rst, yaml]
-  - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.18.4
-    hooks:
-      - id: gitleaks

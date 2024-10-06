@@ -1,4 +1,4 @@
-Frequently Asked Questions 
+Frequently Asked Questions
 ==========================
 
 We are collecting answers to frequently asked questions here. Contributions welcome!
@@ -25,20 +25,20 @@ Here is an example of a simple population model:
     >>> import numpyro
     >>> from jax import random as jrd
     >>> from numpyro.distributions import Distribution
-    >>> 
+    >>>
     >>> class MyPopulationModel(Distribution):
     ...     def __init__(self, loc, scale):
     ...         self.loc = loc
     ...         self.scale = scale
-    ... 
+    ...
     ...     def sample(self, key, sample_shape=()):
     ...         return numpyro.distributions.Normal(self.loc, self.scale).sample(
     ...             key, sample_shape
     ...         )
-    ... 
+    ...
     ...     def log_prob(self, value):
     ...         return numpyro.distributions.Normal(self.loc, self.scale).log_prob(value)
-    >>> 
+    >>>
     >>> samples = MyPopulationModel(0.0, 1.0).sample(jrd.PRNGKey(0), (1000,))
     >>> samples.shape
     (1000,)

@@ -9,21 +9,21 @@
 GWKokab ✴️ documentation
 ========================
 
-GWKokab_ offers a robust suite of probability density function (PDF) models for 
+GWKokab_ offers a robust suite of probability density function (PDF) models for
 analyzing the distribution of parameters in compact binary coalescence (CBC) sources,
 such as neutron star or black hole mergers.
 
-Researchers use these models to create synthetic populations of CBC sources, aiding in 
+Researchers use these models to create synthetic populations of CBC sources, aiding in
 population inference studies. This helps scientists draw statistical conclusions about
 the astrophysical population of CBC events based on observed data. The models cover
 various aspects of CBC sources, including mass distribution, spin, and redshift.
 
-Built with :class:`~numpyro.distributions.distribution.Distribution` objects, these 
+Built with :class:`~numpyro.distributions.distribution.Distribution` objects, these
 models leverage NumPyro's integration with JAX_ for automatic differentiation and GPU
 acceleration, ensuring mathematical rigor and computational efficiency for large-scale
 simulations and analyses.
 
-GWKokab_ also incorporates flowMC_, a normalizing flow-enhanced sampling package 
+GWKokab_ also incorporates flowMC_, a normalizing flow-enhanced sampling package
 for probabilistic inference, providing a powerful framework for Bayesian parameter
 estimation from complex, high-dimensional distributions.
 

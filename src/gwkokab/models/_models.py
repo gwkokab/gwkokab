@@ -138,9 +138,9 @@ class _BaseSmoothedMassDistribution(Distribution):
 
     def smoothing_kernel(self, mass: Array | Real) -> Array | Real:
         r"""See equation B4 in `Population Properties of Compact Objects from the
-        Second LIGO-Virgo Gravitational-Wave Transient Catalog 
+        Second LIGO-Virgo Gravitational-Wave Transient Catalog
         <https://arxiv.org/abs/2010.14533>`_.
-        
+
         .. math::
             S(m\mid m_{\min}, \delta) = \begin{cases}
                 0 & \text{if } m < m_{\min}, \\
@@ -149,7 +149,7 @@ class _BaseSmoothedMassDistribution(Distribution):
                 & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
                 1 & \text{if } m \geq m_{\min} + \delta
             \end{cases}
-    
+
         :param mass: mass of the primary black hole
         :param mass_min: minimum mass of the primary black hole
         :param delta: small mass difference
@@ -1612,9 +1612,9 @@ class MassGapModel(Distribution):
 
     def smoothing_kernel(self, mass: Array | Real) -> Array | Real:
         r"""See equation B4 in `Population Properties of Compact Objects from the
-        Second LIGO-Virgo Gravitational-Wave Transient Catalog 
+        Second LIGO-Virgo Gravitational-Wave Transient Catalog
         <https://arxiv.org/abs/2010.14533>`_.
-        
+
         .. math::
             S(m\mid m_{\min}, \delta) = \begin{cases}
                 0 & \text{if } m < m_{\min}, \\
@@ -1623,7 +1623,7 @@ class MassGapModel(Distribution):
                 & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
                 1 & \text{if } m \geq m_{\min} + \delta
             \end{cases}
-    
+
         :param mass: mass of the primary black hole
         :return: smoothing kernel value
         """
