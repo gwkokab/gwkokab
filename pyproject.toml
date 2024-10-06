@@ -69,7 +69,7 @@ dev = [
 
 docs = [
     "flatbuffers==24.3.25",
-    "ipython==8.27.0",
+    "ipython==8.28.0",
     "ipywidgets==8.1.5",
     "myst-parser==4.0.0",
     "nbsphinx==0.9.5",
