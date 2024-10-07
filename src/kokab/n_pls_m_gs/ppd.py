@@ -15,10 +15,10 @@
 from __future__ import annotations
 
 import json
-from typing_extensions import Dict, List, Tuple
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from typing_extensions import Dict
 
 import pandas as pd
-from jaxtyping import Float, Int
 
 from gwkokab.models import NPowerLawMGaussian
 from gwkokab.parameters import (
@@ -30,17 +30,24 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 
-from ..utils import ppd
+from ..utils import ppd, ppd_parser
 
 
-def calculate_ppd(
-    filename: str,
-    ppd_ranges: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
-):
-    with open("constants.json", "r") as f:
+def make_parser() -> ArgumentParser:
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ppd_parser.get_parser(parser)
+
+    return parser
+
+
+def main() -> None:
+    parser = make_parser()
+    args = parser.parse_args()
+
+    with open(args.constants, "r") as f:
         constants: Dict[str, int | float | bool] = json.loads(f)
 
-    with open("nf_samples_mapping.json", "r") as f:
+    with open(args.nf_samples_mapping, "r") as f:
         nf_samples_mapping: Dict[str, int] = json.loads(f)
 
     has_spin = constants["use_spin"]
@@ -61,15 +68,12 @@ def calculate_ppd(
         **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
     )
 
+    ppd_ranges = args.range
+
     ppd_values = ppd.compute_ppd(model.log_prob, ppd_ranges)
     ppd.save_ppd(
-        ppd_values, filename, ppd_ranges, [parameter.name for parameter in parameters]
+        ppd_values,
+        args.filename,
+        ppd_ranges,
+        [parameter.name for parameter in parameters],
     )
-
-
-if __name__ == "__main__":
-    ppd_ranges = [  # ( start, end, num_points )
-        (0.0, 100.0, 1000),  # m1
-        (0.0, 100.0, 1000),  # m2
-    ]
-    calculate_ppd("ppd.hdf5", ppd_ranges)

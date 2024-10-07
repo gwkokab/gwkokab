@@ -37,7 +37,7 @@ def compute_ppd(
     :param ranges: A list of tuples `(start, end, num_points)` for each parameter, defining the grid over which to compute the PPD.
     :return: The PPD of the model as a multidimensional array corresponding to the parameter grid.
     """
-    max_axis = int(np.argmax([n for _, _, n in ranges]))
+    max_axis = int(np.argmax([int(n) for _, _, n in ranges]))
 
     @partial(jax.vmap, in_axes=(max_axis,), out_axes=max_axis)
     def _ppd_vmapped(x: Float[Array, "..."]) -> Float[Array, "..."]:
@@ -46,7 +46,7 @@ def compute_ppd(
         ppd = jnp.mean(prob, axis=-1)
         return ppd
 
-    xx = [jnp.linspace(a, b, n) for a, b, n in ranges]
+    xx = [jnp.linspace(a, b, int(n)) for a, b, n in ranges]
     mesh = jnp.meshgrid(*xx, indexing="ij")
     xx_mesh = jnp.stack(mesh, axis=-1)
     ppd_vec = _ppd_vmapped(xx_mesh)

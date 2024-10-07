@@ -16,6 +16,7 @@ from . import (
     common as common,
     genie_parser as genie_parser,
     ppd as ppd,
+    ppd_parser as ppd_parser,
     regex as regex,
     sage_parser as sage_parser,
 )
