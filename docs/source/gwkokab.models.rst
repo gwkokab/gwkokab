@@ -18,9 +18,6 @@ Models
     MultiPeakMassModel
     NDistribution
     NPowerLawMGaussian
-    NPowerLawMGaussianWithDefaultSpinMagnitude
-    NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment
-    NPowerLawMGaussianWithSpinMisalignment
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
     Wysocki2019MassModel

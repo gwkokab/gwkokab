@@ -33,8 +33,6 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
   - `FlexibleMixtureModel`
   - `MassGapModel`
   - `NPowerLawMGaussian`
-  - `NPowerLawMGaussianWithDefaultSpinMagnitude`
-  - `NPowerLawMGaussianWithSpinMisalignment`
 - New transforms:
   - `ComponentMassesAndRedshiftToDetectedMassAndRedshift`
   - `ComponentMassesToMassRatioAndSecondaryMass`
