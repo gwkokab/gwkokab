@@ -1012,16 +1012,32 @@ def NPowerLawMGaussian(
                 for i in range(N_pl)
             ]
 
-        all_dists = [powerlaws]
+        all_dists_pl = jtr.map(
+            lambda pl: (pl,),
+            powerlaws,
+            is_leaf=lambda x: isinstance(x, TransformedDistribution),
+        )
+
         if use_spin:
-            all_dists.append(chis_pl)
+            all_dists_pl = jtr.map(
+                lambda dists, chis: dists + chis,
+                all_dists_pl,
+                chis_pl,
+                is_leaf=lambda x: isinstance(x, tuple),
+            )
+
         if use_tilt:
-            all_dists.append(tilts_pl)
+            all_dists_pl = jtr.map(
+                lambda dists, tilts: dists + tilts,
+                all_dists_pl,
+                tilts_pl,
+                is_leaf=lambda x: isinstance(x, tuple),
+            )
 
         pl_component_dist = jtr.map(
             lambda dists: JointDistribution(*dists),
-            zip(*all_dists),
-            is_leaf=lambda x: isinstance(x, list),
+            all_dists_pl,
+            is_leaf=lambda x: isinstance(x, tuple),
         )
 
     if N_g > 0:
@@ -1041,6 +1057,7 @@ def NPowerLawMGaussian(
             )
             for i in range(N_g)
         ]
+
         if use_spin:
             chis_g = [
                 get_default_spin_magnitude_dists(
@@ -1055,6 +1072,7 @@ def NPowerLawMGaussian(
                 )
                 for i in range(N_g)
             ]
+
         if use_tilt:
             tilts_g = [
                 get_spin_misalignment_dist(
@@ -1070,16 +1088,33 @@ def NPowerLawMGaussian(
                 for i in range(N_g)
             ]
 
-        all_dists = [g_m1, g_m2]
+        all_dists_g = jtr.map(
+            lambda g1, g2: (g1, g2),
+            g_m1,
+            g_m2,
+            is_leaf=lambda x: isinstance(x, Normal),
+        )
+
         if use_spin:
-            all_dists.append(chis_g)
+            all_dists_g = jtr.map(
+                lambda dists, chis: dists + chis,
+                all_dists_g,
+                chis_g,
+                is_leaf=lambda x: isinstance(x, tuple),
+            )
+
         if use_tilt:
-            all_dists.append(tilts_g)
+            all_dists_g = jtr.map(
+                lambda dists, tilts: dists + tilts,
+                all_dists_g,
+                tilts_g,
+                is_leaf=lambda x: isinstance(x, tuple),
+            )
 
         g_component_dist = jtr.map(
             lambda dists: JointDistribution(*dists),
-            zip(*all_dists),
-            is_leaf=lambda x: isinstance(x, list),
+            all_dists_g,
+            is_leaf=lambda x: isinstance(x, tuple),
         )
 
     if N_pl == 0 and N_g != 0:
