@@ -18,6 +18,7 @@ from __future__ import annotations
 from functools import partial
 from typing_extensions import Callable, List, Tuple
 
+import h5py
 import jax
 import numpy as np
 from jax import numpy as jnp
@@ -50,3 +51,22 @@ def compute_ppd(
     xx_mesh = jnp.stack(mesh, axis=-1)
     ppd_vec = _ppd_vmapped(xx_mesh)
     return ppd_vec
+
+
+def save_ppd(
+    ppd_array: Float[Array, "..."],
+    filename: str,
+    ranges: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
+    headers: List[str],
+) -> None:
+    assert ppd_array.ndim == len(
+        ranges
+    ), "Number of ranges must match the number of dimensions of the PPD array."
+    assert ppd_array.ndim == len(
+        headers
+    ), "Number of headers must match the number of dimensions of the PPD array."
+
+    with h5py.File(filename, "w") as f:
+        f.create_dataset("range", data=np.array(ranges))
+        f.create_dataset("headers", data=np.array(headers, dtype="S"))
+        f.create_dataset("ppd", data=ppd_array)

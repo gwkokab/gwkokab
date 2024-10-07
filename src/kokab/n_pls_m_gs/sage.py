@@ -20,6 +20,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
+import pandas as pd
 from jax import random as jrd
 
 from gwkokab.debug import enable_debugging
@@ -39,7 +40,7 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 
-from ..utils import sage_parser
+from ..utils import ppd, sage_parser
 from ..utils.common import (
     expand_arguments,
     flowMC_json_read_and_process,
@@ -118,6 +119,40 @@ def main() -> None:
 
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
+
+    steps_for_ppd = 20
+
+    ppd_ranges = [
+        [
+            PRIMARY_MASS_SOURCE.prior.low,
+            PRIMARY_MASS_SOURCE.prior.high,
+            steps_for_ppd,
+        ],
+        [
+            SECONDARY_MASS_SOURCE.prior.low,
+            SECONDARY_MASS_SOURCE.prior.high,
+            steps_for_ppd,
+        ],
+    ]
+
+    if has_spin:
+        ppd_ranges.append(
+            [
+                PRIMARY_SPIN_MAGNITUDE.prior.low,
+                PRIMARY_SPIN_MAGNITUDE.prior.high,
+                steps_for_ppd,
+            ]
+        )
+        ppd_ranges.append(
+            [
+                SECONDARY_SPIN_MAGNITUDE.prior.low,
+                SECONDARY_SPIN_MAGNITUDE.prior.high,
+                steps_for_ppd,
+            ]
+        )
+    if has_tilt:
+        ppd_ranges.append([COS_TILT_1.prior.low, COS_TILT_1.prior.high, steps_for_ppd])
+        ppd_ranges.append([COS_TILT_2.prior.low, COS_TILT_2.prior.high, steps_for_ppd])
 
     if has_spin and has_tilt:
         parameters = (
@@ -270,3 +305,21 @@ def main() -> None:
     )
 
     handler.run()
+
+    out_dir = FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["out_dir"]
+
+    nf_samples = pd.read_csv(
+        out_dir + "/nf_samples.dat", delimiter=" ", skiprows=1
+    ).to_numpy()
+
+    model = poisson_likelihood.model(
+        **{
+            name: nf_samples[..., i]
+            for name, i in poisson_likelihood.variables_index.items()
+        }
+    )
+
+    ppd_values = ppd.compute_ppd(model.log_prob, ppd_ranges)
+    ppd.save_ppd(
+        ppd_values, "ppd.hdf5", ppd_ranges, [parameter.name for parameter in parameters]
+    )

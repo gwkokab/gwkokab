@@ -45,7 +45,6 @@ dependencies = [
     "numpy<3",
     "numpyro==0.15.3",
     "pandas==2.2.3",
-    "plotly==5.24.0",
     "rich==13.9.2",
     "RIFT==0.0.15.11",
     "seaborn==0.13.2",
