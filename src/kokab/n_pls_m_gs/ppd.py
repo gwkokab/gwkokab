@@ -16,9 +16,11 @@ from __future__ import annotations
 
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing_extensions import Dict
+from typing_extensions import Dict, List, Tuple, Union
 
 import pandas as pd
+from jaxtyping import Bool, Float, Int
+from numpyro.distributions import MixtureGeneral
 
 from gwkokab.models import NPowerLawMGaussian
 from gwkokab.parameters import (
@@ -40,18 +42,55 @@ def make_parser() -> ArgumentParser:
     return parser
 
 
+def load_configuration(
+    constants_file: str, nf_samples_mapping_file: str
+) -> Tuple[
+    Dict[str, Union[Int[int, ""], Float[float, ""], Bool[bool, ""]]],
+    Dict[str, Int[int, ""]],
+]:
+    try:
+        with open(constants_file, "r") as f:
+            constants: Dict[str, Union[int, float, bool]] = json.load(f)
+        with open(nf_samples_mapping_file, "r") as f:
+            nf_samples_mapping: Dict[str, int] = json.load(f)
+        return constants, nf_samples_mapping
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        raise ValueError(f"Error loading configuration: {e}")
+
+
+def setup_model(
+    constants: Dict[str, Union[Int[int, ""], Float[float, ""], Bool[bool, ""]]],
+    nf_samples_mapping: Dict[str, Int[int, ""]],
+) -> MixtureGeneral:
+    nf_samples = pd.read_csv(
+        "sampler_data/nf_samples.dat", delimiter=" ", skiprows=1
+    ).to_numpy()
+    return NPowerLawMGaussian(
+        **constants,
+        **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
+    )
+
+
+def compute_and_save_ppd(
+    model: MixtureGeneral,
+    ppd_ranges: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
+    output_file: str,
+    parameters: List[str],
+) -> None:
+    ppd_values = ppd.compute_ppd(model.log_prob, ppd_ranges)
+    ppd.save_ppd(ppd_values, output_file, ppd_ranges, parameters)
+
+
 def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    with open(args.constants, "r") as f:
-        constants: Dict[str, int | float | bool] = json.loads(f)
+    constants, nf_samples_mapping = load_configuration(
+        args.constants, args.nf_samples_mapping
+    )
 
-    with open(args.nf_samples_mapping, "r") as f:
-        nf_samples_mapping: Dict[str, int] = json.loads(f)
-
-    has_spin = constants["use_spin"]
-    has_tilt = constants["use_tilt"]
+    has_spin = constants.get("use_spin", False)
+    has_tilt = constants.get("use_tilt", False)
 
     parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
     if has_spin:
@@ -59,21 +98,5 @@ def main() -> None:
     if has_tilt:
         parameters.extend([COS_TILT_1.name, COS_TILT_2.name])
 
-    nf_samples = pd.read_csv(
-        "sampler_data/nf_samples.dat", delimiter=" ", skiprows=1
-    ).to_numpy()
-
-    model = NPowerLawMGaussian(
-        **constants,
-        **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
-    )
-
-    ppd_ranges = args.range
-
-    ppd_values = ppd.compute_ppd(model.log_prob, ppd_ranges)
-    ppd.save_ppd(
-        ppd_values,
-        args.filename,
-        ppd_ranges,
-        [parameter.name for parameter in parameters],
-    )
+    model = setup_model(constants, nf_samples_mapping)
+    compute_and_save_ppd(model, args.range, args.filename, parameters)
