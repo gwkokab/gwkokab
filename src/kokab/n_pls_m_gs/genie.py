@@ -18,7 +18,9 @@ from __future__ import annotations
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
+from typing_extensions import List, Tuple
 
+from jaxtyping import Int
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
@@ -98,35 +100,48 @@ def main() -> None:
     has_spin = not args.no_spin
     has_tilt = not args.no_tilt
 
-    model_param = match_all(
-        expand_arguments("alpha", N_pl)
-        + expand_arguments("beta", N_pl)
-        + expand_arguments("mmin", N_pl)
-        + expand_arguments("mmax", N_pl)
-        + expand_arguments("mean_chi1_pl", N_pl)
-        + expand_arguments("mean_chi2_pl", N_pl)
-        + expand_arguments("std_dev_tilt1_pl", N_pl)
-        + expand_arguments("std_dev_tilt2_pl", N_pl)
-        + expand_arguments("variance_chi1_pl", N_pl)
-        + expand_arguments("variance_chi2_pl", N_pl)
-        + expand_arguments("loc_m1", N_g)
-        + expand_arguments("loc_m2", N_g)
-        + expand_arguments("scale_m1", N_g)
-        + expand_arguments("scale_m2", N_g)
-        + expand_arguments("mean_chi1_g", N_g)
-        + expand_arguments("mean_chi2_g", N_g)
-        + expand_arguments("std_dev_tilt1_g", N_g)
-        + expand_arguments("std_dev_tilt2_g", N_g)
-        + expand_arguments("variance_chi1_g", N_g)
-        + expand_arguments("variance_chi2_g", N_g),
-        model_json,
-    )
+    all_params: List[Tuple[str, Int[int, ""]]] = [
+        ("alpha", N_pl),
+        ("beta", N_pl),
+        ("loc_m1", N_g),
+        ("loc_m2", N_g),
+        ("mmax", N_pl),
+        ("mmin", N_pl),
+        ("scale_m1", N_g),
+        ("scale_m2", N_g),
+    ]
 
     parameters_name = (m1_source_name, m2_source_name)
     if has_spin:
         parameters_name += (chi1_name, chi2_name)
+        all_params.extend(
+            [
+                ("mean_chi1_g", N_g),
+                ("mean_chi1_pl", N_pl),
+                ("mean_chi2_g", N_g),
+                ("mean_chi2_pl", N_pl),
+                ("variance_chi1_g", N_g),
+                ("variance_chi1_pl", N_pl),
+                ("variance_chi2_g", N_g),
+                ("variance_chi2_pl", N_pl),
+            ]
+        )
     if has_tilt:
         parameters_name += (cos_tilt_1_name, cos_tilt_2_name)
+        all_params.append(
+            [
+                ("std_dev_tilt1_g", N_g),
+                ("std_dev_tilt1_pl", N_pl),
+                ("std_dev_tilt2_g", N_g),
+                ("std_dev_tilt2_pl", N_pl),
+            ]
+        )
+
+    extended_params = []
+    for params in all_params:
+        extended_params.extend(expand_arguments(*params))
+
+    model_param = match_all(extended_params, model_json)
 
     popmodel_magazine.register(
         parameters_name,

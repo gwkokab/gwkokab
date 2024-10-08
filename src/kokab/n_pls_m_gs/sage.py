@@ -19,8 +19,10 @@ import json
 import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
+from typing_extensions import List, Tuple
 
 from jax import random as jrd
+from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
@@ -114,35 +116,49 @@ def main() -> None:
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
 
-    model_prior_param = get_processed_priors(
-        expand_arguments("alpha", N_pl)
-        + expand_arguments("beta", N_pl)
-        + expand_arguments("mmin", N_pl)
-        + expand_arguments("mmax", N_pl)
-        + expand_arguments("mean_chi1_pl", N_pl)
-        + expand_arguments("mean_chi2_pl", N_pl)
-        + expand_arguments("std_dev_tilt1_pl", N_pl)
-        + expand_arguments("std_dev_tilt2_pl", N_pl)
-        + expand_arguments("variance_chi1_pl", N_pl)
-        + expand_arguments("variance_chi2_pl", N_pl)
-        + expand_arguments("loc_m1", N_g)
-        + expand_arguments("loc_m2", N_g)
-        + expand_arguments("scale_m1", N_g)
-        + expand_arguments("scale_m2", N_g)
-        + expand_arguments("mean_chi1_g", N_g)
-        + expand_arguments("mean_chi2_g", N_g)
-        + expand_arguments("std_dev_tilt1_g", N_g)
-        + expand_arguments("std_dev_tilt2_g", N_g)
-        + expand_arguments("variance_chi1_g", N_g)
-        + expand_arguments("variance_chi2_g", N_g),
-        prior_dict,
-    )
+    all_params: List[Tuple[str, Int[int, ""]]] = [
+        ("alpha", N_pl),
+        ("beta", N_pl),
+        ("loc_m1", N_g),
+        ("loc_m2", N_g),
+        ("mmax", N_pl),
+        ("mmin", N_pl),
+        ("scale_m1", N_g),
+        ("scale_m2", N_g),
+    ]
 
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
+
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
+        all_params.extend(
+            [
+                ("mean_chi1_g", N_g),
+                ("mean_chi1_pl", N_pl),
+                ("mean_chi2_g", N_g),
+                ("mean_chi2_pl", N_pl),
+                ("variance_chi1_g", N_g),
+                ("variance_chi1_pl", N_pl),
+                ("variance_chi2_g", N_g),
+                ("variance_chi2_pl", N_pl),
+            ]
+        )
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
+        all_params.append(
+            [
+                ("std_dev_tilt1_g", N_g),
+                ("std_dev_tilt1_pl", N_pl),
+                ("std_dev_tilt2_g", N_g),
+                ("std_dev_tilt2_pl", N_pl),
+            ]
+        )
+
+    extended_params = []
+    for params in all_params:
+        extended_params.extend(expand_arguments(*params))
+
+    model_prior_param = get_processed_priors(extended_params, prior_dict)
 
     model = Bake(NPowerLawMGaussian)(
         N_pl=N_pl,

@@ -38,6 +38,22 @@ def constraint(
     has_spin: Bool[bool, "True", "False"],
     has_tilt: Bool[bool, "True", "False"],
 ) -> Bool[Array, "..."]:
+    """
+    Applies physical constraints to the input array.
+
+    :param x: Input array where:
+
+        - x[..., 0] is mass m1
+        - x[..., 1] is mass m2
+        - x[..., 2] is chi1 (if has_spin is True)
+        - x[..., 3] is chi2 (if has_spin is True)
+        - x[..., 4] is cos_tilt_1 (if has_tilt is True)
+        - x[..., 5] is cos_tilt_2 (if has_tilt is True)
+
+    :param has_spin: Whether to apply spin constraints.
+    :param has_tilt: Whether to apply tilt constraints.
+    :return: Boolean array indicating which samples satisfy the constraints.
+    """
     m1 = x[..., 0]
     m2 = x[..., 1]
 
