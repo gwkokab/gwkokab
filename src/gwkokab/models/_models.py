@@ -30,6 +30,7 @@ from numpyro.distributions import (
     constraints,
     Distribution,
     DoublyTruncatedPowerLaw,
+    HalfNormal,
     MixtureGeneral,
     MultivariateNormal,
     Normal,
@@ -894,7 +895,7 @@ def NPowerLawMGaussian(
     N_g: Int[int, "Number of Gaussian components"],
     use_spin: Bool[bool, "True", "False"] = False,
     use_tilt: Bool[bool, "True", "False"] = False,
-    # use_eccentricity: Bool[bool, "True", "False"] = False,
+    use_eccentricity: Bool[bool, "True", "False"] = False,
     # use_redshift: Bool[bool, "True", "False"] = False,
     *,
     validate_args=None,
@@ -904,64 +905,51 @@ def NPowerLawMGaussian(
 
     :param N_pl: number of power-law components
     :param N_g: number of Gaussian components
-    :param alpha_i: Power law index for primary mass for ith component, where
-        :math:`0\leq i < N_{pl}`
-    :param beta_i: Power law index for mass ratio for ith component, where
-        :math:`0\leq i < N_{pl}`
-    :param mmin_i: Minimum mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param alpha_i: Power law index for primary mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param beta_i: Power law index for mass ratio for ith component, where :math:`0\leq i < N_{pl}`
+    :param loc_m1_i: Mean of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
+    :param loc_m2_i: Mean of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
+    :param mean_chi1_g_i: Mean of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param mean_chi1_pl_i: Mean of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
+    :param mean_chi2_g_i: Mean of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param mean_chi2_pl_i: Mean of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
     :param mmax_i: Maximum mass for ith component, where :math:`0\leq i < N_{pl}`
-    :param mean_chi1_pl_i: Mean of the beta distribution of primary spin magnitudes for
-        ith component, where :math:`0\leq i < N_{pl}`
-    :param variance_chi1_pl_i: Variance of the beta distribution of primary spin
-        magnitudes for ith component, where :math:`0\leq i < N_{pl}`
-    :param mean_chi2_pl_i: Mean of the beta distribution of secondary spin magnitudes
-        for ith component, where :math:`0\leq i < N_{pl}`
-    :param variance_chi2_pl_i: Variance of the beta distribution of secondary spin
-        magnitudes for ith component, where :math:`0\leq i < N_{pl}`
-    :param std_dev_tilt1_pl_i: Standard deviation of the tilt distribution of primary
-        tilt for ith component, where :math:`0\leq i < N_{pl}`
-    :param std_dev_tilt2_pl_i: Standard deviation of the tilt distribution of secondary
-        tilt for ith component, where :math:`0\leq i < N_{pl}`
-    :param loc_m1_i: Mean of the primary mass distribution for ith component, where
-        :math:`0\leq i < N_{g}`
-    :param scale_m1_i: Width of the primary mass distribution for ith component, where
-        :math:`0\leq i < N_{g}`
-    :param loc_m2_i: Mean of the secondary mass distribution for ith component, where
-        :math:`0\leq i < N_{g}`
-    :param scale_m2_i: Width of the secondary mass distribution for ith component, where
-        :math:`0\leq i < N_{g}`
-    :param mean_chi1_g_i: Mean of the beta distribution of primary spin magnitudes for
-        ith component, where :math:`0\leq i < N_{g}`
-    :param variance_chi1_g_i: Variance of the beta distribution of primary spin
-        magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param mean_chi2_g_i: Mean of the beta distribution of secondary spin magnitudes for
-        ith component, where :math:`0\leq i < N_{g}`
-    :param variance_chi2_g_i: Variance of the beta distribution of secondary spin
-        magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param std_dev_tilt1_g_i: Variance of the beta distribution of primary spin
-        magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param std_dev_tilt2_g_i: Variance of the beta distribution of secondary spin
-        magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param mmin_i: Minimum mass for ith component, where :math:`0\leq i < N_{pl}`
+    :param scale_ecc_g_i: Scale of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param scale_ecc_pl_i: Scale of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
+    :param scale_m1_i: Width of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
+    :param scale_m2_i: Width of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
+    :param std_dev_tilt1_g_i: Variance of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param std_dev_tilt1_pl_i: Standard deviation of the tilt distribution of primary tilt for ith component, where :math:`0\leq i < N_{pl}`
+    :param std_dev_tilt2_g_i: Variance of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param std_dev_tilt2_pl_i: Standard deviation of the tilt distribution of secondary tilt for ith component, where :math:`0\leq i < N_{pl}`
+    :param variance_chi1_g_i: Variance of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param variance_chi1_pl_i: Variance of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
+    :param variance_chi2_g_i: Variance of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param variance_chi2_pl_i: Variance of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
     :param alpha: default value for :code:`alpha`
     :param beta: default value for :code:`beta`
-    :param mmin: default value for :code:`mmin`
-    :param mmax: default value for :code:`mmax`
-    :param mean_chi1_pl: default value for :code:`mean_chi1_pl`
-    :param variance_chi1_pl: default value for :code:`variance_chi1_pl`
-    :param mean_chi2_pl: default value for :code:`mean_chi2_pl`
-    :param variance_chi2_pl: default value for :code:`variance_chi2_pl`
-    :param std_dev_tilt1_pl: default value for :code:`std_dev_tilt1_pl`
-    :param std_dev_tilt2_pl: default value for :code:`std_dev_tilt2_pl`
     :param loc_m1: default value for :code:`loc_m1`
-    :param scale_m1: default value for :code:`scale_m1`
     :param loc_m2: default value for :code:`loc_m2`
-    :param scale_m2: default value for :code:`scale_m2`
     :param mean_chi1_g: default value for :code:`mean_chi1_g`
-    :param variance_chi1_g: default value for :code:`variance_chi1_g`
+    :param mean_chi1_pl: default value for :code:`mean_chi1_pl`
     :param mean_chi2_g: default value for :code:`mean_chi2_g`
-    :param variance_chi2_g: default value for :code:`variance_chi2_g`
+    :param mean_chi2_pl: default value for :code:`mean_chi2_pl`
+    :param mmax: default value for :code:`mmax`
+    :param mmin: default value for :code:`mmin`
+    :param scale_ecc_g: Scale of the half-normal distribution of eccentricity for Gaussian components
+    :param scale_ecc_pl: Scale of the half-normal distribution of eccentricity for power-law components
+    :param scale_ecc: default value for :code:`scale_ecc_pl` and :code:`scale_ecc_g`
+    :param scale_m1: default value for :code:`scale_m1`
+    :param scale_m2: default value for :code:`scale_m2`
     :param std_dev_tilt1_g: default value for :code:`std_dev_tilt1_g`
+    :param std_dev_tilt1_pl: default value for :code:`std_dev_tilt1_pl`
     :param std_dev_tilt2_g: default value for :code:`std_dev_tilt2_g`
+    :param std_dev_tilt2_pl: default value for :code:`std_dev_tilt2_pl`
+    :param variance_chi1_g: default value for :code:`variance_chi1_g`
+    :param variance_chi1_pl: default value for :code:`variance_chi1_pl`
+    :param variance_chi2_g: default value for :code:`variance_chi2_g`
+    :param variance_chi2_pl: default value for :code:`variance_chi2_pl`
     :return: Mixture of N power-law and M Gaussians
     """
     if N_pl > 0:
@@ -1011,6 +999,15 @@ def NPowerLawMGaussian(
                 )
                 for i in range(N_pl)
             ]
+        if use_eccentricity:
+            default_scale_ecc_pl = params.get("scale_ecc_pl", params.get("scale_ecc"))
+            eccs_pl = [
+                HalfNormal(
+                    scale=params.get(f"scale_ecc_pl_{i}", default_scale_ecc_pl),
+                    validate_args=validate_args,
+                )
+                for i in range(N_pl)
+            ]
 
         all_dists_pl = jtr.map(
             lambda pl: (pl,),
@@ -1032,6 +1029,14 @@ def NPowerLawMGaussian(
                 all_dists_pl,
                 tilts_pl,
                 is_leaf=lambda x: isinstance(x, tuple),
+            )
+
+        if use_eccentricity:
+            all_dists_pl = jtr.map(
+                lambda dists, eccs: dists + (eccs,),
+                all_dists_pl,
+                eccs_pl,
+                is_leaf=lambda x: isinstance(x, HalfNormal),
             )
 
         pl_component_dist = jtr.map(
@@ -1088,6 +1093,16 @@ def NPowerLawMGaussian(
                 for i in range(N_g)
             ]
 
+        if use_eccentricity:
+            default_scale_ecc_g = params.get("scale_ecc_g", params.get("scale_ecc"))
+            eccs_g = [
+                HalfNormal(
+                    scale=params.get(f"scale_ecc_g_{i}", default_scale_ecc_g),
+                    validate_args=validate_args,
+                )
+                for i in range(N_g)
+            ]
+
         all_dists_g = jtr.map(
             lambda g1, g2: (g1, g2),
             g_m1,
@@ -1109,6 +1124,14 @@ def NPowerLawMGaussian(
                 all_dists_g,
                 tilts_g,
                 is_leaf=lambda x: isinstance(x, tuple),
+            )
+
+        if use_eccentricity:
+            all_dists_g = jtr.map(
+                lambda dists, eccs: dists + (eccs,),
+                all_dists_g,
+                eccs_g,
+                is_leaf=lambda x: isinstance(x, HalfNormal),
             )
 
         g_component_dist = jtr.map(

@@ -30,6 +30,7 @@ from gwkokab.models import NPowerLawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
+    ECCENTRICITY,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     SECONDARY_MASS_SOURCE,
@@ -70,6 +71,11 @@ def make_parser() -> ArgumentParser:
         "--no-tilt",
         action="store_true",
         help="Do not include tilt parameters in the model.",
+    )
+    model_group.add_argument(
+        "--no-eccentricity",
+        action="store_true",
+        help="Do not include eccentricity in the model.",
     )
 
     return parser
@@ -112,6 +118,7 @@ def main() -> None:
 
     has_spin = not args.no_spin
     has_tilt = not args.no_tilt
+    has_eccentricity = not args.no_eccentricity
 
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
@@ -153,6 +160,9 @@ def main() -> None:
                 ("std_dev_tilt2_pl", N_pl),
             ]
         )
+    if has_eccentricity:
+        parameters.append(ECCENTRICITY)
+        all_params.append([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
 
     extended_params = []
     for params in all_params:
@@ -165,6 +175,7 @@ def main() -> None:
         N_g=N_g,
         use_spin=has_spin,
         use_tilt=has_tilt,
+        use_eccentricity=has_eccentricity,
         **model_prior_param,
     )
 
@@ -190,6 +201,7 @@ def main() -> None:
     constants["N_g"] = N_g
     constants["use_spin"] = int(has_spin)
     constants["use_tilt"] = int(has_tilt)
+    constants["use_eccentricity"] = int(has_eccentricity)
 
     with open("constants.json", "w") as f:
         json.dump(constants, f)

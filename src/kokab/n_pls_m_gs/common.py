@@ -37,6 +37,7 @@ def constraint(
     x: Float[Array, "..."],
     has_spin: Bool[bool, "True", "False"],
     has_tilt: Bool[bool, "True", "False"],
+    has_eccentricity: Bool[bool, "True", "False"],
 ) -> Bool[Array, "..."]:
     """
     Applies physical constraints to the input array.
@@ -49,9 +50,11 @@ def constraint(
         - x[..., 3] is chi2 (if has_spin is True)
         - x[..., 4] is cos_tilt_1 (if has_tilt is True)
         - x[..., 5] is cos_tilt_2 (if has_tilt is True)
+        - x[..., 6] is eccentricity (if has_eccentricity is True)
 
     :param has_spin: Whether to apply spin constraints.
     :param has_tilt: Whether to apply tilt constraints.
+    :param has_eccentricity: Whether to apply eccentricity constraints.
     :return: Boolean array indicating which samples satisfy the constraints.
     """
     m1 = x[..., 0]
@@ -61,9 +64,11 @@ def constraint(
     mask &= m2 > 0.0
     mask &= m1 >= m2
 
+    i = 2
+
     if has_spin:
-        chi1 = x[..., 2]
-        chi2 = x[..., 3]
+        chi1 = x[..., i]
+        chi2 = x[..., i + 1]
 
         mask &= chi1 >= 0.0
         mask &= chi1 <= 1.0
@@ -71,14 +76,24 @@ def constraint(
         mask &= chi2 >= 0.0
         mask &= chi2 <= 1.0
 
+        i += 2
+
     if has_tilt:
-        cos_tilt_1 = x[..., 4]
-        cos_tilt_2 = x[..., 5]
+        cos_tilt_1 = x[..., i]
+        cos_tilt_2 = x[..., i + 1]
 
         mask &= cos_tilt_1 >= -1.0
         mask &= cos_tilt_1 <= 1.0
 
         mask &= cos_tilt_2 >= -1.0
         mask &= cos_tilt_2 <= 1.0
+
+        i += 2
+
+    if has_eccentricity:
+        ecc = x[..., i]
+
+        mask &= ecc >= 0.0
+        mask &= ecc <= 1.0
 
     return mask

@@ -26,6 +26,7 @@ from gwkokab.models import NPowerLawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
+    ECCENTRICITY,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     SECONDARY_MASS_SOURCE,
@@ -91,12 +92,15 @@ def main() -> None:
 
     has_spin = constants.get("use_spin", False)
     has_tilt = constants.get("use_tilt", False)
+    has_eccentricity = constants.get("use_eccentricity", False)
 
     parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
     if has_tilt:
         parameters.extend([COS_TILT_1.name, COS_TILT_2.name])
+    if has_eccentricity:
+        parameters.append(ECCENTRICITY.name)
 
     model = setup_model(constants, nf_samples_mapping)
     compute_and_save_ppd(model, args.range, args.filename, parameters)
