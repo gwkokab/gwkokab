@@ -25,13 +25,11 @@ from jax import numpy as jnp
 from jaxtyping import Array, Float, Int
 
 
-def compute_ppd(
+def compute_probs(
     logpdf: Callable[[Float[Array, "..."]], Float[Array, "..."]],
     ranges: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
 ) -> Float[Array, "..."]:
-    r"""Compute the posterior predictive distribution (PPD) of a model.
-
-    The function evaluates the PPD over a grid defined by the provided parameter ranges.
+    r"""Compute the probability density function of a model.
 
     :param logpdf: A callable that computes the log-probability density function of the model.
     :param ranges: A list of tuples `(start, end, num_points)` for each parameter, defining the grid over which to compute the PPD.
@@ -40,33 +38,77 @@ def compute_ppd(
     max_axis = int(np.argmax([int(n) for _, _, n in ranges]))
 
     @partial(jax.vmap, in_axes=(max_axis,), out_axes=max_axis)
-    def _ppd_vmapped(x: Float[Array, "..."]) -> Float[Array, "..."]:
-        x = jnp.expand_dims(x, axis=-2)
-        prob = jnp.exp(logpdf(x))
-        ppd = jnp.mean(prob, axis=-1)
-        return ppd
+    def _prob_vmapped(x: Float[Array, "..."]) -> Float[Array, "..."]:
+        x_expanded = jnp.expand_dims(x, axis=-2)
+        prob = jnp.exp(logpdf(x_expanded))
+        return prob
 
     xx = [jnp.linspace(a, b, int(n)) for a, b, n in ranges]
     mesh = jnp.meshgrid(*xx, indexing="ij")
     xx_mesh = jnp.stack(mesh, axis=-1)
-    ppd_vec = _ppd_vmapped(xx_mesh)
-    return ppd_vec
+    prob_vec = _prob_vmapped(xx_mesh)
+    return prob_vec
 
 
-def save_ppd(
+def _compute_marginal_probs(
+    probs_array: Float[Array, "..."],
+    axis: int,
+    domain: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
+) -> Float[Array, "..."]:
+    r"""Compute the marginal probabilities of a model.
+
+    The function computes the marginal probabilities of a model by summing over the specified axis.
+
+    :param probs_array: The probabilities of the model.
+    :param axis: The axis
+    :param domain: The domain of the axis.
+    :return: The marginal probabilities of the model.
+    """
+    assert axis < probs_array.ndim, "Axis must be less than the number of dimensions."
+    j = 0
+    marginal_density = probs_array
+    for i, (start, end, num_points) in enumerate(domain):
+        if i == axis:
+            continue
+        marginal_density = np.trapezoid(
+            y=marginal_density,
+            x=np.linspace(start, end, num_points),
+            axis=i - j,
+        )
+        j += 1
+
+    return marginal_density
+
+
+def get_all_marginals(
+    probs: Float[Array, "..."],
+    domains: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
+) -> List[Float[Array, "..."]]:
+    return [_compute_marginal_probs(probs, axis, domains) for axis in range(probs.ndim)]
+
+
+def get_ppd(probs: Float[Array, "..."], axis: Int[int, ""] = -1) -> Float[Array, "..."]:
+    return np.mean(probs, axis=axis)
+
+
+def save_probs(
     ppd_array: Float[Array, "..."],
+    marginal_probs: List[Float[Array, "..."]],
     filename: str,
-    ranges: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
+    domains: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
     headers: List[str],
 ) -> None:
     assert ppd_array.ndim == len(
-        ranges
+        domains
     ), "Number of ranges must match the number of dimensions of the PPD array."
     assert ppd_array.ndim == len(
         headers
     ), "Number of headers must match the number of dimensions of the PPD array."
 
     with h5py.File(filename, "w") as f:
-        f.create_dataset("range", data=np.array(ranges))
+        f.create_dataset("domains", data=np.array(domains))
         f.create_dataset("headers", data=np.array(headers, dtype="S"))
         f.create_dataset("ppd", data=ppd_array)
+        marginal_probs_group = f.create_group("marginals")
+        for marginal_prob, head in zip(marginal_probs, headers):
+            marginal_probs_group.create_dataset(head, data=marginal_prob)

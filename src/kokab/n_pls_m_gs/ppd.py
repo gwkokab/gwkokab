@@ -74,17 +74,21 @@ def setup_model(
 
 def compute_and_save_ppd(
     model: MixtureGeneral,
-    ppd_ranges: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
+    domains: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
     output_file: str,
     parameters: List[str],
 ) -> None:
-    ppd_values = ppd.compute_ppd(model.log_prob, ppd_ranges)
-    ppd.save_ppd(ppd_values, output_file, ppd_ranges, parameters)
+    prob_values = ppd.compute_probs(model.log_prob, domains)
+    ppd_values = ppd.get_ppd(prob_values, axis=-1)
+    marginals = ppd.get_all_marginals(prob_values, domains)
+    ppd.save_probs(ppd_values, marginals, output_file, domains, parameters)
 
 
 def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
+
+    assert str(args.filename).endswith(".hdf5"), "Output file must be an HDF5 file."
 
     constants, nf_samples_mapping = load_configuration(
         args.constants, args.nf_samples_mapping
