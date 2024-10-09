@@ -62,6 +62,20 @@ def make_parser() -> argparse.ArgumentParser:
         default="linear",
         type=str,
     )
+    parser.add_argument(
+        "--x-range",
+        nargs=2,
+        action="append",
+        type=float,
+        help="range of the x axis plot in the form of start end for each parameter",
+    )
+    parser.add_argument(
+        "--y-range",
+        nargs=2,
+        action="append",
+        type=float,
+        help="range of the y axis plot in the form of start end for each parameter",
+    )
 
     return parser
 
@@ -89,6 +103,9 @@ def main() -> None:
 
     prefix = "" if args.prefix is None else args.prefix
 
+    x_range = args.x_range
+    y_range = args.y_range
+
     with h5py.File(args.data.name, "r") as f:
         domains = get_domain(f["domains"])
         headers = get_headers(f["headers"])
@@ -97,6 +114,7 @@ def main() -> None:
 
     marginal_ppds = get_all_marginals(ppd, domains)
 
+    i = 0
     for head, marginal, marginal_ppd, domain in zip(
         headers, marginals, marginal_ppds, domains
     ):
@@ -120,7 +138,15 @@ def main() -> None:
         ax.set_title(f"PPD plot of {prefix}{head}")
         ax.set_xlabel(head)
         ax.set_ylabel(f"ppd({head})")
+        if x_range is not None:
+            if i < len(x_range):
+                ax.set_xlim(x_range[i][0], x_range[i][1])
+        if y_range is not None:
+            if i < len(y_range):
+                ax.set_ylim(y_range[i][0], y_range[i][1])
+
         plt.legend()
         plt.tight_layout()
         fig.savefig(f"{prefix}{head}_ppd_plot.png")
         plt.close("all")
+        i += 1
