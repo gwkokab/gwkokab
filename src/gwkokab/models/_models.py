@@ -1036,7 +1036,7 @@ def NPowerLawMGaussian(
                 lambda dists, eccs: dists + (eccs,),
                 all_dists_pl,
                 eccs_pl,
-                is_leaf=lambda x: isinstance(x, HalfNormal),
+                is_leaf=lambda x: isinstance(x, (tuple, HalfNormal)),
             )
 
         pl_component_dist = jtr.map(
@@ -1131,7 +1131,7 @@ def NPowerLawMGaussian(
                 lambda dists, eccs: dists + (eccs,),
                 all_dists_g,
                 eccs_g,
-                is_leaf=lambda x: isinstance(x, HalfNormal),
+                is_leaf=lambda x: isinstance(x, (tuple, HalfNormal)),
             )
 
         g_component_dist = jtr.map(
