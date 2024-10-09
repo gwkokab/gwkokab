@@ -109,7 +109,7 @@ def main() -> None:
     has_tilt = not args.no_tilt
     has_eccentricity = not args.no_eccentricity
 
-    all_params: List[Tuple[str, Int[int, ""]]] = [
+    all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
         ("alpha", N_pl),
         ("beta", N_pl),
         ("loc_m1", N_g),
@@ -137,7 +137,7 @@ def main() -> None:
         )
     if has_tilt:
         parameters_name += (cos_tilt_1_name, cos_tilt_2_name)
-        all_params.append(
+        all_params.extend(
             [
                 ("std_dev_tilt1_g", N_g),
                 ("std_dev_tilt1_pl", N_pl),
@@ -147,7 +147,7 @@ def main() -> None:
         )
     if has_eccentricity:
         parameters_name += (ecc_name,)
-        all_params.append([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
+        all_params.extend([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
 
     extended_params = []
     for params in all_params:

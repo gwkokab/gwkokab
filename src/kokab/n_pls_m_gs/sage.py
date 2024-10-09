@@ -123,7 +123,7 @@ def main() -> None:
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
 
-    all_params: List[Tuple[str, Int[int, ""]]] = [
+    all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
         ("alpha", N_pl),
         ("beta", N_pl),
         ("loc_m1", N_g),
@@ -152,7 +152,7 @@ def main() -> None:
         )
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
-        all_params.append(
+        all_params.extend(
             [
                 ("std_dev_tilt1_g", N_g),
                 ("std_dev_tilt1_pl", N_pl),
@@ -162,7 +162,7 @@ def main() -> None:
         )
     if has_eccentricity:
         parameters.append(ECCENTRICITY)
-        all_params.append([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
+        all_params.extend([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
 
     extended_params = []
     for params in all_params:
