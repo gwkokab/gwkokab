@@ -76,6 +76,12 @@ def make_parser() -> argparse.ArgumentParser:
         type=float,
         help="range of the y axis plot in the form of start end for each parameter",
     )
+    parser.add_argument(
+        "--dir",
+        type=str,
+        required=True,
+        help="directory to save the plots",
+    )
 
     return parser
 
@@ -147,6 +153,6 @@ def main() -> None:
 
         plt.legend()
         plt.tight_layout()
-        fig.savefig(f"{prefix}{head}_ppd_plot.png")
+        fig.savefig(f"{args.dir}/{prefix}{head}_ppd_plot.png")
         plt.close("all")
         i += 1
