@@ -88,7 +88,7 @@ def make_parser() -> argparse.ArgumentParser:
 
 def get_domain(
     domain_as_read: Any,
-) -> Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]:
+) -> List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]]:
     return [(float(s), float(e), int(n)) for s, e, n in domain_as_read]
 
 
