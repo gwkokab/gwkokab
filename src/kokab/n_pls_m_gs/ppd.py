@@ -16,11 +16,13 @@ from __future__ import annotations
 
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing_extensions import Dict, List, Tuple, Union
+from typing_extensions import Callable, Dict, List, Tuple, Union
 
+import jax.numpy as jnp
 import pandas as pd
-from jaxtyping import Bool, Float, Int
-from numpyro.distributions import MixtureGeneral
+from jax.nn import log_softmax, logsumexp
+from jaxtyping import Array, Bool, Float, Int
+from numpyro.distributions import CategoricalProbs
 
 from gwkokab.models import NPowerLawMGaussian
 from gwkokab.parameters import (
@@ -59,26 +61,57 @@ def load_configuration(
         raise ValueError(f"Error loading configuration: {e}")
 
 
-def setup_model(
+def get_model_pdf(
     constants: Dict[str, Union[Int[int, ""], Float[float, ""], Bool[bool, ""]]],
     nf_samples_mapping: Dict[str, Int[int, ""]],
-) -> MixtureGeneral:
+    rate_scaled: Bool[bool, ""] = False,
+) -> Callable[[Float[Array, "..."]], Float[Array, "..."]]:
     nf_samples = pd.read_csv(
         "sampler_data/nf_samples.dat", delimiter=" ", skiprows=1
     ).to_numpy()
-    return NPowerLawMGaussian(
+
+    model = NPowerLawMGaussian(
         **constants,
         **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
     )
 
+    if rate_scaled:
+        min_index = min(nf_samples_mapping.values())
+        log_rates = nf_samples[..., 0:min_index] / jnp.log10(jnp.e)
+        rates = jnp.power(10, log_rates)
+        total_rate = jnp.sum(rates, axis=-1, keepdims=True)
+        rates = rates / total_rate
+        model._mixing_distribution = CategoricalProbs(rates, validate_args=True)
+
+        def _log_prob(y: Float[Array, "..."]) -> Float[Array, "..."]:
+            # Numpyro's MixtureGeneral does not support weights that do not sum to 1.
+            # To bypass this constraint we have used this mathematical jugaad to remove
+            # the weights that are normalized and add back the log of rates.
+            sum_log_probs = (
+                log_rates  # Adding back the log of rates to scale each component to their rate
+                + model.component_log_probs(y)  # log of the component probabilities
+                - log_softmax(
+                    model.mixing_distribution.logits
+                )  # removing the normalized weights
+            )
+            safe_sum_log_probs = jnp.where(
+                jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
+            )
+            mixture_log_prob = logsumexp(safe_sum_log_probs, axis=-1)
+            return mixture_log_prob
+
+        return _log_prob
+
+    return model.log_prob
+
 
 def compute_and_save_ppd(
-    model: MixtureGeneral,
+    logpdf: Callable[[Float[Array, "..."]], Float[Array, "..."]],
     domains: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
     output_file: str,
     parameters: List[str],
 ) -> None:
-    prob_values = ppd.compute_probs(model.log_prob, domains)
+    prob_values = ppd.compute_probs(logpdf, domains)
     ppd_values = ppd.get_ppd(prob_values, axis=-1)
     marginals = ppd.get_all_marginals(prob_values, domains)
     ppd.save_probs(ppd_values, marginals, output_file, domains, parameters)
@@ -107,5 +140,10 @@ def main() -> None:
     if has_eccentricity:
         parameters.append(ECCENTRICITY.name)
 
-    model = setup_model(constants, nf_samples_mapping)
-    compute_and_save_ppd(model, args.range, args.filename, parameters)
+    model_without_rate_pdf = get_model_pdf(constants, nf_samples_mapping)
+    compute_and_save_ppd(model_without_rate_pdf, args.range, args.filename, parameters)
+
+    model_with_rate_pdf = get_model_pdf(constants, nf_samples_mapping, rate_scaled=True)
+    compute_and_save_ppd(
+        model_with_rate_pdf, args.range, "rate_scaled_" + args.filename, parameters
+    )
