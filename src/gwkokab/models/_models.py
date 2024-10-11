@@ -919,9 +919,9 @@ def NPowerLawMGaussian(
     :param scale_ecc_pl_i: Scale of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
     :param scale_m1_i: Width of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
     :param scale_m2_i: Width of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
-    :param std_dev_tilt1_g_i: Variance of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param std_dev_tilt1_g_i: Standard deviation of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
     :param std_dev_tilt1_pl_i: Standard deviation of the tilt distribution of primary tilt for ith component, where :math:`0\leq i < N_{pl}`
-    :param std_dev_tilt2_g_i: Variance of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
+    :param std_dev_tilt2_g_i: Standard deviation of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
     :param std_dev_tilt2_pl_i: Standard deviation of the tilt distribution of secondary tilt for ith component, where :math:`0\leq i < N_{pl}`
     :param variance_chi1_g_i: Variance of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
     :param variance_chi1_pl_i: Variance of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
