@@ -71,18 +71,11 @@ def _compute_marginal_probs(
         if i == axis:
             continue
         num_points = int(num_points)
-        try:
-            marginal_density = np.trapezoid(
-                y=marginal_density,
-                x=np.linspace(start, end, num_points),
-                axis=i - j,
-            )
-        except AttributeError:
-            marginal_density = np.trapz(
-                y=marginal_density,
-                x=np.linspace(start, end, num_points),
-                axis=i - j,
-            )
+        marginal_density = jnp.trapezoid(
+            y=marginal_density,
+            x=jnp.linspace(start, end, num_points),
+            axis=i - j,
+        )
         j += 1
 
     return marginal_density
