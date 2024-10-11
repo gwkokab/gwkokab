@@ -88,7 +88,8 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    assert str(args.filename).endswith(".hdf5"), "Output file must be an HDF5 file."
+    if not str(args.filename).endswith(".hdf5"):
+        raise ValueError("Output file must be an HDF5 file.")
 
     constants, nf_samples_mapping = load_configuration(
         args.constants, args.nf_samples_mapping
