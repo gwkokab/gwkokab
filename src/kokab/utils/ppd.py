@@ -85,10 +85,22 @@ def get_all_marginals(
     probs: Float[Array, "..."],
     domains: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
 ) -> List[Float[Array, "..."]]:
+    """Compute marginal probabilities for all axes.
+
+    :param probs: The probability array.
+    :param domains: List of domains for each axis.
+    :return: List of marginal probability arrays, one for each axis.
+    """
     return [_compute_marginal_probs(probs, axis, domains) for axis in range(probs.ndim)]
 
 
 def get_ppd(probs: Float[Array, "..."], axis: Int[int, ""] = -1) -> Float[Array, "..."]:
+    """Compute the posterior predictive distribution.
+
+    :param probs: The probability array.
+    :param axis: The axis along which to compute the mean (default: -1).
+    :return: The posterior predictive distribution.
+    """
     return np.mean(probs, axis=axis)
 
 
