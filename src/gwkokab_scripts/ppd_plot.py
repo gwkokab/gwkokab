@@ -76,6 +76,20 @@ def make_parser() -> argparse.ArgumentParser:
         help="range of the y axis plot in the form of start end for each parameter",
     )
     parser.add_argument(
+        "--x-labels",
+        nargs="+",
+        action="append",
+        type=str,
+        help="labels for the x axis in order of the parameters",
+    )
+    parser.add_argument(
+        "--y-labels",
+        nargs="+",
+        action="append",
+        type=str,
+        help="labels for the y axis in order of the parameters",
+    )
+    parser.add_argument(
         "--size",
         help="size of the ppd plot in inches",
         nargs=2,
@@ -125,6 +139,9 @@ def main() -> None:
     x_range = args.x_range
     y_range = args.y_range
 
+    x_labels = args.x_labels
+    y_labels = args.y_labels
+
     with h5py.File(args.data, "r") as f:
         domains = get_domain(f["domains"])
         headers = get_utf8_decoded_headers(f["headers"])
@@ -163,14 +180,23 @@ def main() -> None:
         ax.set_yscale(args.y_scale)
         ax.set_xscale(args.x_scale)
         ax.set_title(f"PPD plot of {prefix}{head}")
-        ax.set_xlabel(head)
-        ax.set_ylabel(f"ppd({head})")
+        if args.x_labels is None:
+            ax.set_xlabel(head)
+        if args.y_labels is None:
+            ax.set_ylabel(f"ppd({head})")
+
         if x_range is not None:
             if i < len(x_range):
                 ax.set_xlim(x_range[i][0], x_range[i][1])
         if y_range is not None:
             if i < len(y_range):
                 ax.set_ylim(y_range[i][0], y_range[i][1])
+        if x_labels is not None:
+            if i < len(x_labels):
+                ax.set_xlabel(x_labels[i])
+        if y_labels is not None:
+            if i < len(y_labels):
+                ax.set_ylabel(y_labels[i])
 
         plt.legend()
         plt.tight_layout()
