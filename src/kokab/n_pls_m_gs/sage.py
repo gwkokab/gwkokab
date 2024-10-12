@@ -19,20 +19,18 @@ import json
 import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
+from typing_extensions import List, Tuple
 
 from jax import random as jrd
+from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
-from gwkokab.models import (
-    NPowerLawMGaussian,
-    NPowerLawMGaussianWithDefaultSpinMagnitude,
-    NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment,
-    NPowerLawMGaussianWithSpinMisalignment,
-)
+from gwkokab.models import NPowerLawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
+    ECCENTRICITY,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     SECONDARY_MASS_SOURCE,
@@ -73,6 +71,11 @@ def make_parser() -> ArgumentParser:
         "--no-tilt",
         action="store_true",
         help="Do not include tilt parameters in the model.",
+    )
+    model_group.add_argument(
+        "--no-eccentricity",
+        action="store_true",
+        help="Do not include eccentricity in the model.",
     )
 
     return parser
@@ -115,127 +118,66 @@ def main() -> None:
 
     has_spin = not args.no_spin
     has_tilt = not args.no_tilt
+    has_eccentricity = not args.no_eccentricity
 
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
 
-    if has_spin and has_tilt:
-        parameters = (
-            PRIMARY_MASS_SOURCE,
-            SECONDARY_MASS_SOURCE,
-            PRIMARY_SPIN_MAGNITUDE,
-            SECONDARY_SPIN_MAGNITUDE,
-            COS_TILT_1,
-            COS_TILT_2,
-        )
-        model_prior_param = get_processed_priors(
-            expand_arguments("alpha", N_pl)
-            + expand_arguments("beta", N_pl)
-            + expand_arguments("mmin", N_pl)
-            + expand_arguments("mmax", N_pl)
-            + expand_arguments("mean_chi1_pl", N_pl)
-            + expand_arguments("mean_chi2_pl", N_pl)
-            + expand_arguments("std_dev_tilt1_pl", N_pl)
-            + expand_arguments("std_dev_tilt2_pl", N_pl)
-            + expand_arguments("variance_chi1_pl", N_pl)
-            + expand_arguments("variance_chi2_pl", N_pl)
-            + expand_arguments("loc_m1", N_g)
-            + expand_arguments("loc_m2", N_g)
-            + expand_arguments("scale_m1", N_g)
-            + expand_arguments("scale_m2", N_g)
-            + expand_arguments("mean_chi1_g", N_g)
-            + expand_arguments("mean_chi2_g", N_g)
-            + expand_arguments("std_dev_tilt1_g", N_g)
-            + expand_arguments("std_dev_tilt2_g", N_g)
-            + expand_arguments("variance_chi1_g", N_g)
-            + expand_arguments("variance_chi2_g", N_g),
-            prior_dict,
-        )
+    all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
+        ("alpha", N_pl),
+        ("beta", N_pl),
+        ("loc_m1", N_g),
+        ("loc_m2", N_g),
+        ("mmax", N_pl),
+        ("mmin", N_pl),
+        ("scale_m1", N_g),
+        ("scale_m2", N_g),
+    ]
 
-        model = Bake(NPowerLawMGaussianWithDefaultSpinMagnitudeAndSpinMisalignment)(
-            N_pl=N_pl,
-            N_g=N_g,
-            **model_prior_param,
-        )
-    elif has_spin:
-        parameters = (
-            PRIMARY_MASS_SOURCE,
-            SECONDARY_MASS_SOURCE,
-            PRIMARY_SPIN_MAGNITUDE,
-            SECONDARY_SPIN_MAGNITUDE,
-        )
-        model_prior_param = get_processed_priors(
-            expand_arguments("alpha", N_pl)
-            + expand_arguments("beta", N_pl)
-            + expand_arguments("mmin", N_pl)
-            + expand_arguments("mmax", N_pl)
-            + expand_arguments("mean_chi1_pl", N_pl)
-            + expand_arguments("mean_chi2_pl", N_pl)
-            + expand_arguments("variance_chi1_pl", N_pl)
-            + expand_arguments("variance_chi2_pl", N_pl)
-            + expand_arguments("loc_m1", N_g)
-            + expand_arguments("loc_m2", N_g)
-            + expand_arguments("scale_m1", N_g)
-            + expand_arguments("scale_m2", N_g)
-            + expand_arguments("mean_chi1_g", N_g)
-            + expand_arguments("mean_chi2_g", N_g)
-            + expand_arguments("variance_chi1_g", N_g)
-            + expand_arguments("variance_chi2_g", N_g),
-            prior_dict,
-        )
+    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
 
-        model = Bake(NPowerLawMGaussianWithDefaultSpinMagnitude)(
-            N_pl=N_pl,
-            N_g=N_g,
-            **model_prior_param,
+    if has_spin:
+        parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
+        all_params.extend(
+            [
+                ("mean_chi1_g", N_g),
+                ("mean_chi1_pl", N_pl),
+                ("mean_chi2_g", N_g),
+                ("mean_chi2_pl", N_pl),
+                ("variance_chi1_g", N_g),
+                ("variance_chi1_pl", N_pl),
+                ("variance_chi2_g", N_g),
+                ("variance_chi2_pl", N_pl),
+            ]
         )
-    elif has_tilt:
-        parameters = (
-            PRIMARY_MASS_SOURCE,
-            SECONDARY_MASS_SOURCE,
-            COS_TILT_1,
-            COS_TILT_2,
+    if has_tilt:
+        parameters.extend([COS_TILT_1, COS_TILT_2])
+        all_params.extend(
+            [
+                ("std_dev_tilt1_g", N_g),
+                ("std_dev_tilt1_pl", N_pl),
+                ("std_dev_tilt2_g", N_g),
+                ("std_dev_tilt2_pl", N_pl),
+            ]
         )
-        model_prior_param = get_processed_priors(
-            expand_arguments("alpha", N_pl)
-            + expand_arguments("beta", N_pl)
-            + expand_arguments("mmin", N_pl)
-            + expand_arguments("mmax", N_pl)
-            + expand_arguments("std_dev_tilt1_pl", N_pl)
-            + expand_arguments("std_dev_tilt2_pl", N_pl)
-            + expand_arguments("loc_m1", N_g)
-            + expand_arguments("loc_m2", N_g)
-            + expand_arguments("scale_m1", N_g)
-            + expand_arguments("scale_m2", N_g)
-            + expand_arguments("std_dev_tilt1_g", N_g)
-            + expand_arguments("std_dev_tilt2_g", N_g),
-            prior_dict,
-        )
+    if has_eccentricity:
+        parameters.append(ECCENTRICITY)
+        all_params.extend([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
 
-        model = Bake(NPowerLawMGaussianWithSpinMisalignment)(
-            N_pl=N_pl,
-            N_g=N_g,
-            **model_prior_param,
-        )
-    else:
-        parameters = (PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE)
-        model_prior_param = get_processed_priors(
-            expand_arguments("alpha", N_pl)
-            + expand_arguments("beta", N_pl)
-            + expand_arguments("mmin", N_pl)
-            + expand_arguments("mmax", N_pl)
-            + expand_arguments("loc_m1", N_g)
-            + expand_arguments("loc_m2", N_g)
-            + expand_arguments("scale_m1", N_g)
-            + expand_arguments("scale_m2", N_g),
-            prior_dict,
-        )
+    extended_params = []
+    for params in all_params:
+        extended_params.extend(expand_arguments(*params))
 
-        model = Bake(NPowerLawMGaussian)(
-            N_pl=N_pl,
-            N_g=N_g,
-            **model_prior_param,
-        )
+    model_prior_param = get_processed_priors(extended_params, prior_dict)
+
+    model = Bake(NPowerLawMGaussian)(
+        N_pl=N_pl,
+        N_g=N_g,
+        use_spin=has_spin,
+        use_tilt=has_tilt,
+        use_eccentricity=has_eccentricity,
+        **model_prior_param,
+    )
 
     log_rate_prior_param = get_processed_priors(
         expand_arguments("log_rate", N_pl + N_g), prior_dict
@@ -252,6 +194,20 @@ def main() -> None:
         [log_rate_prior_param[r] for r in expand_arguments("log_rate", N_pl + N_g)],
         model=model,
     )
+
+    constants = model.constants
+
+    constants["N_pl"] = N_pl
+    constants["N_g"] = N_g
+    constants["use_spin"] = int(has_spin)
+    constants["use_tilt"] = int(has_tilt)
+    constants["use_eccentricity"] = int(has_eccentricity)
+
+    with open("constants.json", "w") as f:
+        json.dump(constants, f)
+
+    with open("nf_samples_mapping.json", "w") as f:
+        json.dump(poisson_likelihood.variables_index, f)
 
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
     initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))

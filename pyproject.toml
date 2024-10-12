@@ -42,11 +42,10 @@ dependencies = [
     "jaxtyping==0.2.34",
     "matplotlib==3.9.2",
     "mplcursors==0.5.3",
-    "numpy<2",
+    "numpy<3",
     "numpyro==0.15.3",
     "pandas==2.2.3",
-    "plotly==5.24.0",
-    "rich==13.8.0",
+    "rich==13.9.2",
     "RIFT==0.0.15.11",
     "seaborn==0.13.2",
     "typing_extensions==4.12.2",
@@ -61,15 +60,15 @@ keywords = [
 
 [project.optional-dependencies]
 dev = [
-    "pre-commit==3.8.0",
+    "pre-commit==4.0.0",
     "pytest==8.3.3",
-    "ruff==0.6.8",
+    "ruff==0.6.9",
     "setuptools==75.1.0",
 ]
 
 docs = [
     "flatbuffers==24.3.25",
-    "ipython==8.27.0",
+    "ipython==8.28.0",
     "ipywidgets==8.1.5",
     "myst-parser==4.0.0",
     "nbsphinx==0.9.5",
@@ -96,19 +95,22 @@ gwk_batch_scatter3d = "gwkokab_scripts.batch_scatter3d:main"
 gwk_chain_plot = "gwkokab_scripts.chain_plot:main"
 gwk_corner_plot = "gwkokab_scripts.corner_plot:main"
 gwk_joint_plot = "gwkokab_scripts.joint_plot:main"
+gwk_ppd_plot = "gwkokab_scripts.ppd_plot:main"
 gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
 gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
 # Kokab scripts
-# Genie scripts
+## Genie scripts
 genie_ecc_matters = "kokab.ecc_matters.genie:main"
 genie_n_pls_m_gs = "kokab.n_pls_m_gs.genie:main"
 genie_powerlaw_peak = "kokab.powerlawpeak.genie:main"
 genie_powerlaw_primary_mass_ratio = "kokab.powerlawprimarymassratio.genie:main"
 genie_single_gaussians = "kokab.single_gaussians.genie:main"
-# Sage scripts
+## Sage scripts
 sage_ecc_matters = "kokab.ecc_matters.sage:main"
 sage_n_pls_m_gs = "kokab.n_pls_m_gs.sage:main"
 sage_powerlaw_primary_mass_ratio = "kokab.powerlawprimarymassratio.sage:main"
+## PPD scripts
+ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]
