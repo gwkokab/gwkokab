@@ -2,16 +2,6 @@
 
 Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
-- [Change log](#change-log)
-  - [gwkokab 0.1.1](#gwkokab-011)
-    - [Breaking changes](#breaking-changes)
-    - [New features](#new-features)
-    - [New Design](#new-design)
-  - [gwkokab 0.1.0 (July 27, 2024)](#gwkokab-010-july-27-2024)
-    - [Breaking changes](#breaking-changes-1)
-    - [New features](#new-features-1)
-  - [gwkokab 0.0.1 (Jul 5, 2024)](#gwkokab-001-jul-5-2024)
-
 ## gwkokab 0.1.1
 
 ### Breaking changes

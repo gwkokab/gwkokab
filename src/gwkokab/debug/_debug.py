@@ -55,7 +55,7 @@ def debug(func) -> Callable:
 
     :param func: The function to be decorated.
     :return: A wrapper function that prints the arguments and return value of the
-    decorated function.
+        decorated function.
     """
 
     def wrapper(*args, **kwargs):

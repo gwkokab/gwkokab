@@ -39,8 +39,7 @@ def constraint(
     has_tilt: Bool[bool, "True", "False"],
     has_eccentricity: Bool[bool, "True", "False"],
 ) -> Bool[Array, "..."]:
-    """
-    Applies physical constraints to the input array.
+    """Applies physical constraints to the input array.
 
     :param x: Input array where:
 

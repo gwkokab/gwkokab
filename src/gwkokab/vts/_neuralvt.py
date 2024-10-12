@@ -227,8 +227,8 @@ def train_regressor(
     :param data_path: path to the data
     :param checkpoint_path: path to save the model
     :param epochs: number of epochs to train the model
-    :param validation_split: fraction of the data to use for validation,
-        defaults to 0.2
+    :param validation_split: fraction of the data to use for validation, defaults to
+        0.2
     :param learning_rate: learning rate for the optimizer, defaults to 1e-3
     :param plot_loss: whether to plot the loss, defaults to True
     :raises ValueError: if checkpoint path does not end with .eqx

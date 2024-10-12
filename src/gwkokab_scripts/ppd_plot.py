@@ -122,7 +122,7 @@ def get_utf8_decoded_headers(headers_as_read: Any) -> List[str]:
 def get_quantiles(
     data: Float[np.ndarray, "..."], quantiles: Float[np.ndarray, "..."]
 ) -> Float[np.ndarray, "..."]:
-    r"""Get the quantiles of the data
+    r"""Get the quantiles of the data.
 
     :return: The quantiles of the data.
     """

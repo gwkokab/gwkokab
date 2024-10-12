@@ -19,7 +19,8 @@ from numpyro.distributions.distribution import enable_validation
 
 
 def get_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the Genie script.
+    """Populate the command line argument parser with the arguments for the Genie
+    script.
 
     :param parser: Parser to add the arguments to
     :return: the command line argument parser

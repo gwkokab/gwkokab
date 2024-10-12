@@ -31,9 +31,12 @@ def compute_probs(
 ) -> Float[Array, "..."]:
     r"""Compute the probability density function of a model.
 
-    :param logpdf: A callable that computes the log-probability density function of the model.
-    :param ranges: A list of tuples `(start, end, num_points)` for each parameter, defining the grid over which to compute the PPD.
-    :return: The PPD of the model as a multidimensional array corresponding to the parameter grid.
+    :param logpdf: A callable that computes the log-probability density function of
+        the model.
+    :param ranges: A list of tuples `(start, end, num_points)` for each parameter,
+        defining the grid over which to compute the PPD.
+    :return: The PPD of the model as a multidimensional array corresponding to the
+        parameter grid.
     """
     max_axis = int(np.argmax([int(n) for _, _, n in ranges]))
 
@@ -57,7 +60,8 @@ def _compute_marginal_probs(
 ) -> Float[Array, "..."]:
     r"""Compute the marginal probabilities of a model.
 
-    The function computes the marginal probabilities of a model by summing over the specified axis.
+    The function computes the marginal probabilities of a model by summing over the
+    specified axis.
 
     :param probs_array: The probabilities of the model.
     :param axis: The axis
