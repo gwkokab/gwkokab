@@ -66,7 +66,6 @@ class PoissonLikelihood:
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
 
     :param custom_vt: Custom VT function to use.
-    :param is_multi_rate_model: Flag to indicate if the model is multi-rate.
     :param logVT: Log of the VT function.
     :param time: Time interval for the Poisson process.
     :param vt_method: Method to use for the VT function. Options are `uniform`, `model`, and `custom`.
@@ -76,7 +75,6 @@ class PoissonLikelihood:
     _vt_method: Optional[str] = None
     _vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
     custom_vt: Optional[Callable[[Int, PRNGKeyArray, Distribution], Array]] = None
-    is_multi_rate_model: bool = False
     logVT: Optional[Callable[[], Array]] = None
     scale_factor: Float = 1.0
     time: Float = 1.0
@@ -87,13 +85,11 @@ class PoissonLikelihood:
             "_vt_method",
             "_vt_params",
             "custom_vt",
-            "is_multi_rate_model",
             "logVT",
             "model",
             "ref_priors",
             "time",
             "scale_factor",
-            "total_pop",
             "variables_index",
             "variables",
             "vt_params_index",
@@ -143,12 +139,10 @@ class PoissonLikelihood:
         self,
         /,
         params: Optional[Sequence[Parameter]] = None,
-        # log_rates_prior: Optional[Distribution | Sequence[Distribution]] = None,
         *,
         model: Optional[Bake] = None,
     ) -> None:
         assert model is not None, "Model must be provided."
-        # assert log_rates_prior is not None, "Rate prior must be provided."
         assert params is not None, "Params must be provided."
         dummy_model = model.get_dummy()
         assert isinstance(
