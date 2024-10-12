@@ -51,6 +51,7 @@ from .utils import (
     get_spin_misalignment_dist,
     JointDistribution,
     numerical_inverse_transform_sampling,
+    ScaledMixture,
 )
 
 
@@ -899,11 +900,12 @@ def NPowerLawMGaussian(
     *,
     validate_args=None,
     **params,
-) -> MixtureGeneral:
+) -> ScaledMixture:
     r"""Mixture of N power-law and M Gaussians.
 
     :param N_pl: number of power-law components
     :param N_g: number of Gaussian components
+    :param log_rate_i: Log rate for ith component, where :math:`0\leq i < N_{pl}+N_{g}`
     :param alpha_i: Power law index for primary mass for ith component, where :math:`0\leq i < N_{pl}`
     :param beta_i: Power law index for mass ratio for ith component, where :math:`0\leq i < N_{pl}`
     :param loc_m1_i: Mean of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
@@ -1147,12 +1149,10 @@ def NPowerLawMGaussian(
         component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
-    mixing_dist = CategoricalProbs(
-        probs=jnp.divide(jnp.ones(N), N), validate_args=validate_args
-    )
+    log_rates = jnp.asarray([params.get(f"log_rate_{i}", 0.0) for i in range(N)])
 
-    return MixtureGeneral(
-        mixing_dist,
+    return ScaledMixture(
+        log_rates,
         component_dists,
         support=constraints.real_vector,
         validate_args=validate_args,
