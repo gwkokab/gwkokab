@@ -120,8 +120,8 @@ def ncopy(
 
 
 CHIRP_MASS = Parameter(name="chirp_mass")
-COS_TILT_1 = Parameter(name="tilt_1")
-COS_TILT_2 = Parameter(name="tilt_2")
+COS_TILT_1 = Parameter(name="cos_tilt_1")
+COS_TILT_2 = Parameter(name="cos_tilt_2")
 ECCENTRICITY = Parameter(name="ecc")
 EFFECTIVE_SPIN_MAGNITUDE = Parameter(name="chi_eff")
 MASS_RATIO = Parameter(name="mass_ratio")
@@ -140,8 +140,6 @@ SECONDARY_SPIN_X = Parameter(name="spin_2x")
 SECONDARY_SPIN_Y = Parameter(name="spin_2y")
 SECONDARY_SPIN_Z = Parameter(name="spin_2z")
 SYMMETRIC_MASS_RATIO = Parameter(name="symmetric_mass_ratio")
-TILT_1 = Parameter(name="tilt_1")
-TILT_2 = Parameter(name="tilt_2")
 
 
 DEFAULT_PRIORS = {
@@ -213,7 +211,5 @@ for param in (
     SECONDARY_SPIN_X,
     SECONDARY_SPIN_Y,
     SECONDARY_SPIN_Z,
-    TILT_1,
-    TILT_2,
 ):
     DEFAULT_PRIORS[param.name] = Uniform(-1.0, 1.0, validate_args=True)

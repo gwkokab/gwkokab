@@ -38,8 +38,6 @@ from .parameters import (
     SECONDARY_SPIN_Y,
     SECONDARY_SPIN_Z,
     SYMMETRIC_MASS_RATIO,
-    TILT_1,
-    TILT_2,
 )
 
 
@@ -68,6 +66,4 @@ __all__ = [
     "SECONDARY_SPIN_Y",
     "SECONDARY_SPIN_Z",
     "SYMMETRIC_MASS_RATIO",
-    "TILT_1",
-    "TILT_2",
 ]

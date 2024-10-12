@@ -49,7 +49,5 @@ Predefined Parameter
     SECONDARY_SPIN_Y
     SECONDARY_SPIN_Z
     SYMMETRIC_MASS_RATIO
-    TILT_1
-    TILT_2
 
 .. currentmodule:: gwkokab.parameters
