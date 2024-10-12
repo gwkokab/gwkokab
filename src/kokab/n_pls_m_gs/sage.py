@@ -164,7 +164,9 @@ def main() -> None:
         parameters.append(ECCENTRICITY)
         all_params.extend([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
 
-    extended_params = [("log_rate", N_pl + N_g)]
+    all_params.append(("log_rate", N_pl + N_g))
+
+    extended_params = []
     for params in all_params:
         extended_params.extend(expand_arguments(*params))
 
