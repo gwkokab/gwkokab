@@ -211,9 +211,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = expand_arguments(
-        "log_rate", N_pl + N_g
-    ) + list(model.variables.keys())
+    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
 
     handler = flowMChandler(
         logpdf=poisson_likelihood.log_posterior,
