@@ -15,13 +15,15 @@
 
 from __future__ import annotations
 
-from typing_extensions import Callable, Tuple
+from typing_extensions import Callable, List, Tuple
 
 import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
-from jaxtyping import Array, Int, PRNGKeyArray
-from numpyro.distributions import Beta, Distribution, TruncatedNormal
+from jaxtyping import Array, Float, Int, PRNGKeyArray
+from numpyro.distributions import Beta, CategoricalProbs, Distribution, TruncatedNormal
+from numpyro.distributions.mixtures import MixtureGeneral
+from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
 
 from ..utils.math import beta_dist_mean_variance_to_concentrations
@@ -35,6 +37,7 @@ __all__ = [
     "get_spin_misalignment_dist",
     "JointDistribution",
     "numerical_inverse_transform_sampling",
+    "ScaledMixture",
 ]
 
 
@@ -520,3 +523,68 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
     )
 
     return primal_out, tangent_out
+
+
+class ScaledMixture(MixtureGeneral):
+    r"""A finite mixture of component distributions from different families. This is
+    a generalization of :class:`~numpyro.distributions.Mixture` where the component
+    distributions are scaled by a set of rates.
+
+    **Example**
+
+    .. doctest::
+
+       >>> import jax
+       >>> import jax.random as jrd
+       >>> import numpyro.distributions as dist
+       >>> from gwkokab.models.utils import ScaledMixture
+       >>> log_scales = jrd.uniform(jrd.PRNGKey(42), (3,), minval=0, maxval=5)
+       >>> component_dists = [
+       ...     dist.Normal(loc=0.0, scale=1.0),
+       ...     dist.Normal(loc=-0.5, scale=0.3),
+       ...     dist.Normal(loc=0.6, scale=1.2),
+       ... ]
+       >>> mixture = ScaledMixture(log_scales, component_dists)
+       >>> mixture.sample(jax.random.PRNGKey(42)).shape
+       ()
+    """
+
+    pytree_data_fields = ("_log_scales",)
+
+    def __init__(
+        self,
+        log_scales: Float[Array, "..."],
+        component_distributions: List[Distribution],
+        *,
+        support=None,
+        validate_args=None,
+    ):
+        self._log_scales = log_scales
+        normed_scales = jax.nn.softmax(log_scales)
+        mixing_distribution = CategoricalProbs(
+            probs=normed_scales, validate_args=validate_args
+        )
+        super(ScaledMixture, self).__init__(
+            mixing_distribution=mixing_distribution,
+            component_distributions=component_distributions,
+            support=support,
+            validate_args=validate_args,
+        )
+
+    @validate_sample
+    def log_prob(self, value: Float[Array, "..."]) -> Float[Array, "..."]:
+        # Numpyro's MixtureGeneral does not support weights that do not sum to 1.
+        # To bypass this constraint we have used this mathematical jugaad to remove
+        # the weights that are normalized and add back the log of rates.
+        sum_log_probs = (
+            self._log_scales  # Adding back the log of rates to scale each component to their rate
+            + self.component_log_probs(value)  # log of the component probabilities
+            - jax.nn.log_softmax(
+                self._mixing_distribution.logits
+            )  # removing the normalized weights
+        )
+        safe_sum_log_probs = jnp.where(
+            jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
+        )
+        mixture_log_prob = jax.nn.logsumexp(safe_sum_log_probs, axis=-1)
+        return mixture_log_prob
