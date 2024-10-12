@@ -40,9 +40,7 @@ def expand_arguments(arg: str, n: int) -> List[str]:
 
 
 def flowMC_json_read_and_process(json_file: str) -> dict:
-    """
-    Convert a json file to a dictionary
-    """
+    """Convert a json file to a dictionary."""
     with open(json_file, "r") as f:
         flowMC_json = json.load(f)
 

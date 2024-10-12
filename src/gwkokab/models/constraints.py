@@ -72,9 +72,9 @@ class _MassSandwichConstraint(Constraint):
 
 
 class _MassRatioMassSandwichConstraint(Constraint):
-    r"""Constrain primary mass to lie within a sandwiched interval
-    and the mass ratio to lie within a given interval. This is a
-    transformed version of the :class:`_MassSandwichConstraint`.
+    r"""Constrain primary mass to lie within a sandwiched interval and the mass ratio
+    to lie within a given interval. This is a transformed version of the
+    :class:`_MassSandwichConstraint`.
 
     .. math::
         \begin{align*}
@@ -129,7 +129,8 @@ class _IncreasingVector(_SingletonConstraint):
 
 
 class _DecreasingVector(_SingletonConstraint):
-    r"""Constrain values to be decreasing, i.e. :math:`\forall i<j, x_i \geq x_j`."""
+    r"""Constrain values to be decreasing, i.e. :math:`\forall i<j, x_i \geq
+    x_j`."""
 
     event_dim = 1
 
@@ -144,7 +145,8 @@ class _DecreasingVector(_SingletonConstraint):
 
 
 class _StrictlyIncreasingVector(_SingletonConstraint):
-    r"""Constrain values to be strictly increasing, i.e. :math:`\forall i<j, x_i < x_j`."""
+    r"""Constrain values to be strictly increasing, i.e. :math:`\forall i<j, x_i <
+    x_j`."""
 
     event_dim = 1
 
@@ -159,7 +161,8 @@ class _StrictlyIncreasingVector(_SingletonConstraint):
 
 
 class _StrictlyDecreasingVector(_SingletonConstraint):
-    r"""Constrain values to be strictly decreasing, i.e. :math:`\forall i<j,x_i > x_j`."""
+    r"""Constrain values to be strictly decreasing, i.e. :math:`\forall i<j,x_i >
+    x_j`."""
 
     event_dim = 1
 
@@ -174,7 +177,8 @@ class _StrictlyDecreasingVector(_SingletonConstraint):
 
 
 class _PositiveIncreasingVector(_SingletonConstraint):
-    r"""Constrain values to be positive and increasing, i.e. :math:`\forall i<j, x_i \leq x_j`."""
+    r"""Constrain values to be positive and increasing, i.e. :math:`\forall i<j, x_i
+    \leq x_j`."""
 
     event_dim = 1
 
@@ -189,7 +193,8 @@ class _PositiveIncreasingVector(_SingletonConstraint):
 
 
 class _PositiveDecreasingVector(_SingletonConstraint):
-    r"""Constrain values to be positive and decreasing, i.e. :math:`\forall i<j, x_i \geq x_j`."""
+    r"""Constrain values to be positive and decreasing, i.e. :math:`\forall i<j, x_i
+    \geq x_j`."""
 
     event_dim = 1
 

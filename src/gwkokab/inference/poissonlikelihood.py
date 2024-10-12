@@ -38,8 +38,8 @@ __all__ = ["poisson_likelihood"]
 
 @register_pytree_node_class
 class PoissonLikelihood:
-    r"""This class is used to provide a likelihood function for the
-    inhomogeneous Poisson process. The likelihood is given by,
+    r"""This class is used to provide a likelihood function for the inhomogeneous
+    Poisson process. The likelihood is given by,
 
     .. math::
         \log\mathcal{L}(\Lambda) \propto -\mu(\Lambda)
@@ -223,7 +223,8 @@ class PoissonLikelihood:
     def exp_rate_integral_model_samples(
         self, N: int, key: PRNGKeyArray, model: Distribution
     ) -> Array:
-        r"""This method approximates the Monte-Carlo integral by sampling from the model.
+        r"""This method approximates the Monte-Carlo integral by sampling from the
+        model.
 
         :param N: Number of samples.
         :param key: PRNG key.

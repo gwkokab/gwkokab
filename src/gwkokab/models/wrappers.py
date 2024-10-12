@@ -22,8 +22,8 @@ __all__ = ["gwk_magazine", "add_log_factor"]
 
 
 def add_log_factor(name, model=None):
-    r"""Adds log factor to logarithm of the probability of the model,
-    equivalent to multiplying the model by the factor.
+    r"""Adds log factor to logarithm of the probability of the model, equivalent to
+    multiplying the model by the factor.
 
     :param name: Name of the parameter to be added as a log factor.
     :param model: Model to be added the log factor to.
@@ -46,7 +46,6 @@ def add_log_factor(name, model=None):
         ... )
         >>> model2 = model_by_decorator(log_rate=2.0, loc=10.0, scale=2.0)
         >>> assert jnp.equal(model1.log_prob(xx), model2.log_prob(xx))
-
     """
 
     if model is None:
@@ -61,7 +60,7 @@ def add_log_factor(name, model=None):
 
 
 class ModelRegistry(object):
-    r"""Decorator class to register models and their parameters"""
+    r"""Decorator class to register models and their parameters."""
 
     def __init__(self) -> None:
         self._registry = {}

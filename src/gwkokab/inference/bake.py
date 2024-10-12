@@ -25,10 +25,10 @@ from numpyro.distributions import Distribution
 
 @register_pytree_node_class
 class Bake(object):
-    r"""It is designed to be a simple and flexible way to define a
-    distribution for the inference. It has a similar interface to the
-    :class:`~numpyro.distributions.distribution.Distribution` class, but it allows for
-    the parameters of the distribution to be fixed or variable.
+    r"""It is designed to be a simple and flexible way to define a distribution for
+    the inference. It has a similar interface to the
+    :class:`~numpyro.distributions.distribution.Distribution` class, but it allows
+    for the parameters of the distribution to be fixed or variable.
 
     :param dist: A distribution or a function that returns a distribution
     :type dist: Distribution | Callable[[], Distribution]
@@ -74,9 +74,11 @@ class Bake(object):
     ) -> Tuple[Dict[str, Distribution], Dict[str, str], Callable[[], Distribution]]:
         r"""Return the distribution with the fixed parameters set.
 
-        :return: A tuple containing the distribution with the fixed parameters set and a
-            function that returns the distribution with the fixed parameters set.
-        :rtype: Tuple[Dict[str, Distribution], Dict[str, str], Callable[[], Distribution]]
+        :return: A tuple containing the distribution with the fixed parameters set
+            and a function that returns the distribution with the fixed parameters
+            set.
+        :rtype: Tuple[Dict[str, Distribution], Dict[str, str], Callable[[],
+            Distribution]]
         """
         return self.variables, self.duplicates, partial(self.dist, **self.constants)
 

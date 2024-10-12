@@ -744,9 +744,8 @@ class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
 
 
 class PowerLawPrimaryMassRatio(Distribution):
-    r"""Power law model for two-dimensional mass distribution,
-    modelling primary mass and conditional mass ratio
-    distribution.
+    r"""Power law model for two-dimensional mass distribution, modelling primary mass
+    and conditional mass ratio distribution.
 
     .. math::
         p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)

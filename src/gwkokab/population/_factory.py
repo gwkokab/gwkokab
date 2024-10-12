@@ -50,8 +50,8 @@ error_magazine = ModelRegistry()
 
 
 class PopulationFactory:
-    r"""Class with methods equipped to generate population for each
-    realizations and adding errors in it."""
+    r"""Class with methods equipped to generate population for each realizations and
+    adding errors in it."""
 
     analysis_time: Optional[Float] = None
     constraint: Callable[[Array], Bool] = lambda x: jnp.ones(x.shape[0], dtype=bool)
