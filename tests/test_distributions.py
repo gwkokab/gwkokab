@@ -24,6 +24,7 @@ from scipy.sparse import csr_matrix
 from gwkokab.models import (
     BrokenPowerLawMassModel,
     MultiPeakMassModel,
+    NPowerLawMGaussian,
     PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio,
     Wysocki2019MassModel,
@@ -68,6 +69,96 @@ CONTINUOUS = [
     (Wysocki2019MassModel, {"alpha_m": -2.3, "mmin": 5.0, "mmax": 100.0}),
     (Wysocki2019MassModel, {"alpha_m": 0.7, "mmin": 50.0, "mmax": 100.0}),
     (Wysocki2019MassModel, {"alpha_m": 3.1, "mmin": 70.0, "mmax": 100.0}),
+    (
+        NPowerLawMGaussian,
+        {
+            "N_pl": 1,
+            "N_g": 0,
+            "log_rate_0": -2.0,
+            "alpha_0": 2.0,
+            "beta_0": 3.0,
+            "mmin_0": 50.0,
+            "mmax_0": 70.0,
+        },
+    ),
+    (
+        NPowerLawMGaussian,
+        {
+            "N_pl": 0,
+            "N_g": 1,
+            "log_rate_0": -1.0,
+            "loc_m1_0": 70.0,
+            "loc_m2_0": 30.0,
+            "scale_m1_0": 2.1,
+            "scale_m2_0": 3.2,
+        },
+    ),
+    (
+        NPowerLawMGaussian,
+        {
+            "N_pl": 1,
+            "N_g": 1,
+            "log_rate_0": -2.0,
+            "log_rate_1": -1.0,
+            "alpha_0": 2.0,
+            "beta_0": 3.0,
+            "mmin_0": 50.0,
+            "mmax_0": 70.0,
+            "loc_m1_0": 70.0,
+            "loc_m2_0": 30.0,
+            "scale_m1_0": 2.1,
+            "scale_m2_0": 3.2,
+        },
+    ),
+    (
+        NPowerLawMGaussian,
+        {
+            "N_pl": 1,
+            "N_g": 2,
+            "log_rate_0": -2.0,
+            "log_rate_1": -1.0,
+            "log_rate_2": 1.0,
+            "alpha_0": 2.0,
+            "beta_0": 3.0,
+            "mmin_0": 50.0,
+            "mmax_0": 70.0,
+            "loc_m1_0": 70.0,
+            "loc_m2_0": 30.0,
+            "scale_m1_0": 2.1,
+            "scale_m2_0": 3.2,
+            "loc_m1_1": 80.0,
+            "loc_m2_1": 20.0,
+            "scale_m1_1": 1.1,
+            "scale_m2_1": 2.2,
+        },
+    ),
+    (
+        NPowerLawMGaussian,
+        {
+            "N_pl": 2,
+            "N_g": 2,
+            "log_rate_0": -2.0,
+            "log_rate_1": -1.0,
+            "log_rate_2": 1.5,
+            "log_rate_3": 1.0,
+            "alpha_0": 2.0,
+            "beta_0": 3.0,
+            "mmin_0": 50.0,
+            "mmax_0": 70.0,
+            "alpha_1": -1.5,
+            "beta_1": -1.0,
+            "mmin_1": 20.0,
+            "mmax_1": 100.0,
+            "loc_m1_0": 70.0,
+            "loc_m2_0": 30.0,
+            "scale_m1_0": 2.1,
+            "scale_m2_0": 3.2,
+            "loc_m1_1": 80.0,
+            "loc_m2_1": 20.0,
+            "scale_m1_1": 1.1,
+            "scale_m2_1": 2.2,
+        },
+    ),
 ]
 
 
@@ -278,6 +369,8 @@ def test_dist_shape(jax_dist_cls, params, prepend_shape):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_has_rsample(jax_dist, params):
+    if not isinstance(jax_dist, dist.Distribution):
+        pytest.skip("skip testing for non-distribution")
     jax_dist = jax_dist(**params)
     masked_dist = jax_dist.mask(False)
     indept_dist = jax_dist.expand_by([2]).to_event(1)
@@ -355,7 +448,7 @@ def test_jit_log_likelihood(jax_dist, params):
         return jax_dist(**params).log_prob(samples)
 
     expected = log_likelihood(**params)
-    actual = jax.jit(log_likelihood)(**params)
+    actual = jax.jit(log_likelihood, static_argnames=("N_pl", "N_g"))(**params)
     assert_allclose(actual, expected, atol=2e-5, rtol=2e-5)
 
 
@@ -414,6 +507,8 @@ def test_cdf_and_icdf(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_gof(jax_dist, params):
+    if not isinstance(jax_dist, dist.Distribution):
+        pytest.skip("skip testing for non-distribution")
     if jax_dist.__name__ in ("PowerLawPrimaryMassRatio",):
         pytest.skip("Failure rate is lower than expected.")
     num_samples = 10000
@@ -441,14 +536,26 @@ def test_log_prob_gradient(jax_dist, params):
     rng_key = jrd.PRNGKey(0)
     value = jax_dist(**params).sample(rng_key)
 
-    def fn(*args):
-        return jnp.sum(jax_dist(*args).log_prob(value))
+    if isinstance(jax_dist, dist.Distribution):
+
+        def fn(*args):
+            return jnp.sum(jax_dist(*args).log_prob(value))
+    else:
+        params_mapping = {name: i for i, name in enumerate(params.keys())}
+
+        def fn(*args):
+            param = {k: args[params_mapping[k]] for k in params_mapping}
+            return jnp.sum(jax_dist(**param).log_prob(value))
 
     eps = 1e-3
     for i, k in enumerate(params.keys()):
         if jax_dist is PowerLawPrimaryMassRatio and i > 1:
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
+            continue
+        if jax_dist is NPowerLawMGaussian and any(
+            [k.startswith("mmin"), k.startswith("mmax")]
+        ):
             continue
         if params[k] is None or jnp.result_type(params[k]) in (jnp.int32, jnp.int64):
             continue
@@ -488,6 +595,8 @@ def test_mean_var(jax_dist, params):
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
 def test_distribution_constraints(jax_dist, params, prepend_shape):
+    if not isinstance(jax_dist, dist.Distribution):
+        pytest.skip("skip testing for non-distribution")
     valid_params = {}
     oob_params = {}
     key = jrd.PRNGKey(1)
@@ -639,6 +748,8 @@ def _tree_equal(t1, t2):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_vmap_dist(jax_dist, params):
+    if not isinstance(jax_dist, dist.Distribution):
+        pytest.skip("skip testing for non-distribution")
     param_names = list(inspect.signature(jax_dist).parameters.keys())
     vmappable_param_idxs = _get_vmappable_dist_init_params(jax_dist)
     vmappable_param_idxs = vmappable_param_idxs[: len(params)]
