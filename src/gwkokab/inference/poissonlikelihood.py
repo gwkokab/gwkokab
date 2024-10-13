@@ -262,7 +262,7 @@ class PoissonLikelihood:
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
         expected_rates = jnp.dot(
-            model._log_scales,
+            jnp.exp(model._log_scales),
             jnp.asarray(
                 [
                     self.exp_rate_integral(model_i)
