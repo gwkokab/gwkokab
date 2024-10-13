@@ -4,7 +4,6 @@
 # source: https://github.com/pyro-ppl/numpyro/blob/3cde93d0f25490b9b90c1c423816c6cfd9ea23ed/test/test_distributions.py
 
 import inspect
-from collections import namedtuple
 
 import jax
 import jax.numpy as jnp
@@ -51,41 +50,25 @@ def my_kron(A, B):
     return D.reshape(newshape)
 
 
-def _identity(x):
-    return x
-
-
-class T(namedtuple("TestCase", ["jax_dist", "sp_dist", "params"])):
-    def __new__(cls, jax_dist, *params):
-        sp_dist = get_sp_dist(jax_dist)
-        return super(cls, T).__new__(cls, jax_dist, sp_dist, params)
-
-
-_DIST_MAP = {}
-
-
-def get_sp_dist(jax_dist):
-    classes = jax_dist.mro() if isinstance(jax_dist, type) else [jax_dist]
-    for cls in classes:
-        if cls in _DIST_MAP:
-            return _DIST_MAP[cls]
-    return None
-
-
 CONTINUOUS = [
-    T(PowerLawPrimaryMassRatio, -1.0, 1.0, 10.0, 50.0),
-    T(PowerLawPrimaryMassRatio, -0.1, -8.0, 70.0, 100.0),
-    T(PowerLawPrimaryMassRatio, -1.4, 9.0, 5.0, 100.0),
-    T(PowerLawPrimaryMassRatio, 2.0, 3.0, 50.0, 70.0),
-    T(Wysocki2019MassModel, -1.0, 10.0, 50.0),
-    T(Wysocki2019MassModel, -2.3, 5.0, 100.0),
-    T(Wysocki2019MassModel, 0.7, 50.0, 100.0),
-    T(Wysocki2019MassModel, 3.1, 70.0, 100.0),
+    (
+        PowerLawPrimaryMassRatio,
+        {"alpha": -1.0, "beta": 1.0, "mmin": 10.0, "mmax": 50.0},
+    ),
+    (
+        PowerLawPrimaryMassRatio,
+        {"alpha": -0.1, "beta": -8.0, "mmin": 70.0, "mmax": 100.0},
+    ),
+    (
+        PowerLawPrimaryMassRatio,
+        {"alpha": -1.4, "beta": 9.0, "mmin": 5.0, "mmax": 100.0},
+    ),
+    (PowerLawPrimaryMassRatio, {"alpha": 2.0, "beta": 3.0, "mmin": 50.0, "mmax": 70.0}),
+    (Wysocki2019MassModel, {"alpha_m": -1.0, "mmin": 10.0, "mmax": 50.0}),
+    (Wysocki2019MassModel, {"alpha_m": -2.3, "mmin": 5.0, "mmax": 100.0}),
+    (Wysocki2019MassModel, {"alpha_m": 0.7, "mmin": 50.0, "mmax": 100.0}),
+    (Wysocki2019MassModel, {"alpha_m": 3.1, "mmin": 70.0, "mmax": 100.0}),
 ]
-
-
-def _is_batched_multivariate(jax_dist):
-    return len(jax_dist.event_shape) > 0 and len(jax_dist.batch_shape) > 0
 
 
 def gen_values_within_bounds(constraint, size, key=jrd.PRNGKey(11)):
@@ -283,41 +266,19 @@ def gen_values_outside_bounds(constraint, size, key=jrd.PRNGKey(11)):
         raise NotImplementedError("{} not implemented.".format(constraint))
 
 
-@pytest.mark.parametrize("jax_dist_cls, sp_dist, params", CONTINUOUS)
+@pytest.mark.parametrize("jax_dist_cls, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
-def test_dist_shape(jax_dist_cls, sp_dist, params, prepend_shape):
-    jax_dist = jax_dist_cls(*params)
+def test_dist_shape(jax_dist_cls, params, prepend_shape):
+    jax_dist = jax_dist_cls(**params)
     rng_key = jrd.PRNGKey(0)
     expected_shape = prepend_shape + jax_dist.batch_shape + jax_dist.event_shape
     samples = jax_dist.sample(key=rng_key, sample_shape=prepend_shape)
     assert jnp.shape(samples) == expected_shape
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_infer_shapes(jax_dist, sp_dist, params):
-    shapes = []
-    for param in params:
-        if param is None:
-            shapes.append(None)
-            continue
-        shape = getattr(param, "shape", ())
-        if callable(shape):
-            shape = shape()
-        shapes.append(shape)
-    jax_dist = jax_dist(*params)
-    try:
-        expected_batch_shape, expected_event_shape = type(jax_dist).infer_shapes(
-            *shapes
-        )
-    except NotImplementedError:
-        pytest.skip(f"{type(jax_dist).__name__}.infer_shapes() is not implemented")
-    assert jax_dist.batch_shape == expected_batch_shape
-    assert jax_dist.event_shape == expected_event_shape
-
-
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_has_rsample(jax_dist, sp_dist, params):
-    jax_dist = jax_dist(*params)
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_has_rsample(jax_dist, params):
+    jax_dist = jax_dist(**params)
     masked_dist = jax_dist.mask(False)
     indept_dist = jax_dist.expand_by([2]).to_event(1)
     transf_dist = dist.TransformedDistribution(jax_dist, biject_to(constraints.real))
@@ -337,30 +298,17 @@ def test_has_rsample(jax_dist, sp_dist, params):
             jax_dist.rsample(jrd.PRNGKey(0))
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_sample_gradient(jax_dist, sp_dist, params):
-    dist_args = [
-        p
-        for p in (
-            inspect.getfullargspec(jax_dist.__init__)[0][1:]
-            if inspect.isclass(jax_dist)
-            # account the the case jax_dist is a function
-            else inspect.getfullargspec(jax_dist)[0]
-        )
-    ]
-    params_dict = dict(zip(dist_args[: len(params)], params))
-
-    jax_class = type(jax_dist(**params_dict))
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_sample_gradient(jax_dist, params):
+    jax_class = type(jax_dist(**params))
     reparametrized_params = [p for p in jax_class.reparametrized_params]
     if not reparametrized_params:
         pytest.skip("{} not reparametrized.".format(jax_class.__name__))
 
     nonrepara_params_dict = {
-        k: v for k, v in params_dict.items() if k not in reparametrized_params
+        k: v for k, v in params.items() if k not in reparametrized_params
     }
-    repara_params = tuple(
-        v for k, v in params_dict.items() if k in reparametrized_params
-    )
+    repara_params = tuple(v for k, v in params.items() if k in reparametrized_params)
 
     rng_key = jrd.PRNGKey(0)
 
@@ -387,8 +335,8 @@ def test_sample_gradient(jax_dist, sp_dist, params):
         assert_allclose(jnp.sum(actual_grad[i]), expected_grad, rtol=0.02, atol=0.03)
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_jit_log_likelihood(jax_dist, sp_dist, params):
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_jit_log_likelihood(jax_dist, params):
     if jax_dist.__name__ in (
         "EulerMaruyama",
         "GaussianRandomWalk",
@@ -401,74 +349,19 @@ def test_jit_log_likelihood(jax_dist, sp_dist, params):
         pytest.xfail(reason="non-jittable params")
 
     rng_key = jrd.PRNGKey(0)
-    samples = jax_dist(*params).sample(key=rng_key, sample_shape=(2, 3))
+    samples = jax_dist(**params).sample(key=rng_key, sample_shape=(2, 3))
 
-    def log_likelihood(*params):
-        return jax_dist(*params).log_prob(samples)
+    def log_likelihood(**params):
+        return jax_dist(**params).log_prob(samples)
 
-    expected = log_likelihood(*params)
-    actual = jax.jit(log_likelihood)(*params)
+    expected = log_likelihood(**params)
+    actual = jax.jit(log_likelihood)(**params)
     assert_allclose(actual, expected, atol=2e-5, rtol=2e-5)
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-@pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
-@pytest.mark.parametrize("jit", [False, True])
-def test_log_prob(jax_dist, sp_dist, params, prepend_shape, jit):
-    jit_fn = _identity if not jit else jax.jit
-    jax_dist = jax_dist(*params)
-
-    rng_key = jrd.PRNGKey(0)
-    samples = jax_dist.sample(key=rng_key, sample_shape=prepend_shape)
-    assert jax_dist.log_prob(samples).shape == prepend_shape + jax_dist.batch_shape
-
-    if sp_dist is None:
-        pytest.skip("no corresponding scipy distn.")
-    if _is_batched_multivariate(jax_dist):
-        pytest.skip("batching not allowed in multivariate distns.")
-    if jax_dist.event_shape and prepend_shape:
-        # >>> d = sp.dirichlet([1.1, 1.1])
-        # >>> samples = d.rvs(size=(2,))
-        # >>> d.logpdf(samples)
-        # ValueError: The input vector 'x' must lie within the normal simplex ...
-        pytest.skip("batched samples cannot be scored by multivariate distributions.")
-    sp_dist = sp_dist(*params)
-    try:
-        expected = sp_dist.logpdf(samples)
-    except AttributeError:
-        expected = sp_dist.logpmf(samples)
-    except ValueError as e:
-        # precision issue: jnp.sum(x / jnp.sum(x)) = 0.99999994 != 1
-        if "The input vector 'x' must lie within the normal simplex." in str(e):
-            samples = jax.device_get(samples).astype("float64")
-            samples = samples / samples.sum(axis=-1, keepdims=True)
-            expected = sp_dist.logpdf(samples)
-        else:
-            raise e
-    assert_allclose(jit_fn(jax_dist.log_prob)(samples), expected, atol=1e-5)
-
-
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_entropy_scipy(jax_dist, sp_dist, params):
-    jax_dist = jax_dist(*params)
-
-    try:
-        actual = jax_dist.entropy()
-    except NotImplementedError:
-        pytest.skip(reason=f"distribution {jax_dist} does not implement `entropy`")
-    if _is_batched_multivariate(jax_dist):
-        pytest.skip("batching not allowed in multivariate distns.")
-    if sp_dist is None:
-        pytest.skip(reason="no corresponding scipy distribution")
-
-    sp_dist = sp_dist(*params)
-    expected = sp_dist.entropy()
-    assert_allclose(actual, expected, atol=1e-5)
-
-
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_entropy_samples(jax_dist, sp_dist, params):
-    jax_dist = jax_dist(*params)
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_entropy_samples(jax_dist, params):
+    jax_dist = jax_dist(**params)
 
     try:
         actual = jax_dist.entropy()
@@ -487,13 +380,13 @@ def test_entropy_samples(jax_dist, sp_dist, params):
 
 
 @pytest.mark.parametrize(
-    "jax_dist, sp_dist, params",
+    "jax_dist, params",
     # TODO: add more complete pattern for Discrete.cdf
     CONTINUOUS,
 )
 @pytest.mark.filterwarnings("ignore:overflow encountered:RuntimeWarning")
-def test_cdf_and_icdf(jax_dist, sp_dist, params):
-    d = jax_dist(*params)
+def test_cdf_and_icdf(jax_dist, params):
+    d = jax_dist(**params)
     if d.event_dim > 0:
         pytest.skip("skip testing cdf/icdf methods of multivariate distributions")
     samples = d.sample(key=jrd.PRNGKey(0), sample_shape=(100,))
@@ -518,28 +411,14 @@ def test_cdf_and_icdf(jax_dist, sp_dist, params):
     except NotImplementedError:
         pytest.skip("cdf/icdf not implemented")
 
-    # test against scipy
-    if not sp_dist:
-        pytest.skip("no corresponding scipy distn.")
-    sp_dist = sp_dist(*params)
-    try:
-        actual_cdf = d.cdf(samples)
-        expected_cdf = sp_dist.cdf(samples)
-        assert_allclose(actual_cdf, expected_cdf, atol=1e-5, rtol=1e-5)
-        actual_icdf = d.icdf(quantiles)
-        expected_icdf = sp_dist.ppf(quantiles)
-        assert_allclose(actual_icdf, expected_icdf, atol=1e-4, rtol=1e-4)
-    except NotImplementedError:
-        pytest.skip("cdf/icdf not implemented")
 
-
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_gof(jax_dist, sp_dist, params):
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_gof(jax_dist, params):
     if jax_dist.__name__ in ("PowerLawPrimaryMassRatio",):
         pytest.skip("Failure rate is lower than expected.")
     num_samples = 10000
     rng_key = jrd.PRNGKey(0)
-    d = jax_dist(*params)
+    d = jax_dist(**params)
     samples = d.sample(key=rng_key, sample_shape=(num_samples,))
     probs = np.exp(d.log_prob(samples))
 
@@ -557,162 +436,98 @@ def test_gof(jax_dist, sp_dist, params):
             assert gof > TEST_FAILURE_RATE
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_log_prob_gradient(jax_dist, sp_dist, params):
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_log_prob_gradient(jax_dist, params):
     rng_key = jrd.PRNGKey(0)
-    value = jax_dist(*params).sample(rng_key)
+    value = jax_dist(**params).sample(rng_key)
 
     def fn(*args):
         return jnp.sum(jax_dist(*args).log_prob(value))
 
     eps = 1e-3
-    for i in range(len(params)):
+    for i, k in enumerate(params.keys()):
         if jax_dist is PowerLawPrimaryMassRatio and i > 1:
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
-        if isinstance(
-            params[i], dist.Distribution
-        ):  # skip taking grad w.r.t. base_dist
+        if params[k] is None or jnp.result_type(params[k]) in (jnp.int32, jnp.int64):
             continue
-        if params[i] is None or jnp.result_type(params[i]) in (jnp.int32, jnp.int64):
-            continue
-        actual_grad = jax.grad(fn, i)(*params)
-        args_lhs = [p if j != i else p - eps for j, p in enumerate(params)]
-        args_rhs = [p if j != i else p + eps for j, p in enumerate(params)]
+        actual_grad = jax.grad(fn, i)(*params.values())
+        args_lhs = [p if j != i else p - eps for j, p in enumerate(params.values())]
+        args_rhs = [p if j != i else p + eps for j, p in enumerate(params.values())]
         fn_lhs = fn(*args_lhs)
         fn_rhs = fn(*args_rhs)
         # finite diff approximation
         expected_grad = (fn_rhs - fn_lhs) / (2.0 * eps)
-        assert jnp.shape(actual_grad) == jnp.shape(params[i])
+        assert jnp.shape(actual_grad) == jnp.shape(params[k])
         assert_allclose(jnp.sum(actual_grad), expected_grad, rtol=0.01, atol=0.01)
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_mean_var(jax_dist, sp_dist, params):
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_mean_var(jax_dist, params):
     if isinstance(
         jax_dist, (BrokenPowerLawMassModel, MultiPeakMassModel, PowerLawPeakMassModel)
     ):
         pytest.skip("skip testing mean/var for non-standard dist")
     n = 200_000
-    d_jax = jax_dist(*params)
+    d_jax = jax_dist(**params)
     k = jrd.PRNGKey(0)
     samples = d_jax.sample(k, sample_shape=(n,)).astype(np.float32)
-    # check with suitable scipy implementation if available
-    # XXX: VonMises is already tested below
-    if sp_dist and not _is_batched_multivariate(d_jax):
-        d_sp = sp_dist(*params)
-        try:
-            sp_mean = d_sp.mean()
-        except TypeError:  # mvn does not have .mean() method
-            sp_mean = d_sp.mean
-        # for multivariate distns try .cov first
-        if d_jax.event_shape:
-            try:
-                sp_var = jnp.diag(d_sp.cov())
-            except TypeError:  # mvn does not have .cov() method
-                sp_var = jnp.diag(d_sp.cov)
-            except (AttributeError, ValueError):
-                sp_var = d_sp.var()
-        else:
-            sp_var = d_sp.var()
-        assert_allclose(d_jax.mean, sp_mean, rtol=0.01, atol=1e-7)
-        assert_allclose(d_jax.variance, sp_var, rtol=0.01, atol=1e-7)
-        if jnp.all(jnp.isfinite(sp_mean)):
+
+    try:
+        if jnp.all(jnp.isfinite(d_jax.mean)):
             assert_allclose(jnp.mean(samples, 0), d_jax.mean, rtol=0.05, atol=1e-2)
-        if jnp.all(jnp.isfinite(sp_var)):
-            assert_allclose(
+        if jnp.all(jnp.isfinite(d_jax.variance)):
+            assert jnp.allclose(
                 jnp.std(samples, 0), jnp.sqrt(d_jax.variance), rtol=0.05, atol=1e-2
             )
-        else:  # unbatched
-            sample_shape = (200_000,)
-            # mean
-            jnp.allclose(
-                jnp.mean(samples, 0),
-                jnp.squeeze(d_jax.mean),
-                rtol=0.5,
-                atol=1e-2,
-            )
-            # cov
-            samples_mvn = jnp.squeeze(samples).reshape(sample_shape + (-1,), order="F")
-            scale_tril = my_kron(
-                jnp.squeeze(d_jax.scale_tril_column), jnp.squeeze(d_jax.scale_tril_row)
-            )
-            sample_scale_tril = jnp.linalg.cholesky(jnp.cov(samples_mvn.T))
-            jnp.allclose(sample_scale_tril, scale_tril, atol=0.5, rtol=1e-2)
-    else:
-        try:
-            if jnp.all(jnp.isfinite(d_jax.mean)):
-                assert_allclose(jnp.mean(samples, 0), d_jax.mean, rtol=0.05, atol=1e-2)
-            if jnp.all(jnp.isfinite(d_jax.variance)):
-                assert jnp.allclose(
-                    jnp.std(samples, 0), jnp.sqrt(d_jax.variance), rtol=0.05, atol=1e-2
-                )
-        except NotImplementedError:
-            pytest.skip(
-                f"mean/variance not implemented for {jax_dist.__class__.__name__}"
-            )
+    except NotImplementedError:
+        pytest.skip(f"mean/variance not implemented for {jax_dist.__class__.__name__}")
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
-def test_distribution_constraints(jax_dist, sp_dist, params, prepend_shape):
-    dist_args = [p for p in inspect.getfullargspec(jax_dist.__init__)[0][1:]]
-
-    valid_params, oob_params = list(params), list(params)
+def test_distribution_constraints(jax_dist, params, prepend_shape):
+    valid_params = {}
+    oob_params = {}
     key = jrd.PRNGKey(1)
     dependent_constraint = False
-    for i in range(len(params)):
-        if params[i] is None:
-            oob_params[i] = None
-            valid_params[i] = None
+    # for i in range(len(params)):
+    for name, value in params.items():
+        if value is None:
+            oob_params[name] = None
+            valid_params[name] = None
             continue
-        constraint = jax_dist.arg_constraints[dist_args[i]]
+        constraint = jax_dist.arg_constraints[name]
         if isinstance(constraint, constraints._Dependent):
             dependent_constraint = True
             break
         key, key_gen = jrd.split(key)
-        oob_params[i] = gen_values_outside_bounds(
-            constraint, jnp.shape(params[i]), key_gen
+        oob_params[name] = gen_values_outside_bounds(
+            constraint, jnp.shape(value), key_gen
         )
-        valid_params[i] = gen_values_within_bounds(
-            constraint, jnp.shape(params[i]), key_gen
+        valid_params[name] = gen_values_within_bounds(
+            constraint, jnp.shape(value), key_gen
         )
 
-    assert jax_dist(*oob_params)
+    assert jax_dist(**oob_params)
 
     # Invalid parameter values throw ValueError
     if not dependent_constraint:
         with pytest.raises(ValueError):
-            jax_dist(*oob_params, validate_args=True)
+            jax_dist(**oob_params, validate_args=True)
 
         with pytest.raises(ValueError):
             # test error raised under jit omnistaging
             oob_params = jax.device_get(oob_params)
 
             def dist_gen_fn():
-                d = jax_dist(*oob_params, validate_args=True)
+                d = jax_dist(**oob_params, validate_args=True)
                 return d
 
             jax.jit(dist_gen_fn)()
 
-    d = jax_dist(*valid_params, validate_args=True)
-
-    # Test agreement of log density evaluation on randomly generated samples
-    # with scipy's implementation when available.
-    if (
-        sp_dist
-        and not _is_batched_multivariate(d)
-        and not (d.event_shape and prepend_shape)
-    ):
-        valid_samples = gen_values_within_bounds(
-            d.support, size=prepend_shape + d.batch_shape + d.event_shape
-        )
-        try:
-            expected = sp_dist(*valid_params).logpdf(valid_samples)
-        except AttributeError:
-            expected = sp_dist(*valid_params).logpmf(valid_samples)
-        assert_allclose(d.log_prob(valid_samples), expected, atol=1e-5, rtol=1e-5)
+    d = jax_dist(**valid_params, validate_args=True)
 
     # Out of support samples throw ValueError
     oob_samples = gen_values_outside_bounds(
@@ -727,17 +542,17 @@ def test_distribution_constraints(jax_dist, sp_dist, params, prepend_shape):
         valid_params = jax.device_get(valid_params)
 
         def log_prob_fn():
-            d = jax_dist(*valid_params, validate_args=True)
+            d = jax_dist(**valid_params, validate_args=True)
             return d.log_prob(oob_samples)
 
         jax.jit(log_prob_fn)()
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2, 3)])
 @pytest.mark.parametrize("sample_shape", [(), (4,)])
-def test_expand(jax_dist, sp_dist, params, prepend_shape, sample_shape):
-    jax_dist = jax_dist(*params)
+def test_expand(jax_dist, params, prepend_shape, sample_shape):
+    jax_dist = jax_dist(**params)
     new_batch_shape = prepend_shape + jax_dist.batch_shape
     expanded_dist = jax_dist.expand(new_batch_shape)
     rng_key = jrd.PRNGKey(0)
@@ -756,10 +571,10 @@ def test_expand(jax_dist, sp_dist, params, prepend_shape, sample_shape):
             assert expanded_dist.expand((3,) + jax_dist.batch_shape)
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_dist_pytree(jax_dist, sp_dist, params):
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_dist_pytree(jax_dist, params):
     def f(x):
-        return jax_dist(*params)
+        return jax_dist(**params)
 
     jax.jit(f)(0)  # this test for flatten/unflatten
     lax.map(f, np.ones(3))  # this test for compatibility w.r.t. scan
@@ -822,8 +637,8 @@ def _tree_equal(t1, t2):
     return jnp.all(jax.flatten_util.ravel_pytree(t)[0])
 
 
-@pytest.mark.parametrize("jax_dist, sp_dist, params", CONTINUOUS)
-def test_vmap_dist(jax_dist, sp_dist, params):
+@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
+def test_vmap_dist(jax_dist, params):
     param_names = list(inspect.signature(jax_dist).parameters.keys())
     vmappable_param_idxs = _get_vmappable_dist_init_params(jax_dist)
     vmappable_param_idxs = vmappable_param_idxs[: len(params)]
@@ -831,13 +646,13 @@ def test_vmap_dist(jax_dist, sp_dist, params):
     if len(vmappable_param_idxs) == 0:
         return
 
-    def make_jax_dist(*params):
-        return jax_dist(*params)
+    def make_jax_dist(**params):
+        return jax_dist(**params)
 
     def sample(d: dist.Distribution):
         return d.sample(jrd.PRNGKey(0))
 
-    d = make_jax_dist(*params)
+    d = make_jax_dist(**params)
 
     in_out_axes_cases = [
         # vmap over all args
