@@ -16,19 +16,14 @@
 from typing_extensions import Callable, List, Optional, Sequence, Union
 
 import numpy as np
-from jax import lax, numpy as jnp, random as jrd, tree as jtr
-from jax.nn import log_softmax, logsumexp
+from jax import numpy as jnp, random as jrd, tree as jtr
+from jax.nn import logsumexp
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Float, Int, PRNGKeyArray
-from numpyro.distributions import (
-    CategoricalProbs,
-    Distribution,
-    MixtureGeneral,
-    Uniform,
-)
+from numpyro.distributions import Distribution, Uniform
 
-from ..debug import debug_flush, debug_mode
-from ..models.utils import JointDistribution
+from ..debug import debug_flush
+from ..models.utils import JointDistribution, ScaledMixture
 from ..parameters import DEFAULT_PRIORS, Parameter
 from .bake import Bake
 
@@ -71,7 +66,6 @@ class PoissonLikelihood:
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
 
     :param custom_vt: Custom VT function to use.
-    :param is_multi_rate_model: Flag to indicate if the model is multi-rate.
     :param logVT: Log of the VT function.
     :param time: Time interval for the Poisson process.
     :param vt_method: Method to use for the VT function. Options are `uniform`, `model`, and `custom`.
@@ -81,7 +75,6 @@ class PoissonLikelihood:
     _vt_method: Optional[str] = None
     _vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
     custom_vt: Optional[Callable[[Int, PRNGKeyArray, Distribution], Array]] = None
-    is_multi_rate_model: bool = False
     logVT: Optional[Callable[[], Array]] = None
     scale_factor: Float = 1.0
     time: Float = 1.0
@@ -92,13 +85,11 @@ class PoissonLikelihood:
             "_vt_method",
             "_vt_params",
             "custom_vt",
-            "is_multi_rate_model",
             "logVT",
             "model",
             "ref_priors",
             "time",
             "scale_factor",
-            "total_pop",
             "variables_index",
             "variables",
             "vt_params_index",
@@ -148,30 +139,15 @@ class PoissonLikelihood:
         self,
         /,
         params: Optional[Sequence[Parameter]] = None,
-        log_rates_prior: Optional[Distribution | Sequence[Distribution]] = None,
         *,
         model: Optional[Bake] = None,
     ) -> None:
         assert model is not None, "Model must be provided."
-        assert log_rates_prior is not None, "Rate prior must be provided."
         assert params is not None, "Params must be provided."
-
-        if isinstance(log_rates_prior, Distribution):
-            log_rates_prior = [log_rates_prior]
-        if self.is_multi_rate_model:
-            dummy_model = model.get_dummy()
-            assert isinstance(
-                dummy_model, MixtureGeneral
-            ), "Model must be a mixture model for multi-rate models."
-            assert (
-                len(log_rates_prior) == dummy_model._mixture_size
-            ), "Number of rate priors must match the number of sub-populations."
-            self.total_pop = len(log_rates_prior)
-        else:
-            assert (
-                len(log_rates_prior) == 1
-            ), "Single population model must have one rate prior."
-            self.total_pop = 1
+        dummy_model = model.get_dummy()
+        assert isinstance(
+            dummy_model, ScaledMixture
+        ), "Model must be a scaled mixture model."
 
         args_name = list(map(lambda x: x.name, params))
         if self._vt_params is None:
@@ -187,15 +163,13 @@ class PoissonLikelihood:
         )
 
         self.variables, duplicates, self.model = model.get_dist()
-        self.variables_index = {
-            key: self.total_pop + i for i, key in enumerate(self.variables.keys())
-        }
+        self.variables_index = {key: i for i, key in enumerate(self.variables.keys())}
 
         for key, value in duplicates.items():
             self.variables_index[key] = self.variables_index[value]
 
         self.ref_priors = JointDistribution(*map(lambda x: x.prior, params))
-        self.priors = JointDistribution(*log_rates_prior, *self.variables.values())
+        self.priors = JointDistribution(*self.variables.values())
 
     def exp_rate_integral_uniform_samples(
         self, N: int, key: PRNGKeyArray, model: Distribution
@@ -259,71 +233,28 @@ class PoissonLikelihood:
         debug_flush("exp_rate_integral: {vt_value}", vt_value=vt_value)
         return vt_value
 
-    def log_likelihood_single_rate(self, x: Array, data: dict) -> Array:
-        model = self.model(
-            **{name: x[..., i] for name, i in self.variables_index.items()}
+    def log_likelihood(self, x: Array, data: dict) -> Array:
+        """The log likelihood function for the inhomogeneous Poisson process.
+
+        :param x: Recovered parameters.
+        :param data: Data provided by the user/sampler.
+        :return: Log likelihood value for the given parameters.
+        """
+        model: ScaledMixture = self.model(
+            **{
+                name: (
+                    x[..., i]
+                    if not name.startswith("log_rate")
+                    else x[..., i] / jnp.log10(jnp.e)
+                )
+                for name, i in self.variables_index.items()
+            }
         )
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
-            + logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y))
+            + logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
             - jnp.log(y.shape[0]),
-            data["data"],
-            0.0,
-        )
-
-        log_rate = jnp.divide(
-            x[..., 0], jnp.log10(jnp.e)
-        )  # log_rate = log10_rate / log10(e)
-
-        log_likelihood += data["N"] * log_rate
-
-        debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
-
-        rate = jnp.exp(log_rate)  # rate = e^log_rate
-
-        return log_likelihood - rate * lax.cond(
-            jnp.isinf(log_likelihood),
-            lambda _: 0.0,
-            lambda m: self.exp_rate_integral(m),
-            model,
-        )
-
-    def log_likelihood_multi_rate(self, x: Array, data: dict) -> Array:
-        model: MixtureGeneral = self.model(
-            **{name: x[..., i] for name, i in self.variables_index.items()}
-        )
-
-        # log_rate = log10_rate / log10(e)
-        log_rates = jnp.divide(x[..., 0 : self.total_pop], jnp.log10(jnp.e))
-        rates = jnp.exp(log_rates)
-        total_rate = rates.sum(-1)
-        safe_total_rate = jnp.where(total_rate == 0.0, 1.0, total_rate)
-
-        model._mixing_distribution = CategoricalProbs(probs=rates / safe_total_rate)
-
-        def _log_likelihood_single_event(y: Array) -> Array:
-            # Numpyro's MixtureGeneral does not support weights that do not sum to 1.
-            # To bypass this constraint we have used this mathematical jugaad to remove
-            # the weights that are normalized and add back the log of rates.
-            sum_log_probs = (
-                log_rates  # Adding back the log of rates to scale each component to their rate
-                + model.component_log_probs(y)  # log of the component probabilities
-                - log_softmax(
-                    model.mixing_distribution.logits
-                )  # removing the normalized weights
-            )
-            safe_sum_log_probs = jnp.where(
-                jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
-            )
-            mixture_log_prob = logsumexp(safe_sum_log_probs, axis=-1)
-            log_likelihood_single_event = logsumexp(
-                mixture_log_prob - self.ref_priors.log_prob(y), axis=-1
-            ) - jnp.log(y.shape[0])
-            return log_likelihood_single_event
-
-        log_likelihood = jtr.reduce(
-            lambda x, y: x + _log_likelihood_single_event(y),
             data["data"],
             0.0,
         )
@@ -331,7 +262,7 @@ class PoissonLikelihood:
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
         expected_rates = jnp.dot(
-            rates,
+            jnp.exp(model._log_scales),
             jnp.asarray(
                 [
                     self.exp_rate_integral(model_i)
@@ -343,28 +274,6 @@ class PoissonLikelihood:
         debug_flush("expected_rate={expr}", expr=expected_rates)
 
         return log_likelihood - expected_rates
-
-    def log_likelihood(self, x: Array, data: dict) -> Array:
-        """The log likelihood function for the inhomogeneous Poisson process.
-
-        :param x: Recovered parameters.
-        :param data: Data provided by the user/sampler.
-        :return: Log likelihood value for the given parameters.
-        """
-        if self.is_multi_rate_model:
-            log_likelihood = self.log_likelihood_multi_rate(x, data)
-            if debug_mode():
-                pdict = {name: x[..., i] for name, i in self.variables_index.items()}
-                pdict["log_rates"] = x[..., 0 : self.total_pop]
-                debug_flush("parameters: {pdict}", pdict=pdict)
-        else:
-            log_likelihood = self.log_likelihood_single_rate(x, data)
-            if debug_mode():
-                pdict = {name: x[..., i] for name, i in self.variables_index.items()}
-                pdict["log_rate"] = x[..., 0]
-                debug_flush("parameters: {pdict}", pdict=pdict)
-        debug_flush("log_likelihood: {ll}", ll=log_likelihood)
-        return log_likelihood
 
     def log_posterior(self, x: Array, data: Optional[dict] = None) -> Array:
         r"""The likelihood function for the inhomogeneous Poisson process.

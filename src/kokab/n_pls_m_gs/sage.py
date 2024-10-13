@@ -164,6 +164,8 @@ def main() -> None:
         parameters.append(ECCENTRICITY)
         all_params.extend([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
 
+    all_params.append(("log_rate", N_pl + N_g))
+
     extended_params = []
     for params in all_params:
         extended_params.extend(expand_arguments(*params))
@@ -179,11 +181,6 @@ def main() -> None:
         **model_prior_param,
     )
 
-    log_rate_prior_param = get_processed_priors(
-        expand_arguments("log_rate", N_pl + N_g), prior_dict
-    )
-
-    poisson_likelihood.is_multi_rate_model = True
     poisson_likelihood.logVT = get_logVT(VT_FILENAME)
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
@@ -191,7 +188,6 @@ def main() -> None:
 
     poisson_likelihood.set_model(
         parameters,
-        [log_rate_prior_param[r] for r in expand_arguments("log_rate", N_pl + N_g)],
         model=model,
     )
 
@@ -215,9 +211,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = expand_arguments(
-        "log_rate", N_pl + N_g
-    ) + list(model.variables.keys())
+    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
 
     handler = flowMChandler(
         logpdf=poisson_likelihood.log_posterior,

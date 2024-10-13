@@ -32,6 +32,7 @@ Utilities
     :toctree: _autosummary
 
     JointDistribution
+    ScaledMixture
 
 Constraints
 -----------
