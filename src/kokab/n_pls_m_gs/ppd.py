@@ -18,11 +18,8 @@ import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing_extensions import Callable, Dict, List, Tuple, Union
 
-import jax.numpy as jnp
 import pandas as pd
-from jax.nn import log_softmax, logsumexp
 from jaxtyping import Array, Bool, Float, Int
-from numpyro.distributions import CategoricalProbs
 
 from gwkokab.models import NPowerLawMGaussian
 from gwkokab.parameters import (
@@ -70,37 +67,19 @@ def get_model_pdf(
         "sampler_data/nf_samples.dat", delimiter=" ", skiprows=1
     ).to_numpy()
 
-    model = NPowerLawMGaussian(
-        **constants,
-        **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
-    )
-
     if rate_scaled:
-        min_index = min(nf_samples_mapping.values())
-        log_rates = nf_samples[..., 0:min_index] / jnp.log10(jnp.e)
-        rates = jnp.power(10, log_rates)
-        total_rate = jnp.sum(rates, axis=-1, keepdims=True)
-        rates = rates / total_rate
-        model._mixing_distribution = CategoricalProbs(rates, validate_args=True)
-
-        def _log_prob(y: Float[Array, "..."]) -> Float[Array, "..."]:
-            # Numpyro's MixtureGeneral does not support weights that do not sum to 1.
-            # To bypass this constraint we have used this mathematical jugaad to remove
-            # the weights that are normalized and add back the log of rates.
-            sum_log_probs = (
-                log_rates  # Adding back the log of rates to scale each component to their rate
-                + model.component_log_probs(y)  # log of the component probabilities
-                - log_softmax(
-                    model.mixing_distribution.logits
-                )  # removing the normalized weights
-            )
-            safe_sum_log_probs = jnp.where(
-                jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
-            )
-            mixture_log_prob = logsumexp(safe_sum_log_probs, axis=-1)
-            return mixture_log_prob
-
-        return _log_prob
+        model = NPowerLawMGaussian(
+            **constants,
+            **{
+                name: (nf_samples[..., i] if not name.startswith("log_rate") else 0.0)
+                for name, i in nf_samples_mapping.items()
+            },
+        )
+    else:
+        model = NPowerLawMGaussian(
+            **constants,
+            **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
+        )
 
     return model.log_prob
 
