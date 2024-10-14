@@ -141,6 +141,7 @@ def make_parser() -> ArgumentParser:
 
 def main() -> None:
     """Main function of the script."""
+    raise DeprecationWarning("This script is deprecated. Use `n_pls_m_gs` instead.")
     parser = make_parser()
     args = parser.parse_args()
 

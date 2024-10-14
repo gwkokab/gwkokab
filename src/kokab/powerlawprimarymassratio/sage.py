@@ -54,6 +54,7 @@ def make_parser() -> ArgumentParser:
 
 def main() -> None:
     r"""Main function of the script."""
+    raise DeprecationWarning("This script is deprecated. Use `n_pls_m_gs` instead.")
     warnings.warn(
         "If you have made any changes to any parameters, please make sure"
         " that the changes are reflected in scripts that generate plots.",

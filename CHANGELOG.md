@@ -36,6 +36,16 @@ Best view [here](https://gwkokab.readthedocs.io/en/latest/changelog.html).
 
 - Introduced a refined base class for smoothed mass distribution models, enhancing functionality and maintainability.
 
+### Deprecations
+
+Following has been deprecated:
+
+- `genie_ecc_matters`
+- `genie_powerlaw_primary_mass_ratio`
+- `genie_single_gaussians`
+- `sage_ecc_matters`
+- `sage_powerlaw_primary_mass_ratio`
+
 ## gwkokab 0.1.0 (July 27, 2024)
 
 ### Breaking changes
