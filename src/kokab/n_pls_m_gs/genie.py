@@ -38,7 +38,7 @@ from gwkokab.parameters import (
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 
 from ..utils import genie_parser
-from ..utils.common import expand_arguments
+from ..utils.common import check_vt_params, expand_arguments
 from ..utils.regex import match_all
 from .common import constraint, get_logVT
 
@@ -276,6 +276,7 @@ def main() -> None:
     popfactory.log_VT_fn = get_logVT(args.vt_path)
     popfactory.num_realizations = args.num_realizations
     popfactory.rate = args.rate
-    popfactory.VT_params = [m1_source_name, m2_source_name]
+    popfactory.VT_params = args.vt_params
+    check_vt_params(args.vt_params, parameters_name)
 
     popfactory.produce()

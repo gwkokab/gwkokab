@@ -39,6 +39,7 @@ from gwkokab.parameters import (
 
 from ..utils import sage_parser
 from ..utils.common import (
+    check_vt_params,
     expand_arguments,
     flowMC_json_read_and_process,
     get_posterior_data,
@@ -101,7 +102,6 @@ def main() -> None:
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
-    VT_PARAMS = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
     ANALYSIS_TIME = args.analysis_time
 
     FLOWMC_HANDLER_KWARGS = flowMC_json_read_and_process(args.flowMC_json)
@@ -181,15 +181,15 @@ def main() -> None:
         **model_prior_param,
     )
 
+    VT_PARAMS = args.vt_params
+    check_vt_params(VT_PARAMS, parameters)
+
     poisson_likelihood.logVT = get_logVT(VT_FILENAME)
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
     poisson_likelihood.vt_params = VT_PARAMS
 
-    poisson_likelihood.set_model(
-        parameters,
-        model=model,
-    )
+    poisson_likelihood.set_model(parameters, model=model)
 
     constants = model.constants
 

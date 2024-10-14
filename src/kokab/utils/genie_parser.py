@@ -38,6 +38,13 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     genie_group.add_argument(
+        "--vt-params",
+        help="Parameters of the VT",
+        type=str,
+        nargs="+",
+        required=True,
+    )
+    genie_group.add_argument(
         "--analysis_time",
         help="Analysis time of the VT",
         default=1.0,

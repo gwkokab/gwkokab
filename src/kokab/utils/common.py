@@ -109,3 +109,18 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
         if param not in matched_prior_params:
             raise ValueError(f"Missing prior for {param}")
     return matched_prior_params
+
+
+def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
+    r"""Check if all the parameters in the VT are in the model.
+
+    :param vt_params: list of VT parameters
+    :param parameters: list of model parameters
+    :raises ValueError: if the parameters in the VT do not match the parameters in
+        the model
+    """
+    if set(vt_params) - set(parameters):
+        raise ValueError(
+            "The parameters in the VT do not match the parameters in the model. "
+            f"VT_PARAMS: {vt_params}, parameters: {parameters}"
+        )
