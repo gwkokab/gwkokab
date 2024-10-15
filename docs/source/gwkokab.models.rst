@@ -18,6 +18,7 @@ Models
     MultiPeakMassModel
     NDistribution
     NPowerLawMGaussian
+    NPowerLawMGaussian_TruncatedNormalEccentricity
     PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
     Wysocki2019MassModel
