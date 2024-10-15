@@ -1169,7 +1169,7 @@ def NPowerLawMGaussian_TruncatedNormalEccentricity(
     # use_redshift: Bool[bool, "True", "False"] = False,
     *,
     validate_args=None,
-    **params,
+    **params: float | Array,
 ) -> ScaledMixture:
     r"""Mixture of N power-law and M Gaussians.
 
@@ -1283,7 +1283,7 @@ def NPowerLawMGaussian_TruncatedNormalEccentricity(
                 for i in range(N_pl)
             ]
         if use_eccentricity:
-            default_loc_ecc_pl = params.get("loc_ecc_pl", params.get("loc_ecc"))
+            default_loc_ecc_pl = params.get("loc_ecc_pl", params.get("loc_ecc", 0.0))
             default_scale_ecc_pl = params.get("scale_ecc_pl", params.get("scale_ecc"))
             default_low_ecc_pl = params.get("low_ecc_pl", params.get("low_ecc", 0.0))
             default_high_ecc_pl = params.get("high_ecc_pl", params.get("high_ecc", 1.0))
@@ -1383,7 +1383,7 @@ def NPowerLawMGaussian_TruncatedNormalEccentricity(
             ]
 
         if use_eccentricity:
-            default_loc_ecc_g = params.get("loc_ecc_g", params.get("loc_ecc"))
+            default_loc_ecc_g = params.get("loc_ecc_g", params.get("loc_ecc", 0.0))
             default_scale_ecc_g = params.get("scale_ecc_g", params.get("scale_ecc"))
             default_low_ecc_g = params.get("low_ecc_g", params.get("low_ecc", 0.0))
             default_high_ecc_g = params.get("high_ecc_g", params.get("high_ecc", 1.0))
