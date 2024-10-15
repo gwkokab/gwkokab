@@ -182,9 +182,10 @@ def main() -> None:
     )
 
     VT_PARAMS = args.vt_params
-    check_vt_params(VT_PARAMS, parameters)
+    parameter_names = [parameter.name for parameter in parameters]
+    check_vt_params(VT_PARAMS, parameter_names)
 
-    poisson_likelihood.logVT = get_logVT(VT_FILENAME)
+    poisson_likelihood.logVT = get_logVT(VT_FILENAME, parameter_names)
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
     poisson_likelihood.vt_params = VT_PARAMS

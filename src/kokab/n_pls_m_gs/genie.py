@@ -265,6 +265,7 @@ def main() -> None:
             err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
+    check_vt_params(args.vt_params, parameters_name)
     popfactory.analysis_time = args.analysis_time
     popfactory.constraint = partial(
         constraint,
@@ -273,10 +274,11 @@ def main() -> None:
         has_eccentricity=has_eccentricity,
     )
     popfactory.error_size = args.error_size
-    popfactory.log_VT_fn = get_logVT(args.vt_path)
+    popfactory.log_VT_fn = get_logVT(
+        args.vt_path, [parameters_name.index(vt_param) for vt_param in args.vt_params]
+    )
     popfactory.num_realizations = args.num_realizations
     popfactory.rate = args.rate
     popfactory.VT_params = args.vt_params
-    check_vt_params(args.vt_params, parameters_name)
 
     popfactory.produce()
