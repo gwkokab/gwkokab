@@ -25,7 +25,7 @@ from jaxtyping import Int
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
-from gwkokab.models import NPowerLawMGaussian_TruncatedNormalEccentricity
+from gwkokab.models import NPowerLawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -168,7 +168,7 @@ def main() -> None:
 
     popmodel_magazine.register(
         parameters_name,
-        NPowerLawMGaussian_TruncatedNormalEccentricity(
+        NPowerLawMGaussian(
             N_pl=N_pl,
             N_g=N_g,
             use_spin=has_spin,

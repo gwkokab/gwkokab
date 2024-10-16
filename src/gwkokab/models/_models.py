@@ -63,7 +63,6 @@ __all__ = [
     "MassGapModel",
     "MultiPeakMassModel",
     "NDistribution",
-    "NPowerLawMGaussian_TruncatedNormalEccentricity",
     "NPowerLawMGaussian",
     "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
@@ -909,16 +908,22 @@ def NPowerLawMGaussian(
     :param log_rate_i: Log rate for ith component, where :math:`0\leq i < N_{pl}+N_{g}`
     :param alpha_i: Power law index for primary mass for ith component, where :math:`0\leq i < N_{pl}`
     :param beta_i: Power law index for mass ratio for ith component, where :math:`0\leq i < N_{pl}`
+    :param higher_ecc_g_i: Upper bound of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param higher_ecc_pl_i: Upper bound of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
+    :param loc_ecc_g_i: Mean of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param loc_ecc_pl_i: Mean of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
     :param loc_m1_i: Mean of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
     :param loc_m2_i: Mean of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
+    :param low_ecc_g_i: Lower bound of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param low_ecc_pl_i: Lower bound of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
     :param mean_chi1_g_i: Mean of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
     :param mean_chi1_pl_i: Mean of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
     :param mean_chi2_g_i: Mean of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
     :param mean_chi2_pl_i: Mean of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
     :param mmax_i: Maximum mass for ith component, where :math:`0\leq i < N_{pl}`
     :param mmin_i: Minimum mass for ith component, where :math:`0\leq i < N_{pl}`
-    :param scale_ecc_g_i: Scale of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param scale_ecc_pl_i: Scale of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
+    :param scale_ecc_g_i: Scale of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param scale_ecc_pl_i: Scale of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
     :param scale_m1_i: Width of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
     :param scale_m2_i: Width of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
     :param std_dev_tilt1_g_i: Standard deviation of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
@@ -931,297 +936,22 @@ def NPowerLawMGaussian(
     :param variance_chi2_pl_i: Variance of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
     :param alpha: default value for :code:`alpha`
     :param beta: default value for :code:`beta`
+    :param high_ecc_g: Upper bound of the normal distribution of eccentricity for Gaussian components
+    :param high_ecc_pl: Upper bound of the normal distribution of eccentricity for power-law components
+    :param loc_ecc_g: Mean bound of the normal distribution of eccentricity for Gaussian components
+    :param loc_ecc_pl: Mean bound of the normal distribution of eccentricity for power-law components
     :param loc_m1: default value for :code:`loc_m1`
     :param loc_m2: default value for :code:`loc_m2`
+    :param low_ecc_g: Lower bound of the normal distribution of eccentricity for Gaussian components
+    :param low_ecc_pl: Lower bound of the normal distribution of eccentricity for power-law components
     :param mean_chi1_g: default value for :code:`mean_chi1_g`
     :param mean_chi1_pl: default value for :code:`mean_chi1_pl`
     :param mean_chi2_g: default value for :code:`mean_chi2_g`
     :param mean_chi2_pl: default value for :code:`mean_chi2_pl`
     :param mmax: default value for :code:`mmax`
     :param mmin: default value for :code:`mmin`
-    :param scale_ecc_g: Scale of the half-normal distribution of eccentricity for Gaussian components
-    :param scale_ecc_pl: Scale of the half-normal distribution of eccentricity for power-law components
-    :param scale_ecc: default value for :code:`scale_ecc_pl` and :code:`scale_ecc_g`
-    :param scale_m1: default value for :code:`scale_m1`
-    :param scale_m2: default value for :code:`scale_m2`
-    :param std_dev_tilt1_g: default value for :code:`std_dev_tilt1_g`
-    :param std_dev_tilt1_pl: default value for :code:`std_dev_tilt1_pl`
-    :param std_dev_tilt2_g: default value for :code:`std_dev_tilt2_g`
-    :param std_dev_tilt2_pl: default value for :code:`std_dev_tilt2_pl`
-    :param variance_chi1_g: default value for :code:`variance_chi1_g`
-    :param variance_chi1_pl: default value for :code:`variance_chi1_pl`
-    :param variance_chi2_g: default value for :code:`variance_chi2_g`
-    :param variance_chi2_pl: default value for :code:`variance_chi2_pl`
-    :return: Mixture of N power-law and M Gaussians
-    """
-    if N_pl > 0:
-        pl_arg_names = PowerLawPrimaryMassRatio.arg_constraints.keys()
-        pl_args_per_component = [
-            {arg: params.get(f"{arg}_{i}", params.get(arg)) for arg in pl_arg_names}
-            for i in range(N_pl)
-        ]
-        powerlaws = jtr.map(
-            lambda x: TransformedDistribution(
-                base_distribution=PowerLawPrimaryMassRatio(**x),
-                transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-                validate_args=validate_args,
-            ),
-            pl_args_per_component,
-            is_leaf=lambda x: isinstance(x, dict),
-        )
-        if use_spin:
-            chis_pl = [
-                get_default_spin_magnitude_dists(
-                    mean_chi1=params.get(
-                        f"mean_chi1_pl_{i}", params.get("mean_chi1_pl")
-                    ),
-                    variance_chi1=params.get(
-                        f"variance_chi1_pl_{i}", params.get("variance_chi1_pl")
-                    ),
-                    mean_chi2=params.get(
-                        f"mean_chi2_pl_{i}", params.get("mean_chi2_pl")
-                    ),
-                    variance_chi2=params.get(
-                        f"variance_chi2_pl_{i}", params.get("variance_chi2_pl")
-                    ),
-                )
-                for i in range(N_pl)
-            ]
-        if use_tilt:
-            tilts_pl = [
-                get_spin_misalignment_dist(
-                    mean_tilt_1=1.0,
-                    std_dev_tilt_1=params.get(
-                        f"std_dev_tilt1_pl_{i}", params.get("std_dev_tilt1_pl")
-                    ),
-                    mean_tilt_2=1.0,
-                    std_dev_tilt_2=params.get(
-                        f"std_dev_tilt2_pl_{i}", params.get("std_dev_tilt2_pl")
-                    ),
-                )
-                for i in range(N_pl)
-            ]
-        if use_eccentricity:
-            default_scale_ecc_pl = params.get("scale_ecc_pl", params.get("scale_ecc"))
-            eccs_pl = [
-                HalfNormal(
-                    scale=params.get(f"scale_ecc_pl_{i}", default_scale_ecc_pl),
-                    validate_args=validate_args,
-                )
-                for i in range(N_pl)
-            ]
-
-        all_dists_pl = jtr.map(
-            lambda pl: (pl,),
-            powerlaws,
-            is_leaf=lambda x: isinstance(x, TransformedDistribution),
-        )
-
-        if use_spin:
-            all_dists_pl = jtr.map(
-                lambda dists, chis: dists + chis,
-                all_dists_pl,
-                chis_pl,
-                is_leaf=lambda x: isinstance(x, tuple),
-            )
-
-        if use_tilt:
-            all_dists_pl = jtr.map(
-                lambda dists, tilts: dists + tilts,
-                all_dists_pl,
-                tilts_pl,
-                is_leaf=lambda x: isinstance(x, tuple),
-            )
-
-        if use_eccentricity:
-            all_dists_pl = jtr.map(
-                lambda dists, eccs: dists + (eccs,),
-                all_dists_pl,
-                eccs_pl,
-                is_leaf=lambda x: isinstance(x, (tuple, HalfNormal)),
-            )
-
-        pl_component_dist = jtr.map(
-            lambda dists: JointDistribution(*dists),
-            all_dists_pl,
-            is_leaf=lambda x: isinstance(x, tuple),
-        )
-
-    if N_g > 0:
-        g_m1 = [
-            Normal(
-                loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
-                scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
-                validate_args=validate_args,
-            )
-            for i in range(N_g)
-        ]
-        g_m2 = [
-            Normal(
-                loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
-                scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
-                validate_args=validate_args,
-            )
-            for i in range(N_g)
-        ]
-
-        if use_spin:
-            chis_g = [
-                get_default_spin_magnitude_dists(
-                    mean_chi1=params.get(f"mean_chi1_g_{i}", params.get("mean_chi1_g")),
-                    variance_chi1=params.get(
-                        f"variance_chi1_g_{i}", params.get("variance_chi1_g")
-                    ),
-                    mean_chi2=params.get(f"mean_chi2_g_{i}", params.get("mean_chi2_g")),
-                    variance_chi2=params.get(
-                        f"variance_chi2_g_{i}", params.get("variance_chi2_g")
-                    ),
-                )
-                for i in range(N_g)
-            ]
-
-        if use_tilt:
-            tilts_g = [
-                get_spin_misalignment_dist(
-                    mean_tilt_1=1.0,
-                    std_dev_tilt_1=params.get(
-                        f"std_dev_tilt1_g_{i}", params.get("std_dev_tilt1_g")
-                    ),
-                    mean_tilt_2=1.0,
-                    std_dev_tilt_2=params.get(
-                        f"std_dev_tilt2_g_{i}", params.get("std_dev_tilt2_g")
-                    ),
-                )
-                for i in range(N_g)
-            ]
-
-        if use_eccentricity:
-            default_scale_ecc_g = params.get("scale_ecc_g", params.get("scale_ecc"))
-            eccs_g = [
-                HalfNormal(
-                    scale=params.get(f"scale_ecc_g_{i}", default_scale_ecc_g),
-                    validate_args=validate_args,
-                )
-                for i in range(N_g)
-            ]
-
-        all_dists_g = jtr.map(
-            lambda g1, g2: (g1, g2),
-            g_m1,
-            g_m2,
-            is_leaf=lambda x: isinstance(x, Normal),
-        )
-
-        if use_spin:
-            all_dists_g = jtr.map(
-                lambda dists, chis: dists + chis,
-                all_dists_g,
-                chis_g,
-                is_leaf=lambda x: isinstance(x, tuple),
-            )
-
-        if use_tilt:
-            all_dists_g = jtr.map(
-                lambda dists, tilts: dists + tilts,
-                all_dists_g,
-                tilts_g,
-                is_leaf=lambda x: isinstance(x, tuple),
-            )
-
-        if use_eccentricity:
-            all_dists_g = jtr.map(
-                lambda dists, eccs: dists + (eccs,),
-                all_dists_g,
-                eccs_g,
-                is_leaf=lambda x: isinstance(x, (tuple, HalfNormal)),
-            )
-
-        g_component_dist = jtr.map(
-            lambda dists: JointDistribution(*dists),
-            all_dists_g,
-            is_leaf=lambda x: isinstance(x, tuple),
-        )
-
-    if N_pl == 0 and N_g != 0:
-        component_dists = g_component_dist
-    elif N_g == 0 and N_pl != 0:
-        component_dists = pl_component_dist
-    else:
-        component_dists = pl_component_dist + g_component_dist
-
-    N = N_pl + N_g
-    log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
-
-    return ScaledMixture(
-        log_rates,
-        component_dists,
-        support=constraints.real_vector,
-        validate_args=validate_args,
-    )
-
-
-def NPowerLawMGaussian_TruncatedNormalEccentricity(
-    N_pl: Int[int, "Number of power-law components"],
-    N_g: Int[int, "Number of Gaussian components"],
-    use_spin: Bool[bool, "True", "False"] = False,
-    use_tilt: Bool[bool, "True", "False"] = False,
-    use_eccentricity: Bool[bool, "True", "False"] = False,
-    # use_redshift: Bool[bool, "True", "False"] = False,
-    *,
-    validate_args=None,
-    **params: float | Array,
-) -> ScaledMixture:
-    r"""Mixture of N power-law and M Gaussians.
-
-    :param N_pl: number of power-law components
-    :param N_g: number of Gaussian components
-    :param log_rate_i: Log rate for ith component, where :math:`0\leq i < N_{pl}+N_{g}`
-    :param alpha_i: Power law index for primary mass for ith component, where :math:`0\leq i < N_{pl}`
-    :param beta_i: Power law index for mass ratio for ith component, where :math:`0\leq i < N_{pl}`
-    :param higher_ecc_g_i: Upper bound of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param higher_ecc_pl_i: Upper bound of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
-    :param loc_ecc_g_i: Mean of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param loc_ecc_pl_i: Mean of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
-    :param loc_m1_i: Mean of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
-    :param loc_m2_i: Mean of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
-    :param low_ecc_g_i: Lower bound of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param low_ecc_pl_i: Lower bound of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
-    :param mean_chi1_g_i: Mean of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param mean_chi1_pl_i: Mean of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
-    :param mean_chi2_g_i: Mean of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param mean_chi2_pl_i: Mean of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
-    :param mmax_i: Maximum mass for ith component, where :math:`0\leq i < N_{pl}`
-    :param mmin_i: Minimum mass for ith component, where :math:`0\leq i < N_{pl}`
-    :param scale_ecc_g_i: Scale of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param scale_ecc_pl_i: Scale of the half-normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
-    :param scale_m1_i: Width of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
-    :param scale_m2_i: Width of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
-    :param std_dev_tilt1_g_i: Standard deviation of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param std_dev_tilt1_pl_i: Standard deviation of the tilt distribution of primary tilt for ith component, where :math:`0\leq i < N_{pl}`
-    :param std_dev_tilt2_g_i: Standard deviation of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param std_dev_tilt2_pl_i: Standard deviation of the tilt distribution of secondary tilt for ith component, where :math:`0\leq i < N_{pl}`
-    :param variance_chi1_g_i: Variance of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param variance_chi1_pl_i: Variance of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
-    :param variance_chi2_g_i: Variance of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
-    :param variance_chi2_pl_i: Variance of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
-    :param alpha: default value for :code:`alpha`
-    :param beta: default value for :code:`beta`
-    :param high_ecc_g: Upper bound of the half-normal distribution of eccentricity for Gaussian components
-    :param high_ecc_pl: Upper bound of the half-normal distribution of eccentricity for power-law components
-    :param loc_ecc_g: Mean bound of the half-normal distribution of eccentricity for Gaussian components
-    :param loc_ecc_pl: Mean bound of the half-normal distribution of eccentricity for power-law components
-    :param loc_m1: default value for :code:`loc_m1`
-    :param loc_m2: default value for :code:`loc_m2`
-    :param low_ecc_g: Lower bound of the half-normal distribution of eccentricity for Gaussian components
-    :param low_ecc_pl: Lower bound of the half-normal distribution of eccentricity for power-law components
-    :param mean_chi1_g: default value for :code:`mean_chi1_g`
-    :param mean_chi1_pl: default value for :code:`mean_chi1_pl`
-    :param mean_chi2_g: default value for :code:`mean_chi2_g`
-    :param mean_chi2_pl: default value for :code:`mean_chi2_pl`
-    :param mmax: default value for :code:`mmax`
-    :param mmin: default value for :code:`mmin`
-    :param scale_ecc_g: Scale of the half-normal distribution of eccentricity for Gaussian components
-    :param scale_ecc_pl: Scale of the half-normal distribution of eccentricity for power-law components
+    :param scale_ecc_g: Scale of the normal distribution of eccentricity for Gaussian components
+    :param scale_ecc_pl: Scale of the normal distribution of eccentricity for power-law components
     :param scale_ecc: default value for :code:`scale_ecc_pl` and :code:`scale_ecc_g`
     :param scale_m1: default value for :code:`scale_m1`
     :param scale_m2: default value for :code:`scale_m2`
@@ -1286,7 +1016,7 @@ def NPowerLawMGaussian_TruncatedNormalEccentricity(
             default_loc_ecc_pl = params.get("loc_ecc_pl", params.get("loc_ecc", 0.0))
             default_scale_ecc_pl = params.get("scale_ecc_pl", params.get("scale_ecc"))
             default_low_ecc_pl = params.get("low_ecc_pl", params.get("low_ecc", 0.0))
-            default_high_ecc_pl = params.get("high_ecc_pl", params.get("high_ecc", 1.0))
+            default_high_ecc_pl = params.get("high_ecc_pl", params.get("high_ecc"))
             eccs_pl = [
                 TruncatedNormal(
                     loc=params.get(f"loc_ecc_pl_{i}", default_loc_ecc_pl),
@@ -1336,17 +1066,21 @@ def NPowerLawMGaussian_TruncatedNormalEccentricity(
 
     if N_g > 0:
         g_m1 = [
-            Normal(
+            TruncatedNormal(
                 loc=params.get(f"loc_m1_{i}", params.get("loc_m1")),
                 scale=params.get(f"scale_m1_{i}", params.get("scale_m1")),
+                low=params.get(f"low_m1_{i}", params.get("low_m1")),
+                high=params.get(f"high_m1_{i}", params.get("high_m1")),
                 validate_args=validate_args,
             )
             for i in range(N_g)
         ]
         g_m2 = [
-            Normal(
+            TruncatedNormal(
                 loc=params.get(f"loc_m2_{i}", params.get("loc_m2")),
                 scale=params.get(f"scale_m2_{i}", params.get("scale_m2")),
+                low=params.get(f"low_m2_{i}", params.get("low_m2")),
+                high=params.get(f"high_m2_{i}", params.get("high_m2")),
                 validate_args=validate_args,
             )
             for i in range(N_g)
@@ -1386,7 +1120,7 @@ def NPowerLawMGaussian_TruncatedNormalEccentricity(
             default_loc_ecc_g = params.get("loc_ecc_g", params.get("loc_ecc", 0.0))
             default_scale_ecc_g = params.get("scale_ecc_g", params.get("scale_ecc"))
             default_low_ecc_g = params.get("low_ecc_g", params.get("low_ecc", 0.0))
-            default_high_ecc_g = params.get("high_ecc_g", params.get("high_ecc", 1.0))
+            default_high_ecc_g = params.get("high_ecc_g", params.get("high_ecc"))
             eccs_g = [
                 TruncatedNormal(
                     loc=params.get(f"loc_ecc_g_{i}", default_loc_ecc_g),
