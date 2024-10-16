@@ -32,7 +32,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     genie_group = parser.add_argument_group("Genie Options")
 
     genie_group.add_argument(
-        "--vt_path",
+        "--vt-path",
         help="Path to the neural VT",
         type=str,
         required=True,
@@ -45,19 +45,19 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     genie_group.add_argument(
-        "--analysis_time",
+        "--analysis-time",
         help="Analysis time of the VT",
         default=1.0,
         type=float,
     )
     genie_group.add_argument(
-        "--error_size",
+        "--error-size",
         help="Size of the error.",
         default=2000,
         type=int,
     )
     genie_group.add_argument(
-        "--num_realizations",
+        "--num-realizations",
         help="Number of realizations.",
         default=5,
         type=int,

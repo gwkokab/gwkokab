@@ -147,7 +147,18 @@ def main() -> None:
         )
     if has_eccentricity:
         parameters_name += (ecc_name,)
-        all_params.extend([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
+        all_params.extend(
+            [
+                ("high_ecc_g", N_g),
+                ("high_ecc_pl", N_pl),
+                ("loc_ecc_g", N_g),
+                ("loc_ecc_pl", N_pl),
+                ("low_ecc_g", N_g),
+                ("low_ecc_pl", N_pl),
+                ("scale_ecc_g", N_g),
+                ("scale_ecc_pl", N_pl),
+            ]
+        )
 
     extended_params = []
     for params in all_params:
@@ -185,10 +196,10 @@ def main() -> None:
             "cos_tilt_2_loc",
             "cos_tilt_2_low",
             "cos_tilt_2_scale",
-            "eccentricity_err_high",
-            "eccentricity_err_loc",
-            "eccentricity_err_low",
-            "eccentricity_err_scale",
+            "ecc_err_high",
+            "ecc_err_loc",
+            "ecc_err_low",
+            "ecc_err_scale",
             "scale_eta",
             "scale_Mc",
         ],
@@ -255,10 +266,10 @@ def main() -> None:
         @error_magazine.register(ecc_name)
         def ecc_error_fn(x, size, key):
             err_x = x + dist.TruncatedNormal(
-                loc=err_param["eccentricity_err_loc"],
-                scale=err_param["eccentricity_err_scale"],
-                low=err_param["eccentricity_err_low"],
-                high=err_param["eccentricity_err_high"],
+                loc=err_param["ecc_err_loc"],
+                scale=err_param["ecc_err_scale"],
+                low=err_param["ecc_err_low"],
+                high=err_param["ecc_err_high"],
             ).sample(key=key, sample_shape=(size,))
             mask = err_x < 0.0
             mask |= err_x > 1.0
