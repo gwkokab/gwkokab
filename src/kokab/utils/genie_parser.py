@@ -32,7 +32,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     genie_group = parser.add_argument_group("Genie Options")
 
     genie_group.add_argument(
-        "--vt_path",
+        "--vt-path",
         help="Path to the neural VT",
         type=str,
         required=True,
