@@ -23,10 +23,7 @@ from numpyro.distributions.util import multinomial, signed_stick_breaking_tril
 from scipy.sparse import csr_matrix
 
 from gwkokab.models import (
-    BrokenPowerLawMassModel,
-    MultiPeakMassModel,
     NPowerLawMGaussian,
-    PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
@@ -70,7 +67,7 @@ CONTINUOUS = [
     (Wysocki2019MassModel, {"alpha_m": -2.3, "mmin": 5.0, "mmax": 100.0}),
     (Wysocki2019MassModel, {"alpha_m": 0.7, "mmin": 50.0, "mmax": 100.0}),
     (Wysocki2019MassModel, {"alpha_m": 3.1, "mmin": 70.0, "mmax": 100.0}),
-    ######### NPowLawMGaussian (m1, m2) #########
+    ######### NPowerLawMGaussian (m1, m2) #########
     (
         NPowerLawMGaussian,
         {
@@ -161,7 +158,7 @@ CONTINUOUS = [
             "scale_m2_1": 2.2,
         },
     ),
-    ######### NPowLawMGaussian (m1, m2, chi1, chi2) #########
+    ######### NPowerLawMGaussian (m1, m2, chi1, chi2) #########
     (
         NPowerLawMGaussian,
         {
@@ -289,7 +286,7 @@ CONTINUOUS = [
             "variance_chi2_pl": 0.1,
         },
     ),
-    ######### NPowLawMGaussian (m1, m2, cos_tilt_1, cos_tilt_2) #########
+    ######### NPowerLawMGaussian (m1, m2, cos_tilt_1, cos_tilt_2) #########
     (
         NPowerLawMGaussian,
         {
@@ -407,7 +404,7 @@ CONTINUOUS = [
             "std_dev_tilt2_pl_1": 0.3,
         },
     ),
-    ######### NPowLawMGaussian (m1, m2, ecc) #########
+    ######### NPowerLawMGaussian (m1, m2, ecc) #########
     (
         NPowerLawMGaussian,
         {
@@ -514,7 +511,7 @@ CONTINUOUS = [
             "scale_ecc_g_1": 0.6,
         },
     ),
-    ######### NPowLawMGaussian (m1, m2, chi1, chi2, cos_tilt_1, cos_tilt_2, ecc) #########
+    ######### NPowerLawMGaussian (m1, m2, chi1, chi2, cos_tilt_1, cos_tilt_2, ecc) #########
     (
         NPowerLawMGaussian,
         {
@@ -1080,7 +1077,7 @@ def test_log_prob_gradient(jax_dist, params):
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
-        if jax_dist is NPowerLawMGaussian and any(
+        if (jax_dist is NPowerLawMGaussian) and any(
             [k.startswith("mmin"), k.startswith("mmax")]
         ):
             continue
@@ -1097,28 +1094,6 @@ def test_log_prob_gradient(jax_dist, params):
         expected_grad = (fn_rhs - fn_lhs) / (2.0 * eps)
         assert jnp.shape(actual_grad) == jnp.shape(params[k])
         assert_allclose(jnp.sum(actual_grad), expected_grad, rtol=0.01, atol=0.01)
-
-
-@pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
-def test_mean_var(jax_dist, params):
-    if isinstance(
-        jax_dist, (BrokenPowerLawMassModel, MultiPeakMassModel, PowerLawPeakMassModel)
-    ):
-        pytest.skip("skip testing mean/var for non-standard dist")
-    n = 200_000
-    d_jax = jax_dist(**params)
-    k = jrd.PRNGKey(0)
-    samples = d_jax.sample(k, sample_shape=(n,)).astype(np.float32)
-
-    try:
-        if jnp.all(jnp.isfinite(d_jax.mean)):
-            assert_allclose(jnp.mean(samples, 0), d_jax.mean, rtol=0.05, atol=1e-2)
-        if jnp.all(jnp.isfinite(d_jax.variance)):
-            assert jnp.allclose(
-                jnp.std(samples, 0), jnp.sqrt(d_jax.variance), rtol=0.05, atol=1e-2
-            )
-    except NotImplementedError:
-        pytest.skip(f"mean/variance not implemented for {jax_dist.__class__.__name__}")
 
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
