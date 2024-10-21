@@ -908,22 +908,22 @@ def NPowerLawMGaussian(
     :param log_rate_i: Log rate for ith component, where :math:`0\leq i < N_{pl}+N_{g}`
     :param alpha_i: Power law index for primary mass for ith component, where :math:`0\leq i < N_{pl}`
     :param beta_i: Power law index for mass ratio for ith component, where :math:`0\leq i < N_{pl}`
-    :param higher_ecc_g_i: Upper bound of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param higher_ecc_pl_i: Upper bound of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
-    :param loc_ecc_g_i: Mean of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param loc_ecc_pl_i: Mean of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
+    :param higher_ecc_g_i: Upper bound of the truncated normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param higher_ecc_pl_i: Upper bound of the truncated normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
+    :param loc_ecc_g_i: Mean of the truncated normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param loc_ecc_pl_i: Mean of the truncated normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
     :param loc_m1_i: Mean of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
     :param loc_m2_i: Mean of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
-    :param low_ecc_g_i: Lower bound of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param low_ecc_pl_i: Lower bound of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
+    :param low_ecc_g_i: Lower bound of the truncated normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param low_ecc_pl_i: Lower bound of the truncated normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
     :param mean_chi1_g_i: Mean of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
     :param mean_chi1_pl_i: Mean of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
     :param mean_chi2_g_i: Mean of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
     :param mean_chi2_pl_i: Mean of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
     :param mmax_i: Maximum mass for ith component, where :math:`0\leq i < N_{pl}`
     :param mmin_i: Minimum mass for ith component, where :math:`0\leq i < N_{pl}`
-    :param scale_ecc_g_i: Scale of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
-    :param scale_ecc_pl_i: Scale of the normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
+    :param scale_ecc_g_i: Scale of the truncated normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{g}`
+    :param scale_ecc_pl_i: Scale of the truncated normal distribution of eccentricity for ith component, where :math:`0\leq i < N_{pl}`
     :param scale_m1_i: Width of the primary mass distribution for ith component, where :math:`0\leq i < N_{g}`
     :param scale_m2_i: Width of the secondary mass distribution for ith component, where :math:`0\leq i < N_{g}`
     :param std_dev_tilt1_g_i: Standard deviation of the beta distribution of primary spin magnitudes for ith component, where :math:`0\leq i < N_{g}`
@@ -936,22 +936,22 @@ def NPowerLawMGaussian(
     :param variance_chi2_pl_i: Variance of the beta distribution of secondary spin magnitudes for ith component, where :math:`0\leq i < N_{pl}`
     :param alpha: default value for :code:`alpha`
     :param beta: default value for :code:`beta`
-    :param high_ecc_g: Upper bound of the normal distribution of eccentricity for Gaussian components
-    :param high_ecc_pl: Upper bound of the normal distribution of eccentricity for power-law components
-    :param loc_ecc_g: Mean bound of the normal distribution of eccentricity for Gaussian components
-    :param loc_ecc_pl: Mean bound of the normal distribution of eccentricity for power-law components
+    :param high_ecc_g: Upper bound of the truncated normal distribution of eccentricity for Gaussian components
+    :param high_ecc_pl: Upper bound of the truncated normal distribution of eccentricity for power-law components
+    :param loc_ecc_g: Mean of the truncated normal distribution of eccentricity for Gaussian components
+    :param loc_ecc_pl: Mean of the truncated normal distribution of eccentricity for power-law components
     :param loc_m1: default value for :code:`loc_m1`
     :param loc_m2: default value for :code:`loc_m2`
-    :param low_ecc_g: Lower bound of the normal distribution of eccentricity for Gaussian components
-    :param low_ecc_pl: Lower bound of the normal distribution of eccentricity for power-law components
+    :param low_ecc_g: Lower bound of the truncated normal distribution of eccentricity for Gaussian components
+    :param low_ecc_pl: Lower bound of the truncated normal distribution of eccentricity for power-law components
     :param mean_chi1_g: default value for :code:`mean_chi1_g`
     :param mean_chi1_pl: default value for :code:`mean_chi1_pl`
     :param mean_chi2_g: default value for :code:`mean_chi2_g`
     :param mean_chi2_pl: default value for :code:`mean_chi2_pl`
     :param mmax: default value for :code:`mmax`
     :param mmin: default value for :code:`mmin`
-    :param scale_ecc_g: Scale of the normal distribution of eccentricity for Gaussian components
-    :param scale_ecc_pl: Scale of the normal distribution of eccentricity for power-law components
+    :param scale_ecc_g: Scale of the truncated normal distribution of eccentricity for Gaussian components
+    :param scale_ecc_pl: Scale of the truncated normal distribution of eccentricity for power-law components
     :param scale_ecc: default value for :code:`scale_ecc_pl` and :code:`scale_ecc_g`
     :param scale_m1: default value for :code:`scale_m1`
     :param scale_m2: default value for :code:`scale_m2`
