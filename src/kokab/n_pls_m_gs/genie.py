@@ -24,8 +24,10 @@ import jax.numpy as jnp
 from jaxtyping import Int
 from numpyro import distributions as dist
 
+import gwkokab
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import NPowerLawMGaussian
+from gwkokab.models.npowerlawmgaussian import create_truncated_normal_distributions
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -79,6 +81,11 @@ def make_parser() -> ArgumentParser:
         action="store_true",
         help="Do not include eccentricity parameters in the model.",
     )
+    model_group.add_argument(
+        "--spin-truncated-normal",
+        action="store_true",
+        help="Use truncated normal distributions for spin parameters.",
+    )
 
     err_group = parser.add_argument_group("Error Options")
     err_group.add_argument(
@@ -123,18 +130,43 @@ def main() -> None:
     parameters_name = (m1_source_name, m2_source_name)
     if has_spin:
         parameters_name += (chi1_name, chi2_name)
-        all_params.extend(
-            [
-                ("chi1_mean_g", N_g),
-                ("chi1_mean_pl", N_pl),
-                ("chi1_variance_g", N_g),
-                ("chi1_variance_pl", N_pl),
-                ("chi2_mean_g", N_g),
-                ("chi2_mean_pl", N_pl),
-                ("chi2_variance_g", N_g),
-                ("chi2_variance_pl", N_pl),
-            ]
-        )
+        if args.spin_truncated_normal:
+            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+                create_truncated_normal_distributions
+            )
+            all_params.extend(
+                [
+                    ("chi1_high_g", N_g),
+                    ("chi1_high_pl", N_pl),
+                    ("chi1_loc_g", N_g),
+                    ("chi1_loc_pl", N_pl),
+                    ("chi1_low_g", N_g),
+                    ("chi1_low_pl", N_pl),
+                    ("chi1_scale_g", N_g),
+                    ("chi1_scale_pl", N_pl),
+                    ("chi2_high_g", N_g),
+                    ("chi2_high_pl", N_pl),
+                    ("chi2_loc_g", N_g),
+                    ("chi2_loc_pl", N_pl),
+                    ("chi2_low_g", N_g),
+                    ("chi2_low_pl", N_pl),
+                    ("chi2_scale_g", N_g),
+                    ("chi2_scale_pl", N_pl),
+                ]
+            )
+        else:
+            all_params.extend(
+                [
+                    ("chi1_mean_g", N_g),
+                    ("chi1_mean_pl", N_pl),
+                    ("chi1_variance_g", N_g),
+                    ("chi1_variance_pl", N_pl),
+                    ("chi2_mean_g", N_g),
+                    ("chi2_mean_pl", N_pl),
+                    ("chi2_variance_g", N_g),
+                    ("chi2_variance_pl", N_pl),
+                ]
+            )
     if has_tilt:
         parameters_name += (cos_tilt_1_name, cos_tilt_2_name)
         all_params.extend(
