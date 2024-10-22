@@ -127,7 +127,7 @@ def main() -> None:
         ("mmin_pl", N_pl),
     ]
 
-    parameters_name = (m1_source_name, m2_source_name)
+    parameters_name: Tuple[str, ...] = (m1_source_name, m2_source_name)
     if has_spin:
         parameters_name += (chi1_name, chi2_name)
         if args.spin_truncated_normal:
@@ -213,23 +213,18 @@ def main() -> None:
     err_param = match_all(
         [
             "chi1_high",
-            "chi1_loc",
             "chi1_low",
             "chi1_scale",
             "chi2_high",
-            "chi2_loc",
             "chi2_low",
             "chi2_scale",
             "cos_tilt_1_high",
-            "cos_tilt_1_loc",
             "cos_tilt_1_low",
             "cos_tilt_1_scale",
             "cos_tilt_2_high",
-            "cos_tilt_2_loc",
             "cos_tilt_2_low",
             "cos_tilt_2_scale",
             "ecc_err_high",
-            "ecc_err_loc",
             "ecc_err_low",
             "ecc_err_scale",
             "scale_eta",
