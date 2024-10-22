@@ -253,8 +253,8 @@ def main() -> None:
 
         @error_magazine.register(chi1_name)
         def chi1_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["chi1_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["chi1_scale"],
                 low=err_param.get("chi1_low"),
                 high=err_param.get("chi1_high"),
@@ -266,8 +266,8 @@ def main() -> None:
 
         @error_magazine.register(chi2_name)
         def chi2_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["chi2_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["chi2_scale"],
                 low=err_param.get("chi2_low"),
                 high=err_param.get("chi2_high"),
@@ -281,8 +281,8 @@ def main() -> None:
 
         @error_magazine.register(cos_tilt_1_name)
         def cos_tilt_1_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["cos_tilt_1_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["cos_tilt_1_scale"],
                 low=err_param.get("cos_tilt_1_low"),
                 high=err_param.get("cos_tilt_1_high"),
@@ -294,8 +294,8 @@ def main() -> None:
 
         @error_magazine.register(cos_tilt_2_name)
         def cos_tilt_2_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["cos_tilt_2_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["cos_tilt_2_scale"],
                 low=err_param.get("cos_tilt_2_low"),
                 high=err_param.get("cos_tilt_2_high"),
@@ -309,8 +309,8 @@ def main() -> None:
 
         @error_magazine.register(ecc_name)
         def ecc_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["ecc_err_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["ecc_err_scale"],
                 low=err_param.get("ecc_err_low"),
                 high=err_param.get("ecc_err_high"),
