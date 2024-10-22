@@ -127,7 +127,7 @@ def main() -> None:
         ("mmin_pl", N_pl),
     ]
 
-    parameters_name = (m1_source_name, m2_source_name)
+    parameters_name: Tuple[str, ...] = (m1_source_name, m2_source_name)
     if has_spin:
         parameters_name += (chi1_name, chi2_name)
         if args.spin_truncated_normal:
@@ -213,23 +213,18 @@ def main() -> None:
     err_param = match_all(
         [
             "chi1_high",
-            "chi1_loc",
             "chi1_low",
             "chi1_scale",
             "chi2_high",
-            "chi2_loc",
             "chi2_low",
             "chi2_scale",
             "cos_tilt_1_high",
-            "cos_tilt_1_loc",
             "cos_tilt_1_low",
             "cos_tilt_1_scale",
             "cos_tilt_2_high",
-            "cos_tilt_2_loc",
             "cos_tilt_2_low",
             "cos_tilt_2_scale",
             "ecc_err_high",
-            "ecc_err_loc",
             "ecc_err_low",
             "ecc_err_scale",
             "scale_eta",
@@ -253,8 +248,8 @@ def main() -> None:
 
         @error_magazine.register(chi1_name)
         def chi1_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["chi1_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["chi1_scale"],
                 low=err_param.get("chi1_low"),
                 high=err_param.get("chi1_high"),
@@ -266,8 +261,8 @@ def main() -> None:
 
         @error_magazine.register(chi2_name)
         def chi2_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["chi2_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["chi2_scale"],
                 low=err_param.get("chi2_low"),
                 high=err_param.get("chi2_high"),
@@ -281,8 +276,8 @@ def main() -> None:
 
         @error_magazine.register(cos_tilt_1_name)
         def cos_tilt_1_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["cos_tilt_1_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["cos_tilt_1_scale"],
                 low=err_param.get("cos_tilt_1_low"),
                 high=err_param.get("cos_tilt_1_high"),
@@ -294,8 +289,8 @@ def main() -> None:
 
         @error_magazine.register(cos_tilt_2_name)
         def cos_tilt_2_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["cos_tilt_2_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["cos_tilt_2_scale"],
                 low=err_param.get("cos_tilt_2_low"),
                 high=err_param.get("cos_tilt_2_high"),
@@ -309,8 +304,8 @@ def main() -> None:
 
         @error_magazine.register(ecc_name)
         def ecc_error_fn(x, size, key):
-            err_x = x + dist.TruncatedNormal(
-                loc=err_param["ecc_err_loc"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
                 scale=err_param["ecc_err_scale"],
                 low=err_param.get("ecc_err_low"),
                 high=err_param.get("ecc_err_high"),
