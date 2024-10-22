@@ -124,14 +124,14 @@ def main() -> None:
         prior_dict = json.load(f)
 
     all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
-        ("alpha", N_pl),
-        ("beta", N_pl),
-        ("loc_m1", N_g),
-        ("loc_m2", N_g),
-        ("mmax", N_pl),
-        ("mmin", N_pl),
-        ("scale_m1", N_g),
-        ("scale_m2", N_g),
+        ("alpha_pl", N_pl),
+        ("beta_pl", N_pl),
+        ("m1_loc_g", N_g),
+        ("m1_loc_g", N_g),
+        ("m1_scale_g", N_g),
+        ("m2_scale_g", N_g),
+        ("mmax_pl", N_pl),
+        ("mmin_pl", N_pl),
     ]
 
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
@@ -140,29 +140,29 @@ def main() -> None:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
         all_params.extend(
             [
-                ("mean_chi1_g", N_g),
-                ("mean_chi1_pl", N_pl),
-                ("mean_chi2_g", N_g),
-                ("mean_chi2_pl", N_pl),
-                ("variance_chi1_g", N_g),
-                ("variance_chi1_pl", N_pl),
-                ("variance_chi2_g", N_g),
-                ("variance_chi2_pl", N_pl),
+                ("chi1_mean_g", N_g),
+                ("chi1_mean_pl", N_pl),
+                ("chi1_variance_g", N_g),
+                ("chi1_variance_pl", N_pl),
+                ("chi2_mean_g", N_g),
+                ("chi2_mean_pl", N_pl),
+                ("chi2_variance_g", N_g),
+                ("chi2_variance_pl", N_pl),
             ]
         )
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
         all_params.extend(
             [
-                ("std_dev_tilt1_g", N_g),
-                ("std_dev_tilt1_pl", N_pl),
-                ("std_dev_tilt2_g", N_g),
-                ("std_dev_tilt2_pl", N_pl),
+                ("cos_tilt1_scale_g", N_g),
+                ("cos_tilt1_scale_pl", N_pl),
+                ("cos_tilt2_scale_g", N_g),
+                ("cos_tilt2_scale_pl", N_pl),
             ]
         )
     if has_eccentricity:
         parameters.append(ECCENTRICITY)
-        all_params.extend([("scale_ecc_g", N_g), ("scale_ecc_pl", N_pl)])
+        all_params.extend([("ecc_scale_g", N_g), ("ecc_scale_pl", N_pl)])
 
     all_params.append(("log_rate", N_pl + N_g))
 

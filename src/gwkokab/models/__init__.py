@@ -22,11 +22,11 @@ from ._models import (
     MassGapModel,
     MultiPeakMassModel,
     NDistribution,
-    NPowerLawMGaussian,
     PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
+from .npowerlawmgaussian import NPowerLawMGaussian as NPowerLawMGaussian
 
 
 __all__ = [
@@ -41,7 +41,6 @@ __all__ = [
     "MassGapModel",
     "MultiPeakMassModel",
     "NDistribution",
-    "NPowerLawMGaussian",
     "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
     "Wysocki2019MassModel",

@@ -21,20 +21,19 @@ import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array, Float, Int, PRNGKeyArray
-from numpyro.distributions import Beta, CategoricalProbs, Distribution, TruncatedNormal
+from numpyro.distributions import (
+    CategoricalProbs,
+    Distribution,
+)
 from numpyro.distributions.mixtures import MixtureGeneral
 from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
-
-from ..utils.math import beta_dist_mean_variance_to_concentrations
 
 
 __all__ = [
     "doubly_truncated_power_law_cdf",
     "doubly_truncated_power_law_icdf",
     "doubly_truncated_power_law_log_prob",
-    "get_default_spin_magnitude_dists",
-    "get_spin_misalignment_dist",
     "JointDistribution",
     "numerical_inverse_transform_sampling",
     "ScaledMixture",
@@ -51,7 +50,7 @@ class JointDistribution(Distribution):
         :param marginal_distributions: A sequence of marginal distributions.
         """
         self.marginal_distributions = marginal_distributions
-        self.shaped_values = tuple()
+        self.shaped_values: Tuple[int | slice, ...] = tuple()
         batch_shape = lax.broadcast_shapes(
             *tuple(d.batch_shape for d in self.marginal_distributions)
         )
@@ -103,7 +102,7 @@ def numerical_inverse_transform_sampling(
     *,
     key: PRNGKeyArray,
     batch_shape: tuple = (),
-    n_grid_points: Int = 1000,
+    n_grid_points: Int[int, ""] = 1000,
 ) -> Array:
     """Numerical inverse transform sampling.
 
@@ -134,49 +133,6 @@ def numerical_inverse_transform_sampling(
         interp = jax.vmap(interp, in_axes=(1, 1))
     samples = interp(cdf, grid)  # interpolate
     return samples  # inverse transform sampling
-
-
-def get_default_spin_magnitude_dists(
-    mean_chi1,
-    variance_chi1,
-    mean_chi2,
-    variance_chi2,
-):
-    concentrations_chi1 = beta_dist_mean_variance_to_concentrations(
-        mean_chi1, variance_chi1
-    )
-    concentrations_chi2 = beta_dist_mean_variance_to_concentrations(
-        mean_chi2, variance_chi2
-    )
-    chi1_dist = Beta(
-        *concentrations_chi1,
-        validate_args=True,
-    )
-    chi2_dist = Beta(
-        *concentrations_chi2,
-        validate_args=True,
-    )
-    return chi1_dist, chi2_dist
-
-
-def get_spin_misalignment_dist(
-    mean_tilt_1, std_dev_tilt_1, mean_tilt_2, std_dev_tilt_2
-) -> Tuple[TruncatedNormal]:
-    cos_tilt1_dist = TruncatedNormal(
-        loc=mean_tilt_1,
-        scale=std_dev_tilt_1,
-        low=-1,
-        high=1,
-        validate_args=True,
-    )
-    cos_tilt2_dist = TruncatedNormal(
-        loc=mean_tilt_2,
-        scale=std_dev_tilt_2,
-        low=-1,
-        high=1,
-        validate_args=True,
-    )
-    return cos_tilt1_dist, cos_tilt2_dist
 
 
 @jax.custom_jvp
