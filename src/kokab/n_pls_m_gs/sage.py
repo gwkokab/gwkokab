@@ -162,7 +162,18 @@ def main() -> None:
         )
     if has_eccentricity:
         parameters.append(ECCENTRICITY)
-        all_params.extend([("ecc_scale_g", N_g), ("ecc_scale_pl", N_pl)])
+        all_params.extend(
+            [
+                ("ecc_high_g", N_g),
+                ("ecc_high_pl", N_pl),
+                ("ecc_loc_g", N_g),
+                ("ecc_loc_pl", N_pl),
+                ("ecc_low_g", N_g),
+                ("ecc_low_pl", N_pl),
+                ("ecc_scale_g", N_g),
+                ("ecc_scale_pl", N_pl),
+            ]
+        )
 
     all_params.append(("log_rate", N_pl + N_g))
 

@@ -256,9 +256,12 @@ def main() -> None:
             err_x = x + dist.TruncatedNormal(
                 loc=err_param["chi1_loc"],
                 scale=err_param["chi1_scale"],
-                low=err_param["chi1_low"],
-                high=err_param["chi1_high"],
+                low=err_param.get("chi1_low"),
+                high=err_param.get("chi1_high"),
             ).sample(key=key, sample_shape=(size,))
+            mask = err_x < 0.0
+            mask |= err_x > 1.0
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
         @error_magazine.register(chi2_name)
@@ -266,9 +269,12 @@ def main() -> None:
             err_x = x + dist.TruncatedNormal(
                 loc=err_param["chi2_loc"],
                 scale=err_param["chi2_scale"],
-                low=err_param["chi2_low"],
-                high=err_param["chi2_high"],
+                low=err_param.get("chi2_low"),
+                high=err_param.get("chi2_high"),
             ).sample(key=key, sample_shape=(size,))
+            mask = err_x < 0.0
+            mask |= err_x > 1.0
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
     if has_tilt:
@@ -278,9 +284,12 @@ def main() -> None:
             err_x = x + dist.TruncatedNormal(
                 loc=err_param["cos_tilt_1_loc"],
                 scale=err_param["cos_tilt_1_scale"],
-                low=err_param["cos_tilt_1_low"],
-                high=err_param["cos_tilt_1_high"],
+                low=err_param.get("cos_tilt_1_low"),
+                high=err_param.get("cos_tilt_1_high"),
             ).sample(key=key, sample_shape=(size,))
+            mask = err_x < -1.0
+            mask |= err_x > 1.0
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
         @error_magazine.register(cos_tilt_2_name)
@@ -288,9 +297,12 @@ def main() -> None:
             err_x = x + dist.TruncatedNormal(
                 loc=err_param["cos_tilt_2_loc"],
                 scale=err_param["cos_tilt_2_scale"],
-                low=err_param["cos_tilt_2_low"],
-                high=err_param["cos_tilt_2_high"],
+                low=err_param.get("cos_tilt_2_low"),
+                high=err_param.get("cos_tilt_2_high"),
             ).sample(key=key, sample_shape=(size,))
+            mask = err_x < -1.0
+            mask |= err_x > 1.0
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
     if has_eccentricity:
@@ -300,8 +312,8 @@ def main() -> None:
             err_x = x + dist.TruncatedNormal(
                 loc=err_param["ecc_err_loc"],
                 scale=err_param["ecc_err_scale"],
-                low=err_param["ecc_err_low"],
-                high=err_param["ecc_err_high"],
+                low=err_param.get("ecc_err_low"),
+                high=err_param.get("ecc_err_high"),
             ).sample(key=key, sample_shape=(size,))
             mask = err_x < 0.0
             mask |= err_x > 1.0
