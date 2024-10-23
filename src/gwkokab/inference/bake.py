@@ -34,7 +34,7 @@ class Bake(object):
     :type dist: Distribution | Callable[[], Distribution]
     """
 
-    def __init__(self, dist: Distribution | Callable[[], Distribution]) -> None:
+    def __init__(self, dist: Distribution | Callable[..., Distribution]) -> None:
         self.dist = dist
 
     def __call__(self, **kwargs: Any) -> Self:
@@ -44,11 +44,13 @@ class Bake(object):
         :return: The Bake object
         :rtype: Self
         """
-        constants: Dict[str, int | float] = dict()
+        constants: Dict[str, int | float | None] = dict()
         variables: Dict[str, Distribution] = dict()
         duplicates: Dict[str, str] = dict()
         for key, value in kwargs.items():
-            if isinstance(value, Distribution):
+            if value is None:
+                constants[key] = None
+            elif isinstance(value, Distribution):
                 variables[key] = value
             elif isinstance(value, (int, float)):
                 constants[key] = lax.stop_gradient(value)
@@ -71,13 +73,13 @@ class Bake(object):
 
     def get_dist(
         self,
-    ) -> Tuple[Dict[str, Distribution], Dict[str, str], Callable[[], Distribution]]:
+    ) -> Tuple[Dict[str, Distribution], Dict[str, str], Callable[..., Distribution]]:
         r"""Return the distribution with the fixed parameters set.
 
         :return: A tuple containing the distribution with the fixed parameters set
             and a function that returns the distribution with the fixed parameters
             set.
-        :rtype: Tuple[Dict[str, Distribution], Dict[str, str], Callable[[],
+        :rtype: Tuple[Dict[str, Distribution], Dict[str, str], Callable[...,
             Distribution]]
         """
         return self.variables, self.duplicates, partial(self.dist, **self.constants)

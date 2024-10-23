@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from __future__ import annotations
 
 import re
+from typing import TypeVar
 from typing_extensions import Dict, List
+
+
+_VT = TypeVar("_VT")
 
 
 def matches_regex(pattern: str, string: str) -> bool:
@@ -30,15 +33,15 @@ def matches_regex(pattern: str, string: str) -> bool:
 
 
 def match_all(
-    strings: List[str], pattern_dict_with_val: Dict[str, float]
-) -> Dict[str, float]:
+    strings: List[str], pattern_dict_with_val: Dict[str, str | _VT]
+) -> Dict[str, str | _VT | None]:
     r"""Match all strings in a list with a dictionary of regex patterns.
 
     :param strings: list of strings to match
     :param pattern_dict_with_val: dictionary of regex patterns with values
     :return: dictionary of matched patterns with values
     """
-    matches = {}
+    matches: Dict[str, str | _VT | None] = {}
     duplicates = []
     for string in strings:
         if pattern_dict_with_val.get(string):  # Exact match
@@ -50,10 +53,14 @@ def match_all(
             else:
                 matches[string] = matched_string
             continue
+        pattern_found = False
         for pattern, value in pattern_dict_with_val.items():
             if matches_regex(pattern, string):
                 matches[string] = value
+                pattern_found = True
                 break
+        if not pattern_found:
+            matches[string] = None
     for duplicate in duplicates:
         matches[duplicate] = matches[pattern_dict_with_val[duplicate]]
     return matches
