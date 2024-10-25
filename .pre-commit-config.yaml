@@ -1,5 +1,6 @@
 ci:
-  autoupdate_schedule: quarterly
+  autoupdate_schedule: monthly
+  autoupdate_commit_msg: "chore: update pre-commit hooks"
 
 default_stages: [pre-commit]
 
@@ -8,13 +9,14 @@ default_install_hook_types: [pre-commit, commit-msg]
 files: src||scripts||tests||examples
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.6.9"
+    rev: "v0.7.1"
     hooks:
       - id: ruff
         args: [--fix]
         types_or: [python, pyi, jupyter, toml]
       - id: ruff-format # formatter
         types_or: [python, pyi, jupyter, toml]
+
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.42.0
     hooks:
@@ -23,42 +25,56 @@ repos:
         # MD033: no inline HTML
         # MD041: first line in a file should be a top-level heading
         args: [--disable, MD013, MD033, MD041, MD024 "--"]
+
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
     hooks:
       - id: codespell
         stages: [pre-commit, commit-msg]
         args: [--ignore-words-list, "statics,socio-economic,precessing", --check-filenames, --skip, "*.ipynb"]
+
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.20.1
+    rev: v8.21.1
     hooks:
       - id: gitleaks
+
   - repo: https://github.com/google/yamlfmt
     rev: v0.13.0
     hooks:
       - id: yamlfmt
         args: [-formatter, retain_line_breaks=true]
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      - id: check-added-large-files
       - id: check-case-conflict
+      - id: check-merge-conflict
       - id: check-symlinks
       - id: check-yaml
+      - id: debug-statements
       - id: destroyed-symlinks
       - id: end-of-file-fixer
-        exclude_types: [svg]
       - id: forbid-new-submodules
       - id: mixed-line-ending
       - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude_types: [svg]
+      - id: name-tests-test
+        args: ["--pytest-test-first"]
+
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.10.0
     hooks:
+      - id: rst-backticks
+        # Detect mistake of using backticks instead of double colons in rst.
       - id: rst-directive-colons
         # Detect mistake of rst directive not ending with double colon.
       - id: rst-inline-touching-normal
         # Detect mistake of inline code touching normal text in rst.
       - id: text-unicode-replacement-char
         # Forbid files which have a UTF-8 Unicode replacement character.
+
   - repo: https://github.com/PyCQA/docformatter
     # using an untagged rev for forward compatibility with pre-commit 4.0
     # see https://github.com/PyCQA/docformatter/issues/289
@@ -68,6 +84,31 @@ repos:
       - id: docformatter
         additional_dependencies: [tomli]
         args: [--in-place, --config, ./pyproject.toml]
+
+  - repo: https://github.com/scientific-python/cookie
+    rev: 2024.08.19
+    hooks:
+      - id: sp-repo-review
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.29.4
+    hooks:
+      - id: check-dependabot
+      - id: check-github-workflows
+      - id: check-readthedocs
+
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.22
+    hooks:
+      - id: validate-pyproject
+
+  - repo: https://github.com/adamchainz/blacken-docs
+    rev: "1.19.1" # replace with latest tag on GitHub
+    hooks:
+      - id: blacken-docs
+        additional_dependencies:
+          - black==22.12.0
+
   - repo: local
     hooks:
       - id: no-bracket-links

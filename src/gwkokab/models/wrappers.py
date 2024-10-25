@@ -33,17 +33,18 @@ def add_log_factor(name, model=None):
         >>> from functools import partial
         >>> from jax import numpy as jnp, random as jrd
         >>> from numpyro.distributions import Normal
-
+        >>>
         >>> model_by_function = add_log_factor("log_rate", Normal)
-
+        >>>
         >>> @partial(add_log_factor, "log_rate")
         >>> def model_by_decorator(loc, scale):
         ...     return Normal(loc, scale, validate_args=True)
-
+        >>>
         >>> xx = jrd.uniform(jrd.PRNGKey(0), (100,))
         >>> model1 = model_by_function(
         ...     log_rate=2.0, loc=10.0, scale=2.0, validate_args=True
         ... )
+        >>>
         >>> model2 = model_by_decorator(log_rate=2.0, loc=10.0, scale=2.0)
         >>> assert jnp.equal(model1.log_prob(xx), model2.log_prob(xx))
     """

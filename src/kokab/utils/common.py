@@ -27,8 +27,7 @@ from .regex import match_all
 def expand_arguments(arg: str, n: int) -> List[str]:
     r"""Extend the argument with a number of strings.
 
-    .. code:: python
-
+    .. doctest::
         >>> expand_arguments("physics", 3)
         ["physics_0", "physics_1", "physics_2"]
 

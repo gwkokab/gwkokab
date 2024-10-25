@@ -38,9 +38,9 @@ Follow these steps to contribute code:
 
 4. Add the GWKokab repo as an upstream remote, so you can use it to sync your changes.
 
-      ```bash
-      git remote add upstream https://www.github.com/gwkokab/gwkokab
-      ```
+   ```bash
+   git remote add upstream https://www.github.com/gwkokab/gwkokab
+   ```
 
 5. Create a new branch for your changes:
 

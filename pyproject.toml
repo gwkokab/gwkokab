@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages]
@@ -13,9 +13,7 @@ authors = [
 ]
 name = "gwkokab"
 version = "0.1.1.dev"
-maintainers = [
-    { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
-]
+maintainers = [{ name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" }]
 description = "A JAX-based gravitational-wave population inference toolkit for parametric models"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -59,12 +57,7 @@ keywords = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pre-commit==4.0.0",
-    "pytest==8.3.3",
-    "ruff==0.6.9",
-    "setuptools==75.1.0",
-]
+dev = ["pre-commit==4.0.0", "pytest==8.3.3", "ruff==0.6.9", "setuptools==75.1.0"]
 
 docs = [
     "flatbuffers==24.3.25",
@@ -113,7 +106,11 @@ sage_powerlaw_primary_mass_ratio = "kokab.powerlawprimarymassratio.sage:main"
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
 
 [tool.pytest.ini_options]
-addopts = ["-v", "--color=yes"]
+minversion = "7"
+xfail_strict = true
+addopts = ["-v", "-ra", "--color=yes", "--strict-config", "--strict-markers"]
+testpaths = ["tests"]
+log_cli_level = "INFO"
 filterwarnings = [
     "error",
     "ignore:numpy.ufunc size changed,:RuntimeWarning",
@@ -124,11 +121,7 @@ filterwarnings = [
     "once:No GPU:UserWarning",
     "once::DeprecationWarning",
 ]
-doctest_optionflags = [
-    "ELLIPSIS",
-    "NORMALIZE_WHITESPACE",
-    "IGNORE_EXCEPTION_DETAIL",
-]
+doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
 
 [tool.docformatter]
 # The ``summaries`` are not (yet) 75 characters because the summary lines can't be

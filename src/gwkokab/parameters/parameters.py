@@ -30,8 +30,7 @@ class Parameter:
     Lets define chirp mass parameter with :class:`~numpyro.distributions.continuous.Uniform`
     prior from 1 to 10 as follows:
 
-    .. code-block:: python
-
+    .. doctest::
         >>> from numpyro.distributions import Uniform
         >>> chirp_mass = Parameter(name="chirp_mass")(Uniform(1, 10))
 

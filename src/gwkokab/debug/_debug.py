@@ -38,8 +38,7 @@ def debug_flush(fmt_str: str, **kwargs) -> None:
     .. note::
         This function will only print message in debug mode.
 
-    .. code:: python
-
+    .. doctest::
         >>> debug_flush("Hello, {name}!", name="world")
         Hello, world!
 

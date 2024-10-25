@@ -35,7 +35,7 @@ fix = true
 
 
 [lint]
-select = ["E4", "E7", "E9", "F", "I001"]
+select = ["E4", "E7", "E9", "F", "I001", "I"]
 ignore = ["E402", "E721", "E731", "E741", "F722", "F403", "F405"]
 
 fixable = ["I001", "F401"]
