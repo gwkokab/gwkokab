@@ -15,6 +15,10 @@ on:
       - "**/*.py"
       - ".github/workflows/ci.yml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     name: Lint with ruff (py ${{ matrix.python-version }} on ${{ matrix.os }})
