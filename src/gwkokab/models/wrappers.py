@@ -13,51 +13,7 @@
 # limitations under the License.
 
 
-from numpyro.distributions import Distribution, Unit
-
-from .utils import JointDistribution
-
-
-__all__ = ["gwk_magazine", "add_log_factor"]
-
-
-def add_log_factor(name, model=None):
-    r"""Adds log factor to logarithm of the probability of the model, equivalent to
-    multiplying the model by the factor.
-
-    :param name: Name of the parameter to be added as a log factor.
-    :param model: Model to be added the log factor to.
-
-    .. doctest::
-
-        >>> from functools import partial
-        >>> from jax import numpy as jnp, random as jrd
-        >>> from numpyro.distributions import Normal
-        >>>
-        >>> model_by_function = add_log_factor("log_rate", Normal)
-        >>>
-        >>> @partial(add_log_factor, "log_rate")
-        >>> def model_by_decorator(loc, scale):
-        ...     return Normal(loc, scale, validate_args=True)
-        >>>
-        >>> xx = jrd.uniform(jrd.PRNGKey(0), (100,))
-        >>> model1 = model_by_function(
-        ...     log_rate=2.0, loc=10.0, scale=2.0, validate_args=True
-        ... )
-        >>>
-        >>> model2 = model_by_decorator(log_rate=2.0, loc=10.0, scale=2.0)
-        >>> assert jnp.equal(model1.log_prob(xx), model2.log_prob(xx))
-    """
-
-    if model is None:
-        raise ValueError("Model must be provided.")
-
-    def rate_times_model(*args, **kwargs) -> Distribution:
-        log_rate = kwargs.pop(name)
-        log_rate_factor_dist = Unit(log_rate, validate_args=True)
-        return JointDistribution(log_rate_factor_dist, model(*args, **kwargs))
-
-    return rate_times_model
+__all__ = ["ModelRegistry"]
 
 
 class ModelRegistry(object):
@@ -92,6 +48,3 @@ class ModelRegistry(object):
             raise NotImplementedError from e
 
         return model(parameter)
-
-
-gwk_magazine = ModelRegistry()

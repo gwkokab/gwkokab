@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from typing_extensions import List
 
 import pandas as pd
@@ -110,7 +111,7 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
     return matched_prior_params
 
 
-def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
+def check_vt_params(vt_params: Sequence[str], parameters: Sequence[str]) -> None:
     r"""Check if all the parameters in the VT are in the model.
 
     :param vt_params: list of VT parameters

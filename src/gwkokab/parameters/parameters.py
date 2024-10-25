@@ -92,29 +92,6 @@ class Parameter:
         return cls(**aux_data)
 
 
-def ncopy(
-    n: int, params: list[str], priors: dict[str, Distribution]
-) -> dict[str, Parameter]:
-    """Creates n copies of the parameters.
-
-    :param n: Number of copies to create.
-    :param params: List of parameters to create copies of.
-    :param priors: Dictionary of priors for the parameters.
-    :return: Dictionary of n copies of the parameters.
-    """
-    all_params = {}
-    for param in params:
-        param_arr = {
-            f"{param}_{i}": Parameter(
-                name=f"{param}_{i}",
-                prior=priors.get(f"{param}_{i}", priors.get(param)),
-            )
-            for i in range(n)
-        }
-        all_params.update(param_arr)
-    return all_params
-
-
 # TODO: Add more parameters as needed.
 
 
@@ -149,45 +126,45 @@ DEFAULT_PRIORS = {
 }
 DEFAULT_PRIORS[PRIMARY_MASS_DETECTED.name] = Uniform(
     m_source_z_to_m_det(
-        m_source=DEFAULT_PRIORS.get(PRIMARY_MASS_SOURCE.name).low,
-        z=DEFAULT_PRIORS.get(REDSHIFT.name).low,
+        m_source=DEFAULT_PRIORS[PRIMARY_MASS_SOURCE.name].low,
+        z=DEFAULT_PRIORS[REDSHIFT.name].low,
     ),
     m_source_z_to_m_det(
-        m_source=DEFAULT_PRIORS.get(PRIMARY_MASS_SOURCE.name).high,
-        z=DEFAULT_PRIORS.get(REDSHIFT.name).high,
+        m_source=DEFAULT_PRIORS[PRIMARY_MASS_SOURCE.name].high,
+        z=DEFAULT_PRIORS[REDSHIFT.name].high,
     ),
     validate_args=True,
 )
 DEFAULT_PRIORS[SECONDARY_MASS_DETECTED.name] = Uniform(
     m_source_z_to_m_det(
-        m_source=DEFAULT_PRIORS.get(SECONDARY_MASS_SOURCE.name).low,
-        z=DEFAULT_PRIORS.get(REDSHIFT.name).low,
+        m_source=DEFAULT_PRIORS[SECONDARY_MASS_SOURCE.name].low,
+        z=DEFAULT_PRIORS[REDSHIFT.name].low,
     ),
     m_source_z_to_m_det(
-        m_source=DEFAULT_PRIORS.get(SECONDARY_MASS_SOURCE.name).high,
-        z=DEFAULT_PRIORS.get(REDSHIFT.name).high,
+        m_source=DEFAULT_PRIORS[SECONDARY_MASS_SOURCE.name].high,
+        z=DEFAULT_PRIORS[REDSHIFT.name].high,
     ),
     validate_args=True,
 )
 DEFAULT_PRIORS[CHIRP_MASS.name] = Uniform(
     chirp_mass(
-        m1=DEFAULT_PRIORS.get(PRIMARY_MASS_DETECTED.name).low,
-        m2=DEFAULT_PRIORS.get(SECONDARY_MASS_DETECTED.name).low,
+        m1=DEFAULT_PRIORS[PRIMARY_MASS_DETECTED.name].low,
+        m2=DEFAULT_PRIORS[SECONDARY_MASS_DETECTED.name].low,
     ),
     chirp_mass(
-        m1=DEFAULT_PRIORS.get(PRIMARY_MASS_DETECTED.name).high,
-        m2=DEFAULT_PRIORS.get(SECONDARY_MASS_DETECTED.name).high,
+        m1=DEFAULT_PRIORS[PRIMARY_MASS_DETECTED.name].high,
+        m2=DEFAULT_PRIORS[SECONDARY_MASS_DETECTED.name].high,
     ),
     validate_args=True,
 )
 DEFAULT_PRIORS[REDUCED_MASS.name] = Uniform(
     reduced_mass(
-        m1=DEFAULT_PRIORS.get(PRIMARY_MASS_DETECTED.name).low,
-        m2=DEFAULT_PRIORS.get(SECONDARY_MASS_DETECTED.name).low,
+        m1=DEFAULT_PRIORS[PRIMARY_MASS_DETECTED.name].low,
+        m2=DEFAULT_PRIORS[SECONDARY_MASS_DETECTED.name].low,
     ),
     reduced_mass(
-        m1=DEFAULT_PRIORS.get(PRIMARY_MASS_DETECTED.name).high,
-        m2=DEFAULT_PRIORS.get(SECONDARY_MASS_DETECTED.name).high,
+        m1=DEFAULT_PRIORS[PRIMARY_MASS_DETECTED.name].high,
+        m2=DEFAULT_PRIORS[SECONDARY_MASS_DETECTED.name].high,
     ),
     validate_args=True,
 )

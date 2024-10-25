@@ -34,14 +34,14 @@ def matches_regex(pattern: str, string: str) -> bool:
 
 def match_all(
     strings: List[str], pattern_dict_with_val: Dict[str, str | _VT]
-) -> Dict[str, str | _VT | None]:
+) -> Dict[str, _VT | None]:
     r"""Match all strings in a list with a dictionary of regex patterns.
 
     :param strings: list of strings to match
     :param pattern_dict_with_val: dictionary of regex patterns with values
     :return: dictionary of matched patterns with values
     """
-    matches: Dict[str, str | _VT | None] = {}
+    matches: Dict[str, _VT | None] = {}
     duplicates = []
     for string in strings:
         if pattern_dict_with_val.get(string):  # Exact match
