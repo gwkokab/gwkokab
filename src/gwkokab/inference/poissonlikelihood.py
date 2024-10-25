@@ -74,10 +74,12 @@ class PoissonLikelihood:
 
     _vt_method: Optional[str] = None
     _vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
-    custom_vt: Optional[Callable[[Int, PRNGKeyArray, Distribution], Array]] = None
-    logVT: Optional[Callable[[], Array]] = None
-    scale_factor: Float = 1.0
-    time: Float = 1.0
+    custom_vt: Optional[Callable[[Int[int, ""], PRNGKeyArray, Distribution], Array]] = (
+        None
+    )
+    logVT: Optional[Callable[[Array], Array]] = None
+    scale_factor: Float[float, ""] = 1.0
+    time: Float[float, ""] = 1.0
 
     def tree_flatten(self) -> tuple:
         children = ()

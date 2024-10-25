@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
-from typing_extensions import List, Tuple
+from typing_extensions import Dict, List, Tuple
 
 import jax.numpy as jnp
 from jaxtyping import Int
@@ -107,7 +107,7 @@ def main() -> None:
         model_json = json.load(f)
 
     with open(args.err_json, "r") as f:
-        err_json = json.load(f)
+        err_json: Dict[str, str | int | float] = json.load(f)
 
     N_pl = model_json["N_pl"]
     N_g = model_json["N_g"]
@@ -232,6 +232,12 @@ def main() -> None:
         ],
         err_json,
     )
+
+    if err_param["scale_Mc"] is None:
+        raise ValueError("scale_Mc must be provided in the error JSON file.")
+
+    if err_param["scale_eta"] is None:
+        raise ValueError("scale_eta must be provided in the error JSON file.")
 
     error_magazine.register(
         (m1_source_name, m2_source_name),
