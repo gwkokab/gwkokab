@@ -4,13 +4,12 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
-    branches: ["*"]
     paths:
       - "**/*.py"
       - ".github/workflows/ci.yml"
   pull_request:
-    branches: ["*"]
     paths:
       - "**/*.py"
       - ".github/workflows/ci.yml"
