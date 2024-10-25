@@ -9,10 +9,10 @@ on:
     paths:
       - "**/*.py"
       - ".github/workflows/ci.yml"
-  pull_request:
-    paths:
-      - "**/*.py"
-      - ".github/workflows/ci.yml"
+      # pull_request:
+      #   paths:
+      #     - "**/*.py"
+      #     - ".github/workflows/ci.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
