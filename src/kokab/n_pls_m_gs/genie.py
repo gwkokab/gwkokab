@@ -21,6 +21,7 @@ from functools import partial
 from typing_extensions import List, Tuple
 
 import jax.numpy as jnp
+import jax.random as jrd
 from jaxtyping import Int
 from numpyro import distributions as dist
 
@@ -40,9 +41,9 @@ from gwkokab.parameters import (
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
 
 from ..utils import genie_parser
-from ..utils.common import check_vt_params, expand_arguments
+from ..utils.common import check_vt_params, expand_arguments, get_logVT
 from ..utils.regex import match_all
-from .common import constraint, get_logVT
+from .common import constraint
 
 
 m1_source_name = PRIMARY_MASS_SOURCE.name
@@ -325,7 +326,11 @@ def main() -> None:
     )
     popfactory.error_size = args.error_size
     popfactory.log_VT_fn = get_logVT(
-        args.vt_path, [parameters_name.index(vt_param) for vt_param in args.vt_params]
+        vt_path=args.vt_path,
+        vt_params=args.vt_params,
+        model_params=parameters_name,
+        key=jrd.PRNGKey(37),
+        use_pdet=args.use_pdet,
     )
     popfactory.num_realizations = args.num_realizations
     popfactory.rate = args.rate

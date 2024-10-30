@@ -23,7 +23,6 @@ from typing_extensions import List, Tuple
 
 from jax import random as jrd
 from jaxtyping import Int
-from pdet import pdet_O3
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
@@ -43,10 +42,10 @@ from ..utils.common import (
     check_vt_params,
     expand_arguments,
     flowMC_json_read_and_process,
+    get_logVT,
     get_posterior_data,
     get_processed_priors,
 )
-from .common import get_logVT
 
 
 def make_parser() -> ArgumentParser:
@@ -78,13 +77,6 @@ def make_parser() -> ArgumentParser:
         "--no-eccentricity",
         action="store_true",
         help="Do not include eccentricity in the model.",
-    )
-
-    aux_group = parser.add_argument_group("Auxiliary Options")
-    aux_group.add_argument(
-        "--use-pdet",
-        action="store_true",
-        help="Use injection based VT (https://github.com/gwkokab/pdet)",
     )
 
     return parser
@@ -204,13 +196,13 @@ def main() -> None:
     parameter_names = [parameter.name for parameter in parameters]
     check_vt_params(VT_PARAMS, parameter_names)
 
-    if args.use_pdet:
-        pdet_vt = pdet_O3(parameters=VT_PARAMS)
-        poisson_likelihood.logVT = lambda param: pdet_vt.predict(key=KEY4, params=param)
-    else:
-        poisson_likelihood.logVT = get_logVT(
-            VT_FILENAME, [parameter_names.index(name) for name in VT_PARAMS]
-        )
+    poisson_likelihood.logVT = get_logVT(
+        vt_path=VT_FILENAME,
+        vt_params=VT_PARAMS,
+        model_params=parameter_names,
+        key=KEY4,
+        use_pdet=args.use_pdet,
+    )
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
     poisson_likelihood.vt_params = VT_PARAMS
