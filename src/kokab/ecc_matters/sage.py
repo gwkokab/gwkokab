@@ -20,7 +20,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-from jax import random as jrd, vmap
+from jax import random as jrd
 from numpyro import distributions as dist
 
 from gwkokab.debug import enable_debugging
@@ -28,11 +28,11 @@ from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
 from gwkokab.models import Wysocki2019MassModel
 from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
-from gwkokab.vts import load_model
 
 from ..utils import sage_parser
 from ..utils.common import (
     flowMC_json_read_and_process,
+    get_logVT,
     get_posterior_data,
     get_processed_priors,
 )
@@ -54,7 +54,7 @@ def EccentricityMattersModel(alpha_m, mmin, mmax, scale) -> JointDistribution:
 
 def main() -> None:
     r"""Main function of the script."""
-    raise DeprecationWarning("This script is deprecated. Use `n_pls_m_gs` instead.")
+    # raise DeprecationWarning("This script is deprecated. Use `n_pls_m_gs` instead.")
     warnings.warn(
         "If you have made any changes to any parameters, please make sure"
         " that the changes are reflected in scripts that generate plots.",
@@ -69,7 +69,7 @@ def main() -> None:
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2, KEY3 = jrd.split(KEY, 3)
+    KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
@@ -97,11 +97,17 @@ def main() -> None:
 
     log_rate_prior_param = get_processed_priors(["log_rate"], prior_dict)
 
-    _, logVT = load_model(VT_FILENAME)
-    logVT = vmap(logVT)
-
-    poisson_likelihood.is_multi_rate_model = False
-    poisson_likelihood.logVT = logVT
+    poisson_likelihood.logVT = get_logVT(
+        vt_path=VT_FILENAME,
+        vt_params=VT_PARAMS,
+        model_params=[
+            PRIMARY_MASS_SOURCE.name,
+            SECONDARY_MASS_SOURCE.name,
+            ECCENTRICITY.name,
+        ],
+        key=KEY4,
+        use_pdet=args.use_pdet,
+    )
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
     poisson_likelihood.vt_params = VT_PARAMS

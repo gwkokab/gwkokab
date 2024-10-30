@@ -16,10 +16,17 @@
 from __future__ import annotations
 
 import json
-from typing_extensions import List
+from collections.abc import Sequence
+from typing_extensions import Callable, List
 
+import jax.numpy as jnp
 import pandas as pd
+from jax import vmap
+from jaxtyping import Array, Bool, Float, PRNGKeyArray
 from numpyro.distributions import Uniform
+from pdet import pdet_O3
+
+from gwkokab.vts import load_model
 
 from .regex import match_all
 
@@ -124,3 +131,33 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
             "The parameters in the VT do not match the parameters in the model. "
             f"VT_PARAMS: {vt_params}, parameters: {parameters}"
         )
+
+
+def get_logVT(
+    vt_path: str,
+    vt_params: Sequence[str],
+    model_params: Sequence[int],
+    key: PRNGKeyArray,
+    use_pdet: Bool[bool, "True", "False"] = False,
+) -> Callable[[Float[Array, "..."]], Float[Array, "..."]]:
+    """Get the logVT function.
+
+    :param vt_path: path to the VT model
+    :param vt_params: list of VT parameters
+    :param model_params: list of model parameters
+    :param key: random key
+    :param use_pdet: whether to use injection based VT or not
+    :return: logVT function
+    """
+    if use_pdet:
+        pdet_vt = pdet_O3(parameters=vt_params)
+        return lambda param: jnp.log(pdet_vt.predict(key=key, params=param))
+    else:
+        _, logVT = load_model(vt_path)
+        selection_indexes = [model_params.index(name) for name in vt_params]
+
+        def trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
+            m1m2 = x[..., selection_indexes]
+            return vmap(logVT)(m1m2)
+
+        return trimmed_logVT

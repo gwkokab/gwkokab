@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
-from jax import numpy as jnp, vmap
+from jax import numpy as jnp
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
@@ -28,9 +28,9 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
 )
 from gwkokab.population import error_magazine, popfactory, popmodel_magazine
-from gwkokab.vts import load_model
 
 from ..utils import genie_parser
+from ..utils.common import get_logVT
 from .common import constraint
 
 
@@ -141,7 +141,7 @@ def make_parser() -> ArgumentParser:
 
 def main() -> None:
     """Main function of the script."""
-    raise DeprecationWarning("This script is deprecated. Use `n_pls_m_gs` instead.")
+    # raise DeprecationWarning("This script is deprecated. Use `n_pls_m_gs` instead.")
     parser = make_parser()
     args = parser.parse_args()
 
@@ -185,8 +185,13 @@ def main() -> None:
         err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
         return err_x
 
-    _, logVT = load_model(args.vt_path)
-    logVT = vmap(logVT)
+    logVT = get_logVT(
+        args.vt_path,
+        args.vt_params,
+        [m1_source, m2_source, ecc],
+        key=args.key,
+        use_pdet=args.use_pdet,
+    )
 
     popfactory.analysis_time = args.analysis_time
     popfactory.constraint = constraint
@@ -194,6 +199,6 @@ def main() -> None:
     popfactory.log_VT_fn = logVT
     popfactory.num_realizations = args.num_realizations
     popfactory.rate = args.rate
-    popfactory.VT_params = [m1_source, m2_source]
+    popfactory.VT_params = args.vt_params
 
     popfactory.produce()
