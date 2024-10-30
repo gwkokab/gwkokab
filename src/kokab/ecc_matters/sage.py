@@ -22,11 +22,12 @@ from glob import glob
 
 from jax import random as jrd
 from numpyro import distributions as dist
+from numpyro.distributions import constraints
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
 from gwkokab.models import Wysocki2019MassModel
-from gwkokab.models.utils import JointDistribution
+from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 
 from ..utils import sage_parser
@@ -45,10 +46,16 @@ def make_parser() -> ArgumentParser:
     return parser
 
 
-def EccentricityMattersModel(alpha_m, mmin, mmax, scale) -> JointDistribution:
-    return JointDistribution(
+def EccentricityMattersModel(log_rate, alpha_m, mmin, mmax, scale) -> JointDistribution:
+    model = JointDistribution(
         Wysocki2019MassModel(alpha_m=alpha_m, mmin=mmin, mmax=mmax),
         dist.HalfNormal(scale=scale, validate_args=True),
+    )
+    return ScaledMixture(
+        log_scales=log_rate,
+        component_distributions=model,
+        support=constraints.real_vector,
+        validate_args=True,
     )
 
 
@@ -89,13 +96,11 @@ def main() -> None:
         prior_dict = json.load(f)
 
     model_prior_param = get_processed_priors(
-        ["alpha_m", "mmin", "mmax", "scale"],
+        ["log_rate", "alpha_m", "mmin", "mmax", "scale"],
         prior_dict,
     )
 
     model = Bake(EccentricityMattersModel)(**model_prior_param)
-
-    log_rate_prior_param = get_processed_priors(["log_rate"], prior_dict)
 
     poisson_likelihood.logVT = get_logVT(
         vt_path=VT_FILENAME,
@@ -114,7 +119,6 @@ def main() -> None:
 
     poisson_likelihood.set_model(
         (PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY),
-        log_rate_prior_param["log_rate"],
         model=model,
     )
 
@@ -124,9 +128,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = ["log_rate"] + list(
-        model.variables.keys()
-    )
+    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
 
     handler = flowMChandler(
         logpdf=poisson_likelihood.log_posterior,
