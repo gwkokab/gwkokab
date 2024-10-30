@@ -28,7 +28,7 @@ from numpyro.distributions import Uniform
 
 try:  # uptill pdet gets uploaded to PyPI
     from pdet import pdet_O3
-finally:
+except ModuleNotFoundError:
     pass
 
 from gwkokab.vts import load_model
