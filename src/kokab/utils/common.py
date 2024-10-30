@@ -24,7 +24,12 @@ import pandas as pd
 from jax import vmap
 from jaxtyping import Array, Bool, Float, PRNGKeyArray
 from numpyro.distributions import Uniform
-from pdet import pdet_O3
+
+
+try:  # uptill pdet gets uploaded to PyPI
+    from pdet import pdet_O3
+finally:
+    pass
 
 from gwkokab.vts import load_model
 
