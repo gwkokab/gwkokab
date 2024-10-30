@@ -54,7 +54,7 @@ def EccentricityMattersModel(log_rate, alpha_m, mmin, mmax, scale) -> JointDistr
     )
     return ScaledMixture(
         log_scales=jnp.array([log_rate]),
-        component_distributions=model,
+        component_distributions=[model],
         support=constraints.real_vector,
         validate_args=True,
     )
