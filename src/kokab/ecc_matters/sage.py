@@ -20,6 +20,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
+import jax.numpy as jnp
 from jax import random as jrd
 from numpyro import distributions as dist
 from numpyro.distributions import constraints
@@ -52,7 +53,7 @@ def EccentricityMattersModel(log_rate, alpha_m, mmin, mmax, scale) -> JointDistr
         dist.HalfNormal(scale=scale, validate_args=True),
     )
     return ScaledMixture(
-        log_scales=log_rate,
+        log_scales=jnp.array([log_rate]),
         component_distributions=model,
         support=constraints.real_vector,
         validate_args=True,
