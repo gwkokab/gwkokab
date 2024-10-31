@@ -5,12 +5,12 @@ name: CI
 
 on:
   push:
-    branches: ['main', 'dev']
+    branches: ["main", "dev"]
     paths:
       - "**/*.py"
       - ".github/workflows/ci.yml"
   pull_request:
-    branches: ['main', 'dev']
+    branches: ["main", "dev"]
     paths:
       - "**/*.py"
       - ".github/workflows/ci.yml"
@@ -70,7 +70,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install pytest
-          python -m pip install .
+          python -m pip install ".[test]"
           pip freeze
       - name: Test with pytest
         env:
@@ -87,7 +87,7 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.11'
+          - "3.11"
 
     steps:
       - uses: actions/checkout@v4.2.0

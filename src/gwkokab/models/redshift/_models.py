@@ -57,21 +57,21 @@ class PowerlawRedshift(Distribution):
         >>> from astropy.cosmology import Planck15
         >>> z_grid = jnp.linspace(0.001, 1, 1000)
         >>> dVcdz_grid = Planck15.differential_comoving_volume(z_grid).value * 4.0 * jnp.pi
-        >>> d = PowerlawRedshift(lamb=0.0, maximum=1.0, zgrid=z_grid, dVcdz=dVcdz_grid)
+        >>> d = PowerlawRedshift(lamb=0.0, z_max=1.0, zgrid=z_grid, dVcdz=dVcdz_grid)
         >>> lpdfs = d.log_prob(self.grid)
         >>> lpdfs.shape
         (1000,)
     """
 
-    arg_constraints = {"maximum": constraints.positive, "lamb": constraints.real}
-    reparametrized_params = ["maximum", "lamb"]
+    arg_constraints = {"z_max": constraints.positive, "lamb": constraints.real}
+    reparametrized_params = ["z_max", "lamb"]
 
     def __init__(
-        self, lamb, maximum, zgrid, dVcdz, low=0.0, high=1000.0, validate_args=None
+        self, lamb, z_max, zgrid, dVcdz, low=0.0, high=1000.0, validate_args=None
     ):
-        self.maximum, self.lamb = promote_shapes(maximum, lamb)
+        self.z_max, self.lamb = promote_shapes(z_max, lamb)
         self._support = constraints.interval(low, high)
-        batch_shape = broadcast_shapes(jnp.shape(maximum), jnp.shape(lamb))
+        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(lamb))
         super(PowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
@@ -96,7 +96,7 @@ class PowerlawRedshift(Distribution):
         if dVdc is None:
             dVdc = jnp.interp(value, self.zs, self.dVdc_)
         return jnp.where(
-            jnp.less_equal(value, self.maximum),
+            jnp.less_equal(value, self.z_max),
             jnp.log(dVdc) + (self.lamb - 1.0) * jnp.log1p(value) - jnp.log(self.norm),
             jnp.nan_to_num(-jnp.inf),
         )
