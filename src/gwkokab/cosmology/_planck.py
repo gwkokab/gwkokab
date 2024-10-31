@@ -23,16 +23,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ..constants import MPC_SI
 from ._cosmology import Cosmology
 
 
-# Planck 2015 Cosmology (Table4 in arXiv:1502.01589, OmegaMatter from astropy Planck 2015)
-PLANCK_2015_Ho = 67.74 / (MPC_SI * 1e-3)  # (km/s/Mpc) / (m/Mpc * km/m) = s**-1
+PLANCK_2015_Ho = 67.74 / (1e-3)  # Mpc
 PLANCK_2015_OmegaMatter = 0.3089
 PLANCK_2015_OmegaLambda = 1.0 - PLANCK_2015_OmegaMatter
 PLANCK_2015_OmegaRadiation = 0.0
-
 
 PLANCK_2015_Cosmology = Cosmology(
     PLANCK_2015_Ho,
@@ -40,10 +37,13 @@ PLANCK_2015_Cosmology = Cosmology(
     PLANCK_2015_OmegaRadiation,
     PLANCK_2015_OmegaLambda,
 )
+PLANCK_2015_Cosmology.__setattr__(
+    "__doc__",
+    "Planck 2015 Cosmology (Table4 in arXiv:1502.01589, OmegaMatter from astropy Planck 2015)",
+)
 
 
-# Planck 2018 Cosmology (Table1 in arXiv:1807.06209)
-PLANCK_2018_Ho = 67.32 / (MPC_SI * 1e-3)  ### (km/s/Mpc) / (m/Mpc * km/m) = s**-1
+PLANCK_2018_Ho = 67.32 / (1e-3)  # Mpc
 PLANCK_2018_OmegaMatter = 0.3158
 PLANCK_2018_OmegaLambda = 1.0 - PLANCK_2018_OmegaMatter
 PLANCK_2018_OmegaRadiation = 0.0
@@ -53,4 +53,8 @@ PLANCK_2018_Cosmology = Cosmology(
     PLANCK_2018_OmegaMatter,
     PLANCK_2018_OmegaRadiation,
     PLANCK_2018_OmegaLambda,
+)
+PLANCK_2018_Cosmology.__setattr__(
+    "__doc__",
+    "Planck 2018 Cosmology (Table1 in arXiv:1807.06209)",
 )

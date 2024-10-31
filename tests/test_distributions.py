@@ -13,7 +13,6 @@ import numpy as np
 import numpyro.distributions as dist
 import pytest
 import scipy.stats as osp
-from astropy.cosmology import Planck15
 from jax import lax, vmap
 from numpy.testing import assert_allclose
 from numpyro.distributions import constraints
@@ -23,6 +22,7 @@ from numpyro.distributions.transforms import biject_to
 from numpyro.distributions.util import multinomial, signed_stick_breaking_tril
 from scipy.sparse import csr_matrix
 
+from gwkokab.cosmology import PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
 from gwkokab.models import (
     NPowerLawMGaussian,
     PowerLawPrimaryMassRatio,
@@ -712,9 +712,7 @@ CONTINUOUS = [
             "lamb": 0.0,
             "z_max": 1.0,
             "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": Planck15.differential_comoving_volume(
-                jnp.linspace(0.001, 1, 1000)
-            ).value
+            "dVcdz": PLANCK_2015_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
             * 4.0
             * jnp.pi,
         },
@@ -725,9 +723,29 @@ CONTINUOUS = [
             "lamb": 0.0,
             "z_max": 2.3,
             "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": Planck15.differential_comoving_volume(
-                jnp.linspace(0.001, 1, 1000)
-            ).value
+            "dVcdz": PLANCK_2015_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
+            * 4.0
+            * jnp.pi,
+        },
+    ),
+    (
+        PowerlawRedshift,
+        {
+            "lamb": 0.0,
+            "z_max": 1.0,
+            "zgrid": jnp.linspace(0.001, 1, 1000),
+            "dVcdz": PLANCK_2018_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
+            * 4.0
+            * jnp.pi,
+        },
+    ),
+    (
+        PowerlawRedshift,
+        {
+            "lamb": 0.0,
+            "z_max": 2.3,
+            "zgrid": jnp.linspace(0.001, 1, 1000),
+            "dVcdz": PLANCK_2018_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
             * 4.0
             * jnp.pi,
         },

@@ -42,7 +42,7 @@ DEFAULT_DZ = 1e-3  # should be good enough for most numeric integrations we want
 class Cosmology(object):
     """A class that implements specific cosmological computations.
 
-    **NOTE**, we work in SI units throughout, though distances are specified in Mpc.
+    .. note:: We work in SI units throughout, though distances are specified in Mpc.
     """
 
     def __init__(
@@ -91,6 +91,7 @@ class Cosmology(object):
 
         X = jnp.array([self.z, Dc, Vc])
         extended_X = fori_loop(0, self.z.shape[0] - 1, self.update, X)
+        # extended_X = lax.scan(self.update, X, jnp.arange(0, self.z.shape[0] - 1))
         self.Dc = extended_X[1]
         self.Vc = extended_X[2]
 
@@ -112,9 +113,7 @@ class Cosmology(object):
 
     def dVcdz(self, z, Dc=None, dz=DEFAULT_DZ):
         """Return dVc/dz."""
-        if Dc is None:
-            Dc = self.z_to_Dc(z, dz=dz)
-        return 4 * jnp.pi * Dc**2 * self.dDcdz(z)
+        return jnp.exp(self.logdVcdz(z, Dc=Dc, dz=dz))
 
     def logdVcdz(self, z, Dc=None, dz=DEFAULT_DZ):
         """Return ln(dVc/dz), useful when constructing probability distributions
@@ -128,9 +127,7 @@ class Cosmology(object):
         max_z = jnp.max(z)
         if jnp.greater(max_z, jnp.max(self.z)):
             self.extend(max_z=max_z, dz=dz)
-            return jnp.interp(z, self.z, self.Dc)
-        else:
-            return jnp.interp(z, self.z, self.Dc)
+        return jnp.interp(z, self.z, self.Dc)
 
     def DL_to_z(self, DL, dz=DEFAULT_DZ):
         """Returns redshifts for each DL specified."""
