@@ -27,6 +27,7 @@ from ._models import (
     Wysocki2019MassModel,
 )
 from .npowerlawmgaussian import NPowerLawMGaussian as NPowerLawMGaussian
+from .redshift import PowerlawRedshift as PowerlawRedshift
 
 
 __all__ = [

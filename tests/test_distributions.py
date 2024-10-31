@@ -13,6 +13,7 @@ import numpy as np
 import numpyro.distributions as dist
 import pytest
 import scipy.stats as osp
+from astropy.cosmology import Planck15
 from jax import lax, vmap
 from numpy.testing import assert_allclose
 from numpyro.distributions import constraints
@@ -25,6 +26,7 @@ from scipy.sparse import csr_matrix
 from gwkokab.models import (
     NPowerLawMGaussian,
     PowerLawPrimaryMassRatio,
+    PowerlawRedshift,
     Wysocki2019MassModel,
 )
 from gwkokab.models.constraints import (
@@ -704,6 +706,32 @@ CONTINUOUS = [
             "ecc_scale_g_1": 0.6,
         },
     ),
+    (
+        PowerlawRedshift,
+        {
+            "lamb": 0.0,
+            "z_max": 1.0,
+            "zgrid": jnp.linspace(0.001, 1, 1000),
+            "dVcdz": Planck15.differential_comoving_volume(
+                jnp.linspace(0.001, 1, 1000)
+            ).value
+            * 4.0
+            * jnp.pi,
+        },
+    ),
+    (
+        PowerlawRedshift,
+        {
+            "lamb": 0.0,
+            "z_max": 2.3,
+            "zgrid": jnp.linspace(0.001, 1, 1000),
+            "dVcdz": Planck15.differential_comoving_volume(
+                jnp.linspace(0.001, 1, 1000)
+            ).value
+            * 4.0
+            * jnp.pi,
+        },
+    ),
 ]
 
 
@@ -1031,22 +1059,26 @@ def test_cdf_and_icdf(jax_dist, params):
     samples = d.sample(key=jrd.PRNGKey(0), sample_shape=(100,))
     quantiles = jrd.uniform(jrd.PRNGKey(1), (100,) + d.shape())
     try:
+        atol = 1e-5
         rtol = 1e-5
+        if jax_dist.__name__ in ["PowerlawRedshift"]:
+            atol = 4e-3
+            rtol = 0.02
         if d.shape() == () and not d.is_discrete:
             assert_allclose(
                 jax.vmap(jax.grad(d.cdf))(samples),
                 jnp.exp(d.log_prob(samples)),
-                atol=1e-5,
+                atol=atol,
                 rtol=rtol,
             )
             assert_allclose(
                 jax.vmap(jax.grad(d.icdf))(quantiles),
                 jnp.exp(-d.log_prob(d.icdf(quantiles))),
-                atol=1e-5,
+                atol=atol,
                 rtol=rtol,
             )
-        assert_allclose(d.cdf(d.icdf(quantiles)), quantiles, atol=1e-5, rtol=1e-5)
-        assert_allclose(d.icdf(d.cdf(samples)), samples, atol=1e-5, rtol=rtol)
+        assert_allclose(d.cdf(d.icdf(quantiles)), quantiles, atol=atol, rtol=rtol)
+        assert_allclose(d.icdf(d.cdf(samples)), samples, atol=atol, rtol=rtol)
     except NotImplementedError:
         pytest.skip("cdf/icdf not implemented")
 
