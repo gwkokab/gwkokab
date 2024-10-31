@@ -45,6 +45,11 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     sage_group.add_argument(
+        "--use-pdet",
+        action="store_true",
+        help="Use injection based VT (https://github.com/gwkokab/pdet)",
+    )
+    sage_group.add_argument(
         "--posterior-regex",
         help="Regex for the posterior samples.",
         type=str,

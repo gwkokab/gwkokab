@@ -42,10 +42,10 @@ from ..utils.common import (
     check_vt_params,
     expand_arguments,
     flowMC_json_read_and_process,
+    get_logVT,
     get_posterior_data,
     get_processed_priors,
 )
-from .common import get_logVT
 
 
 def make_parser() -> ArgumentParser:
@@ -98,7 +98,7 @@ def main() -> None:
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2, KEY3 = jrd.split(KEY, 3)
+    KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
@@ -197,7 +197,11 @@ def main() -> None:
     check_vt_params(VT_PARAMS, parameter_names)
 
     poisson_likelihood.logVT = get_logVT(
-        VT_FILENAME, [parameter_names.index(name) for name in VT_PARAMS]
+        vt_path=VT_FILENAME,
+        vt_params=VT_PARAMS,
+        model_params=parameter_names,
+        key=KEY4,
+        use_pdet=args.use_pdet,
     )
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"

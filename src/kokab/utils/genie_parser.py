@@ -45,6 +45,11 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     genie_group.add_argument(
+        "--use-pdet",
+        action="store_true",
+        help="Use injection based VT (https://github.com/gwkokab/pdet)",
+    )
+    genie_group.add_argument(
         "--analysis-time",
         help="Analysis time of the VT",
         default=1.0,

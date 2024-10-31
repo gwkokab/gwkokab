@@ -18,7 +18,7 @@ from __future__ import annotations
 from jaxtyping import Array, Bool
 
 
-def constraint(x: Array) -> Bool:
+def constraint(x: Array) -> Bool[Array, "..."]:
     m1 = x[..., 0]
     m2 = x[..., 1]
     ecc = x[..., 2]
