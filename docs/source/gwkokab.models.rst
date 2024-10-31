@@ -22,6 +22,17 @@ Models
     PowerLawPrimaryMassRatio
     Wysocki2019MassModel
 
+Redshift
+^^^^^^^^
+
+.. automodule:: gwkokab.models.redshift
+
+.. autosummary::
+    :nosignatures:
+    :toctree: _autosummary
+
+    PowerlawRedshift
+
 Utilities
 ---------
 
