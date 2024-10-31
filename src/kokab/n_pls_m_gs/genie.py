@@ -34,6 +34,7 @@ from gwkokab.parameters import (
     ECCENTRICITY,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
+    REDSHIFT,
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
@@ -52,6 +53,7 @@ chi2_name = SECONDARY_SPIN_MAGNITUDE.name
 cos_tilt_1_name = COS_TILT_1.name
 cos_tilt_2_name = COS_TILT_2.name
 ecc_name = ECCENTRICITY.name
+redshift_name = REDSHIFT.name
 
 
 def make_parser() -> ArgumentParser:
@@ -80,6 +82,11 @@ def make_parser() -> ArgumentParser:
         "--no-eccentricity",
         action="store_true",
         help="Do not include eccentricity parameters in the model.",
+    )
+    model_group.add_argument(
+        "--no-redshift",
+        action="store_true",
+        help="Do not include redshift parameters in the model.",
     )
     model_group.add_argument(
         "--spin-truncated-normal",
@@ -115,6 +122,7 @@ def main() -> None:
     has_spin = not args.no_spin
     has_tilt = not args.no_tilt
     has_eccentricity = not args.no_eccentricity
+    has_redshift = not args.no_redshift
 
     all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
         ("alpha_pl", N_pl),
@@ -227,6 +235,9 @@ def main() -> None:
             "ecc_err_high",
             "ecc_err_low",
             "ecc_err_scale",
+            "redshift_high",
+            "redshift_low",
+            "redshift_scale",
             "scale_eta",
             "scale_Mc",
         ],
@@ -315,6 +326,20 @@ def main() -> None:
             err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
+    if has_redshift:
+
+        @error_magazine.register(redshift_name)
+        def redshift_error_fn(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param["redshift_scale"],
+                low=err_param.get("redshift_low"),
+                high=err_param.get("redshift_high"),
+            ).sample(key=key, sample_shape=(size,))
+            mask = err_x < 1e-3
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
+            return err_x
+
     check_vt_params(args.vt_params, parameters_name)
     popfactory.analysis_time = args.analysis_time
     popfactory.constraint = partial(
@@ -322,6 +347,7 @@ def main() -> None:
         has_spin=has_spin,
         has_tilt=has_tilt,
         has_eccentricity=has_eccentricity,
+        has_redshift=has_redshift,
     )
     popfactory.error_size = args.error_size
     popfactory.log_VT_fn = get_logVT(
