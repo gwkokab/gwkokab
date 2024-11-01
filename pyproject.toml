@@ -39,7 +39,7 @@ dependencies = [
     "jaxlib==0.4.33",
     "jaxtyping==0.2.34",
     "matplotlib==3.9.2",
-    "mplcursors==0.5.3",
+    "mplcursors==0.6",
     "numpy<3",
     "numpyro==0.15.3",
     "pandas==2.2.3",
