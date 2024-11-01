@@ -15,9 +15,14 @@
 
 from __future__ import annotations
 
+import os
+
+
+GWK_MULTI_COLOR_SUBPOP: int = int(os.getenv("GWK_MULTI_COLOR_SUBPOP", 0))
 from typing_extensions import Callable, List, Tuple
 
 import jax
+import numpy as np
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array, Float, Int, PRNGKeyArray
@@ -544,3 +549,39 @@ class ScaledMixture(MixtureGeneral):
         )
         mixture_log_prob = jax.nn.logsumexp(safe_sum_log_probs, axis=-1)
         return mixture_log_prob
+
+    def sample_with_intermediates(self, key, sample_shape=()):
+        """A version of ``sample`` that also returns the sampled component indices.
+
+        :param jax.random.PRNGKey key: the rng_key key to be used for the
+            distribution.
+        :param tuple sample_shape: the sample shape for the distribution.
+        :return: A 2-element tuple with the samples from the distribution, and the
+            indices of the sampled components.
+        :rtype: tuple
+        """
+        assert is_prng_key(key)
+        key_comp, key_ind = jax.random.split(key)
+        samples = self.component_sample(key_comp, sample_shape=sample_shape)
+
+        # Sample selection indices from the categorical (shape will be sample_shape)
+        indices = self.mixing_distribution.expand(
+            sample_shape + self.batch_shape
+        ).sample(key_ind)
+        n_expand = self.event_dim + 1
+        indices_expanded = indices.reshape(indices.shape + (1,) * n_expand)
+        if GWK_MULTI_COLOR_SUBPOP:
+            count = int(os.getenv("REALIZATION_COUNT", "0"))
+            os.environ["REALIZATION_COUNT"] = str(
+                int(os.getenv("REALIZATION_COUNT", "0")) + 1
+            )
+            os.makedirs(f"data/realization_{count}", exist_ok=True)
+            np.savetxt(f"data/realization_{count}/indices.dat", indices, fmt="%d")
+
+        # Select samples according to indices samples from categorical
+        samples_selected = jnp.take_along_axis(
+            samples, indices=indices_expanded, axis=self.mixture_dim
+        )
+
+        # Final sample shape (*sample_shape, *batch_shape, *event_shape)
+        return jnp.squeeze(samples_selected, axis=self.mixture_dim), [indices]

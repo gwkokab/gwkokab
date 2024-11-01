@@ -156,6 +156,12 @@ class PopulationFactory:
             key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
         )
 
+        if os.getenv("GWK_MULTI_COLOR_SUBPOP") is not None:
+            count = int(os.getenv("REALIZATION_COUNT")) - 1
+            indices = np.loadtxt(f"data/realization_{count}/indices.dat", dtype=int)
+            color_indexes = indices[index]
+            np.savetxt(f"data/realization_{count}/color.dat", color_indexes, fmt="%d")
+
         population = population[index]
 
         return population
