@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import argparse
 
+import matplotlib.colors as mcolors
+import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
@@ -81,6 +83,28 @@ def make_parser() -> argparse.ArgumentParser:
         default="y",
         type=str,
     )
+    parser.add_argument(
+        "--color",
+        help="path to the file containing the color values",
+        type=str,
+    )
+    parser.add_argument(
+        "--legend",
+        help="legend of the plot",
+        nargs="+",
+        type=str,
+    )
+    parser.add_argument(
+        "--pointer-size",
+        help="size of the pointer",
+        type=float,
+    )
+    parser.add_argument(
+        "--override-color",
+        help="override the color of the pointers",
+        nargs="+",
+        type=str,
+    )
 
     return parser
 
@@ -90,14 +114,39 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
+    if args.color:
+        color = np.loadtxt(args.color)
+
     data = pd.read_csv(args.data.name, delimiter=" ")
     x = data[args.x_value_column_name].to_numpy()
     y = data[args.y_value_column_name].to_numpy()
 
-    plt.scatter(x, y)
+    if not args.color:
+        plt.scatter(x, y, s=args.pointer_size)
+    else:
+        if args.override_color:
+            ALL_COLORS = args.override_color
+        else:
+            ALL_COLORS = (
+                list(mcolors.TABLEAU_COLORS.values())
+                + list(mcolors.XKCD_COLORS.values())
+                + list(mcolors.CSS4_COLORS.values())
+                + list(mcolors.BASE_COLORS.values())
+            )
+        unique_colors = np.unique(color)
+        for i, unique_color in enumerate(unique_colors):
+            mask = color == unique_color
+            plt.scatter(
+                x[mask],
+                y[mask],
+                label=args.legend[i] if args.legend else None,
+                c=ALL_COLORS[int(unique_color)],
+                s=args.pointer_size,
+            )
     plt.xlabel(args.xlabel)
     plt.ylabel(args.ylabel)
     plt.title(args.title)
+    plt.legend()
     plt.tight_layout()
     plt.savefig(args.output.name)
 
