@@ -134,7 +134,7 @@ def main() -> None:
         ("alpha_pl", N_pl),
         ("beta_pl", N_pl),
         ("m1_loc_g", N_g),
-        ("m1_loc_g", N_g),
+        ("m2_loc_g", N_g),
         ("m1_scale_g", N_g),
         ("m2_scale_g", N_g),
         ("mmax_pl", N_pl),
