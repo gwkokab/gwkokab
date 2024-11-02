@@ -30,7 +30,8 @@ from jax.lax import broadcast_shapes
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array
 from numpyro.distributions import constraints, Distribution
-from numpyro.distributions.util import is_prng_key, promote_shapes, validate_sample
+from numpyro.distributions.util import promote_shapes, validate_sample
+from numpyro.util import is_prng_key
 
 
 def cumtrapz(y: Array, x: Array) -> Array:
