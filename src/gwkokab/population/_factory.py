@@ -22,11 +22,7 @@ import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softmax
 from jaxtyping import Array, Bool, Float, Int, PRNGKeyArray
-from numpyro.distributions import (
-    CategoricalProbs,
-    Distribution,
-    MixtureGeneral,
-)
+from numpyro.distributions import CategoricalProbs, Distribution, MixtureGeneral
 from numpyro.util import is_prng_key
 from rich.progress import (
     BarColumn,
@@ -140,7 +136,8 @@ class PopulationFactory:
             size += int(1e5)
 
         population = self.model.sample(key, (size,))
-        population = population[self.constraint(population)]
+        constraints = self.constraint(population)
+        population = population[constraints]
 
         if self.log_VT_fn is None:
             return population
@@ -159,6 +156,7 @@ class PopulationFactory:
         if os.getenv("GWK_MULTI_COLOR_SUBPOP") is not None:
             count = int(os.getenv("REALIZATION_COUNT")) - 1
             indices = np.loadtxt(f"data/realization_{count}/indices.dat", dtype=int)
+            indices = indices[constraints]
             color_indexes = indices[index]
             np.savetxt(f"data/realization_{count}/color.dat", color_indexes, fmt="%d")
 
