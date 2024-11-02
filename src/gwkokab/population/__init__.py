@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from ._factory import error_magazine, popfactory, popmodel_magazine
-
-
-__all__ = ["error_magazine", "popfactory", "popmodel_magazine"]
+from ._factory import (
+    error_magazine as error_magazine,
+    PopulationFactory as PopulationFactory,
+)
