@@ -84,6 +84,18 @@ def make_parser() -> argparse.ArgumentParser:
         type=str,
     )
     parser.add_argument(
+        "--x-scale",
+        help="scale of the x-axis",
+        default="linear",
+        type=str,
+    )
+    parser.add_argument(
+        "--y-scale",
+        help="scale of the y-axis",
+        default="linear",
+        type=str,
+    )
+    parser.add_argument(
         "--color",
         help="path to the file containing the color values",
         type=str,
@@ -136,6 +148,7 @@ def main() -> None:
         unique_colors = np.unique(color)
         for i, unique_color in enumerate(unique_colors):
             mask = color == unique_color
+            print(i, unique_color, args.legend[i])
             plt.scatter(
                 x[mask],
                 y[mask],
@@ -146,6 +159,8 @@ def main() -> None:
     plt.xlabel(args.xlabel)
     plt.ylabel(args.ylabel)
     plt.title(args.title)
+    plt.xscale(args.x_scale)
+    plt.yscale(args.y_scale)
     plt.legend()
     plt.tight_layout()
     plt.savefig(args.output.name)
