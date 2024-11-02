@@ -35,7 +35,7 @@ dependencies = [
     "chex==0.1.87",
     "flowMC==0.3.4",
     "h5py==3.12.1",
-    "jax==0.4.33",
+    "jax==0.4.35",
     "jaxlib==0.4.33",
     "jaxtyping==0.2.34",
     "matplotlib==3.9.2",
