@@ -97,13 +97,9 @@ gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
 ## Genie scripts
 genie_ecc_matters = "kokab.ecc_matters.genie:main"
 genie_n_pls_m_gs = "kokab.n_pls_m_gs.genie:main"
-genie_powerlaw_peak = "kokab.powerlawpeak.genie:main"
-genie_powerlaw_primary_mass_ratio = "kokab.powerlawprimarymassratio.genie:main"
-genie_single_gaussians = "kokab.single_gaussians.genie:main"
 ## Sage scripts
 sage_ecc_matters = "kokab.ecc_matters.sage:main"
 sage_n_pls_m_gs = "kokab.n_pls_m_gs.sage:main"
-sage_powerlaw_primary_mass_ratio = "kokab.powerlawprimarymassratio.sage:main"
 ## PPD scripts
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
 
