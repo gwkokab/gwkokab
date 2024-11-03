@@ -98,11 +98,11 @@ class PopulationFactory:
             else:
                 raise ValueError(f"VT parameter '{param}' is not found in parameters.")
 
-    def exp_rate(self, *, key: PRNGKeyArray, model: ScaledMixture) -> Float[Array, ""]:
+    def exp_rate(self, *, key: PRNGKeyArray) -> Float[Array, ""]:
         r"""Calculates the expected rate."""
-        N = int(1e4)
-        value = model.sample(key, (N,))[..., self.vt_selection_mask]
-        sum_of_rates = jnp.sum(jnp.exp(model._log_scales))
+        N = int(5e4)
+        value = self.model.sample(key, (N,))[..., self.vt_selection_mask]
+        sum_of_rates = jnp.sum(jnp.exp(self.model._log_scales))
         return (
             self.analysis_time
             * self.scale_factor
@@ -138,9 +138,7 @@ class PopulationFactory:
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
-        size = int(
-            jrd.poisson(poisson_key, self.exp_rate(key=rate_key, model=self.model))
-        )
+        size = int(jrd.poisson(poisson_key, self.exp_rate(key=rate_key)))
         key = rate_key
         if size == 0:
             raise ValueError(
