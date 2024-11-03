@@ -19,7 +19,7 @@ import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
 from jax.nn import logsumexp
 from jax.tree_util import register_pytree_node_class
-from jaxtyping import Array, Float, Int, PRNGKeyArray
+from jaxtyping import Array, Int, PRNGKeyArray
 from numpyro.distributions import Distribution, Uniform
 
 from ..debug import debug_flush
@@ -74,10 +74,11 @@ class PoissonLikelihood:
 
     _vt_method: Optional[str] = None
     _vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
-    custom_vt: Optional[Callable[[Int, PRNGKeyArray, Distribution], Array]] = None
-    logVT: Optional[Callable[[], Array]] = None
-    scale_factor: Float = 1.0
-    time: Float = 1.0
+    custom_vt: Optional[Callable[[Int[int, ""], PRNGKeyArray, Distribution], Array]] = (
+        None
+    )
+    logVT: Optional[Callable[[Array], Array]] = None
+    time: float = 1.0
 
     def tree_flatten(self) -> tuple:
         children = ()
@@ -89,7 +90,6 @@ class PoissonLikelihood:
             "model",
             "ref_priors",
             "time",
-            "scale_factor",
             "variables_index",
             "variables",
             "vt_params_index",
@@ -229,7 +229,7 @@ class PoissonLikelihood:
             vt_value = self.custom_vt(N, key, model)
         else:
             raise ValueError("Invalid VT method.")
-        vt_value *= self.time * self.scale_factor
+        vt_value *= self.time
         debug_flush("exp_rate_integral: {vt_value}", vt_value=vt_value)
         return vt_value
 
