@@ -127,13 +127,17 @@ def main() -> None:
     all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
         ("alpha_pl", N_pl),
         ("beta_pl", N_pl),
+        ("log_rate", N_pl + N_g),
+        ("m1_high_g", N_g),
         ("m1_loc_g", N_g),
+        ("m1_low_g", N_g),
         ("m1_scale_g", N_g),
+        ("m2_high_g", N_g),
         ("m2_loc_g", N_g),
+        ("m2_low_g", N_g),
         ("m2_scale_g", N_g),
         ("mmax_pl", N_pl),
         ("mmin_pl", N_pl),
-        ("log_rate", N_pl + N_g),
     ]
 
     parameters_name: Tuple[str, ...] = (m1_source_name, m2_source_name)
