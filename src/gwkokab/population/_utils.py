@@ -25,7 +25,7 @@ from rich.progress import (
 )
 
 
-def name_endswith_dat_or_no_extension(filename: str) -> str:
+def ensure_dat_extension(filename: str) -> str:
     """Transform a filename to end with .dat if it does not have an extension.
 
     :param filename: name of the file
@@ -37,8 +37,9 @@ def name_endswith_dat_or_no_extension(filename: str) -> str:
     elif "." not in filename:
         return filename + ".dat"
     else:
+        ext = filename.split(".")[-1]
         raise ValueError(
-            f"Invalid filename {filename!r}: must end with .dat or have no extension"
+            f"Invalid filename {filename!r}: found extension '.{ext}' but must end with '.dat' or have no extension"
         )
 
 

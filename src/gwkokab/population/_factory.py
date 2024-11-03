@@ -28,7 +28,7 @@ from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
 from ..models.wrappers import ModelRegistry
-from ._utils import get_progress_bar, name_endswith_dat_or_no_extension
+from ._utils import ensure_dat_extension, get_progress_bar
 
 
 PROGRESS_BAR_TEXT_WITDH = 25
@@ -72,10 +72,8 @@ class PopulationFactory:
         self.error_size = error_size
         self.constraint = constraint
 
-        self.event_filename = name_endswith_dat_or_no_extension(self.event_filename)
-        self.injection_filename = name_endswith_dat_or_no_extension(
-            self.injection_filename
-        )
+        self.event_filename = ensure_dat_extension(self.event_filename)
+        self.injection_filename = ensure_dat_extension(self.injection_filename)
 
         if self.logVT_fn is None:
             raise ValueError("`logVT_fn` is not provided.")
