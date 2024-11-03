@@ -41,6 +41,7 @@ def constraint(
     has_spin: Bool[bool, "True", "False"],
     has_tilt: Bool[bool, "True", "False"],
     has_eccentricity: Bool[bool, "True", "False"],
+    has_redshift: Bool[bool, "True", "False"],
 ) -> Bool[Array, "..."]:
     """Applies physical constraints to the input array.
 
@@ -97,5 +98,10 @@ def constraint(
 
         mask &= ecc >= 0.0
         mask &= ecc <= 1.0
+
+    if has_redshift:
+        z = x[..., i]
+
+        mask &= z >= 1e-3
 
     return mask

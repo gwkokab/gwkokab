@@ -33,6 +33,7 @@ from gwkokab.parameters import (
     ECCENTRICITY,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
+    REDSHIFT,
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
@@ -72,6 +73,11 @@ def make_parser() -> ArgumentParser:
         "--no-tilt",
         action="store_true",
         help="Do not include tilt parameters in the model.",
+    )
+    model_group.add_argument(
+        "--no-redshift",
+        action="store_true",
+        help="Do not include redshift parameters in the model.",
     )
     model_group.add_argument(
         "--no-eccentricity",
@@ -119,6 +125,7 @@ def main() -> None:
     has_spin = not args.no_spin
     has_tilt = not args.no_tilt
     has_eccentricity = not args.no_eccentricity
+    has_redshift = not args.no_redshift
 
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
@@ -174,6 +181,16 @@ def main() -> None:
                 ("ecc_scale_pl", N_pl),
             ]
         )
+    if has_redshift:
+        parameters.append(REDSHIFT)
+        all_params.extend(
+            [
+                ("redshift_lamb_g", N_g),
+                ("redshift_lamb_pl", N_pl),
+                ("redshift_z_max_g", N_g),
+                ("redshift_z_max_pl", N_pl),
+            ]
+        )
 
     all_params.append(("log_rate", N_pl + N_g))
 
@@ -189,6 +206,7 @@ def main() -> None:
         use_spin=has_spin,
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
+        use_redshift=has_redshift,
         **model_prior_param,
     )
 
@@ -212,6 +230,7 @@ def main() -> None:
     constants["use_spin"] = int(has_spin)
     constants["use_tilt"] = int(has_tilt)
     constants["use_eccentricity"] = int(has_eccentricity)
+    constants["use_redshift"] = int(has_redshift)
 
     with open("constants.json", "w") as f:
         json.dump(constants, f)

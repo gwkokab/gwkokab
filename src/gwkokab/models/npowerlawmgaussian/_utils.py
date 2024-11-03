@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing_extensions import Dict, List, Literal, Optional
 
+from jax import numpy as jnp
 from jaxtyping import Array, Bool, Int
 from numpyro.distributions import (
     Beta,
@@ -27,9 +28,11 @@ from numpyro.distributions import (
     TwoSidedTruncatedDistribution,
 )
 
+from ...cosmology import PLANCK_2015_Cosmology
 from ...utils.math import beta_dist_mean_variance_to_concentrations
 from ...utils.tools import fetch_first_matching_value
 from .._models import PowerLawPrimaryMassRatio
+from ..redshift import PowerlawRedshift
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 
 
@@ -215,3 +218,50 @@ def create_powerlaws(
         )
         powerlaws_collection.append(transformed_powerlaw)
     return powerlaws_collection
+
+
+zgrid = jnp.linspace(0.001, 10, 1000)
+dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
+
+
+def create_powerlaw_redshift(
+    N: Int[int, ""],
+    parameter_name: Literal["redshift"],
+    component_type: Literal["pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    r"""Create a list of PowerlawRedshift distributions.
+
+    :param N: Number of components
+    :param parameter_name: name of the parameter to create distributions for
+    :param component_type: type of component, either "pl" or "g"
+    :param params: dictionary of parameters
+    :param validate_args: whether to validate arguments, defaults to None
+    :raises ValueError: if lamb or z_max parameters are missing
+    :return: list of PowerlawRedshift distributions
+    """
+    powerlaw_redshift_collection = []
+    lamb_name = f"{parameter_name}_lamb_{component_type}"
+    z_max_name = f"{parameter_name}_z_max_{component_type}"
+
+    for i in range(N):
+        lamb = fetch_first_matching_value(params, f"{lamb_name}_{i}", lamb_name)
+        if lamb is None:
+            raise ValueError(f"Missing parameter {lamb_name}_{i}")
+
+        z_max = fetch_first_matching_value(params, f"{z_max_name}_{i}", z_max_name)
+        if z_max is None:
+            raise ValueError(f"Missing parameter {z_max_name}_{i}")
+
+        powerlaw_redshift_collection.append(
+            PowerlawRedshift(
+                lamb=lamb,
+                z_max=z_max,
+                zgrid=zgrid,
+                dVcdz=dVcdz,
+                validate_args=validate_args,
+            )
+        )
+
+    return powerlaw_redshift_collection

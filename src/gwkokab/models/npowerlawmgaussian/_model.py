@@ -30,6 +30,7 @@ from ..utils import JointDistribution, ScaledMixture
 from ._utils import (
     combine_distributions,
     create_beta_distributions,
+    create_powerlaw_redshift,
     create_powerlaws,
     create_truncated_normal_distributions,
     create_truncated_normal_distributions_for_cos_tilt,
@@ -39,6 +40,7 @@ from ._utils import (
 build_spin_distributions = create_beta_distributions
 build_tilt_distributions = create_truncated_normal_distributions_for_cos_tilt
 build_eccentricity_distributions = create_truncated_normal_distributions
+build_redshift_distributions = create_powerlaw_redshift
 
 
 def _build_non_mass_distributions(
@@ -48,6 +50,7 @@ def _build_non_mass_distributions(
     use_spin: Bool[bool, "True", "False"],
     use_tilt: Bool[bool, "True", "False"],
     use_eccentricity: Bool[bool, "True", "False"],
+    use_redshift: Bool[bool, "True", "False"],
     params: Dict[str, Array],
     validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
 ) -> List[Distribution]:
@@ -59,6 +62,7 @@ def _build_non_mass_distributions(
     :param use_spin: whether to include spin
     :param use_tilt: whether to include tilt
     :param use_eccentricity: whether to include eccentricity
+    :param use_redshift: whether to include redshift
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of distributions
@@ -110,6 +114,15 @@ def _build_non_mass_distributions(
             validate_args=validate_args,
         )
         build_distributions = combine_distributions(build_distributions, ecc_dists)
+    if use_redshift:
+        redshift_dists = build_redshift_distributions(
+            N=N,
+            parameter_name="redshift",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(build_distributions, redshift_dists)
 
     return build_distributions
 
@@ -119,6 +132,7 @@ def _build_pl_component_distributions(
     use_spin: Bool[bool, "True", "False"],
     use_tilt: Bool[bool, "True", "False"],
     use_eccentricity: Bool[bool, "True", "False"],
+    use_redshift: Bool[bool, "True", "False"],
     params: Dict[str, Array],
     validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
 ) -> List[JointDistribution]:
@@ -128,6 +142,7 @@ def _build_pl_component_distributions(
     :param use_spin: whether to include spin
     :param use_tilt: whether to include tilt
     :param use_eccentricity: whether to include eccentricity
+    :param use_redshift: whether to include redshift
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of JointDistribution
@@ -147,6 +162,7 @@ def _build_pl_component_distributions(
         use_spin=use_spin,
         use_tilt=use_tilt,
         use_eccentricity=use_eccentricity,
+        use_redshift=use_redshift,
         params=params,
         validate_args=validate_args,
     )
@@ -159,6 +175,7 @@ def _build_g_component_distributions(
     use_spin: Bool[bool, "True", "False"],
     use_tilt: Bool[bool, "True", "False"],
     use_eccentricity: Bool[bool, "True", "False"],
+    use_redshift: Bool[bool, "True", "False"],
     params: Dict[str, Array],
     validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
 ) -> List[JointDistribution]:
@@ -168,6 +185,7 @@ def _build_g_component_distributions(
     :param use_spin: whether to include spin
     :param use_tilt: whether to include tilt
     :param use_eccentricity: whether to include eccentricity
+    :param use_redshift: whether to include redshift
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of JointDistribution
@@ -201,6 +219,7 @@ def _build_g_component_distributions(
         use_spin=use_spin,
         use_tilt=use_tilt,
         use_eccentricity=use_eccentricity,
+        use_redshift=use_redshift,
         params=params,
         validate_args=validate_args,
     )
@@ -214,7 +233,7 @@ def NPowerLawMGaussian(
     use_spin: Bool[bool, "True", "False"] = False,
     use_tilt: Bool[bool, "True", "False"] = False,
     use_eccentricity: Bool[bool, "True", "False"] = False,
-    # use_redshift: Bool[bool, "True", "False"] = False,
+    use_redshift: Bool[bool, "True", "False"] = False,
     *,
     validate_args=None,
     **params,
@@ -300,6 +319,7 @@ def NPowerLawMGaussian(
     :param use_spin: whether to include spin, defaults to False
     :param use_tilt: whether to include tilt, defaults to False
     :param use_eccentricity: whether to include eccentricity, defaults to False
+    :param use_redshift: whether to include redshift, defaults to False
     :param validate_args: whether to validate arguments, defaults to None
     :return: Mixture of power-law and Gaussian components
     """
@@ -309,6 +329,7 @@ def NPowerLawMGaussian(
             use_spin=use_spin,
             use_tilt=use_tilt,
             use_eccentricity=use_eccentricity,
+            use_redshift=use_redshift,
             params=params,
             validate_args=validate_args,
         )
@@ -319,6 +340,7 @@ def NPowerLawMGaussian(
             use_spin=use_spin,
             use_tilt=use_tilt,
             use_eccentricity=use_eccentricity,
+            use_redshift=use_redshift,
             params=params,
             validate_args=validate_args,
         )
