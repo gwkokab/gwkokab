@@ -42,15 +42,27 @@ def name_endswith_dat_or_no_extension(filename: str) -> str:
         )
 
 
-def get_progress_bar(name: str, verbose: bool = True) -> Progress:
-    progress_bar_text_witdh = 25
+def get_progress_bar(
+    name: str,
+    verbose: bool = True,
+    text_width: int = 25,
+    bar_width: int = 40,
+) -> Progress:
+    """Create a progress bar with customizable columns.
+
+    :param name: Name to display in the progress bar
+    :param verbose: Whether to show the progress bar
+    :param text_width: Width of the name column
+    :param bar_width: Width of the progress bar
+    :return: Configured Progress object
+    """
     return Progress(
         SpinnerColumn(),
         TextColumn(
-            ("[bold blue]{name}".format(name=name)).ljust(progress_bar_text_witdh),
+            ("[bold blue]{name}".format(name=name)).ljust(text_width),
             justify="left",
         ),
-        BarColumn(bar_width=40),
+        BarColumn(bar_width=bar_width),
         "[progress.percentage]{task.percentage:>3.2f}%",
         "•",
         TimeRemainingColumn(elapsed_when_finished=True),
