@@ -341,6 +341,7 @@ def main() -> None:
         use_spin=has_spin,
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
+        has_redshift=has_redshift,
         **model_param,
     )
     _constraint = partial(

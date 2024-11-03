@@ -22,7 +22,6 @@ from jaxtyping import Array, Bool, Int
 from numpyro.distributions import (
     constraints,
     Distribution,
-    Normal,
     TransformedDistribution,
 )
 
@@ -209,7 +208,7 @@ def _build_g_component_distributions(
         lambda m1, m2: [m1, m2],
         m1_dists,
         m2_dists,
-        is_leaf=lambda x: isinstance(x, Normal),
+        is_leaf=lambda x: isinstance(x, Distribution),
     )
 
     build_distributions = _build_non_mass_distributions(
