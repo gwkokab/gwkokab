@@ -37,7 +37,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-from gwkokab.population import error_magazine, popfactory, popmodel_magazine
+from gwkokab.population import error_magazine, PopulationFactory
 
 from ..utils import genie_parser
 from ..utils.common import check_vt_params, expand_arguments
@@ -125,6 +125,7 @@ def main() -> None:
         ("m2_scale_g", N_g),
         ("mmax_pl", N_pl),
         ("mmin_pl", N_pl),
+        ("log_rate", N_pl + N_g),
     ]
 
     parameters_name: Tuple[str, ...] = (m1_source_name, m2_source_name)
@@ -197,18 +198,6 @@ def main() -> None:
         extended_params.extend(expand_arguments(*params))
 
     model_param = match_all(extended_params, model_json)
-
-    popmodel_magazine.register(
-        parameters_name,
-        NPowerLawMGaussian(
-            N_pl=N_pl,
-            N_g=N_g,
-            use_spin=has_spin,
-            use_tilt=has_tilt,
-            use_eccentricity=has_eccentricity,
-            **model_param,
-        ),
-    )
 
     err_param = match_all(
         [
@@ -316,19 +305,34 @@ def main() -> None:
             return err_x
 
     check_vt_params(args.vt_params, parameters_name)
-    popfactory.analysis_time = args.analysis_time
-    popfactory.constraint = partial(
+
+    model = NPowerLawMGaussian(
+        N_pl=N_pl,
+        N_g=N_g,
+        use_spin=has_spin,
+        use_tilt=has_tilt,
+        use_eccentricity=has_eccentricity,
+        **model_param,
+    )
+    _constraint = partial(
         constraint,
         has_spin=has_spin,
         has_tilt=has_tilt,
         has_eccentricity=has_eccentricity,
     )
-    popfactory.error_size = args.error_size
-    popfactory.log_VT_fn = get_logVT(
+    logVT = get_logVT(
         args.vt_path, [parameters_name.index(vt_param) for vt_param in args.vt_params]
     )
-    popfactory.num_realizations = args.num_realizations
-    popfactory.rate = args.rate
-    popfactory.VT_params = args.vt_params
+
+    popfactory = PopulationFactory(
+        model=model,
+        parameters=parameters_name,
+        analysis_time=args.analysis_time,
+        constraint=_constraint,
+        error_size=args.error_size,
+        logVT_fn=logVT,
+        num_realizations=args.num_realizations,
+        vt_params=args.vt_params,
+    )
 
     popfactory.produce()

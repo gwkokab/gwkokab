@@ -10,5 +10,4 @@
     :toctree: _autosummary
 
     popfactory
-    popmodel_magazine
     error_magazine
