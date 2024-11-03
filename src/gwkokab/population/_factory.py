@@ -93,9 +93,12 @@ class PopulationFactory:
         if self.vt_params == []:
             raise ValueError("VT Parameters are not provided.")
 
-        self.vt_selection_mask = [
-            self.parameters.index(param) for param in self.vt_params
-        ]
+        self.vt_selection_mask = []
+        for param in self.vt_params:
+            if param in self.parameters:
+                self.vt_selection_mask.append(self.parameters.index(param))
+            else:
+                raise ValueError(f"VT parameter '{param}' is not found in parameters.")
 
     def exp_rate(self, *, key: PRNGKeyArray, model: ScaledMixture) -> Float[Array, ""]:
         r"""Calculates the expected rate."""
