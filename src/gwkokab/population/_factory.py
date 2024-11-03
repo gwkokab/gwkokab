@@ -184,6 +184,7 @@ class PopulationFactory:
                     color_indices_file_path,
                     indices,
                     comments="",  # To remove the default comment character '#'
+                    fmt="%d",
                 )
                 progress.advance(realization_task, 1)
 
