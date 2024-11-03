@@ -356,7 +356,7 @@ def main() -> None:
 
     popfactory = PopulationFactory(
         model=model,
-        parameters=parameters_name,
+        parameters=list(parameters_name),
         analysis_time=args.analysis_time,
         constraint=_constraint,
         error_size=args.error_size,
