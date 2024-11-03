@@ -148,7 +148,6 @@ def main() -> None:
         unique_colors = np.unique(color)
         for i, unique_color in enumerate(unique_colors):
             mask = color == unique_color
-            print(i, unique_color, args.legend[i])
             plt.scatter(
                 x[mask],
                 y[mask],

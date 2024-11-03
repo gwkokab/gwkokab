@@ -15,14 +15,9 @@
 
 from __future__ import annotations
 
-import os
-
-
-GWK_MULTI_COLOR_SUBPOP: int = int(os.getenv("GWK_MULTI_COLOR_SUBPOP", 0))
 from typing_extensions import Callable, List, Tuple
 
 import jax
-import numpy as np
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array, Float, Int, PRNGKeyArray
@@ -549,18 +544,3 @@ class ScaledMixture(MixtureGeneral):
         )
         mixture_log_prob = jax.nn.logsumexp(safe_sum_log_probs, axis=-1)
         return mixture_log_prob
-
-    def sample(self, key, sample_shape=()):
-        samples, [indices] = self.sample_with_intermediates(
-            key=key, sample_shape=sample_shape
-        )
-        if GWK_MULTI_COLOR_SUBPOP:
-            count = int(os.getenv("REALIZATION_COUNT", "0"))
-            os.environ["REALIZATION_COUNT"] = str(
-                int(os.getenv("REALIZATION_COUNT", "0")) + 1
-            )
-            print(f"data/realization_{count}", indices.shape)
-            os.makedirs(f"data/realization_{count}", exist_ok=True)
-            np.savetxt(f"data/realization_{count}/indices.dat", indices, fmt="%d")
-
-        return samples

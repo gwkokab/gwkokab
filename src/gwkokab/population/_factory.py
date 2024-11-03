@@ -18,7 +18,7 @@ from __future__ import annotations
 import os
 import warnings
 from collections.abc import Callable
-from typing_extensions import List, Optional
+from typing import List, Optional, Tuple
 
 import numpy as np
 from jax import numpy as jnp, random as jrd
@@ -110,16 +110,19 @@ class PopulationFactory:
             * jnp.mean(jnp.exp(self.logVT_fn(value).flatten()))
         )
 
-    def _generate_population(self, size: int, *, key: PRNGKeyArray) -> Array:
+    def _generate_population(
+        self, size: int, *, key: PRNGKeyArray
+    ) -> Tuple[Array, Array]:
         r"""Generate population for a realization."""
 
         if self.logVT_fn is not None:
             old_size = size
             size += int(1e5)
 
-        population = self.model.sample(key, (size,))
+        population, [indices] = self.model.sample_with_intermediates(key, (size,))
         constraints = self.constraint(population)
         population = population[constraints]
+        indices = indices[constraints]
 
         _, key = jrd.split(key)
 
@@ -132,16 +135,10 @@ class PopulationFactory:
             key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
         )
 
-        if os.getenv("GWK_MULTI_COLOR_SUBPOP") is not None:
-            count = int(os.getenv("REALIZATION_COUNT")) - 1
-            indices = np.loadtxt(f"data/realization_{count}/indices.dat", dtype=int)
-            indices = indices[constraints]
-            color_indexes = indices[index]
-            np.savetxt(f"data/realization_{count}/color.dat", color_indexes, fmt="%d")
-
         population = population[index]
+        indices = indices[index]
 
-        return population
+        return population, indices
 
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
@@ -164,7 +161,7 @@ class PopulationFactory:
                 "Generating realizations", total=self.num_realizations
             )
             for i in range(self.num_realizations):
-                population = self._generate_population(size, key=pop_keys[i])
+                population, indices = self._generate_population(size, key=pop_keys[i])
 
                 if population.shape == ():
                     continue
@@ -176,10 +173,16 @@ class PopulationFactory:
                 injections_file_path = os.path.join(
                     realizations_path, self.injection_filename
                 )
+                color_indices_file_path = os.path.join(realizations_path, "color.dat")
                 np.savetxt(
                     injections_file_path,
                     population,
                     header=" ".join(self.parameters),
+                    comments="",  # To remove the default comment character '#'
+                )
+                np.savetxt(
+                    color_indices_file_path,
+                    indices,
                     comments="",  # To remove the default comment character '#'
                 )
                 progress.advance(realization_task, 1)
