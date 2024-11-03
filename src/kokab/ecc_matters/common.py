@@ -15,10 +15,42 @@
 
 from __future__ import annotations
 
+from jax import numpy as jnp
 from jaxtyping import Array, Bool
+from numpyro.distributions import TruncatedNormal
+from numpyro.distributions.constraints import real_vector
+
+from gwkokab.models import Wysocki2019MassModel
+from gwkokab.models.utils import JointDistribution, ScaledMixture
 
 
-def constraint(x: Array) -> Bool:
+def EccentricityMattersModel(
+    log_rate: Array,
+    alpha_m: Array,
+    mmin: Array,
+    mmax: Array,
+    loc: Array,
+    scale: Array,
+    low: Array,
+    high: Array,
+) -> ScaledMixture:
+    return ScaledMixture(
+        log_scales=jnp.array([log_rate]),
+        component_distributions=[
+            JointDistribution(
+                Wysocki2019MassModel(
+                    alpha_m=alpha_m, mmin=mmin, mmax=mmax, validate_args=True
+                ),
+                TruncatedNormal(
+                    loc=loc, scale=scale, low=low, high=high, validate_args=True
+                ),
+            )
+        ],
+        support=real_vector,
+    )
+
+
+def constraint(x: Array) -> Bool[Array, "..."]:
     m1 = x[..., 0]
     m2 = x[..., 1]
     ecc = x[..., 2]

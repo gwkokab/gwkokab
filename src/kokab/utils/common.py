@@ -16,10 +16,15 @@
 from __future__ import annotations
 
 import json
-from typing_extensions import List
+from collections.abc import Callable
+from typing import List
 
 import pandas as pd
+from jax import vmap
+from jaxtyping import Array, Float
 from numpyro.distributions import Uniform
+
+from gwkokab.vts import load_model
 
 from .regex import match_all
 
@@ -124,3 +129,15 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
             "The parameters in the VT do not match the parameters in the model. "
             f"VT_PARAMS: {vt_params}, parameters: {parameters}"
         )
+
+
+def get_logVT(
+    vt_path: str, selection_indexes: List[int]
+) -> Callable[[Float[Array, "..."]], Float[Array, "..."]]:
+    _, logVT = load_model(vt_path)
+
+    def trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
+        m1m2 = x[..., selection_indexes]
+        return vmap(logVT)(m1m2)
+
+    return trimmed_logVT
