@@ -54,7 +54,6 @@ class PopulationFactory:
         analysis_time: float,
         logVT_fn: Callable[[Array], Array],
         vt_params: List[str],
-        scale_factor: float = 1.0,
         num_realizations: Int[int, "..."] = 5,
         error_size: Int[int, ">0"] = 2_000,
         constraint: Callable[[Array], Bool[Array, "..."]] = lambda x: jnp.ones(
@@ -67,7 +66,6 @@ class PopulationFactory:
         self.analysis_time = analysis_time
         self.logVT_fn = logVT_fn
         self.vt_params = vt_params
-        self.scale_factor = scale_factor
         self.num_realizations = num_realizations
         self.error_size = error_size
         self.constraint = constraint
@@ -105,7 +103,6 @@ class PopulationFactory:
         sum_of_rates = jnp.sum(jnp.exp(self.model._log_scales))
         return (
             self.analysis_time
-            * self.scale_factor
             * sum_of_rates
             * jnp.mean(jnp.exp(self.logVT_fn(value).flatten()))
         )
