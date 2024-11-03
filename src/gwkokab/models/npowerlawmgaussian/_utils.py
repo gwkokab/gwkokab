@@ -229,17 +229,17 @@ def create_powerlaw_redshift(
     parameter_name: Literal["redshift"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    r"""Create a list of TruncatedNormal distributions.
+    r"""Create a list of PowerlawRedshift distributions.
 
     :param N: Number of components
     :param parameter_name: name of the parameter to create distributions for
     :param component_type: type of component, either "pl" or "g"
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if loc, scale, low, or high is missing
-    :return: list of TruncatedNormal distributions
+    :raises ValueError: if lamb or z_max parameters are missing
+    :return: list of PowerlawRedshift distributions
     """
     powerlaw_redshift_collection = []
     lamb_name = f"{parameter_name}_lamb_{component_type}"

@@ -62,6 +62,7 @@ def _build_non_mass_distributions(
     :param use_spin: whether to include spin
     :param use_tilt: whether to include tilt
     :param use_eccentricity: whether to include eccentricity
+    :param use_redshift: whether to include redshift
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of distributions
@@ -141,6 +142,7 @@ def _build_pl_component_distributions(
     :param use_spin: whether to include spin
     :param use_tilt: whether to include tilt
     :param use_eccentricity: whether to include eccentricity
+    :param use_redshift: whether to include redshift
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of JointDistribution
@@ -183,6 +185,7 @@ def _build_g_component_distributions(
     :param use_spin: whether to include spin
     :param use_tilt: whether to include tilt
     :param use_eccentricity: whether to include eccentricity
+    :param use_redshift: whether to include redshift
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of JointDistribution
@@ -316,6 +319,7 @@ def NPowerLawMGaussian(
     :param use_spin: whether to include spin, defaults to False
     :param use_tilt: whether to include tilt, defaults to False
     :param use_eccentricity: whether to include eccentricity, defaults to False
+    :param use_redshift: whether to include redshift, defaults to False
     :param validate_args: whether to validate arguments, defaults to None
     :return: Mixture of power-law and Gaussian components
     """
