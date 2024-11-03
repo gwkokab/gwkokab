@@ -15,23 +15,21 @@
 
 from __future__ import annotations
 
+import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from typing import List
 
-from jax import numpy as jnp, vmap
+from jax import numpy as jnp
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
-from gwkokab.models import Wysocki2019MassModel
-from gwkokab.parameters import (
-    ECCENTRICITY,
-    PRIMARY_MASS_SOURCE,
-    SECONDARY_MASS_SOURCE,
-)
-from gwkokab.population import error_magazine, popfactory, popmodel_magazine
-from gwkokab.vts import load_model
+from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.population import error_magazine, PopulationFactory
 
 from ..utils import genie_parser
-from .common import constraint
+from ..utils.common import check_vt_params, get_logVT
+from ..utils.regex import match_all
+from .common import constraint, EccentricityMattersModel
 
 
 m1_source = PRIMARY_MASS_SOURCE.name
@@ -54,85 +52,17 @@ def make_parser() -> ArgumentParser:
     model_group = parser.add_argument_group("Model Options")
 
     model_group.add_argument(
-        "--alpha_m",
-        help="Power-law index of the mass distribution.",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--mmin",
-        help="Minimum mass of the mass distribution.",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--mmax",
-        help="Maximum mass of the mass distribution.",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--scale",
-        help="Scale of the eccentricity distribution.",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--loc",
-        help="Location of the eccentricity distribution.",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--low",
-        help="Lower bound of the eccentricity distribution.",
-        type=float,
-        required=True,
-    )
-    model_group.add_argument(
-        "--high",
-        help="Upper bound of the eccentricity distribution.",
-        type=float,
+        "--model-json",
+        help="Path to the JSON file containing the model parameters",
+        type=str,
         required=True,
     )
 
     err_group = parser.add_argument_group("Error Options")
-
     err_group.add_argument(
-        "--err_scale_Mc",
-        help="Scale of the error in chirp mass.",
-        default=1.0,
-        type=float,
-    )
-    err_group.add_argument(
-        "--err_scale_eta",
-        help="Scale of the error in symmetric mass ratio.",
-        default=1.0,
-        type=float,
-    )
-    err_group.add_argument(
-        "--err_loc",
-        help="Location of the error in eccentricity.",
-        default=0.0,
-        type=float,
-    )
-    err_group.add_argument(
-        "--err_scale",
-        help="Scale of the error in eccentricity.",
-        type=float,
-        required=True,
-    )
-    err_group.add_argument(
-        "--err_low",
-        help="Lower bound of the error in eccentricity.",
-        default=0.0,
-        type=float,
-        required=True,
-    )
-    err_group.add_argument(
-        "--err_high",
-        help="Upper bound of the error in eccentricity.",
-        type=float,
+        "--err-json",
+        help="Path to the JSON file containing the error parameters",
+        type=str,
         required=True,
     )
 
@@ -141,25 +71,32 @@ def make_parser() -> ArgumentParser:
 
 def main() -> None:
     """Main function of the script."""
-    raise DeprecationWarning("This script is deprecated. Use `n_pls_m_gs` instead.")
     parser = make_parser()
     args = parser.parse_args()
 
-    popmodel_magazine.register(
-        (m1_source, m2_source),
-        Wysocki2019MassModel(alpha_m=args.alpha_m, mmin=args.mmin, mmax=args.mmax),
+    with open(args.model_json, "r") as f:
+        model_json = json.load(f)
+
+    with open(args.err_json, "r") as f:
+        err_json = json.load(f)
+
+    model_params_name: List[str] = [
+        "alpha_m",
+        "high",
+        "loc",
+        "log_rate",
+        "low",
+        "mmax",
+        "mmin",
+        "scale",
+    ]
+
+    model_param = match_all(model_params_name, model_json)
+    err_param = match_all(
+        ["scale_Mc", "scale_eta", "loc", "scale", "low", "high"], err_json
     )
 
-    popmodel_magazine.register(
-        ecc,
-        dist.TruncatedNormal(
-            scale=args.scale,
-            loc=args.loc,
-            low=args.low,
-            high=args.high,
-            validate_args=True,
-        ),
-    )
+    model = EccentricityMattersModel(**model_param)
 
     error_magazine.register(
         (m1_source, m2_source),
@@ -167,33 +104,41 @@ def main() -> None:
             x,
             size,
             key,
-            scale_Mc=args.err_scale_Mc,
-            scale_eta=args.err_scale_eta,
+            scale_Mc=err_param["scale_Mc"],
+            scale_eta=err_param["scale_eta"],
         ),
     )
 
     @error_magazine.register(ecc)
     def ecc_error_fn(x, size, key):
         err_x = x + dist.TruncatedNormal(
-            loc=args.err_loc,
-            scale=args.err_scale,
-            low=args.err_low,
-            high=args.err_high,
+            loc=err_param["loc"],
+            scale=err_param["scale"],
+            low=err_param["low"],
+            high=err_param["high"],
         ).sample(key=key, sample_shape=(size,))
         mask = err_x < 0.0
         mask |= err_x > 1.0
         err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
         return err_x
 
-    _, logVT = load_model(args.vt_path)
-    logVT = vmap(logVT)
+    model_parameters = [m1_source, m2_source, ecc]
 
-    popfactory.analysis_time = args.analysis_time
-    popfactory.constraint = constraint
-    popfactory.error_size = args.error_size
-    popfactory.log_VT_fn = logVT
-    popfactory.num_realizations = args.num_realizations
-    popfactory.rate = args.rate
-    popfactory.VT_params = [m1_source, m2_source]
+    check_vt_params(args.vt_params, model_parameters)
+
+    vt_selection_mask = [model_parameters.index(param) for param in args.vt_params]
+
+    logVT = get_logVT(args.vt_path, vt_selection_mask)
+
+    popfactory = PopulationFactory(
+        model=model,
+        parameters=[m1_source, m2_source, ecc],
+        analysis_time=args.analysis_time,
+        logVT_fn=logVT,
+        num_realizations=args.num_realizations,
+        error_size=args.error_size,
+        vt_params=args.vt_params,
+        constraint=constraint,
+    )
 
     popfactory.produce()
