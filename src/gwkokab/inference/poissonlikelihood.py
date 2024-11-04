@@ -241,14 +241,7 @@ class PoissonLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         model: ScaledMixture = self.model(
-            **{
-                name: (
-                    x[..., i]
-                    if not name.startswith("log_rate")
-                    else x[..., i] / jnp.log10(jnp.e)
-                )
-                for name, i in self.variables_index.items()
-            }
+            **{name: x[..., i] for name, i in self.variables_index.items()}
         )
 
         log_likelihood = jtr.reduce(
