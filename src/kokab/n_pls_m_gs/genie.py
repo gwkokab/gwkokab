@@ -124,6 +124,32 @@ def main() -> None:
     has_eccentricity = not args.no_eccentricity
     has_redshift = not args.no_redshift
 
+    err_param = match_all(
+        [
+            "chi1_high",
+            "chi1_low",
+            "chi1_scale",
+            "chi2_high",
+            "chi2_low",
+            "chi2_scale",
+            "cos_tilt_1_high",
+            "cos_tilt_1_low",
+            "cos_tilt_1_scale",
+            "cos_tilt_2_high",
+            "cos_tilt_2_low",
+            "cos_tilt_2_scale",
+            "ecc_err_high",
+            "ecc_err_low",
+            "ecc_err_scale",
+            "redshift_high",
+            "redshift_low",
+            "redshift_scale",
+            "scale_eta",
+            "scale_Mc",
+        ],
+        err_json,
+    )
+
     all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
         ("alpha_pl", N_pl),
         ("beta_pl", N_pl),
@@ -141,6 +167,18 @@ def main() -> None:
     ]
 
     parameters_name: Tuple[str, ...] = (m1_source_name, m2_source_name)
+
+    error_magazine.register(
+        (m1_source_name, m2_source_name),
+        lambda x, size, key: banana_error_m1_m2(
+            x,
+            size,
+            key,
+            scale_Mc=err_param["scale_Mc"],
+            scale_eta=err_param["scale_eta"],
+        ),
+    )
+
     if has_spin:
         parameters_name += (chi1_name, chi2_name)
         if args.spin_truncated_normal:
@@ -180,75 +218,6 @@ def main() -> None:
                     ("chi2_variance_pl", N_pl),
                 ]
             )
-    if has_tilt:
-        parameters_name += (cos_tilt_1_name, cos_tilt_2_name)
-        all_params.extend(
-            [
-                ("cos_tilt1_scale_g", N_g),
-                ("cos_tilt1_scale_pl", N_pl),
-                ("cos_tilt2_scale_g", N_g),
-                ("cos_tilt2_scale_pl", N_pl),
-            ]
-        )
-    if has_eccentricity:
-        parameters_name += (ecc_name,)
-        all_params.extend(
-            [
-                ("ecc_high_g", N_g),
-                ("ecc_high_pl", N_pl),
-                ("ecc_loc_g", N_g),
-                ("ecc_loc_pl", N_pl),
-                ("ecc_low_g", N_g),
-                ("ecc_low_pl", N_pl),
-                ("ecc_scale_g", N_g),
-                ("ecc_scale_pl", N_pl),
-            ]
-        )
-
-    extended_params = []
-    for params in all_params:
-        extended_params.extend(expand_arguments(*params))
-
-    model_param = match_all(extended_params, model_json)
-
-    err_param = match_all(
-        [
-            "chi1_high",
-            "chi1_low",
-            "chi1_scale",
-            "chi2_high",
-            "chi2_low",
-            "chi2_scale",
-            "cos_tilt_1_high",
-            "cos_tilt_1_low",
-            "cos_tilt_1_scale",
-            "cos_tilt_2_high",
-            "cos_tilt_2_low",
-            "cos_tilt_2_scale",
-            "ecc_err_high",
-            "ecc_err_low",
-            "ecc_err_scale",
-            "redshift_high",
-            "redshift_low",
-            "redshift_scale",
-            "scale_eta",
-            "scale_Mc",
-        ],
-        err_json,
-    )
-
-    error_magazine.register(
-        (m1_source_name, m2_source_name),
-        lambda x, size, key: banana_error_m1_m2(
-            x,
-            size,
-            key,
-            scale_Mc=err_param["scale_Mc"],
-            scale_eta=err_param["scale_eta"],
-        ),
-    )
-
-    if has_spin:
 
         @error_magazine.register(chi1_name)
         def chi1_error_fn(x, size, key):
@@ -277,6 +246,15 @@ def main() -> None:
             return err_x
 
     if has_tilt:
+        parameters_name += (cos_tilt_1_name, cos_tilt_2_name)
+        all_params.extend(
+            [
+                ("cos_tilt1_scale_g", N_g),
+                ("cos_tilt1_scale_pl", N_pl),
+                ("cos_tilt2_scale_g", N_g),
+                ("cos_tilt2_scale_pl", N_pl),
+            ]
+        )
 
         @error_magazine.register(cos_tilt_1_name)
         def cos_tilt_1_error_fn(x, size, key):
@@ -305,6 +283,19 @@ def main() -> None:
             return err_x
 
     if has_eccentricity:
+        parameters_name += (ecc_name,)
+        all_params.extend(
+            [
+                ("ecc_high_g", N_g),
+                ("ecc_high_pl", N_pl),
+                ("ecc_loc_g", N_g),
+                ("ecc_loc_pl", N_pl),
+                ("ecc_low_g", N_g),
+                ("ecc_low_pl", N_pl),
+                ("ecc_scale_g", N_g),
+                ("ecc_scale_pl", N_pl),
+            ]
+        )
 
         @error_magazine.register(ecc_name)
         def ecc_error_fn(x, size, key):
@@ -320,6 +311,16 @@ def main() -> None:
             return err_x
 
     if has_redshift:
+        parameters_name += (redshift_name,)
+
+        all_params.extend(
+            [
+                ("redshift_lamb_g", N_g),
+                ("redshift_lamb_pl", N_pl),
+                ("redshift_z_max_g", N_g),
+                ("redshift_z_max_pl", N_pl),
+            ]
+        )
 
         @error_magazine.register(redshift_name)
         def redshift_error_fn(x, size, key):
@@ -333,6 +334,12 @@ def main() -> None:
             err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
+    extended_params = []
+    for params in all_params:
+        extended_params.extend(expand_arguments(*params))
+
+    model_param = match_all(extended_params, model_json)
+
     check_vt_params(args.vt_params, parameters_name)
 
     model = NPowerLawMGaussian(
@@ -341,7 +348,7 @@ def main() -> None:
         use_spin=has_spin,
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
-        has_redshift=has_redshift,
+        use_redshift=has_redshift,
         **model_param,
     )
     _constraint = partial(
