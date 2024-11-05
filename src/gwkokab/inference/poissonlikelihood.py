@@ -172,7 +172,7 @@ class PoissonLikelihood:
         self.priors = JointDistribution(*self.variables.values())
 
     def exp_rate_integral_uniform_samples(
-        self, N: int, key: PRNGKeyArray, model: Distribution
+        self, N: int, key: PRNGKeyArray, model: ScaledMixture
     ) -> Array:
         r"""This method approximates the Monte-Carlo integral by sampling from the
         uniform distribution.
@@ -195,7 +195,7 @@ class PoissonLikelihood:
         return volume * jnp.mean(jnp.exp(logpdf))
 
     def exp_rate_integral_model_samples(
-        self, N: int, key: PRNGKeyArray, model: Distribution
+        self, N: int, key: PRNGKeyArray, model: ScaledMixture
     ) -> Array:
         r"""This method approximates the Monte-Carlo integral by sampling from the
         model.
@@ -206,7 +206,8 @@ class PoissonLikelihood:
         :return: Integral.
         """
         samples = model.sample(key, (N,))[..., self.vt_params_index]
-        return jnp.mean(jnp.exp(self.logVT(samples)))
+        sum_of_rates = jnp.sum(jnp.exp(model._log_scales))
+        return sum_of_rates * jnp.mean(jnp.exp(self.logVT(samples)))
 
     def exp_rate_integral(self, model: Distribution) -> Array:
         r"""This function calculates the integral inside the term
@@ -249,20 +250,12 @@ class PoissonLikelihood:
             + logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
             - jnp.log(y.shape[0]),
             data["data"],
-            0.0,
+            jnp.zeros(()),
         )
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        expected_rates = jnp.dot(
-            jnp.exp(model._log_scales),
-            jnp.asarray(
-                [
-                    self.exp_rate_integral(model_i)
-                    for model_i in model._component_distributions
-                ]
-            ),
-        )
+        expected_rates = self.exp_rate_integral(model)
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 
