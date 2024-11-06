@@ -101,7 +101,7 @@ class PopulationFactory:
         r"""Calculates the expected rate."""
         N = int(5e4)
         values = self.model.component_sample(key, (N,))[..., self.vt_selection_mask]
-        VT_fn = lambda xx: jnp.exp(jnp.mean(self.logVT_fn(xx)))
+        VT_fn = lambda xx: jnp.mean(jnp.exp(self.logVT_fn(xx)))
         VT = jax.vmap(VT_fn, in_axes=1)(values)
         rates = jnp.exp(self.model._log_scales)
         return self.analysis_time * jnp.dot(VT, rates)

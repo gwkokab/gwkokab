@@ -207,7 +207,7 @@ class PoissonLikelihood:
         :return: Integral.
         """
         values = model.component_sample(key, (N,))[..., self.vt_params_index]
-        VT_fn = lambda xx: jnp.exp(jnp.mean(self.logVT(xx)))
+        VT_fn = lambda xx: jnp.mean(jnp.exp(self.logVT(xx)))
         VT = jax.vmap(VT_fn, in_axes=1)(values)
         rates = jnp.exp(model._log_scales)
         return self.time * jnp.dot(VT, rates)
