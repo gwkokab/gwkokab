@@ -210,7 +210,7 @@ class PoissonLikelihood:
         VT_fn = lambda xx: jnp.mean(jnp.exp(self.logVT(xx)))
         VT = jax.vmap(VT_fn, in_axes=1)(values)
         rates = jnp.exp(model._log_scales)
-        return self.time * jnp.dot(VT, rates)
+        return jnp.dot(VT, rates)
 
     def exp_rate_integral(self, model: Distribution) -> Array:
         r"""This function calculates the integral inside the term
