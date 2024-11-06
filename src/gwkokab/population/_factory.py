@@ -20,6 +20,7 @@ import warnings
 from collections.abc import Callable
 from typing import List, Optional, Tuple
 
+import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd
 from jax.nn import softmax
@@ -99,13 +100,11 @@ class PopulationFactory:
     def exp_rate(self, *, key: PRNGKeyArray) -> Float[Array, ""]:
         r"""Calculates the expected rate."""
         N = int(5e4)
-        value = self.model.sample(key, (N,))[..., self.vt_selection_mask]
-        sum_of_rates = jnp.sum(jnp.exp(self.model._log_scales))
-        return (
-            self.analysis_time
-            * sum_of_rates
-            * jnp.mean(jnp.exp(self.logVT_fn(value).flatten()))
-        )
+        values = self.model.component_sample(key, (N,))[..., self.vt_selection_mask]
+        VT_fn = lambda xx: jnp.exp(jnp.mean(self.logVT_fn(xx)))
+        VT = jax.vmap(VT_fn, in_axes=1)(values)
+        rates = jnp.exp(self.model._log_scales)
+        return self.analysis_time * jnp.dot(VT, rates)
 
     def _generate_population(
         self, size: int, *, key: PRNGKeyArray

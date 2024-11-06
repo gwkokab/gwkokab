@@ -15,6 +15,7 @@
 
 from typing_extensions import Callable, List, Optional, Sequence, Union
 
+import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
 from jax.nn import logsumexp
@@ -205,9 +206,11 @@ class PoissonLikelihood:
         :param model: :math:`\rho(\lambda\mid\Lambda)`.
         :return: Integral.
         """
-        samples = model.sample(key, (N,))[..., self.vt_params_index]
-        sum_of_rates = jnp.sum(jnp.exp(model._log_scales))
-        return sum_of_rates * jnp.mean(jnp.exp(self.logVT(samples)))
+        values = model.component_sample(key, (N,))[..., self.vt_params_index]
+        VT_fn = lambda xx: jnp.exp(jnp.mean(self.logVT(xx)))
+        VT = jax.vmap(VT_fn, in_axes=1)(values)
+        rates = jnp.exp(model._log_scales)
+        return self.time * jnp.dot(VT, rates)
 
     def exp_rate_integral(self, model: Distribution) -> Array:
         r"""This function calculates the integral inside the term
