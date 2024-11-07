@@ -22,7 +22,6 @@ from numpyro.distributions.transforms import biject_to
 from numpyro.distributions.util import multinomial, signed_stick_breaking_tril
 from scipy.sparse import csr_matrix
 
-from gwkokab.cosmology import PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
 from gwkokab.models import (
     NPowerLawMGaussian,
     PowerLawPrimaryMassRatio,
@@ -706,50 +705,10 @@ CONTINUOUS = [
             "ecc_scale_g_1": 0.6,
         },
     ),
-    (
-        PowerlawRedshift,
-        {
-            "lamb": 0.0,
-            "z_max": 1.0,
-            "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2015_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
-            * 4.0
-            * jnp.pi,
-        },
-    ),
-    (
-        PowerlawRedshift,
-        {
-            "lamb": 0.0,
-            "z_max": 2.3,
-            "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2015_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
-            * 4.0
-            * jnp.pi,
-        },
-    ),
-    (
-        PowerlawRedshift,
-        {
-            "lamb": 0.0,
-            "z_max": 1.0,
-            "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2018_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
-            * 4.0
-            * jnp.pi,
-        },
-    ),
-    (
-        PowerlawRedshift,
-        {
-            "lamb": 0.0,
-            "z_max": 2.3,
-            "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2018_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
-            * 4.0
-            * jnp.pi,
-        },
-    ),
+    (PowerlawRedshift, {"lamb": 0.0, "z_max": 1.0}),
+    (PowerlawRedshift, {"lamb": 1.0, "z_max": 2.3}),
+    (PowerlawRedshift, {"lamb": -3.14, "z_max": 3.0}),
+    (PowerlawRedshift, {"lamb": -2.0, "z_max": 2.3}),
 ]
 
 

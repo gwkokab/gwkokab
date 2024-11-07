@@ -33,6 +33,8 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
+from ...cosmology import PLANCK_2015_Cosmology
+
 
 def cumtrapz(y: Array, x: Array) -> Array:
     @vmap
@@ -68,17 +70,15 @@ class PowerlawRedshift(Distribution):
     arg_constraints = {"z_max": constraints.positive, "lamb": constraints.real}
     reparametrized_params = ["z_max", "lamb"]
 
-    def __init__(
-        self, lamb, z_max, zgrid, dVcdz, low=0.0, high=1000.0, validate_args=None
-    ):
+    def __init__(self, lamb, z_max, low=0.0, high=1000.0, validate_args=None):
         self.z_max, self.lamb = promote_shapes(z_max, lamb)
         self._support = constraints.interval(low, high)
         batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(lamb))
         super(PowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
-        self.zs = zgrid
-        self.dVdc_ = dVcdz
+        self.zs = jnp.linspace(0.001, z_max, 100)
+        self.dVdc_ = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(self.zs)
         self.pdfs = self.dVdc_ * (1 + self.zs) ** (lamb - 1)
         self.norm = trapezoid(self.pdfs, self.zs)
         self.pdfs /= self.norm

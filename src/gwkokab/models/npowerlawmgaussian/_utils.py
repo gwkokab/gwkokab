@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from typing_extensions import Dict, List, Literal, Optional
 
-from jax import numpy as jnp
 from jaxtyping import Array, Bool, Int
 from numpyro.distributions import (
     Beta,
@@ -28,7 +27,6 @@ from numpyro.distributions import (
     TwoSidedTruncatedDistribution,
 )
 
-from ...cosmology import PLANCK_2015_Cosmology
 from ...utils.math import beta_dist_mean_variance_to_concentrations
 from ...utils.tools import fetch_first_matching_value
 from .._models import PowerLawPrimaryMassRatio
@@ -220,10 +218,6 @@ def create_powerlaws(
     return powerlaws_collection
 
 
-zgrid = jnp.linspace(0.001, 10, 1000)
-dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
-
-
 def create_powerlaw_redshift(
     N: Int[int, ""],
     parameter_name: Literal["redshift"],
@@ -255,13 +249,7 @@ def create_powerlaw_redshift(
             raise ValueError(f"Missing parameter {z_max_name}_{i}")
 
         powerlaw_redshift_collection.append(
-            PowerlawRedshift(
-                lamb=lamb,
-                z_max=z_max,
-                zgrid=zgrid,
-                dVcdz=dVcdz,
-                validate_args=validate_args,
-            )
+            PowerlawRedshift(lamb=lamb, z_max=z_max, validate_args=validate_args)
         )
 
     return powerlaw_redshift_collection
