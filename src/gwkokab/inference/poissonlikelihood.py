@@ -15,6 +15,7 @@
 
 from typing_extensions import Callable, List, Optional, Sequence, Union
 
+import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd, tree as jtr
 from jax.nn import logsumexp
@@ -172,7 +173,7 @@ class PoissonLikelihood:
         self.priors = JointDistribution(*self.variables.values())
 
     def exp_rate_integral_uniform_samples(
-        self, N: int, key: PRNGKeyArray, model: Distribution
+        self, N: int, key: PRNGKeyArray, model: ScaledMixture
     ) -> Array:
         r"""This method approximates the Monte-Carlo integral by sampling from the
         uniform distribution.
@@ -195,7 +196,7 @@ class PoissonLikelihood:
         return volume * jnp.mean(jnp.exp(logpdf))
 
     def exp_rate_integral_model_samples(
-        self, N: int, key: PRNGKeyArray, model: Distribution
+        self, N: int, key: PRNGKeyArray, model: ScaledMixture
     ) -> Array:
         r"""This method approximates the Monte-Carlo integral by sampling from the
         model.
@@ -205,8 +206,11 @@ class PoissonLikelihood:
         :param model: :math:`\rho(\lambda\mid\Lambda)`.
         :return: Integral.
         """
-        samples = model.sample(key, (N,))[..., self.vt_params_index]
-        return jnp.mean(jnp.exp(self.logVT(samples)))
+        values = model.component_sample(key, (N,))[..., self.vt_params_index]
+        VT_fn = lambda xx: jnp.mean(jnp.exp(self.logVT(xx)))
+        VT = jax.vmap(VT_fn, in_axes=1)(values)
+        rates = jnp.exp(model._log_scales)
+        return jnp.dot(VT, rates)
 
     def exp_rate_integral(self, model: Distribution) -> Array:
         r"""This function calculates the integral inside the term
@@ -249,20 +253,12 @@ class PoissonLikelihood:
             + logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
             - jnp.log(y.shape[0]),
             data["data"],
-            0.0,
+            jnp.zeros(()),
         )
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        expected_rates = jnp.dot(
-            jnp.exp(model._log_scales),
-            jnp.asarray(
-                [
-                    self.exp_rate_integral(model_i)
-                    for model_i in model._component_distributions
-                ]
-            ),
-        )
+        expected_rates = self.exp_rate_integral(model)
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 
