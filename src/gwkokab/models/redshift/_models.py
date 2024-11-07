@@ -77,7 +77,7 @@ class PowerlawRedshift(Distribution):
         super(PowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
-        self.zs = jnp.linspace(0.001, z_max, 100)
+        self.zs = jnp.linspace(0.001, z_max, 1000)
         self.dVdc_ = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(self.zs)
         self.pdfs = self.dVdc_ * (1 + self.zs) ** (lamb - 1)
         self.norm = trapezoid(self.pdfs, self.zs)

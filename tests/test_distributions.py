@@ -707,7 +707,7 @@ CONTINUOUS = [
     ),
     (PowerlawRedshift, {"lamb": 0.0, "z_max": 1.0}),
     (PowerlawRedshift, {"lamb": 1.0, "z_max": 2.3}),
-    (PowerlawRedshift, {"lamb": -3.14, "z_max": 3.0}),
+    (PowerlawRedshift, {"lamb": 4.1, "z_max": 3.0}),
     (PowerlawRedshift, {"lamb": -2.0, "z_max": 2.3}),
 ]
 
