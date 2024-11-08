@@ -516,9 +516,8 @@ class ScaledMixture(MixtureGeneral):
         validate_args=None,
     ):
         self._log_scales = log_scales
-        normed_scales = jax.nn.softmax(log_scales)
         mixing_distribution = CategoricalProbs(
-            probs=normed_scales, validate_args=validate_args
+            probs=jax.nn.softmax(log_scales), validate_args=validate_args
         )
         super(ScaledMixture, self).__init__(
             mixing_distribution=mixing_distribution,
@@ -529,18 +528,19 @@ class ScaledMixture(MixtureGeneral):
 
     @validate_sample
     def log_prob(self, value: Float[Array, "..."]) -> Float[Array, "..."]:
-        # Numpyro's MixtureGeneral does not support weights that do not sum to 1.
-        # To bypass this constraint we have used this mathematical jugaad to remove
-        # the weights that are normalized and add back the log of rates.
-        sum_log_probs = (
-            self._log_scales  # Adding back the log of rates to scale each component to their rate
-            + self.component_log_probs(value)  # log of the component probabilities
-            - jax.nn.log_softmax(
-                self._mixing_distribution.logits
-            )  # removing the normalized weights
+        # modified implementation of numpyro.distributions.MixtureGeneral.log_prob
+        _component_log_probs = []
+        for d in self.component_distributions:
+            log_prob = d.log_prob(value)
+            if (self._support is not None) and (not d._validate_args):
+                mask = d.support(value)
+                log_prob = jnp.where(mask, log_prob, -jnp.inf)
+            _component_log_probs.append(log_prob)
+        component_log_probs = self._log_scales + jnp.stack(
+            _component_log_probs, axis=-1
         )
         safe_sum_log_probs = jnp.where(
-            jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
+            jnp.isneginf(component_log_probs), -jnp.inf, component_log_probs
         )
         mixture_log_prob = jax.nn.logsumexp(safe_sum_log_probs, axis=-1)
         return mixture_log_prob

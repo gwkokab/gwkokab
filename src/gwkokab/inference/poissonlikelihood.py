@@ -156,7 +156,7 @@ class PoissonLikelihood:
         assert all(
             param in args_name for param in self._vt_params
         ), f"Missing parameters: {self._vt_params} in {args_name}"
-        self.vt_params_index: List[Int] = list(
+        self.vt_params_index: List[int] = list(
             map(lambda x: args_name.index(x), self._vt_params)
         )
         self.vt_params_unif_rvs = JointDistribution(
@@ -264,7 +264,7 @@ class PoissonLikelihood:
 
         return log_likelihood - expected_rates
 
-    def log_posterior(self, x: Array, data: Optional[dict] = None) -> Array:
+    def log_posterior(self, x: Array, data: dict) -> Array:
         r"""The likelihood function for the inhomogeneous Poisson process.
 
         .. math::
