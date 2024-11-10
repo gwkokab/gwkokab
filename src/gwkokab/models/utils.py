@@ -36,7 +36,7 @@ __all__ = [
     "doubly_truncated_power_law_log_prob",
     "JointDistribution",
     "numerical_inverse_transform_sampling",
-    "planck_taper_window",
+    "log_planck_taper_window",
     "ScaledMixture",
 ]
 
@@ -547,7 +547,7 @@ class ScaledMixture(MixtureGeneral):
         return mixture_log_prob
 
 
-def planck_taper_window(x: Array, a: Array, b: Array) -> Array:
+def log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
     r"""If :math:`x` is the point at which to evaluate the window, :math:`a` is the
     lower bound of the window, and :math:`b` is the window width, the Planck taper
     window is defined as,
@@ -566,6 +566,8 @@ def planck_taper_window(x: Array, a: Array, b: Array) -> Array:
 
         \operatorname{expit}(x)=\frac{1}{1+e^{-x}}
 
+    This function evaluates the log of the Planck taper window :math:`\ln{S(x\mid a,b)}`.
+
     :param value: point at which to evaluate the window
     :param low: lower bound of the window
     :param high: upper bound of the window
@@ -578,8 +580,8 @@ def planck_taper_window(x: Array, a: Array, b: Array) -> Array:
             x > a + b,
         ],
         [
+            -jnp.inf,
+            -jnn.softplus(b / (x - b) + b / x),
             0.0,
-            jnn.sigmoid(b / (b - x) - b / x),
-            1.0,
         ],
     )

@@ -20,7 +20,7 @@ import chex
 from absl.testing import parameterized
 from jax import grad, numpy as jnp
 
-from gwkokab.models.utils import planck_taper_window
+from gwkokab.models.utils import log_planck_taper_window
 
 
 x = [10.907955, 16.377821, 18.65535, 19.9329, 3.5127172, 9.406811]
@@ -42,7 +42,7 @@ class TestPlanckTaperWindow(parameterized.TestCase):
     def test_planck_taper_window(self, x, a, b):
         @self.variant  # pyright: ignore
         def planck_taper_window_fn(x, a, b):
-            return planck_taper_window(x, a, b)
+            return jnp.exp(log_planck_taper_window(x, a, b))
 
         if x < a:
             assert planck_taper_window_fn(x, a, b) == 0
@@ -64,7 +64,7 @@ class TestPlanckTaperWindow(parameterized.TestCase):
     def test_planck_taper_window_grad(self, x, a, b):
         @self.variant  # pyright: ignore
         def planck_taper_window_fn(x, a, b):
-            return planck_taper_window(x, a, b)
+            return jnp.exp(log_planck_taper_window(x, a, b))
 
         grad_fn = grad(planck_taper_window_fn)
         grad_val = grad_fn(x, a, b)
