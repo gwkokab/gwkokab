@@ -27,6 +27,7 @@ from gwkokab.models import (
     NPowerLawMGaussian,
     PowerLawPrimaryMassRatio,
     PowerlawRedshift,
+    SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
 from gwkokab.models.constraints import (
@@ -52,6 +53,22 @@ def my_kron(A, B):
 
 
 CONTINUOUS = [
+    (
+        SmoothedPowerlawPrimaryMassRatio,
+        {"alpha": -1.0, "beta": 1.0, "mmin": 10.0, "mmax": 50.0, "delta": 4.1},
+    ),
+    (
+        SmoothedPowerlawPrimaryMassRatio,
+        {"alpha": -0.1, "beta": -8.0, "mmin": 70.0, "mmax": 100.0, "delta": 3.14},
+    ),
+    (
+        SmoothedPowerlawPrimaryMassRatio,
+        {"alpha": -1.4, "beta": 9.0, "mmin": 5.0, "mmax": 100.0, "delta": 0.8},
+    ),
+    (
+        SmoothedPowerlawPrimaryMassRatio,
+        {"alpha": 2.0, "beta": 3.0, "mmin": 50.0, "mmax": 70.0, "delta": 7.4},
+    ),
     (
         PowerLawPrimaryMassRatio,
         {"alpha": -1.0, "beta": 1.0, "mmin": 10.0, "mmax": 50.0},
@@ -951,6 +968,8 @@ def gen_values_outside_bounds(constraint, size, key=jrd.PRNGKey(11)):
 @pytest.mark.parametrize("jax_dist_cls, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
 def test_dist_shape(jax_dist_cls, params, prepend_shape):
+    if jax_dist_cls.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+        pytest.skip(reason=f"{jax_dist_cls.__name__} does not provide sample method")
     jax_dist = jax_dist_cls(**params)
     rng_key = jrd.PRNGKey(0)
     expected_shape = prepend_shape + jax_dist.batch_shape + jax_dist.event_shape
@@ -984,6 +1003,8 @@ def test_has_rsample(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_sample_gradient(jax_dist, params):
+    if jax_dist.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+        pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     jax_class = type(jax_dist(**params))
     reparametrized_params = [p for p in jax_class.reparametrized_params]
     if not reparametrized_params:
@@ -1032,6 +1053,9 @@ def test_jit_log_likelihood(jax_dist, params):
         # "NPowerLawMGaussian",
     ):
         pytest.xfail(reason="non-jittable params")
+
+    if jax_dist.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+        pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
 
     rng_key = jrd.PRNGKey(0)
     samples = jax_dist(**params).sample(key=rng_key, sample_shape=(2, 3))
@@ -1129,6 +1153,8 @@ def test_gof(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_log_prob_gradient(jax_dist, params):
+    if jax_dist.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+        pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     rng_key = jrd.PRNGKey(0)
     value = jax_dist(**params).sample(rng_key)
 
@@ -1237,6 +1263,8 @@ def test_distribution_constraints(jax_dist, params, prepend_shape):
 @pytest.mark.parametrize("prepend_shape", [(), (2, 3)])
 @pytest.mark.parametrize("sample_shape", [(), (4,)])
 def test_expand(jax_dist, params, prepend_shape, sample_shape):
+    if jax_dist.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+        pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     jax_dist = jax_dist(**params)
     new_batch_shape = prepend_shape + jax_dist.batch_shape
     expanded_dist = jax_dist.expand(new_batch_shape)

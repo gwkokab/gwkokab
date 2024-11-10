@@ -45,6 +45,7 @@ from .utils import (
     doubly_truncated_power_law_icdf,
     doubly_truncated_power_law_log_prob,
     JointDistribution,
+    log_planck_taper_window,
     numerical_inverse_transform_sampling,
 )
 
@@ -60,6 +61,7 @@ __all__ = [
     "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
     "Wysocki2019MassModel",
+    "SmoothedPowerlawPrimaryMassRatio",
 ]
 
 
@@ -1226,3 +1228,82 @@ def FlexibleMixtureModel(
         ),
         validate_args=validate_args,
     )
+
+
+class SmoothedPowerlawPrimaryMassRatio(Distribution):
+    r""":ref:`PowerlawPrimaryMassRatio` with smoothing kernel on the lower edge.
+
+    .. math::
+        p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
+
+    .. math::
+        \begin{align*}
+            p(m_1\mid\alpha)&
+            \propto m_1^{\alpha}S(m_1\mid m_{\text{min}},\delta),\qquad m_{\text{min}}\leq m_1\leq m_{\max}\\
+            p(q\mid m_1,\beta)&
+            \propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
+        \end{align*}
+    """
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
+        "delta": constraints.positive,
+    }
+    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta"]
+    pytree_aux_fields = ("_support",)
+
+    def __init__(self, alpha, beta, mmin, mmax, delta, *, validate_args=None) -> None:
+        """
+        :param alpha: Power law index for primary mass
+        :param beta: Power law index for mass ratio
+        :param mmin: Minimum mass
+        :param mmax: Maximum mass
+        :param delta: width of the smoothing window
+        """
+        self.alpha, self.beta, self.mmin, self.mmax, self.delta = promote_shapes(
+            alpha, beta, mmin, mmax, delta
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha),
+            jnp.shape(beta),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(delta),
+        )
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        super(SmoothedPowerlawPrimaryMassRatio, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        q = value[..., 1]
+        m2 = jnp.multiply(m1, q)
+        log_smoothing_m1 = log_planck_taper_window(x=m1, a=self.mmin, b=self.delta)
+        log_smoothing_q = log_planck_taper_window(x=m2, a=self.mmin, b=self.delta)
+
+        log_prob_m1 = doubly_truncated_power_law_log_prob(
+            x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+        )
+        # as low approaches to high, mathematically it shoots off to infinity
+        # And autograd does not behave nicely around limiting values.
+        # These two links provide the solution to the problem.
+        # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
+        # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
+        mmin_over_m1 = jnp.where(self.mmin < m1, jnp.divide(self.mmin, m1), 0.0)
+        log_prob_q = jnp.where(
+            self.mmin < m1,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=mmin_over_m1, high=1.0
+            ),
+            -jnp.inf,
+        )
+        return jnp.add(log_prob_m1, log_prob_q) + log_smoothing_m1 + log_smoothing_q

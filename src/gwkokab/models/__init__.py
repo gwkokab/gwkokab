@@ -24,6 +24,7 @@ from ._models import (
     NDistribution,
     PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio,
+    SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
 from .npowerlawmgaussian import NPowerLawMGaussian as NPowerLawMGaussian
