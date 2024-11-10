@@ -10,15 +10,12 @@ Models
     :nosignatures:
     :toctree: _autosummary
 
-    BrokenPowerLawMassModel
     FlexibleMixtureModel
     GaussianSpinModel
     IndependentSpinOrientationGaussianIsotropic
     MassGapModel
-    MultiPeakMassModel
     NDistribution
     NPowerLawMGaussian
-    PowerLawPeakMassModel
     PowerLawPrimaryMassRatio
     Wysocki2019MassModel
 
@@ -42,9 +39,12 @@ Utilities
     :nosignatures:
     :toctree: _autosummary
 
+    doubly_truncated_power_law_cdf
+    doubly_truncated_power_law_icdf
+    doubly_truncated_power_law_log_prob
     JointDistribution
-    ScaledMixture
     log_planck_taper_window
+    ScaledMixture
 
 Constraints
 -----------

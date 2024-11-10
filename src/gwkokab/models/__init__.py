@@ -15,14 +15,11 @@
 
 from . import constraints, transformations, utils, wrappers
 from ._models import (
-    BrokenPowerLawMassModel,
     FlexibleMixtureModel,
     GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic,
     MassGapModel,
-    MultiPeakMassModel,
     NDistribution,
-    PowerLawPeakMassModel,
     PowerLawPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
@@ -36,14 +33,11 @@ __all__ = [
     "transformations",
     "utils",
     "wrappers",
-    "BrokenPowerLawMassModel",
     "FlexibleMixtureModel",
     "GaussianSpinModel",
     "IndependentSpinOrientationGaussianIsotropic",
     "MassGapModel",
-    "MultiPeakMassModel",
     "NDistribution",
-    "PowerLawPeakMassModel",
     "PowerLawPrimaryMassRatio",
     "Wysocki2019MassModel",
 ]
