@@ -555,9 +555,9 @@ def log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
     .. math::
 
         S(x\mid a,b)=\begin{cases}
-            0                                                                         & \text{if } x < a,             \\
-            \displaystyle\operatorname{expit}{\left(\frac{b}{b-x}-\frac{b}{x}\right)} & \text{if } a \leq x \leq a+b, \\
-            1                                                                         & \text{if } x > a+b,           \\
+            0                                                                             & \text{if } x < a,             \\
+            \displaystyle\operatorname{expit}{\left(\frac{b}{b+a-x}+\frac{b}{a-x}\right)} & \text{if } a \leq x \leq a+b, \\
+            1                                                                             & \text{if } x > a+b,           \\
         \end{cases}
 
     where :math:`\operatorname{expit}` is the logistic sigmoid function.
@@ -581,7 +581,7 @@ def log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
         ],
         [
             -jnp.inf,
-            -jnn.softplus(b / (x - b) + b / x),
+            -jnn.softplus(b / (x - a - b) + b / (x - a)),
             0.0,
         ],
     )
