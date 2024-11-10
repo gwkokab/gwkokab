@@ -17,6 +17,7 @@ Models
     NDistribution
     NPowerLawMGaussian
     PowerLawPrimaryMassRatio
+    SmoothedPowerlawPrimaryMassRatio
     Wysocki2019MassModel
 
 Redshift
@@ -43,7 +44,6 @@ Utilities
     doubly_truncated_power_law_icdf
     doubly_truncated_power_law_log_prob
     JointDistribution
-    log_planck_taper_window
     ScaledMixture
 
 Constraints
