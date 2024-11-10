@@ -549,8 +549,8 @@ class ScaledMixture(MixtureGeneral):
 
 def planck_taper_window(x: Array, a: Array, b: Array) -> Array:
     r"""If :math:`x` is the point at which to evaluate the window, :math:`a` is the
-    lower bound of the window, and :math:`b` is the window width, the
-    Planck taper window is defined as,
+    lower bound of the window, and :math:`b` is the window width, the Planck taper
+    window is defined as,
 
     .. math::
 
