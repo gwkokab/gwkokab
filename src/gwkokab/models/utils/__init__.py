@@ -19,5 +19,12 @@ from ._doubletruncpowerlaw import (
     doubly_truncated_power_law_log_prob as doubly_truncated_power_law_log_prob,
 )
 from ._joindistribution import JointDistribution as JointDistribution
+from ._ncombination import (
+    combine_distributions as combine_distributions,
+    create_beta_distributions as create_beta_distributions,
+    create_powerlaw_redshift as create_powerlaw_redshift,
+    create_powerlaws as create_powerlaws,
+    create_truncated_normal_distributions as create_truncated_normal_distributions,
+    create_truncated_normal_distributions_for_cos_tilt as create_truncated_normal_distributions_for_cos_tilt,
+)
 from ._scaledmixture import ScaledMixture as ScaledMixture
-from ._smoothingkernels import log_planck_taper_window as log_planck_taper_window

@@ -19,10 +19,3 @@ from ._model import (
     build_tilt_distributions as build_tilt_distributions,
     NPowerLawMGaussian as NPowerLawMGaussian,
 )
-from ._utils import (
-    combine_distributions as combine_distributions,
-    create_beta_distributions as create_beta_distributions,
-    create_powerlaws as create_powerlaws,
-    create_truncated_normal_distributions as create_truncated_normal_distributions,
-    create_truncated_normal_distributions_for_cos_tilt as create_truncated_normal_distributions_for_cos_tilt,
-)

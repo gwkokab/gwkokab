@@ -29,16 +29,17 @@ from numpyro.distributions import (
 )
 
 from ...cosmology import PLANCK_2015_Cosmology
+from ...models._models import PowerLawPrimaryMassRatio
+from ...models.redshift import PowerlawRedshift
+from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ...utils.math import beta_dist_mean_variance_to_concentrations
 from ...utils.tools import fetch_first_matching_value
-from .._models import PowerLawPrimaryMassRatio
-from ..redshift import PowerlawRedshift
-from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 
 
 __all__ = [
     "combine_distributions",
     "create_beta_distributions",
+    "create_powerlaw_redshift",
     "create_powerlaws",
     "create_truncated_normal_distributions_for_cos_tilt",
     "create_truncated_normal_distributions",

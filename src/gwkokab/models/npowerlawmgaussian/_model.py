@@ -19,20 +19,17 @@ from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array, Bool, Int
-from numpyro.distributions import (
-    constraints,
-    Distribution,
-    TransformedDistribution,
-)
+from numpyro.distributions import constraints, Distribution, TransformedDistribution
 
-from ..utils import JointDistribution, ScaledMixture
-from ._utils import (
+from ..utils import (
     combine_distributions,
     create_beta_distributions,
     create_powerlaw_redshift,
     create_powerlaws,
     create_truncated_normal_distributions,
     create_truncated_normal_distributions_for_cos_tilt,
+    JointDistribution,
+    ScaledMixture,
 )
 
 
