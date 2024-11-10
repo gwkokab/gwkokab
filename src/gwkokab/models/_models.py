@@ -678,6 +678,8 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             p(q\mid m_1,\beta)&
             \propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
         \end{align*}
+        
+    Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
     """
 
     arg_constraints = {
