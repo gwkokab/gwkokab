@@ -13,7 +13,8 @@
 # limitations under the License.
 
 
-from . import math, transformations
+from . import kernel as kernel, math, transformations
+from .kernel import log_planck_taper_window as log_planck_taper_window
 from .math import (
     beta_dist_concentrations_to_mean_variance,
     beta_dist_mean_variance_to_concentrations,

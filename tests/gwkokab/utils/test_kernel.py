@@ -20,7 +20,7 @@ import chex
 from absl.testing import parameterized
 from jax import grad, numpy as jnp
 
-from gwkokab.models.utils import log_planck_taper_window
+from gwkokab.utils import log_planck_taper_window
 
 
 x = [10.907955, 16.377821, 18.65535, 19.9329, 3.5127172, 9.406811]

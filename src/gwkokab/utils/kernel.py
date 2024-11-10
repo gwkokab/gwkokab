@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import jax
 from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array
 
@@ -39,6 +40,17 @@ def log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
         \operatorname{expit}(x)=\frac{1}{1+e^{-x}}
 
     This function evaluates the log of the Planck taper window :math:`\ln{S(x\mid a,b)}`.
+
+    :param value: point at which to evaluate the window
+    :param low: lower bound of the window
+    :param high: upper bound of the window
+    :return: window value
+    """
+    return jax.jit(_log_planck_taper_window, inline=True)(x, a, b)
+
+
+def _log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
+    """Log Planck taper window.
 
     :param value: point at which to evaluate the window
     :param low: lower bound of the window

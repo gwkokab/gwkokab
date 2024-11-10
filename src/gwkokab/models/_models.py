@@ -36,12 +36,12 @@ from numpyro.distributions import (
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
 
+from ..utils import log_planck_taper_window
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
     doubly_truncated_power_law_icdf,
     doubly_truncated_power_law_log_prob,
     JointDistribution,
-    log_planck_taper_window,
 )
 
 
@@ -666,7 +666,7 @@ def FlexibleMixtureModel(
 
 
 class SmoothedPowerlawPrimaryMassRatio(Distribution):
-    r""":ref:`PowerlawPrimaryMassRatio` with smoothing kernel on the lower edge.
+    r""":class:`PowerLawPrimaryMassRatio` with smoothing kernel on the lower edge.
 
     .. math::
         p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
