@@ -19,7 +19,7 @@ from typing_extensions import Tuple
 
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jaxtyping import PRNGKeyArray
-from numpyro.distributions import Distribution
+from numpyro.distributions import constraints, Distribution
 from numpyro.util import is_prng_key
 
 
@@ -27,6 +27,7 @@ class JointDistribution(Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
     pytree_aux_fields = ("marginal_distributions", "shaped_values")
+    support = constraints.real_vector
 
     def __init__(
         self, *marginal_distributions: Distribution, validate_args=None
