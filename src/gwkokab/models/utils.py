@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing_extensions import Callable, List, Tuple
 
 import jax
-from jax import lax, numpy as jnp, random as jrd, tree as jtr
+from jax import lax, nn as jnn, numpy as jnp, random as jrd, tree as jtr
 from jax.scipy.integrate import trapezoid
 from jaxtyping import Array, Float, Int, PRNGKeyArray
 from numpyro.distributions import (
@@ -36,6 +36,7 @@ __all__ = [
     "doubly_truncated_power_law_log_prob",
     "JointDistribution",
     "numerical_inverse_transform_sampling",
+    "planck_taper_window",
     "ScaledMixture",
 ]
 
@@ -544,3 +545,41 @@ class ScaledMixture(MixtureGeneral):
         )
         mixture_log_prob = jax.nn.logsumexp(safe_sum_log_probs, axis=-1)
         return mixture_log_prob
+
+
+def planck_taper_window(x: Array, a: Array, b: Array) -> Array:
+    r"""If :math:`x` is the point at which to evaluate the window, :math:`a` is the
+    lower bound of the window, and :math:`b` is the window width, the
+    Planck taper window is defined as,
+
+    .. math::
+
+        S(x\mid a,b)=\begin{cases}
+            0                                                                         & \text{if } x < a,             \\
+            \displaystyle\operatorname{expit}{\left(\frac{b}{b-x}-\frac{b}{x}\right)} & \text{if } a \leq x \leq a+b, \\
+            1                                                                         & \text{if } x > a+b,           \\
+        \end{cases}
+
+    where :math:`\operatorname{expit}` is the logistic sigmoid function.
+
+    .. math::
+
+        \operatorname{expit}(x)=\frac{1}{1+e^{-x}}
+
+    :param value: point at which to evaluate the window
+    :param low: lower bound of the window
+    :param high: upper bound of the window
+    :return: window value
+    """
+    return jnp.select(
+        [
+            x < a,
+            (a <= x) & (x <= a + b),
+            x > a + b,
+        ],
+        [
+            0.0,
+            jnn.sigmoid(b / (b - x) - b / x),
+            1.0,
+        ],
+    )

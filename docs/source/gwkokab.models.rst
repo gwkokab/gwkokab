@@ -44,6 +44,7 @@ Utilities
 
     JointDistribution
     ScaledMixture
+    planck_taper_window
 
 Constraints
 -----------
