@@ -27,6 +27,7 @@ from gwkokab.models import (
     NPowerLawMGaussian,
     PowerLawPrimaryMassRatio,
     PowerlawRedshift,
+    SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
@@ -53,6 +54,50 @@ def my_kron(A, B):
 
 
 CONTINUOUS = [
+    (
+        SmoothedGaussianPrimaryMassRatio,
+        {
+            "loc": 70.0,
+            "scale": 2.1,
+            "beta": 1.0,
+            "mmin": 10.0,
+            "mmax": 50.0,
+            "delta": 4.1,
+        },
+    ),
+    (
+        SmoothedGaussianPrimaryMassRatio,
+        {
+            "loc": 80.0,
+            "scale": 1.1,
+            "beta": -8.0,
+            "mmin": 70.0,
+            "mmax": 100.0,
+            "delta": 3.14,
+        },
+    ),
+    (
+        SmoothedGaussianPrimaryMassRatio,
+        {
+            "loc": 20.0,
+            "scale": 3.14,
+            "beta": 9.0,
+            "mmin": 5.0,
+            "mmax": 100.0,
+            "delta": 0.8,
+        },
+    ),
+    (
+        SmoothedGaussianPrimaryMassRatio,
+        {
+            "loc": 65.0,
+            "scale": 3.14,
+            "beta": 3.0,
+            "mmin": 50.0,
+            "mmax": 70.0,
+            "delta": 7.4,
+        },
+    ),
     (
         SmoothedPowerlawPrimaryMassRatio,
         {"alpha": -1.0, "beta": 1.0, "mmin": 10.0, "mmax": 50.0, "delta": 4.1},
@@ -968,7 +1013,10 @@ def gen_values_outside_bounds(constraint, size, key=jrd.PRNGKey(11)):
 @pytest.mark.parametrize("jax_dist_cls, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
 def test_dist_shape(jax_dist_cls, params, prepend_shape):
-    if jax_dist_cls.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+    if jax_dist_cls.__name__ in (
+        "SmoothedGaussianPrimaryMassRatio",
+        "SmoothedPowerlawPrimaryMassRatio",
+    ):
         pytest.skip(reason=f"{jax_dist_cls.__name__} does not provide sample method")
     jax_dist = jax_dist_cls(**params)
     rng_key = jrd.PRNGKey(0)
@@ -1003,7 +1051,10 @@ def test_has_rsample(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_sample_gradient(jax_dist, params):
-    if jax_dist.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+    if jax_dist.__name__ in (
+        "SmoothedGaussianPrimaryMassRatio",
+        "SmoothedPowerlawPrimaryMassRatio",
+    ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     jax_class = type(jax_dist(**params))
     reparametrized_params = [p for p in jax_class.reparametrized_params]
@@ -1054,7 +1105,10 @@ def test_jit_log_likelihood(jax_dist, params):
     ):
         pytest.xfail(reason="non-jittable params")
 
-    if jax_dist.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+    if jax_dist.__name__ in (
+        "SmoothedGaussianPrimaryMassRatio",
+        "SmoothedPowerlawPrimaryMassRatio",
+    ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
 
     rng_key = jrd.PRNGKey(0)
@@ -1153,7 +1207,10 @@ def test_gof(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_log_prob_gradient(jax_dist, params):
-    if jax_dist.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+    if jax_dist.__name__ in (
+        "SmoothedGaussianPrimaryMassRatio",
+        "SmoothedPowerlawPrimaryMassRatio",
+    ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     rng_key = jrd.PRNGKey(0)
     value = jax_dist(**params).sample(rng_key)
@@ -1263,7 +1320,10 @@ def test_distribution_constraints(jax_dist, params, prepend_shape):
 @pytest.mark.parametrize("prepend_shape", [(), (2, 3)])
 @pytest.mark.parametrize("sample_shape", [(), (4,)])
 def test_expand(jax_dist, params, prepend_shape, sample_shape):
-    if jax_dist.__name__ in ("SmoothedPowerlawPrimaryMassRatio",):
+    if jax_dist.__name__ in (
+        "SmoothedGaussianPrimaryMassRatio",
+        "SmoothedPowerlawPrimaryMassRatio",
+    ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     jax_dist = jax_dist(**params)
     new_batch_shape = prepend_shape + jax_dist.batch_shape

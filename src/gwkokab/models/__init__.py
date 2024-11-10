@@ -21,6 +21,7 @@ from ._models import (
     MassGapModel,
     NDistribution,
     PowerLawPrimaryMassRatio,
+    SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )

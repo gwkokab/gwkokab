@@ -21,7 +21,7 @@ import chex
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
-from jax.scipy.stats import truncnorm, uniform
+from jax.scipy.stats import norm, truncnorm, uniform
 from jaxtyping import Array, Int, Real
 from numpyro.distributions import (
     CategoricalProbs,
@@ -52,8 +52,9 @@ __all__ = [
     "MassGapModel",
     "NDistribution",
     "PowerLawPrimaryMassRatio",
-    "Wysocki2019MassModel",
+    "SmoothedGaussianPrimaryMassRatio",
     "SmoothedPowerlawPrimaryMassRatio",
+    "Wysocki2019MassModel",
 ]
 
 
@@ -678,7 +679,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             p(q\mid m_1,\beta)&
             \propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
         \end{align*}
-        
+
     Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
     """
 
@@ -730,6 +731,86 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
+        # as low approaches to high, mathematically it shoots off to infinity
+        # And autograd does not behave nicely around limiting values.
+        # These two links provide the solution to the problem.
+        # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
+        # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
+        mmin_over_m1 = jnp.where(self.mmin < m1, jnp.divide(self.mmin, m1), 0.0)
+        log_prob_q = jnp.where(
+            self.mmin < m1,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=mmin_over_m1, high=1.0
+            ),
+            -jnp.inf,
+        )
+        return jnp.add(log_prob_m1, log_prob_q) + log_smoothing_m1 + log_smoothing_q
+
+
+class SmoothedGaussianPrimaryMassRatio(Distribution):
+    r""":class:`~numpyro.distributions.continuous.Normal` with smoothing kernel on
+    the lower edge.
+
+    .. math::
+        p(m_1,q\mid\mu,\sigma^2,\beta) = \mathcal{N}(m_1\mid\mu,\sigma^2)p(q \mid m_1,\beta)
+
+    .. math::
+        p(q\mid m_1,\beta) \propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
+
+    Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
+    """
+
+    arg_constraints = {
+        "loc": constraints.positive,
+        "scale": constraints.positive,
+        "beta": constraints.real,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
+        "delta": constraints.positive,
+    }
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "mmax", "delta"]
+    pytree_aux_fields = ("_support",)
+
+    def __init__(
+        self, loc, scale, beta, mmin, mmax, delta, *, validate_args=None
+    ) -> None:
+        """
+        :param loc: mean of the Gaussian distribution
+        :param scale: standard deviation of the Gaussian distribution
+        :param beta: Power law index for mass ratio
+        :param mmin: Minimum mass
+        :param mmax: Maximum mass
+        :param delta: width of the smoothing window
+        """
+        self.loc, self.scale, self.beta, self.mmin, self.mmax, self.delta = (
+            promote_shapes(loc, scale, beta, mmin, mmax, delta)
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(loc),
+            jnp.shape(scale),
+            jnp.shape(beta),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(delta),
+        )
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        super(SmoothedGaussianPrimaryMassRatio, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        q = value[..., 1]
+        m2 = jnp.multiply(m1, q)
+        log_smoothing_m1 = log_planck_taper_window(x=m1, a=self.mmin, b=self.delta)
+        log_smoothing_q = log_planck_taper_window(x=m2, a=self.mmin, b=self.delta)
+
+        log_prob_m1 = norm.logpdf(x=m1, loc=self.loc, scale=self.scale)
         # as low approaches to high, mathematically it shoots off to infinity
         # And autograd does not behave nicely around limiting values.
         # These two links provide the solution to the problem.

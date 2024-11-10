@@ -17,6 +17,7 @@ Models
     NDistribution
     NPowerLawMGaussian
     PowerLawPrimaryMassRatio
+    SmoothedGaussianPrimaryMassRatio
     SmoothedPowerlawPrimaryMassRatio
     Wysocki2019MassModel
 
