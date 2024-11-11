@@ -19,7 +19,7 @@ from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array, Bool, Int
-from numpyro.distributions import constraints, Distribution, TransformedDistribution
+from numpyro.distributions import constraints, Distribution
 
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..utils import (
