@@ -223,7 +223,7 @@ def _build_g_component_distributions(
     return [JointDistribution(*dists) for dists in build_distributions]
 
 
-def NPowerLawMGaussian(
+def NPowerlawMGaussian(
     N_pl: Int[int, "Number of power-law components"],
     N_g: Int[int, "Number of Gaussian components"],
     use_spin: Bool[bool, "True", "False"] = False,
@@ -252,10 +252,10 @@ def NPowerLawMGaussian(
     .. note::
 
         **Mass distribution**: For powerlaw mass distribution is
-        :class:`PowerLawPrimaryMassRatio` and for Gaussian we have
+        :class:`PowerlawPrimaryMassRatio` and for Gaussian we have
         :class:`~numpyro.distributions.truncated.TruncatedNormal` distribution.
 
-        .. math:: (m_1, m_2) \sim \text{PowerLawPrimaryMassRatio}(\alpha, \beta, m_{\text{min}}, m_{\text{max}})
+        .. math:: (m_1, m_2) \sim \text{PowerlawPrimaryMassRatio}(\alpha, \beta, m_{\text{min}}, m_{\text{max}})
 
         .. math:: (m_1, m_2) \sim \mathcal{N}_{[a,b]}(\mu, \sigma^2)
 

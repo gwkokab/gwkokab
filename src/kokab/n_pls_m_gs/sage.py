@@ -26,7 +26,7 @@ from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
-from gwkokab.models import NPowerLawMGaussian
+from gwkokab.models import NPowerlawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -200,7 +200,7 @@ def main() -> None:
 
     model_prior_param = get_processed_priors(extended_params, prior_dict)
 
-    model = Bake(NPowerLawMGaussian)(
+    model = Bake(NPowerlawMGaussian)(
         N_pl=N_pl,
         N_g=N_g,
         use_spin=has_spin,

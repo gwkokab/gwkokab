@@ -29,7 +29,7 @@ from numpyro.distributions import (
 )
 
 from ...cosmology import PLANCK_2015_Cosmology
-from ...models._models import PowerLawPrimaryMassRatio
+from ...models._models import PowerlawPrimaryMassRatio
 from ...models.redshift import PowerlawRedshift
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ...utils.math import beta_dist_mean_variance_to_concentrations
@@ -209,7 +209,7 @@ def create_powerlaws(
         if mmax is None:
             raise ValueError(f"Missing parameter {mmax_name}_{i}")
 
-        powerlaw = PowerLawPrimaryMassRatio(
+        powerlaw = PowerlawPrimaryMassRatio(
             alpha=alpha, beta=beta, mmin=mmin, mmax=mmax, validate_args=validate_args
         )
         transformed_powerlaw = TransformedDistribution(

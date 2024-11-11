@@ -26,7 +26,7 @@ from numpyro import distributions as dist
 
 import gwkokab
 from gwkokab.errors import banana_error_m1_m2
-from gwkokab.models import NPowerLawMGaussian
+from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.npowerlawmgaussian import create_truncated_normal_distributions
 from gwkokab.parameters import (
     COS_TILT_1,
@@ -342,7 +342,7 @@ def main() -> None:
 
     check_vt_params(args.vt_params, parameters_name)
 
-    model = NPowerLawMGaussian(
+    model = NPowerlawMGaussian(
         N_pl=N_pl,
         N_g=N_g,
         use_spin=has_spin,

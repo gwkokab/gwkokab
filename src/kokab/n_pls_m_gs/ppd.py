@@ -21,7 +21,7 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 import pandas as pd
 from jaxtyping import Array, Bool, Float, Int
 
-from gwkokab.models import NPowerLawMGaussian
+from gwkokab.models import NPowerlawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -68,7 +68,7 @@ def get_model_pdf(
     ).to_numpy()
 
     if rate_scaled:
-        model = NPowerLawMGaussian(
+        model = NPowerlawMGaussian(
             **constants,
             **{
                 name: (nf_samples[..., i] if not name.startswith("log_rate") else 0.0)
@@ -76,7 +76,7 @@ def get_model_pdf(
             },
         )
     else:
-        model = NPowerLawMGaussian(
+        model = NPowerlawMGaussian(
             **constants,
             **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
         )

@@ -24,8 +24,8 @@ from scipy.sparse import csr_matrix
 
 from gwkokab.cosmology import PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
 from gwkokab.models import (
-    NPowerLawMGaussian,
-    PowerLawPrimaryMassRatio,
+    NPowerlawMGaussian,
+    PowerlawPrimaryMassRatio,
     PowerlawRedshift,
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio,
@@ -115,25 +115,25 @@ CONTINUOUS = [
         {"alpha": 2.0, "beta": 3.0, "mmin": 50.0, "mmax": 70.0, "delta": 7.4},
     ),
     (
-        PowerLawPrimaryMassRatio,
+        PowerlawPrimaryMassRatio,
         {"alpha": -1.0, "beta": 1.0, "mmin": 10.0, "mmax": 50.0},
     ),
     (
-        PowerLawPrimaryMassRatio,
+        PowerlawPrimaryMassRatio,
         {"alpha": -0.1, "beta": -8.0, "mmin": 70.0, "mmax": 100.0},
     ),
     (
-        PowerLawPrimaryMassRatio,
+        PowerlawPrimaryMassRatio,
         {"alpha": -1.4, "beta": 9.0, "mmin": 5.0, "mmax": 100.0},
     ),
-    (PowerLawPrimaryMassRatio, {"alpha": 2.0, "beta": 3.0, "mmin": 50.0, "mmax": 70.0}),
+    (PowerlawPrimaryMassRatio, {"alpha": 2.0, "beta": 3.0, "mmin": 50.0, "mmax": 70.0}),
     (Wysocki2019MassModel, {"alpha_m": -1.0, "mmin": 10.0, "mmax": 50.0}),
     (Wysocki2019MassModel, {"alpha_m": -2.3, "mmin": 5.0, "mmax": 100.0}),
     (Wysocki2019MassModel, {"alpha_m": 0.7, "mmin": 50.0, "mmax": 100.0}),
     (Wysocki2019MassModel, {"alpha_m": 3.1, "mmin": 70.0, "mmax": 100.0}),
-    ######### NPowerLawMGaussian (m1, m2) #########
+    ######### NPowerlawMGaussian (m1, m2) #########
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 0,
@@ -145,7 +145,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 0,
             "N_g": 1,
@@ -157,7 +157,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 1,
@@ -174,7 +174,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 2,
@@ -196,7 +196,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 2,
             "N_g": 2,
@@ -222,9 +222,9 @@ CONTINUOUS = [
             "m2_scale_g_1": 2.2,
         },
     ),
-    ######### NPowerLawMGaussian (m1, m2, chi1, chi2) #########
+    ######### NPowerlawMGaussian (m1, m2, chi1, chi2) #########
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 0,
@@ -241,7 +241,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 0,
             "N_g": 1,
@@ -258,7 +258,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 1,
@@ -284,7 +284,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 2,
@@ -315,7 +315,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 2,
             "N_g": 2,
@@ -350,9 +350,9 @@ CONTINUOUS = [
             "chi2_variance_pl": 0.1,
         },
     ),
-    ######### NPowerLawMGaussian (m1, m2, cos_tilt_1, cos_tilt_2) #########
+    ######### NPowerlawMGaussian (m1, m2, cos_tilt_1, cos_tilt_2) #########
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 0,
@@ -367,7 +367,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 0,
             "N_g": 1,
@@ -382,7 +382,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 1,
@@ -404,7 +404,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 2,
@@ -433,7 +433,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 2,
             "N_g": 2,
@@ -468,9 +468,9 @@ CONTINUOUS = [
             "cos_tilt2_scale_pl_1": 0.3,
         },
     ),
-    ######### NPowerLawMGaussian (m1, m2, ecc) #########
+    ######### NPowerlawMGaussian (m1, m2, ecc) #########
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 0,
@@ -485,7 +485,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 0,
             "N_g": 1,
@@ -500,7 +500,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 1,
@@ -522,7 +522,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 2,
@@ -551,7 +551,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 2,
             "N_g": 2,
@@ -586,9 +586,9 @@ CONTINUOUS = [
             "ecc_scale_g_1": 0.6,
         },
     ),
-    ######### NPowerLawMGaussian (m1, m2, chi1, chi2, cos_tilt_1, cos_tilt_2, ecc) #########
+    ######### NPowerlawMGaussian (m1, m2, chi1, chi2, cos_tilt_1, cos_tilt_2, ecc) #########
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 0,
@@ -611,7 +611,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 0,
             "N_g": 1,
@@ -634,7 +634,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 1,
@@ -670,7 +670,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 1,
             "N_g": 2,
@@ -715,7 +715,7 @@ CONTINUOUS = [
         },
     ),
     (
-        NPowerLawMGaussian,
+        NPowerlawMGaussian,
         {
             "N_pl": 2,
             "N_g": 2,
@@ -1101,7 +1101,7 @@ def test_jit_log_likelihood(jax_dist, params):
         "LKJCholesky",
         "_SparseCAR",
         "ZeroSumNormal",
-        # "NPowerLawMGaussian",
+        # "NPowerlawMGaussian",
     ):
         pytest.xfail(reason="non-jittable params")
 
@@ -1183,7 +1183,7 @@ def test_cdf_and_icdf(jax_dist, params):
 def test_gof(jax_dist, params):
     if not isinstance(jax_dist, dist.Distribution):
         pytest.skip("skip testing for non-distribution")
-    if jax_dist.__name__ in ("PowerLawPrimaryMassRatio",):
+    if jax_dist.__name__ in ("PowerlawPrimaryMassRatio",):
         pytest.skip("Failure rate is lower than expected.")
     num_samples = 10000
     rng_key = jrd.PRNGKey(0)
@@ -1228,11 +1228,11 @@ def test_log_prob_gradient(jax_dist, params):
 
     eps = 1e-3
     for i, k in enumerate(params.keys()):
-        if jax_dist is PowerLawPrimaryMassRatio and i > 1:
+        if jax_dist is PowerlawPrimaryMassRatio and i > 1:
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
-        if (jax_dist is NPowerLawMGaussian) and any(
+        if (jax_dist is NPowerlawMGaussian) and any(
             [k.startswith("mmin"), k.startswith("mmax")]
         ):
             continue

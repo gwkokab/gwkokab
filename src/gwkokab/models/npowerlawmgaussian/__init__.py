@@ -17,5 +17,5 @@ from ._model import (
     build_eccentricity_distributions as build_eccentricity_distributions,
     build_spin_distributions as build_spin_distributions,
     build_tilt_distributions as build_tilt_distributions,
-    NPowerLawMGaussian as NPowerLawMGaussian,
+    NPowerlawMGaussian as NPowerlawMGaussian,
 )

@@ -27,7 +27,7 @@ from numpyro.distributions import (
     CategoricalProbs,
     constraints,
     Distribution,
-    DoublyTruncatedPowerLaw,
+    DoublyTruncatedPowerlaw,
     MixtureGeneral,
     MultivariateNormal,
     Normal,
@@ -51,7 +51,7 @@ __all__ = [
     "IndependentSpinOrientationGaussianIsotropic",
     "MassGapModel",
     "NDistribution",
-    "PowerLawPrimaryMassRatio",
+    "PowerlawPrimaryMassRatio",
     "SmoothedGaussianPrimaryMassRatio",
     "SmoothedPowerlawPrimaryMassRatio",
     "Wysocki2019MassModel",
@@ -175,7 +175,7 @@ def NDistribution(
     )
 
 
-class PowerLawPrimaryMassRatio(Distribution):
+class PowerlawPrimaryMassRatio(Distribution):
     r"""Power law model for two-dimensional mass distribution, modelling primary mass
     and conditional mass ratio distribution.
 
@@ -217,7 +217,7 @@ class PowerLawPrimaryMassRatio(Distribution):
             jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax)
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
-        super(PowerLawPrimaryMassRatio, self).__init__(
+        super(PowerlawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
@@ -637,7 +637,7 @@ def FlexibleMixtureModel(
         alpha_q_i,
         q_min_i: JointDistribution(
             Normal(loc=mu_Mc_i, scale=sigma_Mc_i, validate_args=validate_args),
-            DoublyTruncatedPowerLaw(
+            DoublyTruncatedPowerlaw(
                 alpha=alpha_q_i, low=q_min_i, high=1.0, validate_args=validate_args
             ),
             Normal(loc=mu_sz_i, scale=sigma_sz_i, validate_args=validate_args),
@@ -667,7 +667,7 @@ def FlexibleMixtureModel(
 
 
 class SmoothedPowerlawPrimaryMassRatio(Distribution):
-    r""":class:`PowerLawPrimaryMassRatio` with smoothing kernel on the lower edge.
+    r""":class:`PowerlawPrimaryMassRatio` with smoothing kernel on the lower edge.
 
     .. math::
         p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)

@@ -15,8 +15,8 @@ Models
     IndependentSpinOrientationGaussianIsotropic
     MassGapModel
     NDistribution
-    NPowerLawMGaussian
-    PowerLawPrimaryMassRatio
+    NPowerlawMGaussian
+    PowerlawPrimaryMassRatio
     SmoothedGaussianPrimaryMassRatio
     SmoothedPowerlawPrimaryMassRatio
     Wysocki2019MassModel

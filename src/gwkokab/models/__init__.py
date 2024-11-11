@@ -20,12 +20,12 @@ from ._models import (
     IndependentSpinOrientationGaussianIsotropic,
     MassGapModel,
     NDistribution,
-    PowerLawPrimaryMassRatio,
+    PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
-from .npowerlawmgaussian import NPowerLawMGaussian as NPowerLawMGaussian
+from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
 from .redshift import PowerlawRedshift as PowerlawRedshift
 
 
@@ -39,6 +39,6 @@ __all__ = [
     "IndependentSpinOrientationGaussianIsotropic",
     "MassGapModel",
     "NDistribution",
-    "PowerLawPrimaryMassRatio",
+    "PowerlawPrimaryMassRatio",
     "Wysocki2019MassModel",
 ]
