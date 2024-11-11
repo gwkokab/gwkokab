@@ -27,7 +27,7 @@ from numpyro.distributions import (
     CategoricalProbs,
     constraints,
     Distribution,
-    DoublyTruncatedPowerlaw,
+    DoublyTruncatedPowerLaw,
     MixtureGeneral,
     MultivariateNormal,
     Normal,
@@ -637,7 +637,7 @@ def FlexibleMixtureModel(
         alpha_q_i,
         q_min_i: JointDistribution(
             Normal(loc=mu_Mc_i, scale=sigma_Mc_i, validate_args=validate_args),
-            DoublyTruncatedPowerlaw(
+            DoublyTruncatedPowerLaw(
                 alpha=alpha_q_i, low=q_min_i, high=1.0, validate_args=validate_args
             ),
             Normal(loc=mu_sz_i, scale=sigma_sz_i, validate_args=validate_args),
