@@ -4,6 +4,7 @@
 # source: https://github.com/pyro-ppl/numpyro/blob/3cde93d0f25490b9b90c1c423816c6cfd9ea23ed/test/test_distributions.py
 
 import inspect
+import types
 
 import equinox as eqx
 import jax
@@ -25,6 +26,7 @@ from scipy.sparse import csr_matrix
 from gwkokab.cosmology import PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
 from gwkokab.models import (
     NPowerlawMGaussian,
+    NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
     PowerlawRedshift,
     SmoothedGaussianPrimaryMassRatio,
@@ -53,50 +55,82 @@ def my_kron(A, B):
     return D.reshape(newshape)
 
 
+generic_nspmsg = {
+    ## rates
+    "log_rate_0": -2.0,
+    "log_rate_1": -1.0,
+    "log_rate_2": 1.5,
+    "log_rate_3": 1.0,
+    ## powerlaw 0
+    "alpha_pl_0": 2.0,
+    "beta_pl_0": 3.0,
+    "mmin_pl_0": 50.0,
+    "mmax_pl_0": 70.0,
+    "delta_pl_0": 5,
+    ## powerlaw 1
+    "alpha_pl_1": -1.5,
+    "beta_pl_1": -1.0,
+    "mmin_pl_1": 20.0,
+    "mmax_pl_1": 100.0,
+    "delta_pl_1": 20,
+    ## gaussian 0
+    "loc_g_0": 70.0,
+    "scale_g_0": 2.1,
+    "beta_g_0": 3.2,
+    "mmin_g_0": 50.0,
+    "delta_g_0": 5,
+    ## gaussian 1
+    "loc_g_1": 80.0,
+    "scale_g_1": 1.1,
+    "beta_g_1": 2.2,
+    "mmin_g_1": 20.0,
+    "delta_g_1": 5,
+    # "use_spin": True,
+    "chi1_mean_g": 0.5,
+    "chi1_mean_pl": 0.7,
+    "chi2_mean_g": 0.2,
+    "chi2_mean_pl": 0.6,
+    "chi1_variance_g": 0.1,
+    "chi1_variance_pl": 0.2,
+    "chi2_variance_g": 0.14,
+    "chi2_variance_pl": 0.1,
+    # "use_tilt": True,
+    "cos_tilt1_scale_g_0": 0.1,
+    "cos_tilt1_scale_g_1": 0.3,
+    "cos_tilt1_scale_pl_0": 0.1,
+    "cos_tilt1_scale_pl_1": 0.3,
+    "cos_tilt2_scale_g_0": 0.1,
+    "cos_tilt2_scale_g_1": 0.3,
+    "cos_tilt2_scale_pl_0": 0.1,
+    "cos_tilt2_scale_pl_1": 0.3,
+    # "use_eccentricity": True,
+    "ecc_loc_pl_0": 0.0,
+    "ecc_scale_pl_0": 0.2,
+    "ecc_loc_pl_1": 0.0,
+    "ecc_scale_pl_1": 0.4,
+    "ecc_loc_g_0": 0.0,
+    "ecc_scale_g_0": 0.7,
+    "ecc_loc_g_1": 0.0,
+    "ecc_scale_g_1": 0.6,
+}
+
+
 CONTINUOUS = [
     (
         SmoothedGaussianPrimaryMassRatio,
-        {
-            "loc": 70.0,
-            "scale": 2.1,
-            "beta": 1.0,
-            "mmin": 10.0,
-            "mmax": 50.0,
-            "delta": 4.1,
-        },
+        {"loc": 70.0, "scale": 2.1, "beta": 1.0, "mmin": 10.0, "delta": 4.1},
     ),
     (
         SmoothedGaussianPrimaryMassRatio,
-        {
-            "loc": 80.0,
-            "scale": 1.1,
-            "beta": -8.0,
-            "mmin": 70.0,
-            "mmax": 100.0,
-            "delta": 3.14,
-        },
+        {"loc": 80.0, "scale": 1.1, "beta": -8.0, "mmin": 70.0, "delta": 3.14},
     ),
     (
         SmoothedGaussianPrimaryMassRatio,
-        {
-            "loc": 20.0,
-            "scale": 3.14,
-            "beta": 9.0,
-            "mmin": 5.0,
-            "mmax": 100.0,
-            "delta": 0.8,
-        },
+        {"loc": 20.0, "scale": 3.14, "beta": 9.0, "mmin": 5.0, "delta": 0.8},
     ),
     (
         SmoothedGaussianPrimaryMassRatio,
-        {
-            "loc": 65.0,
-            "scale": 3.14,
-            "beta": 3.0,
-            "mmin": 50.0,
-            "mmax": 70.0,
-            "delta": 7.4,
-        },
+        {"loc": 65.0, "scale": 3.14, "beta": 3.0, "mmin": 50.0, "delta": 7.4},
     ),
     (
         SmoothedPowerlawPrimaryMassRatio,
@@ -812,6 +846,131 @@ CONTINUOUS = [
             * jnp.pi,
         },
     ),
+    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2) #########
+    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 0, **generic_nspmsg}),
+    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 0, "N_g": 1, **generic_nspmsg}),
+    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 1, **generic_nspmsg}),
+    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 2, **generic_nspmsg}),
+    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 2, "N_g": 2, **generic_nspmsg}),
+    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2, chi1, chi2) #########
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 0, "use_spin": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 0, "N_g": 1, "use_spin": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 1, "use_spin": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 2, "use_spin": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 2, "N_g": 2, "use_spin": True, **generic_nspmsg},
+    ),
+    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2, cos_tilt_1, cos_tilt_2) #########
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 0, "use_tilt": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 0, "N_g": 1, "use_tilt": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 1, "use_tilt": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 2, "use_tilt": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 2, "N_g": 2, "use_tilt": True, **generic_nspmsg},
+    ),
+    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2, ecc) #########
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 0, "use_eccentricity": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 0, "N_g": 1, "use_eccentricity": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 1, "use_eccentricity": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 1, "N_g": 2, "use_eccentricity": True, **generic_nspmsg},
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {"N_pl": 2, "N_g": 2, "use_eccentricity": True, **generic_nspmsg},
+    ),
+    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2, chi1, chi2, cos_tilt_1, cos_tilt_2, ecc) #########
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {
+            "N_pl": 1,
+            "N_g": 0,
+            "use_spin": True,
+            "use_tilt": True,
+            "use_eccentricity": True,
+            **generic_nspmsg,
+        },
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {
+            "N_pl": 0,
+            "N_g": 1,
+            "use_spin": True,
+            "use_tilt": True,
+            "use_eccentricity": True,
+            **generic_nspmsg,
+        },
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {
+            "N_pl": 1,
+            "N_g": 1,
+            "use_spin": True,
+            "use_tilt": True,
+            "use_eccentricity": True,
+            **generic_nspmsg,
+        },
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {
+            "N_pl": 1,
+            "N_g": 2,
+            "use_spin": True,
+            "use_tilt": True,
+            "use_eccentricity": True,
+            **generic_nspmsg,
+        },
+    ),
+    (
+        NSmoothedPowerlawMSmoothedGaussian,
+        {
+            "N_pl": 2,
+            "N_g": 2,
+            "use_spin": True,
+            "use_tilt": True,
+            "use_eccentricity": True,
+            **generic_nspmsg,
+        },
+    ),
 ]
 
 
@@ -1018,6 +1177,11 @@ def test_dist_shape(jax_dist_cls, params, prepend_shape):
         "SmoothedPowerlawPrimaryMassRatio",
     ):
         pytest.skip(reason=f"{jax_dist_cls.__name__} does not provide sample method")
+    if isinstance(jax_dist_cls, types.FunctionType):
+        if jax_dist_cls.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
+            pytest.skip(
+                reason=f"{jax_dist_cls.__name__} does not provide sample method"
+            )
     jax_dist = jax_dist_cls(**params)
     rng_key = jrd.PRNGKey(0)
     expected_shape = prepend_shape + jax_dist.batch_shape + jax_dist.event_shape
@@ -1056,6 +1220,9 @@ def test_sample_gradient(jax_dist, params):
         "SmoothedPowerlawPrimaryMassRatio",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
+    if isinstance(jax_dist, types.FunctionType):
+        if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
+            pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     jax_class = type(jax_dist(**params))
     reparametrized_params = [p for p in jax_class.reparametrized_params]
     if not reparametrized_params:
@@ -1110,6 +1277,9 @@ def test_jit_log_likelihood(jax_dist, params):
         "SmoothedPowerlawPrimaryMassRatio",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
+    if isinstance(jax_dist, types.FunctionType):
+        if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
+            pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
 
     rng_key = jrd.PRNGKey(0)
     samples = jax_dist(**params).sample(key=rng_key, sample_shape=(2, 3))
@@ -1212,6 +1382,9 @@ def test_log_prob_gradient(jax_dist, params):
         "SmoothedPowerlawPrimaryMassRatio",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
+    if isinstance(jax_dist, types.FunctionType):
+        if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
+            pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     rng_key = jrd.PRNGKey(0)
     value = jax_dist(**params).sample(rng_key)
 
@@ -1325,6 +1498,9 @@ def test_expand(jax_dist, params, prepend_shape, sample_shape):
         "SmoothedPowerlawPrimaryMassRatio",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
+    if isinstance(jax_dist, types.FunctionType):
+        if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
+            pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     jax_dist = jax_dist(**params)
     new_batch_shape = prepend_shape + jax_dist.batch_shape
     expanded_dist = jax_dist.expand(new_batch_shape)

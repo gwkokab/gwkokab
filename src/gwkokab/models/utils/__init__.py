@@ -24,6 +24,8 @@ from ._ncombination import (
     create_beta_distributions as create_beta_distributions,
     create_powerlaw_redshift as create_powerlaw_redshift,
     create_powerlaws as create_powerlaws,
+    create_smoothed_gaussians as create_smoothed_gaussians,
+    create_smoothed_powerlaws as create_smoothed_powerlaws,
     create_truncated_normal_distributions as create_truncated_normal_distributions,
     create_truncated_normal_distributions_for_cos_tilt as create_truncated_normal_distributions_for_cos_tilt,
 )

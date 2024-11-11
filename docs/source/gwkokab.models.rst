@@ -16,6 +16,7 @@ Models
     MassGapModel
     NDistribution
     NPowerlawMGaussian
+    NSmoothedPowerlawMSmoothedGaussian
     PowerlawPrimaryMassRatio
     SmoothedGaussianPrimaryMassRatio
     SmoothedPowerlawPrimaryMassRatio

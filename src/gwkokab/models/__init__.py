@@ -26,6 +26,9 @@ from ._models import (
     Wysocki2019MassModel,
 )
 from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
+from .nsmoothedpowerlawmsmoothedgaussian import (
+    NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
+)
 from .redshift import PowerlawRedshift as PowerlawRedshift
 
 
