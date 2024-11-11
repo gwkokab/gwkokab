@@ -765,35 +765,30 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "scale": constraints.positive,
         "beta": constraints.real,
         "mmin": constraints.positive,
-        "mmax": constraints.positive,
         "delta": constraints.positive,
     }
-    reparametrized_params = ["loc", "scale", "beta", "mmin", "mmax", "delta"]
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(
-        self, loc, scale, beta, mmin, mmax, delta, *, validate_args=None
-    ) -> None:
+    def __init__(self, loc, scale, beta, mmin, delta, *, validate_args=None) -> None:
         """
         :param loc: mean of the Gaussian distribution
         :param scale: standard deviation of the Gaussian distribution
         :param beta: Power law index for mass ratio
         :param mmin: Minimum mass
-        :param mmax: Maximum mass
         :param delta: width of the smoothing window
         """
-        self.loc, self.scale, self.beta, self.mmin, self.mmax, self.delta = (
-            promote_shapes(loc, scale, beta, mmin, mmax, delta)
+        self.loc, self.scale, self.beta, self.mmin, self.delta = promote_shapes(
+            loc, scale, beta, mmin, delta
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(loc),
             jnp.shape(scale),
             jnp.shape(beta),
             jnp.shape(mmin),
-            jnp.shape(mmax),
             jnp.shape(delta),
         )
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = constraints.greater_than_eq(mmin)
         super(SmoothedGaussianPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
