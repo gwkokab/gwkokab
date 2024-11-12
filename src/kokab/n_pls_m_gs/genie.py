@@ -27,7 +27,7 @@ from numpyro import distributions as dist
 import gwkokab
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.npowerlawmgaussian import create_truncated_normal_distributions
+from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
