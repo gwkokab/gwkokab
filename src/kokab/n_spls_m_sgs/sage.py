@@ -140,7 +140,7 @@ def main() -> None:
         ("loc_g", N_g),
         ("scale_g", N_g),
         ("beta_g", N_g),
-        ("mmax_g", N_g),
+        ("mmin_g", N_g),
         ("delta_g", N_g),
         ("low_g", N_g),
         ("high_g", N_g),
