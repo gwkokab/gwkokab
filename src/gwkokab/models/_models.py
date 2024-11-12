@@ -21,7 +21,7 @@ import chex
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
-from jax.scipy.stats import norm, truncnorm, uniform
+from jax.scipy.stats import truncnorm, uniform
 from jaxtyping import Array, Int, Real
 from numpyro.distributions import (
     CategoricalProbs,
@@ -758,6 +758,15 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         p(q\mid m_1,\beta) \propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
 
     Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
+
+    .. attention::
+
+        Interestingly, in :class:`~numpyro.distributions.truncated.TruncatedNormal`
+        distribution, if any of the bounds are not provided, it will be set to
+        :math:`\pm\infty`. For example, if we set :math:`\mu=0` and do not provide the
+        upper bound, then the resulting distribution would be a
+        `half normal <https://en.wikipedia.org/wiki/Half-normal_distribution>`_
+        distribution.
     """
 
     arg_constraints = {
@@ -767,19 +776,23 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "mmin": constraints.positive,
         "delta": constraints.positive,
     }
-    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta"]
-    pytree_aux_fields = ("_support",)
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "low", "high"]
+    pytree_aux_fields = ("_support", "_norm")
 
-    def __init__(self, loc, scale, beta, mmin, delta, *, validate_args=None) -> None:
+    def __init__(
+        self, loc, scale, beta, mmin, delta, low=None, high=None, *, validate_args=None
+    ) -> None:
         """
         :param loc: mean of the Gaussian distribution
         :param scale: standard deviation of the Gaussian distribution
         :param beta: Power law index for mass ratio
         :param mmin: Minimum mass
         :param delta: width of the smoothing window
+        :param low: lower bound of the Gaussian distribution, defaults to -inf
+        :param high: upper bound of the Gaussian distribution, defaults to inf
         """
-        self.loc, self.scale, self.beta, self.mmin, self.delta = promote_shapes(
-            loc, scale, beta, mmin, delta
+        self.loc, self.scale, self.beta, self.mmin, self.delta, self.low, self.high = (
+            promote_shapes(loc, scale, beta, mmin, delta, low, high)
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(loc),
@@ -787,10 +800,19 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             jnp.shape(beta),
             jnp.shape(mmin),
             jnp.shape(delta),
+            jnp.shape(low),
+            jnp.shape(high),
         )
         self._support = constraints.greater_than_eq(mmin)
         super(SmoothedGaussianPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+        self._norm = TruncatedNormal(
+            loc=self.loc,
+            scale=self.scale,
+            low=self.low,
+            high=self.high,
+            validate_args=validate_args,
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
@@ -805,7 +827,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         log_smoothing_m1 = log_planck_taper_window(x=m1, a=self.mmin, b=self.delta)
         log_smoothing_q = log_planck_taper_window(x=m2, a=self.mmin, b=self.delta)
 
-        log_prob_m1 = norm.logpdf(x=m1, loc=self.loc, scale=self.scale)
+        log_prob_m1 = self._norm.log_prob(m1)
         # as low approaches to high, mathematically it shoots off to infinity
         # And autograd does not behave nicely around limiting values.
         # These two links provide the solution to the problem.

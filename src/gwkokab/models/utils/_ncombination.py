@@ -345,6 +345,8 @@ def create_smoothed_gaussians(
     beta_name = "beta_g"
     mmin_name = "mmin_g"
     delta_name = "delta_g"
+    low_name = "low_g"
+    high_name = "high_g"
     for i in range(N):
         loc = fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
         if loc is None:
@@ -366,12 +368,17 @@ def create_smoothed_gaussians(
         if delta is None:
             raise ValueError(f"Missing parameter {delta_name}_{i}")
 
+        low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
+        high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
+
         powerlaw = SmoothedGaussianPrimaryMassRatio(
             loc=loc,
             scale=scale,
             beta=beta,
             mmin=mmin,
             delta=delta,
+            low=low,
+            high=high,
             validate_args=validate_args,
         )
         smoothed_gaussians_collection.append(powerlaw)
