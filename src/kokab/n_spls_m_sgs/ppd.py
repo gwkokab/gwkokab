@@ -67,7 +67,7 @@ def get_model_pdf(
         "sampler_data/nf_samples.dat", delimiter=" ", skiprows=1
     ).to_numpy()
 
-    if rate_scaled:
+    if not rate_scaled:
         model = NSmoothedPowerlawMSmoothedGaussian(
             **constants,
             **{
