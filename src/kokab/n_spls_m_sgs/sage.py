@@ -221,7 +221,7 @@ def main() -> None:
         VT_FILENAME, [parameter_names.index(name) for name in VT_PARAMS]
     )
     poisson_likelihood.time = ANALYSIS_TIME
-    poisson_likelihood.vt_method = "model"
+    poisson_likelihood.vt_method = "uniform"
     poisson_likelihood.vt_params = VT_PARAMS
 
     poisson_likelihood.set_model(parameters, model=model)
