@@ -803,7 +803,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             jnp.shape(low),
             jnp.shape(high),
         )
-        self._support = constraints.greater_than_eq(mmin)
+        self._support = mass_ratio_mass_sandwich(mmin, jnp.inf)
         super(SmoothedGaussianPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
