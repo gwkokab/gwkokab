@@ -30,7 +30,10 @@ def get_logVT(
     _, logVT = load_model(vt_path)
 
     def trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
-        m1m2 = x[..., selection_indexes]
+        m1q = x[..., selection_indexes]
+        m2 = x[..., 0] * x[..., 1]
+        m1m2 = m1q.at[..., 1].set(m2)
+
         return vmap(logVT)(m1m2)
 
     return trimmed_logVT
