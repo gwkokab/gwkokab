@@ -89,7 +89,7 @@ def create_beta_distributions(
             raise ValueError(f"Missing parameter {beta_name}_{i}")
 
         beta_collection.append(
-            Beta(concentration0=alpha, concentration1=beta, validate_args=validate_args)
+            Beta(concentration1=alpha, concentration0=beta, validate_args=validate_args)
         )
     return beta_collection
 
