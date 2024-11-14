@@ -14,220 +14,268 @@
 
 from __future__ import annotations
 
+import jax
+from chex import Numeric
 from jax import numpy as jnp
-from jaxtyping import Array, Real
 
 
-def m1_times_m2(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+def m1_times_m2(*, m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
-        f(m_1, m_2) = m_1m_2
+        m_1m_2(m_1, m_2) = m_1 m_2
     """
-    return jnp.multiply(m1, m2)
+    return m1 * m2
 
 
-def total_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+def total_mass(*, m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
-        f(m_1, m_2) = m_1 + m_2
+        M(m_1, m_2) = m_1 + m_2
     """
-    return jnp.add(m1, m2)
+    return m1 + m2
 
 
-def mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+def _mass_ratio(*, m1: Numeric, m2: Numeric) -> Numeric:
+    safe_m1 = jnp.where(m1 == 0.0, 1.0, m1)
+    return jnp.where(m1 == 0.0, jnp.inf, m2 / safe_m1)
+
+
+def mass_ratio(*, m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
         q(m_1, m_2) = \frac{m_2}{m_1}
     """
-    safe_m1 = jnp.where(m1 == 0.0, 1.0, m1)
-    return jnp.where(m1 == 0.0, -jnp.inf, jnp.divide(m2, safe_m1))
+    return jax.jit(_mass_ratio, inline=True)(m1=m1, m2=m2)
 
 
-def chirp_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+def _chirp_mass(*, m1: Numeric, m2: Numeric) -> Numeric:
+    M = total_mass(m1=m1, m2=m2)
+    m1m2 = m1_times_m2(m1=m1, m2=m2)
+    return jnp.power(m1m2, 0.6) * jnp.power(M, -0.2)
+
+
+def chirp_mass(*, m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
         M_c(m_1, m_2) = \frac{(m_1m_2)^{3/5}}{(m_1 + m_2)^{1/5}}
     """
+    return jax.jit(_chirp_mass, inline=True)(m1=m1, m2=m2)
+
+
+def _symmetric_mass_ratio(*, m1: Numeric, m2: Numeric) -> Numeric:
     M = total_mass(m1=m1, m2=m2)
     m1m2 = m1_times_m2(m1=m1, m2=m2)
-    return jnp.multiply(jnp.power(m1m2, 0.6), jnp.power(M, -0.2))
+    return m1m2 * jnp.power(M, -2.0)
 
 
-def symmetric_mass_ratio(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+def symmetric_mass_ratio(*, m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
         \eta(m_1, m_2) = \frac{m_1m_2}{(m_1 + m_2)^2}
     """
+    return jax.jit(_symmetric_mass_ratio, inline=True)(m1=m1, m2=m2)
+
+
+def _reduced_mass(*, m1: Numeric, m2: Numeric) -> Numeric:
     M = total_mass(m1=m1, m2=m2)
     m1m2 = m1_times_m2(m1=m1, m2=m2)
-    return jnp.multiply(m1m2, jnp.power(M, -2.0))
+    return jnp.where(M == 0.0, jnp.inf, m1m2 / M)
 
 
-def reduced_mass(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+def reduced_mass(*, m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
-        M_r(m_1, m_2) = \frac{m_1m_2}{(m_1 + m_2)}
+        M_r(m_1, m_2) = \frac{m_1m_2}{m_1 + m_2}
     """
+    return jax.jit(_reduced_mass, inline=True)(m1=m1, m2=m2)
+
+
+def _delta_m(*, m1: Numeric, m2: Numeric) -> Numeric:
+    diff = m1 - m2
     M = total_mass(m1=m1, m2=m2)
-    m1m2 = m1_times_m2(m1=m1, m2=m2)
-    return jnp.divide(m1m2, M)
+    return jnp.where(M == 0.0, jnp.inf, diff / M)
 
 
-def delta_m(*, m1: Array | Real, m2: Array | Real) -> Array | Real:
+def delta_m(*, m1: Numeric, m2: Numeric) -> Numeric:
     r"""
     .. math::
         \delta_m(m_1, m_2) = \frac{m_1 - m_2}{m_1 + m_2}
     """
-    diff = jnp.subtract(m1, m2)
-    M = total_mass(m1=m1, m2=m2)
-    return jnp.divide(diff, M)
+    return jax.jit(_delta_m, inline=True)(m1=m1, m2=m2)
 
 
-def delta_m_to_symmetric_mass_ratio(*, delta_m: Array | Real) -> Array | Real:
+def _delta_m_to_symmetric_mass_ratio(*, delta_m: Numeric) -> Numeric:
+    delta_m_sq = jnp.square(delta_m)  # delta_m^2
+    eta = 0.25 * (1 - delta_m_sq)  # (1 - delta_m^2) / 4
+    return eta
+
+
+def delta_m_to_symmetric_mass_ratio(*, delta_m: Numeric) -> Numeric:
     r"""
     .. math::
         \eta(\delta_m) = \frac{1 - \delta_m^2}{4}
     """
-    delta_m_sq = jnp.square(delta_m)  # delta_m^2
-    eta = jnp.multiply(0.25, jnp.subtract(1, delta_m_sq))  # (1 - delta_m^2) / 4
-    return eta
+    return jax.jit(_delta_m_to_symmetric_mass_ratio, inline=True)(delta_m=delta_m)
 
 
-def symmetric_mass_ratio_to_delta_m(*, eta: Array | Real) -> Array | Real:
-    r"""
-    .. math::
-        \delta_m(\eta) = \sqrt{1 - 4\eta}
-    """
+def _symmetric_mass_ratio_to_delta_m(*, eta: Numeric) -> Numeric:
     eta_4 = jnp.multiply(eta, 4)  #  eta*4
     delta_m = jnp.sqrt(jnp.subtract(1, eta_4))  # sqrt(1 - 4 * eta)
     return delta_m
 
 
-def m1_m2_ordering(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
+def symmetric_mass_ratio_to_delta_m(*, eta: Numeric) -> Numeric:
     r"""
     .. math::
-        f(m_1, m_2) = \begin{cases}
-            (m_1, m_2) & \text{if } m_1 \geq m_2 \\
-            (m_2, m_1) & \text{otherwise}
-        \end{cases}
+        \delta_m(\eta) = \sqrt{1 - 4\eta}
     """
-    i_sorted = m1 >= m2
-    m1_sorted = jnp.where(i_sorted, m1, m2)
-    m2_sorted = jnp.where(i_sorted, m2, m1)
-    return m1_sorted, m2_sorted
+    return jax.jit(_symmetric_mass_ratio_to_delta_m, inline=True)(eta=eta)
 
 
-def m_det_z_to_m_source(*, m_det: Array | Real, z: Array | Real) -> Array | Real:
+def _m_det_z_to_m_source(*, m_det: Numeric, z: Numeric) -> Numeric:
+    safe_one_more_z = jnp.where(z == -1.0, 1.0, jnp.add(1.0, z))
+    m_source = jnp.where(z == -1.0, jnp.inf, m_det / safe_one_more_z)
+    return m_source
+
+
+def m_det_z_to_m_source(*, m_det: Numeric, z: Numeric) -> Numeric:
     r"""
     .. math::
         m_{\text{source}}(m_{\text{det}}, z) = \frac{m_{\text{det}}}{1 + z}
     """
-    return jnp.divide(
-        m_det,
-        jnp.add(1.0, z),  # 1 + z
-    )
+    return jax.jit(_m_det_z_to_m_source, inline=True)(m_det=m_det, z=z)
 
 
-def m_source_z_to_m_det(*, m_source: Array | Real, z: Array | Real) -> Array | Real:
+def _m_source_z_to_m_det(*, m_source: Numeric, z: Numeric) -> Numeric:
+    return m_source * (1.0 + z)
+
+
+def m_source_z_to_m_det(*, m_source: Numeric, z: Numeric) -> Numeric:
     r"""
     .. math::
         m_{\text{det}}(m_{\text{source}}, z) = m_{\text{source}}(1 + z)
     """
-    return jnp.multiply(
-        m_source,
-        jnp.add(1.0, z),  # 1 + z
-    )
+    return jax.jit(_m_source_z_to_m_det, inline=True)(m_source=m_source, z=z)
 
 
-def m1_q_to_m2(*, m1: Array | Real, q: Array | Real) -> Array | Real:
+def m1_q_to_m2(*, m1: Numeric, q: Numeric) -> Numeric:
     r"""
     .. math::
         m_2(m_1, q) = m_1q
     """
-    return jnp.multiply(m1, q)  # m2 = m1 * q
+    return m1 * q
 
 
-def m2_q_to_m1(*, m2: Array | Real, q: Array | Real) -> Array | Real:
+def _m2_q_to_m1(*, m2: Numeric, q: Numeric) -> Numeric:
+    safe_q = jnp.where(q == 0.0, 1.0, q)
+    m1 = jnp.where(q == 0.0, jnp.inf, m2 / safe_q)
+    return m1
+
+
+def m2_q_to_m1(*, m2: Numeric, q: Numeric) -> Numeric:
     r"""
     .. math::
         m_1(m_2, q) = \frac{m_2}{q}
     """
-    return jnp.divide(m2, q)  # m1 = m2 / q
+    return jax.jit(_m2_q_to_m1, inline=True)(m2=m2, q=q)
 
 
-def M_q_to_m1_m2(*, M: Array | Real, q: Array | Real) -> tuple[Array, Array]:
-    m1 = jnp.divide(M, jnp.add(1, q))  # M/(1 + q)
-    m2 = m1_q_to_m2(m1=m1, q=q)
-    return m1, m2
+def chi_costilt_to_chiz(*, chi: Numeric, costilt: Numeric) -> Numeric:
+    r"""
+    .. math::
+        \chi_z(\chi, \cos(\theta)) = \chi \cos(\theta)
+    """
+    return chi * costilt
 
 
-def chi_costilt_to_chiz(*, chi: Array | Real, costilt: Array | Real) -> Array | Real:
-    return jnp.multiply(chi, costilt)
+def _m1_m2_chi1z_chi2z_to_chiminus(
+    *, m1: Numeric, m2: Numeric, chi1z: Numeric, chi2z: Numeric
+) -> Numeric:
+    m1_chi1z = m1 * chi1z
+    m2_chi2z = m2 * chi2z
+    M = total_mass(m1=m1, m2=m2)
+    diff = m1_chi1z - m2_chi2z
+    return jnp.where(M == 0, jnp.inf, diff / M)
 
 
 def m1_m2_chi1z_chi2z_to_chiminus(
-    *,
-    m1: Array | Real,
-    m2: Array | Real,
-    chi1z: Array | Real,
-    chi2z: Array | Real,
-) -> Array | Real:
-    m1_chi1z = jnp.multiply(m1, chi1z)
-    m2_chi2z = jnp.multiply(m2, chi2z)
-    M = total_mass(m1=m1, m2=m2)
-    diff = jnp.subtract(m1_chi1z, m2_chi2z)
-    return jnp.divide(diff, M)
+    *, m1: Numeric, m2: Numeric, chi1z: Numeric, chi2z: Numeric
+) -> Numeric:
+    r"""
+    .. math::
+        \chi_{\text{minus}}(m_1, m_2, \chi_{1z}, \chi_{2z}) = \frac{m_1\chi_{1z} - m_2\chi_{2z}}{m_1 + m_2}
+    """
+    return jax.jit(_m1_m2_chi1z_chi2z_to_chiminus, inline=True)(
+        m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z
+    )
 
 
-def m1_m2_chi1z_chi2z_to_chieff(
-    *,
-    m1: Array | Real,
-    m2: Array | Real,
-    chi1z: Array | Real,
-    chi2z: Array | Real,
-) -> Array | Real:
-    m1_chi1z = jnp.multiply(m1, chi1z)
-    m2_chi2z = jnp.multiply(m2, chi2z)
+def _chieff(*, m1: Numeric, m2: Numeric, chi1z: Numeric, chi2z: Numeric) -> Numeric:
+    m1_chi1z = m1 * chi1z
+    m2_chi2z = m2 * chi2z
     M = total_mass(m1=m1, m2=m2)
-    m_dot_chi = jnp.add(m1_chi1z, m2_chi2z)
-    return jnp.divide(m_dot_chi, M)
+    m_dot_chi = m1_chi1z + m2_chi2z
+    return jnp.where(M == 0, jnp.inf, m_dot_chi / M)
+
+
+def chieff(*, m1: Numeric, m2: Numeric, chi1z: Numeric, chi2z: Numeric) -> Numeric:
+    r"""
+    .. math::
+        \chi_{\text{eff}}(m_1, m_2, \chi_{1z}, \chi_{2z}) = \frac{m_1\chi_{1z} + m_2\chi_{2z}}{m_1 + m_2}
+    """
+    return jax.jit(_chieff, inline=True)(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 
 def m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
     *,
-    m1: Array | Real,
-    m2: Array | Real,
-    chi1: Array | Real,
-    chi2: Array | Real,
-    costilt1: Array | Real,
-    costilt2: Array | Real,
-) -> Array | Real:
+    m1: Numeric,
+    m2: Numeric,
+    chi1: Numeric,
+    chi2: Numeric,
+    costilt1: Numeric,
+    costilt2: Numeric,
+) -> Numeric:
+    r"""
+    .. math::
+        \chi_{\text{eff}}(m_1, m_2, \chi_1, \chi_2, \cos(\theta_1), \cos(\theta_2)) =
+        \frac{m_1\chi_1\cos(\theta_1) + m_2\chi_2\cos(\theta_2)}{m_1 + m_2}
+    """
     chi1z = chi_costilt_to_chiz(chi=chi1, costilt=costilt1)
     chi2z = chi_costilt_to_chiz(chi=chi2, costilt=costilt2)
-    return m1_m2_chi1z_chi2z_to_chieff(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
+    return chieff(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 
 def m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(
     *,
-    m1: Array | Real,
-    m2: Array | Real,
-    chi1: Array | Real,
-    chi2: Array | Real,
-    costilt1: Array | Real,
-    costilt2: Array | Real,
-) -> Array | Real:
+    m1: Numeric,
+    m2: Numeric,
+    chi1: Numeric,
+    chi2: Numeric,
+    costilt1: Numeric,
+    costilt2: Numeric,
+) -> Numeric:
+    r"""
+    .. math::
+        \chi_{\text{minus}}(m_1, m_2, \chi_1, \chi_2, \cos(\theta_1), \cos(\theta_2)) =
+        \frac{m_1\chi_1\cos(\theta_1) - m_2\chi_2\cos(\theta_2)}{m_1 + m_2}
+    """
     chi1z = chi_costilt_to_chiz(chi=chi1, costilt=costilt1)
     chi2z = chi_costilt_to_chiz(chi=chi2, costilt=costilt2)
     return m1_m2_chi1z_chi2z_to_chiminus(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 
 def m1_m2_chieff_chiminus_to_chi1z_chi2z(
-    *,
-    m1: Array | Real,
-    m2: Array | Real,
-    chieff: Array | Real,
-    chiminus: Array | Real,
-) -> tuple[Array, Array]:
+    *, m1: Numeric, m2: Numeric, chieff: Numeric, chiminus: Numeric
+) -> tuple[Numeric, Numeric]:
+    r"""
+    .. math::
+        \begin{align*}
+        \chi_{1z}(m_1, m_2, \chi_{\text{eff}}, \chi_{\text{minus}}) &=
+        \frac{m_1+m_2}{2m_1} \left( \chi_{\text{eff}} + \chi_{\text{minus}} \right)\\
+        \chi_{2z}(m_1, m_2, \chi_{\text{eff}}, \chi_{\text{minus}}) &=
+        \frac{m_1+m_2}{2m_2} \left( \chi_{\text{eff}} - \chi_{\text{minus}} \right)
+        \end{align*}
+    """
     half_M = jnp.multiply(0.5, total_mass(m1=m1, m2=m2))  # M/2
     chi1z = jnp.divide(
         jnp.multiply(half_M, jnp.add(chieff, chiminus)), m1
@@ -238,20 +286,14 @@ def m1_m2_chieff_chiminus_to_chi1z_chi2z(
     return chi1z, chi2z
 
 
-def Mc_delta_chieff_chiminus_to_chi1z_chi2z(
-    *,
-    Mc: Array | Real,
-    delta: Array | Real,
-    chieff: Array | Real,
-    chiminus: Array | Real,
-) -> tuple[Array, Array]:
-    m1, m2 = Mc_delta_to_m1_m2(Mc=Mc, delta=delta)
-    return m1_m2_chieff_chiminus_to_chi1z_chi2z(
-        m1=m1, m2=m2, chieff=chieff, chiminus=chiminus
-    )
-
-
-def Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Array]:
+def Mc_eta_to_m1_m2(*, Mc: Numeric, eta: Numeric) -> tuple[Numeric, Numeric]:
+    r"""
+    .. math::
+        \begin{align*}
+            m_1(M_c, \eta) &= \frac{M_c}{2} \eta^{-0.6} (1 + \sqrt{1 - 4\eta}) \\
+            m_2(M_c, \eta) &= \frac{M_c}{2} \eta^{-0.6} (1 - \sqrt{1 - 4\eta})
+        \end{align*}
+    """
     delta_sq = jnp.subtract(1, jnp.multiply(4.0, eta))  # 1 - 4 * eta
     delta_sq = jnp.maximum(
         delta_sq, jnp.zeros_like(delta_sq)
@@ -271,50 +313,64 @@ def Mc_eta_to_m1_m2(*, Mc: Array | Real, eta: Array | Real) -> tuple[Array, Arra
     return m1, m2
 
 
-def m1_m2_to_Mc_eta(*, m1: Array | Real, m2: Array | Real) -> tuple[Array, Array]:
-    M = total_mass(m1=m1, m2=m2)
-    m1m2 = m1_times_m2(m1=m1, m2=m2)
-    eta = jnp.multiply(m1m2, jnp.reciprocal(M * M))  # eta = m1 * m2 / M^2
-    Mc = jnp.multiply(jnp.power(eta, 0.6), M)  # Mc = M * eta^0.6
-    return Mc, eta
-
-
-def Mc_delta_to_m1_m2(*, Mc: Array | Real, delta: Array | Real) -> tuple[Array, Array]:
-    eta = delta_m_to_symmetric_mass_ratio(delta_m=delta)
-    return Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
-
-
-def polar_to_cart(*, r: Array | Real, theta: Array | Real) -> tuple[Array, Array]:
-    x = jnp.multiply(r, jnp.cos(theta))
-    y = jnp.multiply(r, jnp.sin(theta))
+def polar_to_cart(*, r: Numeric, theta: Numeric) -> tuple[Numeric, Numeric]:
+    r"""
+    .. math::
+        \begin{align*}
+            x(r, \theta) &= r \cos(\theta) \\
+            y(r, \theta) &= r \sin(\theta)
+        \end{align*}
+    """
+    x = r * jnp.cos(theta)
+    y = r * jnp.sin(theta)
     return x, y
 
 
-def cart_to_polar(*, x: Array | Real, y: Array | Real) -> tuple[Array, Array]:
-    r = jnp.sqrt(jnp.add(jnp.square(x), jnp.square(y)))
+def cart_to_polar(*, x: Numeric, y: Numeric) -> tuple[Numeric, Numeric]:
+    r"""
+    .. math::
+        \begin{align*}
+            r(x, y) &= \sqrt{x^2 + y^2} \\
+            \theta(x, y) &= \arctan(y/x)
+        \end{align*}
+    """
+    r = jnp.sqrt(x * x + y * y)
     theta = jnp.arctan2(y, x)
     return r, theta
 
 
 def spherical_to_cart(
-    *, r: Array | Real, theta: Array | Real, phi: Array | Real
-) -> tuple[Array, Array, Array]:
-    x = jnp.multiply(
-        jnp.multiply(r, jnp.sin(theta)), jnp.cos(phi)
-    )  # x = r * sin(theta) * cos(phi)
-    y = jnp.multiply(
-        jnp.multiply(r, jnp.sin(theta)), jnp.sin(phi)
-    )  # y = r * sin(theta) * sin(phi)
-    z = jnp.multiply(r, jnp.cos(theta))  # z = r * cos(theta)
+    *, r: Numeric, theta: Numeric, phi: Numeric
+) -> tuple[Numeric, Numeric, Numeric]:
+    r"""
+    .. math::
+        \begin{align*}
+            x(r, \theta, \phi) &= r \sin(\theta) \cos(\phi) \\
+            y(r, \theta, \phi) &= r \sin(\theta) \sin(\phi) \\
+            z(r, \theta, \phi) &= r \cos(\theta)
+        \end{align*}
+    """
+    x = r * jnp.sin(theta) * jnp.cos(phi)  # x = r * sin(theta) * cos(phi)
+    y = r * jnp.sin(theta) * jnp.sin(phi)  # y = r * sin(theta) * sin(phi)
+    z = r * jnp.cos(theta)  # z = r * cos(theta)
     return x, y, z
 
 
 def cart_to_spherical(
-    *, x: Array | Real, y: Array | Real, z: Array | Real
-) -> tuple[Array, Array, Array]:
-    r = jnp.sqrt(
-        jnp.add(jnp.add(jnp.square(x), jnp.square(y)), jnp.square(z))
-    )  # r = sqrt(x^2 + y^2 + z^2)
-    theta = jnp.arccos(jnp.divide(z, r))  # theta = arccos(z / r)
+    *, x: Numeric, y: Numeric, z: Numeric
+) -> tuple[Numeric, Numeric, Numeric]:
+    r"""
+    .. math::
+        \begin{align*}
+            r(x, y, z) &= \sqrt{x^2 + y^2 + z^2} \\
+            \theta(x, y, z) &= \arccos\left(\frac{z}{r}\right) \\
+            \phi(x, y, z) &= \arctan\left(\frac{y}{x}\right)
+        \end{align*}
+    """
+    r = jnp.sqrt(x * x + y * y + z * z)  # r = sqrt(x^2 + y^2 + z^2)
+    safe_r = jnp.where(r == 0.0, 1.0, r)
+    theta = jnp.arccos(
+        jnp.where(r == 0.0, jnp.inf, z / safe_r)
+    )  # theta = arccos(z / r)
     phi = jnp.arctan2(y, x)  # phi = arctan(y / x)
     return r, theta, phi
