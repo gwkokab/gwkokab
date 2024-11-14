@@ -36,25 +36,20 @@
     cart_to_polar
     cart_to_spherical
     chi_costilt_to_chiz
+    chieff
     chirp_mass
     delta_m
     delta_m_to_symmetric_mass_ratio
     m1_m2_chi1_chi2_costilt1_costilt2_to_chieff
     m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus
-    m1_m2_chi1z_chi2z_to_chieff
     m1_m2_chi1z_chi2z_to_chiminus
     m1_m2_chieff_chiminus_to_chi1z_chi2z
-    m1_m2_ordering
-    m1_m2_to_Mc_eta
     m1_q_to_m2
     m1_times_m2
     m2_q_to_m1
     m_det_z_to_m_source
-    M_q_to_m1_m2
     m_source_z_to_m_det
     mass_ratio
-    Mc_delta_chieff_chiminus_to_chi1z_chi2z
-    Mc_delta_to_m1_m2
     Mc_eta_to_m1_m2
     polar_to_cart
     reduced_mass

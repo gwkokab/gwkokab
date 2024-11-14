@@ -20,25 +20,20 @@ from gwkokab.utils.transformations import (
     cart_to_polar,
     cart_to_spherical,
     chi_costilt_to_chiz,
+    chieff,
     chirp_mass,
     delta_m,
     delta_m_to_symmetric_mass_ratio,
     m1_m2_chi1_chi2_costilt1_costilt2_to_chieff,
     m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus,
-    m1_m2_chi1z_chi2z_to_chieff,
     m1_m2_chi1z_chi2z_to_chiminus,
     m1_m2_chieff_chiminus_to_chi1z_chi2z,
-    m1_m2_ordering,
-    m1_m2_to_Mc_eta,
     m1_q_to_m2,
     m1_times_m2,
     m2_q_to_m1,
     m_det_z_to_m_source,
-    M_q_to_m1_m2,
     m_source_z_to_m_det,
     mass_ratio,
-    Mc_delta_chieff_chiminus_to_chi1z_chi2z,
-    Mc_delta_to_m1_m2,
     Mc_eta_to_m1_m2,
     polar_to_cart,
     reduced_mass,
@@ -97,27 +92,9 @@ def test_different_mass_representations(m1, m2):
     assert jnp.allclose(eta_, delta_m_to_symmetric_mass_ratio(delta_m=delta))
     delta_ = jnp.sqrt(1 - 4 * eta)
     assert jnp.allclose(delta_, symmetric_mass_ratio_to_delta_m(eta=eta))
-    m1_, m2_ = M_q_to_m1_m2(M=M, q=q)
-    assert jnp.allclose(m1, m1_)
-    assert jnp.allclose(m2, m2_)
-    Mc_, eta_ = m1_m2_to_Mc_eta(m1=m1, m2=m2)
-    assert jnp.allclose(Mc, Mc_)
-    assert jnp.allclose(eta, eta_)
     m1_, m2_ = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
     assert jnp.allclose(m1, m1_)
     assert jnp.allclose(m2, m2_)
-    m1_, m2_ = Mc_delta_to_m1_m2(Mc=Mc, delta=delta)
-    assert jnp.allclose(m1, m1_)
-    assert jnp.allclose(m2, m2_)
-
-
-def test_m1_m2_ordering():
-    m1_, m2_ = m1_m2_ordering(m1=_primary_masses, m2=_secondary_masses)
-    i_sorted = _primary_masses >= _secondary_masses
-    m1_sorted = jnp.where(i_sorted, _primary_masses, _secondary_masses)
-    m2_sorted = jnp.where(i_sorted, _secondary_masses, _primary_masses)
-    assert jnp.allclose(m1_sorted, m1_)
-    assert jnp.allclose(m2_sorted, m2_)
 
 
 @pytest.mark.parametrize("m", _primary_masses)
@@ -140,9 +117,9 @@ def test_chi_costilt_to_chiz(chi, costilt):
 @pytest.mark.parametrize("chi1", _chi1)
 @pytest.mark.parametrize("chi2", _chi2)
 def test_m1_m2_chi1z_chi2z(m1, m2, chi1, chi2):
-    chieff_ = m1_m2_chi1z_chi2z_to_chieff(m1=m1, m2=m2, chi1z=chi1, chi2z=chi2)
-    chieff = (m1 * chi1 + m2 * chi2) / (m1 + m2)
-    assert jnp.allclose(chieff, chieff_)
+    chieff_ = chieff(m1=m1, m2=m2, chi1z=chi1, chi2z=chi2)
+    chieff__ = (m1 * chi1 + m2 * chi2) / (m1 + m2)
+    assert jnp.allclose(chieff__, chieff_)
     chiminus_ = m1_m2_chi1z_chi2z_to_chiminus(m1=m1, m2=m2, chi1z=chi1, chi2z=chi2)
     chiminus = (m1 * chi1 - m2 * chi2) / (m1 + m2)
     assert jnp.allclose(chiminus, chiminus_)
@@ -157,15 +134,6 @@ def test_m1_m2_chieff_chiminus(m1, m2, chieff, chiminus):
     )
     chi1z = (m1 + m2) * (chieff + chiminus) / (2 * m1)
     chi2z = (m1 + m2) * (chieff - chiminus) / (2 * m2)
-    assert jnp.allclose(chi1z, chi1z_)
-    assert jnp.allclose(chi2z, chi2z_)
-    m1m2 = m1 * m2
-    M = m1 + m2
-    Mc = m1m2**0.6 * M**-0.2
-    delta = (m1 - m2) / M
-    chi1z_, chi2z_ = Mc_delta_chieff_chiminus_to_chi1z_chi2z(
-        Mc=Mc, delta=delta, chieff=chieff, chiminus=chiminus
-    )
     assert jnp.allclose(chi1z, chi1z_)
     assert jnp.allclose(chi2z, chi2z_)
 

@@ -32,13 +32,12 @@ from numpyro.distributions.transforms import (
 from ..utils.transformations import (
     chirp_mass,
     delta_m,
-    m1_m2_to_Mc_eta,
+    delta_m_to_symmetric_mass_ratio,
     m1_q_to_m2,
     m2_q_to_m1,
-    M_q_to_m1_m2,
     mass_ratio,
-    Mc_delta_to_m1_m2,
     Mc_eta_to_m1_m2,
+    symmetric_mass_ratio,
     total_mass,
 )
 from .constraints import (
@@ -139,7 +138,8 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     def __call__(self, x):
         m1 = x[..., 0]
         m2 = x[..., 1]
-        Mc, eta = m1_m2_to_Mc_eta(m1=m1, m2=m2)
+        Mc = chirp_mass(m1=m1, m2=m2)
+        eta = symmetric_mass_ratio(m1=m1, m2=m2)
         return jnp.stack((Mc, eta), axis=-1)
 
     def _inverse(self, y):
@@ -244,7 +244,8 @@ class ComponentMassesToChirpMassAndDelta(Transform):
     def _inverse(self, y):
         Mc = y[..., 0]
         delta = y[..., 1]
-        m1, m2 = Mc_delta_to_m1_m2(Mc=Mc, delta=delta)
+        eta = delta_m_to_symmetric_mass_ratio(delta_m=delta)
+        m1, m2 = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
@@ -455,7 +456,9 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
     def _inverse(self, y):
         M = y[..., 0]
         q = y[..., 1]
-        m1, m2 = M_q_to_m1_m2(M=M, q=q)
+        safe_q = jnp.where(q == -1.0, 1.0, q)
+        m1 = jnp.where(q == -1.0, jnp.inf, M / (1 + safe_q))
+        m2 = m1_q_to_m2(m1=m1, q=q)
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
