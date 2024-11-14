@@ -121,6 +121,7 @@ autodoc_type_aliases = {
     "ArrayLike": "ArrayLike",
     "Iterable": "Iterable",
     "Numeric": "Numeric",
+    "chex.Numeric": "Numeric",
 }
 
 
@@ -161,4 +162,5 @@ intersphinx_mapping = {
     "numpyro": ("https://num.pyro.ai/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),
     "typing_extensions": ("https://typing-extensions.readthedocs.io/en/latest/", None),
+    "chex": ("https://chex.readthedocs.io/en/latest/", None),
 }
