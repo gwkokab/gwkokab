@@ -57,15 +57,19 @@ def _log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
     :param high: upper bound of the window
     :return: window value
     """
-    return jnp.select(
-        [
-            x < a,
-            (a <= x) & (x <= a + b),
-            x > a + b,
-        ],
-        [
-            -jnp.inf,
-            -jnn.softplus(b / (x - a - b) + b / (x - a)),
-            0.0,
-        ],
-    )
+    eps = 1e-6
+    safe_b = jnp.where(b == 0, eps, b)
+    x_norm = jnp.where(b == 0, eps, (x - a) / safe_b)
+    safe_x_norm = jnp.clip(x_norm, eps, 1.0 - eps)
+    condlist = [
+        x_norm <= 0.0,
+        (0.0 < x_norm) & (x_norm < 1.0),
+        x_norm >= 1.0,
+    ]
+    choicelist = [
+        -jnp.inf,
+        -jnn.softplus(1.0 / (safe_x_norm - 1.0) + 1.0 / safe_x_norm),
+        0.0,
+    ]
+    mask = jnp.select(condlist, choicelist)
+    return mask
