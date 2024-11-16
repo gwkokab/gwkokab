@@ -70,21 +70,26 @@ class ScaledMixture(MixtureGeneral):
             validate_args=validate_args,
         )
 
-    @validate_sample
-    def log_prob(self, value: Float[Array, "..."]) -> Float[Array, "..."]:
-        # modified implementation of numpyro.distributions.MixtureGeneral.log_prob
-        _component_log_probs = []
+    def component_log_probs(self, value):
+        # modified implementation of numpyro.distributions.MixtureGeneral.component_log_probs
+        component_log_probs = []
         for d in self.component_distributions:
             log_prob = d.log_prob(value)
             if (self._support is not None) and (not d._validate_args):
                 mask = d.support(value)
                 log_prob = jnp.where(mask, log_prob, -jnp.inf)
-            _component_log_probs.append(log_prob)
-        component_log_probs = self._log_scales + jnp.stack(
-            _component_log_probs, axis=-1
+            component_log_probs.append(log_prob)
+        component_log_probs = jnp.stack(component_log_probs, axis=-1)
+        return self._log_scales + component_log_probs
+
+    @validate_sample
+    def log_prob(
+        self, value: Float[Array, "..."], intermediates=None
+    ) -> Float[Array, "..."]:
+        # https://github.com/pyro-ppl/numpyro/issues/1870
+        del intermediates
+        sum_log_probs = self.component_log_probs(value)
+        safe_sum_log_probs = jnp.where(
+            jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
         )
-        safe_component_log_probs = jnp.where(
-            jnp.isneginf(component_log_probs), -jnp.inf, component_log_probs
-        )
-        mixture_log_prob = jax.nn.logsumexp(safe_component_log_probs, axis=-1)
-        return mixture_log_prob
+        return jax.nn.logsumexp(safe_sum_log_probs, axis=-1)
