@@ -36,7 +36,8 @@ from numpyro.distributions import (
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ..utils import log_planck_taper_window
+from ..utils.kernel import log_planck_taper_window
+from ..utils.transformations import mass_ratio
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
     doubly_truncated_power_law_icdf,
@@ -724,7 +725,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
     def log_prob(self, value):
         m1 = value[..., 0]
         q = value[..., 1]
-        m2 = jnp.multiply(m1, q)
+        m2 = m1 * q
         log_smoothing_m1 = log_planck_taper_window(x=m1, a=self.mmin, b=self.delta)
         log_smoothing_q = log_planck_taper_window(x=m2, a=self.mmin, b=self.delta)
 
@@ -736,15 +737,15 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         # These two links provide the solution to the problem.
         # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
         # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
-        mmin_over_m1 = jnp.where(self.mmin < m1, jnp.divide(self.mmin, m1), 0.0)
+        q_min = mass_ratio(m1=m1, m2=self.mmin)
         log_prob_q = jnp.where(
             self.mmin < m1,
             doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=mmin_over_m1, high=1.0
+                x=q, alpha=self.beta, low=q_min, high=1.0
             ),
             -jnp.inf,
         )
-        return jnp.add(log_prob_m1, log_prob_q) + log_smoothing_m1 + log_smoothing_q
+        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
 
 
 class SmoothedGaussianPrimaryMassRatio(Distribution):
@@ -823,7 +824,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
     def log_prob(self, value):
         m1 = value[..., 0]
         q = value[..., 1]
-        m2 = jnp.multiply(m1, q)
+        m2 = m1 * q
         log_smoothing_m1 = log_planck_taper_window(x=m1, a=self.mmin, b=self.delta)
         log_smoothing_q = log_planck_taper_window(x=m2, a=self.mmin, b=self.delta)
 
@@ -833,12 +834,12 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         # These two links provide the solution to the problem.
         # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
         # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
-        mmin_over_m1 = jnp.where(self.mmin < m1, jnp.divide(self.mmin, m1), 0.0)
+        q_min = mass_ratio(m1=m1, m2=self.mmin)
         log_prob_q = jnp.where(
             self.mmin < m1,
             doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=mmin_over_m1, high=1.0
+                x=q, alpha=self.beta, low=q_min, high=1.0
             ),
             -jnp.inf,
         )
-        return jnp.add(log_prob_m1, log_prob_q) + log_smoothing_m1 + log_smoothing_q
+        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q

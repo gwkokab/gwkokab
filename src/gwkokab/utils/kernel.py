@@ -60,7 +60,8 @@ def _log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
     eps = 1e-6
     safe_b = jnp.where(b == 0, eps, b)
     x_norm = jnp.where(b == 0, eps, (x - a) / safe_b)
-    safe_x_norm = jnp.clip(x_norm, eps, 1.0 - eps)
+    term_1 = jnp.where(x_norm == 0, 1.0, 1.0 / x_norm)
+    term_2 = jnp.where(x_norm == 1.0, 1.0, 1.0 / (x_norm - 1.0))
     condlist = [
         x_norm <= 0.0,
         (0.0 < x_norm) & (x_norm < 1.0),
@@ -68,7 +69,7 @@ def _log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
     ]
     choicelist = [
         -jnp.inf,
-        -jnn.softplus(1.0 / (safe_x_norm - 1.0) + 1.0 / safe_x_norm),
+        -jnn.softplus(term_1 + term_2),
         0.0,
     ]
     mask = jnp.select(condlist, choicelist)
