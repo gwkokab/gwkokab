@@ -18,7 +18,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing_extensions import Callable
 
-from jax import vmap
+from jax import numpy as jnp, vmap
 from jaxtyping import Array, Bool, Float
 
 from gwkokab.vts import load_model
@@ -31,7 +31,7 @@ def get_logVT(
 
     def m1m2_trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
         m1m2 = x[..., selection_indexes]
-        return vmap(logVT)(m1m2)
+        return jnp.squeeze(vmap(logVT)(m1m2), axis=-1)
 
     return m1m2_trimmed_logVT
 
