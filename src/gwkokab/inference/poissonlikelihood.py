@@ -183,17 +183,16 @@ class PoissonLikelihood:
         :param model: :math:`\rho(\lambda\mid\Lambda)`.
         :return: Integral.
         """
-        samples = self.vt_params_unif_rvs.sample(key, (N,))
+        values = self.vt_params_unif_rvs.sample(key, (N,))
+        log_VT = self.logVT(values[..., self.vt_params_index])
         volume = jtr.reduce(
             lambda x, y: x * (y.high - y.low),
             self.vt_params_unif_rvs.marginal_distributions,
             1.0,
             is_leaf=lambda x: isinstance(x, Uniform),
         )
-        logpdf = model.log_prob(samples) + self.logVT(
-            samples[..., self.vt_params_index]
-        )
-        return volume * jnp.mean(jnp.exp(logpdf))
+        component_log_prob = model.log_prob(values) + log_VT
+        return jnp.mean(jnp.exp(component_log_prob)) * volume
 
     def exp_rate_integral_model_samples(
         self, N: int, key: PRNGKeyArray, model: ScaledMixture
@@ -234,7 +233,6 @@ class PoissonLikelihood:
         else:
             raise ValueError("Invalid VT method.")
         vt_value *= self.time
-        debug_flush("exp_rate_integral: {vt_value}", vt_value=vt_value)
         return vt_value
 
     def log_likelihood(self, x: Array, data: dict) -> Array:
@@ -244,9 +242,11 @@ class PoissonLikelihood:
         :param data: Data provided by the user/sampler.
         :return: Log likelihood value for the given parameters.
         """
-        model: ScaledMixture = self.model(
-            **{name: x[..., i] for name, i in self.variables_index.items()}
-        )
+        mapped_params = {name: x[..., i] for name, i in self.variables_index.items()}
+
+        debug_flush("mapped params: {mp}", mp=mapped_params)
+
+        model: ScaledMixture = self.model(**mapped_params)
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
