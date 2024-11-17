@@ -14,8 +14,6 @@
 
 from __future__ import annotations
 
-from itertools import product
-
 import chex
 from absl.testing import parameterized
 from jax import grad, numpy as jnp
@@ -23,9 +21,30 @@ from jax import grad, numpy as jnp
 from gwkokab.utils import log_planck_taper_window
 
 
-x = [10.907955, 19.9329, 3.5127172, 9.406811]
-a = [19.237825, 3.8927088, 8.82331]
-b = [0.35940528, 2.5084865, 8.82331]
+x = [
+    -0.03196073,
+    -0.09624577,
+    -0.09714341,
+    -0.10647035,
+    -0.19786143,
+    -0.579038,
+    -0.89962137,
+    -0.9902357,
+    0.0,
+    0.2309705,
+    0.33585954,
+    0.54150164,
+    0.7553431,
+    0.8452761,
+    1.0,
+    1.0090289,
+    1.1652794,
+    1.3518975,
+    1.6708747,
+    1.7008203,
+    1.720163,
+    1.9225303,
+]
 
 
 class TestPlanckTaperWindow(parameterized.TestCase):
@@ -36,20 +55,18 @@ class TestPlanckTaperWindow(parameterized.TestCase):
         without_device=True,
         with_pmap=True,
     )
-    @parameterized.named_parameters(
-        [(str(i), x_, a_, b_) for i, (x_, a_, b_) in enumerate(product(x, a, b))]
-    )
-    def test_planck_taper_window(self, x, a, b):
+    @parameterized.named_parameters([(str(i), x_) for i, x_ in enumerate(x)])
+    def test_planck_taper_window(self, x):
         @self.variant  # pyright: ignore
-        def planck_taper_window_fn(x, a, b):
-            return jnp.exp(log_planck_taper_window(x, a, b))
+        def planck_taper_window_fn(x):
+            return jnp.exp(log_planck_taper_window(x))
 
-        if x < a:
-            assert planck_taper_window_fn(x, a, b) == 0
-        if x > a + b:
-            assert planck_taper_window_fn(x, a, b) == 1
-        if a <= x <= a + b:
-            assert 0 <= planck_taper_window_fn(x, a, b) <= 1
+        if x < 0.0:
+            assert planck_taper_window_fn(x) == 0
+        elif x > 1.0:
+            assert planck_taper_window_fn(x) == 1
+        else:
+            assert 0 <= planck_taper_window_fn(x) <= 1
 
     @chex.variants(  # pyright: ignore
         with_jit=True,
@@ -58,14 +75,11 @@ class TestPlanckTaperWindow(parameterized.TestCase):
         without_device=True,
         with_pmap=True,
     )
-    @parameterized.named_parameters(
-        [(str(i), x_, a_, b_) for i, (x_, a_, b_) in enumerate(product(x, a, b))]
-    )
-    def test_planck_taper_window_grad(self, x, a, b):
+    @parameterized.named_parameters([(str(i), x_) for i, x_ in enumerate(x)])
+    def test_planck_taper_window_grad(self, x):
         @self.variant  # pyright: ignore
-        def planck_taper_window_fn(x, a, b):
-            return jnp.exp(log_planck_taper_window(x, a, b))
+        def planck_taper_window_grad_fn(x):
+            return grad(lambda X: jnp.exp(log_planck_taper_window(X)))(x)
 
-        grad_fn = grad(planck_taper_window_fn)
-        grad_val = grad_fn(x, a, b)
+        grad_val = planck_taper_window_grad_fn(x)
         assert not jnp.any(jnp.isnan(grad_val))

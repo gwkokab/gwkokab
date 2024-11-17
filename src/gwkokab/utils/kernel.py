@@ -17,60 +17,33 @@ from __future__ import annotations
 
 import jax
 from jax import nn as jnn, numpy as jnp
-from jaxtyping import Array
+from jaxtyping import ArrayLike
 
 
-def log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
-    r"""If :math:`x` is the point at which to evaluate the window, :math:`a` is the
-    lower bound of the window, and :math:`b` is the window width, the Planck taper
-    window is defined as,
+@jax.jit
+def log_planck_taper_window(x: ArrayLike) -> ArrayLike:
+    r"""If :math:`x` is the point at which to evaluate the window, then the Planck
+    taper window is defined as,
 
     .. math::
 
-        S(x\mid a,b)=\begin{cases}
-            0                                                                             & \text{if } x < a,             \\
-            \displaystyle\operatorname{expit}{\left(\frac{b}{b+a-x}+\frac{b}{a-x}\right)} & \text{if } a \leq x \leq a+b, \\
-            1                                                                             & \text{if } x > a+b,           \\
+        S(x)=\begin{cases}
+            0                                                                   & \text{if } x < 0,           \\
+            \displaystyle\frac{1}{1+e^{\left(\frac{1}{x}+\frac{1}{x-1}\right)}} & \text{if } 0 \leq x \leq 1, \\
+            1                                                                   & \text{if } x > 1,           \\
         \end{cases}
 
-    where :math:`\operatorname{expit}` is the logistic sigmoid function.
-
-    .. math::
-
-        \operatorname{expit}(x)=\frac{1}{1+e^{-x}}
-
-    This function evaluates the log of the Planck taper window :math:`\ln{S(x\mid a,b)}`.
+    This function evaluates the log of the Planck taper window :math:`\ln{S(x)}`.
 
     :param value: point at which to evaluate the window
     :param low: lower bound of the window
     :param high: upper bound of the window
     :return: window value
     """
-    return jax.jit(_log_planck_taper_window, inline=True)(x, a, b)
-
-
-def _log_planck_taper_window(x: Array, a: Array, b: Array) -> Array:
-    """Log Planck taper window.
-
-    :param value: point at which to evaluate the window
-    :param low: lower bound of the window
-    :param high: upper bound of the window
-    :return: window value
-    """
-    eps = 1e-6
-    safe_b = jnp.where(b == 0, eps, b)
-    x_norm = jnp.where(b == 0, eps, (x - a) / safe_b)
-    term_1 = jnp.where(x_norm == 0, 1.0, 1.0 / x_norm)
-    term_2 = jnp.where(x_norm == 1.0, 1.0, 1.0 / (x_norm - 1.0))
-    condlist = [
-        x_norm <= 0.0,
-        (0.0 < x_norm) & (x_norm < 1.0),
-        x_norm >= 1.0,
-    ]
-    choicelist = [
+    inv_1 = jnp.where(x == 0.0, 0.0, 1.0 / jnp.where(x == 0.0, 1.0, x))
+    inv_2 = jnp.where(x == 1.0, 0.0, 1.0 / jnp.where(x == 1.0, 1.0, x - 1.0))
+    return jnp.where(
+        x <= 0,
         -jnp.inf,
-        -jnn.softplus(term_1 + term_2),
-        0.0,
-    ]
-    mask = jnp.select(condlist, choicelist)
-    return mask
+        jnp.where(x < 1.0, -jnn.softplus(inv_1 + inv_2), 0.0),
+    )
