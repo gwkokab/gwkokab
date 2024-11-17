@@ -671,14 +671,14 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
     r""":class:`PowerlawPrimaryMassRatio` with smoothing kernel on the lower edge.
 
     .. math::
-        p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
+        p(m_1,q\mid\alpha,\beta,m_{\text{min}},m_{\text{max}},\delta) = p(m_1\mid\alpha,m_{\text{min}},m_{\text{max}},\delta)p(q \mid m_1,\beta,m_{\text{min}},\delta)
 
     .. math::
         \begin{align*}
-            p(m_1\mid\alpha)&
-            \propto m_1^{\alpha}S(m_1\mid m_{\text{min}},\delta),\qquad m_{\text{min}}\leq m_1\leq m_{\max}\\
-            p(q\mid m_1,\beta)&
-            \propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
+            p(m_1\mid\alpha,m_{\text{min}},m_{\text{max}},\delta)&
+            \propto m_1^{\alpha}S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right),\qquad m_{\text{min}}\leq m_1\leq m_{\max} \\
+            p(q \mid m_1,\beta,m_{\text{min}},\delta)&
+            \propto q^{\beta}S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
         \end{align*}
 
     Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
@@ -726,8 +726,12 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         m1 = value[..., 0]
         q = value[..., 1]
         m2 = m1 * q
-        log_smoothing_m1 = log_planck_taper_window(x=m1, a=self.mmin, b=self.delta)
-        log_smoothing_q = log_planck_taper_window(x=m2, a=self.mmin, b=self.delta)
+        log_smoothing_m1 = log_planck_taper_window(
+            (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_smoothing_q = log_planck_taper_window(
+            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
 
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
@@ -753,10 +757,10 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
     the lower edge.
 
     .. math::
-        p(m_1,q\mid\mu,\sigma^2,\beta) = \mathcal{N}(m_1\mid\mu,\sigma^2)p(q \mid m_1,\beta)
+        p(m_1,q\mid\mu,\sigma^2,\beta,m_{\text{min}},m_{\text{max}},\delta) = \mathcal{N}(m_1\mid\mu,\sigma^2)S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)p(q \mid m_1,\beta,m_{\text{min}},\delta)
 
     .. math::
-        p(q\mid m_1,\beta) \propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
+        p(q\mid m_1,\beta) \propto q^{\beta}S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
 
     Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
 
@@ -825,8 +829,12 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         m1 = value[..., 0]
         q = value[..., 1]
         m2 = m1 * q
-        log_smoothing_m1 = log_planck_taper_window(x=m1, a=self.mmin, b=self.delta)
-        log_smoothing_q = log_planck_taper_window(x=m2, a=self.mmin, b=self.delta)
+        log_smoothing_m1 = log_planck_taper_window(
+            (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_smoothing_q = log_planck_taper_window(
+            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
 
         log_prob_m1 = self._norm.log_prob(m1)
         # as low approaches to high, mathematically it shoots off to infinity
