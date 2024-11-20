@@ -102,6 +102,8 @@ def constraint(
         mask &= ecc >= 0.0
         mask &= ecc <= 1.0
 
+        i += 1
+
     if has_redshift:
         z = x[..., i]
 
