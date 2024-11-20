@@ -91,6 +91,7 @@ gwk_chain_plot = "gwkokab_scripts.chain_plot:main"
 gwk_corner_plot = "gwkokab_scripts.corner_plot:main"
 gwk_joint_plot = "gwkokab_scripts.joint_plot:main"
 gwk_ppd_plot = "gwkokab_scripts.ppd_plot:main"
+gwk_samples_from_vt = "gwkokab_scripts.samples_from_vt:main"
 gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
 gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
 # Kokab scripts
