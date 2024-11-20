@@ -83,3 +83,33 @@ class TestPlanckTaperWindow(parameterized.TestCase):
 
         grad_val = planck_taper_window_grad_fn(x)
         assert not jnp.any(jnp.isnan(grad_val))
+
+    @chex.variants(  # pyright: ignore
+        with_jit=True,
+        without_jit=True,
+        with_device=True,
+        without_device=True,
+        with_pmap=True,
+    )
+    def test_planck_taper_window_at_edge(self):
+        @self.variant  # pyright: ignore
+        def planck_taper_window_fn(x):
+            return jnp.exp(log_planck_taper_window(x))
+
+        assert planck_taper_window_fn(0.0) == 0.0
+        assert planck_taper_window_fn(1.0) == 1.0
+
+    @chex.variants(  # pyright: ignore
+        with_jit=True,
+        without_jit=True,
+        with_device=True,
+        without_device=True,
+        with_pmap=True,
+    )
+    def test_planck_taper_window_grad_at_edge(self):
+        @self.variant  # pyright: ignore
+        def planck_taper_window_grad_fn(x):
+            return grad(lambda X: jnp.exp(log_planck_taper_window(X)))(x)
+
+        assert planck_taper_window_grad_fn(0.0) == 0.0  # zero slope at x=0
+        assert planck_taper_window_grad_fn(1.0) == 0.0  # zero slope at x=1
