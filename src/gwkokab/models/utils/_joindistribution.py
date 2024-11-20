@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing_extensions import Tuple
 
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
-from jaxtyping import PRNGKeyArray
+from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import constraints, Distribution
 from numpyro.util import is_prng_key
 
@@ -35,6 +35,8 @@ class JointDistribution(Distribution):
         r"""
         :param marginal_distributions: A sequence of marginal distributions.
         """
+        if not marginal_distributions:
+            raise ValueError("At least one marginal distribution is required.")
         self.marginal_distributions = marginal_distributions
         self.shaped_values: Tuple[int | slice, ...] = tuple()
         batch_shape = lax.broadcast_shapes(
@@ -54,28 +56,21 @@ class JointDistribution(Distribution):
             validate_args=validate_args,
         )
 
-    def log_prob(self, value):
-        log_probs = jtr.map(
-            lambda d, v: d.log_prob(value[..., v]),
-            self.marginal_distributions,
-            self.shaped_values,
-            is_leaf=lambda x: isinstance(x, Distribution),
-        )
+    def log_prob(self, value: Array) -> Array:
         log_probs = jtr.reduce(
-            lambda x, y: x + y,
-            log_probs,
-            is_leaf=lambda x: isinstance(x, jnp.ndarray),
+            lambda x, y: x + y[0].log_prob(value[..., y[1]]),
+            list(zip(self.marginal_distributions, self.shaped_values)),
+            jnp.zeros(value.shape[:-1]),
+            is_leaf=lambda x: isinstance(x, tuple),
         )
         return log_probs
 
     def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
         assert is_prng_key(key)
         keys = tuple(jrd.split(key, len(self.marginal_distributions)))
-        samples = jtr.map(
-            lambda d, k: d.sample(k, sample_shape).reshape(*sample_shape, -1),
-            self.marginal_distributions,
-            keys,
-            is_leaf=lambda x: isinstance(x, Distribution),
-        )
+        samples = [
+            d.sample(k, sample_shape).reshape(*sample_shape, -1)
+            for d, k in zip(self.marginal_distributions, keys)
+        ]
         samples = jnp.concatenate(samples, axis=-1)
         return samples
