@@ -57,6 +57,7 @@ def constraint(
         - x[..., 4] is cos_tilt_1 (if has_tilt is True)
         - x[..., 5] is cos_tilt_2 (if has_tilt is True)
         - x[..., 6] is eccentricity (if has_eccentricity is True)
+        - x[..., 7] is redshift z (if has_redshift is True)
 
     :param has_spin: Whether to apply spin constraints.
     :param has_tilt: Whether to apply tilt constraints.

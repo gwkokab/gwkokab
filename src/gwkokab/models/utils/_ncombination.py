@@ -280,7 +280,7 @@ def create_smoothed_powerlaws(
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
     :raises ValueError: if alpha, beta, mmin, mmax or delta is missing
-    :return: list of TransformedDistribution for powerlaws
+    :return: list of SmoothedPowerlawPrimaryMassRatio for powerlaws
     """
     smoothed_powerlaws_collection = []
     alpha_name = "alpha_pl"
@@ -326,13 +326,13 @@ def create_smoothed_gaussians(
     params: Dict[str, Array],
     validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
 ) -> List[SmoothedPowerlawPrimaryMassRatio]:
-    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws.
+    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions.
 
     :param N: Number of components
     :param params: dictionary of parameters
     :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if loc, scale, beta, mmin, mmax or delta is missing
-    :return: list of TransformedDistribution for powerlaws
+    :raises ValueError: if loc, scale, beta, mmin, delta, low, or high is missing
+    :return: list of SmoothedGaussianPrimaryMassRatio distributions
     """
     smoothed_gaussians_collection = []
     loc_name = "loc_g"
@@ -366,7 +366,7 @@ def create_smoothed_gaussians(
         low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
         high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
 
-        powerlaw = SmoothedGaussianPrimaryMassRatio(
+        smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
             loc=loc,
             scale=scale,
             beta=beta,
@@ -376,5 +376,5 @@ def create_smoothed_gaussians(
             high=high,
             validate_args=validate_args,
         )
-        smoothed_gaussians_collection.append(powerlaw)
+        smoothed_gaussians_collection.append(smoothed_gaussian)
     return smoothed_gaussians_collection
