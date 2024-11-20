@@ -19,13 +19,15 @@ from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array, Bool, Int
-from numpyro.distributions import constraints, Distribution, TransformedDistribution
+from numpyro.distributions import constraints, Distribution
 
+from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
     create_powerlaw_redshift,
-    create_powerlaws,
+    create_smoothed_gaussians,
+    create_smoothed_powerlaws,
     create_truncated_normal_distributions,
     create_truncated_normal_distributions_for_cos_tilt,
     JointDistribution,
@@ -143,12 +145,14 @@ def _build_pl_component_distributions(
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of JointDistribution
     """
-    powerlaws = create_powerlaws(N=N, params=params, validate_args=validate_args)
+    smoothed_powerlaws = create_smoothed_powerlaws(
+        N=N, params=params, validate_args=validate_args
+    )
 
     mass_distributions = jtr.map(
         lambda powerlaw: [powerlaw],
-        powerlaws,
-        is_leaf=lambda x: isinstance(x, TransformedDistribution),
+        smoothed_powerlaws,
+        is_leaf=lambda x: isinstance(x, SmoothedPowerlawPrimaryMassRatio),
     )
 
     build_distributions = _build_non_mass_distributions(
@@ -163,7 +167,10 @@ def _build_pl_component_distributions(
         validate_args=validate_args,
     )
 
-    return [JointDistribution(*dists) for dists in build_distributions]
+    return [
+        JointDistribution(*dists, validate_args=validate_args)
+        for dists in build_distributions
+    ]
 
 
 def _build_g_component_distributions(
@@ -186,26 +193,16 @@ def _build_g_component_distributions(
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of JointDistribution
     """
-    m1_dists = create_truncated_normal_distributions(
+    m1_q_dists = create_smoothed_gaussians(
         N=N,
-        parameter_name="m1",
-        component_type="g",
-        params=params,
-        validate_args=validate_args,
-    )
-    m2_dists = create_truncated_normal_distributions(
-        N=N,
-        parameter_name="m2",
-        component_type="g",
         params=params,
         validate_args=validate_args,
     )
 
     mass_distributions = jtr.map(
-        lambda m1, m2: [m1, m2],
-        m1_dists,
-        m2_dists,
-        is_leaf=lambda x: isinstance(x, Distribution),
+        lambda m1q: [m1q],
+        m1_q_dists,
+        is_leaf=lambda x: isinstance(x, SmoothedGaussianPrimaryMassRatio),
     )
 
     build_distributions = _build_non_mass_distributions(
@@ -220,12 +217,15 @@ def _build_g_component_distributions(
         validate_args=validate_args,
     )
 
-    return [JointDistribution(*dists) for dists in build_distributions]
+    return [
+        JointDistribution(*dists, validate_args=validate_args)
+        for dists in build_distributions
+    ]
 
 
-def NPowerlawMGaussian(
-    N_pl: Int[int, "Number of power-law components"],
-    N_g: Int[int, "Number of Gaussian components"],
+def NSmoothedPowerlawMSmoothedGaussian(
+    N_pl: int,
+    N_g: int,
     use_spin: Bool[bool, "True", "False"] = False,
     use_tilt: Bool[bool, "True", "False"] = False,
     use_eccentricity: Bool[bool, "True", "False"] = False,
@@ -234,7 +234,7 @@ def NPowerlawMGaussian(
     validate_args=None,
     **params,
 ) -> ScaledMixture:
-    r"""Create a mixture of power-law and Gaussian components.
+    r"""Create a mixture of Smoothed Powerlaws and Smoothed Gaussian components.
 
     This model has a lot of parameters, we can not list all of them here. Therefore,
     we are providing the general description of the each sub model and their parameters.
@@ -243,7 +243,7 @@ def NPowerlawMGaussian(
 
         Important information about this models are as follows:
 
-        * The first :code:`N_pl` components are power-law and the next :code:`N_g` components are Gaussian.
+        * The first :code:`N_pl` components are Smoothed Powerlaws and the next :code:`N_g` components are Smoothed Gaussian.
         * Log rates are named as :code:`log_rate_{i}` where :code:`i` is the index of the component.
         * First :code:`N_pl` log rates are for power-law components and the next :code:`N_g` log rates are for Gaussian components.
         * All log rates are in terms of natural logarithm.
@@ -252,12 +252,12 @@ def NPowerlawMGaussian(
     .. note::
 
         **Mass distribution**: For powerlaw mass distribution is
-        :class:`PowerlawPrimaryMassRatio` and for Gaussian we have
-        :class:`~numpyro.distributions.truncated.TruncatedNormal` distribution.
+        :class:`SmoothedPowerlawPrimaryMassRatio` and for Gaussian we have
+        :class:`SmoothedGaussianPrimaryMassRatio` distribution.
 
-        .. math:: (m_1, m_2) \sim \text{PowerlawPrimaryMassRatio}(\alpha, \beta, m_{\text{min}}, m_{\text{max}})
+        .. math:: (m_1, q) \sim \text{SmoothedPowerlawPrimaryMassRatio}(\alpha, \beta, m_{\text{min}}, m_{\text{max}}, \delta)
 
-        .. math:: (m_1, m_2) \sim \mathcal{N}_{[a,b]}(\mu, \sigma^2)
+        .. math:: (m_1, q) \sim \text{SmoothedGaussianPrimaryMassRatio}(\mu, \sigma, \beta, m_{\text{min}}, m_{\text{max}}, \delta)
 
         **Spin distribution**: Spin is taken from a beta distribution. The beta distribution
         is parameterized by :math:`\mu` and :math:`\sigma^2` where :math:`\mu` is the mean

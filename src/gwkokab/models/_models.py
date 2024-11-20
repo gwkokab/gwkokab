@@ -15,12 +15,10 @@
 
 from __future__ import annotations
 
-from functools import partial
 from typing_extensions import Optional
 
 import chex
-import jax
-from jax import lax, numpy as jnp, random as jrd, tree as jtr, vmap
+from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
 from jax.scipy.stats import truncnorm, uniform
@@ -37,292 +35,28 @@ from numpyro.distributions import (
     Uniform,
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
-from numpyro.util import is_prng_key
 
-from ..utils.transformations import m1_q_to_m2
+from ..utils.kernel import log_planck_taper_window
+from ..utils.transformations import mass_ratio
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
     doubly_truncated_power_law_icdf,
     doubly_truncated_power_law_log_prob,
     JointDistribution,
-    numerical_inverse_transform_sampling,
 )
 
 
 __all__ = [
-    "BrokenPowerLawMassModel",
     "FlexibleMixtureModel",
     "GaussianSpinModel",
     "IndependentSpinOrientationGaussianIsotropic",
     "MassGapModel",
-    "MultiPeakMassModel",
     "NDistribution",
-    "PowerLawPeakMassModel",
-    "PowerLawPrimaryMassRatio",
+    "PowerlawPrimaryMassRatio",
+    "SmoothedGaussianPrimaryMassRatio",
+    "SmoothedPowerlawPrimaryMassRatio",
     "Wysocki2019MassModel",
 ]
-
-
-class _BaseSmoothedMassDistribution(Distribution):
-    def _log_prob(self, value):
-        m1 = value[..., 0]
-        q = value[..., 1]
-        log_prob_m1_val = self.log_prob_m1(m1)
-        log_prob_q_val = self.log_prob_q(m1, q)
-        return jnp.add(log_prob_m1_val, log_prob_q_val)
-
-    def log_prob_m1(self, m1):
-        log_prob_m_val = self.log_primary_model(m1)
-        log_prob_m_val = jnp.add(log_prob_m_val, jnp.log(self.smoothing_kernel(m1)))
-        log_norm = self.log_norm_p_m1()
-        log_prob_m_val = jnp.subtract(log_prob_m_val, log_norm)
-        return log_prob_m_val
-
-    def log_prob_q(self, m1, q):
-        log_prob_q_val = doubly_truncated_power_law_log_prob(
-            x=q, alpha=self.beta_q, low=jnp.divide(self.mmin, m1), high=1.0
-        )
-        log_prob_q_val = jnp.add(
-            log_prob_q_val,
-            jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1, q=q))),
-        )
-        log_norm = self.log_norm_p_q()
-        log_prob_q_val = jnp.subtract(log_prob_q_val, log_norm)
-        return log_prob_q_val
-
-    def log_norm_p_m1(self):
-        m1s = jrd.uniform(
-            jrd.PRNGKey(0), shape=(1000,), minval=self.mmin, maxval=self.mmax
-        )
-        log_prob_m_val = self.log_primary_model(m1s)
-        log_prob_m_val = jnp.add(
-            log_prob_m_val,
-            jnp.log(self.smoothing_kernel(m1s)),
-        )
-        log_norm = (
-            logsumexp(log_prob_m_val)
-            - jnp.log(m1s.shape[0])
-            + jnp.log(jnp.prod(self.mmax - self.mmin))
-        )
-        return log_norm
-
-    def log_norm_p_q(self):
-        m1s = jrd.uniform(
-            jrd.PRNGKey(0),
-            shape=(1000,) + self.batch_shape,
-            minval=self.mmin,
-            maxval=self.mmax,
-        )
-        qs = jrd.uniform(
-            jrd.PRNGKey(1), shape=(1000,) + self.batch_shape, minval=0.001, maxval=1
-        )
-        log_prob_q_val = doubly_truncated_power_law_log_prob(
-            x=qs, alpha=self.beta_q, low=jnp.divide(self.mmin, m1s), high=1.0
-        )
-        log_prob_q_val = jnp.add(
-            log_prob_q_val,
-            jnp.log(self.smoothing_kernel(m1_q_to_m2(m1=m1s, q=qs))),
-        )
-        log_norm = (
-            logsumexp(log_prob_q_val) - jnp.log(m1s.shape[0]) + jnp.log(1.0 - 0.001)
-        )
-        return log_norm
-
-    def smoothing_kernel(self, mass: Array | Real) -> Array | Real:
-        r"""See equation B4 in `Population Properties of Compact Objects from the
-        Second LIGO-Virgo Gravitational-Wave Transient Catalog
-        <https://arxiv.org/abs/2010.14533>`_.
-
-        .. math::
-            S(m\mid m_{\min}, \delta) = \begin{cases}
-                0 & \text{if } m < m_{\min}, \\
-                \left[\displaystyle 1 + \exp\left(\frac{\delta}{m}
-                +\frac{\delta}{m-\delta}\right)\right]^{-1}
-                & \text{if } m_{\min} \leq m < m_{\min} + \delta, \\
-                1 & \text{if } m \geq m_{\min} + \delta
-            \end{cases}
-
-        :param mass: mass of the primary black hole
-        :param mass_min: minimum mass of the primary black hole
-        :param delta: small mass difference
-        :return: smoothing kernel value
-        """
-        mass_min_shifted = jnp.add(self.mmin, self.delta_m)
-
-        shifted_mass = jnp.nan_to_num(
-            jnp.divide(jnp.subtract(mass, self.mmin), self.delta_m), nan=0.0
-        )
-        shifted_mass = jnp.clip(shifted_mass, 1e-6, 1.0 - 1e-6)
-        neg_exponent = jnp.subtract(
-            jnp.reciprocal(jnp.subtract(1.0, shifted_mass)),
-            jnp.reciprocal(shifted_mass),
-        )
-        window = expit(neg_exponent)
-        conditions = [
-            jnp.less(mass, self.mmin),
-            jnp.logical_and(
-                jnp.less_equal(self.mmin, mass),
-                jnp.less_equal(mass, mass_min_shifted),
-            ),
-            jnp.greater(mass, mass_min_shifted),
-        ]
-        choices = [jnp.zeros(mass.shape), window, jnp.ones(mass.shape)]
-        return jnp.select(conditions, choices, default=jnp.zeros(mass.shape))
-
-    def sample(self, key, sample_shape=()):
-        assert is_prng_key(key)
-        flattened_sample_shape = jtr.reduce(lambda x, y: x * y, sample_shape, 1)
-
-        m1 = numerical_inverse_transform_sampling(
-            logpdf=self.log_prob_m1,
-            limits=(self.mmin, self.mmax),
-            sample_shape=(flattened_sample_shape,),
-            key=key,
-            batch_shape=self.batch_shape,
-            n_grid_points=500,
-        )
-
-        keys = jrd.split(key, m1.shape)
-
-        q = vmap(
-            lambda _m1, _k: numerical_inverse_transform_sampling(
-                logpdf=partial(self.log_prob_q, _m1),
-                limits=(jnp.divide(self.mmin, _m1), 1.0),
-                sample_shape=(),
-                key=_k,
-                batch_shape=self.batch_shape,
-                n_grid_points=500,
-            )
-        )(m1, keys)
-
-        return jnp.stack([m1, q], axis=-1).reshape(sample_shape + self.event_shape)
-
-
-class BrokenPowerLawMassModel(_BaseSmoothedMassDistribution):
-    r"""See equation (B7) and (B6) in `Population Properties of Compact Objects
-    from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog <https://arxiv.org/abs/2010.14533>`_.
-
-    .. math::
-        \begin{align*}
-            p(m_1) &\propto \begin{cases}
-                m_1^{-\alpha_1}S(m_1\mid m_{\text{min}},\delta_m)
-                & \text{if } m_{\min} \leq m_1 < m_{\text{break}} \\
-                m_1^{-\alpha_2}S(m_1\mid m_{\text{min}},\delta_m)
-                & \text{if } m_{\text{break}} < m_1 \leq m_{\max} \\
-                0 & \text{otherwise}
-            \end{cases} \\
-            p(q\mid m_1) &\propto q^{\beta_q}S(m_1q\mid m_{\text{min}},\delta_m)
-        \end{align*}
-
-    Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel.
-    """
-
-    arg_constraints = {
-        "alpha1": constraints.real,
-        "alpha2": constraints.real,
-        "beta_q": constraints.real,
-        "mmin": constraints.dependent,
-        "mmax": constraints.dependent,
-        "break_fraction": constraints.unit_interval,
-        "delta_m": constraints.positive,
-    }
-    reparametrized_params = [
-        "alpha1",
-        "alpha2",
-        "beta_q",
-        "mmin",
-        "mmax",
-        "break_fraction",
-        "delta_m",
-    ]
-    pytree_data_fields = (
-        "alpha1",
-        "alpha2",
-        "beta_q",
-        "mmin",
-        "mmax",
-        "break_fraction",
-        "delta_m",
-        "mbreak",
-        "log_correction",
-    )
-    pytree_aux_fields = ("_support",)
-
-    def __init__(
-        self,
-        alpha1,
-        alpha2,
-        beta_q,
-        mmin,
-        mmax,
-        break_fraction,
-        delta_m,
-        *,
-        validate_args=None,
-    ):
-        r"""
-        :param alpha1: Power-law index for first component of primary mass model
-        :param alpha2: Power-law index for second component of primary mass
-            model
-        :param beta_q: Power-law index for mass ratio model
-        :param mmin: Minimum mass
-        :param mmax: Maximum mass
-        :param mbreak: Break mass
-        :param delta: Smoothing parameter
-        """
-        (
-            self.alpha1,
-            self.alpha2,
-            self.beta_q,
-            self.mmin,
-            self.mmax,
-            self.break_fraction,
-            self.delta_m,
-        ) = promote_shapes(alpha1, alpha2, beta_q, mmin, mmax, break_fraction, delta_m)
-        batch_shape = lax.broadcast_shapes(
-            jnp.shape(alpha1),
-            jnp.shape(alpha2),
-            jnp.shape(beta_q),
-            jnp.shape(mmin),
-            jnp.shape(mmax),
-            jnp.shape(break_fraction),
-            jnp.shape(delta_m),
-        )
-        self.mbreak = jnp.add(
-            self.mmin,
-            jnp.multiply(self.break_fraction, jnp.subtract(self.mmax, self.mmin)),
-        )
-        self.log_correction = doubly_truncated_power_law_log_prob(
-            x=self.mbreak, alpha=-self.alpha2, low=self.mbreak, high=self.mmax
-        ) - doubly_truncated_power_law_log_prob(
-            x=self.mbreak, alpha=-self.alpha1, low=self.mmin, high=self.mbreak
-        )
-
-        self._support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
-        super(BrokenPowerLawMassModel, self).__init__(
-            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
-        )
-
-    @constraints.dependent_property(is_discrete=False, event_dim=1)
-    def support(self) -> constraints.Constraint:
-        return self._support
-
-    def log_primary_model(self, value):
-        log_low_part = doubly_truncated_power_law_log_prob(
-            x=value, alpha=-self.alpha1, low=self.mmin, high=self.mbreak
-        )
-        log_high_part = doubly_truncated_power_law_log_prob(
-            x=value, alpha=-self.alpha2, low=self.mbreak, high=self.mmax
-        )
-        log_prob_val = (log_low_part + self.log_correction) * jnp.less(
-            value, self.mbreak
-        ) + log_high_part * jnp.greater_equal(value, self.mbreak)
-        return log_prob_val - jax.nn.softplus(self.log_correction)
-
-    @validate_sample
-    def log_prob(self, value):
-        return super()._log_prob(value)
 
 
 def GaussianSpinModel(
@@ -413,180 +147,6 @@ def IndependentSpinOrientationGaussianIsotropic(
     )
 
 
-class MultiPeakMassModel(_BaseSmoothedMassDistribution):
-    r"""See equation (B9) and (B6) in `Population Properties of Compact
-    Objects from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog <https://arxiv.org/abs/2010.14533>`_.
-
-    .. math::
-        p(m_1\mid\lambda,\lambda_1,\alpha,\delta,m_{\text{min}},m_{\text{max}},
-        \mu,\sigma)\propto \left[(1-\lambda)m_1^{-\alpha}
-        \Theta(m_\text{max}-m_1)
-        +\lambda\lambda_1\varphi\left(\frac{m_1-\mu_1}{\sigma_1}\right)
-        +\lambda(1-\lambda_1)\varphi\left(\frac{m_1-\mu_2}{\sigma_2}\right)
-        \right]S(m_1\mid m_{\text{min}},\delta)
-
-    .. math::
-        p(q\mid \beta, m_1,m_{\text{min}},\delta)\propto
-        q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
-
-    Where,
-
-    .. math::
-        \varphi(x)=\frac{1}{\sigma\sqrt{2\pi}}
-        \exp{\left(\displaystyle-\frac{x^{2}}{2}\right)}
-
-    :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
-    and :math:`\Theta` is the Heaviside step function.
-    """
-
-    arg_constraints = {
-        "alpha": constraints.real,
-        "beta_q": constraints.real,
-        "lam": constraints.unit_interval,
-        "lam1": constraints.unit_interval,
-        "mmin": constraints.dependent,
-        "mmax": constraints.dependent,
-        "delta_m": constraints.positive,
-        "mu1": constraints.positive,
-        "sigma1": constraints.positive,
-        "mu2": constraints.positive,
-        "sigma2": constraints.positive,
-    }
-    reparametrized_params = [
-        "alpha",
-        "beta_q",
-        "lam",
-        "lam1",
-        "delta_m",
-        "mmin",
-        "mmax",
-        "mu1",
-        "sigma1",
-        "mu2",
-        "sigma2",
-    ]
-    pytree_data_fields = (
-        "alpha",
-        "beta_q",
-        "lam",
-        "lam1",
-        "delta_m",
-        "mmin",
-        "mmax",
-        "mu1",
-        "sigma1",
-        "mu2",
-        "sigma2",
-    )
-    pytree_aux_fields = ("_support",)
-
-    def __init__(
-        self,
-        alpha,
-        beta_q,
-        lam,
-        lam1,
-        delta_m,
-        mmin,
-        mmax,
-        mu1,
-        sigma1,
-        mu2,
-        sigma2,
-        *,
-        validate_args=None,
-    ):
-        r"""
-        :param alpha: Power-law index for primary mass model
-        :param beta_q: Power-law index for mass ratio model
-        :param lam: weight for power-law component
-        :param lam1: weight for first Gaussian component
-        :param delta_m: Smoothing parameter
-        :param mmin: Minimum mass
-        :param mmax: Maximum mass
-        :param mu1: Mean of first Gaussian component
-        :param sigma1: Standard deviation of first Gaussian component
-        :param mu2: Mean of second Gaussian component
-        :param sigma2: Standard deviation of second Gaussian component
-        """
-        (
-            self.alpha,
-            self.beta_q,
-            self.lam,
-            self.lam1,
-            self.delta_m,
-            self.mmin,
-            self.mmax,
-            self.mu1,
-            self.sigma1,
-            self.mu2,
-            self.sigma2,
-        ) = promote_shapes(
-            alpha, beta_q, lam, lam1, delta_m, mmin, mmax, mu1, sigma1, mu2, sigma2
-        )
-        batch_shape = lax.broadcast_shapes(
-            jnp.shape(alpha),
-            jnp.shape(beta_q),
-            jnp.shape(lam),
-            jnp.shape(lam1),
-            jnp.shape(delta_m),
-            jnp.shape(mmin),
-            jnp.shape(mmax),
-            jnp.shape(mu1),
-            jnp.shape(sigma1),
-            jnp.shape(mu2),
-            jnp.shape(sigma2),
-        )
-        self._support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
-        super(MultiPeakMassModel, self).__init__(
-            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
-        )
-
-    @constraints.dependent_property(is_discrete=False, event_dim=1)
-    def support(self) -> constraints.Constraint:
-        return self._support
-
-    def log_primary_model(self, m1):
-        gaussian_term_1 = jnp.add(jnp.log(self.lam), jnp.log(self.lam1))
-        gaussian_term_1 = jnp.add(
-            gaussian_term_1,
-            truncnorm.logpdf(
-                m1,
-                a=(self.mmin - self.mu1) / self.sigma1,
-                b=(self.mmax - self.mu1) / self.sigma1,
-                loc=self.mu1,
-                scale=self.sigma1,
-            ),
-        )
-
-        gaussian_term_2 = jnp.add(jnp.log(self.lam), jnp.log1p(-self.lam1))
-        gaussian_term_2 = jnp.add(
-            gaussian_term_2,
-            truncnorm.logpdf(
-                m1,
-                a=(self.mmin - self.mu2) / self.sigma2,
-                b=(self.mmax - self.mu2) / self.sigma2,
-                loc=self.mu2,
-                scale=self.sigma2,
-            ),
-        )
-
-        powerlaw_term = jnp.add(
-            jnp.log1p(-self.lam),
-            doubly_truncated_power_law_log_prob(
-                x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
-            ),
-        )
-        log_prob_val = jnp.logaddexp(powerlaw_term, gaussian_term_1)
-        log_prob_val = jnp.add(log_prob_val, jnp.exp(gaussian_term_2))
-        return log_prob_val
-
-    @validate_sample
-    def log_prob(self, value):
-        return super()._log_prob(value)
-
-
 def NDistribution(
     distribution: Distribution, n: Int, *, validate_args=None, **params
 ) -> MixtureGeneral:
@@ -616,128 +176,7 @@ def NDistribution(
     )
 
 
-class PowerLawPeakMassModel(_BaseSmoothedMassDistribution):
-    r"""See equation (B3) and (B6) in `Population Properties of Compact
-    Objects from the Second LIGO-Virgo Gravitational-Wave Transient
-    Catalog <https://arxiv.org/abs/2010.14533>`_.
-
-    .. math::
-        \begin{align*}
-            p(m_1\mid\lambda,\alpha,\delta,m_{\text{min}},m_{\text{max}},
-            \mu,\sigma)
-            &\propto \left[(1-\lambda)m_1^{-\alpha}\Theta(m_\text{max}-m_1)
-            +\frac{\lambda}{\sigma\sqrt{2\pi}}
-            e^{-\frac{1}{2}\left(\frac{m_1-\mu}{\sigma}\right)^{2}}\right]
-            S(m_1\mid m_{\text{min}},\delta)
-            \\
-            p(q\mid \beta, m_1,m_{\text{min}},\delta)
-            &\propto q^{\beta}S(m_1q\mid m_{\text{min}},\delta)
-        \end{align*}
-
-    Where :math:`S(m\mid m_{\text{min}},\delta_m)` is the smoothing kernel,
-    and :math:`\Theta` is the Heaviside step function.
-    """
-
-    arg_constraints = {
-        "alpha": constraints.real,
-        "beta_q": constraints.real,
-        "lam": constraints.unit_interval,
-        "delta_m": constraints.real,
-        "mmin": constraints.dependent,
-        "mmax": constraints.dependent,
-        "mu": constraints.real,
-        "sigma": constraints.positive,
-    }
-    reparametrized_params = [
-        "alpha",
-        "beta_q",
-        "lam",
-        "delta_m",
-        "mmin",
-        "mmax",
-        "mu",
-        "sigma",
-    ]
-    pytree_data_fields = (
-        "alpha",
-        "beta_q",
-        "lam",
-        "delta_m",
-        "mmin",
-        "mmax",
-        "mu",
-        "sigma",
-    )
-    pytree_aux_fields = ("_support",)
-
-    def __init__(
-        self, alpha, beta_q, lam, delta_m, mmin, mmax, mu, sigma, *, validate_args=None
-    ) -> None:
-        r"""
-        :param alpha: Power-law index for primary mass model
-        :param beta_q: Power-law index for mass ratio model
-        :param lam: Fraction of Gaussian component
-        :param delta_m: Smoothing parameter
-        :param mmin: Minimum mass
-        :param mmax: Maximum mass
-        :param mu: Mean of Gaussian component
-        :param sigma: Standard deviation of Gaussian component
-        """
-        (
-            self.alpha,
-            self.beta_q,
-            self.lam,
-            self.delta_m,
-            self.mmin,
-            self.mmax,
-            self.mu,
-            self.sigma,
-        ) = promote_shapes(alpha, beta_q, lam, delta_m, mmin, mmax, mu, sigma)
-        batch_shape = lax.broadcast_shapes(
-            jnp.shape(alpha),
-            jnp.shape(beta_q),
-            jnp.shape(lam),
-            jnp.shape(delta_m),
-            jnp.shape(mmin),
-            jnp.shape(mmax),
-            jnp.shape(mu),
-            jnp.shape(sigma),
-        )
-        self._support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
-        super(PowerLawPeakMassModel, self).__init__(
-            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
-        )
-
-    @constraints.dependent_property(is_discrete=False, event_dim=1)
-    def support(self) -> constraints.Constraint:
-        return self._support
-
-    def log_primary_model(self, m1):
-        gaussian_term = jnp.add(
-            jnp.log(self.lam),
-            truncnorm.logpdf(
-                m1,
-                a=(self.mmin - self.mu) / self.sigma,
-                b=(self.mmax - self.mu) / self.sigma,
-                loc=self.mu,
-                scale=self.sigma,
-            ),
-        )
-        powerlaw_term = jnp.add(
-            jnp.log1p(-self.lam),
-            doubly_truncated_power_law_log_prob(
-                x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
-            ),
-        )
-        log_prob_val = jnp.logaddexp(powerlaw_term, gaussian_term)
-        return log_prob_val
-
-    @validate_sample
-    def log_prob(self, value):
-        return super()._log_prob(value)
-
-
-class PowerLawPrimaryMassRatio(Distribution):
+class PowerlawPrimaryMassRatio(Distribution):
     r"""Power law model for two-dimensional mass distribution, modelling primary mass
     and conditional mass ratio distribution.
 
@@ -779,7 +218,7 @@ class PowerLawPrimaryMassRatio(Distribution):
             jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax)
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
-        super(PowerLawPrimaryMassRatio, self).__init__(
+        super(PowerlawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
@@ -1226,3 +665,187 @@ def FlexibleMixtureModel(
         ),
         validate_args=validate_args,
     )
+
+
+class SmoothedPowerlawPrimaryMassRatio(Distribution):
+    r""":class:`PowerlawPrimaryMassRatio` with smoothing kernel on the lower edge.
+
+    .. math::
+        p(m_1,q\mid\alpha,\beta,m_{\text{min}},m_{\text{max}},\delta) = p(m_1\mid\alpha,m_{\text{min}},m_{\text{max}},\delta)p(q \mid m_1,\beta,m_{\text{min}},\delta)
+
+    .. math::
+        \begin{align*}
+            p(m_1\mid\alpha,m_{\text{min}},m_{\text{max}},\delta)&
+            \propto m_1^{\alpha}S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right),\qquad m_{\text{min}}\leq m_1\leq m_{\max} \\
+            p(q \mid m_1,\beta,m_{\text{min}},\delta)&
+            \propto q^{\beta}S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
+        \end{align*}
+
+    Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
+    """
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
+        "delta": constraints.positive,
+    }
+    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta"]
+    pytree_aux_fields = ("_support",)
+
+    def __init__(self, alpha, beta, mmin, mmax, delta, *, validate_args=None) -> None:
+        """
+        :param alpha: Power law index for primary mass
+        :param beta: Power law index for mass ratio
+        :param mmin: Minimum mass
+        :param mmax: Maximum mass
+        :param delta: width of the smoothing window
+        """
+        self.alpha, self.beta, self.mmin, self.mmax, self.delta = promote_shapes(
+            alpha, beta, mmin, mmax, delta
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha),
+            jnp.shape(beta),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(delta),
+        )
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        super(SmoothedPowerlawPrimaryMassRatio, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        q = value[..., 1]
+        m2 = m1 * q
+        log_smoothing_m1 = log_planck_taper_window(
+            (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_smoothing_q = log_planck_taper_window(
+            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+
+        log_prob_m1 = doubly_truncated_power_law_log_prob(
+            x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+        )
+        # as low approaches to high, mathematically it shoots off to infinity
+        # And autograd does not behave nicely around limiting values.
+        # These two links provide the solution to the problem.
+        # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
+        # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
+        q_min = mass_ratio(m1=m1, m2=self.mmin)
+        log_prob_q = jnp.where(
+            self.mmin < m1,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=q_min, high=1.0
+            ),
+            -jnp.inf,
+        )
+        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
+
+
+class SmoothedGaussianPrimaryMassRatio(Distribution):
+    r""":class:`~numpyro.distributions.continuous.Normal` with smoothing kernel on
+    the lower edge.
+
+    .. math::
+        p(m_1,q\mid\mu,\sigma^2,\beta,m_{\text{min}},m_{\text{max}},\delta) = \mathcal{N}(m_1\mid\mu,\sigma^2)S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)p(q \mid m_1,\beta,m_{\text{min}},\delta)
+
+    .. math::
+        p(q\mid m_1,\beta) \propto q^{\beta}S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
+
+    Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
+
+    .. attention::
+
+        If :code:`low` or :code:`high` are not provided to the `TruncatedNormal`, they
+        default to  :math:`-\infty` or :math:`+\infty`, respectively. This class relies
+        on this behavior to produce the desired distribution when bounds are
+        unspecified.
+    """
+
+    arg_constraints = {
+        "loc": constraints.positive,
+        "scale": constraints.positive,
+        "beta": constraints.real,
+        "mmin": constraints.positive,
+        "delta": constraints.positive,
+    }
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "low", "high"]
+    pytree_aux_fields = ("_support", "_norm")
+
+    def __init__(
+        self, loc, scale, beta, mmin, delta, low=None, high=None, *, validate_args=None
+    ) -> None:
+        """
+        :param loc: mean of the Gaussian distribution
+        :param scale: standard deviation of the Gaussian distribution
+        :param beta: Power law index for mass ratio
+        :param mmin: Minimum mass
+        :param delta: width of the smoothing window
+        :param low: lower bound of the Gaussian distribution, defaults to -inf
+        :param high: upper bound of the Gaussian distribution, defaults to inf
+        """
+        self.loc, self.scale, self.beta, self.mmin, self.delta, self.low, self.high = (
+            promote_shapes(loc, scale, beta, mmin, delta, low, high)
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(loc),
+            jnp.shape(scale),
+            jnp.shape(beta),
+            jnp.shape(mmin),
+            jnp.shape(delta),
+            jnp.shape(low),
+            jnp.shape(high),
+        )
+        self._support = mass_ratio_mass_sandwich(mmin, jnp.inf)
+        super(SmoothedGaussianPrimaryMassRatio, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+        self._norm = TruncatedNormal(
+            loc=self.loc,
+            scale=self.scale,
+            low=self.low,
+            high=self.high,
+            validate_args=validate_args,
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        q = value[..., 1]
+        m2 = m1 * q
+        log_smoothing_m1 = log_planck_taper_window(
+            (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_smoothing_q = log_planck_taper_window(
+            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+
+        log_prob_m1 = self._norm.log_prob(m1)
+        # as low approaches to high, mathematically it shoots off to infinity
+        # And autograd does not behave nicely around limiting values.
+        # These two links provide the solution to the problem.
+        # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
+        # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
+        q_min = mass_ratio(m1=m1, m2=self.mmin)
+        log_prob_q = jnp.where(
+            self.mmin < m1,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=q_min, high=1.0
+            ),
+            -jnp.inf,
+        )
+        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q

@@ -21,14 +21,14 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 import pandas as pd
 from jaxtyping import Array, Bool, Float, Int
 
-from gwkokab.models import NPowerlawMGaussian
+from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
+    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
-    SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
 
@@ -68,7 +68,7 @@ def get_model_pdf(
     ).to_numpy()
 
     if not rate_scaled:
-        model = NPowerlawMGaussian(
+        model = NSmoothedPowerlawMSmoothedGaussian(
             **constants,
             **{
                 name: (nf_samples[..., i] if not name.startswith("log_rate") else 0.0)
@@ -76,7 +76,7 @@ def get_model_pdf(
             },
         )
     else:
-        model = NPowerlawMGaussian(
+        model = NSmoothedPowerlawMSmoothedGaussian(
             **constants,
             **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
         )
@@ -111,7 +111,7 @@ def main() -> None:
     has_tilt = constants.get("use_tilt", False)
     has_eccentricity = constants.get("use_eccentricity", False)
 
-    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+    parameters = [PRIMARY_MASS_SOURCE.name, MASS_RATIO.name]
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
     if has_tilt:

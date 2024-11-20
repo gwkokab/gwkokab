@@ -1,6 +1,17 @@
 ``gwkokab.utils``
 =================
 
+``gwkokab.utils.kernel``
+------------------------
+
+.. automodule:: gwkokab.utils.kernel
+
+.. autosummary::
+    :nosignatures:
+    :toctree: _autosummary
+
+    log_planck_taper_window
+
 ``gwkokab.utils.math``
 ----------------------
 

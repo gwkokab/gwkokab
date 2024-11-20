@@ -29,17 +29,23 @@ from numpyro.distributions import (
 )
 
 from ...cosmology import PLANCK_2015_Cosmology
-from ...utils.math import beta_dist_mean_variance_to_concentrations
+from ...models._models import (
+    PowerlawPrimaryMassRatio,
+    SmoothedGaussianPrimaryMassRatio,
+    SmoothedPowerlawPrimaryMassRatio,
+)
+from ...models.redshift import PowerlawRedshift
+from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ...utils.tools import fetch_first_matching_value
-from .._models import PowerLawPrimaryMassRatio
-from ..redshift import PowerlawRedshift
-from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 
 
 __all__ = [
     "combine_distributions",
     "create_beta_distributions",
+    "create_powerlaw_redshift",
     "create_powerlaws",
+    "create_smoothed_gaussians",
+    "create_smoothed_powerlaws",
     "create_truncated_normal_distributions_for_cos_tilt",
     "create_truncated_normal_distributions",
 ]
@@ -55,9 +61,7 @@ def combine_distributions(
 
 def create_beta_distributions(
     N: Int[int, ""],
-    parameter_name: Literal[
-        "m1", "m2", "chi1", "chi2", "cos_tilt1", "cos_tilt2", "ecc"
-    ],
+    parameter_name: Literal["chi1", "chi2"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
     validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
@@ -73,22 +77,20 @@ def create_beta_distributions(
     :return: list of Beta distributions
     """
     beta_collection = []
-    mean_name = f"{parameter_name}_mean_{component_type}"
-    variance_name = f"{parameter_name}_variance_{component_type}"
+    alpha_name = f"{parameter_name}_alpha_{component_type}"
+    beta_name = f"{parameter_name}_beta_{component_type}"
     for i in range(N):
-        mean = fetch_first_matching_value(params, f"{mean_name}_{i}", mean_name)
-        if mean is None:
-            raise ValueError(f"Missing parameter {mean_name}_{i}")
+        alpha = fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
+        if alpha is None:
+            raise ValueError(f"Missing parameter {alpha_name}_{i}")
 
-        variance = fetch_first_matching_value(
-            params, f"{variance_name}_{i}", variance_name
+        beta = fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
+        if beta is None:
+            raise ValueError(f"Missing parameter {beta_name}_{i}")
+
+        beta_collection.append(
+            Beta(concentration1=alpha, concentration0=beta, validate_args=validate_args)
         )
-        if variance is None:
-            raise ValueError(f"Missing parameter {variance_name}_{i}")
-        concentrations = beta_dist_mean_variance_to_concentrations(
-            mean=mean, variance=variance
-        )
-        beta_collection.append(Beta(*concentrations, validate_args=validate_args))
     return beta_collection
 
 
@@ -208,7 +210,7 @@ def create_powerlaws(
         if mmax is None:
             raise ValueError(f"Missing parameter {mmax_name}_{i}")
 
-        powerlaw = PowerLawPrimaryMassRatio(
+        powerlaw = PowerlawPrimaryMassRatio(
             alpha=alpha, beta=beta, mmin=mmin, mmax=mmax, validate_args=validate_args
         )
         transformed_powerlaw = TransformedDistribution(
@@ -265,3 +267,114 @@ def create_powerlaw_redshift(
         )
 
     return powerlaw_redshift_collection
+
+
+def create_smoothed_powerlaws(
+    N: Int[int, ""],
+    params: Dict[str, Array],
+    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+) -> List[SmoothedPowerlawPrimaryMassRatio]:
+    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws.
+
+    :param N: Number of components
+    :param params: dictionary of parameters
+    :param validate_args: whether to validate arguments, defaults to None
+    :raises ValueError: if alpha, beta, mmin, mmax or delta is missing
+    :return: list of SmoothedPowerlawPrimaryMassRatio for powerlaws
+    """
+    smoothed_powerlaws_collection = []
+    alpha_name = "alpha_pl"
+    beta_name = "beta_pl"
+    mmin_name = "mmin_pl"
+    mmax_name = "mmax_pl"
+    delta_name = "delta_pl"
+    for i in range(N):
+        alpha = fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
+        if alpha is None:
+            raise ValueError(f"Missing parameter {alpha_name}_{i}")
+
+        beta = fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
+        if beta is None:
+            raise ValueError(f"Missing parameter {beta_name}_{i}")
+
+        mmin = fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
+        if mmin is None:
+            raise ValueError(f"Missing parameter {mmin_name}_{i}")
+
+        mmax = fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
+        if mmax is None:
+            raise ValueError(f"Missing parameter {mmax_name}_{i}")
+
+        delta = fetch_first_matching_value(params, f"{delta_name}_{i}", delta_name)
+        if delta is None:
+            raise ValueError(f"Missing parameter {delta_name}_{i}")
+
+        powerlaw = SmoothedPowerlawPrimaryMassRatio(
+            alpha=alpha,
+            beta=beta,
+            mmin=mmin,
+            mmax=mmax,
+            delta=delta,
+            validate_args=validate_args,
+        )
+        smoothed_powerlaws_collection.append(powerlaw)
+    return smoothed_powerlaws_collection
+
+
+def create_smoothed_gaussians(
+    N: Int[int, ""],
+    params: Dict[str, Array],
+    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+) -> List[SmoothedPowerlawPrimaryMassRatio]:
+    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions.
+
+    :param N: Number of components
+    :param params: dictionary of parameters
+    :param validate_args: whether to validate arguments, defaults to None
+    :raises ValueError: if loc, scale, beta, mmin, delta, low, or high is missing
+    :return: list of SmoothedGaussianPrimaryMassRatio distributions
+    """
+    smoothed_gaussians_collection = []
+    loc_name = "loc_g"
+    scale_name = "scale_g"
+    beta_name = "beta_g"
+    mmin_name = "mmin_g"
+    delta_name = "delta_g"
+    low_name = "low_g"
+    high_name = "high_g"
+    for i in range(N):
+        loc = fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
+        if loc is None:
+            raise ValueError(f"Missing parameter {loc_name}_{i}")
+
+        scale = fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
+        if scale is None:
+            raise ValueError(f"Missing parameter {scale_name}_{i}")
+
+        beta = fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
+        if beta is None:
+            raise ValueError(f"Missing parameter {beta_name}_{i}")
+
+        mmin = fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
+        if mmin is None:
+            raise ValueError(f"Missing parameter {mmin_name}_{i}")
+
+        delta = fetch_first_matching_value(params, f"{delta_name}_{i}", delta_name)
+        if delta is None:
+            raise ValueError(f"Missing parameter {delta_name}_{i}")
+
+        low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
+        high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
+
+        smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
+            loc=loc,
+            scale=scale,
+            beta=beta,
+            mmin=mmin,
+            delta=delta,
+            low=low,
+            high=high,
+            validate_args=validate_args,
+        )
+        smoothed_gaussians_collection.append(smoothed_gaussian)
+    return smoothed_gaussians_collection

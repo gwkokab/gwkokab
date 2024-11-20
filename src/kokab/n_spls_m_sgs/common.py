@@ -29,11 +29,14 @@ def get_logVT(
 ) -> Callable[[Float[Array, "..."]], Float[Array, "..."]]:
     _, logVT = load_model(vt_path)
 
-    def m1m2_trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
-        m1m2 = x[..., selection_indexes]
+    def trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
+        m1q = x[..., selection_indexes]
+        m2 = x[..., 0] * x[..., 1]
+        m1m2 = m1q.at[..., 1].set(m2)
+
         return jnp.squeeze(vmap(logVT)(m1m2), axis=-1)
 
-    return m1m2_trimmed_logVT
+    return trimmed_logVT
 
 
 def constraint(
@@ -48,12 +51,13 @@ def constraint(
     :param x: Input array where:
 
         - x[..., 0] is mass m1
-        - x[..., 1] is mass m2
+        - x[..., 1] is mass ratio q
         - x[..., 2] is chi1 (if has_spin is True)
         - x[..., 3] is chi2 (if has_spin is True)
         - x[..., 4] is cos_tilt_1 (if has_tilt is True)
         - x[..., 5] is cos_tilt_2 (if has_tilt is True)
         - x[..., 6] is eccentricity (if has_eccentricity is True)
+        - x[..., 7] is redshift z (if has_redshift is True)
 
     :param has_spin: Whether to apply spin constraints.
     :param has_tilt: Whether to apply tilt constraints.
@@ -61,11 +65,11 @@ def constraint(
     :return: Boolean array indicating which samples satisfy the constraints.
     """
     m1 = x[..., 0]
-    m2 = x[..., 1]
+    q = x[..., 1]
 
     mask = m1 > 0.0
-    mask &= m2 > 0.0
-    mask &= m1 >= m2
+    mask &= q > 0.0
+    mask &= q <= 1.0
 
     i = 2
 
@@ -98,6 +102,8 @@ def constraint(
 
         mask &= ecc >= 0.0
         mask &= ecc <= 1.0
+
+        i += 1
 
     if has_redshift:
         z = x[..., i]

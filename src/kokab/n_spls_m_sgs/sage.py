@@ -26,15 +26,15 @@ from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
-from gwkokab.models import NPowerlawMGaussian
+from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
+    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
-    SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
 
@@ -133,15 +133,20 @@ def main() -> None:
     all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
         ("alpha_pl", N_pl),
         ("beta_pl", N_pl),
-        ("m1_loc_g", N_g),
-        ("m2_loc_g", N_g),
-        ("m1_scale_g", N_g),
-        ("m2_scale_g", N_g),
         ("mmax_pl", N_pl),
         ("mmin_pl", N_pl),
+        ("delta_pl", N_pl),
+        ("log_rate", N_pl + N_g),
+        ("loc_g", N_g),
+        ("scale_g", N_g),
+        ("beta_g", N_g),
+        ("mmin_g", N_g),
+        ("delta_g", N_g),
+        ("low_g", N_g),
+        ("high_g", N_g),
     ]
 
-    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
+    parameters = [PRIMARY_MASS_SOURCE, MASS_RATIO]
 
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
@@ -192,15 +197,13 @@ def main() -> None:
             ]
         )
 
-    all_params.append(("log_rate", N_pl + N_g))
-
     extended_params = []
     for params in all_params:
         extended_params.extend(expand_arguments(*params))
 
     model_prior_param = get_processed_priors(extended_params, prior_dict)
 
-    model = Bake(NPowerlawMGaussian)(
+    model = Bake(NSmoothedPowerlawMSmoothedGaussian)(
         N_pl=N_pl,
         N_g=N_g,
         use_spin=has_spin,
@@ -218,7 +221,7 @@ def main() -> None:
         VT_FILENAME, [parameter_names.index(name) for name in VT_PARAMS]
     )
     poisson_likelihood.time = ANALYSIS_TIME
-    poisson_likelihood.vt_method = "model"
+    poisson_likelihood.vt_method = "uniform"
     poisson_likelihood.vt_params = VT_PARAMS
 
     poisson_likelihood.set_model(parameters, model=model)

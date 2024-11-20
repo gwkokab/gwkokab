@@ -15,18 +15,20 @@
 
 from . import constraints, transformations, utils, wrappers
 from ._models import (
-    BrokenPowerLawMassModel,
     FlexibleMixtureModel,
     GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic,
     MassGapModel,
-    MultiPeakMassModel,
     NDistribution,
-    PowerLawPeakMassModel,
-    PowerLawPrimaryMassRatio,
+    PowerlawPrimaryMassRatio,
+    SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
+    SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
-from .npowerlawmgaussian import NPowerLawMGaussian as NPowerLawMGaussian
+from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
+from .nsmoothedpowerlawmsmoothedgaussian import (
+    NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
+)
 from .redshift import PowerlawRedshift as PowerlawRedshift
 
 
@@ -35,14 +37,11 @@ __all__ = [
     "transformations",
     "utils",
     "wrappers",
-    "BrokenPowerLawMassModel",
     "FlexibleMixtureModel",
     "GaussianSpinModel",
     "IndependentSpinOrientationGaussianIsotropic",
     "MassGapModel",
-    "MultiPeakMassModel",
     "NDistribution",
-    "PowerLawPeakMassModel",
-    "PowerLawPrimaryMassRatio",
+    "PowerlawPrimaryMassRatio",
     "Wysocki2019MassModel",
 ]

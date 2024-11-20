@@ -10,16 +10,16 @@ Models
     :nosignatures:
     :toctree: _autosummary
 
-    BrokenPowerLawMassModel
     FlexibleMixtureModel
     GaussianSpinModel
     IndependentSpinOrientationGaussianIsotropic
     MassGapModel
-    MultiPeakMassModel
     NDistribution
-    NPowerLawMGaussian
-    PowerLawPeakMassModel
-    PowerLawPrimaryMassRatio
+    NPowerlawMGaussian
+    NSmoothedPowerlawMSmoothedGaussian
+    PowerlawPrimaryMassRatio
+    SmoothedGaussianPrimaryMassRatio
+    SmoothedPowerlawPrimaryMassRatio
     Wysocki2019MassModel
 
 Redshift
@@ -42,6 +42,9 @@ Utilities
     :nosignatures:
     :toctree: _autosummary
 
+    doubly_truncated_power_law_cdf
+    doubly_truncated_power_law_icdf
+    doubly_truncated_power_law_log_prob
     JointDistribution
     ScaledMixture
 
