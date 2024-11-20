@@ -33,6 +33,7 @@ from ..utils.common import (
     get_logVT,
     get_posterior_data,
     get_processed_priors,
+    get_vt_samples,
 )
 from .common import EccentricityMattersModel
 
@@ -72,9 +73,10 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
-    FLOWMC_HANDLER_KWARGS["data"] = get_posterior_data(
-        glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS
-    )
+    FLOWMC_HANDLER_KWARGS["data"] = {
+        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        "vt_samples": get_vt_samples(VT_FILENAME, args.vt_params),
+    }
 
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)

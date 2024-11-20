@@ -19,6 +19,7 @@ import json
 from collections.abc import Callable
 from typing import List
 
+import numpy as np
 import pandas as pd
 from jax import vmap
 from jaxtyping import Array, Float
@@ -92,6 +93,23 @@ def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> di
         "N": len(filenames),
     }
     return data_set
+
+
+def get_vt_samples(filename: str, columns: List[str]) -> np.ndarray:
+    r"""Get the VT samples from a list of files.
+
+    :param filenames: list of filenames
+    :param columns: list of columns
+    :return: dictionary of VT samples
+    """
+    df = pd.read_csv(filename, delimiter=" ")
+    missing_columns = set(columns) - set(df.columns)
+    if missing_columns:
+        raise KeyError(
+            f"The file '{filename}' is missing required columns: {missing_columns}"
+        )
+    data = df[columns].to_numpy()
+    return data
 
 
 def get_processed_priors(params: List[str], priors: dict) -> dict:

@@ -17,8 +17,7 @@ from typing_extensions import Callable, List, Optional, Sequence, Union
 
 import jax
 import numpy as np
-from jax import numpy as jnp, random as jrd, tree as jtr
-from jax.nn import logsumexp
+from jax import nn as jnn, numpy as jnp, random as jrd, tree as jtr
 from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array, Int, PRNGKeyArray
 from numpyro.distributions import Distribution, Uniform
@@ -250,7 +249,7 @@ class PoissonLikelihood:
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
-            + logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
+            + jnn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
             - jnp.log(y.shape[0]),
             data["data"],
             jnp.zeros(()),
@@ -258,7 +257,12 @@ class PoissonLikelihood:
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        expected_rates = self.exp_rate_integral(model)
+        # expected_rates = self.exp_rate_integral(model)
+
+        vt_samples = data["vt_samples"]
+        N = vt_samples.shape[0]
+
+        expected_rates = jnn.logsumexp(model.log_prob(vt_samples), axis=-1) - jnp.log(N)
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 

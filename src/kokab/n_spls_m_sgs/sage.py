@@ -45,6 +45,7 @@ from ..utils.common import (
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
+    get_vt_samples,
 )
 from .common import get_logVT
 
@@ -115,9 +116,10 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
-    FLOWMC_HANDLER_KWARGS["data"] = get_posterior_data(
-        glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS
-    )
+    FLOWMC_HANDLER_KWARGS["data"] = {
+        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        "vt_samples": get_vt_samples(VT_FILENAME, args.vt_params),
+    }
 
     N_pl = args.n_pl
     N_g = args.n_g

@@ -156,4 +156,9 @@ def main() -> None:
 
     samples = mcmc.get_samples()
 
-    np.savetxt(args.output, samples["params"], header=" ".join(vt_params_names))
+    np.savetxt(
+        args.output,
+        samples["params"],
+        header=" ".join(vt_params_names),
+        comments="",
+    )
