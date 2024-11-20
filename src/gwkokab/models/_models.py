@@ -766,12 +766,10 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
 
     .. attention::
 
-        Interestingly, in :class:`~numpyro.distributions.truncated.TruncatedNormal`
-        distribution, if any of the bounds are not provided, it will be set to
-        :math:`\pm\infty`. For example, if we set :math:`\mu=0` and do not provide the
-        upper bound, then the resulting distribution would be a
-        `half normal <https://en.wikipedia.org/wiki/Half-normal_distribution>`_
-        distribution.
+        If :code:`low` or :code:`high` are not provided to the `TruncatedNormal`, they
+        default to  :math:`-\infty` or :math:`+\infty`, respectively. This class relies
+        on this behavior to produce the desired distribution when bounds are
+        unspecified.
     """
 
     arg_constraints = {
