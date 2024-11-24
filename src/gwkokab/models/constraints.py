@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+from collections.abc import Sequence
+
 from jax import numpy as jnp
 from numpyro.distributions.constraints import (
     _SingletonConstraint,
@@ -31,6 +33,8 @@ __all__ = [
     "positive_increasing_vector",
     "strictly_decreasing_vector",
     "strictly_increasing_vector",
+    "all_constraint",
+    "any_constraint",
 ]
 
 
@@ -208,6 +212,61 @@ class _PositiveDecreasingVector(_SingletonConstraint):
         return isinstance(other, _PositiveDecreasingVector)
 
 
+class _AllConstraint(Constraint):
+    r"""Constrain values to satisfy multiple constraints."""
+
+    def __init__(
+        self, *constraints: type[Constraint], event_slices: Sequence[int | slice]
+    ):
+        assert len(constraints) == len(event_slices), (
+            f"Number of constraints ({len(constraints)}) must match the number of "
+            f"event slices ({len(event_slices)})"
+        )
+        self.constraints = constraints
+        self.event_slices = event_slices
+
+    def __call__(self, x):
+        mask = self.constraints[0].check(x[..., self.event_slices[0]])
+        for constraint, event_slice in zip(self.constraints[1:], self.event_slices[1:]):
+            mask &= constraint.check(x[..., event_slice])
+        return mask
+
+    def tree_flatten(self):
+        return self.constraints, (("constraints",), dict())
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _AllConstraint):
+            return False
+        return all(
+            constraint == other_constraint
+            for constraint, other_constraint in zip(self.constraints, other.constraints)
+        )
+
+
+class _AnyConstraint(Constraint):
+    r"""Constrain values to satisfy at least one of the constraints."""
+
+    def __init__(self, *constraints: type[Constraint]):
+        self.constraints = constraints
+
+    def __call__(self, x):
+        mask = self.constraints[0].check(x)
+        for constraint in self.constraints[1:]:
+            mask |= constraint.check(x)
+        return mask
+
+    def tree_flatten(self):
+        return self.constraints, (("constraints",), dict())
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _AnyConstraint):
+            return False
+        return all(
+            constraint == other_constraint
+            for constraint, other_constraint in zip(self.constraints, other.constraints)
+        )
+
+
 mass_sandwich = _MassSandwichConstraint
 mass_ratio_mass_sandwich = _MassRatioMassSandwichConstraint
 increasing_vector = _IncreasingVector()
@@ -216,3 +275,19 @@ strictly_increasing_vector = _StrictlyIncreasingVector()
 strictly_decreasing_vector = _StrictlyDecreasingVector()
 positive_increasing_vector = _PositiveIncreasingVector()
 positive_decreasing_vector = _PositiveDecreasingVector()
+all_constraint = _AllConstraint
+any_constraint = _AnyConstraint
+
+
+# create docs
+
+mass_sandwich.__doc__ = _MassSandwichConstraint.__doc__
+mass_ratio_mass_sandwich.__doc__ = _MassRatioMassSandwichConstraint.__doc__
+increasing_vector.__doc__ = _IncreasingVector.__doc__
+decreasing_vector.__doc__ = _DecreasingVector.__doc__
+strictly_increasing_vector.__doc__ = _StrictlyIncreasingVector.__doc__
+strictly_decreasing_vector.__doc__ = _StrictlyDecreasingVector.__doc__
+positive_increasing_vector.__doc__ = _PositiveIncreasingVector.__doc__
+positive_decreasing_vector.__doc__ = _PositiveDecreasingVector.__doc__
+all_constraint.__doc__ = _AllConstraint.__doc__
+any_constraint.__doc__ = _AnyConstraint.__doc__
