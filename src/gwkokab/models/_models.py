@@ -238,7 +238,9 @@ class PowerlawPrimaryMassRatio(Distribution):
         # These two links provide the solution to the problem.
         # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
         # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
-        mmin_over_m1 = jnp.where(self.mmin < m1, jnp.divide(self.mmin, m1), 0.0)
+        mmin_over_m1 = jnp.where(
+            self.mmin < m1, jnp.divide(self.mmin, m1), jnp.finfo(m1.dtype).tiny
+        )
         log_prob_q = jnp.where(
             self.mmin < m1,
             doubly_truncated_power_law_log_prob(

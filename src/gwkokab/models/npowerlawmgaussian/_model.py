@@ -163,7 +163,10 @@ def _build_pl_component_distributions(
         validate_args=validate_args,
     )
 
-    return [JointDistribution(*dists) for dists in build_distributions]
+    return [
+        JointDistribution(*dists, validate_args=validate_args)
+        for dists in build_distributions
+    ]
 
 
 def _build_g_component_distributions(
@@ -220,7 +223,10 @@ def _build_g_component_distributions(
         validate_args=validate_args,
     )
 
-    return [JointDistribution(*dists) for dists in build_distributions]
+    return [
+        JointDistribution(*dists, validate_args=validate_args)
+        for dists in build_distributions
+    ]
 
 
 def NPowerlawMGaussian(
