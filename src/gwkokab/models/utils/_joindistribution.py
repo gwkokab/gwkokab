@@ -20,14 +20,16 @@ from typing_extensions import Tuple
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import constraints, Distribution
+from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
+
+from gwkokab.models.constraints import all_constraint
 
 
 class JointDistribution(Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
-    pytree_aux_fields = ("marginal_distributions", "shaped_values")
-    support = constraints.real_vector
+    pytree_data_fields = ("marginal_distributions", "shaped_values", "_support")
 
     def __init__(
         self, *marginal_distributions: Distribution, validate_args=None
@@ -55,12 +57,25 @@ class JointDistribution(Distribution):
             event_shape=(k,),
             validate_args=validate_args,
         )
+        self._support = all_constraint(
+            *[m_d.support for m_d in marginal_distributions],
+            event_slices=self.shaped_values,
+        )
 
+    @constraints.dependent_property(is_discrete=False)
+    def support(self):
+        return self._support
+
+    @validate_sample
     def log_prob(self, value: Array) -> Array:
+        def safe_log_prob(d: Distribution, v: Array) -> Array:
+            log_prob_i = d.log_prob(v)
+            return jnp.where(jnp.isneginf(log_prob_i), -jnp.inf, log_prob_i)
+
         log_probs = jtr.reduce(
-            lambda x, y: x + y[0].log_prob(value[..., y[1]]),
+            lambda x, y: x + safe_log_prob(y[0], value[..., y[1]]),
             list(zip(self.marginal_distributions, self.shaped_values)),
-            jnp.zeros(value.shape[:-1]),
+            jnp.zeros(self.batch_shape),
             is_leaf=lambda x: isinstance(x, tuple),
         )
         return log_probs
