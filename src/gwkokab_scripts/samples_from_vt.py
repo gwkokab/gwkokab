@@ -15,13 +15,13 @@
 
 import argparse
 
-import numpy as np
+import h5py
 import numpyro
 from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
 from numpyro.infer import MCMC, NUTS
 
-from gwkokab.vts import load_model
+from gwkokab.vts import load_model, save_model
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -116,9 +116,14 @@ def main() -> None:
     args = parser.parse_args()
 
     filename = args.filename
-    if not filename.endswith(".eqx"):
+    if not filename.endswith(".hdf5"):
         raise ValueError("This script only supports Neural VTs.")
-    _, logVT = load_model(filename)
+
+    output = args.output
+    if not output.endswith(".hdf5"):
+        raise ValueError("This script only supports HDF5 output files.")
+
+    logVT = load_model(filename)
 
     vt_params_names = []
     min_vals = []
@@ -156,9 +161,12 @@ def main() -> None:
 
     samples = mcmc.get_samples()
 
-    np.savetxt(
-        args.output,
-        samples["params"],
-        header=" ".join(vt_params_names),
-        comments="",
-    )
+    if filename != output:
+        # save model weights if the output file is different from the input file
+        save_model(filename=output, model=logVT)
+    with h5py.File(output, "a") as f:
+        samples_group = f.create_group("samples")
+        for param in vt_params_names:
+            samples_group.create_dataset(
+                param, data=samples["params"][..., vt_params_names.index(param)]
+            )
