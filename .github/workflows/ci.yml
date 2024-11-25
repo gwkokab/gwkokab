@@ -5,10 +5,12 @@ name: CI
 
 on:
   push:
+    branches: ["main", "dev"]
     paths:
       - "**/*.py"
       - ".github/workflows/ci.yml"
   pull_request:
+    branches: ["main", "dev"]
     paths:
       - "**/*.py"
       - ".github/workflows/ci.yml"
