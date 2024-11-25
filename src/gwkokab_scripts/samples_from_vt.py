@@ -21,7 +21,7 @@ from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
 from numpyro.infer import MCMC, NUTS
 
-from gwkokab.vts import load_model, save_model
+from gwkokab.vts import NeuralVT, save_model
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -123,8 +123,6 @@ def main() -> None:
     if not output.endswith(".hdf5"):
         raise ValueError("This script only supports HDF5 output files.")
 
-    logVT = load_model(filename)
-
     vt_params_names = []
     min_vals = []
     max_vals = []
@@ -134,6 +132,10 @@ def main() -> None:
         vt_params_names.append(param)
         min_vals.append(float(min_val))
         max_vals.append(float(max_val))
+
+    nvt = NeuralVT(vt_params_names, filename)
+
+    logVT = nvt.get_logVT()
 
     def model():
         params = numpyro.sample(
@@ -163,10 +165,12 @@ def main() -> None:
 
     if filename != output:
         # save model weights if the output file is different from the input file
-        save_model(filename=output, model=logVT)
+        save_model(
+            filename=output,
+            model=nvt.model,
+            names=[vt_params_names[i] for i in nvt.shuffle_indices],
+        )
     with h5py.File(output, "a") as f:
         samples_group = f.create_group("samples")
-        for param in vt_params_names:
-            samples_group.create_dataset(
-                param, data=samples["params"][..., vt_params_names.index(param)]
-            )
+        for i, param in enumerate(vt_params_names):
+            samples_group.create_dataset(param, data=samples["params"][..., i])
