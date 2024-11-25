@@ -16,8 +16,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import List
-from typing_extensions import Any, Optional
+from typing import Any, List, Optional
 
 import equinox as eqx
 import h5py
@@ -136,7 +135,7 @@ def make(
     assert is_prng_key(key)
     if hidden_layers is None:
         keys = jrd.split(key, 2)
-        layers = [
+        layers: List[eqx.nn.Linear | eqx.nn.Lambda] = [
             eqx.nn.Linear(
                 in_features=input_layer,
                 out_features=output_layer,
@@ -245,7 +244,6 @@ def train_regressor(
     epochs: int = 50,
     validation_split: float = 0.2,
     learning_rate: float = 1e-3,
-    plot_loss: bool = True,
 ) -> None:
     """Train the model to approximate the log of the VT function.
 
@@ -259,14 +257,12 @@ def train_regressor(
     :param validation_split: fraction of the data to use for validation, defaults to
         0.2
     :param learning_rate: learning rate for the optimizer, defaults to 1e-3
-    :param plot_loss: whether to plot the loss, defaults to True
-    :raises ValueError: if checkpoint path does not end with .eqx
+    :raises ValueError: if checkpoint path does not end with .hdf5
     """
-    if checkpoint_path is not None:
-        if not checkpoint_path.endswith(".eqx"):
-            raise ValueError("Checkpoint path must end with .eqx")
-    else:
-        warnings.warn("No checkpoint path provided, model will not be saved.")
+    if checkpoint_path is None:
+        raise ValueError("No checkpoint path provided, model will not be saved.")
+    if not checkpoint_path.endswith(".hdf5"):
+        raise ValueError("Checkpoint path must end with .hdf5")
 
     optimizer = optax.adam(learning_rate=learning_rate)
 
@@ -367,7 +363,7 @@ def train_regressor(
                 total=total,
                 epoch=epoch + 1,
             )
-            epoch_loss = 0
+            epoch_loss = jnp.zeros(())
             for i in range(0, len(train_X), batch_size):
                 x = train_X[i : i + batch_size]
                 y = train_Y[i : i + batch_size]
