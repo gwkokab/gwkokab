@@ -15,8 +15,8 @@
 
 from __future__ import annotations
 
-import json
 import warnings
+from typing import List
 from typing_extensions import Any, Optional
 
 import equinox as eqx
@@ -26,7 +26,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optax
 import pandas as pd
-from jax import numpy as jnp, random as jrd
+from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, Float, PRNGKeyArray, PyTree
 from numpyro.util import is_prng_key
 from rich.console import Console
@@ -154,7 +154,7 @@ def make(
             out_features=hidden_layers[0],
             key=keys[0],
         ),
-        eqx.nn.Lambda(jax.nn.relu),
+        eqx.nn.Lambda(jnn.relu),
     ]
     for i in range(len(hidden_layers) - 1):
         layers.append(
@@ -164,7 +164,7 @@ def make(
                 key=keys[i],
             ),
         )
-        layers.append(eqx.nn.Lambda(jax.nn.relu))
+        layers.append(eqx.nn.Lambda(jnn.relu))
     layers.append(
         eqx.nn.Linear(
             in_features=hidden_layers[-1],
@@ -178,31 +178,60 @@ def make(
     return model
 
 
-def save_model(*, filename: str, hyperparams: dict[str, Any], model) -> None:
+def save_model(*, filename: str, model: eqx.nn.Sequential) -> None:
     """Save the model to the given file.
 
     :param filename: Name of the file to save the model
-    :param hyperparams: Hyperparameters of the model
     :param model: Model to approximate the log of the VT function
     """
-    with open(filename, "wb") as f:
-        hyperparam_str = json.dumps(hyperparams)
-        f.write((hyperparam_str + "\n").encode())
-        eqx.tree_serialise_leaves(f, model)
+    if not filename.endswith(".hdf5"):
+        if "." in filename:
+            old_filename = filename
+            filename = filename.split(".")[0] + ".hdf5"
+            warnings.warn(
+                f"Neural VT path does not end with .hdf5: {old_filename}. Saving to {filename} instead."
+            )
+    num_layers = len(model.layers)
+    with h5py.File(filename, "w") as f:
+        for i in range(0, num_layers, 2):
+            layer_number = i >> 1
+            layer_i = f.create_group(f"layer_{layer_number}")
+            layer_i.create_dataset(
+                f"weight_{layer_number}", data=model.layers[i].weight
+            )
+            layer_i.create_dataset(f"bias_{layer_number}", data=model.layers[i].bias)
 
 
-def load_model(filename) -> tuple[dict[str, Any], PyTree]:
+def load_model(filename) -> eqx.nn.Sequential:
     """Load the model from the given file.
 
     :param filename: Name of the file to load the model
-    :return: Hyperparameters and the model
+    :return: model
     """
-    with open(filename, "rb") as f:
-        hyperparam_str = f.readline().decode()
-        hyperparams = json.loads(hyperparam_str)
-        model = make(key=jrd.PRNGKey(0), **hyperparams)
-        model = eqx.tree_deserialise_leaves(f, model)
-    return hyperparams, model
+
+    layers: List[Any] = []
+
+    with h5py.File(filename, "r") as f:
+        i = 0
+        while f.get(f"layer_{i}"):
+            layer_i = f[f"layer_{i}"]
+            weight_i = layer_i[f"weight_{i}"][:]
+            bias_i = layer_i[f"bias_{i}"][:]
+            nn = eqx.nn.Linear(
+                in_features=weight_i.shape[1],
+                out_features=weight_i.shape[0],
+                key=jrd.PRNGKey(0),
+            )
+            nn = eqx.tree_at(lambda l: l.weight, nn, weight_i)
+            nn = eqx.tree_at(lambda l: l.bias, nn, bias_i)
+            layers.append(nn)
+            layers.append(eqx.nn.Lambda(jnn.relu))
+            i += 1
+    layers.pop(-1)
+    layers
+    new_model = eqx.nn.Sequential(layers)
+
+    return new_model
 
 
 def train_regressor(
@@ -363,21 +392,10 @@ def train_regressor(
             )
 
     if checkpoint_path is not None:
-        save_model(
-            filename=checkpoint_path,
-            hyperparams={
-                "input_layer": len(input_keys),
-                "output_layer": len(output_keys),
-                "hidden_layers": hidden_layers,
-            },
-            model=model,
-        )
-
-    if plot_loss:
+        save_model(filename=checkpoint_path, model=model)
         plt.plot(loss_vals, label="loss")
         plt.plot(val_loss_vals, label="val loss")
         plt.yscale("log")
         plt.legend()
         plt.tight_layout()
-        plt.savefig("loss.png")
-        plt.show()
+        plt.savefig(checkpoint_path + "_loss.png")
