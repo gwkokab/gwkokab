@@ -257,12 +257,9 @@ class PoissonLikelihood:
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        # expected_rates = self.exp_rate_integral(model)
-
         vt_samples = data["vt_samples"]
-        N = vt_samples.shape[0]
-
-        expected_rates = jnn.logsumexp(model.log_prob(vt_samples), axis=-1) - jnp.log(N)
+        log_prob_vt = model.log_prob(vt_samples)
+        expected_rates = self.time * jnp.mean(jnp.exp(log_prob_vt))
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 
