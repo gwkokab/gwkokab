@@ -40,14 +40,12 @@ from gwkokab.parameters import (
 
 from ..utils import sage_parser
 from ..utils.common import (
-    check_vt_params,
     expand_arguments,
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
     get_vt_samples,
 )
-from .common import get_logVT
 
 
 def make_parser() -> ArgumentParser:
@@ -213,12 +211,6 @@ def main() -> None:
     )
 
     VT_PARAMS = args.vt_params
-    parameter_names = [parameter.name for parameter in parameters]
-    check_vt_params(VT_PARAMS, parameter_names)
-
-    poisson_likelihood.logVT = get_logVT(
-        VT_FILENAME, [parameter_names.index(name) for name in VT_PARAMS]
-    )
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
     poisson_likelihood.vt_params = VT_PARAMS

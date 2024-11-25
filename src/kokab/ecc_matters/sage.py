@@ -30,7 +30,6 @@ from ..utils import sage_parser
 from ..utils.common import (
     check_vt_params,
     flowMC_json_read_and_process,
-    get_logVT,
     get_posterior_data,
     get_processed_priors,
     get_vt_samples,
@@ -95,10 +94,6 @@ def main() -> None:
     ]
 
     check_vt_params(VT_PARAMS, model_parameters)
-
-    vt_selection_mask = [model_parameters.index(param) for param in VT_PARAMS]
-
-    poisson_likelihood.logVT = get_logVT(VT_FILENAME, vt_selection_mask)
     poisson_likelihood.time = ANALYSIS_TIME
     poisson_likelihood.vt_method = "model"
     poisson_likelihood.vt_params = VT_PARAMS
