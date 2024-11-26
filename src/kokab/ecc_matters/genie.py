@@ -25,9 +25,9 @@ from numpyro import distributions as dist
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.population import error_magazine, PopulationFactory
+from gwkokab.vts import NeuralVT
 
 from ..utils import genie_parser
-from ..utils.common import check_vt_params, get_logVT
 from ..utils.regex import match_all
 from .common import constraint, EccentricityMattersModel
 
@@ -111,8 +111,8 @@ def main() -> None:
 
     @error_magazine.register(ecc)
     def ecc_error_fn(x, size, key):
-        err_x = x + dist.TruncatedNormal(
-            loc=err_param["loc"],
+        err_x = dist.TruncatedNormal(
+            loc=x,
             scale=err_param["scale"],
             low=err_param["low"],
             high=err_param["high"],
@@ -124,15 +124,12 @@ def main() -> None:
 
     model_parameters = [m1_source, m2_source, ecc]
 
-    check_vt_params(args.vt_params, model_parameters)
-
-    vt_selection_mask = [model_parameters.index(param) for param in args.vt_params]
-
-    logVT = get_logVT(args.vt_path, vt_selection_mask)
+    nvt = NeuralVT(model_parameters, args.vt_path)
+    logVT = nvt.get_vmapped_logVT()
 
     popfactory = PopulationFactory(
         model=model,
-        parameters=[m1_source, m2_source, ecc],
+        parameters=model_parameters,
         analysis_time=args.analysis_time,
         logVT_fn=logVT,
         num_realizations=args.num_realizations,

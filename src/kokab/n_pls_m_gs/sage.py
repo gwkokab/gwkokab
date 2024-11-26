@@ -37,6 +37,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
+from gwkokab.vts import NeuralVT
 
 from ..utils import sage_parser
 from ..utils.common import (
@@ -44,7 +45,6 @@ from ..utils.common import (
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
-    get_vt_samples,
 )
 
 
@@ -115,8 +115,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
     FLOWMC_HANDLER_KWARGS["data"] = {
-        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
-        "vt_samples": get_vt_samples(VT_FILENAME, args.vt_params),
+        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     }
 
     N_pl = args.n_pl
@@ -210,10 +209,7 @@ def main() -> None:
         **model_prior_param,
     )
 
-    VT_PARAMS = args.vt_params
     poisson_likelihood.time = ANALYSIS_TIME
-    poisson_likelihood.vt_method = "model"
-    poisson_likelihood.vt_params = VT_PARAMS
 
     poisson_likelihood.set_model(parameters, model=model)
 
@@ -231,6 +227,10 @@ def main() -> None:
 
     with open("nf_samples_mapping.json", "w") as f:
         json.dump(poisson_likelihood.variables_index, f)
+
+    model_parameters = [param.name for param in parameters]
+    nvt = NeuralVT(model_parameters, VT_FILENAME)
+    FLOWMC_HANDLER_KWARGS["data"]["vt_samples"] = nvt.get_samples()
 
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
     initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))

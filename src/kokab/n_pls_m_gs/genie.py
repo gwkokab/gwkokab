@@ -20,7 +20,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
 from typing_extensions import List, Tuple
 
-import jax.numpy as jnp
+from jax import numpy as jnp
 from jaxtyping import Int
 from numpyro import distributions as dist
 
@@ -39,11 +39,12 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.population import error_magazine, PopulationFactory
+from gwkokab.vts import NeuralVT
 
 from ..utils import genie_parser
 from ..utils.common import check_vt_params, expand_arguments
 from ..utils.regex import match_all
-from .common import constraint, get_logVT
+from .common import constraint
 
 
 m1_source_name = PRIMARY_MASS_SOURCE.name
@@ -358,9 +359,9 @@ def main() -> None:
         has_eccentricity=has_eccentricity,
         has_redshift=has_redshift,
     )
-    logVT = get_logVT(
-        args.vt_path, [parameters_name.index(vt_param) for vt_param in args.vt_params]
-    )
+
+    nvt = NeuralVT(list(parameters_name), args.vt_path)
+    logVT = nvt.get_vmapped_logVT()
 
     popfactory = PopulationFactory(
         model=model,

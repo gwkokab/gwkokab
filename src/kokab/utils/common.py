@@ -88,10 +88,7 @@ def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> di
             )
         data = df[posterior_columns].to_numpy()
         data_list.append(data)
-    data_set = {
-        "data": data_list,
-        "N": len(filenames),
-    }
+    data_set = {"data": data_list}
     return data_set
 
 

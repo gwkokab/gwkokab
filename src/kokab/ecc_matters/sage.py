@@ -25,14 +25,13 @@ from jax import random as jrd
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.vts import NeuralVT
 
 from ..utils import sage_parser
 from ..utils.common import (
-    check_vt_params,
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
-    get_vt_samples,
 )
 from .common import EccentricityMattersModel
 
@@ -64,7 +63,6 @@ def main() -> None:
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
-    VT_PARAMS = args.vt_params
     ANALYSIS_TIME = args.analysis_time
 
     FLOWMC_HANDLER_KWARGS = flowMC_json_read_and_process(args.flowMC_json)
@@ -73,8 +71,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
     FLOWMC_HANDLER_KWARGS["data"] = {
-        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
-        "vt_samples": get_vt_samples(VT_FILENAME, args.vt_params),
+        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     }
 
     with open(args.prior_json, "r") as f:
@@ -93,10 +90,10 @@ def main() -> None:
         ECCENTRICITY.name,
     ]
 
-    check_vt_params(VT_PARAMS, model_parameters)
+    nvt = NeuralVT(model_parameters, VT_FILENAME)
+    FLOWMC_HANDLER_KWARGS["data"]["vt_samples"] = nvt.get_samples()
+
     poisson_likelihood.time = ANALYSIS_TIME
-    poisson_likelihood.vt_method = "model"
-    poisson_likelihood.vt_params = VT_PARAMS
 
     poisson_likelihood.set_model(
         (PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY), model=model
