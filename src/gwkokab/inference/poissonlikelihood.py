@@ -162,9 +162,7 @@ class PoissonLikelihood:
         """
         log_prior = self.priors.log_prob(x)
         debug_flush("log_prior: {lp}", lp=log_prior)
-        log_likelihood = jnp.where(
-            jnp.isfinite(log_prior), self.log_likelihood(x, data), 0.0
-        )
+        log_likelihood = self.log_likelihood(x, data)
         debug_flush("log_likelihood: {lp}", lp=log_prior)
         return log_prior + log_likelihood
 
