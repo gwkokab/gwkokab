@@ -15,6 +15,8 @@
 from collections.abc import Callable, Sequence
 
 import equinox as eqx
+import jax
+from jax import numpy as jnp
 from jaxtyping import Array
 
 from ._utils import load_model, load_samples
@@ -28,18 +30,29 @@ class NeuralVT(eqx.Module):
 
     def __post_init__(self):
         names, self.model = load_model(self.filename)
-        if any(parameter not in names for parameter in self.parameters):
+        if any(name not in self.parameters for name in names):
             raise ValueError(
                 f"{self.filename} only support {names}. Requested {self.parameters}."
             )
-        self.shuffle_indices = [names.index(parameter) for parameter in self.parameters]
+        self.shuffle_indices = [self.parameters.index(name) for name in names]
 
     def get_logVT(self) -> Callable[[Array], Array]:
         """Gets the logVT function."""
 
+        @jax.jit
         def _logVT(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
             return self.model(x_new)
+
+        return _logVT
+
+    def get_vmapped_logVT(self) -> Callable[[Array], Array]:
+        """Gets the logVT function."""
+
+        @jax.jit
+        def _logVT(x: Array) -> Array:
+            x_new = x[..., self.shuffle_indices]
+            return jnp.squeeze(jax.vmap(self.model)(x_new), axis=-1)
 
         return _logVT
 
