@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing_extensions import Callable, Optional, Sequence
+from typing_extensions import Optional, Sequence
 
 from jax import nn as jnn, numpy as jnp, tree as jtr
 from jax.tree_util import register_pytree_node_class
@@ -63,19 +63,14 @@ class PoissonLikelihood:
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
 
     :param custom_vt: Custom VT function to use.
-    :param logVT: Log of the VT function.
     :param time: Time interval for the Poisson process.
-    :param vt_method: Method to use for the VT function. Options are `uniform`, `model`, and `custom`.
-    :param vt_params: Parameters for the VT function.
     """
 
-    logVT: Optional[Callable[[Array], Array]] = None
     time: float = 1.0
 
     def tree_flatten(self) -> tuple:
         children = ()
         aux_data_keys = [
-            "logVT",
             "model",
             "ref_priors",
             "time",
