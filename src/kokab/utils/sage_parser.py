@@ -38,13 +38,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     sage_group.add_argument(
-        "--vt-params",
-        help="Parameters of the VT",
-        type=str,
-        nargs="+",
-        required=True,
-    )
-    sage_group.add_argument(
         "--posterior-regex",
         help="Regex for the posterior samples.",
         type=str,
