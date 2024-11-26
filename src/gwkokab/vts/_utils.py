@@ -199,5 +199,5 @@ def load_samples(filename) -> Tuple[List[str], Array]:
     with h5py.File(filename, "r") as f:
         names = f["names"][:]
         names = names.astype(str).tolist()
-        samples = f["samples"][:]
+        samples = jnp.stack([f["samples"][name][:] for name in names], axis=-1)
     return names, samples
