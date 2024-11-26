@@ -232,8 +232,12 @@ class PowerlawPrimaryMassRatio(Distribution):
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
-        log_prob_q = doubly_truncated_power_law_log_prob(
-            x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+        log_prob_q = jnp.where(
+            jnp.equal(m1, self.mmin),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
         )
         return log_prob_m1 + log_prob_q
 
@@ -724,8 +728,12 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
-        log_prob_q = doubly_truncated_power_law_log_prob(
-            x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+        log_prob_q = jnp.where(
+            jnp.equal(m1, self.mmin),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
         )
         return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
 
@@ -812,7 +820,11 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
         )
         log_prob_m1 = self._norm.log_prob(m1)
-        log_prob_q = doubly_truncated_power_law_log_prob(
-            x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+        log_prob_q = jnp.where(
+            jnp.equal(m1, self.mmin),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
         )
         return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
