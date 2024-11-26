@@ -124,7 +124,7 @@ class PopulationFactory:
 
         value = population[..., self.vt_selection_mask]
 
-        vt = softmax(self.logVT_fn(value).flatten())
+        vt = softmax(self.logVT_fn(value))
         vt = jnp.nan_to_num(vt, nan=0.0)
         _, key = jrd.split(key)
         index = jrd.choice(
