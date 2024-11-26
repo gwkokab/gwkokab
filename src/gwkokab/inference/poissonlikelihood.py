@@ -13,11 +13,12 @@
 # limitations under the License.
 
 
-from typing_extensions import Optional, Sequence
+from collections.abc import Callable, Mapping, Sequence
 
+import equinox as eqx
 from jax import nn as jnn, numpy as jnp, tree as jtr
-from jax.tree_util import register_pytree_node_class
 from jaxtyping import Array
+from numpyro.distributions import Distribution
 
 from ..debug import debug_flush
 from ..models.utils import JointDistribution, ScaledMixture
@@ -25,11 +26,10 @@ from ..parameters import Parameter
 from .bake import Bake
 
 
-__all__ = ["poisson_likelihood"]
+__all__ = ["PoissonLikelihood"]
 
 
-@register_pytree_node_class
-class PoissonLikelihood:
+class PoissonLikelihood(eqx.Module):
     r"""This class is used to provide a likelihood function for the inhomogeneous
     Poisson process. The likelihood is given by,
 
@@ -66,55 +66,47 @@ class PoissonLikelihood:
     :param time: Time interval for the Poisson process.
     """
 
-    time: float = 1.0
+    model: Bake = eqx.field(static=True)
+    parameters: Sequence[Parameter] = eqx.field(static=True)
+    data: Sequence[Array] = eqx.field(static=True)
+    vt_samples: Array = eqx.field(static=True)
+    _model: Callable[..., Distribution] = eqx.field(static=True)
+    ref_priors: JointDistribution = eqx.field(static=True)
+    priors: JointDistribution = eqx.field(static=True)
+    variables_index: Mapping[str, int] = eqx.field(static=True)
+    time: float = eqx.field(static=True, default=1.0)
 
-    def tree_flatten(self) -> tuple:
-        children = ()
-        aux_data_keys = [
-            "model",
-            "ref_priors",
-            "time",
-            "variables_index",
-            "variables",
-            "priors",
-        ]
-        aux_data = {k: getattr(self, k) for k in aux_data_keys}
-        return children, aux_data
-
-    @classmethod
-    def tree_unflatten(cls, aux_data: dict, children: tuple) -> "PoissonLikelihood":
-        del children
-        obj = cls.__new__(cls)
-        for k, v in aux_data.items():
-            if v is not None:
-                setattr(obj, k, v)
-        PoissonLikelihood.__init__(obj)
-        return obj
-
-    def set_model(
+    def __init__(
         self,
-        /,
-        params: Optional[Sequence[Parameter]] = None,
-        *,
-        model: Optional[Bake] = None,
+        model: Bake,
+        parameters: Sequence[Parameter],
+        data: Sequence[Array],
+        vt_samples: Array,
+        time: float = 1.0,
     ) -> None:
-        assert model is not None, "Model must be provided."
-        assert params is not None, "Params must be provided."
-        dummy_model = model.get_dummy()
+        self.data = data
+        self.model = model
+        self.parameters = parameters
+        self.vt_samples = vt_samples
+        self.time = time
+
+        dummy_model = self.model.get_dummy()
         assert isinstance(
             dummy_model, ScaledMixture
         ), "Model must be a scaled mixture model."
 
-        self.variables, duplicates, self.model = model.get_dist()
-        self.variables_index = {key: i for i, key in enumerate(self.variables.keys())}
+        variables, duplicates, self._model = self.model.get_dist()
+        self.variables_index = {key: i for i, key in enumerate(variables.keys())}
 
         for key, value in duplicates.items():
             self.variables_index[key] = self.variables_index[value]
 
-        self.ref_priors = JointDistribution(*map(lambda x: x.prior, params))
-        self.priors = JointDistribution(*self.variables.values())
+        self.ref_priors = JointDistribution(
+            *map(lambda x: x.prior, self.parameters), validate_args=True
+        )
+        self.priors = JointDistribution(*variables.values(), validate_args=True)
 
-    def log_likelihood(self, x: Array, data: dict) -> Array:
+    def log_likelihood(self, x: Array) -> Array:
         """The log likelihood function for the inhomogeneous Poisson process.
 
         :param x: Recovered parameters.
@@ -125,27 +117,26 @@ class PoissonLikelihood:
 
         debug_flush("mapped params: {mp}", mp=mapped_params)
 
-        model: ScaledMixture = self.model(**mapped_params)
+        model: ScaledMixture = self._model(**mapped_params)
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
             + jnn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
             - jnp.log(y.shape[0]),
-            data["data"],
+            self.data,
             jnp.zeros(()),
         )
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        vt_samples = data["vt_samples"]
-        log_prob_vt = model.log_prob(vt_samples)
+        log_prob_vt = model.log_prob(self.vt_samples)
         expected_rates = self.time * jnp.mean(jnp.exp(log_prob_vt))
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 
         return log_likelihood - expected_rates
 
-    def log_posterior(self, x: Array, data: dict) -> Array:
+    def log_posterior(self, x: Array, _: dict) -> Array:
         r"""The likelihood function for the inhomogeneous Poisson process.
 
         .. math::
@@ -157,9 +148,6 @@ class PoissonLikelihood:
         """
         log_prior = self.priors.log_prob(x)
         debug_flush("log_prior: {lp}", lp=log_prior)
-        log_likelihood = self.log_likelihood(x, data)
+        log_likelihood = self.log_likelihood(x)
         debug_flush("log_likelihood: {lp}", lp=log_prior)
         return log_prior + log_likelihood
-
-
-poisson_likelihood = PoissonLikelihood()

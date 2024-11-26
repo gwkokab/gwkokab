@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing_extensions import Any, Callable
+from collections.abc import Callable
+from typing import Any, Optional
 
 from flowMC.nfmodel.base import NFModel
 from flowMC.nfmodel.realNVP import RealNVP  # noqa F401
@@ -39,7 +40,7 @@ class flowMChandler(object):
         sampler_kwargs: dict[str, Any],
         data_dump_kwargs: dict[str, Any],
         initial_position: Array,
-        data: dict,
+        data: Optional[dict] = None,
     ) -> None:
         self.logpdf = logpdf
         self.local_sampler_kwargs = local_sampler_kwargs

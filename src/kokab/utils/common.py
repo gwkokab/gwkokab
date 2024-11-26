@@ -69,7 +69,9 @@ def flowMC_json_read_and_process(json_file: str) -> dict:
     return flowMC_json
 
 
-def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> dict:
+def get_posterior_data(
+    filenames: List[str], posterior_columns: List[str]
+) -> List[np.ndarray]:
     r"""Get the posterior data from a list of files.
 
     :param filenames: list of filenames
@@ -88,8 +90,7 @@ def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> di
             )
         data = df[posterior_columns].to_numpy()
         data_list.append(data)
-    data_set = {"data": data_list}
-    return data_set
+    return data_list
 
 
 def get_vt_samples(filename: str, columns: List[str]) -> np.ndarray:

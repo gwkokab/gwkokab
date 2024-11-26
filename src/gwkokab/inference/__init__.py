@@ -15,8 +15,8 @@
 
 from .bake import Bake
 from .flowMChandler import flowMChandler
-from .poissonlikelihood import poisson_likelihood
+from .poissonlikelihood import PoissonLikelihood as PoissonLikelihood
 from .utils import save_data_from_sampler
 
 
-__all__ = ["Bake", "flowMChandler", "poisson_likelihood", "save_data_from_sampler"]
+__all__ = ["Bake", "flowMChandler", "save_data_from_sampler"]

@@ -25,7 +25,7 @@ from jax import random as jrd
 from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
-from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
+from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
@@ -113,10 +113,6 @@ def main() -> None:
 
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
-
-    FLOWMC_HANDLER_KWARGS["data"] = {
-        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    }
 
     N_pl = args.n_pl
     N_g = args.n_g
@@ -209,9 +205,15 @@ def main() -> None:
         **model_prior_param,
     )
 
-    poisson_likelihood.time = ANALYSIS_TIME
+    nvt = NeuralVT([param.name for param in parameters], VT_FILENAME)
 
-    poisson_likelihood.set_model(parameters, model=model)
+    poisson_likelihood = PoissonLikelihood(
+        model=model,
+        parameters=parameters,
+        data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        vt_samples=nvt.get_samples(),
+        time=ANALYSIS_TIME,
+    )
 
     constants = model.constants
 
@@ -227,10 +229,6 @@ def main() -> None:
 
     with open("nf_samples_mapping.json", "w") as f:
         json.dump(poisson_likelihood.variables_index, f)
-
-    model_parameters = [param.name for param in parameters]
-    nvt = NeuralVT(model_parameters, VT_FILENAME)
-    FLOWMC_HANDLER_KWARGS["data"]["vt_samples"] = nvt.get_samples()
 
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
     initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))

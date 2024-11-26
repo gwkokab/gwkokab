@@ -23,7 +23,7 @@ from glob import glob
 from jax import random as jrd
 
 from gwkokab.debug import enable_debugging
-from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
+from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.vts import NeuralVT
 
@@ -91,12 +91,13 @@ def main() -> None:
     ]
 
     nvt = NeuralVT(model_parameters, VT_FILENAME)
-    FLOWMC_HANDLER_KWARGS["data"]["vt_samples"] = nvt.get_samples()
 
-    poisson_likelihood.time = ANALYSIS_TIME
-
-    poisson_likelihood.set_model(
-        (PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY), model=model
+    poisson_likelihood = PoissonLikelihood(
+        model=model,
+        parameters=(PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY),
+        data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        vt_samples=nvt.get_samples(),
+        time=ANALYSIS_TIME,
     )
 
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
