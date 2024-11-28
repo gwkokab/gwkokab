@@ -13,19 +13,18 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 import json
-from collections.abc import Callable
-from typing import List
+from collections.abc import Sequence
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
-from jax import vmap
-from jaxtyping import Array, Float
+from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Uniform
 
-from gwkokab.vts import load_model
+from gwkokab.models.utils import JointDistribution
+from gwkokab.parameters import Parameter
+from gwkokab.vts import NeuralVT
 
 from .regex import match_all
 
@@ -147,13 +146,24 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
         )
 
 
-def get_logVT(
-    vt_path: str, selection_indexes: List[int]
-) -> Callable[[Float[Array, "..."]], Float[Array, "..."]]:
-    _, logVT = load_model(vt_path)
+def log_weights_and_samples(
+    key: PRNGKeyArray,
+    parameters: Sequence[Parameter],
+    vt_filename: str,
+    num_samples: int,
+) -> Tuple[Array, Array]:
+    r"""Get the weights and samples from the VT.
 
-    def trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
-        m1m2 = x[..., selection_indexes]
-        return vmap(logVT)(m1m2)
-
-    return trimmed_logVT
+    :param parameters: list of parameters
+    :param vt_filename: VT filename
+    :param num_samples: number of samples
+    :return: tuple of weights and samples
+    """
+    nvt = NeuralVT([param.name for param in parameters], vt_filename)
+    logVT = nvt.get_vmapped_logVT()
+    proposal_dist = JointDistribution(
+        *[param.prior for param in parameters], validate_args=True
+    )
+    samples = proposal_dist.sample(key=key, sample_shape=(num_samples,))
+    log_weights = logVT(samples) - proposal_dist.log_prob(samples)
+    return log_weights, samples

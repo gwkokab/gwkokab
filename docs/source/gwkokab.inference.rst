@@ -9,4 +9,4 @@
 
     Bake
     flowMChandler
-    poisson_likelihood
+    PoissonLikelihood

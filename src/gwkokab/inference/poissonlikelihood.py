@@ -66,36 +66,39 @@ class PoissonLikelihood(eqx.Module):
     :param time: Time interval for the Poisson process.
     """
 
-    model: Bake = eqx.field(static=True)
     parameters: Sequence[Parameter] = eqx.field(static=True)
     data: Sequence[Array] = eqx.field(static=False)
-    vt_samples: Array = eqx.field(static=False)
-    _model: Callable[..., Distribution] = eqx.field(static=True)
+    model: Callable[..., Distribution] = eqx.field(static=True)
     ref_priors: JointDistribution = eqx.field(static=True)
     priors: JointDistribution = eqx.field(static=True)
     variables_index: Mapping[str, int] = eqx.field(static=True)
-    time: float = eqx.field(static=True, default=1.0)
+    log_weights: Array = eqx.field(static=True)
+    samples: Array = eqx.field(static=True)
 
     def __init__(
         self,
         model: Bake,
         parameters: Sequence[Parameter],
         data: Sequence[Array],
-        vt_samples: Array,
+        log_weights: Array,
+        samples: Array,
         time: float = 1.0,
     ) -> None:
         self.data = data
         self.model = model
         self.parameters = parameters
-        self.vt_samples = vt_samples
-        self.time = time
+        # weights and time are multiplied to each other in the end.
+        # This is done one time to avoid a single multiplication for each iteration
+        # in the expected rate calculation.
+        self.log_weights = log_weights + jnp.log(time)
+        self.samples = samples
 
-        dummy_model = self.model.get_dummy()
+        dummy_model = model.get_dummy()
         assert isinstance(
             dummy_model, ScaledMixture
         ), "Model must be a scaled mixture model."
 
-        variables, duplicates, self._model = self.model.get_dist()
+        variables, duplicates, self.model = model.get_dist()
         self.variables_index = {key: i for i, key in enumerate(variables.keys())}
 
         for key, value in duplicates.items():
@@ -117,7 +120,7 @@ class PoissonLikelihood(eqx.Module):
 
         debug_flush("mapped params: {mp}", mp=mapped_params)
 
-        model: ScaledMixture = self._model(**mapped_params)
+        model: ScaledMixture = self.model(**mapped_params)
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
@@ -130,8 +133,9 @@ class PoissonLikelihood(eqx.Module):
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        log_prob_vt = model.log_prob(self.vt_samples)
-        expected_rates = self.time * jnp.mean(jnp.exp(log_prob_vt))
+        expected_rates = jnp.mean(
+            jnp.exp(self.log_weights + model.log_prob(self.samples))
+        )
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 

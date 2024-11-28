@@ -37,7 +37,6 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-from gwkokab.vts import NeuralVT
 
 from ..utils import sage_parser
 from ..utils.common import (
@@ -45,6 +44,7 @@ from ..utils.common import (
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
+    log_weights_and_samples,
 )
 
 
@@ -103,7 +103,7 @@ def main() -> None:
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2, KEY3 = jrd.split(KEY, 3)
+    KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
@@ -205,13 +205,16 @@ def main() -> None:
         **model_prior_param,
     )
 
-    nvt = NeuralVT([param.name for param in parameters], VT_FILENAME)
+    log_weight, samples = log_weights_and_samples(
+        KEY4, parameters, VT_FILENAME, args.vt_n_samples
+    )
 
     poisson_likelihood = PoissonLikelihood(
         model=model,
         parameters=parameters,
         data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
-        vt_samples=nvt.get_samples(),
+        log_weights=log_weight,
+        samples=samples,
         time=ANALYSIS_TIME,
     )
 

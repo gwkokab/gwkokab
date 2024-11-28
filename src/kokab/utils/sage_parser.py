@@ -57,6 +57,12 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         type=float,
     )
     sage_group.add_argument(
+        "--vt-n-samples",
+        help="Number of samples to draw to compute the VT.",
+        default=10_000,
+        type=int,
+    )
+    sage_group.add_argument(
         "--seed",
         help="Seed for the random number generator.",
         default=37,
