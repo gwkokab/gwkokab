@@ -68,8 +68,8 @@ class PoissonLikelihood(eqx.Module):
 
     model: Bake = eqx.field(static=True)
     parameters: Sequence[Parameter] = eqx.field(static=True)
-    data: Sequence[Array] = eqx.field(static=True)
-    vt_samples: Array = eqx.field(static=True)
+    data: Sequence[Array] = eqx.field(static=False)
+    vt_samples: Array = eqx.field(static=False)
     _model: Callable[..., Distribution] = eqx.field(static=True)
     ref_priors: JointDistribution = eqx.field(static=True)
     priors: JointDistribution = eqx.field(static=True)
@@ -125,6 +125,7 @@ class PoissonLikelihood(eqx.Module):
             - jnp.log(y.shape[0]),
             self.data,
             jnp.zeros(()),
+            is_leaf=lambda x: isinstance(x, Array),
         )
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
@@ -147,7 +148,8 @@ class PoissonLikelihood(eqx.Module):
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.priors.log_prob(x)
-        debug_flush("log_prior: {lp}", lp=log_prior)
         log_likelihood = self.log_likelihood(x)
-        debug_flush("log_likelihood: {lp}", lp=log_prior)
+        debug_flush(
+            "log_prior: {lp}\nlog_likelihood: {ll}", lp=log_prior, ll=log_likelihood
+        )
         return log_prior + log_likelihood
