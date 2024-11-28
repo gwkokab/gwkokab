@@ -121,15 +121,34 @@ def main() -> None:
                 alpha=args.alpha,
             )
             ax.set_ylabel(args.labels[0])
+            plt.tick_params(
+                axis="both",
+                which="both",
+                labelleft=True,
+                labelright=True,
+                labeltop=True,
+                labelbottom=True,
+            )
+            plt.grid(visible=True, which="both", axis="both", alpha=0.5)
     else:
         for file in files:
             data = pd.read_csv(file, delimiter=" ", skiprows=1).to_numpy()
+            n = data.T.shape[0]
             for j, data_ in enumerate(data.T):
                 ax[j].plot(
                     data_,
                     alpha=args.alpha,
                 )
                 ax[j].set_ylabel(args.labels[j])
+                ax[j].tick_params(
+                    axis="both",
+                    which="both",
+                    labelleft=True,
+                    labelright=True,
+                    labeltop=j == 0,
+                    labelbottom=j == n - 1,
+                )
+                ax[j].grid(visible=True, which="both", axis="both", alpha=0.5)
     if args.title:
         plt.suptitle(args.title)
     plt.xscale(args.x_scale)
