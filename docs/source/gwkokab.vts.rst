@@ -8,7 +8,6 @@
     :toctree: _autosummary
 
     load_model
-    load_samples
     make_model
     mse_loss_fn
     NeuralVT

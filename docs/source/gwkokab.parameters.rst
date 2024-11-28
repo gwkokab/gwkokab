@@ -12,15 +12,6 @@ Parameter
 
     Parameter
 
-Utils
------
-
-.. autosummary::
-    :nosignatures:
-    :toctree: _autosummary
-
-    ncopy
-
 Predefined Parameter
 --------------------
 
@@ -49,5 +40,3 @@ Predefined Parameter
     SECONDARY_SPIN_Y
     SECONDARY_SPIN_Z
     SYMMETRIC_MASS_RATIO
-
-.. currentmodule:: gwkokab.parameters

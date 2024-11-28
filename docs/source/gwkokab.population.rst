@@ -9,5 +9,5 @@
     :nosignatures:
     :toctree: _autosummary
 
-    popfactory
     error_magazine
+    PopulationFactory
