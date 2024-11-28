@@ -188,16 +188,3 @@ def load_model(filename) -> Tuple[List[str], eqx.nn.Sequential]:
     new_model = eqx.nn.Sequential(layers)
 
     return names, new_model
-
-
-def load_samples(filename) -> Tuple[List[str], Array]:
-    """Load the samples of VT from the given file.
-
-    :param filename: Name of the file to load the model
-    :return: names of the parameters and the samples
-    """
-    with h5py.File(filename, "r") as f:
-        names = f["names"][:]
-        names = names.astype(str).tolist()
-        samples = jnp.stack([f["samples"][name][:] for name in names], axis=-1)
-    return names, samples

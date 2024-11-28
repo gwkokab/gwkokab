@@ -19,7 +19,7 @@ import jax
 from jax import numpy as jnp
 from jaxtyping import Array
 
-from ._utils import load_model, load_samples
+from ._utils import load_model
 
 
 class NeuralVT(eqx.Module):
@@ -49,16 +49,14 @@ class NeuralVT(eqx.Module):
     def get_vmapped_logVT(self) -> Callable[[Array], Array]:
         """Gets the logVT function."""
 
+        model_vmap = jax.vmap(self.model)
+
         @jax.jit
         def _logVT(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
-            return jnp.squeeze(jax.vmap(self.model)(x_new), axis=-1)
+            return jnp.squeeze(model_vmap(x_new), axis=-1)
 
         return _logVT
-
-    def get_samples(self) -> Array:
-        _, samples = load_samples(self.filename)
-        return samples[..., self.shuffle_indices]
 
 
 NeuralVT.__init__.__doc__ = """Convenience class for loading a neural vt.

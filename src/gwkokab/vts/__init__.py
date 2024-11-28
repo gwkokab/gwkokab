@@ -17,7 +17,6 @@ from ._neuralvt import NeuralVT as NeuralVT
 from ._train import train_regressor as train_regressor
 from ._utils import (
     load_model as load_model,
-    load_samples as load_samples,
     make_model as make_model,
     mse_loss_fn as mse_loss_fn,
     predict as predict,
