@@ -14,6 +14,7 @@
 
 
 from ._parameters import (
+    available as available,
     CHIRP_MASS as CHIRP_MASS,
     COS_TILT_1 as COS_TILT_1,
     COS_TILT_2 as COS_TILT_2,

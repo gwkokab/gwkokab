@@ -12,6 +12,16 @@ Parameter
 
     Parameter
 
+Utilities
+---------
+
+.. autosummary::
+    :nosignatures:
+    :toctree: _autosummary
+
+    available
+
+
 Predefined Parameter
 --------------------
 
