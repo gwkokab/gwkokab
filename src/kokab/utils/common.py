@@ -18,11 +18,12 @@ from collections.abc import Sequence
 from typing import List, Tuple
 
 import numpy as np
+import numpyro.distributions as dist
 import pandas as pd
+from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Uniform
 
-from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import Parameter
 from gwkokab.vts import NeuralVT
 
@@ -160,10 +161,41 @@ def log_weights_and_samples(
     :return: tuple of weights and samples
     """
     nvt = NeuralVT([param.name for param in parameters], vt_filename)
-    logVT = nvt.get_vmapped_logVT()
-    proposal_dist = JointDistribution(
-        *[param.prior for param in parameters], validate_args=True
+    logVT_vmap = nvt.get_vmapped_logVT()
+    hyper_uniform = dist.Uniform(
+        low=jnp.asarray([param.prior.low for param in parameters]),
+        high=jnp.asarray([param.prior.high for param in parameters]),
+        validate_args=True,
     )
-    samples = proposal_dist.sample(key=key, sample_shape=(num_samples,))
-    log_weights = logVT(samples) - proposal_dist.log_prob(samples)
-    return log_weights, samples
+
+    mcmc_key, proposal_key = jrd.split(key)
+    uniform_samples = hyper_uniform.sample(mcmc_key, (num_samples,))
+
+    logVT_val = logVT_vmap(uniform_samples)
+
+    mask = logVT_val > hyper_uniform.log_prob(uniform_samples).sum(-1)
+
+    logVT_val = logVT_val[mask]
+    uniform_samples = uniform_samples[mask]
+
+    loc_vector_weights = jnn.softmax(logVT_val)
+
+    loc_vector = jnp.average(uniform_samples, axis=0, weights=loc_vector_weights)
+    covariance_matrix = jnp.cov(uniform_samples.T)
+
+    proposal_dist = dist.MultivariateNormal(
+        loc=loc_vector, covariance_matrix=covariance_matrix, validate_args=True
+    )
+
+    proposal_samples = proposal_dist.sample(proposal_key, (num_samples,))
+
+    mask = parameters[0].prior.support(proposal_samples[..., 0])
+    for i in range(1, len(parameters)):
+        mask &= parameters[i].prior.support(proposal_samples[..., i])
+
+    proposal_samples = proposal_samples[mask]
+
+    log_weights = logVT_vmap(proposal_samples) - proposal_dist.log_prob(
+        proposal_samples
+    )
+    return log_weights, proposal_samples
