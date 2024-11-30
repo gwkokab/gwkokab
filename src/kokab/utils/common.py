@@ -168,8 +168,8 @@ def log_weights_and_samples(
         validate_args=True,
     )
 
-    mcmc_key, proposal_key = jrd.split(key)
-    uniform_samples = hyper_uniform.sample(mcmc_key, (num_samples,))
+    uniform_key, proposal_key = jrd.split(key)
+    uniform_samples = hyper_uniform.sample(uniform_key, (num_samples,))
 
     logVT_val = logVT_vmap(uniform_samples)
 
@@ -179,9 +179,9 @@ def log_weights_and_samples(
     uniform_samples = uniform_samples[mask]
 
     loc_vector_weights = jnn.softmax(logVT_val)
-
     loc_vector = jnp.average(uniform_samples, axis=0, weights=loc_vector_weights)
-    covariance_matrix = jnp.cov(uniform_samples.T)
+
+    covariance_matrix = jnp.cov(uniform_samples.T, aweights=loc_vector_weights)
 
     proposal_dist = dist.MultivariateNormal(
         loc=loc_vector, covariance_matrix=covariance_matrix, validate_args=True
