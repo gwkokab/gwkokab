@@ -66,14 +66,14 @@ class PoissonLikelihood(eqx.Module):
     :param time: Time interval for the Poisson process.
     """
 
-    parameters: Sequence[Parameter] = eqx.field(static=True)
-    data: Sequence[Array] = eqx.field(static=False)
-    model: Callable[..., Distribution] = eqx.field(static=True)
-    ref_priors: JointDistribution = eqx.field(static=True)
-    priors: JointDistribution = eqx.field(static=True)
-    variables_index: Mapping[str, int] = eqx.field(static=True)
-    log_weights: Array = eqx.field(static=True)
-    samples: Array = eqx.field(static=True)
+    parameters: Sequence[Parameter]
+    data: Sequence[Array]
+    model: Callable[..., Distribution]
+    ref_priors: JointDistribution
+    priors: JointDistribution
+    variables_index: Mapping[str, int]
+    log_weights: Array
+    samples: Array
 
     def __init__(
         self,
