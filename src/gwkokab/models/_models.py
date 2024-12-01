@@ -233,7 +233,7 @@ class PowerlawPrimaryMassRatio(Distribution):
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
         log_prob_q = jnp.where(
-            jnp.equal(m1, self.mmin),
+            jnp.less_equal(m1, self.mmin),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
