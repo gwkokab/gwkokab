@@ -68,12 +68,12 @@ class JointDistribution(Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
-        def safe_log_prob(d: Distribution, v: Array) -> Array:
+        def log_prob_i(d: Distribution, v: Array) -> Array:
             log_prob_i = d.log_prob(v)
-            return jnp.where(jnp.isneginf(log_prob_i), -jnp.inf, log_prob_i)
+            return log_prob_i
 
         log_probs = jtr.reduce(
-            lambda x, y: x + safe_log_prob(y[0], value[..., y[1]]),
+            lambda x, y: x + log_prob_i(y[0], value[..., y[1]]),
             list(zip(self.marginal_distributions, self.shaped_values)),
             jnp.zeros(self.batch_shape),
             is_leaf=lambda x: isinstance(x, tuple),
