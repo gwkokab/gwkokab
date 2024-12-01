@@ -20,10 +20,11 @@ from typing import List, Tuple
 import numpy as np
 import numpyro.distributions as dist
 import pandas as pd
-from jax import nn as jnn, numpy as jnp, random as jrd
+from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Uniform
 
+from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import Parameter
 from gwkokab.vts import NeuralVT
 
@@ -162,10 +163,8 @@ def log_weights_and_samples(
     """
     nvt = NeuralVT([param.name for param in parameters], vt_filename)
     logVT_vmap = nvt.get_vmapped_logVT()
-    hyper_uniform = dist.Uniform(
-        low=jnp.asarray([param.prior.low for param in parameters]),
-        high=jnp.asarray([param.prior.high for param in parameters]),
-        validate_args=True,
+    hyper_uniform = JointDistribution(
+        *[param.prior for param in parameters], validate_args=True
     )
 
     uniform_key, proposal_key = jrd.split(key)
@@ -173,18 +172,47 @@ def log_weights_and_samples(
 
     logVT_val = logVT_vmap(uniform_samples)
 
-    mask = logVT_val > hyper_uniform.log_prob(uniform_samples).sum(-1)
+    VT_max_at = jnp.argmax(logVT_val)
+    loc_vector_at_highest_density = uniform_samples[VT_max_at]
 
-    logVT_val = logVT_val[mask]
-    uniform_samples = uniform_samples[mask]
+    loc_vector_by_expectation = jnp.average(
+        uniform_samples, axis=0, weights=jnp.exp(logVT_val)
+    )
+    covariance_matrix = jnp.cov(uniform_samples.T, aweights=jnp.exp(logVT_val))
 
-    loc_vector_weights = jnn.softmax(logVT_val)
-    loc_vector = jnp.average(uniform_samples, axis=0, weights=loc_vector_weights)
-
-    covariance_matrix = jnp.cov(uniform_samples.T, aweights=loc_vector_weights)
-
-    proposal_dist = dist.MultivariateNormal(
-        loc=loc_vector, covariance_matrix=covariance_matrix, validate_args=True
+    proposal_dist = dist.MixtureGeneral(
+        dist.Categorical(probs=jnp.ones(3) / 3, validate_args=True),
+        [
+            JointDistribution(
+                *[
+                    dist.TruncatedNormal(
+                        loc_vector_by_expectation[i],
+                        jnp.sqrt(covariance_matrix[i, i]),
+                        low=param.prior.low,
+                        high=param.prior.high,
+                        validate_args=True,
+                    )
+                    for i, param in enumerate(parameters)
+                ],
+                validate_args=True,
+            ),
+            JointDistribution(
+                *[
+                    dist.TruncatedNormal(
+                        loc_vector_at_highest_density[i],
+                        jnp.sqrt(covariance_matrix[i, i]),
+                        low=param.prior.low,
+                        high=param.prior.high,
+                        validate_args=True,
+                    )
+                    for i, param in enumerate(parameters)
+                ],
+                validate_args=True,
+            ),
+            hyper_uniform,
+        ],
+        support=hyper_uniform.support,
+        validate_args=True,
     )
 
     proposal_samples = proposal_dist.sample(proposal_key, (num_samples,))
