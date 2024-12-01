@@ -178,7 +178,7 @@ def log_weights_and_samples(
     loc_vector_by_expectation = jnp.average(
         uniform_samples, axis=0, weights=jnp.exp(logVT_val)
     )
-    covariance_matrix = jnp.cov(uniform_samples.T, aweights=jnp.exp(logVT_val))
+    covariance_matrix = jnp.cov(uniform_samples.T)
 
     proposal_dist = dist.MixtureGeneral(
         dist.Categorical(probs=jnp.ones(3) / 3, validate_args=True),
