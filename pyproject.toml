@@ -61,7 +61,7 @@ dev = ["pre-commit==4.0.1", "pytest==8.3.3", "ruff==0.8.1", "setuptools==75.3.0"
 
 docs = [
     "flatbuffers==24.3.25",
-    "ipython==8.29.0",
+    "ipython==8.30.0",
     "ipywidgets==8.1.5",
     "myst-parser==4.0.0",
     "nbsphinx==0.9.5",
