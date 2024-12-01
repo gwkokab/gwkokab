@@ -166,6 +166,13 @@ def log_weights_and_samples(
     hyper_uniform = JointDistribution(
         *[param.prior for param in parameters], validate_args=True
     )
+    hyper_log_uniform = JointDistribution(
+        *[
+            dist.LogUniform(low=param.low, high=param.high, validate_args=True)
+            for param in parameters
+        ],
+        validate_args=True,
+    )
 
     uniform_key, proposal_key = jrd.split(key)
     uniform_samples = hyper_uniform.sample(uniform_key, (num_samples,))
@@ -181,7 +188,7 @@ def log_weights_and_samples(
     covariance_matrix = jnp.cov(uniform_samples.T)
 
     proposal_dist = dist.MixtureGeneral(
-        dist.Categorical(probs=jnp.ones(3) / 3, validate_args=True),
+        dist.Categorical(probs=jnp.ones(4) / 4, validate_args=True),
         [
             JointDistribution(
                 *[
@@ -210,6 +217,7 @@ def log_weights_and_samples(
                 validate_args=True,
             ),
             hyper_uniform,
+            hyper_log_uniform,
         ],
         support=hyper_uniform.support,
         validate_args=True,
