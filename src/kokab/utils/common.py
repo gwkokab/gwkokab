@@ -168,7 +168,9 @@ def log_weights_and_samples(
     )
     hyper_log_uniform = JointDistribution(
         *[
-            dist.LogUniform(low=param.low, high=param.high, validate_args=True)
+            dist.LogUniform(
+                low=param.prior.low, high=param.prior.high, validate_args=True
+            )
             for param in parameters
         ],
         validate_args=True,
