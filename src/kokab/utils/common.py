@@ -190,34 +190,8 @@ def log_weights_and_samples(
     covariance_matrix = jnp.cov(uniform_samples.T)
 
     proposal_dist = dist.MixtureGeneral(
-        dist.Categorical(probs=jnp.ones(4) / 4, validate_args=True),
+        dist.Categorical(probs=jnp.ones(2) / 2, validate_args=True),
         [
-            JointDistribution(
-                *[
-                    dist.TruncatedNormal(
-                        loc_vector_by_expectation[i],
-                        jnp.sqrt(covariance_matrix[i, i]),
-                        low=param.prior.low,
-                        high=param.prior.high,
-                        validate_args=True,
-                    )
-                    for i, param in enumerate(parameters)
-                ],
-                validate_args=True,
-            ),
-            JointDistribution(
-                *[
-                    dist.TruncatedNormal(
-                        loc_vector_at_highest_density[i],
-                        jnp.sqrt(covariance_matrix[i, i]),
-                        low=param.prior.low,
-                        high=param.prior.high,
-                        validate_args=True,
-                    )
-                    for i, param in enumerate(parameters)
-                ],
-                validate_args=True,
-            ),
             hyper_uniform,
             hyper_log_uniform,
         ],
