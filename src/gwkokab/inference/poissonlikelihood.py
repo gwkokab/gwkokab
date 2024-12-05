@@ -15,9 +15,11 @@
 
 from collections.abc import Callable, Mapping, Sequence
 
+import chex
 import equinox as eqx
+import jax
 from jax import nn as jnn, numpy as jnp, tree as jtr
-from jaxtyping import Array
+from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Distribution
 
 from ..debug import debug_flush
@@ -27,6 +29,31 @@ from .bake import Bake
 
 
 __all__ = ["PoissonLikelihood"]
+
+
+def ERate_importance_sampling_estimate(
+    samples: Array, log_weights: Array
+) -> Callable[[Array, ScaledMixture], Array]:
+    chex.assert_equal_shape([samples, log_weights], dims=(0,))
+
+    def _estimator(model: ScaledMixture) -> Array:
+        return jnp.mean(jnp.exp(log_weights + model.log_prob(samples)), axis=-1)
+
+    return _estimator
+
+
+def ERate_inverse_transform_sampling_estimate(
+    logVT: Callable[[Array], Array], N: int, key: PRNGKeyArray
+) -> Callable[[Array, ScaledMixture], Array]:
+    VT_vmap = jax.vmap(lambda xx: jnp.mean(jnp.exp(logVT(xx))), in_axes=1)
+
+    def _estimator(model: ScaledMixture) -> Array:
+        values = model.component_sample(key, (N,))
+        VT = VT_vmap(values)
+        rates = jnp.exp(model._log_scales)
+        return jnp.dot(VT, rates)
+
+    return _estimator
 
 
 class PoissonLikelihood(eqx.Module):
@@ -66,32 +93,28 @@ class PoissonLikelihood(eqx.Module):
     :param time: Time interval for the Poisson process.
     """
 
-    parameters: Sequence[Parameter]
+    parameters: Sequence[Parameter] = eqx.field(static=True)
     data: Sequence[Array]
-    model: Callable[..., Distribution]
-    ref_priors: JointDistribution
-    priors: JointDistribution
-    variables_index: Mapping[str, int]
-    log_weights: Array
-    samples: Array
+    model: Callable[..., Distribution] = eqx.field(static=True)
+    time: float = eqx.field(static=True)
+    ref_priors: JointDistribution = eqx.field(static=True)
+    priors: JointDistribution = eqx.field(static=True)
+    variables_index: Mapping[str, int] = eqx.field(static=True)
+    ERate_fn: Callable[[ScaledMixture], Array] = eqx.field(static=True)
 
     def __init__(
         self,
         model: Bake,
         parameters: Sequence[Parameter],
         data: Sequence[Array],
-        log_weights: Array,
-        samples: Array,
+        ERate_fn: Callable[[ScaledMixture], Array],
         time: float = 1.0,
     ) -> None:
         self.data = data
         self.model = model
         self.parameters = parameters
-        # weights and time are multiplied to each other in the end.
-        # This is done one time to avoid a single multiplication for each iteration
-        # in the expected rate calculation.
-        self.log_weights = log_weights + jnp.log(time)
-        self.samples = samples
+        self.ERate_fn = ERate_fn
+        self.time = time
 
         dummy_model = model.get_dummy()
         assert isinstance(
@@ -133,9 +156,7 @@ class PoissonLikelihood(eqx.Module):
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        expected_rates = jnp.mean(
-            jnp.exp(self.log_weights + model.log_prob(self.samples))
-        )
+        expected_rates = self.time * self.ERate_fn(model)
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 
