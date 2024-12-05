@@ -32,12 +32,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     sage_group = parser.add_argument_group("Sage Options")
 
     sage_group.add_argument(
-        "--vt-path",
-        help="Path to the neural VT",
-        type=str,
-        required=True,
-    )
-    sage_group.add_argument(
         "--posterior-regex",
         help="Regex for the posterior samples.",
         type=str,
@@ -57,12 +51,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         type=float,
     )
     sage_group.add_argument(
-        "--vt-n-samples",
-        help="Number of samples to draw to compute the VT.",
-        default=10_000,
-        type=int,
-    )
-    sage_group.add_argument(
         "--seed",
         help="Seed for the random number generator.",
         default=37,
@@ -72,6 +60,27 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--verbose",
         help="Verbose output.",
         action="store_true",
+    )
+
+    vt_group = parser.add_argument_group("VT Options")
+
+    vt_group.add_argument(
+        "--vt-path",
+        help="Path to the neural VT",
+        type=str,
+        required=True,
+    )
+    vt_group.add_argument(
+        "--erate-estimator",
+        help="Estimator for the expected rate. IS: Importance Sampling, ITS: Inverse Transform Sampling",
+        choices=["IS", "ITS"],
+        default="ITS",
+    )
+    vt_group.add_argument(
+        "--vt-n-samples",
+        help="Number of samples to draw to compute the VT.",
+        default=10_000,
+        type=int,
     )
 
     flowMC_group = parser.add_argument_group("flowMC Options")

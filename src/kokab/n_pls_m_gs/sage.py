@@ -25,7 +25,13 @@ from jax import random as jrd
 from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
-from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
+from gwkokab.inference import (
+    Bake,
+    ERate_importance_sampling_estimate,
+    ERate_inverse_transform_sampling_estimate,
+    flowMChandler,
+    PoissonLikelihood,
+)
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
@@ -37,6 +43,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
+from gwkokab.vts import NeuralVT
 
 from ..utils import sage_parser
 from ..utils.common import (
@@ -205,16 +212,23 @@ def main() -> None:
         **model_prior_param,
     )
 
-    log_weight, samples = log_weights_and_samples(
-        KEY4, parameters, VT_FILENAME, args.vt_n_samples
-    )
+    if args.erate_estimator == "IS":
+        log_weights, samples = log_weights_and_samples(
+            KEY4, parameters, VT_FILENAME, args.vt_n_samples
+        )
+        ERate_fn = ERate_importance_sampling_estimate(samples, log_weights)
+    elif args.erate_estimator == "ITS":
+        nvt = NeuralVT([param.name for param in parameters], VT_FILENAME)
+        logVT_vmap = nvt.get_vmapped_logVT()
+        ERate_fn = ERate_inverse_transform_sampling_estimate(
+            logVT_vmap, args.vt_n_samples, KEY4
+        )
 
     poisson_likelihood = PoissonLikelihood(
         model=model,
         parameters=parameters,
         data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
-        log_weights=log_weight,
-        samples=samples,
+        ERate_fn=ERate_fn,
         time=ANALYSIS_TIME,
     )
 
