@@ -14,19 +14,11 @@
 
 
 import json
-from collections.abc import Sequence
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
-import numpyro.distributions as dist
 import pandas as pd
-from jax import numpy as jnp, random as jrd
-from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Uniform
-
-from gwkokab.models.utils import JointDistribution
-from gwkokab.parameters import Parameter
-from gwkokab.vts import NeuralVT
 
 from .regex import match_all
 
@@ -146,68 +138,3 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
             "The parameters in the VT do not match the parameters in the model. "
             f"VT_PARAMS: {vt_params}, parameters: {parameters}"
         )
-
-
-def log_weights_and_samples(
-    key: PRNGKeyArray,
-    parameters: Sequence[Parameter],
-    vt_filename: str,
-    num_samples: int,
-) -> Tuple[Array, Array]:
-    r"""Get the weights and samples from the VT.
-
-    :param parameters: list of parameters
-    :param vt_filename: VT filename
-    :param num_samples: number of samples
-    :return: tuple of weights and samples
-    """
-    nvt = NeuralVT([param.name for param in parameters], vt_filename)
-    logVT_vmap = nvt.get_vmapped_logVT()
-    hyper_uniform = JointDistribution(
-        *[param.prior for param in parameters], validate_args=True
-    )
-    hyper_log_uniform = JointDistribution(
-        *[
-            dist.LogUniform(
-                low=param.prior.low, high=param.prior.high, validate_args=True
-            )
-            for param in parameters
-        ],
-        validate_args=True,
-    )
-
-    uniform_key, proposal_key = jrd.split(key)
-    uniform_samples = hyper_uniform.sample(uniform_key, (num_samples,))
-
-    logVT_val = logVT_vmap(uniform_samples)
-
-    VT_max_at = jnp.argmax(logVT_val)
-    loc_vector_at_highest_density = uniform_samples[VT_max_at]
-
-    loc_vector_by_expectation = jnp.average(
-        uniform_samples, axis=0, weights=jnp.exp(logVT_val)
-    )
-    covariance_matrix = jnp.cov(uniform_samples.T)
-
-    proposal_dist = dist.MixtureGeneral(
-        dist.Categorical(probs=jnp.ones(2) / 2, validate_args=True),
-        [
-            hyper_uniform,
-            hyper_log_uniform,
-        ],
-        support=hyper_uniform.support,
-        validate_args=True,
-    )
-
-    proposal_samples = proposal_dist.sample(proposal_key, (num_samples,))
-
-    mask = parameters[0].prior.support(proposal_samples[..., 0])
-    for i in range(1, len(parameters)):
-        mask &= parameters[i].prior.support(proposal_samples[..., i])
-
-    proposal_samples = proposal_samples[mask]
-
-    log_weights = logVT_vmap(proposal_samples) - proposal_dist.log_prob(
-        proposal_samples
-    )
-    return log_weights, proposal_samples

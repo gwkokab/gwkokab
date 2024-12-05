@@ -15,12 +15,19 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
+from typing import Tuple
 from typing_extensions import Optional
 
 import numpy as np
+import numpyro.distributions as dist
 from flowMC.Sampler import Sampler
-from jax import random as jrd
-from jaxtyping import Int
+from jax import numpy as jnp, random as jrd
+from jaxtyping import Array, Int, PRNGKeyArray
+
+from gwkokab.models.utils import JointDistribution
+from gwkokab.parameters import Parameter
+from gwkokab.vts import NeuralVT
 
 
 def save_data_from_sampler(
@@ -104,3 +111,101 @@ def save_data_from_sampler(
             header="train prod",
             comments="#",
         )
+
+
+def log_weights_and_samples(
+    key: PRNGKeyArray,
+    parameters: Sequence[Parameter],
+    vt_filename: str,
+    num_samples: int,
+    add_peak: bool = False,
+) -> Tuple[Array, Array]:
+    r"""Get the weights and samples from the VT.
+
+    :param parameters: list of parameters
+    :param vt_filename: VT filename
+    :param num_samples: number of samples
+    :param add_peak: whether to add a normal distribution peak, defaults to False
+    :return: tuple of weights and samples
+    """
+    nvt = NeuralVT([param.name for param in parameters], vt_filename)
+    logVT_vmap = nvt.get_vmapped_logVT()
+    hyper_uniform = JointDistribution(
+        *[param.prior for param in parameters], validate_args=True
+    )
+    hyper_log_uniform = JointDistribution(
+        *[
+            dist.LogUniform(
+                low=param.prior.low, high=param.prior.high, validate_args=True
+            )
+            for param in parameters
+        ],
+        validate_args=True,
+    )
+
+    uniform_key, proposal_key = jrd.split(key)
+    component_distributions = [hyper_uniform, hyper_log_uniform]
+    if add_peak:
+        uniform_samples = hyper_uniform.sample(uniform_key, (num_samples,))
+
+        logVT_val = logVT_vmap(uniform_samples)
+
+        VT_max_at = jnp.argmax(logVT_val)
+        loc_vector_at_highest_density = uniform_samples[VT_max_at]
+
+        loc_vector_by_expectation = jnp.average(
+            uniform_samples, axis=0, weights=jnp.exp(logVT_val)
+        )
+        covariance_matrix = jnp.cov(uniform_samples.T)
+        component_distributions.append(
+            JointDistribution(
+                *[
+                    dist.TruncatedNormal(
+                        loc_vector_by_expectation[i],
+                        jnp.sqrt(covariance_matrix[i, i]),
+                        low=param.prior.low,
+                        high=param.prior.high,
+                        validate_args=True,
+                    )
+                    for i, param in enumerate(parameters)
+                ],
+                validate_args=True,
+            )
+        )
+        component_distributions.append(
+            JointDistribution(
+                *[
+                    dist.TruncatedNormal(
+                        loc_vector_at_highest_density[i],
+                        jnp.sqrt(covariance_matrix[i, i]),
+                        low=param.prior.low,
+                        high=param.prior.high,
+                        validate_args=True,
+                    )
+                    for i, param in enumerate(parameters)
+                ],
+                validate_args=True,
+            )
+        )
+
+    n = len(component_distributions)
+
+    proposal_dist = dist.MixtureGeneral(
+        dist.Categorical(probs=jnp.ones(n) / n, validate_args=True),
+        component_distributions,
+        support=hyper_uniform.support,
+        validate_args=True,
+    )
+
+    proposal_samples = proposal_dist.sample(proposal_key, (num_samples,))
+
+    mask = parameters[0].prior.support(proposal_samples[..., 0])
+    for i in range(1, len(parameters)):
+        mask &= parameters[i].prior.support(proposal_samples[..., i])
+
+    proposal_samples = proposal_samples[mask]
+
+    log_weights = logVT_vmap(proposal_samples) - proposal_dist.log_prob(
+        proposal_samples
+    )
+    return log_weights, proposal_samples

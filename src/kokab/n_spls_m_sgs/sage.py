@@ -30,6 +30,7 @@ from gwkokab.inference import (
     ERate_importance_sampling_estimate,
     ERate_inverse_transform_sampling_estimate,
     flowMChandler,
+    log_weights_and_samples,
     PoissonLikelihood,
 )
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
@@ -51,7 +52,6 @@ from ..utils.common import (
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
-    log_weights_and_samples,
 )
 
 
