@@ -97,6 +97,10 @@ ECCENTRICITY = Parameter(name="ecc", prior=standard_uniform)
 REDSHIFT = Parameter(name="redshift", prior=Uniform(0.0, 10.0, validate_args=True))
 
 
+# Copyright (c) 2024 Colm Talbot
+# SPDX-License-Identifier: MIT
+
+
 class _Available:
     """Available parameters.
 
