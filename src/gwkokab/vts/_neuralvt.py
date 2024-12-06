@@ -20,15 +20,20 @@ from jax import numpy as jnp
 from jaxtyping import Array
 
 from ._utils import load_model
+from ._vt import VolumeTimeSensitivityInterface
 
 
-class NeuralVT(eqx.Module):
-    parameters: Sequence[str]
-    filename: str
+class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     model: eqx.nn.Sequential = eqx.field(init=False)
-    shuffle_indices: Sequence[int] = eqx.field(init=False)
 
-    def __post_init__(self):
+    def __init__(self, parameters: Sequence[str], filename: str) -> None:
+        """Convenience class for loading a neural vt.
+
+        :param parameters: The names of the parameters that the model expects.
+        :param filename: The filename of the neural vt.
+        """
+        self.parameters = parameters
+        self.filename = filename
         names, self.model = load_model(self.filename)
         if any(name not in self.parameters for name in names):
             raise ValueError(
@@ -57,10 +62,3 @@ class NeuralVT(eqx.Module):
             return jnp.squeeze(model_vmap(x_new), axis=-1)
 
         return _logVT
-
-
-NeuralVT.__init__.__doc__ = """Convenience class for loading a neural vt.
-
-:param parameters: The names of the parameters that the model expects.
-:param filename: The filename of the neural vt.
-"""

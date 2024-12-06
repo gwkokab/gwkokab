@@ -27,7 +27,7 @@ from jaxtyping import Array, Int, PRNGKeyArray
 
 from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import Parameter
-from gwkokab.vts import NeuralVT
+from gwkokab.vts import NeuralNetVolumeTimeSensitivity
 
 
 def save_data_from_sampler(
@@ -128,7 +128,9 @@ def log_weights_and_samples(
     :param add_peak: whether to add a normal distribution peak, defaults to False
     :return: tuple of weights and samples
     """
-    nvt = NeuralVT([param.name for param in parameters], vt_filename)
+    nvt = NeuralNetVolumeTimeSensitivity(
+        [param.name for param in parameters], vt_filename
+    )
     logVT_vmap = nvt.get_vmapped_logVT()
     hyper_uniform = JointDistribution(
         *[param.prior for param in parameters], validate_args=True

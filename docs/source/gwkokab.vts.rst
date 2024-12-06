@@ -10,8 +10,9 @@
     load_model
     make_model
     mse_loss_fn
-    NeuralVT
+    NeuralNetVolumeTimeSensitivity
     predict
     read_data
     save_model
     train_regressor
+    VolumeTimeSensitivityInterface

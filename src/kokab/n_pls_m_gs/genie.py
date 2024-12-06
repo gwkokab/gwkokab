@@ -39,7 +39,7 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.population import error_magazine, PopulationFactory
-from gwkokab.vts import NeuralVT
+from gwkokab.vts import NeuralNetVolumeTimeSensitivity
 
 from ..utils import genie_parser
 from ..utils.common import check_vt_params, expand_arguments
@@ -360,7 +360,7 @@ def main() -> None:
         has_redshift=has_redshift,
     )
 
-    nvt = NeuralVT(list(parameters_name), args.vt_path)
+    nvt = NeuralNetVolumeTimeSensitivity(list(parameters_name), args.vt_path)
     logVT = nvt.get_vmapped_logVT()
 
     popfactory = PopulationFactory(

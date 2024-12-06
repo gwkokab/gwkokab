@@ -44,7 +44,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-from gwkokab.vts import NeuralVT
+from gwkokab.vts import NeuralNetVolumeTimeSensitivity
 
 from ..utils import sage_parser
 from ..utils.common import (
@@ -218,7 +218,9 @@ def main() -> None:
         )
         ERate_fn = ERate_importance_sampling_estimate(samples, log_weights)
     elif args.erate_estimator == "ITS":
-        nvt = NeuralVT([param.name for param in parameters], VT_FILENAME)
+        nvt = NeuralNetVolumeTimeSensitivity(
+            [param.name for param in parameters], VT_FILENAME
+        )
         logVT_vmap = nvt.get_vmapped_logVT()
         ERate_fn = ERate_inverse_transform_sampling_estimate(
             logVT_vmap, args.vt_n_samples, KEY4

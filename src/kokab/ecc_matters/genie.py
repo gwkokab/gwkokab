@@ -25,7 +25,7 @@ from numpyro import distributions as dist
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.population import error_magazine, PopulationFactory
-from gwkokab.vts import NeuralVT
+from gwkokab.vts import NeuralNetVolumeTimeSensitivity
 
 from ..utils import genie_parser
 from ..utils.regex import match_all
@@ -124,7 +124,7 @@ def main() -> None:
 
     model_parameters = [m1_source, m2_source, ecc]
 
-    nvt = NeuralVT(model_parameters, args.vt_path)
+    nvt = NeuralNetVolumeTimeSensitivity(model_parameters, args.vt_path)
     logVT = nvt.get_vmapped_logVT()
 
     popfactory = PopulationFactory(
