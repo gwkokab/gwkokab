@@ -69,8 +69,8 @@ class JointDistribution(Distribution):
     @validate_sample
     def log_prob(self, value: Array) -> Array:
         def log_prob_i(d: Distribution, v: Array) -> Array:
-            log_prob_i = d.log_prob(v)
-            return log_prob_i
+            log_p = d.log_prob(v)
+            return log_p
 
         log_probs = jtr.reduce(
             lambda x, y: x + log_prob_i(y[0], value[..., y[1]]),
