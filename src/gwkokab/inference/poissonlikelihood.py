@@ -34,6 +34,18 @@ __all__ = ["PoissonLikelihood"]
 def ERate_importance_sampling_estimate(
     samples: Array, log_weights: Array
 ) -> Callable[[Array, ScaledMixture], Array]:
+    r"""Importance sampling estimator for the expected rate.
+
+    .. math::
+
+        \mu_{\Omega\mid\Lambda} \approx
+        \frac{1}{N} \sum_{i=1}^{N}
+        \exp{\left(\log w_i + \log \rho_{\Omega\mid\Lambda}(\omega_i\mid\lambda)\right)}
+
+    :param samples: samples from the model
+    :param log_weights: log weights for the samples
+    :return: Importance sampling estimator
+    """
     chex.assert_equal_shape([samples, log_weights], dims=(0,))
 
     def _estimator(model: ScaledMixture) -> Array:
@@ -45,6 +57,19 @@ def ERate_importance_sampling_estimate(
 def ERate_inverse_transform_sampling_estimate(
     logVT: Callable[[Array], Array], N: int, key: PRNGKeyArray
 ) -> Callable[[Array, ScaledMixture], Array]:
+    r"""Inverse transform sampling estimator for the expected rate.
+
+    .. math::
+
+        \mu_{\Omega\mid\Lambda} \approx
+        \frac{1}{N} \sum_{0<i\leq N,\omega_i\sim\Omega\mid\Lambda}
+        \exp{\left(\log VT(\omega_i)\right)}
+
+    :param logVT: Log VT function to use.
+    :param N: Number of samples to draw.
+    :param key: PRNG key.
+    :return: Inverse transform sampling estimator.
+    """
     VT_vmap = jax.vmap(lambda xx: jnp.mean(jnp.exp(logVT(xx))), in_axes=1)
 
     def _estimator(model: ScaledMixture) -> Array:
