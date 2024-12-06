@@ -45,16 +45,10 @@ class Parameter(eqx.Module):
     )
 
     def __repr__(self):
-        return (
-            f"Parameter(name={self.name}, prior={self.prior.__class__.__name__}("
-            + ", ".join(
-                [
-                    f"{k}={getattr(self.prior, k)}"
-                    for k in self.prior.arg_constraints.keys()
-                ]
-            )
-            + "))"
+        args = ", ".join(
+            [f"{k}={getattr(self.prior, k)}" for k in self.prior.arg_constraints.keys()]
         )
+        return f"Parameter(name={self.name}, prior={self.prior.__class__.__name__}({args}))"
 
 
 # TODO: Add more parameters as needed.
