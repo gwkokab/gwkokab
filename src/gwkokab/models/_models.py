@@ -37,7 +37,6 @@ from numpyro.distributions import (
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..utils.kernel import log_planck_taper_window
-from ..utils.transformations import mass_ratio
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
     doubly_truncated_power_law_icdf,
@@ -233,20 +232,14 @@ class PowerlawPrimaryMassRatio(Distribution):
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
-        # as low approaches to high, mathematically it shoots off to infinity
-        # And autograd does not behave nicely around limiting values.
-        # These two links provide the solution to the problem.
-        # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
-        # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
-        mmin_over_m1 = jnp.where(self.mmin < m1, jnp.divide(self.mmin, m1), 0.0)
         log_prob_q = jnp.where(
-            self.mmin < m1,
-            doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=mmin_over_m1, high=1.0
-            ),
+            jnp.less_equal(m1, self.mmin),
             -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
         )
-        return jnp.add(log_prob_m1, log_prob_q)
+        return log_prob_m1 + log_prob_q
 
     def sample(self, key, sample_shape=()):
         key_m1, key_q = jrd.split(key)
@@ -732,22 +725,15 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         log_smoothing_q = log_planck_taper_window(
             (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
         )
-
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
-        # as low approaches to high, mathematically it shoots off to infinity
-        # And autograd does not behave nicely around limiting values.
-        # These two links provide the solution to the problem.
-        # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
-        # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
-        q_min = mass_ratio(m1=m1, m2=self.mmin)
         log_prob_q = jnp.where(
-            self.mmin < m1,
-            doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=q_min, high=1.0
-            ),
+            jnp.equal(m1, self.mmin),
             -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
         )
         return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
 
@@ -833,19 +819,12 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         log_smoothing_q = log_planck_taper_window(
             (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
         )
-
         log_prob_m1 = self._norm.log_prob(m1)
-        # as low approaches to high, mathematically it shoots off to infinity
-        # And autograd does not behave nicely around limiting values.
-        # These two links provide the solution to the problem.
-        # https://github.com/jax-ml/jax/issues/1052#issuecomment-514083352
-        # https://github.com/jax-ml/jax/issues/5039#issuecomment-735430180
-        q_min = mass_ratio(m1=m1, m2=self.mmin)
         log_prob_q = jnp.where(
-            self.mmin < m1,
-            doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=q_min, high=1.0
-            ),
+            jnp.equal(m1, self.mmin),
             -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
         )
         return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q

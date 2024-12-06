@@ -23,14 +23,20 @@ from glob import glob
 from jax import random as jrd
 
 from gwkokab.debug import enable_debugging
-from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
+from gwkokab.inference import (
+    Bake,
+    ERate_importance_sampling_estimate,
+    ERate_inverse_transform_sampling_estimate,
+    flowMChandler,
+    log_weights_and_samples,
+    PoissonLikelihood,
+)
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.vts import NeuralVT
 
 from ..utils import sage_parser
 from ..utils.common import (
-    check_vt_params,
     flowMC_json_read_and_process,
-    get_logVT,
     get_posterior_data,
     get_processed_priors,
 )
@@ -60,11 +66,10 @@ def main() -> None:
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2, KEY3 = jrd.split(KEY, 3)
+    KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
-    VT_PARAMS = args.vt_params
     ANALYSIS_TIME = args.analysis_time
 
     FLOWMC_HANDLER_KWARGS = flowMC_json_read_and_process(args.flowMC_json)
@@ -72,9 +77,9 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
-    FLOWMC_HANDLER_KWARGS["data"] = get_posterior_data(
-        glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS
-    )
+    FLOWMC_HANDLER_KWARGS["data"] = {
+        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
+    }
 
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
@@ -86,23 +91,26 @@ def main() -> None:
 
     model = Bake(EccentricityMattersModel)(**model_prior_param)
 
-    model_parameters = [
-        PRIMARY_MASS_SOURCE.name,
-        SECONDARY_MASS_SOURCE.name,
-        ECCENTRICITY.name,
-    ]
+    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY]
 
-    check_vt_params(VT_PARAMS, model_parameters)
+    if args.erate_estimator == "IS":
+        log_weights, samples = log_weights_and_samples(
+            KEY4, parameters, VT_FILENAME, args.vt_n_samples
+        )
+        ERate_fn = ERate_importance_sampling_estimate(samples, log_weights)
+    elif args.erate_estimator == "ITS":
+        nvt = NeuralVT([param.name for param in parameters], VT_FILENAME)
+        logVT_vmap = nvt.get_vmapped_logVT()
+        ERate_fn = ERate_inverse_transform_sampling_estimate(
+            logVT_vmap, args.vt_n_samples, KEY4
+        )
 
-    vt_selection_mask = [model_parameters.index(param) for param in VT_PARAMS]
-
-    poisson_likelihood.logVT = get_logVT(VT_FILENAME, vt_selection_mask)
-    poisson_likelihood.time = ANALYSIS_TIME
-    poisson_likelihood.vt_method = "model"
-    poisson_likelihood.vt_params = VT_PARAMS
-
-    poisson_likelihood.set_model(
-        (PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY), model=model
+    poisson_likelihood = PoissonLikelihood(
+        model=model,
+        parameters=parameters,
+        data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        ERate_fn=ERate_fn,
+        time=ANALYSIS_TIME,
     )
 
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]

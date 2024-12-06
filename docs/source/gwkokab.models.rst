@@ -57,6 +57,8 @@ Constraints
     :nosignatures:
     :toctree: _autosummary
 
+    all_constraint
+    any_constraint
     decreasing_vector
     increasing_vector
     mass_ratio_mass_sandwich

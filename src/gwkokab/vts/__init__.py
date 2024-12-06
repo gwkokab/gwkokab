@@ -13,7 +13,13 @@
 #  limitations under the License.
 
 
-from ._neuralvt import load_model, save_model, train_regressor
-
-
-__all__ = ["load_model", "save_model", "train_regressor"]
+from ._neuralvt import NeuralVT as NeuralVT
+from ._train import train_regressor as train_regressor
+from ._utils import (
+    load_model as load_model,
+    make_model as make_model,
+    mse_loss_fn as mse_loss_fn,
+    predict as predict,
+    read_data as read_data,
+    save_model as save_model,
+)

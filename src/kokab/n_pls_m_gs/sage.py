@@ -25,7 +25,14 @@ from jax import random as jrd
 from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
-from gwkokab.inference import Bake, flowMChandler, poisson_likelihood
+from gwkokab.inference import (
+    Bake,
+    ERate_importance_sampling_estimate,
+    ERate_inverse_transform_sampling_estimate,
+    flowMChandler,
+    log_weights_and_samples,
+    PoissonLikelihood,
+)
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.parameters import (
     COS_TILT_1,
@@ -37,16 +44,15 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
+from gwkokab.vts import NeuralVT
 
 from ..utils import sage_parser
 from ..utils.common import (
-    check_vt_params,
     expand_arguments,
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
 )
-from .common import get_logVT
 
 
 def make_parser() -> ArgumentParser:
@@ -104,7 +110,7 @@ def main() -> None:
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2, KEY3 = jrd.split(KEY, 3)
+    KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
     VT_FILENAME = args.vt_path
@@ -114,10 +120,6 @@ def main() -> None:
 
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
-
-    FLOWMC_HANDLER_KWARGS["data"] = get_posterior_data(
-        glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS
-    )
 
     N_pl = args.n_pl
     N_g = args.n_g
@@ -210,18 +212,25 @@ def main() -> None:
         **model_prior_param,
     )
 
-    VT_PARAMS = args.vt_params
-    parameter_names = [parameter.name for parameter in parameters]
-    check_vt_params(VT_PARAMS, parameter_names)
+    if args.erate_estimator == "IS":
+        log_weights, samples = log_weights_and_samples(
+            KEY4, parameters, VT_FILENAME, args.vt_n_samples, add_peak=N_g > 0
+        )
+        ERate_fn = ERate_importance_sampling_estimate(samples, log_weights)
+    elif args.erate_estimator == "ITS":
+        nvt = NeuralVT([param.name for param in parameters], VT_FILENAME)
+        logVT_vmap = nvt.get_vmapped_logVT()
+        ERate_fn = ERate_inverse_transform_sampling_estimate(
+            logVT_vmap, args.vt_n_samples, KEY4
+        )
 
-    poisson_likelihood.logVT = get_logVT(
-        VT_FILENAME, [parameter_names.index(name) for name in VT_PARAMS]
+    poisson_likelihood = PoissonLikelihood(
+        model=model,
+        parameters=parameters,
+        data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        ERate_fn=ERate_fn,
+        time=ANALYSIS_TIME,
     )
-    poisson_likelihood.time = ANALYSIS_TIME
-    poisson_likelihood.vt_method = "model"
-    poisson_likelihood.vt_params = VT_PARAMS
-
-    poisson_likelihood.set_model(parameters, model=model)
 
     constants = model.constants
 

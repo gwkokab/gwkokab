@@ -75,8 +75,11 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         \mathrm{det}(J_f) = m_1
     """
 
-    domain = mass_ratio_mass_sandwich(
-        jnp.finfo(jnp.result_type(float)).tiny, jnp.finfo(jnp.result_type(float)).max
+    domain = constraints.independent(
+        constraints.interval(
+            jnp.zeros((2,)), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
+        ),
+        1,
     )
     codomain = positive_decreasing_vector
 
@@ -96,9 +99,7 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
         m1 = x[..., 0]
-        zero_safe_m1 = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
-        abs_m1 = jnp.where(m1 < 0.0, -m1, zero_safe_m1)
-        return jnp.log(abs_m1)
+        return jnp.log(jnp.abs(m1))
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -130,7 +131,7 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     domain = positive_decreasing_vector
     codomain = constraints.independent(
         constraints.interval(
-            jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 0.25])
+            jnp.zeros((2,)), jnp.array([jnp.finfo(jnp.result_type(float)).max, 0.25])
         ),
         1,
     )

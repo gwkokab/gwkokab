@@ -13,27 +13,75 @@
 # limitations under the License.
 
 
-from typing_extensions import Callable, List, Optional, Sequence, Union
+from collections.abc import Callable, Mapping, Sequence
 
+import chex
+import equinox as eqx
 import jax
-import numpy as np
-from jax import numpy as jnp, random as jrd, tree as jtr
-from jax.nn import logsumexp
-from jax.tree_util import register_pytree_node_class
-from jaxtyping import Array, Int, PRNGKeyArray
-from numpyro.distributions import Distribution, Uniform
+from jax import nn as jnn, numpy as jnp, tree as jtr
+from jaxtyping import Array, PRNGKeyArray
+from numpyro.distributions import Distribution
 
 from ..debug import debug_flush
 from ..models.utils import JointDistribution, ScaledMixture
-from ..parameters import DEFAULT_PRIORS, Parameter
+from ..parameters import Parameter
 from .bake import Bake
 
 
-__all__ = ["poisson_likelihood"]
+__all__ = ["PoissonLikelihood"]
 
 
-@register_pytree_node_class
-class PoissonLikelihood:
+def ERate_importance_sampling_estimate(
+    samples: Array, log_weights: Array
+) -> Callable[[Array, ScaledMixture], Array]:
+    r"""Importance sampling estimator for the expected rate.
+
+    .. math::
+
+        \mu_{\Omega\mid\Lambda} \approx
+        \frac{1}{N} \sum_{i=1}^{N}
+        \exp{\left(\log w_i + \log \rho_{\Omega\mid\Lambda}(\omega_i\mid\lambda)\right)}
+
+    :param samples: samples from the model
+    :param log_weights: log weights for the samples
+    :return: Importance sampling estimator
+    """
+    chex.assert_equal_shape([samples, log_weights], dims=(0,))
+
+    def _estimator(model: ScaledMixture) -> Array:
+        return jnp.mean(jnp.exp(log_weights + model.log_prob(samples)), axis=-1)
+
+    return _estimator
+
+
+def ERate_inverse_transform_sampling_estimate(
+    logVT: Callable[[Array], Array], N: int, key: PRNGKeyArray
+) -> Callable[[Array, ScaledMixture], Array]:
+    r"""Inverse transform sampling estimator for the expected rate.
+
+    .. math::
+
+        \mu_{\Omega\mid\Lambda} \approx
+        \frac{1}{N} \sum_{0<i\leq N,\omega_i\sim\Omega\mid\Lambda}
+        \exp{\left(\log VT(\omega_i)\right)}
+
+    :param logVT: Log VT function to use.
+    :param N: Number of samples to draw.
+    :param key: PRNG key.
+    :return: Inverse transform sampling estimator.
+    """
+    VT_vmap = jax.vmap(lambda xx: jnp.mean(jnp.exp(logVT(xx))), in_axes=1)
+
+    def _estimator(model: ScaledMixture) -> Array:
+        values = model.component_sample(key, (N,))
+        VT = VT_vmap(values)
+        rates = jnp.exp(model._log_scales)
+        return jnp.dot(VT, rates)
+
+    return _estimator
+
+
+class PoissonLikelihood(eqx.Module):
     r"""This class is used to provide a likelihood function for the inhomogeneous
     Poisson process. The likelihood is given by,
 
@@ -67,175 +115,49 @@ class PoissonLikelihood:
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
 
     :param custom_vt: Custom VT function to use.
-    :param logVT: Log of the VT function.
     :param time: Time interval for the Poisson process.
-    :param vt_method: Method to use for the VT function. Options are `uniform`, `model`, and `custom`.
-    :param vt_params: Parameters for the VT function.
     """
 
-    _vt_method: Optional[str] = None
-    _vt_params: Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]] = None
-    custom_vt: Optional[Callable[[Int[int, ""], PRNGKeyArray, Distribution], Array]] = (
-        None
-    )
-    logVT: Optional[Callable[[Array], Array]] = None
-    time: float = 1.0
+    parameters: Sequence[Parameter] = eqx.field(static=True)
+    data: Sequence[Array]
+    model: Callable[..., Distribution] = eqx.field(static=True)
+    time: float = eqx.field(static=True)
+    ref_priors: JointDistribution = eqx.field(static=True)
+    priors: JointDistribution = eqx.field(static=True)
+    variables_index: Mapping[str, int] = eqx.field(static=True)
+    ERate_fn: Callable[[ScaledMixture], Array] = eqx.field(static=True)
 
-    def tree_flatten(self) -> tuple:
-        children = ()
-        aux_data_keys = [
-            "_vt_method",
-            "_vt_params",
-            "custom_vt",
-            "logVT",
-            "model",
-            "ref_priors",
-            "time",
-            "variables_index",
-            "variables",
-            "vt_params_index",
-            "vt_params_unif_rvs",
-            "priors",
-        ]
-        aux_data = {k: getattr(self, k) for k in aux_data_keys}
-        return children, aux_data
-
-    @classmethod
-    def tree_unflatten(cls, aux_data: dict, children: tuple) -> "PoissonLikelihood":
-        del children
-        obj = cls.__new__(cls)
-        for k, v in aux_data.items():
-            if v is not None:
-                setattr(obj, k, v)
-        PoissonLikelihood.__init__(obj)
-        return obj
-
-    @property
-    def vt_params(
+    def __init__(
         self,
-    ) -> Optional[Union[Parameter, Sequence[str], Sequence[Parameter]]]:
-        return self._vt_params
-
-    @vt_params.setter
-    def vt_params(
-        self, params: Union[Parameter, Sequence[str], Sequence[Parameter]]
+        model: Bake,
+        parameters: Sequence[Parameter],
+        data: Sequence[Array],
+        ERate_fn: Callable[[ScaledMixture], Array],
+        time: float = 1.0,
     ) -> None:
-        """Pre-process the parameters before setting the model."""
-        if isinstance(params, Parameter):
-            params = (params.name,)
-        elif all(isinstance(param, Parameter) for param in params):
-            params = tuple(map(lambda x: x.name, params))
-        self._vt_params = params
+        self.data = data
+        self.model = model
+        self.parameters = parameters
+        self.ERate_fn = ERate_fn
+        self.time = time
 
-    @property
-    def vt_method(self) -> Optional[str]:
-        return self._vt_method
-
-    @vt_method.setter
-    def vt_method(self, method: str) -> None:
-        assert method in ["uniform", "model", "custom"], "Invalid VT method."
-        self._vt_method = method
-
-    def set_model(
-        self,
-        /,
-        params: Optional[Sequence[Parameter]] = None,
-        *,
-        model: Optional[Bake] = None,
-    ) -> None:
-        assert model is not None, "Model must be provided."
-        assert params is not None, "Params must be provided."
         dummy_model = model.get_dummy()
         assert isinstance(
             dummy_model, ScaledMixture
         ), "Model must be a scaled mixture model."
 
-        args_name = list(map(lambda x: x.name, params))
-        if self._vt_params is None:
-            raise ValueError("VT parameters must be provided.")
-        assert all(
-            param in args_name for param in self._vt_params
-        ), f"Missing parameters: {self._vt_params} in {args_name}"
-        self.vt_params_index: List[int] = list(
-            map(lambda x: args_name.index(x), self._vt_params)
-        )
-        self.vt_params_unif_rvs = JointDistribution(
-            *map(lambda x: DEFAULT_PRIORS[x], args_name)
-        )
-
-        self.variables, duplicates, self.model = model.get_dist()
-        self.variables_index = {key: i for i, key in enumerate(self.variables.keys())}
+        variables, duplicates, self.model = model.get_dist()
+        self.variables_index = {key: i for i, key in enumerate(variables.keys())}
 
         for key, value in duplicates.items():
             self.variables_index[key] = self.variables_index[value]
 
-        self.ref_priors = JointDistribution(*map(lambda x: x.prior, params))
-        self.priors = JointDistribution(*self.variables.values())
-
-    def exp_rate_integral_uniform_samples(
-        self, N: int, key: PRNGKeyArray, model: ScaledMixture
-    ) -> Array:
-        r"""This method approximates the Monte-Carlo integral by sampling from the
-        uniform distribution.
-
-        :param N: Number of samples.
-        :param key: PRNG key.
-        :param model: :math:`\rho(\lambda\mid\Lambda)`.
-        :return: Integral.
-        """
-        values = self.vt_params_unif_rvs.sample(key, (N,))
-        log_VT = self.logVT(values[..., self.vt_params_index])
-        volume = jtr.reduce(
-            lambda x, y: x * (y.high - y.low),
-            self.vt_params_unif_rvs.marginal_distributions,
-            1.0,
-            is_leaf=lambda x: isinstance(x, Uniform),
+        self.ref_priors = JointDistribution(
+            *map(lambda x: x.prior, self.parameters), validate_args=True
         )
-        component_log_prob = model.log_prob(values) + log_VT
-        return jnp.mean(jnp.exp(component_log_prob)) * volume
+        self.priors = JointDistribution(*variables.values(), validate_args=True)
 
-    def exp_rate_integral_model_samples(
-        self, N: int, key: PRNGKeyArray, model: ScaledMixture
-    ) -> Array:
-        r"""This method approximates the Monte-Carlo integral by sampling from the
-        model.
-
-        :param N: Number of samples.
-        :param key: PRNG key.
-        :param model: :math:`\rho(\lambda\mid\Lambda)`.
-        :return: Integral.
-        """
-        values = model.component_sample(key, (N,))[..., self.vt_params_index]
-        VT_fn = lambda xx: jnp.mean(jnp.exp(self.logVT(xx)))
-        VT = jax.vmap(VT_fn, in_axes=1)(values)
-        rates = jnp.exp(model._log_scales)
-        return jnp.dot(VT, rates)
-
-    def exp_rate_integral(self, model: Distribution) -> Array:
-        r"""This function calculates the integral inside the term
-        :math:`\exp(\Lambda)` in the likelihood function. The integral is given by,
-
-        .. math::
-            \mu(\Lambda) =
-            \int \mathrm{VT}(\lambda)\rho(\lambda\mid\Lambda) \mathrm{d}\lambda
-
-        :param model: Distribution.
-        :return: Integral.
-        """
-        N = 1 << 13
-        key = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
-        if self.vt_method == "uniform":
-            vt_value = self.exp_rate_integral_uniform_samples(N, key, model)
-        elif self.vt_method == "model":
-            vt_value = self.exp_rate_integral_model_samples(N, key, model)
-        elif self.vt_method == "custom":
-            vt_value = self.custom_vt(N, key, model)
-        else:
-            raise ValueError("Invalid VT method.")
-        vt_value *= self.time
-        return vt_value
-
-    def log_likelihood(self, x: Array, data: dict) -> Array:
+    def log_likelihood(self, x: Array) -> Array:
         """The log likelihood function for the inhomogeneous Poisson process.
 
         :param x: Recovered parameters.
@@ -250,21 +172,22 @@ class PoissonLikelihood:
 
         log_likelihood = jtr.reduce(
             lambda x, y: x
-            + logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
+            + jnn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
             - jnp.log(y.shape[0]),
-            data["data"],
+            self.data,
             jnp.zeros(()),
+            is_leaf=lambda x: isinstance(x, Array),
         )
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        expected_rates = self.exp_rate_integral(model)
+        expected_rates = self.time * self.ERate_fn(model)
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 
         return log_likelihood - expected_rates
 
-    def log_posterior(self, x: Array, data: dict) -> Array:
+    def log_posterior(self, x: Array, _: dict) -> Array:
         r"""The likelihood function for the inhomogeneous Poisson process.
 
         .. math::
@@ -275,8 +198,8 @@ class PoissonLikelihood:
         :return: Log likelihood value for the given parameters.
         """
         log_prior = self.priors.log_prob(x)
-        debug_flush("log_prior: {lp}", lp=log_prior)
-        return log_prior + self.log_likelihood(x, data)
-
-
-poisson_likelihood = PoissonLikelihood()
+        log_likelihood = self.log_likelihood(x)
+        debug_flush(
+            "log_prior: {lp}\nlog_likelihood: {ll}", lp=log_prior, ll=log_likelihood
+        )
+        return log_prior + log_likelihood

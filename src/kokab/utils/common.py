@@ -13,18 +13,12 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 import json
-from collections.abc import Callable
 from typing import List
 
+import numpy as np
 import pandas as pd
-from jax import vmap
-from jaxtyping import Array, Float
 from numpyro.distributions import Uniform
-
-from gwkokab.vts import load_model
 
 from .regex import match_all
 
@@ -68,7 +62,9 @@ def flowMC_json_read_and_process(json_file: str) -> dict:
     return flowMC_json
 
 
-def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> dict:
+def get_posterior_data(
+    filenames: List[str], posterior_columns: List[str]
+) -> List[np.ndarray]:
     r"""Get the posterior data from a list of files.
 
     :param filenames: list of filenames
@@ -87,11 +83,24 @@ def get_posterior_data(filenames: List[str], posterior_columns: List[str]) -> di
             )
         data = df[posterior_columns].to_numpy()
         data_list.append(data)
-    data_set = {
-        "data": data_list,
-        "N": len(filenames),
-    }
-    return data_set
+    return data_list
+
+
+def get_vt_samples(filename: str, columns: List[str]) -> np.ndarray:
+    r"""Get the VT samples from a list of files.
+
+    :param filenames: list of filenames
+    :param columns: list of columns
+    :return: dictionary of VT samples
+    """
+    df = pd.read_csv(filename, delimiter=" ")
+    missing_columns = set(columns) - set(df.columns)
+    if missing_columns:
+        raise KeyError(
+            f"The file '{filename}' is missing required columns: {missing_columns}"
+        )
+    data = df[columns].to_numpy()
+    return data
 
 
 def get_processed_priors(params: List[str], priors: dict) -> dict:
@@ -129,15 +138,3 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
             "The parameters in the VT do not match the parameters in the model. "
             f"VT_PARAMS: {vt_params}, parameters: {parameters}"
         )
-
-
-def get_logVT(
-    vt_path: str, selection_indexes: List[int]
-) -> Callable[[Float[Array, "..."]], Float[Array, "..."]]:
-    _, logVT = load_model(vt_path)
-
-    def trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
-        m1m2 = x[..., selection_indexes]
-        return vmap(logVT)(m1m2)
-
-    return trimmed_logVT
