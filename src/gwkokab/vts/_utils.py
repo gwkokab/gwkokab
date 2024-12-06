@@ -116,7 +116,7 @@ def make_model(
             eqx.nn.Linear(
                 in_features=hidden_layers[i],
                 out_features=hidden_layers[i + 1],
-                key=keys[i],
+                key=keys[i + 1],
             ),
         )
         layers.append(eqx.nn.Lambda(jnn.relu))
