@@ -32,14 +32,12 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         :param parameters: The names of the parameters that the model expects.
         :param filename: The filename of the neural vt.
         """
-        self.parameters = parameters
-        self.filename = filename
-        names, self.model = load_model(self.filename)
-        if any(name not in self.parameters for name in names):
+        names, self.model = load_model(filename)
+        if any(name not in parameters for name in names):
             raise ValueError(
-                f"{self.filename} only supports {names}. Requested {self.parameters}."
+                f"{filename} only supports {names}. Requested {parameters}."
             )
-        self.shuffle_indices = [self.parameters.index(name) for name in names]
+        self.shuffle_indices = [parameters.index(name) for name in names]
 
     def get_logVT(self) -> Callable[[Array], Array]:
         """Gets the logVT function."""
