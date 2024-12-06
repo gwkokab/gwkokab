@@ -32,7 +32,7 @@ class NeuralVT(eqx.Module):
         names, self.model = load_model(self.filename)
         if any(name not in self.parameters for name in names):
             raise ValueError(
-                f"{self.filename} only support {names}. Requested {self.parameters}."
+                f"{self.filename} only supports {names}. Requested {self.parameters}."
             )
         self.shuffle_indices = [self.parameters.index(name) for name in names]
 
@@ -47,7 +47,7 @@ class NeuralVT(eqx.Module):
         return _logVT
 
     def get_vmapped_logVT(self) -> Callable[[Array], Array]:
-        """Gets the logVT function."""
+        """Gets the vmapped logVT function for batch processing."""
 
         model_vmap = jax.vmap(self.model)
 
