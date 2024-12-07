@@ -44,7 +44,7 @@ from gwkokab.poisson_mean import (
 from gwkokab.population import error_magazine, PopulationFactory
 
 from ..utils import genie_parser
-from ..utils.common import check_vt_params, expand_arguments, vt_json_read_and_process
+from ..utils.common import expand_arguments, vt_json_read_and_process
 from ..utils.regex import match_all
 from .common import constraint
 
@@ -342,8 +342,6 @@ def main() -> None:
         extended_params.extend(expand_arguments(*params))
 
     model_param = match_all(extended_params, model_json)
-
-    check_vt_params(args.vt_params, parameters_name)
 
     model = NPowerlawMGaussian(
         N_pl=N_pl,
