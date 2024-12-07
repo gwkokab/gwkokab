@@ -18,7 +18,7 @@ from typing import Union
 
 import equinox as eqx
 import jax
-from jax import numpy as jnp, random as jrd
+from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
 from ..models.utils import ScaledMixture
@@ -44,7 +44,6 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
 
     def __call__(self, model):
         values = model.component_sample(self.key, (self.num_samples,))
-        _, self.key = jrd.split(self.key)
         VT = self.logVT_fn(values)
         rates = jnp.exp(model._log_scales)
         return self.scale * jnp.dot(VT, rates)
