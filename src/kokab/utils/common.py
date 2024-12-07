@@ -14,11 +14,14 @@
 
 
 import json
+from collections.abc import Sequence
 from typing import List
 
 import numpy as np
 import pandas as pd
 from numpyro.distributions import Uniform
+
+from gwkokab.vts import available as gwk_vts, VolumeTimeSensitivityInterface
 
 from .regex import match_all
 
@@ -138,3 +141,23 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
             "The parameters in the VT do not match the parameters in the model. "
             f"VT_PARAMS: {vt_params}, parameters: {parameters}"
         )
+
+
+def vt_json_read_and_process(
+    parameters: Sequence[str], vt_path: str, settings_path: str
+) -> VolumeTimeSensitivityInterface:
+    r"""Read and process the VT JSON file.
+
+    :param parameters: list of parameters
+    :param vt_path: path to the VT
+    :param settings_path: path to the VT settings
+    :raises ValueError: if the VT is not found
+    :return: VT object
+    """
+    with open(settings_path, "r") as f:
+        vt_settings = json.load(f)
+
+    vt_type = vt_settings["type"]
+    vt_settings.pop("type")
+    vt = gwk_vts[vt_type]
+    return vt(parameters, vt_path, **vt_settings)

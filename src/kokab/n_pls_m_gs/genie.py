@@ -13,14 +13,13 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
-from typing_extensions import List, Tuple
+from typing import List, Tuple
 
-from jax import numpy as jnp
+import numpy as np
+from jax import numpy as jnp, random as jrd
 from jaxtyping import Int
 from numpyro import distributions as dist
 
@@ -38,11 +37,14 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
+from gwkokab.poisson_mean import (
+    ImportanceSamplingPoissonMean,
+    InverseTransformSamplingPoissonMean,
+)
 from gwkokab.population import error_magazine, PopulationFactory
-from gwkokab.vts import NeuralNetVolumeTimeSensitivity
 
 from ..utils import genie_parser
-from ..utils.common import check_vt_params, expand_arguments
+from ..utils.common import check_vt_params, expand_arguments, vt_json_read_and_process
 from ..utils.regex import match_all
 from .common import constraint
 
@@ -360,18 +362,34 @@ def main() -> None:
         has_redshift=has_redshift,
     )
 
-    nvt = NeuralNetVolumeTimeSensitivity(list(parameters_name), args.vt_path)
+    nvt = vt_json_read_and_process(parameters_name, args.vt_path, args.vt_json)
     logVT = nvt.get_vmapped_logVT()
+
+    if args.erate_estimator == "IS":
+        erate_estimator = ImportanceSamplingPoissonMean(
+            logVT,
+            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
+            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            args.n_samples,
+            args.analysis_time,
+        )
+    elif args.erate_estimator == "ITS":
+        erate_estimator = InverseTransformSamplingPoissonMean(
+            logVT,
+            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            args.n_samples,
+            args.analysis_time,
+        )
+    else:
+        raise ValueError("Invalid estimator for expected rate.")
 
     popfactory = PopulationFactory(
         model=model,
-        parameters=list(parameters_name),
-        analysis_time=args.analysis_time,
-        constraint=_constraint,
-        error_size=args.error_size,
+        parameters=parameters_name,
         logVT_fn=logVT,
+        ERate_fn=erate_estimator.__call__,
         num_realizations=args.num_realizations,
-        vt_params=args.vt_params,
+        error_size=args.error_size,
+        constraint=_constraint,
     )
-
     popfactory.produce()

@@ -13,24 +13,20 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 import json
 import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
-from typing_extensions import List, Tuple
+from typing import List, Tuple
 
+import numpy as np
 from jax import random as jrd
 from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import (
     Bake,
-    ERate_importance_sampling_estimate,
-    ERate_inverse_transform_sampling_estimate,
     flowMChandler,
-    log_weights_and_samples,
     PoissonLikelihood,
 )
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
@@ -42,9 +38,13 @@ from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
+    SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-from gwkokab.vts import NeuralNetVolumeTimeSensitivity
+from gwkokab.poisson_mean import (
+    ImportanceSamplingPoissonMean,
+    InverseTransformSamplingPoissonMean,
+)
 
 from ..utils import sage_parser
 from ..utils.common import (
@@ -52,6 +52,7 @@ from ..utils.common import (
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
+    vt_json_read_and_process,
 )
 
 
@@ -113,8 +114,6 @@ def main() -> None:
     KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
-    VT_FILENAME = args.vt_path
-    ANALYSIS_TIME = args.analysis_time
 
     FLOWMC_HANDLER_KWARGS = flowMC_json_read_and_process(args.flowMC_json)
 
@@ -219,26 +218,34 @@ def main() -> None:
         **model_prior_param,
     )
 
+    nvt = vt_json_read_and_process(
+        [param.name for param in parameters], args.vt_path, args.vt_json
+    )
+    logVT = nvt.get_vmapped_logVT()
+
     if args.erate_estimator == "IS":
-        log_weights, samples = log_weights_and_samples(
-            KEY4, parameters, VT_FILENAME, args.vt_n_samples
+        erate_estimator = ImportanceSamplingPoissonMean(
+            logVT,
+            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
+            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            args.n_samples,
+            args.analysis_time,
         )
-        ERate_fn = ERate_importance_sampling_estimate(samples, log_weights)
     elif args.erate_estimator == "ITS":
-        nvt = NeuralNetVolumeTimeSensitivity(
-            [param.name for param in parameters], VT_FILENAME
+        erate_estimator = InverseTransformSamplingPoissonMean(
+            logVT,
+            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            args.n_samples,
+            args.analysis_time,
         )
-        logVT_vmap = nvt.get_vmapped_logVT()
-        ERate_fn = ERate_inverse_transform_sampling_estimate(
-            logVT_vmap, args.vt_n_samples, KEY4
-        )
+    else:
+        raise ValueError("Invalid estimator for expected rate.")
 
     poisson_likelihood = PoissonLikelihood(
         model=model,
         parameters=parameters,
         data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
-        ERate_fn=ERate_fn,
-        time=ANALYSIS_TIME,
+        ERate_fn=erate_estimator.__call__,
     )
 
     constants = model.constants
