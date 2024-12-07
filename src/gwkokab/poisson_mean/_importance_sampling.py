@@ -47,7 +47,9 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         hyper_log_uniform = JointDistribution(
             *[
                 dist.LogUniform(
-                    low=param.prior.low, high=param.prior.high, validate_args=True
+                    low=jnp.maximum(param.prior.low, 1e-6),
+                    high=param.prior.high,
+                    validate_args=True,
                 )
                 for param in parameters
             ],
