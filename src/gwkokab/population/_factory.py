@@ -20,11 +20,10 @@ import warnings
 from collections.abc import Callable
 from typing import List, Optional, Tuple
 
-import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd
 from jax.nn import softmax
-from jaxtyping import Array, Bool, Float, Int, PRNGKeyArray
+from jaxtyping import Array, Bool, Int, PRNGKeyArray
 from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
@@ -52,9 +51,7 @@ class PopulationFactory:
         self,
         model: ScaledMixture,
         parameters: List[str],
-        analysis_time: float,
-        logVT_fn: Callable[[Array], Array],
-        vt_params: List[str],
+        ERate_fn: Callable[[ScaledMixture], Array],
         num_realizations: Int[int, "..."] = 5,
         error_size: Int[int, ">0"] = 2_000,
         constraint: Callable[[Array], Bool[Array, "..."]] = lambda x: jnp.ones(
@@ -64,18 +61,13 @@ class PopulationFactory:
         r"""Check if the parameters are provided."""
         self.model = model
         self.parameters = parameters
-        self.analysis_time = analysis_time
-        self.logVT_fn = logVT_fn
-        self.vt_params = vt_params
+        self.ERate_fn = ERate_fn
         self.num_realizations = num_realizations
         self.error_size = error_size
         self.constraint = constraint
 
         self.event_filename = ensure_dat_extension(self.event_filename)
         self.injection_filename = ensure_dat_extension(self.injection_filename)
-
-        if self.logVT_fn is None:
-            raise ValueError("`logVT_fn` is not provided.")
 
         if self.model is None:
             raise ValueError("Model is not provided.")
@@ -87,31 +79,13 @@ class PopulationFactory:
 
         if self.parameters == []:
             raise ValueError("Parameters are not provided.")
-        if self.vt_params == []:
-            raise ValueError("VT Parameters are not provided.")
-
-        self.vt_selection_mask = []
-        for param in self.vt_params:
-            if param in self.parameters:
-                self.vt_selection_mask.append(self.parameters.index(param))
-            else:
-                raise ValueError(f"VT parameter '{param}' is not found in parameters.")
-
-    def exp_rate(self, *, key: PRNGKeyArray) -> Float[Array, ""]:
-        r"""Calculates the expected rate."""
-        N = int(5e4)
-        values = self.model.component_sample(key, (N,))[..., self.vt_selection_mask]
-        VT_fn = lambda xx: jnp.mean(jnp.exp(self.logVT_fn(xx)))
-        VT = jax.vmap(VT_fn, in_axes=1)(values)
-        rates = jnp.exp(self.model._log_scales)
-        return self.analysis_time * jnp.dot(VT, rates)
 
     def _generate_population(
         self, size: int, *, key: PRNGKeyArray
     ) -> Tuple[Array, Array]:
         r"""Generate population for a realization."""
 
-        if self.logVT_fn is not None:
+        if self.ERate_fn is not None:
             old_size = size
             size += int(1e5)
 
@@ -124,7 +98,7 @@ class PopulationFactory:
 
         value = population[..., self.vt_selection_mask]
 
-        vt = softmax(self.logVT_fn(value))
+        vt = softmax(self.ERate_fn(value))
         vt = jnp.nan_to_num(vt, nan=0.0)
         _, key = jrd.split(key)
         index = jrd.choice(
@@ -139,7 +113,7 @@ class PopulationFactory:
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
-        size = int(jrd.poisson(poisson_key, self.exp_rate(key=rate_key)))
+        size = int(jrd.poisson(poisson_key, self.ERate_fn(self.model)))
         key = rate_key
         if size == 0:
             raise ValueError(

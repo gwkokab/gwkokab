@@ -28,6 +28,7 @@ from . import (
     inference as inference,
     models as models,
     parameters as parameters,
+    poisson_mean as poisson_mean,
     population as population,
     utils as utils,
     vts as vts,
