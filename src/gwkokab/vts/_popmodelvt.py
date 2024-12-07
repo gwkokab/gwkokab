@@ -53,7 +53,7 @@ def _check_and_get(name: str, f: h5py.File) -> Array:
 
 
 class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
-    logVT_interpolator: RegularGridInterpolator
+    logVT_interpolator: RegularGridInterpolator = eqx.field(init=False, static=True)
     m_min: float = eqx.field(converter=float, init=False, static=True)
 
     def __init__(
