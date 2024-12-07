@@ -371,12 +371,12 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         def _logVT(x: Array) -> Array:
             xs = x[..., self.shuffle_indices]
             m1, m2 = xs[..., 0], xs[..., 1]
-            x_converted = jnp.stack([m1, m2, *xs[..., 2:]], axis=-1)
+            x_converted = [m1, m2, *xs[..., 2:]]
             correction = jnp.zeros(())
             # Loop over the basis functions and multiply by the coefficients
             # https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L487-492
             for coeff, base in zip(self.coeffs, self.basis):
-                correction += coeff * base(x_converted)
+                correction += coeff * base(*x_converted)
             logM, qtilde = self.mass_grid_coords(m1, m2)
             query = (logM, qtilde, *xs[..., 2:])
             return self.logVT_interpolator(query) + jnp.log(correction)
