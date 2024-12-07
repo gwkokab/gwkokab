@@ -20,7 +20,7 @@ from jax import numpy as jnp
 from jaxtyping import Array
 
 from ._utils import load_model
-from ._vt import VolumeTimeSensitivityInterface
+from ._vt_abc import VolumeTimeSensitivityInterface
 
 
 class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):

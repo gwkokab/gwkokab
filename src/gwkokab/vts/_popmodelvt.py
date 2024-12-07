@@ -30,7 +30,7 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 
-from ._vt import VolumeTimeSensitivityInterface
+from ._vt_abc import VolumeTimeSensitivityInterface
 
 
 def _check_and_get(name: str, f: h5py.File) -> Array:
