@@ -133,9 +133,9 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                 s2z = _check_and_get("s2z", f)
 
         if zero_spin:
-            return VT, logM, qtilde, s1z, s2z
-        else:
             return VT, logM, qtilde
+        else:
+            return VT, logM, qtilde, s1z, s2z
 
     @eqx.filter_jit
     def mass_grid_coords_inverse(
@@ -215,7 +215,8 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             xs = x[..., self.shuffle_indices]
             m1, m2 = xs[..., 0], xs[..., 1]
             logM, qtilde = self.mass_grid_coords(m1, m2)
-            return self.logVT_interpolator((logM, qtilde))
+            query = (logM, qtilde, *xs[..., 2:])
+            return self.logVT_interpolator(query)
 
         return _logVT
 
