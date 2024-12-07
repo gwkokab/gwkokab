@@ -29,6 +29,11 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
+from gwkokab.utils.transformations import (
+    chirp_mass,
+    log_chirp_mass,
+    symmetric_mass_ratio,
+)
 
 from ._vt_abc import VolumeTimeSensitivityInterface
 
@@ -222,3 +227,158 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
     def get_vmapped_logVT(self) -> Callable[[Array], Array]:
         return jax.vmap(self.get_logVT(), in_axes=0, out_axes=0)
+
+
+# source: https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L554-709
+
+_correction_basis_scalar_zero_spin = [
+    lambda m1, m2: 1.0,
+]
+_correction_basis_scalar_aligned_spin = [
+    lambda m1, m2, a1z, a2z: 1.0,
+]
+
+_correction_basis_linear_zero_spin = _correction_basis_scalar_zero_spin + [
+    lambda m1, m2: m1,
+    lambda m1, m2: m2,
+]
+_correction_basis_linear_aligned_spin = _correction_basis_scalar_aligned_spin + [
+    lambda m1, m2, a1z, a2z: m1,
+    lambda m1, m2, a1z, a2z: m2,
+]
+
+_correction_basis_quadratic_zero_spin = _correction_basis_linear_zero_spin + [
+    lambda m1, m2: m1 * m2,
+    lambda m1, m2: m1**2,
+    lambda m1, m2: m2**2,
+]
+_correction_basis_quadratic_aligned_spin = _correction_basis_linear_aligned_spin + [
+    lambda m1, m2, a1z, a2z: m1 * m2,
+    lambda m1, m2, a1z, a2z: m1**2,
+    lambda m1, m2, a1z, a2z: m2**2,
+]
+_correction_basis_quintic_zero_spin = _correction_basis_quadratic_zero_spin + [
+    lambda m1, m2: m1**2 * m2,
+    lambda m1, m2: m1 * m2**2,
+    lambda m1, m2: m1**3,
+    lambda m1, m2: m2**3,
+]
+_correction_basis_quintic_aligned_spin = _correction_basis_quadratic_aligned_spin + [
+    lambda m1, m2, a1z, a2z: m1**2 * m2,
+    lambda m1, m2, a1z, a2z: m1 * m2**2,
+    lambda m1, m2, a1z, a2z: m1**3,
+    lambda m1, m2, a1z, a2z: m2**3,
+]
+
+
+_correction_basis_linear_Mc_eta_zero_spin = _correction_basis_scalar_zero_spin + [
+    lambda m1, m2: chirp_mass(m1, m2),
+    lambda m1, m2: symmetric_mass_ratio(m1, m2),
+]
+_correction_basis_linear_Mc_eta_aligned_spin = _correction_basis_scalar_aligned_spin + [
+    lambda m1, m2, a1z, a2z: chirp_mass(m1, m2),
+    lambda m1, m2, a1z, a2z: symmetric_mass_ratio(m1, m2),
+]
+
+_correction_basis_quadratic_Mc_eta_zero_spin = _correction_basis_linear_zero_spin + [
+    lambda m1, m2: chirp_mass(m1, m2) * symmetric_mass_ratio(m1, m2),
+    lambda m1, m2: chirp_mass(m1, m2) ** 2,
+    lambda m1, m2: symmetric_mass_ratio(m1, m2) ** 2,
+]
+_correction_basis_quadratic_Mc_eta_aligned_spin = (
+    _correction_basis_linear_aligned_spin
+    + [
+        lambda m1, m2, a1z, a2z: chirp_mass(m1, m2) * symmetric_mass_ratio(m1, m2),
+        lambda m1, m2, a1z, a2z: chirp_mass(m1, m2) ** 2,
+        lambda m1, m2, a1z, a2z: symmetric_mass_ratio(m1, m2) ** 2,
+    ]
+)
+
+_correction_basis_linear_logMc_eta_zero_spin = _correction_basis_scalar_zero_spin + [
+    lambda m1, m2: log_chirp_mass(m1, m2),
+    lambda m1, m2: symmetric_mass_ratio(m1, m2),
+]
+_correction_basis_linear_logMc_eta_aligned_spin = (
+    _correction_basis_scalar_aligned_spin
+    + [
+        lambda m1, m2, a1z, a2z: log_chirp_mass(m1, m2),
+        lambda m1, m2, a1z, a2z: symmetric_mass_ratio(m1, m2),
+    ]
+)
+
+_correction_basis_quadratic_logMc_eta_zero_spin = _correction_basis_linear_zero_spin + [
+    lambda m1, m2: log_chirp_mass(m1, m2) * symmetric_mass_ratio(m1, m2),
+    lambda m1, m2: log_chirp_mass(m1, m2) ** 2,
+    lambda m1, m2: symmetric_mass_ratio(m1, m2) ** 2,
+]
+_correction_basis_quadratic_logMc_eta_aligned_spin = (
+    _correction_basis_linear_aligned_spin
+    + [
+        lambda m1, m2, a1z, a2z: log_chirp_mass(m1, m2) * symmetric_mass_ratio(m1, m2),
+        lambda m1, m2, a1z, a2z: log_chirp_mass(m1, m2) ** 2,
+        lambda m1, m2, a1z, a2z: symmetric_mass_ratio(m1, m2) ** 2,
+    ]
+)
+
+
+_correction_bases_zero_spin = {
+    "scalar": _correction_basis_scalar_zero_spin,
+    "linear": _correction_basis_linear_zero_spin,
+    "quadratic": _correction_basis_quadratic_zero_spin,
+    "quintic": _correction_basis_quintic_zero_spin,
+    "linear_Mc_eta": _correction_basis_linear_Mc_eta_zero_spin,
+    "quadratic_Mc_eta": _correction_basis_quadratic_Mc_eta_zero_spin,
+    "linear_logMc_eta": _correction_basis_linear_logMc_eta_zero_spin,
+    "quadratic_logMc_eta": _correction_basis_quadratic_logMc_eta_zero_spin,
+}
+_correction_bases_aligned_spin = {
+    "scalar": _correction_basis_scalar_aligned_spin,
+    "linear": _correction_basis_linear_aligned_spin,
+    "quadratic": _correction_basis_quadratic_aligned_spin,
+    "quintic": _correction_basis_quintic_aligned_spin,
+    "linear_Mc_eta": _correction_basis_linear_Mc_eta_aligned_spin,
+    "quadratic_Mc_eta": _correction_basis_quadratic_Mc_eta_aligned_spin,
+    "linear_logMc_eta": _correction_basis_linear_logMc_eta_aligned_spin,
+    "quadratic_logMc_eta": _correction_basis_quadratic_logMc_eta_aligned_spin,
+}
+
+
+class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
+    coeffs: Sequence[int | float] = eqx.field(converter=list, init=False, static=True)
+    basis: Sequence[Callable[..., float | Array]] = eqx.field(init=False, static=True)
+
+    def __init__(
+        self,
+        parameters: Sequence[str],
+        filename: str,
+        zero_spin: bool,
+        coeffs: Sequence[int | float],
+        basis: str,
+        scale_factor: int = 1,
+        m_min: float = 0.5,
+    ) -> None:
+        self.coeffs = coeffs
+        if zero_spin:
+            self.basis = _correction_bases_zero_spin[basis]
+        else:
+            self.basis = _correction_bases_aligned_spin[basis]
+        super(PopModelsCalibratedVolumeTimeSensitivity, self).__init__(
+            parameters, filename, zero_spin, scale_factor, m_min
+        )
+
+    def get_logVT(self) -> Callable[[Array], Array]:
+        @eqx.filter_jit
+        def _logVT(x: Array) -> Array:
+            xs = x[..., self.shuffle_indices]
+            m1, m2 = xs[..., 0], xs[..., 1]
+            x_converted = jnp.stack([m1, m2, *xs[..., 2:]], axis=-1)
+            correction = jnp.zeros(())
+            # Loop over the basis functions and multiply by the coefficients
+            # https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L487-492
+            for coeff, base in zip(self.coeffs, self.basis):
+                correction += coeff * base(x_converted)
+            logM, qtilde = self.mass_grid_coords(m1, m2)
+            query = (logM, qtilde, *xs[..., 2:])
+            return self.logVT_interpolator(query) + jnp.log(correction)
+
+        return _logVT

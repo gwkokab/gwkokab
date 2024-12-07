@@ -16,7 +16,10 @@ import sys
 from typing import List
 
 from ._neuralvt import NeuralNetVolumeTimeSensitivity
-from ._popmodelvt import PopModelsVolumeTimeSensitivity
+from ._popmodelvt import (
+    PopModelsCalibratedVolumeTimeSensitivity,
+    PopModelsVolumeTimeSensitivity,
+)
 
 
 def __getattr__(name):
@@ -24,6 +27,8 @@ def __getattr__(name):
         return NeuralNetVolumeTimeSensitivity
     elif name == "PopModelsVolumeTimeSensitivity":
         return PopModelsVolumeTimeSensitivity
+    elif name == "PopModelsCalibratedVolumeTimeSensitivity":
+        return PopModelsCalibratedVolumeTimeSensitivity
     else:
         raise AttributeError(f"module {__name__} has no attribute {name}")
 

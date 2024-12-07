@@ -15,6 +15,7 @@
 
 from ._neuralvt import NeuralNetVolumeTimeSensitivity as NeuralNetVolumeTimeSensitivity
 from ._popmodelvt import (
+    PopModelsCalibratedVolumeTimeSensitivity as PopModelsCalibratedVolumeTimeSensitivity,
     PopModelsVolumeTimeSensitivity as PopModelsVolumeTimeSensitivity,
 )
 from ._train import train_regressor as train_regressor
