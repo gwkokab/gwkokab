@@ -1,33 +1,51 @@
-#  Copyright 2023 The GWKokab Authors
+# Copyright 2023 The GWKokab Authors
 #
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-#     http://www.apache.org/licenses/LICENSE-2.0
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
-from abc import abstractmethod
-from collections.abc import Callable, Sequence
+import sys
+from typing import List
 
-import equinox as eqx
-from jaxtyping import Array
+from ._neuralvt import NeuralNetVolumeTimeSensitivity
+from ._popmodelvt import PopModelsVolumeTimeSensitivity
 
 
-class VolumeTimeSensitivityInterface(eqx.Module):
-    shuffle_indices: Sequence[int] = eqx.field(init=False)
+def __getattr__(name):
+    if name == "NeuralNetVolumeTimeSensitivity":
+        return NeuralNetVolumeTimeSensitivity
+    elif name == "PopModelsVolumeTimeSensitivity":
+        return PopModelsVolumeTimeSensitivity
+    else:
+        raise AttributeError(f"module {__name__} has no attribute {name}")
 
-    @abstractmethod
-    def get_logVT(self) -> Callable[[Array], Array]:
-        """Gets the logVT function."""
-        raise NotImplementedError
 
-    @abstractmethod
-    def get_vmapped_logVT(self) -> Callable[[Array], Array]:
-        """Gets the vmapped logVT function for batch processing."""
-        raise NotImplementedError
+# Copyright (c) 2024 Colm Talbot
+# SPDX-License-Identifier: MIT
+
+
+class _Available:
+    names: List[str] = [
+        "NeuralNetVolumeTimeSensitivity",
+        "PopModelsVolumeTimeSensitivity",
+    ]
+
+    def keys(self):
+        return self.names
+
+    def __getitem__(self, key):
+        return sys.modules[__name__].__getattr__(key)
+
+    def __repr__(self) -> str:
+        return repr(self.keys())
+
+
+available = _Available()
