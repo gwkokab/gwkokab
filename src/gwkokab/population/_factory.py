@@ -13,16 +13,13 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 import os
 import warnings
 from collections.abc import Callable
 from typing import List, Optional, Tuple
 
 import numpy as np
-from jax import numpy as jnp, random as jrd
-from jax.nn import softmax
+from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, Bool, Int, PRNGKeyArray
 from numpyro.util import is_prng_key
 
@@ -51,9 +48,10 @@ class PopulationFactory:
         self,
         model: ScaledMixture,
         parameters: List[str],
+        logVT_fn: Callable[[Array], Array],
         ERate_fn: Callable[[ScaledMixture], Array],
         num_realizations: Int[int, "..."] = 5,
-        error_size: Int[int, ">0"] = 2_000,
+        error_size: int = 2_000,
         constraint: Callable[[Array], Bool[Array, "..."]] = lambda x: jnp.ones(
             x.shape[0], dtype=bool
         ),
@@ -61,6 +59,7 @@ class PopulationFactory:
         r"""Check if the parameters are provided."""
         self.model = model
         self.parameters = parameters
+        self.logVT_fn = logVT_fn
         self.ERate_fn = ERate_fn
         self.num_realizations = num_realizations
         self.error_size = error_size
@@ -85,7 +84,7 @@ class PopulationFactory:
     ) -> Tuple[Array, Array]:
         r"""Generate population for a realization."""
 
-        if self.ERate_fn is not None:
+        if self.logVT_fn is not None:
             old_size = size
             size += int(1e5)
 
@@ -96,9 +95,7 @@ class PopulationFactory:
 
         _, key = jrd.split(key)
 
-        value = population[..., self.vt_selection_mask]
-
-        vt = softmax(self.ERate_fn(value))
+        vt = jnn.softmax(self.logVT_fn(population))
         vt = jnp.nan_to_num(vt, nan=0.0)
         _, key = jrd.split(key)
         index = jrd.choice(
@@ -113,7 +110,8 @@ class PopulationFactory:
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
-        size = int(jrd.poisson(poisson_key, self.ERate_fn(self.model)))
+        exp_rate = self.ERate_fn(self.model)
+        size = int(jrd.poisson(poisson_key, exp_rate))
         key = rate_key
         if size == 0:
             raise ValueError(
