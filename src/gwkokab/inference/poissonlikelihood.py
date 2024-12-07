@@ -69,7 +69,6 @@ class PoissonLikelihood(eqx.Module):
     parameters: Sequence[Parameter] = eqx.field(static=True)
     data: Sequence[Array]
     model: Callable[..., Distribution] = eqx.field(static=True)
-    time: float = eqx.field(static=True)
     ref_priors: JointDistribution = eqx.field(static=True)
     priors: JointDistribution = eqx.field(static=True)
     variables_index: Mapping[str, int] = eqx.field(static=True)
@@ -81,13 +80,11 @@ class PoissonLikelihood(eqx.Module):
         parameters: Sequence[Parameter],
         data: Sequence[Array],
         ERate_fn: Callable[[ScaledMixture], Array],
-        time: float = 1.0,
     ) -> None:
         self.data = data
         self.model = model
         self.parameters = parameters
         self.ERate_fn = ERate_fn
-        self.time = time
 
         dummy_model = model.get_dummy()
         assert isinstance(
@@ -129,7 +126,7 @@ class PoissonLikelihood(eqx.Module):
 
         debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
 
-        expected_rates = self.time * self.ERate_fn(model)
+        expected_rates = self.ERate_fn(model)
 
         debug_flush("expected_rate={expr}", expr=expected_rates)
 
