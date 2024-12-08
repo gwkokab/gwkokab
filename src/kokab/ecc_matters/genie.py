@@ -13,21 +13,24 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
-from jax import numpy as jnp
+import numpy as np
+from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.poisson_mean import (
+    ImportanceSamplingPoissonMean,
+    InverseTransformSamplingPoissonMean,
+)
 from gwkokab.population import error_magazine, PopulationFactory
-from gwkokab.vts import NeuralVT
 
 from ..utils import genie_parser
+from ..utils.common import vt_json_read_and_process
 from ..utils.regex import match_all
 from .common import constraint, EccentricityMattersModel
 
@@ -124,17 +127,34 @@ def main() -> None:
 
     model_parameters = [m1_source, m2_source, ecc]
 
-    nvt = NeuralVT(model_parameters, args.vt_path)
+    nvt = vt_json_read_and_process(model_parameters, args.vt_path, args.vt_json)
     logVT = nvt.get_vmapped_logVT()
+
+    if args.erate_estimator == "IS":
+        erate_estimator = ImportanceSamplingPoissonMean(
+            logVT,
+            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
+            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            args.n_samples,
+            args.analysis_time,
+        )
+    elif args.erate_estimator == "ITS":
+        erate_estimator = InverseTransformSamplingPoissonMean(
+            logVT,
+            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            args.n_samples,
+            args.analysis_time,
+        )
+    else:
+        raise ValueError("Invalid estimator for expected rate.")
 
     popfactory = PopulationFactory(
         model=model,
         parameters=model_parameters,
-        analysis_time=args.analysis_time,
         logVT_fn=logVT,
+        ERate_fn=erate_estimator.__call__,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
-        vt_params=args.vt_params,
         constraint=constraint,
     )
 
