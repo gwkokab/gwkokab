@@ -74,7 +74,7 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             )
         spin_required = (
             PRIMARY_SPIN_MAGNITUDE.name in parameters
-            or SECONDARY_SPIN_MAGNITUDE.name in parameters
+            and SECONDARY_SPIN_MAGNITUDE.name in parameters
         )
 
         if not spin_required and not zero_spin:
@@ -132,10 +132,14 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             VT = _check_and_get("VT", f)
             logM = _check_and_get("logM", f)
             qtilde = _check_and_get("qtilde", f)
+            s1z = _check_and_get("s1z", f)
+            s2z = _check_and_get("s2z", f)
 
-            if not zero_spin:
-                s1z = _check_and_get("s1z", f)
-                s2z = _check_and_get("s2z", f)
+            if zero_spin:
+                # only retain axis where s1z == s2z == 0
+                s1z_idx = s1z == 0
+                s2z_idx = s2z == 0
+                VT = jnp.squeeze(VT[..., s1z_idx, s2z_idx], axis=-1)
 
         if zero_spin:
             return VT, logM, qtilde
@@ -379,6 +383,11 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
                 correction += coeff * base(*x_converted)
             logM, qtilde = self.mass_grid_coords(m1, m2)
             query = (logM, qtilde, *xs[..., 2:])
-            return self.logVT_interpolator(query) + jnp.log(correction)
+            safe_correction = jnp.where(correction < 0, 1.0, correction)
+            return jnp.where(
+                correction < 0,
+                -jnp.inf,
+                self.logVT_interpolator(query) + jnp.log(safe_correction),
+            )
 
         return _logVT
