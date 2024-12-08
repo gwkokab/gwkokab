@@ -26,6 +26,17 @@ from ._abc import PoissonMeanABC
 
 
 class InverseTransformSamplingPoissonMean(PoissonMeanABC):
+    r"""Samples are generated from :math:`\rho_{\Omega\mid\Lambda}` by using the
+    inverse transform sampling method. The estimator is given by,
+
+    .. math::
+
+        \hat{\mu}_{\Omega\mid\Lambda} \approx \frac{1}{N}\sum_{i=1}^{N}\operatorname{VT}(\omega_i),
+        \qquad \forall 0<i\leq N, \omega_i \sim \rho_{\Omega\mid\Lambda}.
+
+    This method is very useful when the target distribution is easy to sample from.
+    """
+
     logVT_fn: Callable[[ScaledMixture], Array] = eqx.field(init=False)
     num_samples: int = eqx.field(init=False, static=True)
     key: PRNGKeyArray = eqx.field(init=False)
@@ -37,6 +48,12 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         num_samples: int,
         scale: Union[int, float, Array] = 1.0,
     ) -> None:
+        r"""
+        :param logVT_fn: Log of the Volume Time Sensitivity function.
+        :param key: PRNG key.
+        :param num_samples: Number of samples
+        :param scale: scale factor, defaults to 1.0
+        """
         self.scale = scale
         self.key = key
         self.num_samples = num_samples

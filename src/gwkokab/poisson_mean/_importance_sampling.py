@@ -27,6 +27,32 @@ from ._abc import PoissonMeanABC
 
 
 class ImportanceSamplingPoissonMean(PoissonMeanABC):
+    r"""It is very cheap to generate random samples from the proposal distribution
+    and evaluate the importance weights and reusing them for rest of the
+    calculations. We assume a proposal distribution :math:`\rho_{\phi}` and
+    calculate the importance weights as,
+
+    .. math::
+        w_i = \frac{\operatorname{VT(\omega_i)}}{\rho_{\phi}(\omega_i)},
+        \qquad \forall 0<i\leq N, \omega_i \sim \rho_{\phi}.
+
+    We save these weights and samples for the later use and estimate
+    :math:`\mu_{\Omega\mid\Lambda}` as,
+
+    .. math::
+        \hat{\mu}_{\Omega\mid\Lambda} \approx \frac{1}{N} \sum_{i=1}^{N}
+        w_i \cdot \rho_{\Omega\mid\Lambda}(\omega_i\mid\lambda).
+
+    Importance sampling is a variance reduction technique and it is very useful when the
+    proposal distribution is close to the target distribution. Choice of a good proposal
+    distribution is a tedious task and it is not always possible to find a good proposal
+    distribution. To overcome this problem, we have used a mixture of proposal
+    distributions to sample from. Usually, we use a uniform distribution and a
+    log-uniform distribution over an appropriate range of the parameters. Some times we
+    also add a peak at the maxima and at the expectation of the proposal distribution to
+    improve the performance of the importance sampling.
+    """
+
     log_weights: Array = eqx.field(init=False)
     samples: Array = eqx.field(init=False)
 
@@ -39,6 +65,14 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         scale: Union[int, float, Array] = 1.0,
         add_peak: bool = False,
     ) -> None:
+        r"""
+        :param logVT_fn: Log of the Volume Time Sensitivity function.
+        :param parameters: List of parameters.
+        :param key: PRNG key.
+        :param num_samples: Number of samples
+        :param scale: scale factor, defaults to 1.0
+        :param add_peak: Add a peak at the maxima and at the expectation of the proposal distribution, defaults to False
+        """
         self.scale = scale
         hyper_uniform = JointDistribution(
             *[param.prior for param in parameters], validate_args=True
@@ -67,7 +101,9 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             loc_vector_at_highest_density = uniform_samples[VT_max_at]
 
             loc_vector_by_expectation = jnp.average(
-                uniform_samples, axis=0, weights=jnp.exp(logVT_val)
+                uniform_samples,
+                axis=0,
+                weights=jnp.exp(logVT_val - hyper_uniform.log_prob(uniform_samples)),
             )
             covariance_matrix = jnp.cov(uniform_samples.T)
             component_distributions.append(
