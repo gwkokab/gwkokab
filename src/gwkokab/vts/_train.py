@@ -219,10 +219,11 @@ def train_regressor(
             )
 
     if checkpoint_path is not None:
-        save_model(filename=checkpoint_path, model=model)
+        save_model(filename=checkpoint_path, model=model, names=input_keys)
         plt.plot(loss_vals, label="loss")
         plt.plot(val_loss_vals, label="val loss")
         plt.yscale("log")
         plt.legend()
         plt.tight_layout()
         plt.savefig(checkpoint_path + "_loss.png")
+        plt.close("all")
