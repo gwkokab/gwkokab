@@ -137,6 +137,9 @@ def train_regressor(
     data_Y = df[output_keys].to_numpy()
 
     log_data_Y = jnp.log(data_Y)
+    log_data_Y = jnp.where(
+        jnp.isneginf(log_data_Y), jnp.finfo(jnp.result_type(float)).tiny, log_data_Y
+    )
 
     train_X, test_X, train_Y, test_Y = _train_test_data_split(
         data_X,
@@ -207,7 +210,7 @@ def train_regressor(
             loss = epoch_loss / (len(train_X) // batch_size)
             loss_vals.append(loss)
 
-            val_loss = mse_loss_fn(model, test_X, test_Y)
+            val_loss, _ = mse_loss_fn(model, test_X, test_Y)
             val_loss_vals.append(val_loss)
             progress.update(
                 task_id,
