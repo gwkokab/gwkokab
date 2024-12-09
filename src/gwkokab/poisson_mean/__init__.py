@@ -12,24 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
 
-import importlib.metadata
-
-
-__version__ = importlib.metadata.version("gwkokab")
-
-
-from . import (
-    constants as constants,
-    cosmology as cosmology,
-    debug as debug,
-    errors as errors,
-    inference as inference,
-    models as models,
-    parameters as parameters,
-    poisson_mean as poisson_mean,
-    population as population,
-    utils as utils,
-    vts as vts,
+from ._abc import PoissonMeanABC as PoissonMeanABC
+from ._importance_sampling import (
+    ImportanceSamplingPoissonMean as ImportanceSamplingPoissonMean,
+)
+from ._inverse_transform_sampling import (
+    InverseTransformSamplingPoissonMean as InverseTransformSamplingPoissonMean,
 )

@@ -32,25 +32,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     genie_group = parser.add_argument_group("Genie Options")
 
     genie_group.add_argument(
-        "--vt-path",
-        help="Path to the neural VT",
-        type=str,
-        required=True,
-    )
-    genie_group.add_argument(
-        "--vt-params",
-        help="Parameters of the VT",
-        type=str,
-        nargs="+",
-        required=True,
-    )
-    genie_group.add_argument(
-        "--analysis-time",
-        help="Analysis time of the VT",
-        default=1.0,
-        type=float,
-    )
-    genie_group.add_argument(
         "--error-size",
         help="Size of the error.",
         default=2000,
@@ -60,6 +41,42 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--num-realizations",
         help="Number of realizations.",
         default=5,
+        type=int,
+    )
+
+    vt_group = parser.add_argument_group("VT Options")
+
+    vt_group.add_argument(
+        "--vt-path",
+        help="Path to the neural VT",
+        type=str,
+        required=True,
+    )
+    vt_group.add_argument(
+        "--vt-json",
+        help="Path to the JSON file containing the VT options.",
+        type=str,
+        required=True,
+    )
+    vt_group.add_argument(
+        "--analysis-time",
+        help="Analysis time of the VT",
+        default=1.0,
+        type=float,
+    )
+
+    erate_group = parser.add_argument_group("Expected Rate Options")
+
+    erate_group.add_argument(
+        "--erate-estimator",
+        help="Estimator for the expected rate. IS: Importance Sampling, ITS: Inverse Transform Sampling",
+        choices=["IS", "ITS"],
+        default="ITS",
+    )
+    erate_group.add_argument(
+        "--n-samples",
+        help="Number of samples to compute expected rate.",
+        default=10_000,
         type=int,
     )
 

@@ -11,6 +11,7 @@ GWKokab public API
    gwkokab.inference
    gwkokab.models
    gwkokab.parameters
+   gwkokab.poisson_mean
    gwkokab.population
    gwkokab.utils
    gwkokab.vts
