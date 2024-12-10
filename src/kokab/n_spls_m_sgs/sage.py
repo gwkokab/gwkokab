@@ -120,10 +120,6 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
-    FLOWMC_HANDLER_KWARGS["data"] = {
-        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    }
-
     N_pl = args.n_pl
     N_g = args.n_g
 
