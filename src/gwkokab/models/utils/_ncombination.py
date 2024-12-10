@@ -35,6 +35,7 @@ from ...models._models import (
     SmoothedPowerlawPrimaryMassRatio,
 )
 from ...models.redshift import PowerlawRedshift
+from ...models.spin import BetaFromMeanVar
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ...utils.tools import fetch_first_matching_value
 
@@ -77,19 +78,30 @@ def create_beta_distributions(
     :return: list of Beta distributions
     """
     beta_collection = []
-    alpha_name = f"{parameter_name}_alpha_{component_type}"
-    beta_name = f"{parameter_name}_beta_{component_type}"
+    mean_name = f"{parameter_name}_mean_{component_type}"
+    variance_name = f"{parameter_name}_variance_{component_type}"
+    scale_name = f"{parameter_name}_scale_{component_type}"
     for i in range(N):
-        alpha = fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
-        if alpha is None:
-            raise ValueError(f"Missing parameter {alpha_name}_{i}")
-
-        beta = fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
-        if beta is None:
-            raise ValueError(f"Missing parameter {beta_name}_{i}")
+        mean = fetch_first_matching_value(params, f"{mean_name}_{i}", mean_name)
+        if mean is None:
+            raise ValueError(f"Missing parameter {mean_name}_{i}")
+        variance = fetch_first_matching_value(
+            params, f"{variance_name}_{i}", variance_name
+        )
+        if variance is None:
+            raise ValueError(f"Missing parameter {variance_name}_{i}")
+        scale = fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
+        if scale is None:
+            scale = 1.0
 
         beta_collection.append(
-            Beta(concentration1=alpha, concentration0=beta, validate_args=validate_args)
+            BetaFromMeanVar(
+                mean=mean,
+                variance=variance,
+                loc=0.0,
+                scale=scale,
+                validate_args=validate_args,
+            )
         )
     return beta_collection
 
