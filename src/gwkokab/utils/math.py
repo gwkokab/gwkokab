@@ -20,18 +20,24 @@ from jaxtyping import Array
 
 
 def beta_dist_concentrations_to_mean_variance(
-    alpha: Array, beta: Array
+    alpha: Array,
+    beta: Array,
+    loc: Array = 0.0,
+    scale: Array = 1.0,
 ) -> Tuple[Array, Array]:
     r"""Let :math:`\alpha` and :math:`\beta` be the shape parameters of a beta
-    distribution. This function returns the mean and variance of the distribution.
-    Then concentrations are given by:
+    distribution, :math:`a` being the location and :math:`b` being the scale. This
+    function returns the mean and variance of the distribution. Then concentrations are
+    given by:
 
     .. math::
-        \mu = \frac{\alpha}{\alpha + \beta}\qquad
-        \sigma^2 = \frac{\alpha \beta}{(\alpha + \beta)^2 (\alpha + \beta + 1)}
+        \mu = a+b\frac{\alpha}{\alpha + \beta}\qquad
+        \sigma^2 = b^2\frac{\alpha \beta}{(\alpha + \beta)^2 (\alpha + \beta + 1)}
 
     :param alpha: The shape parameter :math:`\alpha`.
     :param beta: The shape parameter :math:`\beta`.
+    :param loc: The location :math:`a` of the beta distribution.
+    :param scale: The scale :math:`b` of the beta distribution.
     :return: The mean :math:`\mu` and variance :math:`\sigma^2` of the beta distribution.
     """
     sum_of_concentrations = jnp.add(alpha, beta)
@@ -43,37 +49,37 @@ def beta_dist_concentrations_to_mean_variance(
     variance = jnp.multiply(jnp.square(sum_of_concentrations), variance)
     variance = jnp.divide(product_of_concentrations, variance)
 
-    return mean, variance
+    return loc + scale * mean, scale**2 * variance
 
 
 def beta_dist_mean_variance_to_concentrations(
-    mean: Array, variance: Array
+    mean: Array,
+    variance: Array,
+    loc: Array = 0.0,
+    scale: Array = 1.0,
 ) -> Tuple[Array, Array]:
     r"""Let :math:`\mu` and :math:`\sigma^2` be the mean and variance of a beta
-    distribution. This function returns the shape parameters :math:`\alpha` and
-    :math:`\beta` of the distribution. Then concentrations are given by:
+    distribution, :math:`a` being the location and :math:`b` being the scale. This
+    function returns the shape parameters :math:`\alpha` and :math:`\beta` of the
+    distribution. Then concentrations are given by:
 
     .. math::
-        \alpha = \mu \left(\frac{\mu(1 - \mu)}{\sigma^2} - 1\right)\qquad
-        \beta = \alpha\left(\frac{1}{\mu}-1\right)
+        \alpha = -\frac{\mu-a}{b} \left(\left(\frac{\mu-a}{\sigma}\right)\left(\frac{\mu-a-b}{\sigma}\right)+1\right)\qquad
+        \beta = \alpha\left(\frac{b}{\mu-a}-1\right)
 
     :param mean: The mean :math:`\mu` of the beta distribution.
     :param variance: The variance :math:`\sigma^2` of the beta distribution.
+    :param loc: The location :math:`a` of the beta distribution.
+    :param scale: The scale :math:`b` of the beta distribution.
     :return: The shape parameters :math:`\alpha` and :math:`\beta` of the beta distribution.
     """
-    r"""Let :math:`\mu` and :math:`\sigma^2` be the mean and variance of a beta
-    distribution. This function returns the shape parameters :math:`\alpha` and
-    :math:`\beta` of the distribution. Then concentrations are given by:
-
-    .. math::
-        \alpha = \mu \left(\frac{\mu(1 - \mu)}{\sigma^2} - 1\right)\qquad
-        \beta = \alpha\left(\frac{1}{\mu}-1\right)
-
-    :param mean: The mean :math:`\mu` of the beta distribution.
-    :param variance: The variance :math:`\sigma^2` of the beta distribution.
-    :return: The shape parameters :math:`\alpha` and :math:`\beta` of the beta distribution.
-    """
-    alpha = mean * ((mean * (1 - mean) / variance) - 1)
-    beta = alpha * ((1 - mean) / mean)
-    return alpha, beta
+    low = loc
+    high = loc + scale
+    mean_shifted_by_low = mean - low
+    mean_shifted_by_high = mean - high
+    shared_term = (mean_shifted_by_low * mean_shifted_by_high + variance) / (
+        scale * variance
+    )
+    alpha = -mean_shifted_by_low * shared_term
+    beta = mean_shifted_by_high * shared_term
     return alpha, beta
