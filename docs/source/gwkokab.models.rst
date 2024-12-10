@@ -11,8 +11,6 @@ Models
     :toctree: _autosummary
 
     FlexibleMixtureModel
-    GaussianSpinModel
-    IndependentSpinOrientationGaussianIsotropic
     MassGapModel
     NDistribution
     NPowerlawMGaussian
@@ -21,6 +19,20 @@ Models
     SmoothedGaussianPrimaryMassRatio
     SmoothedPowerlawPrimaryMassRatio
     Wysocki2019MassModel
+
+Spin
+^^^^
+
+.. automodule:: gwkokab.models.spin
+
+.. autosummary::
+    :nosignatures:
+    :toctree: _autosummary
+
+    BetaFromMeanVar
+    GaussianSpinModel
+    IndependentSpinOrientationGaussianIsotropic
+
 
 Redshift
 ^^^^^^^^
