@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr

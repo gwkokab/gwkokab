@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 from functools import partial
 from typing_extensions import Callable, List, Tuple
 
