@@ -19,22 +19,33 @@ import jax
 from jax import numpy as jnp
 from jaxtyping import Array
 
+from ._abc import VolumeTimeSensitivityInterface
 from ._utils import load_model
 
 
-class NeuralVT(eqx.Module):
-    parameters: Sequence[str]
-    filename: str
+class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     model: eqx.nn.Sequential = eqx.field(init=False)
-    shuffle_indices: Sequence[int] = eqx.field(init=False)
 
-    def __post_init__(self):
-        names, self.model = load_model(self.filename)
-        if any(name not in self.parameters for name in names):
+    def __init__(self, parameters: Sequence[str], filename: str) -> None:
+        """Convenience class for loading a neural vt.
+
+        :param parameters: The names of the parameters that the model expects.
+        :param filename: The filename of the neural vt.
+        """
+        if not parameters:
+            raise ValueError("parameters sequence cannot be empty")
+        if not isinstance(parameters, Sequence):
+            raise TypeError(f"parameters must be a Sequence, got {type(parameters)}")
+        if not all(isinstance(p, str) for p in parameters):
+            raise TypeError("all parameters must be strings")
+
+        names, self.model = load_model(filename)
+        if any(name not in parameters for name in names):
             raise ValueError(
-                f"{self.filename} only supports {names}. Requested {self.parameters}."
+                f"Model in {filename} expects parameters {names}, but received "
+                f"{parameters}. Missing: {set(names) - set(parameters)}"
             )
-        self.shuffle_indices = [self.parameters.index(name) for name in names]
+        self.shuffle_indices = [parameters.index(name) for name in names]
 
     def get_logVT(self) -> Callable[[Array], Array]:
         """Gets the logVT function."""
@@ -57,10 +68,3 @@ class NeuralVT(eqx.Module):
             return jnp.squeeze(model_vmap(x_new), axis=-1)
 
         return _logVT
-
-
-NeuralVT.__init__.__doc__ = """Convenience class for loading a neural vt.
-
-:param parameters: The names of the parameters that the model expects.
-:param filename: The filename of the neural vt.
-"""

@@ -16,8 +16,6 @@
 from . import constraints, transformations, utils, wrappers
 from ._models import (
     FlexibleMixtureModel,
-    GaussianSpinModel,
-    IndependentSpinOrientationGaussianIsotropic,
     MassGapModel,
     NDistribution,
     PowerlawPrimaryMassRatio,
@@ -30,6 +28,11 @@ from .nsmoothedpowerlawmsmoothedgaussian import (
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
 )
 from .redshift import PowerlawRedshift as PowerlawRedshift
+from .spin import (
+    BetaFromMeanVar as BetaFromMeanVar,
+    GaussianSpinModel as GaussianSpinModel,
+    IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
+)
 
 
 __all__ = [
@@ -38,8 +41,6 @@ __all__ = [
     "utils",
     "wrappers",
     "FlexibleMixtureModel",
-    "GaussianSpinModel",
-    "IndependentSpinOrientationGaussianIsotropic",
     "MassGapModel",
     "NDistribution",
     "PowerlawPrimaryMassRatio",
