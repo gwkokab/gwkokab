@@ -1,7 +1,6 @@
 # Copyright Contributors to the Pyro project.
 # SPDX-License-Identifier: Apache-2.0
 
-from __future__ import annotations
 
 from typing_extensions import Sequence, Tuple
 
@@ -10,7 +9,7 @@ import jax.numpy as jnp
 import jax.random as jrd
 import numpyro.distributions as dist
 import pytest
-from jaxtyping import Array, Float, Int
+from jaxtyping import Array
 from numpyro.distributions import Distribution, HalfNormal, MultivariateNormal, Normal
 
 from gwkokab.models.utils import ScaledMixture
@@ -19,7 +18,7 @@ from gwkokab.models.utils import ScaledMixture
 rng_key = jax.random.PRNGKey(42)
 
 
-def get_normal(batch_shape: Tuple[Int[int, "..."], ...]) -> Normal:
+def get_normal(batch_shape: Tuple[int, ...]) -> Normal:
     """Get parameterized Normal with given batch shape."""
     loc = jnp.zeros(batch_shape)
     scale = jnp.ones(batch_shape)
@@ -27,14 +26,14 @@ def get_normal(batch_shape: Tuple[Int[int, "..."], ...]) -> Normal:
     return normal
 
 
-def get_half_normal(batch_shape: Tuple[Int[int, "..."], ...]) -> HalfNormal:
+def get_half_normal(batch_shape: Tuple[int, ...]) -> HalfNormal:
     """Get parameterized HalfNormal with given batch shape."""
     scale = jnp.ones(batch_shape)
     half_normal = HalfNormal(scale=scale)
     return half_normal
 
 
-def get_mvn(batch_shape: Tuple[Int[int, "..."], ...]) -> MultivariateNormal:
+def get_mvn(batch_shape: Tuple[int, ...]) -> MultivariateNormal:
     """Get parameterized MultivariateNormal with given batch shape."""
     dimensions = 2
     loc = jnp.zeros((*batch_shape, dimensions))
@@ -104,9 +103,7 @@ def test_mixture_with_different_support(batch_shape):
     assert jnp.allclose(result, expected_log_prob)
 
 
-def _test_mixture(
-    log_scales: Float[Array, "..."], component_distribution: Sequence[Distribution]
-):
+def _test_mixture(log_scales: Array, component_distribution: Sequence[Distribution]):
     # Create mixture
     mixture = ScaledMixture(
         log_scales=log_scales,

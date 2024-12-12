@@ -21,7 +21,6 @@ from typing import List, Tuple
 
 import numpy as np
 from jax import random as jrd
-from jaxtyping import Int
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import (
@@ -130,7 +129,7 @@ def main() -> None:
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
 
-    all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
+    all_params: List[Tuple[str, int]] = [
         ("alpha_pl", N_pl),
         ("beta_pl", N_pl),
         ("mmax_pl", N_pl),

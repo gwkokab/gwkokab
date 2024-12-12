@@ -13,12 +13,10 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp
-from jaxtyping import Array, Bool, Int
+from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
     Distribution,
@@ -60,11 +58,11 @@ def combine_distributions(
 
 
 def create_beta_distributions(
-    N: Int[int, ""],
+    N: int,
     parameter_name: Literal["chi1", "chi2"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[Beta]:
     r"""Create a list of Beta distributions.
 
@@ -95,13 +93,13 @@ def create_beta_distributions(
 
 
 def create_truncated_normal_distributions(
-    N: Int[int, ""],
+    N: int,
     parameter_name: Literal[
         "m1", "m2", "chi1", "chi2", "cos_tilt1", "cos_tilt2", "ecc"
     ],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
     r"""Create a list of TruncatedNormal distributions.
 
@@ -140,11 +138,11 @@ def create_truncated_normal_distributions(
 
 
 def create_truncated_normal_distributions_for_cos_tilt(
-    N: Int[int, ""],
+    N: int,
     parameter_name: Literal["cos_tilt1", "cos_tilt2"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[TwoSidedTruncatedDistribution]:
     r"""Create a list of TwoSidedTruncatedDistribution distributions for tilt.
 
@@ -176,9 +174,9 @@ def create_truncated_normal_distributions_for_cos_tilt(
 
 
 def create_powerlaws(
-    N: Int[int, ""],
+    N: int,
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
     r"""Create a list of TransformedDistribution for powerlaws.
 
@@ -227,7 +225,7 @@ dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
 
 
 def create_powerlaw_redshift(
-    N: Int[int, ""],
+    N: int,
     parameter_name: Literal["redshift"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
@@ -270,9 +268,9 @@ def create_powerlaw_redshift(
 
 
 def create_smoothed_powerlaws(
-    N: Int[int, ""],
+    N: int,
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[SmoothedPowerlawPrimaryMassRatio]:
     r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws.
 
@@ -322,9 +320,9 @@ def create_smoothed_powerlaws(
 
 
 def create_smoothed_gaussians(
-    N: Int[int, ""],
+    N: int,
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[SmoothedPowerlawPrimaryMassRatio]:
     r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions.
 

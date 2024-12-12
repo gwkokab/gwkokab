@@ -23,7 +23,7 @@ import jax
 import numpy as np
 import pandas as pd
 from jax import nn as jnn, numpy as jnp, random as jrd
-from jaxtyping import Array, Float, PRNGKeyArray, PyTree
+from jaxtyping import Array, PRNGKeyArray, PyTree
 from numpyro.util import is_prng_key
 
 
@@ -38,7 +38,7 @@ __all__ = [
 
 
 @eqx.filter_value_and_grad
-def mse_loss_fn(model: PyTree, x: Float[Array, ""], y: Float[Array, ""]) -> Array:
+def mse_loss_fn(model: PyTree, x: Array, y: Array) -> Array:
     """Mean squared error loss function.
 
     :param model: Model to approximate the log of the VT function
@@ -51,7 +51,7 @@ def mse_loss_fn(model: PyTree, x: Float[Array, ""], y: Float[Array, ""]) -> Arra
 
 
 @eqx.filter_jit
-def predict(model: PyTree, x: Float[Array, ""]) -> Array:
+def predict(model: PyTree, x: Array) -> Array:
     """Predict the output of the model given the input data.
 
     :param model: Model to approximate the log of the VT function

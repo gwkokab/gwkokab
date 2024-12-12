@@ -20,7 +20,7 @@ from typing import List, Optional, Tuple
 
 import numpy as np
 from jax import nn as jnn, numpy as jnp, random as jrd
-from jaxtyping import Array, Bool, Int, PRNGKeyArray
+from jaxtyping import Array, PRNGKeyArray
 from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
@@ -50,9 +50,9 @@ class PopulationFactory:
         parameters: List[str],
         logVT_fn: Callable[[Array], Array],
         ERate_fn: Callable[[ScaledMixture], Array],
-        num_realizations: Int[int, "..."] = 5,
+        num_realizations: int = 5,
         error_size: int = 2_000,
-        constraint: Callable[[Array], Bool[Array, "..."]] = lambda x: jnp.ones(
+        constraint: Callable[[Array], Array] = lambda x: jnp.ones(
             x.shape[0], dtype=bool
         ),
     ) -> None:

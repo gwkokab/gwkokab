@@ -13,10 +13,8 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 from jax import numpy as jnp
-from jaxtyping import Array, Bool
+from jaxtyping import Array
 from numpyro.distributions import TruncatedNormal
 from numpyro.distributions.constraints import real_vector
 
@@ -50,7 +48,7 @@ def EccentricityMattersModel(
     )
 
 
-def constraint(x: Array) -> Bool[Array, "..."]:
+def constraint(x: Array) -> Array:
     m1 = x[..., 0]
     m2 = x[..., 1]
     ecc = x[..., 2]
