@@ -20,6 +20,11 @@ from jaxtyping import Array
 
 
 class VolumeTimeSensitivityInterface(eqx.Module):
+    r"""Interface for volume time sensitivity.
+
+    :param shuffle_indices: The indices to shuffle the input to the model.
+    """
+
     shuffle_indices: Sequence[int] = eqx.field(init=False)
 
     @abstractmethod
