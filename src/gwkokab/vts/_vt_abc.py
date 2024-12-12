@@ -29,10 +29,20 @@ class VolumeTimeSensitivityInterface(eqx.Module):
 
     @abstractmethod
     def get_logVT(self) -> Callable[[Array], Array]:
-        """Gets the logVT function."""
+        """Gets the log volume-time sensitivity function.
+
+        :return: A function that takes an input array of shape (n_features,) and
+            returns the log volume-time sensitivity as an array of shape ().
+        """
         raise NotImplementedError
 
     @abstractmethod
     def get_vmapped_logVT(self) -> Callable[[Array], Array]:
-        """Gets the vmapped logVT function for batch processing."""
+        """Gets a vectorized log volume-time sensitivity function for batch
+        processing.
+
+        :return: A function that takes a batch of inputs as an array of shape
+            (batch_size, n_features) and returns an array of log volume-time
+            sensitivities with shape (batch_size,).
+        """
         raise NotImplementedError
