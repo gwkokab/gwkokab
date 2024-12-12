@@ -32,10 +32,18 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         :param parameters: The names of the parameters that the model expects.
         :param filename: The filename of the neural vt.
         """
+        if not parameters:
+            raise ValueError("parameters sequence cannot be empty")
+        if not isinstance(parameters, Sequence):
+            raise TypeError(f"parameters must be a Sequence, got {type(parameters)}")
+        if not all(isinstance(p, str) for p in parameters):
+            raise TypeError("all parameters must be strings")
+
         names, self.model = load_model(filename)
         if any(name not in parameters for name in names):
             raise ValueError(
-                f"{filename} only supports {names}. Requested {parameters}."
+                f"Model in {filename} expects parameters {names}, but received "
+                f"{parameters}. Missing: {set(names) - set(parameters)}"
             )
         self.shuffle_indices = [parameters.index(name) for name in names]
 
