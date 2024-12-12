@@ -376,11 +376,12 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
             xs = x[..., self.shuffle_indices]
             m1, m2 = xs[..., 0], xs[..., 1]
             x_converted = [m1, m2, *xs[..., 2:]]
-            correction = jnp.zeros(())
+
             # Loop over the basis functions and multiply by the coefficients
             # https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L487-492
-            for coeff, base in zip(self.coeffs, self.basis):
-                correction += coeff * base(*x_converted)
+            basis_values = jnp.array([base(*x_converted) for base in self.basis])
+            correction = jnp.dot(self.coeffs, basis_values)
+
             logM, qtilde = self.mass_grid_coords(m1, m2)
             query = (logM, qtilde, *xs[..., 2:])
             safe_correction = jnp.where(correction < 0, 1.0, correction)
