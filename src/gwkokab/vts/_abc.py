@@ -25,7 +25,7 @@ class VolumeTimeSensitivityInterface(eqx.Module):
     :param shuffle_indices: The indices to shuffle the input to the model.
     """
 
-    shuffle_indices: Sequence[int] = eqx.field(init=False)
+    shuffle_indices: Sequence[int] = eqx.field(init=False, static=True)
 
     @abstractmethod
     def get_logVT(self) -> Callable[[Array], Array]:

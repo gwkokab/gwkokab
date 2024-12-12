@@ -64,6 +64,15 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         scale_factor: int = 1,
         m_min: float = 0.5,
     ) -> None:
+        r"""Convenience class for loading a volume time sensitivity function generated
+        by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_.
+
+        :param parameters: The names of the parameters that the model expects.
+        :param filename: The filename of the volume time sensitivity function.
+        :param zero_spin: Load with zero spin or not. :code:`True` for zero spin, :code:`False` otherwise.
+        :param scale_factor: Scale factor for the volume time sensitivity function, defaults to 1
+        :param m_min: Minimum mass, defaults to 0.5
+        """
         self.m_min = m_min
         if (
             PRIMARY_MASS_SOURCE.name not in parameters
@@ -361,6 +370,18 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         scale_factor: int = 1,
         m_min: float = 0.5,
     ) -> None:
+        r"""Convenience class for loading a volume time sensitivity function generated
+        by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_
+        with calibrated corrections.
+
+        :param parameters: The names of the parameters that the model expects.
+        :param filename: The filename of the volume time sensitivity function.
+        :param zero_spin: Load with zero spin or not. :code:`True` for zero spin, :code:`False` otherwise.
+        :param coeffs: Coefficients for the basis functions
+        :param basis: Basis functions to use for the correction
+        :param scale_factor: Scale factor for the volume time sensitivity function, defaults to 1
+        :param m_min: Minimum mass, defaults to 0.5
+        """
         self.coeffs = coeffs
         if zero_spin:
             self.basis = _correction_bases_zero_spin[basis]
