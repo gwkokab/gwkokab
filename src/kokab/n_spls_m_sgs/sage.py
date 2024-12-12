@@ -38,7 +38,6 @@ from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
-    SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import (
@@ -222,7 +221,7 @@ def main() -> None:
     if args.erate_estimator == "IS":
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
-            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
+            parameters,
             jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
             args.n_samples,
             args.analysis_time,

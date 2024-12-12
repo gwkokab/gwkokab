@@ -214,7 +214,7 @@ def main() -> None:
     if args.erate_estimator == "IS":
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
-            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
+            parameters,
             jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
             args.n_samples,
             args.analysis_time,

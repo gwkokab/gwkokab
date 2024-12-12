@@ -28,6 +28,7 @@ from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
+    available as gwk_parameter,
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
@@ -366,7 +367,7 @@ def main() -> None:
     if args.erate_estimator == "IS":
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
-            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
+            [gwk_parameter[p] for p in parameters_name],
             jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
             args.n_samples,
             args.analysis_time,
