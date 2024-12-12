@@ -1184,6 +1184,7 @@ def test_dist_shape(jax_dist_cls, params, prepend_shape):
     if jax_dist_cls.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "HighMassRatioEffectiveSpinModel",
     ):
         pytest.skip(reason=f"{jax_dist_cls.__name__} does not provide sample method")
     if isinstance(jax_dist_cls, types.FunctionType):
