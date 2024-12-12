@@ -20,7 +20,7 @@ from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
 from jax.scipy.stats import truncnorm, uniform
-from jaxtyping import Array, Int, Real
+from jaxtyping import Array
 from numpyro.distributions import (
     CategoricalProbs,
     constraints,
@@ -53,7 +53,7 @@ __all__ = [
 
 
 def NDistribution(
-    distribution: Distribution, n: Int, *, validate_args=None, **params
+    distribution: Distribution, n: int, *, validate_args=None, **params
 ) -> MixtureGeneral:
     """Mixture of any :math:`n` distributions.
 
@@ -373,7 +373,7 @@ class MassGapModel(Distribution):
         )
         return jnp.log(-jnp.expm1(notch_filter_val))
 
-    def smoothing_kernel(self, mass: Array | Real) -> Array | Real:
+    def smoothing_kernel(self, mass: Array) -> Array:
         r"""See equation B4 in `Population Properties of Compact Objects from the
         Second LIGO-Virgo Gravitational-Wave Transient Catalog
         <https://arxiv.org/abs/2010.14533>`_.
@@ -483,12 +483,12 @@ class MassGapModel(Distribution):
 def FlexibleMixtureModel(
     N: int,
     weights: Array,
-    mu_Mc: Optional[Real] = None,
-    sigma_Mc: Optional[Real] = None,
-    mu_sz: Optional[Real] = None,
-    sigma_sz: Optional[Real] = None,
-    alpha_q: Optional[Real] = None,
-    q_min: Optional[Real] = None,
+    mu_Mc: Optional[float] = None,
+    sigma_Mc: Optional[float] = None,
+    mu_sz: Optional[float] = None,
+    sigma_sz: Optional[float] = None,
+    alpha_q: Optional[float] = None,
+    q_min: Optional[float] = None,
     *,
     validate_args=None,
     **params,

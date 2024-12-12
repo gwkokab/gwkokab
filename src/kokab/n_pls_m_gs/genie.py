@@ -20,7 +20,6 @@ from typing import List, Tuple
 
 import numpy as np
 from jax import numpy as jnp, random as jrd
-from jaxtyping import Int
 from numpyro import distributions as dist
 
 import gwkokab
@@ -154,7 +153,7 @@ def main() -> None:
         err_json,
     )
 
-    all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
+    all_params: List[Tuple[str, int]] = [
         ("alpha_pl", N_pl),
         ("beta_pl", N_pl),
         ("log_rate", N_pl + N_g),

@@ -16,7 +16,7 @@
 from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr
-from jaxtyping import Array, Bool, Int
+from jaxtyping import Array
 from numpyro.distributions import constraints, Distribution
 
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
@@ -40,15 +40,15 @@ build_redshift_distributions = create_powerlaw_redshift
 
 
 def _build_non_mass_distributions(
-    N: Int[int, ""],
+    N: int,
     component_type: Literal["pl", "g"],
     mass_distributions: List[Distribution],
-    use_spin: Bool[bool, "True", "False"],
-    use_tilt: Bool[bool, "True", "False"],
-    use_eccentricity: Bool[bool, "True", "False"],
-    use_redshift: Bool[bool, "True", "False"],
+    use_spin: bool,
+    use_tilt: bool,
+    use_eccentricity: bool,
+    use_redshift: bool,
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
     r"""Build distributions for non-mass parameters.
 
@@ -124,13 +124,13 @@ def _build_non_mass_distributions(
 
 
 def _build_pl_component_distributions(
-    N: Int[int, ""],
-    use_spin: Bool[bool, "True", "False"],
-    use_tilt: Bool[bool, "True", "False"],
-    use_eccentricity: Bool[bool, "True", "False"],
-    use_redshift: Bool[bool, "True", "False"],
+    N: int,
+    use_spin: bool,
+    use_tilt: bool,
+    use_eccentricity: bool,
+    use_redshift: bool,
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
     r"""Build distributions for power-law components.
 
@@ -172,13 +172,13 @@ def _build_pl_component_distributions(
 
 
 def _build_g_component_distributions(
-    N: Int[int, ""],
-    use_spin: Bool[bool, "True", "False"],
-    use_tilt: Bool[bool, "True", "False"],
-    use_eccentricity: Bool[bool, "True", "False"],
-    use_redshift: Bool[bool, "True", "False"],
+    N: int,
+    use_spin: bool,
+    use_tilt: bool,
+    use_eccentricity: bool,
+    use_redshift: bool,
     params: Dict[str, Array],
-    validate_args: Bool[Optional[bool], "True", "False", "None"] = None,
+    validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
     r"""Build distributions for Gaussian components.
 
@@ -224,10 +224,10 @@ def _build_g_component_distributions(
 def NSmoothedPowerlawMSmoothedGaussian(
     N_pl: int,
     N_g: int,
-    use_spin: Bool[bool, "True", "False"] = False,
-    use_tilt: Bool[bool, "True", "False"] = False,
-    use_eccentricity: Bool[bool, "True", "False"] = False,
-    use_redshift: Bool[bool, "True", "False"] = False,
+    use_spin: bool = False,
+    use_tilt: bool = False,
+    use_eccentricity: bool = False,
+    use_redshift: bool = False,
     *,
     validate_args=None,
     **params,

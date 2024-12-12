@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optax
 from jax import numpy as jnp, random as jrd
-from jaxtyping import Array, Float, PyTree
+from jaxtyping import Array, PyTree
 from rich.console import Console
 from rich.progress import (
     BarColumn,
@@ -36,7 +36,7 @@ from ._utils import make_model, mse_loss_fn, read_data, save_model
 
 
 def _train_test_data_split(
-    X: Float[Array, ""], Y: Float[Array, ""], batch_size: int, test_size: float = 0.2
+    X: Array, Y: Array, batch_size: int, test_size: float = 0.2
 ) -> tuple[Array, Array, Array, Array]:
     """Split the data into training and testing sets.
 

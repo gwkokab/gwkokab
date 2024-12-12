@@ -18,7 +18,6 @@ from typing_extensions import Any, List, Tuple
 
 import h5py
 import numpy as np
-from jaxtyping import Float, Int
 from matplotlib import pyplot as plt
 
 from kokab.utils.ppd import get_all_marginals
@@ -100,7 +99,7 @@ def make_parser() -> argparse.ArgumentParser:
 
 def get_domain(
     domain_as_read: Any,
-) -> List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]]:
+) -> List[Tuple[float, float, int]]:
     """Get the domain of the model per axis.
 
     :return: The domain of the model per axis.
@@ -117,9 +116,7 @@ def get_utf8_decoded_headers(headers_as_read: Any) -> List[str]:
     return [h.decode("utf-8") for h in headers_as_read]
 
 
-def get_quantiles(
-    data: Float[np.ndarray, "..."], quantiles: Float[np.ndarray, "..."]
-) -> Float[np.ndarray, "..."]:
+def get_quantiles(data: np.ndarray, quantiles: np.ndarray) -> np.ndarray:
     r"""Get the quantiles of the data.
 
     :return: The quantiles of the data.

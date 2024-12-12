@@ -20,13 +20,13 @@ import h5py
 import jax
 import numpy as np
 from jax import numpy as jnp
-from jaxtyping import Array, Float, Int
+from jaxtyping import Array
 
 
 def compute_probs(
-    logpdf: Callable[[Float[Array, "..."]], Float[Array, "..."]],
-    ranges: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
-) -> Float[Array, "..."]:
+    logpdf: Callable[[Array], Array],
+    ranges: List[Tuple[float, float, int]],
+) -> Array:
     r"""Compute the probability density function of a model.
 
     :param logpdf: A callable that computes the log-probability density function of
@@ -39,7 +39,7 @@ def compute_probs(
     max_axis = int(np.argmax([int(n) for _, _, n in ranges]))
 
     @partial(jax.vmap, in_axes=(max_axis,), out_axes=max_axis)
-    def _prob_vmapped(x: Float[Array, "..."]) -> Float[Array, "..."]:
+    def _prob_vmapped(x: Array) -> Array:
         x_expanded = jnp.expand_dims(x, axis=-2)
         prob = jnp.exp(logpdf(x_expanded))
         return prob
@@ -52,10 +52,10 @@ def compute_probs(
 
 
 def _compute_marginal_probs(
-    probs_array: Float[Array, "..."],
+    probs_array: Array,
     axis: int,
-    domain: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
-) -> Float[Array, "..."]:
+    domain: List[Tuple[float, float, int]],
+) -> Array:
     r"""Compute the marginal probabilities of a model.
 
     The function computes the marginal probabilities of a model by summing over the
@@ -84,9 +84,9 @@ def _compute_marginal_probs(
 
 
 def get_all_marginals(
-    probs: Float[Array, "..."],
-    domains: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
-) -> List[Float[Array, "..."]]:
+    probs: Array,
+    domains: List[Tuple[float, float, int]],
+) -> List[Array]:
     """Compute marginal probabilities for all axes.
 
     :param probs: The probability array.
@@ -96,7 +96,7 @@ def get_all_marginals(
     return [_compute_marginal_probs(probs, axis, domains) for axis in range(probs.ndim)]
 
 
-def get_ppd(probs: Float[Array, "..."], axis: Int[int, ""] = -1) -> Float[Array, "..."]:
+def get_ppd(probs: Array, axis: int = -1) -> Array:
     """Compute the posterior predictive distribution.
 
     :param probs: The probability array.
@@ -107,10 +107,10 @@ def get_ppd(probs: Float[Array, "..."], axis: Int[int, ""] = -1) -> Float[Array,
 
 
 def save_probs(
-    ppd_array: Float[Array, "..."],
-    marginal_probs: List[Float[Array, "..."]],
+    ppd_array: Array,
+    marginal_probs: List[Array],
     filename: str,
-    domains: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
+    domains: List[Tuple[float, float, int]],
     headers: List[str],
 ) -> None:
     assert ppd_array.ndim == len(
