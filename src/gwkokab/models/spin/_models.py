@@ -13,11 +13,12 @@
 # limitations under the License.
 
 
-from jax import numpy as jnp
+from jax import lax, numpy as jnp
 from numpyro.distributions import (
     Beta,
     CategoricalProbs,
     constraints,
+    Distribution,
     MixtureGeneral,
     MultivariateNormal,
     TransformedDistribution,
@@ -25,6 +26,7 @@ from numpyro.distributions import (
     Uniform,
 )
 from numpyro.distributions.transforms import AffineTransform
+from numpyro.distributions.util import promote_shapes, validate_sample
 
 from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 
@@ -132,3 +134,64 @@ def BetaFromMeanVar(
         ),
         validate_args=validate_args,
     )
+
+
+class HighMassRatioEffectiveSpinModel(Distribution):
+    r"""Model for the effective spin of high mass ratio systems.
+
+    See Eq. (D5) in section VII.B of `Population of Merging Compact Binaries
+    Inferred Using Gravitational Waves through GWTC-3
+    <https://link.aps.org/doi/10.1103/PhysRevX.13.011048>`_.
+
+
+    .. math::
+        p(\chi_{\text{eff}}\mid q,\alpha,\beta,\mu_0,\sigma_0) \propto
+        \exp{\left(-\frac{1}{2}\left(\frac{\chi_{\text{eff}}-\mu(q)}{\sigma(q)}\right)^2\right)}
+
+    with,
+
+    .. math::
+
+        \mu(q) = \mu_0 + \alpha(q-1) \qquad \log_{10}(\sigma(q)) = \log_{10}(\sigma_0) + \beta(q-1)
+    """
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "loc_0": constraints.real,
+        "scale_0": constraints.positive,
+    }
+    reparametrized_params = ["alpha", "beta", "loc_0", "scale_0"]
+    support = constraints.independent(
+        constraints.interval(jnp.array([-1, 0]), jnp.array([1, 1])), 1
+    )
+
+    def __init__(self, alpha, beta, loc_0, scale_0, *, validate_args=None) -> None:
+        """
+        :param alpha: Hyperparameter for the mean of the effective spin
+        :param beta: Hyperparameter for the standard deviation of the effective spin
+        :param loc_0: Hyperparameter for the mean of the mass ratio
+        :param scale_0: Hyperparameter for the standard deviation of the mass ratio
+        :param validate_args: Whether to enable validation of distribution, defaults to None
+        """
+        self.alpha, self.beta, self.loc_0, self.scale_0 = promote_shapes(
+            alpha, beta, loc_0, scale_0
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha),
+            jnp.shape(beta),
+            jnp.shape(loc_0),
+            jnp.shape(scale_0),
+        )
+
+        super(HighMassRatioEffectiveSpinModel, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+    @validate_sample
+    def log_prob(self, value):
+        chi_eff, one_less_q = value[..., 0], value[..., 1] - 1
+        loc_q = self.loc_0 + self.alpha * one_less_q
+        scale_q = self.scale_0 * jnp.power(10, self.beta * one_less_q)
+        quadratic = jnp.square((chi_eff - loc_q) / scale_q)
+        return -0.5 * jnp.log(2 * jnp.pi) - jnp.log(scale_q) - 0.5 * quadratic

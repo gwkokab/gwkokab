@@ -31,6 +31,7 @@ from .redshift import PowerlawRedshift as PowerlawRedshift
 from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
+    HighMassRatioEffectiveSpinModel as HighMassRatioEffectiveSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
 )
 

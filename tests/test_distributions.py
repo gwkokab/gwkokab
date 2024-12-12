@@ -25,6 +25,7 @@ from scipy.sparse import csr_matrix
 
 from gwkokab.cosmology import PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
 from gwkokab.models import (
+    HighMassRatioEffectiveSpinModel,
     NPowerlawMGaussian,
     NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
@@ -970,6 +971,14 @@ CONTINUOUS = [
             "use_eccentricity": True,
             **generic_nspmsg,
         },
+    ),
+    (
+        HighMassRatioEffectiveSpinModel,
+        {"alpha": 1.2, "beta": 3.2, "loc_0": 0.3, "scale_0": 2.0},
+    ),
+    (
+        HighMassRatioEffectiveSpinModel,
+        {"alpha": -1.2, "beta": 3.2, "loc_0": 1.8, "scale_0": 0.8},
     ),
 ]
 
