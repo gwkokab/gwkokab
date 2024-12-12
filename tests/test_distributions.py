@@ -1227,6 +1227,7 @@ def test_sample_gradient(jax_dist, params):
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "HighMassRatioEffectiveSpinModel",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
@@ -1283,6 +1284,7 @@ def test_jit_log_likelihood(jax_dist, params):
 
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
+        "HighMassRatioEffectiveSpinModel",
         "SmoothedPowerlawPrimaryMassRatio",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
@@ -1389,6 +1391,7 @@ def test_log_prob_gradient(jax_dist, params):
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "HighMassRatioEffectiveSpinModel",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
@@ -1505,6 +1508,7 @@ def test_expand(jax_dist, params, prepend_shape, sample_shape):
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "HighMassRatioEffectiveSpinModel",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
