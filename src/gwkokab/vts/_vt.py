@@ -15,12 +15,12 @@
 import sys
 from typing import List
 
+from ._abc import VolumeTimeSensitivityInterface
 from ._neuralvt import NeuralNetVolumeTimeSensitivity
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity,
     PopModelsVolumeTimeSensitivity,
 )
-from ._vt_abc import VolumeTimeSensitivityInterface
 
 
 def __getattr__(name):

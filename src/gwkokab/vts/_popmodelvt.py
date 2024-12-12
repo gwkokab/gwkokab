@@ -35,7 +35,7 @@ from gwkokab.utils.transformations import (
     symmetric_mass_ratio,
 )
 
-from ._vt_abc import VolumeTimeSensitivityInterface
+from ._abc import VolumeTimeSensitivityInterface
 
 
 def _check_and_get(name: str, f: h5py.File) -> Array:
