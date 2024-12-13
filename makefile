@@ -16,7 +16,8 @@ help:
 
 install: uninstall
 ifndef UV_CHECK
-	$(error "$(UV) is not installed. Please install it first")
+	@echo "UV is not installed. Proceeding with pip only."
+	$(PIP) install $(PIP_FLAGS) .
 endif
 	$(UV) $(PIP) install $(PIP_FLAGS) .
 
