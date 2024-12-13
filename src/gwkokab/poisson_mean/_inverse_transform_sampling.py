@@ -59,7 +59,6 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         self.num_samples = num_samples
         self.logVT_fn = jax.vmap(lambda xx: jnp.mean(jnp.exp(logVT_fn(xx))), in_axes=1)
 
-    @eqx.filter_jit
     def __call__(self, model: ScaledMixture) -> Array:
         values = model.component_sample(self.key, (self.num_samples,))
         VT = self.logVT_fn(values)

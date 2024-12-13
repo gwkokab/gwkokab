@@ -161,7 +161,6 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         )
         self.samples = proposal_samples
 
-    @eqx.filter_jit
     def __call__(self, model: ScaledMixture) -> Array:
         return jnp.mean(
             jnp.exp(self.log_weights + model.log_prob(self.samples)), axis=-1
