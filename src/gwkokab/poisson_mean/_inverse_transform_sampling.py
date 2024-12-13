@@ -37,7 +37,7 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
     This method is very useful when the target distribution is easy to sample from.
     """
 
-    logVT_fn: Callable[[ScaledMixture], Array] = eqx.field(init=False, static=True)
+    logVT_fn: Callable[[ScaledMixture], Array] = eqx.field(init=False)
     num_samples: int = eqx.field(init=False, static=True)
     key: PRNGKeyArray = eqx.field(init=False)
 
