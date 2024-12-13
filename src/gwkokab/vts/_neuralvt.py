@@ -24,7 +24,7 @@ from ._utils import load_model
 
 
 class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
-    model: eqx.nn.Sequential = eqx.field(init=False)
+    model: eqx.nn.Sequential = eqx.field(init=False, static=True)
 
     def __init__(self, parameters: Sequence[str], filename: str) -> None:
         """Convenience class for loading a neural vt.
