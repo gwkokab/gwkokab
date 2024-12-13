@@ -37,13 +37,13 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
     This method is very useful when the target distribution is easy to sample from.
     """
 
-    logVT_fn: Callable[[ScaledMixture], Array] = eqx.field(init=False)
+    logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
     num_samples: int = eqx.field(init=False, static=True)
     key: PRNGKeyArray = eqx.field(init=False)
 
     def __init__(
         self,
-        logVT_fn: Callable[[ScaledMixture], Array],
+        logVT_fn: Callable[[Array], Array],
         key: PRNGKeyArray,
         num_samples: int,
         scale: Union[int, float, Array] = 1.0,
@@ -57,10 +57,11 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         self.scale = scale
         self.key = key
         self.num_samples = num_samples
-        self.logVT_fn = jax.vmap(lambda xx: jnp.mean(jnp.exp(logVT_fn(xx))), in_axes=1)
+        self.logVT_fn = jax.vmap(logVT_fn, in_axes=1, out_axes=1)
 
     def __call__(self, model: ScaledMixture) -> Array:
         values = model.component_sample(self.key, (self.num_samples,))
-        VT = self.logVT_fn(values)
+        VT = jnp.exp(self.logVT_fn(values))
+        VT = jnp.mean(VT, axis=0)
         rates = jnp.exp(model._log_scales)
         return self.scale * jnp.dot(VT, rates)
