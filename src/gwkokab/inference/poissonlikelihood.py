@@ -67,7 +67,7 @@ class PoissonLikelihood(eqx.Module):
     """
 
     parameters: Sequence[Parameter] = eqx.field(static=True)
-    data: Sequence[Array]
+    data: Sequence[Array] = eqx.field(static=True)
     model: Callable[..., Distribution] = eqx.field(static=True)
     ref_priors: JointDistribution = eqx.field(static=True)
     priors: JointDistribution = eqx.field(static=True)
