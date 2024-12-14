@@ -39,7 +39,6 @@ from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
-    SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import (
