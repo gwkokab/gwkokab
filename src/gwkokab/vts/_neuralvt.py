@@ -21,7 +21,6 @@ from jaxtyping import Array
 
 from ._abc import VolumeTimeSensitivityInterface
 from ._utils import load_model
-from ._vt_abc import VolumeTimeSensitivityInterface
 
 
 class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
