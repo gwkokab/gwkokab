@@ -13,23 +13,21 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 from collections.abc import Sequence
 from typing_extensions import Callable
 
 from jax import numpy as jnp, vmap
-from jaxtyping import Array, Bool, Float
+from jaxtyping import Array
 
 from gwkokab.vts import load_model
 
 
 def get_logVT(
     vt_path: str, selection_indexes: Sequence[int]
-) -> Callable[[Float[Array, "..."]], Float[Array, "..."]]:
+) -> Callable[[Array], Array]:
     _, logVT = load_model(vt_path)
 
-    def trimmed_logVT(x: Float[Array, "..."]) -> Float[Array, "..."]:
+    def trimmed_logVT(x: Array) -> Array:
         m1q = x[..., selection_indexes]
         m2 = x[..., 0] * x[..., 1]
         m1m2 = m1q.at[..., 1].set(m2)
@@ -40,12 +38,12 @@ def get_logVT(
 
 
 def constraint(
-    x: Float[Array, "..."],
-    has_spin: Bool[bool, "True", "False"],
-    has_tilt: Bool[bool, "True", "False"],
-    has_eccentricity: Bool[bool, "True", "False"],
-    has_redshift: Bool[bool, "True", "False"],
-) -> Bool[Array, "..."]:
+    x: Array,
+    has_spin: bool,
+    has_tilt: bool,
+    has_eccentricity: bool,
+    has_redshift: bool,
+) -> Array:
     """Applies physical constraints to the input array.
 
     :param x: Input array where:

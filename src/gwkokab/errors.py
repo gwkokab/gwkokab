@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray

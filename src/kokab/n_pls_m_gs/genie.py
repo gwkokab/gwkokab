@@ -20,7 +20,6 @@ from typing import List, Tuple
 
 import numpy as np
 from jax import numpy as jnp, random as jrd
-from jaxtyping import Int
 from numpyro import distributions as dist
 
 import gwkokab
@@ -28,6 +27,7 @@ from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
+    available as gwk_parameter,
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
@@ -153,7 +153,7 @@ def main() -> None:
         err_json,
     )
 
-    all_params: List[Tuple[str, Int[int, "N_pl", "N_g"]]] = [
+    all_params: List[Tuple[str, int]] = [
         ("alpha_pl", N_pl),
         ("beta_pl", N_pl),
         ("log_rate", N_pl + N_g),
@@ -370,7 +370,7 @@ def main() -> None:
     if args.erate_estimator == "IS":
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
-            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
+            [gwk_parameter[p] for p in parameters_name],
             jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
             args.n_samples,
             args.analysis_time,

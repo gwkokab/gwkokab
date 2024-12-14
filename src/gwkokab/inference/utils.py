@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
 
 import os
 from typing_extensions import Optional
@@ -20,7 +19,6 @@ from typing_extensions import Optional
 import numpy as np
 from flowMC.Sampler import Sampler
 from jax import random as jrd
-from jaxtyping import Int
 
 
 def save_data_from_sampler(
@@ -28,7 +26,7 @@ def save_data_from_sampler(
     *,
     out_dir: str,
     labels: Optional[list[str]] = None,
-    n_samples: Int = 5000,
+    n_samples: int = 5000,
 ) -> None:
     """This functions saves the data from a sampler to disk. The data saved includes
     the samples from the flow, the chains from the training and production phases,

@@ -12,14 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from __future__ import annotations
 
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing_extensions import Callable, Dict, List, Tuple, Union
 
 import pandas as pd
-from jaxtyping import Array, Bool, Float, Int
+from jaxtyping import Array
 
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
 from gwkokab.parameters import (
@@ -45,8 +44,8 @@ def make_parser() -> ArgumentParser:
 def load_configuration(
     constants_file: str, nf_samples_mapping_file: str
 ) -> Tuple[
-    Dict[str, Union[Int[int, ""], Float[float, ""], Bool[bool, ""]]],
-    Dict[str, Int[int, ""]],
+    Dict[str, Union[int, float, bool]],
+    Dict[str, int],
 ]:
     try:
         with open(constants_file, "r") as f:
@@ -59,10 +58,10 @@ def load_configuration(
 
 
 def get_model_pdf(
-    constants: Dict[str, Union[Int[int, ""], Float[float, ""], Bool[bool, ""]]],
-    nf_samples_mapping: Dict[str, Int[int, ""]],
-    rate_scaled: Bool[bool, ""] = False,
-) -> Callable[[Float[Array, "..."]], Float[Array, "..."]]:
+    constants: Dict[str, Union[int, float, bool]],
+    nf_samples_mapping: Dict[str, int],
+    rate_scaled: bool = False,
+) -> Callable[[Array], Array]:
     nf_samples = pd.read_csv(
         "sampler_data/nf_samples.dat", delimiter=" ", skiprows=1
     ).to_numpy()
@@ -85,8 +84,8 @@ def get_model_pdf(
 
 
 def compute_and_save_ppd(
-    logpdf: Callable[[Float[Array, "..."]], Float[Array, "..."]],
-    domains: List[Tuple[Float[float, ""], Float[float, ""], Int[int, ""]]],
+    logpdf: Callable[[Array], Array],
+    domains: List[Tuple[float, float, int]],
     output_file: str,
     parameters: List[str],
 ) -> None:

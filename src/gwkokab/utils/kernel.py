@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 import jax
 from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array

@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 
+from ._abc import VolumeTimeSensitivityInterface as VolumeTimeSensitivityInterface
 from ._neuralvt import NeuralNetVolumeTimeSensitivity as NeuralNetVolumeTimeSensitivity
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity as PopModelsCalibratedVolumeTimeSensitivity,
@@ -28,4 +29,3 @@ from ._utils import (
     save_model as save_model,
 )
 from ._vt import available as available
-from ._vt_abc import VolumeTimeSensitivityInterface as VolumeTimeSensitivityInterface

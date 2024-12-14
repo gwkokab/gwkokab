@@ -15,6 +15,7 @@
 import sys
 from typing import List
 
+from ._abc import VolumeTimeSensitivityInterface
 from ._neuralvt import NeuralNetVolumeTimeSensitivity
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity,
@@ -40,13 +41,14 @@ def __getattr__(name):
 class _Available:
     names: List[str] = [
         "NeuralNetVolumeTimeSensitivity",
+        "PopModelsCalibratedVolumeTimeSensitivity",
         "PopModelsVolumeTimeSensitivity",
     ]
 
-    def keys(self):
+    def keys(self) -> List[str]:
         return self.names
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> VolumeTimeSensitivityInterface:
         return sys.modules[__name__].__getattr__(key)
 
     def __repr__(self) -> str:

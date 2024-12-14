@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import constraints

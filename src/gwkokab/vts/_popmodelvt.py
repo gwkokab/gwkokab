@@ -35,7 +35,7 @@ from gwkokab.utils.transformations import (
     symmetric_mass_ratio,
 )
 
-from ._vt_abc import VolumeTimeSensitivityInterface
+from ._abc import VolumeTimeSensitivityInterface
 
 
 def _check_and_get(name: str, f: h5py.File) -> Array:
@@ -64,6 +64,15 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         scale_factor: int = 1,
         m_min: float = 0.5,
     ) -> None:
+        r"""Convenience class for loading a volume time sensitivity function generated
+        by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_.
+
+        :param parameters: The names of the parameters that the model expects.
+        :param filename: The filename of the volume time sensitivity function.
+        :param zero_spin: Load with zero spin or not. :code:`True` for zero spin, :code:`False` otherwise.
+        :param scale_factor: Scale factor for the volume time sensitivity function, defaults to 1
+        :param m_min: Minimum mass, defaults to 0.5
+        """
         self.m_min = m_min
         if (
             PRIMARY_MASS_SOURCE.name not in parameters
@@ -361,6 +370,18 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         scale_factor: int = 1,
         m_min: float = 0.5,
     ) -> None:
+        r"""Convenience class for loading a volume time sensitivity function generated
+        by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_
+        with calibrated corrections.
+
+        :param parameters: The names of the parameters that the model expects.
+        :param filename: The filename of the volume time sensitivity function.
+        :param zero_spin: Load with zero spin or not. :code:`True` for zero spin, :code:`False` otherwise.
+        :param coeffs: Coefficients for the basis functions
+        :param basis: Basis functions to use for the correction
+        :param scale_factor: Scale factor for the volume time sensitivity function, defaults to 1
+        :param m_min: Minimum mass, defaults to 0.5
+        """
         self.coeffs = coeffs
         if zero_spin:
             self.basis = _correction_bases_zero_spin[basis]
@@ -376,11 +397,12 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
             xs = x[..., self.shuffle_indices]
             m1, m2 = xs[..., 0], xs[..., 1]
             x_converted = [m1, m2, *xs[..., 2:]]
-            correction = jnp.zeros(())
+
             # Loop over the basis functions and multiply by the coefficients
             # https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L487-492
-            for coeff, base in zip(self.coeffs, self.basis):
-                correction += coeff * base(*x_converted)
+            basis_values = jnp.array([base(*x_converted) for base in self.basis])
+            correction = jnp.dot(self.coeffs, basis_values)
+
             logM, qtilde = self.mass_grid_coords(m1, m2)
             query = (logM, qtilde, *xs[..., 2:])
             safe_correction = jnp.where(correction < 0, 1.0, correction)

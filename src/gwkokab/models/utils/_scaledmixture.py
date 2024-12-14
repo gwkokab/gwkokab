@@ -13,13 +13,11 @@
 # limitations under the License.
 
 
-from __future__ import annotations
-
 from typing_extensions import List
 
 import jax
 from jax import numpy as jnp
-from jaxtyping import Array, Float
+from jaxtyping import Array
 from numpyro.distributions import CategoricalProbs, Distribution
 from numpyro.distributions.mixtures import MixtureGeneral
 from numpyro.distributions.util import validate_sample
@@ -53,7 +51,7 @@ class ScaledMixture(MixtureGeneral):
 
     def __init__(
         self,
-        log_scales: Float[Array, "..."],
+        log_scales: Array,
         component_distributions: List[Distribution],
         *,
         support=None,
@@ -83,9 +81,7 @@ class ScaledMixture(MixtureGeneral):
         return self._log_scales + component_log_probs
 
     @validate_sample
-    def log_prob(
-        self, value: Float[Array, "..."], intermediates=None
-    ) -> Float[Array, "..."]:
+    def log_prob(self, value: Array, intermediates=None) -> Array:
         # https://github.com/pyro-ppl/numpyro/issues/1870
         del intermediates
         sum_log_probs = self.component_log_probs(value)
