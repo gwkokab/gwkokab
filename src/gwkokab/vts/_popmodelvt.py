@@ -382,7 +382,7 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         :param scale_factor: Scale factor for the volume time sensitivity function, defaults to 1
         :param m_min: Minimum mass, defaults to 0.5
         """
-        self.coeffs = coeffs
+        self.coeffs = jnp.array(coeffs)
         if zero_spin:
             self.basis = _correction_bases_zero_spin[basis]
         else:
@@ -401,7 +401,7 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
             # Loop over the basis functions and multiply by the coefficients
             # https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L487-492
             basis_values = jnp.array([base(*x_converted) for base in self.basis])
-            correction = jnp.dot(self.coeffs, basis_values)
+            correction = jnp.dot(jnp.array(self.coeffs), basis_values)
 
             logM, qtilde = self.mass_grid_coords(m1, m2)
             query = (logM, qtilde, *xs[..., 2:])
