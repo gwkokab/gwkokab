@@ -211,14 +211,18 @@ def main() -> None:
         else:
             all_params.extend(
                 [
-                    ("chi1_alpha_g", N_g),
-                    ("chi1_alpha_pl", N_pl),
-                    ("chi1_beta_g", N_g),
-                    ("chi1_beta_pl", N_pl),
-                    ("chi2_alpha_g", N_g),
-                    ("chi2_alpha_pl", N_pl),
-                    ("chi2_beta_g", N_g),
-                    ("chi2_beta_pl", N_pl),
+                    ("chi1_mean_g", N_g),
+                    ("chi1_mean_pl", N_pl),
+                    ("chi1_scale_g", N_g),
+                    ("chi1_scale_pl", N_pl),
+                    ("chi1_variance_g", N_g),
+                    ("chi1_variance_pl", N_pl),
+                    ("chi2_mean_g", N_g),
+                    ("chi2_mean_pl", N_pl),
+                    ("chi2_scale_g", N_g),
+                    ("chi2_scale_pl", N_pl),
+                    ("chi2_variance_g", N_g),
+                    ("chi2_variance_pl", N_pl),
                 ]
             )
 
