@@ -61,5 +61,13 @@ def match_all(
         if not pattern_found:
             matches[string] = None
     for duplicate in duplicates:
-        matches[duplicate] = matches[pattern_dict_with_val[duplicate]]
+        pattern_found = False
+        for pattern, value in pattern_dict_with_val.items():
+            if matches_regex(pattern, duplicate):
+                matches[duplicate] = value
+                pattern_found = True
+                break
+        if not pattern_found:
+            matches[duplicate] = None
+
     return matches
