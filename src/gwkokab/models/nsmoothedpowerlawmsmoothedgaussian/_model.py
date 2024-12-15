@@ -22,7 +22,6 @@ from numpyro.distributions import constraints, Distribution
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..utils import (
     combine_distributions,
-    create_beta_distributions,
     create_powerlaw_redshift,
     create_smoothed_gaussians,
     create_smoothed_powerlaws,
@@ -33,7 +32,7 @@ from ..utils import (
 )
 
 
-build_spin_distributions = create_beta_distributions
+build_spin_distributions = create_truncated_normal_distributions
 build_tilt_distributions = create_truncated_normal_distributions_for_cos_tilt
 build_eccentricity_distributions = create_truncated_normal_distributions
 build_redshift_distributions = create_powerlaw_redshift

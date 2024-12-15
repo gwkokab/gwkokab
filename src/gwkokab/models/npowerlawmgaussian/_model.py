@@ -23,7 +23,6 @@ from gwkokab.models.constraints import any_constraint
 
 from ..utils import (
     combine_distributions,
-    create_beta_distributions,
     create_powerlaw_redshift,
     create_powerlaws,
     create_truncated_normal_distributions,
@@ -33,7 +32,7 @@ from ..utils import (
 )
 
 
-build_spin_distributions = create_beta_distributions
+build_spin_distributions = create_truncated_normal_distributions
 build_tilt_distributions = create_truncated_normal_distributions_for_cos_tilt
 build_eccentricity_distributions = create_truncated_normal_distributions
 build_redshift_distributions = create_powerlaw_redshift

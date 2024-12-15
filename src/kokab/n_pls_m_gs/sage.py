@@ -26,7 +26,7 @@ import gwkokab
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.utils import create_truncated_normal_distributions
+from gwkokab.models.utils import create_beta_distributions
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -88,9 +88,9 @@ def make_parser() -> ArgumentParser:
         help="Do not include eccentricity in the model.",
     )
     model_group.add_argument(
-        "--spin-truncated-normal",
+        "--spin-beta",
         action="store_true",
-        help="Use truncated normal distributions for spin parameters.",
+        help="Use beta distributions for spin parameters.",
     )
 
     return parser
@@ -146,11 +146,28 @@ def main() -> None:
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
 
     if has_spin:
+        gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+            create_beta_distributions
+        )
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
-        if args.spin_truncated_normal:
-            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
-                create_truncated_normal_distributions
+        if args.spin_beta:
+            all_params.extend(
+                [
+                    ("chi1_mean_g", N_g),
+                    ("chi1_mean_pl", N_pl),
+                    ("chi1_scale_g", N_g),
+                    ("chi1_scale_pl", N_pl),
+                    ("chi1_variance_g", N_g),
+                    ("chi1_variance_pl", N_pl),
+                    ("chi2_mean_g", N_g),
+                    ("chi2_mean_pl", N_pl),
+                    ("chi2_scale_g", N_g),
+                    ("chi2_scale_pl", N_pl),
+                    ("chi2_variance_g", N_g),
+                    ("chi2_variance_pl", N_pl),
+                ]
             )
+        else:
             all_params.extend(
                 [
                     ("chi1_high_g", N_g),
@@ -169,23 +186,6 @@ def main() -> None:
                     ("chi2_low_pl", N_pl),
                     ("chi2_scale_g", N_g),
                     ("chi2_scale_pl", N_pl),
-                ]
-            )
-        else:
-            all_params.extend(
-                [
-                    ("chi1_mean_g", N_g),
-                    ("chi1_mean_pl", N_pl),
-                    ("chi1_scale_g", N_g),
-                    ("chi1_scale_pl", N_pl),
-                    ("chi1_variance_g", N_g),
-                    ("chi1_variance_pl", N_pl),
-                    ("chi2_mean_g", N_g),
-                    ("chi2_mean_pl", N_pl),
-                    ("chi2_scale_g", N_g),
-                    ("chi2_scale_pl", N_pl),
-                    ("chi2_variance_g", N_g),
-                    ("chi2_variance_pl", N_pl),
                 ]
             )
     if has_tilt:
