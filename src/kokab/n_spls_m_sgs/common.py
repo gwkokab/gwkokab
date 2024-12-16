@@ -63,11 +63,11 @@ def constraint(
     :return: Boolean array indicating which samples satisfy the constraints.
     """
     m1 = x[..., 0]
-    q = x[..., 1]
+    m2 = x[..., 1]
 
     mask = m1 > 0.0
-    mask &= q > 0.0
-    mask &= q <= 1.0
+    mask &= m2 > 0.0
+    mask &= m1 >= m2
 
     i = 2
 
