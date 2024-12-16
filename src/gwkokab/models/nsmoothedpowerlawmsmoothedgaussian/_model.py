@@ -348,9 +348,15 @@ def NSmoothedPowerlawMSmoothedGaussian(
     N = N_pl + N_g
     log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
 
-    return ScaledMixture(
+    base_dist = ScaledMixture(
         log_rates,
         component_dists,
         support=constraints.real_vector,
+        validate_args=validate_args,
+    )
+
+    return TransformedDistribution(
+        base_distribution=base_dist,
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
         validate_args=validate_args,
     )
