@@ -35,10 +35,10 @@ from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
-    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
+    SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import (
@@ -152,7 +152,7 @@ def main() -> None:
         ("high_g", N_g),
     ]
 
-    parameters = [PRIMARY_MASS_SOURCE, MASS_RATIO]
+    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
 
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
