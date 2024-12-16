@@ -283,7 +283,7 @@ def create_smoothed_powerlaws(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[SmoothedPowerlawPrimaryMassRatio]:
+) -> List[TransformedDistribution]:
     r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws.
 
     :param N: Number of components
@@ -319,7 +319,7 @@ def create_smoothed_powerlaws(
         if delta is None:
             raise ValueError(f"Missing parameter {delta_name}_{i}")
 
-        powerlaw = SmoothedPowerlawPrimaryMassRatio(
+        smoothed_powerlaw = SmoothedPowerlawPrimaryMassRatio(
             alpha=alpha,
             beta=beta,
             mmin=mmin,
@@ -327,7 +327,12 @@ def create_smoothed_powerlaws(
             delta=delta,
             validate_args=validate_args,
         )
-        smoothed_powerlaws_collection.append(powerlaw)
+        transformed_smoothed_powerlaw = TransformedDistribution(
+            base_distribution=smoothed_powerlaw,
+            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            validate_args=validate_args,
+        )
+        smoothed_powerlaws_collection.append(transformed_smoothed_powerlaw)
     return smoothed_powerlaws_collection
 
 
@@ -335,7 +340,7 @@ def create_smoothed_gaussians(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[SmoothedPowerlawPrimaryMassRatio]:
+) -> List[TransformedDistribution]:
     r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions.
 
     :param N: Number of components
@@ -386,5 +391,10 @@ def create_smoothed_gaussians(
             high=high,
             validate_args=validate_args,
         )
-        smoothed_gaussians_collection.append(smoothed_gaussian)
+        transformed_smoothed_gaussian = TransformedDistribution(
+            base_distribution=smoothed_gaussian,
+            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            validate_args=validate_args,
+        )
+        smoothed_gaussians_collection.append(transformed_smoothed_gaussian)
     return smoothed_gaussians_collection
