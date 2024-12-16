@@ -17,10 +17,9 @@ from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution, TransformedDistribution
+from numpyro.distributions import constraints, Distribution
 
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
-from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
@@ -350,15 +349,9 @@ def NSmoothedPowerlawMSmoothedGaussian(
     N = N_pl + N_g
     log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
 
-    base_dist = ScaledMixture(
+    return ScaledMixture(
         log_rates,
         component_dists,
         support=constraints.real_vector,
-        validate_args=validate_args,
-    )
-
-    return TransformedDistribution(
-        base_distribution=base_dist,
-        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
         validate_args=validate_args,
     )
