@@ -19,8 +19,6 @@ from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
 from numpyro.distributions import constraints, Distribution, TransformedDistribution
 
-from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
-from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
@@ -151,7 +149,7 @@ def _build_pl_component_distributions(
     mass_distributions = jtr.map(
         lambda powerlaw: [powerlaw],
         smoothed_powerlaws,
-        is_leaf=lambda x: isinstance(x, SmoothedPowerlawPrimaryMassRatio),
+        is_leaf=lambda x: isinstance(x, TransformedDistribution),
     )
 
     build_distributions = _build_non_mass_distributions(
@@ -201,7 +199,7 @@ def _build_g_component_distributions(
     mass_distributions = jtr.map(
         lambda m1q: [m1q],
         m1_q_dists,
-        is_leaf=lambda x: isinstance(x, SmoothedGaussianPrimaryMassRatio),
+        is_leaf=lambda x: isinstance(x, TransformedDistribution),
     )
 
     build_distributions = _build_non_mass_distributions(
@@ -350,15 +348,9 @@ def NSmoothedPowerlawMSmoothedGaussian(
     N = N_pl + N_g
     log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
 
-    base_dist = ScaledMixture(
+    return ScaledMixture(
         log_rates,
         component_dists,
         support=constraints.real_vector,
-        validate_args=validate_args,
-    )
-
-    return TransformedDistribution(
-        base_distribution=base_dist,
-        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
         validate_args=validate_args,
     )
