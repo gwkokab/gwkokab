@@ -17,9 +17,8 @@ from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution
+from numpyro.distributions import constraints, Distribution, TransformedDistribution
 
-from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
@@ -150,7 +149,7 @@ def _build_pl_component_distributions(
     mass_distributions = jtr.map(
         lambda powerlaw: [powerlaw],
         smoothed_powerlaws,
-        is_leaf=lambda x: isinstance(x, SmoothedPowerlawPrimaryMassRatio),
+        is_leaf=lambda x: isinstance(x, TransformedDistribution),
     )
 
     build_distributions = _build_non_mass_distributions(
@@ -200,7 +199,7 @@ def _build_g_component_distributions(
     mass_distributions = jtr.map(
         lambda m1q: [m1q],
         m1_q_dists,
-        is_leaf=lambda x: isinstance(x, SmoothedGaussianPrimaryMassRatio),
+        is_leaf=lambda x: isinstance(x, TransformedDistribution),
     )
 
     build_distributions = _build_non_mass_distributions(
