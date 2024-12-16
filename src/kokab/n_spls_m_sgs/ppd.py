@@ -20,7 +20,9 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 import pandas as pd
 from jaxtyping import Array
 
+import gwkokab
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
+from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -98,6 +100,11 @@ def compute_and_save_ppd(
 def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
+
+    if args.spin_truncated_normal:
+        gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+            create_truncated_normal_distributions
+        )
 
     if not str(args.filename).endswith(".hdf5"):
         raise ValueError("Output file must be an HDF5 file.")
