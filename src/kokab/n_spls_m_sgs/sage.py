@@ -157,9 +157,7 @@ def main() -> None:
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
         if args.spin_truncated_normal:
-            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
-                create_truncated_normal_distributions
-            )
+            gwkokab.models.nsmoothedpowerlawmsmoothedgaussian._model.build_spin_distributions = create_truncated_normal_distributions
             all_params.extend(
                 [
                     ("chi1_high_g", N_g),
