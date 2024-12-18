@@ -88,7 +88,6 @@ def main() -> None:
         prior_dict = json.load(f)
 
     model_parameters = [
-        "log_rate",
         "lambda_peak",
         "lamb",
         "loc_m",
