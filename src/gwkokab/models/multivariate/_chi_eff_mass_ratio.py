@@ -106,16 +106,16 @@ class ChiEffMassRatioIndependent(Distribution):
             kappa,
         )
         batch_shape = lax.broadcast_shapes(
-            lambda_peak.shape,
-            lamb.shape,
-            loc_m.shape,
-            scale_m.shape,
-            mmin.shape,
-            mmax.shape,
-            gamma.shape,
-            mu_eff.shape,
-            sigma_eff.shape,
-            kappa.shape,
+            jnp.shape(lambda_peak),
+            jnp.shape(lamb),
+            jnp.shape(loc_m),
+            jnp.shape(scale_m),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(gamma),
+            jnp.shape(mu_eff),
+            jnp.shape(sigma_eff),
+            jnp.shape(kappa),
         )
         super(ChiEffMassRatioIndependent, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
@@ -240,18 +240,18 @@ class ChiEffMassRatioCorrelated(Distribution):
             kappa,
         )
         batch_shape = lax.broadcast_shapes(
-            lambda_peak.shape,
-            lamb.shape,
-            loc_m.shape,
-            scale_m.shape,
-            mmin.shape,
-            mmax.shape,
-            gamma.shape,
-            alpha.shape,
-            beta.shape,
-            mu_eff_0.shape,
-            log10_sigma_eff_0.shape,
-            kappa.shape,
+            jnp.shape(lambda_peak),
+            jnp.shape(lamb),
+            jnp.shape(loc_m),
+            jnp.shape(scale_m),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(gamma),
+            jnp.shape(alpha),
+            jnp.shape(beta),
+            jnp.shape(mu_eff_0),
+            jnp.shape(log10_sigma_eff_0),
+            jnp.shape(kappa),
         )
         super(ChiEffMassRatioIndependent, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
