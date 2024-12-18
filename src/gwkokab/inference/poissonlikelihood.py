@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import warnings
 from collections.abc import Callable, Mapping, Sequence
 
 import equinox as eqx
@@ -72,14 +73,14 @@ class PoissonLikelihood(eqx.Module):
     ref_priors: JointDistribution = eqx.field(static=True)
     priors: JointDistribution = eqx.field(static=True)
     variables_index: Mapping[str, int] = eqx.field(static=True)
-    ERate_fn: Callable[[ScaledMixture], Array] = eqx.field(static=True)
+    ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=True)
 
     def __init__(
         self,
         model: Bake,
         parameters: Sequence[Parameter],
         data: Sequence[Array],
-        ERate_fn: Callable[[ScaledMixture], Array],
+        ERate_fn: Callable[[Distribution | ScaledMixture], Array],
     ) -> None:
         self.data = data
         self.model = model
@@ -87,9 +88,11 @@ class PoissonLikelihood(eqx.Module):
         self.ERate_fn = ERate_fn
 
         dummy_model = model.get_dummy()
-        assert isinstance(
-            dummy_model, ScaledMixture
-        ), "Model must be a scaled mixture model."
+        if not isinstance(dummy_model, ScaledMixture):
+            warnings.warn(
+                "The model provided is not a ScaledMixture. This means rate estimation "
+                "will not be possible."
+            )
 
         variables, duplicates, self.model = model.get_dist()
         self.variables_index = {key: i for i, key in enumerate(variables.keys())}
@@ -113,7 +116,7 @@ class PoissonLikelihood(eqx.Module):
 
         debug_flush("mapped params: {mp}", mp=mapped_params)
 
-        model: ScaledMixture = self.model(**mapped_params)
+        model: Distribution = self.model(**mapped_params)
 
         log_likelihood = jtr.reduce(
             lambda x, y: x

@@ -58,7 +58,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
 
     def __init__(
         self,
-        logVT_fn: Callable[[ScaledMixture], Array],
+        logVT_fn: Callable[[Array], Array],
         parameters: Sequence[Parameter],
         key: PRNGKeyArray,
         num_samples: int,
