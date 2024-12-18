@@ -122,23 +122,14 @@ class Cosmology(object):
             Dc = self.z_to_Dc(z, dz=dz)
         return jnp.log(4 * jnp.pi) + 2 * jnp.log(Dc) + jnp.log(self.dDcdz(z))
 
-    def z_to_Dc(self, z, dz=DEFAULT_DZ):
+    def z_to_Dc(self, z):
         """Return Dc for each z specified."""
-        max_z = jnp.max(z)
-        if jnp.greater(max_z, jnp.max(self.z)):
-            self.extend(max_z=max_z, dz=dz)
         return jnp.interp(z, self.z, self.Dc)
 
-    def DL_to_z(self, DL, dz=DEFAULT_DZ):
+    def DL_to_z(self, DL):
         """Returns redshifts for each DL specified."""
-        max_DL = jnp.max(DL)
-        if max_DL > jnp.max(self.DL):  # need to extend the integration
-            self.extend(max_DL=max_DL, dz=dz)
         return jnp.interp(DL, self.DL, self.z)
 
-    def z_to_DL(self, z, dz=DEFAULT_DZ):
+    def z_to_DL(self, z):
         """Returns luminosity distance at the specified redshifts."""
-        max_z = jnp.max(z)
-        if max_z > jnp.max(self.z):
-            self.extend(max_z=max_z, dz=dz)
         return jnp.interp(z, self.z, self.DL)
