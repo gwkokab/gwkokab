@@ -31,7 +31,6 @@ Spin
 
     BetaFromMeanVar
     GaussianSpinModel
-    HighMassRatioEffectiveSpinModel
     IndependentSpinOrientationGaussianIsotropic
 
 
