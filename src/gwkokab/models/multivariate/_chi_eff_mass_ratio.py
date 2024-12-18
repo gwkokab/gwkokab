@@ -125,7 +125,7 @@ class ChiEffMassRatioIndependent(Distribution):
             lamb=self.kappa,
             z_max=3.0 + 1e-6,
             zgrid=zgrid,
-            dVcdz=PLANCK_2015_Cosmology.dVcdz(zgrid),
+            dVcdz=4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid),
         )
         super(ChiEffMassRatioIndependent, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
@@ -268,7 +268,7 @@ class ChiEffMassRatioCorrelated(PowerlawRedshift):
             lamb=self.kappa,
             z_max=3.0 + 1e-6,
             zgrid=zgrid,
-            dVcdz=PLANCK_2015_Cosmology.dVcdz(zgrid),
+            dVcdz=4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid),
         )
         super(ChiEffMassRatioCorrelated, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
