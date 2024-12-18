@@ -111,15 +111,15 @@ class Cosmology(object):
         dDc = self.c_over_Ho / self.z_to_E(z)
         return dDc
 
-    def dVcdz(self, z, Dc=None, dz=DEFAULT_DZ):
+    def dVcdz(self, z, Dc=None):
         """Return dVc/dz."""
-        return jnp.exp(self.logdVcdz(z, Dc=Dc, dz=dz))
+        return jnp.exp(self.logdVcdz(z, Dc=Dc))
 
-    def logdVcdz(self, z, Dc=None, dz=DEFAULT_DZ):
+    def logdVcdz(self, z, Dc=None):
         """Return ln(dVc/dz), useful when constructing probability distributions
         without overflow errors."""
         if Dc is None:
-            Dc = self.z_to_Dc(z, dz=dz)
+            Dc = self.z_to_Dc(z)
         return jnp.log(4 * jnp.pi) + 2 * jnp.log(Dc) + jnp.log(self.dDcdz(z))
 
     def z_to_Dc(self, z):
