@@ -25,18 +25,34 @@ from gwkokab.models.utils import doubly_truncated_power_law_log_prob
 from gwkokab.utils.transformations import chieff, mass_ratio
 
 
-class ChiEffMassRatioConstraint(constraints.ParameterFreeConstraint):
+class ChiEffMassRatioConstraint(constraints.Constraint):
     is_discrete = False
     event_dim = 1
 
+    def __init__(self, mmin, mmax):
+        self.mmin = mmin
+        self.mmax = mmax
+
     def __call__(self, x):
-        m1, m2, chi_eff, z = x[..., 0], x[..., 1], x[..., 2], x[..., 3]
-        mask = m2 > 0.0
+        m1, m2, a1, a2, z = (
+            x[..., 0],
+            x[..., 1],
+            x[..., 2],
+            x[..., 3],
+            x[..., 4],
+        )
+        mask = m2 > self.mmin
         mask &= m1 >= m2
-        mask &= chi_eff >= -1.0
-        mask &= chi_eff <= 1.0
+        mask &= m1 <= self.mmax
+        mask &= a1 >= 0.0
+        mask &= a1 <= 1.0
+        mask &= a2 >= 0.0
+        mask &= a2 <= 1.0
         mask &= z >= 0.0
         return mask
+
+    def tree_flatten(self):
+        return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
 
 class ChiEffMassRatioIndependent(Distribution):
@@ -64,8 +80,7 @@ class ChiEffMassRatioIndependent(Distribution):
         "sigma_eff",
         "kappa",
     ]
-    support = ChiEffMassRatioConstraint()
-    pytree_data_fields = ("_z_powerlaw",)
+    pytree_data_fields = ("_z_powerlaw", "_support")
 
     def __init__(
         self,
@@ -128,9 +143,14 @@ class ChiEffMassRatioIndependent(Distribution):
             zgrid=zgrid,
             dVcdz=4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid),
         )
+        self._support = ChiEffMassRatioConstraint(mmin=self.mmin, mmax=self.mmax)
         super(ChiEffMassRatioIndependent, self).__init__(
             event_shape=(5,), batch_shape=batch_shape, validate_args=validate_args
         )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self):
+        return self._support
 
     @validate_sample
     def log_prob(self, value):
@@ -206,8 +226,7 @@ class ChiEffMassRatioCorrelated(Distribution):
         "log10_sigma_eff_0",
         "kappa",
     ]
-    support = ChiEffMassRatioConstraint()
-    pytree_data_fields = ("_z_powerlaw",)
+    pytree_data_fields = ("_z_powerlaw", "_support")
 
     def __init__(
         self,
@@ -278,9 +297,14 @@ class ChiEffMassRatioCorrelated(Distribution):
             zgrid=zgrid,
             dVcdz=4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid),
         )
+        self._support = ChiEffMassRatioConstraint(mmin=self.mmin, mmax=self.mmax)
         super(ChiEffMassRatioCorrelated, self).__init__(
             event_shape=(5,), batch_shape=batch_shape, validate_args=validate_args
         )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self):
+        return self._support
 
     @validate_sample
     def log_prob(self, value):
@@ -307,8 +331,12 @@ class ChiEffMassRatioCorrelated(Distribution):
         log_prob_m1 = jnp.log(prob_m1)
 
         # log_prob(m2)
-        log_prob_m2 = doubly_truncated_power_law_log_prob(
-            x=m2, alpha=self.gamma, low=self.mmin, high=m1
+        log_prob_m2 = jnp.where(
+            m2 >= self.mmin,
+            doubly_truncated_power_law_log_prob(
+                x=m2, alpha=self.gamma, low=self.mmin, high=m1
+            ),
+            jnp.full_like(m2, -jnp.inf),
         )
 
         # log_prob(chi_eff)
