@@ -45,7 +45,7 @@ class ChiEffMassRatioIndependent(Distribution):
         "mmin": constraints.positive,
         "mmax": constraints.positive,
         "gamma": constraints.real,
-        "mu_eff": constraints.interval(jnp.array([-1, 1])),
+        "mu_eff": constraints.interval(-1, 1),
         "sigma_eff": constraints.positive,
         "kappa": constraints.real,
     }
@@ -171,7 +171,7 @@ class ChiEffMassRatioCorrelated(Distribution):
         "gamma": constraints.real,
         "alpha": constraints.real,
         "beta": constraints.real,
-        "mu_eff_0": constraints.interval(jnp.array([-1, 1])),
+        "mu_eff_0": constraints.interval(-1, 1),
         "log10_sigma_eff_0": constraints.real,
         "kappa": constraints.real,
     }
