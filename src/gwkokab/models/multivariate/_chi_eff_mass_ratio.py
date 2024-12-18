@@ -128,12 +128,18 @@ class ChiEffMassRatioIndependent(Distribution):
             dVcdz=4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid),
         )
         super(ChiEffMassRatioIndependent, self).__init__(
-            event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
+            event_shape=(5,), batch_shape=batch_shape, validate_args=validate_args
         )
 
     @validate_sample
     def log_prob(self, value):
-        m1, m2, chi_eff, z = value[..., 0], value[..., 1], value[..., 2], value[..., 3]
+        m1, m2, a1, a2, z = (
+            value[..., 0],
+            value[..., 1],
+            value[..., 2],
+            value[..., 3],
+            value[..., 4],
+        )
         # log_prob(m1)
         prob_m1 = (1 - self.lambda_peak) * jnp.exp(
             doubly_truncated_power_law_log_prob(
@@ -155,6 +161,7 @@ class ChiEffMassRatioIndependent(Distribution):
         )
 
         # log_prob(chi_eff)
+        chi_eff = (m1 * a1 + m2 * a2) / (m1 + m2)
         log_prob_chi_eff = truncnorm.logpdf(
             x=chi_eff,
             a=(-1.0 - self.mu_eff) / self.sigma_eff,
@@ -271,12 +278,18 @@ class ChiEffMassRatioCorrelated(Distribution):
             dVcdz=4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid),
         )
         super(ChiEffMassRatioCorrelated, self).__init__(
-            event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
+            event_shape=(5,), batch_shape=batch_shape, validate_args=validate_args
         )
 
     @validate_sample
     def log_prob(self, value):
-        m1, m2, chi_eff, z = value[..., 0], value[..., 1], value[..., 2], value[..., 3]
+        m1, m2, a1, a2, z = (
+            value[..., 0],
+            value[..., 1],
+            value[..., 2],
+            value[..., 3],
+            value[..., 4],
+        )
         # log_prob(m1)
         prob_m1 = (1 - self.lambda_peak) * jnp.exp(
             doubly_truncated_power_law_log_prob(
@@ -299,6 +312,7 @@ class ChiEffMassRatioCorrelated(Distribution):
 
         # log_prob(chi_eff)
         q = m2 / m1
+        chi_eff = (a1 + q * a2) / (1 + q)
         mu_eff = self.mu_eff_0 + self.alpha * (q - 1)
         sigma_eff = jnp.power(10, self.log10_sigma_eff_0 + self.beta * (q - 1))
         log_prob_chi_eff = truncnorm.logpdf(

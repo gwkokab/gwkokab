@@ -25,10 +25,11 @@ from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
 from gwkokab.models import ChiEffMassRatioCorrelated, ChiEffMassRatioIndependent
 from gwkokab.parameters import (
-    EFFECTIVE_SPIN_MAGNITUDE,
     PRIMARY_MASS_SOURCE,
+    PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
     SECONDARY_MASS_SOURCE,
+    SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import (
     ImportanceSamplingPoissonMean,
@@ -115,7 +116,8 @@ def main() -> None:
     parameters = [
         PRIMARY_MASS_SOURCE,
         SECONDARY_MASS_SOURCE,
-        EFFECTIVE_SPIN_MAGNITUDE,
+        PRIMARY_SPIN_MAGNITUDE,
+        SECONDARY_SPIN_MAGNITUDE,
         REDSHIFT,
     ]
 
