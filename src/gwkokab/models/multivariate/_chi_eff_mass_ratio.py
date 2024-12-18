@@ -22,7 +22,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from gwkokab.models.utils import doubly_truncated_power_law_log_prob
 
 
-class ChiEffMassRatioConstraint(constraints.Constraint):
+class ChiEffMassRatioConstraint(constraints.ParameterFreeConstraint):
     is_discrete = False
     event_dim = 1
 
