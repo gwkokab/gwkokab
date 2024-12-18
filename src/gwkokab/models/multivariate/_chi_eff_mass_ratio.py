@@ -19,6 +19,8 @@ from jaxtyping import Array
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
+from gwkokab.cosmology import PLANCK_2015_Cosmology
+from gwkokab.models.redshift import PowerlawRedshift
 from gwkokab.models.utils import doubly_truncated_power_law_log_prob
 
 
@@ -62,6 +64,7 @@ class ChiEffMassRatioIndependent(Distribution):
         "kappa",
     ]
     support = ChiEffMassRatioConstraint()
+    pytree_data_fields = ("_z_powerlaw",)
 
     def __init__(
         self,
@@ -117,6 +120,13 @@ class ChiEffMassRatioIndependent(Distribution):
             jnp.shape(sigma_eff),
             jnp.shape(kappa),
         )
+        zgrid = jnp.linspace(0.001, 3.0 + 1e-6, 100)
+        self._z_powerlaw = PowerlawRedshift(
+            lamb=self.kappa,
+            z_max=3.0 + 1e-6,
+            zgrid=zgrid,
+            dVcdz=PLANCK_2015_Cosmology.dVcdz(zgrid),
+        )
         super(ChiEffMassRatioIndependent, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
         )
@@ -154,13 +164,12 @@ class ChiEffMassRatioIndependent(Distribution):
         )
 
         # log_prob(z)
-        # note: we have not applied the comoving volume factor
-        log_prob_z = jnp.power(1 + z, self.kappa - 1)
+        log_prob_z = self._z_powerlaw.log_prob(z)
 
         return log_prob_m1 + log_prob_m2 + log_prob_chi_eff + log_prob_z
 
 
-class ChiEffMassRatioCorrelated(Distribution):
+class ChiEffMassRatioCorrelated(PowerlawRedshift):
     arg_constraints = {
         "lambda_peak": constraints.real,
         "lamb": constraints.real,
@@ -190,6 +199,7 @@ class ChiEffMassRatioCorrelated(Distribution):
         "kappa",
     ]
     support = ChiEffMassRatioConstraint()
+    pytree_data_fields = ("_z_powerlaw",)
 
     def __init__(
         self,
@@ -253,6 +263,13 @@ class ChiEffMassRatioCorrelated(Distribution):
             jnp.shape(log10_sigma_eff_0),
             jnp.shape(kappa),
         )
+        zgrid = jnp.linspace(0.001, 3.0 + 1e-6, 100)
+        self._z_powerlaw = PowerlawRedshift(
+            lamb=self.kappa,
+            z_max=3.0 + 1e-6,
+            zgrid=zgrid,
+            dVcdz=PLANCK_2015_Cosmology.dVcdz(zgrid),
+        )
         super(ChiEffMassRatioCorrelated, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
         )
@@ -293,7 +310,6 @@ class ChiEffMassRatioCorrelated(Distribution):
         )
 
         # log_prob(z)
-        # note: we have not applied the comoving volume factor
-        log_prob_z = jnp.power(1 + z, self.kappa - 1)
+        log_prob_z = self._z_powerlaw.log_prob(z)
 
         return log_prob_m1 + log_prob_m2 + log_prob_chi_eff + log_prob_z
