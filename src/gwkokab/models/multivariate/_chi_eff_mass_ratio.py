@@ -169,7 +169,7 @@ class ChiEffMassRatioIndependent(Distribution):
         return log_prob_m1 + log_prob_m2 + log_prob_chi_eff + log_prob_z
 
 
-class ChiEffMassRatioCorrelated(PowerlawRedshift):
+class ChiEffMassRatioCorrelated(Distribution):
     arg_constraints = {
         "lambda_peak": constraints.real,
         "lamb": constraints.real,
