@@ -36,7 +36,7 @@ class ChiEffMassRatioConstraint(constraints.Constraint):
         return mask
 
 
-class ChiEffMassRatioUncorrelated(Distribution):
+class ChiEffMassRatioIndependent(Distribution):
     arg_constraints = {
         "lambda_peak": constraints.real,
         "lamb": constraints.real,
@@ -117,7 +117,7 @@ class ChiEffMassRatioUncorrelated(Distribution):
             sigma_eff.shape,
             kappa.shape,
         )
-        super(ChiEffMassRatioUncorrelated, self).__init__(
+        super(ChiEffMassRatioIndependent, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
         )
 
@@ -169,6 +169,8 @@ class ChiEffMassRatioCorrelated(Distribution):
         "mmin": constraints.positive,
         "mmax": constraints.positive,
         "gamma": constraints.real,
+        "alpha": constraints.real,
+        "beta": constraints.real,
         "mu_eff_0": constraints.interval(jnp.array([-1, 1])),
         "log10_sigma_eff_0": constraints.real,
         "kappa": constraints.real,
@@ -181,6 +183,8 @@ class ChiEffMassRatioCorrelated(Distribution):
         "mmin",
         "mmax",
         "gamma",
+        "alpha",
+        "beta",
         "mu_eff_0",
         "log10_sigma_eff_0",
         "kappa",
@@ -249,7 +253,7 @@ class ChiEffMassRatioCorrelated(Distribution):
             log10_sigma_eff_0.shape,
             kappa.shape,
         )
-        super(ChiEffMassRatioUncorrelated, self).__init__(
+        super(ChiEffMassRatioIndependent, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
         )
 

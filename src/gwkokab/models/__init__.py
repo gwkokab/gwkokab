@@ -23,6 +23,11 @@ from ._models import (
     SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
+from .multivariate import (
+    ChiEffMassRatioConstraint as ChiEffMassRatioConstraint,
+    ChiEffMassRatioCorrelated as ChiEffMassRatioCorrelated,
+    ChiEffMassRatioIndependent as ChiEffMassRatioIndependent,
+)
 from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
 from .nsmoothedpowerlawmsmoothedgaussian import (
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
