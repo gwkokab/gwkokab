@@ -357,7 +357,7 @@ _correction_bases_aligned_spin = {
 
 
 class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
-    coeffs: Sequence[int | float] = eqx.field(converter=list, init=False, static=True)
+    coeffs: Array = eqx.field(converter=jnp.asarray, init=False, static=True)
     basis: Sequence[Callable[..., float | Array]] = eqx.field(init=False, static=True)
 
     def __init__(
@@ -382,7 +382,7 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         :param scale_factor: Scale factor for the volume time sensitivity function, defaults to 1
         :param m_min: Minimum mass, defaults to 0.5
         """
-        self.coeffs = coeffs
+        self.coeffs = jnp.asarray(coeffs)
         if zero_spin:
             self.basis = _correction_bases_zero_spin[basis]
         else:

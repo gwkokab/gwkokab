@@ -20,14 +20,16 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 import pandas as pd
 from jaxtyping import Array
 
+import gwkokab
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
+from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
-    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
+    SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
 
@@ -99,6 +101,11 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
+    if args.spin_truncated_normal:
+        gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+            create_truncated_normal_distributions
+        )
+
     if not str(args.filename).endswith(".hdf5"):
         raise ValueError("Output file must be an HDF5 file.")
 
@@ -110,7 +117,7 @@ def main() -> None:
     has_tilt = constants.get("use_tilt", False)
     has_eccentricity = constants.get("use_eccentricity", False)
 
-    parameters = [PRIMARY_MASS_SOURCE.name, MASS_RATIO.name]
+    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
     if has_tilt:

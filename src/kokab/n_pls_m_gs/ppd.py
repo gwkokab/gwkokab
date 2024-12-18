@@ -20,7 +20,9 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 import pandas as pd
 from jaxtyping import Array
 
+import gwkokab
 from gwkokab.models import NPowerlawMGaussian
+from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -37,6 +39,13 @@ from ..utils import ppd, ppd_parser
 def make_parser() -> ArgumentParser:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = ppd_parser.get_parser(parser)
+
+    model_group = parser.add_argument_group("Model Options")
+    model_group.add_argument(
+        "--spin-truncated-normal",
+        action="store_true",
+        help="Use truncated normal distributions for spin parameters.",
+    )
 
     return parser
 
@@ -98,6 +107,11 @@ def compute_and_save_ppd(
 def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
+
+    if args.spin_truncated_normal:
+        gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+            create_truncated_normal_distributions
+        )
 
     if not str(args.filename).endswith(".hdf5"):
         raise ValueError("Output file must be an HDF5 file.")

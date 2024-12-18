@@ -14,8 +14,7 @@
 
 
 import re
-from typing import TypeVar
-from typing_extensions import Dict, List
+from typing import Dict, List, TypeVar
 
 
 _VT = TypeVar("_VT")
@@ -40,6 +39,7 @@ def match_all(
     :param pattern_dict_with_val: dictionary of regex patterns with values
     :return: dictionary of matched patterns with values
     """
+    # TODO(Qazalbash): Simplify the logic
     matches: Dict[str, str | _VT | None] = {}
     duplicates = []
     for string in strings:
@@ -61,5 +61,17 @@ def match_all(
         if not pattern_found:
             matches[string] = None
     for duplicate in duplicates:
-        matches[duplicate] = matches[pattern_dict_with_val[duplicate]]
+        pattern_found = False
+        for pattern, value in pattern_dict_with_val.items():
+            matched_duplicate = matches_regex(pattern, pattern_dict_with_val[duplicate])
+            if not isinstance(value, list) and matched_duplicate:  # do not match list
+                matches[duplicate] = value
+                pattern_found = True
+                break
+            elif isinstance(value, list):
+                pattern_found = True
+                matches[duplicate] = pattern_dict_with_val[duplicate]
+        if not pattern_found:
+            matches[duplicate] = None
+
     return matches
