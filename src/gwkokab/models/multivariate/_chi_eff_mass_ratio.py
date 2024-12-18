@@ -253,7 +253,7 @@ class ChiEffMassRatioCorrelated(Distribution):
             jnp.shape(log10_sigma_eff_0),
             jnp.shape(kappa),
         )
-        super(ChiEffMassRatioIndependent, self).__init__(
+        super(ChiEffMassRatioCorrelated, self).__init__(
             event_shape=(4,), batch_shape=batch_shape, validate_args=validate_args
         )
 
