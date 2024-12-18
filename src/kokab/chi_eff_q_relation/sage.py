@@ -18,7 +18,6 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-import numpy as np
 from jax import random as jrd
 
 from gwkokab.debug import enable_debugging
@@ -129,14 +128,14 @@ def main() -> None:
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
             parameters,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
     elif args.erate_estimator == "ITS":
         erate_estimator = InverseTransformSamplingPoissonMean(
             logVT,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
