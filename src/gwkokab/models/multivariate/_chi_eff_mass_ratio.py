@@ -41,7 +41,7 @@ class ChiEffMassRatioConstraint(constraints.Constraint):
             x[..., 3],
             x[..., 4],
         )
-        mask = m2 > self.mmin
+        mask = m2 >= self.mmin
         mask &= m1 >= m2
         mask &= m1 <= self.mmax
         mask &= a1 >= 0.0
@@ -332,11 +332,11 @@ class ChiEffMassRatioCorrelated(Distribution):
 
         # log_prob(m2)
         log_prob_m2 = jnp.where(
-            m2 >= self.mmin,
+            jnp.less_equal(m1, self.mmin),
+            -jnp.inf,
             doubly_truncated_power_law_log_prob(
                 x=m2, alpha=self.gamma, low=self.mmin, high=m1
             ),
-            jnp.full_like(m2, -jnp.inf),
         )
 
         # log_prob(chi_eff)
