@@ -67,6 +67,8 @@ class PowerlawRedshift(Distribution):
 
     arg_constraints = {"z_max": constraints.positive, "lamb": constraints.real}
     reparametrized_params = ["z_max", "lamb"]
+    pytree_aux_fields = ("zs", "dVdc_", "pdfs", "norm", "cdfgrid")
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self, lamb, z_max, zgrid, dVcdz, low=0.0, high=1000.0, validate_args=None
