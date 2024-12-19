@@ -40,6 +40,13 @@ def make_parser() -> ArgumentParser:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = ppd_parser.get_parser(parser)
 
+    model_group = parser.add_argument_group("Model Options")
+    model_group.add_argument(
+        "--spin-truncated-normal",
+        action="store_true",
+        help="Use truncated normal distributions for spin parameters.",
+    )
+
     return parser
 
 
