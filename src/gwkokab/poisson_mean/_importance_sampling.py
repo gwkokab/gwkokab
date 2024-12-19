@@ -162,6 +162,10 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         self.samples = proposal_samples
 
     def __call__(self, model: ScaledMixture) -> Array:
-        return jnp.mean(
-            jnp.exp(self.log_weights + model.log_prob(self.samples)), axis=-1
+        log_prob = model.log_prob(self.samples)
+
+        probs = jnp.where(
+            jnp.isneginf(log_prob), 0.0, jnp.exp(self.log_weights + log_prob)
         )
+
+        return jnp.mean(probs, axis=-1)
