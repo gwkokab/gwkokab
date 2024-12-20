@@ -109,9 +109,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.spin_truncated_normal:
-        gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
-            create_truncated_normal_distributions
-        )
+        gwkokab.models.nsmoothedpowerlawmsmoothedgaussian._model.build_spin_distributions = create_truncated_normal_distributions
 
     if not str(args.filename).endswith(".hdf5"):
         raise ValueError("Output file must be an HDF5 file.")
