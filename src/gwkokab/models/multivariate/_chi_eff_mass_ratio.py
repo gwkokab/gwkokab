@@ -328,28 +328,40 @@ class ChiEffMassRatioCorrelated(Distribution):
             loc=self.loc_m,
             scale=self.scale_m,
         )
+
         log_prob_m1 = jnp.log(prob_m1)
 
         # log_prob(m2)
+        invalid_mass_mask = jnp.less_equal(m1, self.mmin)
+        safe_m1 = jnp.where(invalid_mass_mask, self.mmin + 2.0, m1)
+        safe_m2 = jnp.where(invalid_mass_mask, self.mmin + 2.0, m2)
         log_prob_m2 = jnp.where(
-            jnp.less_equal(m1, self.mmin),
+            invalid_mass_mask,
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
-                x=m2, alpha=self.gamma, low=self.mmin, high=m1
+                x=safe_m2, alpha=self.gamma, low=self.mmin, high=safe_m1
             ),
         )
 
         # log_prob(chi_eff)
-        q = mass_ratio(m1=m1, m2=m2)
-        chi_eff = chieff(m1=m1, m2=m2, chi1z=a1, chi2z=a2)
+        invalid_mass_mask = jnp.less(m1, m2)
+        q = jnp.where(invalid_mass_mask, 1.0, mass_ratio(m1=m1, m2=m2))
+        chi_eff = jnp.where(
+            invalid_mass_mask, 1.0, chieff(m1=m1, m2=m2, chi1z=a1, chi2z=a2)
+        )
         mu_eff = self.mu_eff_0 + self.alpha * (q - 1)
         sigma_eff = jnp.power(10, self.log10_sigma_eff_0 + self.beta * (q - 1))
-        log_prob_chi_eff = truncnorm.logpdf(
-            x=chi_eff,
-            a=(-1.0 - mu_eff) / sigma_eff,
-            b=(1.0 - mu_eff) / sigma_eff,
-            loc=mu_eff,
-            scale=sigma_eff,
+
+        log_prob_chi_eff = jnp.where(
+            invalid_mass_mask,
+            -jnp.inf,
+            truncnorm.logpdf(
+                x=chi_eff,
+                a=(-1.0 - mu_eff) / sigma_eff,
+                b=(1.0 - mu_eff) / sigma_eff,
+                loc=mu_eff,
+                scale=sigma_eff,
+            ),
         )
 
         # log_prob(z)
