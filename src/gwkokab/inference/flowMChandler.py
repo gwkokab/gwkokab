@@ -91,10 +91,10 @@ class flowMChandler(object):
 
         :param debug_nans: Whether to debug NaNs, defaults to False
         """
+        sampler = self.make_sampler()
         if debug_nans:
             with jax.debug_nans(True):
-                sampler = self.make_sampler()
+                sampler.sample(self.initial_position, self.data)
         else:
-            sampler = self.make_sampler()
-        sampler.sample(self.initial_position, self.data)
+            sampler.sample(self.initial_position, self.data)
         save_data_from_sampler(sampler, **self.data_dump_kwargs)
