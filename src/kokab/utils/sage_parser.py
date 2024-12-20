@@ -109,4 +109,12 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
 
+    debug_group = parser.add_argument_group("Debug Options")
+    debug_group.add_argument(
+        "--debug-nans",
+        help="Checks for NaNs in each computation. See details in the documentation: "
+        "https://jax.readthedocs.io/en/latest/_autosummary/jax.debug_nans.html#jax.debug_nans.",
+        action="store_true",
+    )
+
     return parser

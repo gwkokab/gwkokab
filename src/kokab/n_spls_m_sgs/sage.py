@@ -305,4 +305,4 @@ def main() -> None:
         **FLOWMC_HANDLER_KWARGS,
     )
 
-    handler.run()
+    handler.run(args.debug_nans)
