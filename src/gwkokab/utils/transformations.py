@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+from typing import Optional
+
 import jax
 from chex import Numeric
 from jax import numpy as jnp
@@ -34,17 +36,37 @@ def total_mass(m1: Numeric, m2: Numeric) -> Numeric:
     return m1 + m2
 
 
-def _mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
+def _mass_ratio_from_m1_m2(m1: Numeric, m2: Numeric) -> Numeric:
     safe_m1 = jnp.where(m1 == 0.0, 1.0, m1)
     return jnp.where(m1 == 0.0, jnp.inf, m2 / safe_m1)
 
 
-def mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
+def _mass_ratio_from_eta(eta: Numeric) -> Numeric:
+    """
+    implementation reference: https://lscsoft.docs.ligo.org/bilby/api/bilby.gw.conversion.symmetric_mass_ratio_to_mass_ratio.html
+    """
+    temp = 1.0 / (2.0 * eta) - 1.0
+    return temp - jnp.sqrt(jnp.square(temp) - 1.0)
+
+
+def mass_ratio(
+    *,
+    m1: Optional[Numeric] = None,
+    m2: Optional[Numeric] = None,
+    eta: Optional[Numeric] = None,
+) -> Numeric:
     r"""
     .. math::
         q(m_1, m_2) = \frac{m_2}{m_1}
+
+    .. math::
+        q(\eta) = \frac{1}{2\eta} - 1 - \sqrt{\left(\frac{1}{2\eta} - 1\right)^2 - 1}
     """
-    return jax.jit(_mass_ratio, inline=True)(m1=m1, m2=m2)
+    if m1 is not None and m2 is not None and eta is not None:
+        raise ValueError("Only one of (m1, m2) or eta should be provided.")
+    if eta is not None:
+        return jax.jit(_mass_ratio_from_eta, inline=True)(eta=eta)
+    return jax.jit(_mass_ratio_from_m1_m2, inline=True)(m1=m1, m2=m2)
 
 
 def _chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
@@ -74,18 +96,32 @@ def log_chirp_mass(m1: Numeric, m2: Numeric) -> Numeric:
     return jax.jit(_log_chirp_mass, inline=True)(m1=m1, m2=m2)
 
 
-def _symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
+def _symmetric_mass_ratio_from_m1_m2(m1: Numeric, m2: Numeric) -> Numeric:
     M = total_mass(m1=m1, m2=m2)
     m1m2 = m1_times_m2(m1=m1, m2=m2)
     return m1m2 * jnp.power(M, -2.0)
 
 
-def symmetric_mass_ratio(m1: Numeric, m2: Numeric) -> Numeric:
+def _symmetric_mass_ratio_from_q(q: Numeric) -> Numeric:
+    safe_q = jnp.where(q == -1.0, 1.0, q)
+    return jnp.where(q == -1.0, jnp.inf, safe_q / jnp.square(1 + safe_q))
+
+
+def symmetric_mass_ratio(
+    *, m1: Optional[Numeric], m2: Optional[Numeric], q: Optional[Numeric] = None
+) -> Numeric:
     r"""
     .. math::
         \eta(m_1, m_2) = \frac{m_1m_2}{(m_1 + m_2)^2}
+
+    .. math::
+        \eta(q) = \frac{q}{(1 + q)^2}
     """
-    return jax.jit(_symmetric_mass_ratio, inline=True)(m1=m1, m2=m2)
+    if m1 is not None and m2 is not None and q is not None:
+        raise ValueError("Only one of (m1, m2) or q should be provided.")
+    if q is not None:
+        return jax.jit(_symmetric_mass_ratio_from_q, inline=True)(q=q)
+    return jax.jit(_symmetric_mass_ratio_from_m1_m2, inline=True)(m1=m1, m2=m2)
 
 
 def _reduced_mass(m1: Numeric, m2: Numeric) -> Numeric:
@@ -222,7 +258,9 @@ def m1_m2_chi1z_chi2z_to_chiminus(
     )
 
 
-def _chieff(m1: Numeric, m2: Numeric, chi1z: Numeric, chi2z: Numeric) -> Numeric:
+def _chi_eff_by_m1_m2(
+    m1: Numeric, m2: Numeric, chi1z: Numeric, chi2z: Numeric
+) -> Numeric:
     m1_chi1z = m1 * chi1z
     m2_chi2z = m2 * chi2z
     M = total_mass(m1=m1, m2=m2)
@@ -230,12 +268,46 @@ def _chieff(m1: Numeric, m2: Numeric, chi1z: Numeric, chi2z: Numeric) -> Numeric
     return jnp.where(M == 0, jnp.inf, m_dot_chi / M)
 
 
-def chieff(m1: Numeric, m2: Numeric, chi1z: Numeric, chi2z: Numeric) -> Numeric:
+def _chi_eff_by_q(q: Numeric, chi1z: Numeric, chi2z: Numeric) -> Numeric:
+    safe_q = jnp.where(q == -1.0, 1.0, q)
+    safe_chi_eff = jnp.where(q == -1.0, 1.0, (chi1z + safe_q * chi2z) / (1 + safe_q))
+    return safe_chi_eff
+
+
+def chi_eff(
+    *,
+    chi1z: Numeric,
+    chi2z: Numeric,
+    m1: Optional[Numeric] = None,
+    m2: Optional[Numeric] = None,
+    q: Optional[Numeric] = None,
+) -> Numeric:
     r"""
     .. math::
         \chi_{\text{eff}}(m_1, m_2, \chi_{1z}, \chi_{2z}) = \frac{m_1\chi_{1z} + m_2\chi_{2z}}{m_1 + m_2}
+
+    .. math::
+        \chi_{\text{eff}}(q, \chi_{1z}, \chi_{2z}) = \frac{\chi_{1z} + q\chi_{2z}}{1 + q}
     """
-    return jax.jit(_chieff, inline=True)(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
+    if m1 is not None and m2 is not None and q is not None:
+        raise ValueError("Only one of (m1, m2) or q should be provided.")
+    if q is not None:
+        return jax.jit(_chi_eff_by_q, inline=True)(q=q, chi1z=chi1z, chi2z=chi2z)
+    return jax.jit(_chi_eff_by_m1_m2, inline=True)(
+        m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z
+    )
+
+
+def _chi_a(chi1z: Numeric, chi2z: Numeric) -> Numeric:
+    return (chi1z + chi2z) * 0.5
+
+
+def chi_a(chi1z: Numeric, chi2z: Numeric) -> Numeric:
+    r"""
+    .. math::
+        \chi_a(\chi_{1z}, \chi_{2z}) = \frac{\chi_{1z} + \chi_{2z}}{2}
+    """
+    return jax.jit(_chi_a, inline=True)(chi1z=chi1z, chi2z=chi2z)
 
 
 def m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
@@ -254,7 +326,7 @@ def m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
     """
     chi1z = chi_costilt_to_chiz(chi=chi1, costilt=costilt1)
     chi2z = chi_costilt_to_chiz(chi=chi2, costilt=costilt2)
-    return chieff(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
+    return chi_eff(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
 
 
 def m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(
