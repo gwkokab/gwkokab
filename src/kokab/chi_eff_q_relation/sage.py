@@ -22,7 +22,7 @@ from jax import random as jrd
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
-from gwkokab.models import ChiEffMassRatioCorrelated, ChiEffMassRatioIndependent
+from gwkokab.models import ChiEffMassRatioCorrelated
 from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
@@ -47,13 +47,6 @@ from ..utils.common import (
 def make_parser() -> ArgumentParser:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = sage_parser.get_parser(parser)
-
-    model_group = parser.add_argument_group("Model Options")
-    model_group.add_argument(
-        "--independent",
-        help="Use the independent model i.e. no correlation between chi_eff and q",
-        action="store_true",
-    )
 
     return parser
 
@@ -87,29 +80,26 @@ def main() -> None:
         prior_dict = json.load(f)
 
     model_parameters = [
-        "lambda_peak",
-        "lamb",
-        "loc_m",
-        "scale_m",
-        "mmin",
-        "mmax",
+        "alpha",
+        "beta",
         "gamma",
         "kappa",
+        "lamb",
+        "lambda_peak",
+        "loc_m",
+        "log10_sigma_eff_0",
+        "mmax",
+        "mmin",
+        "mu_eff_0",
+        "scale_m",
     ]
-
-    if args.independent:
-        model = ChiEffMassRatioIndependent
-        model_parameters.extend(["mu_eff", "sigma_eff"])
-    else:
-        model = ChiEffMassRatioCorrelated
-        model_parameters.extend(["alpha", "beta", "mu_eff_0", "log10_sigma_eff_0"])
 
     model_prior_param = get_processed_priors(
         model_parameters,
         prior_dict,
     )
 
-    model = Bake(model)(**model_prior_param)
+    model = Bake(ChiEffMassRatioCorrelated)(**model_prior_param)
 
     parameters = [
         PRIMARY_MASS_SOURCE,

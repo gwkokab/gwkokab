@@ -26,7 +26,6 @@ from ._models import (
 from .multivariate import (
     ChiEffMassRatioConstraint as ChiEffMassRatioConstraint,
     ChiEffMassRatioCorrelated as ChiEffMassRatioCorrelated,
-    ChiEffMassRatioIndependent as ChiEffMassRatioIndependent,
 )
 from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
 from .nsmoothedpowerlawmsmoothedgaussian import (
