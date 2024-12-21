@@ -118,10 +118,20 @@ class PoissonLikelihood(eqx.Module):
 
         model: Distribution = self.model(**mapped_params)
 
+        def _nth_prob(y: Array) -> Array:
+            """Calculate the likelihood for the nth event.
+
+            :param y: The data for the nth event.
+            """
+            _log_prob = model.log_prob(y) - self.ref_priors.log_prob(y)
+            return jnn.logsumexp(
+                _log_prob,
+                axis=-1,
+                where=~jnp.isneginf(_log_prob),  # to avoid nans
+            ) - jnp.log(y.shape[0])
+
         log_likelihood = jtr.reduce(
-            lambda x, y: x
-            + jnn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
-            - jnp.log(y.shape[0]),
+            lambda x, y: x + _nth_prob(y),
             self.data,
             jnp.zeros(()),
             is_leaf=lambda x: isinstance(x, Array),
