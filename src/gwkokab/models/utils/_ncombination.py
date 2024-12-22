@@ -279,12 +279,14 @@ def create_powerlaw_redshift(
     return powerlaw_redshift_collection
 
 
-def create_smoothed_powerlaws(
+def create_smoothed_powerlaws_raw(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws.
+    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary
+    mass and mass ratio. We call it the raw version because it does not include the
+    transformation to component masses.
 
     :param N: Number of components
     :param params: dictionary of parameters
@@ -327,21 +329,18 @@ def create_smoothed_powerlaws(
             delta=delta,
             validate_args=validate_args,
         )
-        transformed_smoothed_powerlaw = TransformedDistribution(
-            base_distribution=smoothed_powerlaw,
-            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-            validate_args=validate_args,
-        )
-        smoothed_powerlaws_collection.append(transformed_smoothed_powerlaw)
+        smoothed_powerlaws_collection.append(smoothed_powerlaw)
     return smoothed_powerlaws_collection
 
 
-def create_smoothed_gaussians(
+def create_smoothed_gaussians_raw(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions.
+    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary
+    mass and mass ratio. We call it the raw version because it does not include the
+    transformation to component masses.
 
     :param N: Number of components
     :param params: dictionary of parameters
@@ -391,6 +390,55 @@ def create_smoothed_gaussians(
             high=high,
             validate_args=validate_args,
         )
+        smoothed_gaussians_collection.append(smoothed_gaussian)
+    return smoothed_gaussians_collection
+
+
+def create_smoothed_powerlaws(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[TransformedDistribution]:
+    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary
+    mass and secondary mass. It includes the transformation to component masses.
+
+    :param N: Number of components
+    :param params: dictionary of parameters
+    :param validate_args: whether to validate arguments, defaults to None
+    :raises ValueError: if alpha, beta, mmin, mmax or delta is missing
+    :return: list of SmoothedPowerlawPrimaryMassRatio for powerlaws
+    """
+    smoothed_powerlaws_collection = create_smoothed_powerlaws_raw(
+        N, params, validate_args
+    )
+    for smoothed_powerlaw in smoothed_powerlaws_collection:
+        transformed_smoothed_powerlaw = TransformedDistribution(
+            base_distribution=smoothed_powerlaw,
+            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            validate_args=validate_args,
+        )
+        smoothed_powerlaws_collection.append(transformed_smoothed_powerlaw)
+    return smoothed_powerlaws_collection
+
+
+def create_smoothed_gaussians(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[TransformedDistribution]:
+    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary
+    mass and secondary mass. It includes the transformation to component masses.
+
+    :param N: Number of components
+    :param params: dictionary of parameters
+    :param validate_args: whether to validate arguments, defaults to None
+    :raises ValueError: if loc, scale, beta, mmin, delta, low, or high is missing
+    :return: list of SmoothedGaussianPrimaryMassRatio distributions
+    """
+    smoothed_gaussians_collection = create_smoothed_gaussians_raw(
+        N, params, validate_args
+    )
+    for smoothed_gaussian in smoothed_gaussians_collection:
         transformed_smoothed_gaussian = TransformedDistribution(
             base_distribution=smoothed_gaussian,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
