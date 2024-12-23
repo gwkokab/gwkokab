@@ -274,14 +274,14 @@ def main() -> None:
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
             parameters,
-            jrd.PRNGKey(KEY4),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
     elif args.erate_estimator == "ITS":
         erate_estimator = InverseTransformSamplingPoissonMean(
             logVT,
-            jrd.PRNGKey(KEY4),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
