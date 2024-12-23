@@ -19,7 +19,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
 from jax import numpy as jnp, random as jrd
-from numpyro.distributions import Distribution
+from numpyro.distributions import Uniform
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
@@ -45,14 +45,11 @@ from ..utils.common import (
 )
 
 
-class RedshiftReferencePrior(Distribution):
-    @property
-    def low(self):
-        return 0.001
-
-    @property
-    def high(self):
-        return 3.0 + 1e-6
+class RedshiftReferencePrior(Uniform):
+    def __init__(self, low=0.001, high=3.0 + 1e-6, *, validate_args=None):
+        super(RedshiftReferencePrior, self).__init__(
+            low, high, validate_args=validate_args
+        )
 
     def log_prob(self, value):
         return (2.7 - 1) * jnp.log1p(value)
