@@ -18,15 +18,16 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-from jax import random as jrd
+from jax import numpy as jnp, random as jrd
+from numpyro.distributions import Distribution
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
 from gwkokab.models import ChiEffMassRatioCorrelated
 from gwkokab.parameters import (
+    Parameter,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
-    REDSHIFT,
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
@@ -42,6 +43,14 @@ from ..utils.common import (
     get_processed_priors,
     vt_json_read_and_process,
 )
+
+
+class RedshiftReferencePrior(Distribution):
+    def log_prob(self, value):
+        return (2.7 - 1) * jnp.log1p(value)
+
+
+REDSHIFT = Parameter(name="redshift", prior=RedshiftReferencePrior())
 
 
 def make_parser() -> ArgumentParser:

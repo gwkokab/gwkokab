@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 import jax.numpy as jnp
 from jax import lax
 from jax.scipy.stats import truncnorm
@@ -19,13 +20,15 @@ from jaxtyping import Array
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from gwkokab.cosmology import PLANCK_2015_Cosmology
-from gwkokab.models.redshift import PowerlawRedshift
 from gwkokab.models.utils import doubly_truncated_power_law_log_prob
 from gwkokab.utils.transformations import chieff, mass_ratio
 
 
 class ChiEffMassRatioConstraint(constraints.Constraint):
+    r"""The :math:`\frac{\mathrm{d}V_c}{\mathrm{d}z}` is removed from the redshift
+    distribution, because the reference prior is from same distribution with
+    :math:`\kappa=2.7`."""
+
     is_discrete = False
     event_dim = 1
 
@@ -84,7 +87,10 @@ class ChiEffMassRatioCorrelated(Distribution):
         "log10_sigma_eff_0",
         "kappa",
     ]
-    pytree_data_fields = ("_z_powerlaw", "_support")
+    pytree_data_fields = (
+        # "_z_powerlaw",
+        "_support",
+    )
 
     def __init__(
         self,
@@ -148,13 +154,13 @@ class ChiEffMassRatioCorrelated(Distribution):
             jnp.shape(log10_sigma_eff_0),
             jnp.shape(kappa),
         )
-        zgrid = jnp.linspace(0.001, 3.0 + 1e-6, 100)
-        self._z_powerlaw = PowerlawRedshift(
-            lamb=self.kappa,
-            z_max=3.0 + 1e-6,
-            zgrid=zgrid,
-            dVcdz=4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid),
-        )
+        # zgrid = jnp.linspace(0.001, 3.0 + 1e-6, 100)
+        # self._z_powerlaw = PowerlawRedshift(
+        #     lamb=self.kappa,
+        #     z_max=3.0 + 1e-6,
+        #     zgrid=zgrid,
+        #     dVcdz=4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid),
+        # )
         self._support = ChiEffMassRatioConstraint(mmin=self.mmin, mmax=self.mmax)
         super(ChiEffMassRatioCorrelated, self).__init__(
             event_shape=(5,), batch_shape=batch_shape, validate_args=validate_args
@@ -223,6 +229,7 @@ class ChiEffMassRatioCorrelated(Distribution):
         )
 
         # log_prob(z)
-        log_prob_z = self._z_powerlaw.log_prob(z)
+        # log_prob_z = self._z_powerlaw.log_prob(z)
+        log_prob_z = (self.kappa - 1) * jnp.log1p(z)
 
         return log_prob_m1 + log_prob_m2 + log_prob_chi_eff + log_prob_z
