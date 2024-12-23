@@ -46,6 +46,14 @@ from ..utils.common import (
 
 
 class RedshiftReferencePrior(Distribution):
+    @property
+    def low(self):
+        return 0.001
+
+    @property
+    def high(self):
+        return 3.0 + 1e-6
+
     def log_prob(self, value):
         return (2.7 - 1) * jnp.log1p(value)
 
