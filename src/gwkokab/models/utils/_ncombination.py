@@ -15,7 +15,7 @@
 
 from typing_extensions import Dict, List, Literal, Optional
 
-from jax import numpy as jnp
+from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
@@ -411,13 +411,15 @@ def create_smoothed_powerlaws(
     smoothed_powerlaws_collection = create_smoothed_powerlaws_raw(
         N, params, validate_args
     )
-    for smoothed_powerlaw in smoothed_powerlaws_collection:
-        transformed_smoothed_powerlaw = TransformedDistribution(
+    smoothed_powerlaws_collection = jtr.map(
+        lambda smoothed_powerlaw: TransformedDistribution(
             base_distribution=smoothed_powerlaw,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,
-        )
-        smoothed_powerlaws_collection.append(transformed_smoothed_powerlaw)
+        ),
+        smoothed_powerlaws_collection,
+        is_leaf=lambda x: isinstance(x, SmoothedPowerlawPrimaryMassRatio),
+    )
     return smoothed_powerlaws_collection
 
 
@@ -438,11 +440,13 @@ def create_smoothed_gaussians(
     smoothed_gaussians_collection = create_smoothed_gaussians_raw(
         N, params, validate_args
     )
-    for smoothed_gaussian in smoothed_gaussians_collection:
-        transformed_smoothed_gaussian = TransformedDistribution(
+    smoothed_gaussians_collection = jtr.map(
+        lambda smoothed_gaussian: TransformedDistribution(
             base_distribution=smoothed_gaussian,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,
-        )
-        smoothed_gaussians_collection.append(transformed_smoothed_gaussian)
+        ),
+        smoothed_gaussians_collection,
+        is_leaf=lambda x: isinstance(x, SmoothedGaussianPrimaryMassRatio),
+    )
     return smoothed_gaussians_collection
