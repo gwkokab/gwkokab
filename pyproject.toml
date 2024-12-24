@@ -85,15 +85,15 @@ Issues = "https://github.com/gwkokab/gwkokab/issues"
 
 [project.scripts]
 # GWKokab scripts
-gwk_batch_scatter2d = "gwkokab_scripts.batch_scatter2d:main"
-gwk_batch_scatter3d = "gwkokab_scripts.batch_scatter3d:main"
-gwk_chain_plot = "gwkokab_scripts.chain_plot:main"
-gwk_corner_plot = "gwkokab_scripts.corner_plot:main"
-gwk_joint_plot = "gwkokab_scripts.joint_plot:main"
-gwk_ppd_plot = "gwkokab_scripts.ppd_plot:main"
-gwk_samples_from_vt = "gwkokab_scripts.samples_from_vt:main"
-gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
-gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
+gwk_batch_scatter2d = "cli_gwkokab.batch_scatter2d:main"
+gwk_batch_scatter3d = "cli_gwkokab.batch_scatter3d:main"
+gwk_chain_plot = "cli_gwkokab.chain_plot:main"
+gwk_corner_plot = "cli_gwkokab.corner_plot:main"
+gwk_joint_plot = "cli_gwkokab.joint_plot:main"
+gwk_ppd_plot = "cli_gwkokab.ppd_plot:main"
+gwk_samples_from_vt = "cli_gwkokab.samples_from_vt:main"
+gwk_scatter2d = "cli_gwkokab.scatter2d:main"
+gwk_scatter3d = "cli_gwkokab.scatter3d:main"
 # Kokab scripts
 ## Genie scripts
 genie_ecc_matters = "kokab.ecc_matters.genie:main"
