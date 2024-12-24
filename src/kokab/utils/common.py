@@ -19,10 +19,10 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from numpyro.distributions import Uniform
 
-from gwkokab.vts import available as gwk_vts, VolumeTimeSensitivityInterface
+from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
 
+from .priors import available as available_priors
 from .regex import match_all
 
 
@@ -116,12 +116,9 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
     """
     matched_prior_params = match_all(params, priors)
     for key, value in matched_prior_params.items():
-        if isinstance(value, list):
-            if len(value) != 2:
-                raise ValueError(f"Invalid prior value for {key}: {value}")
-            matched_prior_params[key] = Uniform(
-                low=value[0], high=value[1], validate_args=True
-            )
+        if isinstance(value, dict):
+            dist_type = value.pop("dist")
+            matched_prior_params[key] = available_priors[dist_type](**value)
     for param in params:
         if param not in matched_prior_params:
             raise ValueError(f"Missing prior for {param}")
@@ -159,5 +156,5 @@ def vt_json_read_and_process(
 
     vt_type = vt_settings["type"]
     vt_settings.pop("type")
-    vt = gwk_vts[vt_type]
+    vt = available_vts[vt_type]
     return vt(parameters, vt_path, **vt_settings)
