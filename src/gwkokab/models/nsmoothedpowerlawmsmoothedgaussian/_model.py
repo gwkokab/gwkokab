@@ -15,9 +15,9 @@
 
 from typing_extensions import Dict, List, Literal, Optional
 
-from jax import numpy as jnp, tree as jtr
+from jax import numpy as jnp
 from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution, TransformedDistribution
+from numpyro.distributions import constraints, Distribution
 
 from ..utils import (
     combine_distributions,
@@ -32,6 +32,8 @@ from ..utils import (
 )
 
 
+build_powerlaw_distributions = create_smoothed_powerlaws
+build_gaussian_distributions = create_smoothed_gaussians
 build_spin_distributions = create_beta_distributions
 build_tilt_distributions = create_truncated_normal_distributions_for_cos_tilt
 build_eccentricity_distributions = create_truncated_normal_distributions
@@ -142,15 +144,11 @@ def _build_pl_component_distributions(
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of JointDistribution
     """
-    smoothed_powerlaws = create_smoothed_powerlaws(
+    smoothed_powerlaws = build_powerlaw_distributions(
         N=N, params=params, validate_args=validate_args
     )
 
-    mass_distributions = jtr.map(
-        lambda powerlaw: [powerlaw],
-        smoothed_powerlaws,
-        is_leaf=lambda x: isinstance(x, TransformedDistribution),
-    )
+    mass_distributions = [[powerlaw] for powerlaw in smoothed_powerlaws]
 
     build_distributions = _build_non_mass_distributions(
         N=N,
@@ -190,17 +188,13 @@ def _build_g_component_distributions(
     :param validate_args: whether to validate arguments, defaults to None
     :return: list of JointDistribution
     """
-    m1_q_dists = create_smoothed_gaussians(
+    m1_q_dists = build_gaussian_distributions(
         N=N,
         params=params,
         validate_args=validate_args,
     )
 
-    mass_distributions = jtr.map(
-        lambda m1q: [m1q],
-        m1_q_dists,
-        is_leaf=lambda x: isinstance(x, TransformedDistribution),
-    )
+    mass_distributions = [[m1q] for m1q in m1_q_dists]
 
     build_distributions = _build_non_mass_distributions(
         N=N,

@@ -18,12 +18,19 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-import numpy as np
-from jax import random as jrd
+from jax import numpy as jnp, random as jrd
+from numpyro.distributions import Uniform
 
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
-from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.models import ChiEffMassRatioCorrelated
+from gwkokab.parameters import (
+    Parameter,
+    PRIMARY_MASS_SOURCE,
+    PRIMARY_SPIN_MAGNITUDE,
+    SECONDARY_MASS_SOURCE,
+    SECONDARY_SPIN_MAGNITUDE,
+)
 from gwkokab.poisson_mean import (
     ImportanceSamplingPoissonMean,
     InverseTransformSamplingPoissonMean,
@@ -36,7 +43,19 @@ from ..utils.common import (
     get_processed_priors,
     vt_json_read_and_process,
 )
-from .common import EccentricityMattersModel
+
+
+class RedshiftReferencePrior(Uniform):
+    def __init__(self, low=0.001, high=3.0 + 1e-6, *, validate_args=None):
+        super(RedshiftReferencePrior, self).__init__(
+            low, high, validate_args=validate_args
+        )
+
+    def log_prob(self, value):
+        return (2.7 - 1) * jnp.log1p(value)
+
+
+REDSHIFT = Parameter(name="redshift", prior=RedshiftReferencePrior())
 
 
 def make_parser() -> ArgumentParser:
@@ -71,21 +90,38 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
-    FLOWMC_HANDLER_KWARGS["data"] = {
-        **get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    }
-
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
 
+    model_parameters = [
+        "alpha",
+        "beta",
+        "gamma",
+        "kappa",
+        "lamb",
+        "lambda_peak",
+        "loc_m",
+        "log10_sigma_eff_0",
+        "mmax",
+        "mmin",
+        "mu_eff_0",
+        "scale_m",
+    ]
+
     model_prior_param = get_processed_priors(
-        ["log_rate", "alpha_m", "mmin", "mmax", "loc", "scale", "low", "high"],
+        model_parameters,
         prior_dict,
     )
 
-    model = Bake(EccentricityMattersModel)(**model_prior_param)
+    model = Bake(ChiEffMassRatioCorrelated)(**model_prior_param)
 
-    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY]
+    parameters = [
+        PRIMARY_MASS_SOURCE,
+        SECONDARY_MASS_SOURCE,
+        PRIMARY_SPIN_MAGNITUDE,
+        SECONDARY_SPIN_MAGNITUDE,
+        REDSHIFT,
+    ]
 
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json
@@ -95,15 +131,15 @@ def main() -> None:
     if args.erate_estimator == "IS":
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
-            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            parameters,
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
     elif args.erate_estimator == "ITS":
         erate_estimator = InverseTransformSamplingPoissonMean(
             logVT,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )

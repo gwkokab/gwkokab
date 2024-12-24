@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import warnings
 from collections.abc import Callable, Mapping, Sequence
 
 import equinox as eqx
@@ -72,14 +73,14 @@ class PoissonLikelihood(eqx.Module):
     ref_priors: JointDistribution = eqx.field(static=True)
     priors: JointDistribution = eqx.field(static=True)
     variables_index: Mapping[str, int] = eqx.field(static=True)
-    ERate_fn: Callable[[ScaledMixture], Array] = eqx.field(static=True)
+    ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=True)
 
     def __init__(
         self,
         model: Bake,
         parameters: Sequence[Parameter],
         data: Sequence[Array],
-        ERate_fn: Callable[[ScaledMixture], Array],
+        ERate_fn: Callable[[Distribution | ScaledMixture], Array],
     ) -> None:
         self.data = data
         self.model = model
@@ -87,9 +88,11 @@ class PoissonLikelihood(eqx.Module):
         self.ERate_fn = ERate_fn
 
         dummy_model = model.get_dummy()
-        assert isinstance(
-            dummy_model, ScaledMixture
-        ), "Model must be a scaled mixture model."
+        if not isinstance(dummy_model, ScaledMixture):
+            warnings.warn(
+                "The model provided is not a ScaledMixture. This means rate estimation "
+                "will not be possible."
+            )
 
         variables, duplicates, self.model = model.get_dist()
         self.variables_index = {key: i for i, key in enumerate(variables.keys())}
@@ -113,12 +116,22 @@ class PoissonLikelihood(eqx.Module):
 
         debug_flush("mapped params: {mp}", mp=mapped_params)
 
-        model: ScaledMixture = self.model(**mapped_params)
+        model: Distribution = self.model(**mapped_params)
+
+        def _nth_prob(y: Array) -> Array:
+            """Calculate the likelihood for the nth event.
+
+            :param y: The data for the nth event.
+            """
+            _log_prob = model.log_prob(y) - self.ref_priors.log_prob(y)
+            return jnn.logsumexp(
+                _log_prob,
+                axis=-1,
+                where=~jnp.isneginf(_log_prob),  # to avoid nans
+            ) - jnp.log(y.shape[0])
 
         log_likelihood = jtr.reduce(
-            lambda x, y: x
-            + jnn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
-            - jnp.log(y.shape[0]),
+            lambda x, y: x + _nth_prob(y),
             self.data,
             jnp.zeros(()),
             is_leaf=lambda x: isinstance(x, Array),

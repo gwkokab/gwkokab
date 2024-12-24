@@ -635,7 +635,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
         log_prob_q = jnp.where(
-            jnp.equal(m1, self.mmin),
+            jnp.less_equal(m1, self.mmin),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
@@ -671,7 +671,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "mmin": constraints.positive,
         "delta": constraints.positive,
     }
-    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "low", "high"]
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta"]
     pytree_aux_fields = ("_support", "_norm")
 
     def __init__(
@@ -686,8 +686,8 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         :param low: lower bound of the Gaussian distribution, defaults to -inf
         :param high: upper bound of the Gaussian distribution, defaults to inf
         """
-        self.loc, self.scale, self.beta, self.mmin, self.delta, self.low, self.high = (
-            promote_shapes(loc, scale, beta, mmin, delta, low, high)
+        self.loc, self.scale, self.beta, self.mmin, self.delta = promote_shapes(
+            loc, scale, beta, mmin, delta
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(loc),
@@ -698,15 +698,18 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             jnp.shape(low),
             jnp.shape(high),
         )
-        self._support = mass_ratio_mass_sandwich(mmin, jnp.inf)
+        support_low = mmin
+        if low is not None:
+            support_low = jnp.minimum(mmin, low)
+        self._support = mass_ratio_mass_sandwich(support_low, jnp.inf)
         super(SmoothedGaussianPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
         self._norm = TruncatedNormal(
             loc=self.loc,
             scale=self.scale,
-            low=self.low,
-            high=self.high,
+            low=low,
+            high=high,
             validate_args=validate_args,
         )
 
@@ -727,7 +730,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         )
         log_prob_m1 = self._norm.log_prob(m1)
         log_prob_q = jnp.where(
-            jnp.equal(m1, self.mmin),
+            jnp.less_equal(m1, self.mmin),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0

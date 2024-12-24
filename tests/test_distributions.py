@@ -25,6 +25,7 @@ from scipy.sparse import csr_matrix
 
 from gwkokab.cosmology import PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
 from gwkokab.models import (
+    ChiEffMassRatioCorrelated,
     NPowerlawMGaussian,
     NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
@@ -174,6 +175,23 @@ generic_npmg = {
 
 
 CONTINUOUS = [
+    (
+        ChiEffMassRatioCorrelated,
+        {
+            "lambda_peak": 0.7,
+            "lamb": 3.1,
+            "loc_m": 20.0,
+            "scale_m": 3.0,
+            "mmin": 10.0,
+            "mmax": 50.0,
+            "gamma": 3.2,
+            "alpha": 3.14,
+            "beta": 1.2,
+            "mu_eff_0": 0.0,
+            "log10_sigma_eff_0": 0.5,
+            "kappa": 2.7,
+        },
+    ),
     (
         SmoothedGaussianPrimaryMassRatio,
         {"loc": 70.0, "scale": 2.1, "beta": 1.0, "mmin": 10.0, "delta": 4.1},
@@ -691,6 +709,7 @@ def test_dist_shape(jax_dist_cls, params, prepend_shape):
     if jax_dist_cls.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "ChiEffMassRatioCorrelated",
     ):
         pytest.skip(reason=f"{jax_dist_cls.__name__} does not provide sample method")
     if isinstance(jax_dist_cls, types.FunctionType):
@@ -734,6 +753,7 @@ def test_sample_gradient(jax_dist, params):
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "ChiEffMassRatioCorrelated",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
@@ -791,6 +811,7 @@ def test_jit_log_likelihood(jax_dist, params):
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "ChiEffMassRatioCorrelated",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
@@ -896,6 +917,7 @@ def test_log_prob_gradient(jax_dist, params):
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "ChiEffMassRatioCorrelated",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
@@ -1012,6 +1034,7 @@ def test_expand(jax_dist, params, prepend_shape, sample_shape):
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
+        "ChiEffMassRatioCorrelated",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):

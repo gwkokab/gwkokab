@@ -94,7 +94,9 @@ ECCENTRICITY = Parameter(name="ecc", prior=standard_uniform)
 
 # Redshift
 
-REDSHIFT = Parameter(name="redshift", prior=Uniform(0.0, 10.0, validate_args=True))
+REDSHIFT = Parameter(
+    name="redshift", prior=Uniform(0.001, 3.0 + 1e-6, validate_args=True)
+)
 
 
 # Copyright (c) 2024 Colm Talbot

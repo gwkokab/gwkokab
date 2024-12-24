@@ -15,6 +15,7 @@
 from collections.abc import Callable
 from typing import Any, Optional
 
+import jax
 from flowMC.nfmodel.base import NFModel
 from flowMC.nfmodel.realNVP import RealNVP  # noqa F401
 from flowMC.nfmodel.rqSpline import MaskedCouplingRQSpline  # noqa F401
@@ -85,8 +86,15 @@ class flowMChandler(object):
             **self.sampler_kwargs,
         )
 
-    def run(self) -> None:
-        """Run the flowMC sampler and save the data."""
+    def run(self, debug_nans: bool = False) -> None:
+        """Run the flowMC sampler and save the data.
+
+        :param debug_nans: Whether to debug NaNs, defaults to False
+        """
         sampler = self.make_sampler()
-        sampler.sample(self.initial_position, self.data)
+        if debug_nans:
+            with jax.debug_nans(True):
+                sampler.sample(self.initial_position, self.data)
+        else:
+            sampler.sample(self.initial_position, self.data)
         save_data_from_sampler(sampler, **self.data_dump_kwargs)

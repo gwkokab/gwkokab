@@ -21,7 +21,6 @@ import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
-from ..models.utils import ScaledMixture
 from ._abc import PoissonMeanABC
 
 
@@ -37,13 +36,13 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
     This method is very useful when the target distribution is easy to sample from.
     """
 
-    logVT_fn: Callable[[ScaledMixture], Array] = eqx.field(init=False)
+    logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
     num_samples: int = eqx.field(init=False, static=True)
     key: PRNGKeyArray = eqx.field(init=False)
 
     def __init__(
         self,
-        logVT_fn: Callable[[ScaledMixture], Array],
+        logVT_fn: Callable[[Array], Array],
         key: PRNGKeyArray,
         num_samples: int,
         scale: Union[int, float, Array] = 1.0,

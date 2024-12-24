@@ -19,7 +19,6 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import List, Tuple
 
-import numpy as np
 from jax import random as jrd
 
 import gwkokab
@@ -30,11 +29,16 @@ from gwkokab.inference import (
     PoissonLikelihood,
 )
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
-from gwkokab.models.utils import create_truncated_normal_distributions
+from gwkokab.models.utils import (
+    create_smoothed_gaussians_raw,
+    create_smoothed_powerlaws_raw,
+    create_truncated_normal_distributions,
+)
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
+    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
@@ -96,6 +100,14 @@ def make_parser() -> ArgumentParser:
         action="store_true",
         help="Use truncated normal distributions for spin parameters.",
     )
+    model_group.add_argument(
+        "--raw",
+        action="store_true",
+        help="The raw parameters for this model are primary mass and mass ratio. To"
+        "align with the rest of the codebase, we transform primary mass and mass ratio"
+        "to primary and secondary mass. This flag will use the raw parameters i.e."
+        "primary mass and mass ratio.",
+    )
 
     return parser
 
@@ -152,7 +164,14 @@ def main() -> None:
         ("high_g", N_g),
     ]
 
-    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
+    parameters = [PRIMARY_MASS_SOURCE]
+
+    if args.raw:
+        gwkokab.models.nsmoothedpowerlawmsmoothedgaussian._model.build_powerlaw_distributions = create_smoothed_powerlaws_raw
+        gwkokab.models.nsmoothedpowerlawmsmoothedgaussian._model.build_gaussian_distributions = create_smoothed_gaussians_raw
+        parameters.append(MASS_RATIO)
+    else:
+        parameters.append(SECONDARY_MASS_SOURCE)
 
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
@@ -255,14 +274,14 @@ def main() -> None:
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
             parameters,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
     elif args.erate_estimator == "ITS":
         erate_estimator = InverseTransformSamplingPoissonMean(
             logVT,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
@@ -305,4 +324,4 @@ def main() -> None:
         **FLOWMC_HANDLER_KWARGS,
     )
 
-    handler.run()
+    handler.run(args.debug_nans)

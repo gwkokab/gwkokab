@@ -18,6 +18,7 @@ from typing import Union
 
 import equinox as eqx
 from jaxtyping import Array
+from numpyro.distributions import Distribution
 
 from ..models.utils import ScaledMixture
 
@@ -48,6 +49,6 @@ class PoissonMeanABC(eqx.Module):
     scale: Union[int, float, Array] = eqx.field(init=False, default=1.0, static=True)
 
     @abstractmethod
-    def __call__(self, model: ScaledMixture) -> Array:
+    def __call__(self, model: Distribution | ScaledMixture) -> Array:
         r"""Compute the mean of the Poisson distribution."""
         raise NotImplementedError("Abstract method")
