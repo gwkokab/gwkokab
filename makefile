@@ -16,7 +16,8 @@ help:
 
 install: uninstall
 ifndef UV_CHECK
-	$(error "$(UV) is not installed. Please install it first")
+	@echo "uv is not installed. Continuing without uv."
+	$(PIP) install $(PIP_FLAGS) .
 endif
 	$(UV) $(PIP) install $(PIP_FLAGS) .
 
@@ -25,4 +26,6 @@ uninstall:
 
 cache_clean: uninstall
 	$(PIP) cache purge
+ifdef UV_CHECK
 	$(UV) cache clean
+endif
