@@ -7,151 +7,135 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 
-import inspect
-import operator
 import os
 import sys
 
 
 sys.path.insert(0, os.path.abspath("../.."))
-
-
-from gwkokab import __version__
+sys.path.append(os.path.abspath("./_pygments"))
 
 
 project = "GWKokab"
 copyright = "2024, Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
 author = "Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
-release = __version__
+
+
+try:
+    from gwkokab import __version__
+
+    release = __version__
+except ImportError:
+    try:
+        from importlib.metadata import version as _version
+
+        release = _version("gwkokab")
+    except ImportError:
+        release = "0.0.0+unknown"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "IPython.sphinxext.ipython_console_highlighting",
-    "myst_parser",
-    "nbsphinx",
-    "sphinx_copybutton",
-    "sphinx_design",
-    "sphinx_remove_toctrees",
-    "sphinx_search.extension",
-    "sphinx_tabs.tabs",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.autosummary",
-    "sphinx.ext.doctest",
-    "sphinx.ext.githubpages",
+    "myst_nb",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.napoleon",
     "sphinx.ext.linkcode",
-    "sphinx.ext.mathjax",
-    "sphinx.ext.todo",
-    "sphinx.ext.viewcode",
+    "sphinx_copybutton",
+    "autoapi.extension",
 ]
 
-autodoc_inherit_docstrings = True
+nb_execution_mode = "off"
+myst_heading_anchors = 4
+myst_enable_extensions = [
+    "amsmath",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "html_image",
+]
+
+# sphinx-autoapi
+autoapi_dirs = [
+    "../../src/gwkokab",
+    # "../../src/cli_gwkokab",
+    # "../../src/kokab",
+]
+
 templates_path = ["_templates"]
-source_suffix = {
-    ".rst": "restructuredtext",
-    ".txt": "markdown",
-    ".ipynb": "jupyter_notebook",
-    ".md": "markdown",
-}
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-# html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
+
+html_theme_options = {
+    "sidebar_hide_name": True,
+}
+
 html_static_path = ["_static"]
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
+
 html_css_files = ["style.css"]
-html_theme = "sphinx_book_theme"
 html_logo = "_static/logo.png"
 html_favicon = "_static/favicon.png"
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
-html_theme_options = {
-    "show_toc_level": 2,
-    "repository_url": "https://github.com/gwkokab/gwkokab",
-    "use_repository_button": True,  # add a "link to repository" button
-    "navigation_with_keys": False,
-    "use_download_button": True,
-}
-
-
-# do not execute cells
-nbsphinx_execute = "never"
-
-# Don't add .txt suffix to source files:
-html_sourcelink_suffix = ""
-
-# The master toctree document.
-master_doc = "index"
-
-language = "en"
-
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path .
-exclude_patterns = [
-    ".ipynb_checkpoints",
-    ".DS_Store",
-    "_build",
-    "**.ipynb_checkpoints",
-]
-
-# The name of the Pygments (syntax highlighting) style to use.
-pygments_style = "default"
-
-
-autosummary_generate = True
-napolean_use_rtype = False
-
-# Remove auto-generated API docs from sidebars. They take too long to build.
-remove_from_toctrees = ["_autosummary/*"]
-
-
-# do not prepend module name to functions
-add_module_names = False
-
-autodoc_type_aliases = {
-    "ArrayLike": "ArrayLike",
-    "Iterable": "Iterable",
-    "Numeric": "Numeric",
-    "chex.Numeric": "Numeric",
-}
+pygments_style = "_pygments_light.MarianaLight"
+pygments_dark_style = "_pygments_dark.MarianaDark"
 
 
 def linkcode_resolve(domain, info):
+    """Determine the URL corresponding to Python object."""
+    import inspect
+
     import gwkokab
 
     if domain != "py":
         return None
-    if not info["module"]:
+
+    modname = info["module"]
+    fullname = info["fullname"]
+
+    submod = sys.modules.get(modname)
+    if submod is None:
         return None
-    if not info["fullname"]:
-        return None
-    if info["module"].split(".")[0] != "gwkokab":
-        return None
+
+    obj = submod
+    for part in fullname.split("."):
+        try:
+            obj = getattr(obj, part)
+        except AttributeError:
+            return None
+
     try:
-        mod = sys.modules.get(info["module"])
-        obj = operator.attrgetter(info["fullname"])(mod)
-        if isinstance(obj, property):
-            obj = obj.fget
-        while hasattr(obj, "__wrapped__"):  # decorated functions
-            obj = obj.__wrapped__
-        filename = inspect.getsourcefile(obj)
-        source, linenum = inspect.getsourcelines(obj)
-    except Exception:
+        fn = inspect.getsourcefile(inspect.unwrap(obj))
+    except TypeError:
+        fn = None
+    if not fn:
         return None
-    filename = os.path.relpath(filename, start=os.path.dirname(gwkokab.__file__))
-    lines = f"#L{linenum}-L{linenum + len(source)}" if linenum else ""
-    return f"https://github.com/gwkokab/gwkokab/blob/main/gwkokab/{filename}{lines}"
 
+    try:
+        source, lineno = inspect.getsourcelines(obj)
+    except OSError:
+        lineno = None
 
-os.system("cp -r ../../examples .")
+    if lineno:
+        linespec = f"#L{lineno}-L{lineno + len(source) - 1}"
+    else:
+        linespec = ""
+
+    fn = os.path.relpath(fn, start=os.path.dirname(gwkokab.__file__))
+
+    if "+" in gwkokab.__version__:
+        return (
+            f"https://github.com/gwkokab/gwkokab/blob/"
+            f"HEAD/src/gwkokab/{fn}{linespec}"
+        )
+    else:
+        return (
+            f"https://github.com/gwkokab/gwkokab/blob/"
+            f"v{gwkokab.__version__}/src/gwkokab/{fn}{linespec}"
+        )
 
 
 intersphinx_mapping = {
@@ -162,4 +146,11 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3/", None),
     "typing_extensions": ("https://typing-extensions.readthedocs.io/en/latest/", None),
     "chex": ("https://chex.readthedocs.io/en/latest/", None),
+}
+
+autodoc_type_aliases = {
+    "ArrayLike": "ArrayLike",
+    "Iterable": "Iterable",
+    "Numeric": "Numeric",
+    "chex.Numeric": "Numeric",
 }

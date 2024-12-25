@@ -1,5 +1,0 @@
-pytest
-pytest-xdist
-
-# Packages used for notebook execution
-.[docs] # GWKokab from the current directory

@@ -13,9 +13,7 @@ authors = [
 ]
 name = "gwkokab"
 version = "0.1.1.dev"
-maintainers = [
-    { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
-]
+maintainers = [{ name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" }]
 description = "A JAX-based gravitational-wave population inference toolkit for parametric models"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -60,29 +58,17 @@ keywords = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pre-commit>=4.0.0",
-    "pytest>=8.3.0",
-    "ruff>=0.8.0",
-    "setuptools>=75.6.0",
-]
-
+dev = ["pre-commit>=4.0.0", "pytest>=8.3.0", "ruff>=0.8.0", "setuptools>=75.6.0"]
 docs = [
-    "flatbuffers>=24.3.25",
-    "ipython>=8.30.0",
-    "ipywidgets>=8.1.5",
-    "myst-parser>=4.0.0",
-    "nbsphinx>=0.9.5",
-    "pandoc>=2.4",
-    "readthedocs-sphinx-search>=0.3.2",
-    "sphinx-book-theme>=1.1.3",
-    "sphinx-copybutton>=0.5.2",
-    "sphinx-design>=0.6.1",
-    "sphinx-remove-toctrees>=1.0.0.post1",
-    "sphinx-tabs>=3.4.7",
-    "sphinx",
+    "astroid<3",
+    "furo",
+    "ipython!=8.7.0",
+    "myst-nb",
+    "setuptools_scm",
+    "sphinx-autoapi",
+    "sphinx-copybutton",
+    "sphinx>=2.0",
 ]
-
 test = ["astropy>=6.1.4"]
 
 [project.urls]
@@ -128,11 +114,7 @@ filterwarnings = [
     "once:No GPU:UserWarning",
     "once::DeprecationWarning",
 ]
-doctest_optionflags = [
-    "ELLIPSIS",
-    "NORMALIZE_WHITESPACE",
-    "IGNORE_EXCEPTION_DETAIL",
-]
+doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
 
 [tool.docformatter]
 # The ``summaries`` are not (yet) 75 characters because the summary lines can't be
