@@ -18,8 +18,9 @@ install: uninstall
 ifndef UV_CHECK
 	@echo "uv is not installed. Continuing without uv."
 	$(PIP) install $(PIP_FLAGS) .
-endif
+else
 	$(UV) $(PIP) install $(PIP_FLAGS) .
+endif
 
 uninstall:
 	$(PIP) uninstall $(TARGET) -y
