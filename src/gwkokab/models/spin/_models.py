@@ -62,12 +62,13 @@ def GaussianSpinModel(
         spins
     """
     return MultivariateNormal(
-        loc=jnp.array([mu_eff, mu_p]),
+        loc=jnp.array([mu_eff, mu_p], dtype=jnp.result_type(float)),
         covariance_matrix=jnp.array(
             [
                 [jnp.square(sigma_eff), rho * sigma_eff * sigma_p],
                 [rho * sigma_eff * sigma_p, jnp.square(sigma_p)],
-            ]
+            ],
+            dtype=jnp.result_type(float),
         ),
         validate_args=validate_args,
     )
@@ -92,13 +93,14 @@ def IndependentSpinOrientationGaussianIsotropic(
     :param sigma2: The standard deviation of the second component.
     :return: Mixture model of spin orientations.
     """
-    mixing_probs = jnp.array([1 - zeta, zeta])
-    component_0_dist = Uniform(low=-1, high=1, validate_args=validate_args)
+    dtype = jnp.result_type(float)
+    mixing_probs = jnp.array([1.0 - zeta, zeta], dtype=dtype)
+    component_0_dist = Uniform(low=-1.0, high=1.0, validate_args=validate_args)
     component_1_dist = TruncatedNormal(
         loc=1.0,
-        scale=jnp.array([sigma1, sigma2]),
-        low=-1,
-        high=1,
+        scale=jnp.array([sigma1, sigma2], dtype=dtype),
+        low=-1.0,
+        high=1.0,
         validate_args=validate_args,
     )
     return MixtureGeneral(

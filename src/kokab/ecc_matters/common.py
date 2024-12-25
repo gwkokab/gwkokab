@@ -33,7 +33,7 @@ def EccentricityMattersModel(
     high: Array,
 ) -> ScaledMixture:
     return ScaledMixture(
-        log_scales=jnp.array([log_rate]),
+        log_scales=jnp.array([log_rate], dtype=jnp.result_type(float)),
         component_distributions=[
             JointDistribution(
                 Wysocki2019MassModel(

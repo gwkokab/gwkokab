@@ -194,7 +194,7 @@ def train_regressor(
                 total=total,
                 epoch=epoch + 1,
             )
-            epoch_loss = jnp.zeros(())
+            epoch_loss = jnp.zeros((), dtype=jnp.result_type(float))
             for i in range(0, len(train_X), batch_size):
                 x = train_X[i : i + batch_size]
                 y = train_Y[i : i + batch_size]

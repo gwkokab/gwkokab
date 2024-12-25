@@ -178,7 +178,7 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         :return: Primary and secondary masses
         """
         M = jnp.exp(logM)
-        denominator = M * (1 + q_tilde) - 2 * self.m_min * q_tilde
+        denominator = M * (1.0 + q_tilde) - 2.0 * self.m_min * q_tilde
         factor = (M - self.m_min) / denominator
         m1 = M * factor
         m2 = M - m1
@@ -214,7 +214,7 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
         logM = jnp.log(M)
 
-        i_good = M > 2 * self.m_min + eps
+        i_good = M > 2.0 * self.m_min + eps
 
         # ~i_good is filled with random values
         m1 = jnp.where(i_good, m1, 1.0)
@@ -400,7 +400,10 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
 
             # Loop over the basis functions and multiply by the coefficients
             # https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L487-492
-            basis_values = jnp.array([base(*x_converted) for base in self.basis])
+            basis_values = jnp.array(
+                [base(*x_converted) for base in self.basis],
+                dtype=jnp.result_type(float),
+            )
             correction = jnp.dot(self.coeffs, basis_values)
 
             logM, qtilde = self.mass_grid_coords(m1, m2)

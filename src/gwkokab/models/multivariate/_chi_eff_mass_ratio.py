@@ -69,7 +69,7 @@ class ChiEffMassRatioCorrelated(Distribution):
         "gamma": constraints.real,
         "alpha": constraints.real,
         "beta": constraints.real,
-        "mu_eff_0": constraints.interval(-1, 1),
+        "mu_eff_0": constraints.interval(-1.0, 1.0),
         "log10_sigma_eff_0": constraints.real,
         "kappa": constraints.real,
     }
@@ -230,6 +230,6 @@ class ChiEffMassRatioCorrelated(Distribution):
 
         # log_prob(z)
         # log_prob_z = self._z_powerlaw.log_prob(z)
-        log_prob_z = (self.kappa - 1) * jnp.log1p(z)
+        log_prob_z = (self.kappa - 1.0) * jnp.log1p(z)
 
         return log_prob_m1 + log_prob_m2 + log_prob_chi_eff + log_prob_z

@@ -42,7 +42,7 @@ def cumtrapz(y: Array, x: Array) -> Array:
     difs = jnp.diff(x)
     idxs = jnp.arange(1, len(y))
     res = jnp.cumsum(_area(idxs, difs))
-    return jnp.concatenate([jnp.array([0]), res])
+    return jnp.concatenate([jnp.array([0.0]), res], dtype=jnp.result_type(float))
 
 
 class PowerlawRedshift(Distribution):
@@ -81,7 +81,7 @@ class PowerlawRedshift(Distribution):
         )
         self.zs = zgrid
         self.dVdc_ = dVcdz
-        self.pdfs = self.dVdc_ * (1 + self.zs) ** (lamb - 1)
+        self.pdfs = self.dVdc_ * (1.0 + self.zs) ** (lamb - 1.0)
         self.norm = trapezoid(self.pdfs, self.zs)
         self.pdfs /= self.norm
         self.cdfgrid = cumtrapz(self.pdfs, self.zs)

@@ -133,7 +133,7 @@ class PoissonLikelihood(eqx.Module):
         log_likelihood = jtr.reduce(
             lambda x, y: x + _nth_prob(y),
             self.data,
-            jnp.zeros(()),
+            jnp.zeros((), dtype=jnp.result_type(float)),
             is_leaf=lambda x: isinstance(x, Array),
         )
 

@@ -73,7 +73,7 @@ class JointDistribution(Distribution):
         log_probs = jtr.reduce(
             lambda x, y: x + log_prob_i(y[0], value[..., y[1]]),
             list(zip(self.marginal_distributions, self.shaped_values)),
-            jnp.zeros(self.batch_shape),
+            jnp.zeros(self.batch_shape, dtype=jnp.result_type(float)),
             is_leaf=lambda x: isinstance(x, tuple),
         )
         return log_probs
@@ -85,5 +85,5 @@ class JointDistribution(Distribution):
             d.sample(k, sample_shape).reshape(*sample_shape, -1)
             for d, k in zip(self.marginal_distributions, keys)
         ]
-        samples = jnp.concatenate(samples, axis=-1)
+        samples = jnp.concatenate(samples, axis=-1, dtype=jnp.result_type(float))
         return samples

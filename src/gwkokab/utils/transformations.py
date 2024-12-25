@@ -118,7 +118,7 @@ def delta_m(m1: Numeric, m2: Numeric) -> Numeric:
 
 def _delta_m_to_symmetric_mass_ratio(delta_m: Numeric) -> Numeric:
     delta_m_sq = jnp.square(delta_m)  # delta_m^2
-    eta = 0.25 * (1 - delta_m_sq)  # (1 - delta_m^2) / 4
+    eta = 0.25 * (1.0 - delta_m_sq)  # (1 - delta_m^2) / 4
     return eta
 
 
@@ -131,8 +131,8 @@ def delta_m_to_symmetric_mass_ratio(delta_m: Numeric) -> Numeric:
 
 
 def _symmetric_mass_ratio_to_delta_m(eta: Numeric) -> Numeric:
-    eta_4 = jnp.multiply(eta, 4)  #  eta*4
-    delta_m = jnp.sqrt(jnp.subtract(1, eta_4))  # sqrt(1 - 4 * eta)
+    eta_4 = jnp.multiply(eta, 4.0)  #  eta*4
+    delta_m = jnp.sqrt(jnp.subtract(1.0, eta_4))  # sqrt(1 - 4 * eta)
     return delta_m
 
 
@@ -308,7 +308,7 @@ def Mc_eta_to_m1_m2(Mc: Numeric, eta: Numeric) -> tuple[Numeric, Numeric]:
     """
     delta_sq = jnp.subtract(1, jnp.multiply(4.0, eta))  # 1 - 4 * eta
     delta_sq = jnp.maximum(
-        delta_sq, jnp.zeros_like(delta_sq)
+        delta_sq, jnp.zeros_like(delta_sq, dtype=jnp.result_type(float))
     )  # to avoid negative values
     delta = jnp.sqrt(delta_sq)  # sqrt(1 - 4 * eta)
     half_Mc = jnp.multiply(0.5, Mc)  # Mc/2

@@ -176,8 +176,8 @@ def create_truncated_normal_distributions_for_cos_tilt(
         truncated_normal_for_tilt_collection.append(
             TwoSidedTruncatedDistribution(
                 Normal(loc=1.0, scale=scale, validate_args=validate_args),
-                low=-1,
-                high=1,
+                low=-1.0,
+                high=1.0,
                 validate_args=validate_args,
             )
         )
@@ -232,7 +232,7 @@ def create_powerlaws(
     return powerlaws_collection
 
 
-zgrid = jnp.linspace(0.001, 10, 1000)
+zgrid = jnp.linspace(0.001, 10.0, 1000.0)
 dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
 
 

@@ -281,7 +281,7 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
             change
             * jnp.power(
                 low_pow_one_more_alpha + x * change,
-                jnp.reciprocal(one_more_alpha) - 1,
+                jnp.reciprocal(one_more_alpha) - 1.0,
             )
         ) / one_more_alpha
 
@@ -311,7 +311,7 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
             * jnp.power(
                 low_pow_one_more_alpha
                 + x * (high_pow_one_more_alpha - low_pow_one_more_alpha),
-                jnp.reciprocal(one_more_alpha) - 1,
+                jnp.reciprocal(one_more_alpha) - 1.0,
             )
         )
 
@@ -325,7 +325,7 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
             * jnp.power(
                 low_pow_one_more_alpha
                 + x * (high_pow_one_more_alpha - low_pow_one_more_alpha),
-                jnp.reciprocal(one_more_alpha) - 1,
+                jnp.reciprocal(one_more_alpha) - 1.0,
             )
         )
 
@@ -336,11 +336,11 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
     def low_eq_neg1():
         return (
             jnp.power(high_over_low, x)
-            - (high * x * jnp.power(high_over_low, x - 1)) / low
+            - (high * x * jnp.power(high_over_low, x - 1.0)) / low
         )
 
     def high_eq_neg1():
-        return x * jnp.power(high_over_low, x - 1)
+        return x * jnp.power(high_over_low, x - 1.0)
 
     # Including approximation for alpha = -1 \
     tangent_out = (

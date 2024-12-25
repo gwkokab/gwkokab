@@ -75,7 +75,8 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
 
     domain = constraints.independent(
         constraints.interval(
-            jnp.zeros((2,)), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
+            jnp.zeros((2,), dtype=jnp.result_type(float)),
+            jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0]),
         ),
         1,
     )
@@ -85,14 +86,14 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         m1 = x[..., 0]
         q = x[..., 1]
         m2 = jnp.multiply(m1, q)
-        m1m2 = jnp.stack((m1, m2), axis=-1)
+        m1m2 = jnp.stack((m1, m2), axis=-1, dtype=jnp.result_type(float))
         return m1m2
 
     def _inverse(self, y: Array):
         m1 = y[..., 0]
         m2 = y[..., 1]
         q = mass_ratio(m2=m2, m1=m1)
-        m1q = jnp.stack((m1, q), axis=-1)
+        m1q = jnp.stack((m1, q), axis=-1, dtype=jnp.result_type(float))
         return m1q
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
@@ -129,7 +130,8 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     domain = positive_decreasing_vector
     codomain = constraints.independent(
         constraints.interval(
-            jnp.zeros((2,)), jnp.array([jnp.finfo(jnp.result_type(float)).max, 0.25])
+            jnp.zeros((2,), dtype=jnp.result_type(float)),
+            jnp.array([jnp.finfo(jnp.result_type(float)).max, 0.25]),
         ),
         1,
     )
@@ -139,13 +141,13 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         m2 = x[..., 1]
         Mc = chirp_mass(m1=m1, m2=m2)
         eta = symmetric_mass_ratio(m1=m1, m2=m2)
-        return jnp.stack((Mc, eta), axis=-1)
+        return jnp.stack((Mc, eta), axis=-1, dtype=jnp.result_type(float))
 
     def _inverse(self, y):
         Mc = y[..., 0]
         eta = y[..., 1]
         m1, m2 = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
-        return jnp.stack((m1, m2), axis=-1)
+        return jnp.stack((m1, m2), axis=-1, dtype=jnp.result_type(float))
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         m1 = x[..., 0]
@@ -188,8 +190,8 @@ class DeltaToSymmetricMassRatio(Transform):
         return jnp.multiply(jnp.subtract(1.0, delta_sq), 0.25)
 
     def _inverse(self, y):
-        eta4 = jnp.multiply(4, y)
-        return jnp.sqrt(jnp.subtract(1, eta4))
+        eta4 = jnp.multiply(4.0, y)
+        return jnp.sqrt(jnp.subtract(1.0, eta4))
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         return jnp.subtract(jnp.log(x), jnp.log(2.0))
@@ -228,7 +230,8 @@ class ComponentMassesToChirpMassAndDelta(Transform):
     domain = positive_decreasing_vector
     codomain = constraints.independent(
         constraints.interval(
-            jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
+            jnp.zeros(2, dtype=jnp.result_type(float)),
+            jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0]),
         ),
         1,
     )
@@ -238,14 +241,14 @@ class ComponentMassesToChirpMassAndDelta(Transform):
         m2 = x[..., 1]
         Mc = chirp_mass(m1=m1, m2=m2)
         delta = delta_m(m1=m1, m2=m2)
-        return jnp.stack((Mc, delta), axis=-1)
+        return jnp.stack((Mc, delta), axis=-1, dtype=jnp.result_type(float))
 
     def _inverse(self, y):
         Mc = y[..., 0]
         delta = y[..., 1]
         eta = delta_m_to_symmetric_mass_ratio(delta_m=delta)
         m1, m2 = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
-        return jnp.stack((m1, m2), axis=-1)
+        return jnp.stack((m1, m2), axis=-1, dtype=jnp.result_type(float))
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         m1 = x[..., 0]
@@ -274,17 +277,17 @@ class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
         m_source = x[..., 0]
         z = x[..., 1]
         m_detected = m_source * (1 + z)
-        return jnp.stack((m_detected, z), axis=-1)
+        return jnp.stack((m_detected, z), axis=-1, dtype=jnp.result_type(float))
 
     def _inverse(self, y):
         m_detected = y[..., 0]
         z = y[..., 1]
         m_source = m_detected / (1 + z)
-        return jnp.stack((m_source, z), axis=-1)
+        return jnp.stack((m_source, z), axis=-1, dtype=jnp.result_type(float))
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         z = x[..., 1]
-        return jnp.log(1 + z)
+        return jnp.log1p(z)
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -326,7 +329,7 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         z = x[..., 2]
-        return 2 * jnp.log(1.0 + z)
+        return 2 * jnp.log1p(z)
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -350,7 +353,8 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
     domain = positive_decreasing_vector
     codomain = constraints.independent(
         constraints.open_interval(
-            jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
+            jnp.zeros(2, dtype=jnp.result_type(float)),
+            jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0]),
         ),
         1,
     )
@@ -361,13 +365,13 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
         m1_safe = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
         m2_safe = jnp.where(m2 == 0.0, jnp.finfo(m2.dtype).tiny, m2)
         q = mass_ratio(m1=m1_safe, m2=m2_safe)
-        return jnp.stack((m1_safe, q), axis=-1)
+        return jnp.stack((m1_safe, q), axis=-1, dtype=jnp.result_type(float))
 
     def _inverse(self, y):
         m1 = y[..., 0]
         q = y[..., 1]
         m2 = m1_q_to_m2(m1=m1, q=q)
-        return jnp.stack((m1, m2), axis=-1)
+        return jnp.stack((m1, m2), axis=-1, dtype=jnp.result_type(float))
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         m1 = x[..., 0]
@@ -396,7 +400,8 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
     domain = positive_decreasing_vector
     codomain = constraints.independent(
         constraints.interval(
-            jnp.zeros(2), jnp.array([1.0, jnp.finfo(jnp.result_type(float)).max])
+            jnp.zeros(2, dtype=jnp.result_type(float)),
+            jnp.array([1.0, jnp.finfo(jnp.result_type(float)).max]),
         ),
         1,
     )
@@ -405,13 +410,13 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
         m1 = x[..., 0]
         m2 = x[..., 1]
         q = mass_ratio(m1=m1, m2=m2)
-        return jnp.stack((q, m2), axis=-1)
+        return jnp.stack((q, m2), axis=-1, dtype=jnp.result_type(float))
 
     def _inverse(self, y):
         q = y[..., 0]
         m2 = y[..., 1]
         m1 = m2_q_to_m1(m2=m2, q=q)
-        return jnp.stack((m1, m2), axis=-1)
+        return jnp.stack((m1, m2), axis=-1, dtype=jnp.result_type(float))
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         m1 = x[..., 0]
@@ -440,7 +445,8 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
     domain = positive_decreasing_vector
     codomain = constraints.independent(
         constraints.interval(
-            jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
+            jnp.zeros(2, dtype=jnp.result_type(float)),
+            jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0]),
         ),
         1,
     )
@@ -450,7 +456,7 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
         m2 = x[..., 1]
         M = total_mass(m1=m1, m2=m2)
         q = mass_ratio(m1=m1, m2=m2)
-        return jnp.stack((M, q), axis=-1)
+        return jnp.stack((M, q), axis=-1, dtype=jnp.result_type(float))
 
     def _inverse(self, y):
         M = y[..., 0]
@@ -458,12 +464,12 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
         safe_q = jnp.where(q == -1.0, 1.0, q)
         m1 = jnp.where(q == -1.0, jnp.inf, M / (1 + safe_q))
         m2 = m1_q_to_m2(m1=m1, q=q)
-        return jnp.stack((m1, m2), axis=-1)
+        return jnp.stack((m1, m2), axis=-1, dtype=jnp.result_type(float))
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         m1 = x[..., 0]
         q = y[..., 1]
-        return jnp.log(1 + q) - jnp.log(m1)
+        return jnp.log1p(q) - jnp.log(m1)
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -512,8 +518,11 @@ def _transform_to_mass_sandwich(constraint):
             PowerTransform(-1.0),
             SigmoidTransform(),
             AffineTransform(
-                loc=jnp.array([constraint.mmin, 0.0]),
-                scale=jnp.array([constraint.mmax - constraint.mmin, 1.0]),
+                loc=jnp.array([constraint.mmin, 0.0], dtype=jnp.result_type(float)),
+                scale=jnp.array(
+                    [constraint.mmax - constraint.mmin, 1.0],
+                    dtype=jnp.result_type(float),
+                ),
             ),
         ]
     )

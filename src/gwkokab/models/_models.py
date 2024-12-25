@@ -63,7 +63,8 @@ def NDistribution(
     """
     arg_names = distribution.arg_constraints.keys()
     mixing_dist = CategoricalProbs(
-        probs=jnp.divide(jnp.ones(n), n), validate_args=validate_args
+        probs=jnp.divide(jnp.ones(n, dtype=jnp.result_type(float)), n),
+        validate_args=validate_args,
     )
     args_per_component = [
         {arg: params.get(f"{arg}_{i}") for arg in arg_names} for i in range(n)
@@ -148,16 +149,17 @@ class PowerlawPrimaryMassRatio(Distribution):
         return log_prob_m1 + log_prob_q
 
     def sample(self, key, sample_shape=()):
+        dtype = jnp.result_type(float)
         key_m1, key_q = jrd.split(key)
-        u_m1 = jrd.uniform(key_m1, shape=sample_shape)
-        u_q = jrd.uniform(key_q, shape=sample_shape)
+        u_m1 = jrd.uniform(key_m1, shape=sample_shape, dtype=dtype)
+        u_q = jrd.uniform(key_q, shape=sample_shape, dtype=dtype)
         m1 = doubly_truncated_power_law_icdf(
             q=u_m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
         q = doubly_truncated_power_law_icdf(
             q=u_q, alpha=self.beta, low=jnp.divide(self.mmin, m1), high=1.0
         )
-        return jnp.stack((m1, q), axis=-1)
+        return jnp.stack((m1, q), axis=-1, dtype=dtype)
 
 
 class Wysocki2019MassModel(Distribution):
@@ -212,13 +214,20 @@ class Wysocki2019MassModel(Distribution):
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self, key, sample_shape=()) -> Array:
+        dtype = jnp.result_type(float)
         key_m1, key_m2 = jrd.split(key)
-        u_m1 = jrd.uniform(key_m1, shape=sample_shape)
+        u_m1 = jrd.uniform(key_m1, shape=sample_shape, dtype=dtype)
         m1 = doubly_truncated_power_law_icdf(
             q=u_m1, alpha=-self.alpha_m, low=self.mmin, high=self.mmax
         )
-        m2 = jrd.uniform(key_m2, shape=sample_shape, minval=self.mmin, maxval=m1)
-        return jnp.stack((m1, m2), axis=-1)
+        m2 = jrd.uniform(
+            key_m2,
+            shape=sample_shape,
+            minval=self.mmin,
+            maxval=m1,
+            dtype=dtype,
+        )
+        return jnp.stack((m1, m2), axis=-1, dtype=dtype)
 
 
 class MassGapModel(Distribution):
@@ -390,6 +399,7 @@ class MassGapModel(Distribution):
         :param mass: mass of the primary black hole
         :return: smoothing kernel value
         """
+        dtype = jnp.result_type(float)
         mass_min_shifted = jnp.add(self.mmin, self.delta_m)
 
         shifted_mass = jnp.nan_to_num(
@@ -409,10 +419,19 @@ class MassGapModel(Distribution):
             ),
             jnp.greater(mass, mass_min_shifted),
         ]
-        choices = [jnp.zeros(mass.shape), window, jnp.ones(mass.shape)]
-        return jnp.select(conditions, choices, default=jnp.zeros(mass.shape))
+        choices = [
+            jnp.zeros(mass.shape, dtype=dtype),
+            window,
+            jnp.ones(mass.shape, dtype=dtype),
+        ]
+        return jnp.select(
+            conditions,
+            choices,
+            default=jnp.zeros(mass.shape, dtype=dtype),
+        )
 
     def log_prob_three_component_single(self, m_i):
+        dtype = jnp.result_type(float)
         component_probs = jnp.stack(
             [
                 doubly_truncated_power_law_log_prob(
@@ -434,13 +453,15 @@ class MassGapModel(Distribution):
                 ),
             ],
             axis=-1,
+            dtype=dtype,
         )
         mixing_probs = jnp.array(
             [
                 jnp.log1p(-self.lam),
                 jnp.log(self.lam) + jnp.log(self.lam1),
                 jnp.log(self.lam) + jnp.log1p(-self.lam1),
-            ]
+            ],
+            dtype=dtype,
         )
         log_prob_val = logsumexp(component_probs + mixing_probs)
         return log_prob_val
@@ -453,8 +474,13 @@ class MassGapModel(Distribution):
         return log_prob_mi_val
 
     def log_norm_mi(self):
+        dtype = jnp.result_type(float)
         m_i = jrd.uniform(
-            jrd.PRNGKey(0), shape=(10000,), minval=self.mmin, maxval=self.mmax
+            jrd.PRNGKey(0),
+            shape=(10000,),
+            minval=self.mmin,
+            maxval=self.mmax,
+            dtype=dtype,
         )
         log_prob_mi_val = self.log_prob_three_component_single(m_i=m_i)
         log_prob_mi_val += self.log_notch_filter(m_i)
@@ -462,7 +488,7 @@ class MassGapModel(Distribution):
         return (
             logsumexp(log_prob_mi_val)
             - jnp.log(m_i.shape[0])
-            + jnp.log(jnp.prod(self.mmax - self.mmin))
+            + jnp.log(jnp.prod(self.mmax - self.mmin, dtype=dtype))
         )
 
     @validate_sample
@@ -551,6 +577,8 @@ def FlexibleMixtureModel(
         q_min_list,
     )
 
+    dtype = jnp.result_type(float)
+
     return MixtureGeneral(
         mixing_distribution=CategoricalProbs(
             probs=weights, validate_args=validate_args
@@ -558,7 +586,8 @@ def FlexibleMixtureModel(
         component_distributions=component_dists,
         support=constraints.independent(
             constraints.interval(
-                jnp.array([0.0, 0.0, -1.0, -1.0]), jnp.array([jnp.inf, 1.0, 1.0, 1.0])
+                jnp.array([0.0, 0.0, -1.0, -1.0], dtype=dtype),
+                jnp.array([jnp.inf, 1.0, 1.0, 1.0], dtype=dtype),
             ),
             1,
         ),

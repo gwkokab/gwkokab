@@ -36,6 +36,7 @@ def log_planck_taper_window(x: Array) -> Array:
     :param x: point at which to evaluate the window
     :return: window value
     """
+    x = jnp.asarray(x, dtype=jnp.result_type(float))
     inv_1 = jnp.where(x == 0.0, 0.0, 1.0 / jnp.where(x == 0.0, 1.0, x))
     inv_2 = jnp.where(x == 1.0, 0.0, 1.0 / jnp.where(x == 1.0, 1.0, x - 1.0))
     return jnp.where(

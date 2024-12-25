@@ -80,17 +80,17 @@ class Cosmology(object):
         new_dVcdz = self.dVcdz(z[i] + dz, Dc[i + 1])
         Vc = Vc.at[i + 1].set(Vc[i] + 0.5 * (dVcdz + new_dVcdz) * dz)
 
-        return jnp.array([z, Dc, Vc])
+        return jnp.array([z, Dc, Vc], dtype=jnp.result_type(float))
 
     def extend(self, max_z, dz=DEFAULT_DZ):
         """Integrate to solve for distance measures."""
+        dtype = jnp.result_type(float)
+        self.z = jnp.arange(0.0, max_z, dz, dtype=dtype)
+        Dc = jnp.zeros_like(self.z, dtype=dtype)
+        Vc = jnp.zeros_like(self.z, dtype=dtype)
 
-        self.z = jnp.arange(0, max_z, dz)
-        Dc = jnp.zeros_like(self.z)
-        Vc = jnp.zeros_like(self.z)
-
-        X = jnp.array([self.z, Dc, Vc])
-        extended_X = fori_loop(0, self.z.shape[0] - 1, self.update, X)
+        X = jnp.array([self.z, Dc, Vc], dtype=dtype)
+        extended_X = fori_loop(0.0, self.z.shape[0] - 1, self.update, X)
         # extended_X = lax.scan(self.update, X, jnp.arange(0, self.z.shape[0] - 1))
         self.Dc = extended_X[1]
         self.Vc = extended_X[2]
@@ -120,7 +120,7 @@ class Cosmology(object):
         without overflow errors."""
         if Dc is None:
             Dc = self.z_to_Dc(z)
-        return jnp.log(4 * jnp.pi) + 2 * jnp.log(Dc) + jnp.log(self.dDcdz(z))
+        return jnp.log(4.0 * jnp.pi) + 2.0 * jnp.log(Dc) + jnp.log(self.dDcdz(z))
 
     def z_to_Dc(self, z):
         """Return Dc for each z specified."""

@@ -77,7 +77,9 @@ class ScaledMixture(MixtureGeneral):
                 mask = d.support(value)
                 log_prob = jnp.where(mask, log_prob, -jnp.inf)
             component_log_probs.append(log_prob)
-        component_log_probs = jnp.stack(component_log_probs, axis=-1)
+        component_log_probs = jnp.stack(
+            component_log_probs, axis=-1, dtype=jnp.result_type(float)
+        )
         return self._log_scales + component_log_probs
 
     @validate_sample
