@@ -5,7 +5,7 @@ GWKokab_ is available on PyPI_ and can be easily installed using pip. For optima
 setup, it is recommended to install GWKokab_ in a virtual environment. You can
 install GWKokab_ with the following command:
 
-.. tab-set::
+.. tab-set-code::
 
     .. tab-item:: Stable Release 📦
 
@@ -24,7 +24,7 @@ install GWKokab_ with the following command:
 Depending on the accelerator you have, you can install the appropriate version of JAX_
 with the following command:
 
-.. tab-set::
+.. tab-set-code::
 
     .. tab-item:: CPU 🐢
 

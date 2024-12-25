@@ -6,8 +6,8 @@
 :github_url: https://github.com/gwkokab/gwkokab
 
 
-GWKokab ✴️ documentation
-========================
+GWKokab documentation
+=====================
 
 GWKokab_ offers a robust suite of probability density function (PDF) models for
 analyzing the distribution of parameters in compact binary coalescence (CBC) sources,
@@ -40,7 +40,7 @@ flexibility and extensibility make it invaluable for researchers at all levels.
 .. toctree::
    :hidden:
    :maxdepth: 1
-   :caption: Getting started 🚀
+   :caption: Getting started
 
    installation
    FAQs
@@ -53,8 +53,6 @@ flexibility and extensibility make it invaluable for researchers at all levels.
    :caption: Further resources
 
    dev_docs/index
-   gwkokab
-   gwk_scripts
    changelog
 
 .. _GWKokab: www.github.com/gwkokab/gwkokab

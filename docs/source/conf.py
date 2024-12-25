@@ -57,7 +57,8 @@ myst_enable_extensions = [
 
 # sphinx-autoapi
 autoapi_dirs = [
-    "../../src/gwkokab",
+    "../../src",
+    # "../../src/gwkokab",
     # "../../src/cli_gwkokab",
     # "../../src/kokab",
 ]

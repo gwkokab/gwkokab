@@ -1,4 +1,4 @@
-Citing GWKokab ✴️
+Citing GWKokab
 =================
 
 To cite GWKokab as a software, please use the following BibTeX entry:
