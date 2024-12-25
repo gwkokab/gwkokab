@@ -37,8 +37,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-
-from ..utils import ppd, ppd_parser
+from kokab.utils import ppd, ppd_parser
 
 
 def make_parser() -> ArgumentParser:

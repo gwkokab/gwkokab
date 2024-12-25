@@ -41,9 +41,8 @@ from gwkokab.poisson_mean import (
     ImportanceSamplingPoissonMean,
     InverseTransformSamplingPoissonMean,
 )
-
-from ..utils import sage_parser
-from ..utils.common import (
+from kokab.utils import sage_parser
+from kokab.utils.common import (
     expand_arguments,
     flowMC_json_read_and_process,
     get_posterior_data,

@@ -28,15 +28,14 @@ from gwkokab.poisson_mean import (
     ImportanceSamplingPoissonMean,
     InverseTransformSamplingPoissonMean,
 )
-
-from ..utils import sage_parser
-from ..utils.common import (
+from kokab.ecc_matters.common import EccentricityMattersModel
+from kokab.utils import sage_parser
+from kokab.utils.common import (
     flowMC_json_read_and_process,
     get_posterior_data,
     get_processed_priors,
     vt_json_read_and_process,
 )
-from .common import EccentricityMattersModel
 
 
 def make_parser() -> ArgumentParser:

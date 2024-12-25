@@ -21,9 +21,8 @@ import numpy as np
 import pandas as pd
 
 from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
-
-from .priors import available as available_priors
-from .regex import match_all
+from kokab.utils.priors import available as available_priors
+from kokab.utils.regex import match_all
 
 
 def expand_arguments(arg: str, n: int) -> List[str]:
