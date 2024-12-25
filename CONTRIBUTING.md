@@ -1,6 +1,6 @@
 <!-- Most things are copied from JAX developer documentation https://jax.readthedocs.io/en/latest/contributing.html -->
 
-# Contributing to GWKokab ✴️
+# Contributing to GWKokab
 
 Everyone can contribute to GWKokab, and we
 value everyone's contributions. There are several ways to contribute, including:

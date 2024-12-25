@@ -5,14 +5,14 @@
 </div>
 
 <h2 align="center">
-A JAX-based gravitational-wave population inference toolkit for parametric models ✴️
+A JAX-based gravitational-wave population inference toolkit for parametric models
 </h2>
 
 [**Installation**](https://gwkokab.readthedocs.io/en/latest/installation.html) |
 [**Documentation**](https://gwkokab.readthedocs.io/) |
 [**Examples/Tutorials**](https://gwkokab.readthedocs.io/en/latest/examples.html) |
 [**FAQs**](https://gwkokab.readthedocs.io/en/latest/FAQs.html) |
-[**Citing GWKokab ✴️**](#citing-gwkokab)
+[**Citing GWKokab **](#citing-gwkokab)
 
 ![GitHub License](https://img.shields.io/github/license/gwkokab/gwkokab)
 [![Documentation Status](https://readthedocs.org/projects/gwkokab/badge/?version=latest)](https://gwkokab.readthedocs.io/en/latest/?badge=latest)
