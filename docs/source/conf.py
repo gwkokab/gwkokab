@@ -43,7 +43,10 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx_copybutton",
     "autoapi.extension",
+    # "myst_parser",
+    "sphinx_design",
 ]
+
 
 nb_execution_mode = "off"
 myst_heading_anchors = 4
