@@ -56,11 +56,13 @@ myst_enable_extensions = [
 ]
 
 # sphinx-autoapi
-autoapi_dirs = [
-    "../../src",
-    # "../../src/gwkokab",
-    # "../../src/cli_gwkokab",
-    # "../../src/kokab",
+autoapi_dirs = ["../../src"]
+autoapi_options = [
+    "members",
+    "undoc-members",
+    "show-inheritance",
+    "show-module-summary",
+    "imported-members",
 ]
 
 templates_path = ["_templates"]
@@ -149,9 +151,13 @@ intersphinx_mapping = {
     "chex": ("https://chex.readthedocs.io/en/latest/", None),
 }
 
-autodoc_type_aliases = {
-    "ArrayLike": "ArrayLike",
-    "Iterable": "Iterable",
-    "Numeric": "Numeric",
-    "chex.Numeric": "Numeric",
-}
+
+# source: https://sphinx-autoapi.readthedocs.io/en/latest/reference/config.html#event-autoapi-skip-member
+def skip_util_classes(app, what, name, obj, skip, options):
+    if what == "module" and "._" in name:  # skip private modules
+        skip = True
+    return skip
+
+
+def setup(sphinx):
+    sphinx.connect("autoapi-skip-member", skip_util_classes)

@@ -22,10 +22,6 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-"""A module for basic cosmology calculations using jax.
-
-See https://arxiv.org/pdf/astro-ph/9905116 for description of parameters and functions.
-"""
 
 # adapted from code written by Reed Essick included in the gw-distributions package at:
 # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/utils/cosmology.py
@@ -40,7 +36,9 @@ DEFAULT_DZ = 1e-3  # should be good enough for most numeric integrations we want
 
 
 class Cosmology(object):
-    """A class that implements specific cosmological computations.
+    """A class for basic cosmology calculations using jax.
+
+    See https://arxiv.org/pdf/astro-ph/9905116 for description of parameters and functions.
 
     .. note:: We work in SI units throughout, though distances are specified in Mpc.
     """
