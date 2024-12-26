@@ -155,6 +155,7 @@ def main() -> None:
         ("mmin_pl", N_pl),
         ("delta_pl", N_pl),
         ("log_rate", N_pl + N_g),
+        ("lamb_scale", N_pl + N_g),
         ("loc_g", N_g),
         ("scale_g", N_g),
         ("beta_g", N_g),

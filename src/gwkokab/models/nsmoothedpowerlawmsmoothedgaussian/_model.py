@@ -340,7 +340,13 @@ def NSmoothedPowerlawMSmoothedGaussian(
         component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
-    log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
+    log_rates = jnp.stack(
+        [
+            params.get(f"log_rate_{i}", 0.0) + params.get(f"lamb_scale_{i}", 0.0)
+            for i in range(N)
+        ],
+        axis=-1,
+    )
 
     return ScaledMixture(
         log_rates,
