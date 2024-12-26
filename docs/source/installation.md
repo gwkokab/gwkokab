@@ -17,7 +17,7 @@ pip install --upgrade gwkokab
 :::{tab-item} Nightly 🍺
 
 ```{code-block} bash
-pip install --upgrade git+<https://github.com/gwkokab/gwkokab>
+pip install --upgrade git+https://github.com/gwkokab/gwkokab
 ```
 
 :::

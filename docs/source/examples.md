@@ -1,4 +1,4 @@
-# GWKokab 101 🔰
+# GWKokab 101
 
 ```{toctree}
 {maxdepth:1}

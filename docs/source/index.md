@@ -16,7 +16,7 @@ population inference studies. This helps scientists draw statistical conclusions
 the astrophysical population of CBC events based on observed data. The models cover
 various aspects of CBC sources, including mass distribution, spin, and redshift.
 
-Built with :py::class:`~numpyro.distributions.distribution.Distribution` objects, these
+Built with [`Distribution`](numpyro.distributions.distribution.Distribution) objects, these
 models leverage NumPyro's integration with [JAX][JAX] for automatic differentiation and GPU
 acceleration, ensuring mathematical rigor and computational efficiency for large-scale
 simulations and analyses.
@@ -25,8 +25,7 @@ simulations and analyses.
 for probabilistic inference, providing a powerful framework for Bayesian parameter
 estimation from complex, high-dimensional distributions.
 
-The package includes a wide range of well-established
-[models] <https://gwkokab.readthedocs.io/en/latest/gwkokab.models.html#models>`_
+The package includes a wide range of well-established [`gwkokab.models`](gwkokab.models)
 frequently cited in the literature. It is continuously updated with new models to keep
 pace with advancements in the field, and community contributions are encouraged.
 
@@ -34,9 +33,10 @@ pace with advancements in the field, and community contributions are encouraged.
 detailed parameter estimation of single events and large-scale population studies. Its
 flexibility and extensibility make it invaluable for researchers at all levels.
 
+## Table of Contents
+
 ```{toctree}
-:hidden:
-:maxdepth: 1
+:maxdepth: 2
 :caption: Getting started
 
 installation
@@ -46,7 +46,6 @@ examples
 ```
 
 ```{toctree}
-:hidden:
 :maxdepth: 2
 :caption: Further resources
 
@@ -61,6 +60,6 @@ GitHub Repository <https://github.com/gwkokab/gwkokab>
 Changelog <https://github.com/gwkokab/gwkokab/releases>
 ```
 
-[GWKokab]: www.github.com/gwkokab/gwkokab
-[JAX]: www.github.com/google/jax
-[flowMC]: www.github.com/kazewong/flowMC
+[GWKokab]: https://github.com/gwkokab/gwkokab
+[JAX]: https://github.com/jax-ml/jax
+[flowMC]: https://github.com/kazewong/flowMC

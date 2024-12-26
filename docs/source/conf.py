@@ -59,6 +59,8 @@ myst_enable_extensions = [
 ]
 
 # sphinx-autoapi
+autoapi_python_class_content = "both"
+autoapi_member_order = "groupwise"
 autoapi_dirs = ["../../src"]
 autoapi_options = [
     "members",
