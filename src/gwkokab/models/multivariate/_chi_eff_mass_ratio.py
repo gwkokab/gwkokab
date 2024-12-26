@@ -25,9 +25,15 @@ from gwkokab.utils.transformations import chieff, mass_ratio
 
 
 class ChiEffMassRatioConstraint(constraints.Constraint):
-    r"""The :math:`\frac{\mathrm{d}V_c}{\mathrm{d}z}` is removed from the redshift
-    distribution, because the reference prior is from same distribution with
-    :math:`\kappa=2.7`."""
+    r"""Constraint for the :class:`ChiEffMassRatioCorrelated` model. It is defined
+    as,
+
+    .. math::
+
+        \forall m_1,m_2,a_1,a_2,z,
+        \left(m_{\text{min}} \leq m_2 \leq m_1 \leq m_{\text{max}}\right)
+        \land \left( a_1, a_2 \in [0,1] \right) \land \left( z \geq 0 \right)
+    """
 
     is_discrete = False
     event_dim = 1
@@ -59,6 +65,54 @@ class ChiEffMassRatioConstraint(constraints.Constraint):
 
 
 class ChiEffMassRatioCorrelated(Distribution):
+    r"""This model was proposed in `Who Ordered That? Unequal-mass Binary Black Hole
+    Mergers Have Larger Effective Spins
+    <https://ui.adsabs.harvard.edu/abs/2021ApJ...922L...5C>`_. This is the
+    implementation of correlated model of :math:`\chi_{\text{eff}}` and :math:`q`
+    detailed in Appendix A of the paper. Mathematically it is defined as,
+
+    .. math::
+
+        \begin{align}
+            p(m_1\mid \lambda_{\text{peak}}, \lambda, \mu_m, \sigma_m, m_{\text{min}}, m_{\text{max}}) &=
+            \left((1-\lambda_{\text{peak}})m_1^{\lambda}+\lambda_{\text{peak}}\mathcal{N}(m_1\mid \mu_m, \sigma_m)\right)
+            \Theta(m_1-m_{\text{min}})\Theta(m_{\text{max}}-m_1) \\
+            p(m_2\mid \gamma, m_1, m_{\text{min}}) &= m_2^{\gamma}\Theta(m_2-m_{\text{min}})\Theta(m_1-m_2)\\
+            p(z\mid \kappa) &\propto \frac{\mathrm{d}V_c}{\mathrm{d}z}(1+z)^{\kappa-1}
+        \end{align}
+
+    where :math:`\Theta` is the Heaviside step function, :math:`\mathcal{N}` is the normal
+    distribution, :math:`\mathrm{d}V_c/\mathrm{d}z` is the comoving volume element, and
+    :math:`\kappa` is the redshift distribution parameter. The :math:`\chi_{\text{eff}}`
+    model is defined as,
+
+    .. math::
+
+        \begin{align}
+            \mu_{\chi}(\mu_{\text{eff},0}, \alpha, q) &= \mu_{\text{eff},0} + \alpha(q-1)\\
+            \log_{10}(\sigma_{\chi}(\log_{10}(\sigma_{\text{eff},0}), \beta, q)) &=
+            \log_{10}(\sigma_{\text{eff},0}) + \beta(q-1)\\
+            p(\chi_{\text{eff}}\mid \mu_{\chi}, \sigma_{\chi}) &=
+            \mathcal{N}_{[-1,1]}(\chi_{\text{eff}}\mid \mu_{\chi}, \sigma_{\chi})\\
+        \end{align}
+
+    The joint distribution is defined as,
+
+    .. math::
+
+        p(m_1, m_2, \chi_{\text{eff}}, z\mid \lambda_{\text{peak}}, \lambda, \mu_m, \sigma_m,
+        m_{\text{min}}, m_{\text{max}}, \gamma, \alpha, \beta, \mu_{\text{eff},0},
+        \log_{10}(\sigma_{\text{eff},0}), \kappa) = p(m_1\mid \lambda_{\text{peak}}, \lambda, \mu_m,
+        \sigma_m, m_{\text{min}}, m_{\text{max}}) p(m_2\mid \gamma, m_1, m_{\text{min}})
+        p(\chi_{\text{eff}}\mid \mu_{\chi}, \sigma_{\chi}) p(z\mid \kappa)
+
+
+    .. note::
+
+        The :math:`\frac{\mathrm{d}V_c}{\mathrm{d}z}` is removed from the redshift
+        distribution, because the reference prior is from same distribution with
+        :math:`\kappa=2.7`."""
+
     arg_constraints = {
         "lambda_peak": constraints.real,
         "lamb": constraints.real,
@@ -113,6 +167,36 @@ class ChiEffMassRatioCorrelated(Distribution):
         *,
         validate_args=None,
     ) -> None:
+        r"""
+        Parameters
+        ----------
+        lambda_peak : Array
+            Weight of the peak in the mass distribution, :math:`\lambda_{\text{peak}}`.
+        lamb : Array
+            Power-law index of the mass distribution, :math:`\lambda`.
+        loc_m : Array
+            Location parameter of the peak in the mass distribution, :math:`\mu_m`.
+        scale_m : Array
+            Scale parameter of the peak in the mass distribution, :math:`\sigma_m`.
+        mmin : Array
+            Minimum mass of the mass, :math:`m_{\text{min}}`.
+        mmax : Array
+            Maximum mass of the mass, :math:`m_{\text{max}}`.
+        gamma : Array
+            Power-law index of the mass ratio distribution, :math:`\gamma`.
+        alpha : Array
+            parameter of the :math:`\chi_{\text{eff}}` distribution, :math:`\alpha`.
+        beta : Array
+            parameter of the :math:`\chi_{\text{eff}}` distribution, :math:`\beta`.
+        mu_eff_0 : Array
+            parameter of the :math:`\chi_{\text{eff}}` distribution, :math:`\mu_{\text{eff},0}`.
+        log10_sigma_eff_0 : Array
+            parameter of the :math:`\chi_{\text{eff}}` distribution, :math:`\log_{10}(\sigma_{\text{eff},0})`.
+        kappa : Array
+            parameter of the redshift distribution, :math:`\kappa`.
+        validate_args : bool, optional
+            Whether to validate input arguments, by default None.
+        """
         (
             self.lambda_peak,
             self.lamb,
