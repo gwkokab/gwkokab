@@ -31,6 +31,7 @@ from gwkokab.models import (
     PowerlawPrimaryMassRatio,
     PowerlawRedshift,
     SmoothedGaussianPrimaryMassRatio,
+    SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
@@ -503,6 +504,32 @@ CONTINUOUS = [
             "use_tilt": True,
             "use_eccentricity": True,
             **generic_nspmsg,
+        },
+    ),
+    (
+        SmoothedPowerlawAndPeak,
+        {
+            "alpha": 2.0,
+            "beta": 3.0,
+            "mmin": 50.0,
+            "mmax": 70.0,
+            "loc": 37.0,
+            "scale": 2.3,
+            "delta": 5.0,
+            "lambda_peak": 0.7,
+        },
+    ),
+    (
+        SmoothedPowerlawAndPeak,
+        {
+            "alpha": 2.5,
+            "beta": 3.1,
+            "mmin": 20.0,
+            "mmax": 70.0,
+            "loc": 37.0,
+            "scale": 2.3,
+            "delta": 5.0,
+            "lambda_peak": 0.2,
         },
     ),
 ]
