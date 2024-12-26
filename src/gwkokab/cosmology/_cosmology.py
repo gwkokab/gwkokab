@@ -90,7 +90,7 @@ class Cosmology(object):
         Vc = jnp.zeros_like(self.z, dtype=dtype)
 
         X = jnp.array([self.z, Dc, Vc], dtype=dtype)
-        extended_X = fori_loop(0.0, self.z.shape[0] - 1, self.update, X)
+        extended_X = fori_loop(0, self.z.shape[0] - 1, self.update, X)
         # extended_X = lax.scan(self.update, X, jnp.arange(0, self.z.shape[0] - 1))
         self.Dc = extended_X[1]
         self.Vc = extended_X[2]
