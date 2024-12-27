@@ -52,6 +52,7 @@ from gwkokab.poisson_mean import (
 
 from ..utils import sage_parser
 from ..utils.common import (
+    Adam_opt,
     expand_arguments,
     flowMC_default_parameters,
     get_posterior_data,
@@ -319,6 +320,9 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
 
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
+
+    if args.adam_optimizer:
+        FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
 
     handler = flowMChandler(
         logpdf=poisson_likelihood.log_posterior,
