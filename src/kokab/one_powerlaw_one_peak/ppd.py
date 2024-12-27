@@ -20,6 +20,7 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 import pandas as pd
 from jaxtyping import Array
 
+import kokab
 from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from kokab.one_powerlaw_one_peak.common import (
     create_smoothed_powerlaw_and_peak,
@@ -111,7 +112,9 @@ def main() -> None:
 
     parameters = [PRIMARY_MASS_SOURCE.name]
     if args.raw:
-        build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak_raw  # noqa
+        kokab.one_powerlaw_one_peak.ppd.build_smoothing_powerlaw_and_peak = (
+            create_smoothed_powerlaw_and_peak_raw
+        )
         parameters.append(MASS_RATIO.name)
     else:
         parameters.append(SECONDARY_MASS_SOURCE.name)

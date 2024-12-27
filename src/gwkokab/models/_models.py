@@ -885,7 +885,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         log_prob_m1 = jnp.log(
             (1 - self.lambda_peak)
-            + jnp.exp(
+            * jnp.exp(
                 self.log_rate_pl
                 + doubly_truncated_power_law_log_prob(
                     x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
