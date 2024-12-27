@@ -517,6 +517,8 @@ CONTINUOUS = [
             "scale": 2.3,
             "delta": 5.0,
             "lambda_peak": 0.7,
+            "log_rate_pl": 2.0,
+            "log_rate_peak": 2.0,
         },
     ),
     (
@@ -530,6 +532,8 @@ CONTINUOUS = [
             "scale": 2.3,
             "delta": 5.0,
             "lambda_peak": 0.2,
+            "log_rate_pl": 2.0,
+            "log_rate_peak": 2.0,
         },
     ),
 ]
