@@ -18,26 +18,29 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-from jax import numpy as jnp, random as jrd
-from numpyro.distributions import Uniform
+from jax import random as jrd
 
 from gwkokab.debug import enable_debugging
-from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
-from gwkokab.models import ChiEffMassRatioCorrelated
+from gwkokab.inference import (
+    Bake,
+    flowMChandler,
+    PoissonLikelihood,
+)
 from gwkokab.parameters import (
-    Parameter,
+    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
     SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import (
     ImportanceSamplingPoissonMean,
     InverseTransformSamplingPoissonMean,
 )
-
-from ..utils import sage_parser
-from ..utils.common import (
+from kokab.one_powerlaw_one_peak.common import (
+    create_smoothed_powerlaw_and_peak,
+    create_smoothed_powerlaw_and_peak_raw,
+)
+from kokab.utils import sage_parser
+from kokab.utils.common import (
     flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
@@ -46,22 +49,19 @@ from ..utils.common import (
 )
 
 
-class RedshiftReferencePrior(Uniform):
-    def __init__(self, low=0.001, high=3.0 + 1e-6, *, validate_args=None):
-        super(RedshiftReferencePrior, self).__init__(
-            low, high, validate_args=validate_args
-        )
-
-    def log_prob(self, value):
-        return (2.7 - 1) * jnp.log1p(value)
-
-
-REDSHIFT = Parameter(name="redshift", prior=RedshiftReferencePrior())
-
-
 def make_parser() -> ArgumentParser:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = sage_parser.get_parser(parser)
+
+    model_group = parser.add_argument_group("Model Options")
+    model_group.add_argument(
+        "--raw",
+        action="store_true",
+        help="The raw parameters for this model are primary mass and mass ratio. To"
+        "align with the rest of the codebase, we transform primary mass and mass ratio"
+        "to primary and secondary mass. This flag will use the raw parameters i.e."
+        "primary mass and mass ratio.",
+    )
 
     return parser
 
@@ -91,32 +91,27 @@ def main() -> None:
     model_parameters = [
         "alpha",
         "beta",
-        "gamma",
-        "kappa",
-        "lamb",
-        "lambda_peak",
-        "loc_m",
-        "log10_sigma_eff_0",
-        "mmax",
+        "loc",
+        "scale",
         "mmin",
-        "mu_eff_0",
-        "scale_m",
+        "mmax",
+        "delta",
+        "lambda_peak",
+        "log_rate_pl",
+        "log_rate_peak",
     ]
 
-    model_prior_param = get_processed_priors(
-        model_parameters,
-        prior_dict,
-    )
+    parameters = [PRIMARY_MASS_SOURCE]
+    if args.raw:
+        build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak_raw
+        parameters.append(MASS_RATIO)
+    else:
+        build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak
+        parameters.append(SECONDARY_MASS_SOURCE)
 
-    model = Bake(ChiEffMassRatioCorrelated)(**model_prior_param)
+    model_prior_param = get_processed_priors(model_parameters, prior_dict)
 
-    parameters = [
-        PRIMARY_MASS_SOURCE,
-        SECONDARY_MASS_SOURCE,
-        PRIMARY_SPIN_MAGNITUDE,
-        SECONDARY_SPIN_MAGNITUDE,
-        REDSHIFT,
-    ]
+    model = Bake(build_smoothing_powerlaw_and_peak)(**model_prior_param)
 
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json

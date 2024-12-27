@@ -19,8 +19,8 @@ import chex
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
-from jax.scipy.stats import truncnorm, uniform
-from jaxtyping import Array
+from jax.scipy.stats import norm, truncnorm, uniform
+from jaxtyping import Array, ArrayLike
 from numpyro.distributions import (
     CategoricalProbs,
     constraints,
@@ -760,6 +760,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
+
         return (
             log_prob_m1
             + log_prob_q
@@ -767,3 +768,162 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             + log_smoothing_q
             + self.log_scale
         )
+
+
+class SmoothedPowerlawAndPeak(Distribution):
+    r"""It is a mixture of power law and Gaussian distribution with a smoothing
+    kernel.
+
+    .. math::
+
+        p(m_1, q\mid \alpha, \beta, \mu, \sigma, m_{\text{min}}, m_{\text{max}}, \delta, \lambda_{\text{peak}}) =
+        \left((1-\lambda_{\text{peak})m_1^{\alpha}+\lambda_{\text{peak}\mathcal{N}(m_1\mid\mu,\sigma)\right)
+        q^{\beta}
+        S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)
+        S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),
+        \qqquad m_{\text{min}}\leq m_1q \leq m_1\leq m_{\text{max}}
+    """
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "loc": constraints.real,
+        "scale": constraints.positive,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
+        "delta": constraints.positive,
+        "lambda_peak": constraints.unit_interval,
+        "log_rate_pl": constraints.real,
+        "log_rate_peak": constraints.real,
+    }
+    reparametrized_params = [
+        "alpha",
+        "beta",
+        "loc",
+        "scale",
+        "mmin",
+        "mmax",
+        "delta",
+        "lambda_peak",
+        "log_rate_pl",
+        "log_rate_peak",
+    ]
+    pytree_aux_fields = ("_support",)
+
+    def __init__(
+        self,
+        alpha: ArrayLike,
+        beta: ArrayLike,
+        loc: ArrayLike,
+        scale: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        delta: ArrayLike,
+        lambda_peak: ArrayLike,
+        log_rate_pl: ArrayLike,
+        log_rate_peak: ArrayLike,
+        *,
+        validate_args=None,
+    ):
+        """
+        Parameters
+        ----------
+        alpha : ArrayLike
+            Power law index for primary mass
+        beta : ArrayLike
+            Power law index for mass ratio
+        loc : ArrayLike
+            Mean of the Gaussian distribution
+        scale : ArrayLike
+            Standard deviation of the Gaussian distribution
+        mmin : ArrayLike
+            Minimum mass
+        mmax : ArrayLike
+            Maximum mass
+        delta : ArrayLike
+            Width of the smoothing window
+        lambda_peak : ArrayLike
+            Fraction of masses in the Gaussian peak
+        log_rate_pl : ArrayLike
+            Logarithm of the rate of the power law component
+        log_rate_peak : ArrayLike
+            Logarithm of the rate of the Gaussian peak component
+        validate_args : bool, optional
+            Whether to validate input, by default None
+        """
+        (
+            self.alpha,
+            self.beta,
+            self.loc,
+            self.scale,
+            self.mmin,
+            self.mmax,
+            self.delta,
+            self.lambda_peak,
+            self.log_rate_pl,
+            self.log_rate_peak,
+        ) = promote_shapes(
+            alpha,
+            beta,
+            loc,
+            scale,
+            mmin,
+            mmax,
+            delta,
+            lambda_peak,
+            log_rate_pl,
+            log_rate_peak,
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha),
+            jnp.shape(beta),
+            jnp.shape(loc),
+            jnp.shape(scale),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(delta),
+            jnp.shape(lambda_peak),
+            jnp.shape(log_rate_pl),
+            jnp.shape(log_rate_peak),
+        )
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        super(SmoothedPowerlawAndPeak, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        q = value[..., 1]
+        m2 = m1 * q
+
+        log_smoothing_m1 = log_planck_taper_window(
+            (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_smoothing_q = log_planck_taper_window(
+            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_prob_q = jnp.where(
+            jnp.less_equal(m1, self.mmin),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
+        )
+        log_prob_m1 = jnp.log(
+            (1 - self.lambda_peak)
+            * jnp.exp(
+                self.log_rate_pl
+                + doubly_truncated_power_law_log_prob(
+                    x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+                )
+            )
+            + jnp.exp(self.log_rate_peak)
+            * self.lambda_peak
+            * norm.pdf(m1, loc=self.loc, scale=self.scale)
+        )
+        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
