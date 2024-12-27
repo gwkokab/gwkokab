@@ -809,6 +809,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         "log_rate_peak",
     ]
     pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_log_Z_m1", "_log_Z_q")
 
     def __init__(
         self,
@@ -890,29 +891,21 @@ class SmoothedPowerlawAndPeak(Distribution):
         super(SmoothedPowerlawAndPeak, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
+        m1s = jnp.linspace(mmin, mmax, 50)
+        qs = jnp.linspace(0.001, 1, 50)
+        m1s_grid, qs_grid = jnp.meshgrid(m1s, qs, indexing="ij")
+        _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(m1s_grid)), m1s)
+        _Z_q = jnp.trapezoid(jnp.exp(self._log_prob_q(m1s, qs_grid)), qs, axis=0)
+        self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
+        self._log_Z_q = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_q))
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
         return self._support
 
-    @validate_sample
-    def log_prob(self, value):
-        m1 = value[..., 0]
-        q = value[..., 1]
-        m2 = m1 * q
-
+    def _log_prob_m1(self, m1) -> Array:
         log_smoothing_m1 = log_planck_taper_window(
             (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
-        )
-        log_smoothing_q = log_planck_taper_window(
-            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
-        )
-        log_prob_q = jnp.where(
-            jnp.less_equal(m1, self.mmin),
-            -jnp.inf,
-            doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
-            ),
         )
         log_prob_m1 = jnp.log(
             (1 - self.lambda_peak)
@@ -926,4 +919,28 @@ class SmoothedPowerlawAndPeak(Distribution):
             * self.lambda_peak
             * norm.pdf(m1, loc=self.loc, scale=self.scale)
         )
-        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
+        return log_prob_m1 + log_smoothing_m1
+
+    def _log_prob_q(self, m1, q) -> Array:
+        m2 = m1 * q
+        log_smoothing_q = log_planck_taper_window(
+            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_prob_q = jnp.where(
+            jnp.less_equal(m1, self.mmin),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
+        )
+        return log_prob_q + log_smoothing_q
+
+    @validate_sample
+    def log_prob(self, value):
+        m1 = value[..., 0]
+        q = value[..., 1]
+
+        log_prob_m1 = self._log_prob_m1(m1) - self._log_Z_m1
+        log_prob_q = self._log_prob_q(m1, q) - self._log_Z_q
+
+        return log_prob_m1 + log_prob_q
