@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from functools import partial
 from typing_extensions import Optional
 
 import chex
@@ -809,7 +810,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         "log_rate_peak",
     ]
     pytree_aux_fields = ("_support",)
-    pytree_data_fields = ("_log_Z_m1", "_log_Z_q")
+    pytree_data_fields = ("_log_Z_m1", "_Z_q")
 
     def __init__(
         self,
@@ -894,10 +895,11 @@ class SmoothedPowerlawAndPeak(Distribution):
         m1s = jnp.linspace(mmin, mmax, 50)
         qs = jnp.linspace(0.001, 1, 50)
         m1s_grid, qs_grid = jnp.meshgrid(m1s, qs, indexing="ij")
-        _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(m1s_grid)), m1s)
-        _Z_q = jnp.trapezoid(jnp.exp(self._log_prob_q(m1s, qs_grid)), qs, axis=0)
+        _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(m1s)), m1s)
+        _Z_q = jnp.trapezoid(jnp.exp(self._log_prob_q(m1s_grid, qs_grid)), qs, axis=0)
         self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
-        self._log_Z_q = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_q))
+        _Z_q = jnp.where(self.delta == 0.0, 1.0, _Z_q)
+        self._Z_q = partial(jnp.interp, xp=m1s, fp=_Z_q)
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
@@ -941,6 +943,6 @@ class SmoothedPowerlawAndPeak(Distribution):
         q = value[..., 1]
 
         log_prob_m1 = self._log_prob_m1(m1) - self._log_Z_m1
-        log_prob_q = self._log_prob_q(m1, q) - self._log_Z_q
+        log_prob_q = self._log_prob_q(m1, q) - jnp.log(self._Z_q(m1))
 
         return log_prob_m1 + log_prob_q
