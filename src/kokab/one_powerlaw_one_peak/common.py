@@ -14,13 +14,12 @@
 
 
 from jaxtyping import ArrayLike
-from numpyro.distributions import Distribution, TransformedDistribution, TruncatedNormal
+from numpyro.distributions import TransformedDistribution
 
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.models.transformations import (
     PrimaryMassAndMassRatioToComponentMassesTransform,
 )
-from gwkokab.models.utils import JointDistribution
 
 
 def create_smoothed_powerlaw_and_peak_raw(
@@ -32,6 +31,8 @@ def create_smoothed_powerlaw_and_peak_raw(
     mmax: ArrayLike,
     delta: ArrayLike,
     lambda_peak: ArrayLike,
+    log_rate_pl: ArrayLike,
+    log_rate_peak: ArrayLike,
 ) -> SmoothedPowerlawAndPeak:
     """Create a smoothed powerlaw and peak model with raw parameters."""
     return SmoothedPowerlawAndPeak(
@@ -43,6 +44,8 @@ def create_smoothed_powerlaw_and_peak_raw(
         mmax=mmax,
         delta=delta,
         lambda_peak=lambda_peak,
+        log_rate_pl=log_rate_pl,
+        log_rate_peak=log_rate_peak,
     )
 
 
@@ -55,6 +58,8 @@ def create_smoothed_powerlaw_and_peak(
     mmax: ArrayLike,
     delta: ArrayLike,
     lambda_peak: ArrayLike,
+    log_rate_pl: ArrayLike,
+    log_rate_peak: ArrayLike,
 ) -> TransformedDistribution:
     """Create a smoothed powerlaw and peak model with raw parameters."""
     return TransformedDistribution(
@@ -67,41 +72,8 @@ def create_smoothed_powerlaw_and_peak(
             mmax=mmax,
             delta=delta,
             lambda_peak=lambda_peak,
+            log_rate_pl=log_rate_pl,
+            log_rate_peak=log_rate_peak,
         ),
         transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
     )
-
-
-build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak
-
-
-def create_model(
-    use_spin: bool = False,
-    **params,
-) -> Distribution:
-    powerlaw = build_smoothing_powerlaw_and_peak(
-        params["alpha"],
-        params["beta"],
-        params["loc"],
-        params["scale"],
-        params["mmin"],
-        params["mmax"],
-        params["delta"],
-        params["lambda_peak"],
-    )
-    if not use_spin:
-        return powerlaw
-
-    a1_dist = TruncatedNormal(
-        params["chi1_loc"],
-        params["chi1_scale"],
-        0.0,
-        1.0,
-    )
-    a2_dist = TruncatedNormal(
-        params["chi2_loc"],
-        params["chi2_scale"],
-        0.0,
-        1.0,
-    )
-    return JointDistribution(powerlaw, a1_dist, a2_dist)

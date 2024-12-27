@@ -762,6 +762,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         "mmax": constraints.positive,
         "delta": constraints.positive,
         "lambda_peak": constraints.unit_interval,
+        "log_rate_pl": constraints.real,
+        "log_rate_peak": constraints.real,
     }
     reparametrized_params = [
         "alpha",
@@ -772,6 +774,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         "mmax",
         "delta",
         "lambda_peak",
+        "log_rate_pl",
+        "log_rate_peak",
     ]
     pytree_aux_fields = ("_support",)
 
@@ -785,6 +789,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         mmax: ArrayLike,
         delta: ArrayLike,
         lambda_peak: ArrayLike,
+        log_rate_pl: ArrayLike,
+        log_rate_peak: ArrayLike,
         *,
         validate_args=None,
     ):
@@ -807,6 +813,10 @@ class SmoothedPowerlawAndPeak(Distribution):
             Width of the smoothing window
         lambda_peak : ArrayLike
             Fraction of masses in the Gaussian peak
+        log_rate_pl : ArrayLike
+            Logarithm of the rate of the power law component
+        log_rate_peak : ArrayLike
+            Logarithm of the rate of the Gaussian peak component
         validate_args : bool, optional
             Whether to validate input, by default None
         """
@@ -819,7 +829,20 @@ class SmoothedPowerlawAndPeak(Distribution):
             self.mmax,
             self.delta,
             self.lambda_peak,
-        ) = promote_shapes(alpha, beta, loc, scale, mmin, mmax, delta, lambda_peak)
+            self.log_rate_pl,
+            self.log_rate_peak,
+        ) = promote_shapes(
+            alpha,
+            beta,
+            loc,
+            scale,
+            mmin,
+            mmax,
+            delta,
+            lambda_peak,
+            log_rate_pl,
+            log_rate_peak,
+        )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
             jnp.shape(beta),
@@ -829,6 +852,8 @@ class SmoothedPowerlawAndPeak(Distribution):
             jnp.shape(mmax),
             jnp.shape(delta),
             jnp.shape(lambda_peak),
+            jnp.shape(log_rate_pl),
+            jnp.shape(log_rate_peak),
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(SmoothedPowerlawAndPeak, self).__init__(
@@ -861,10 +886,13 @@ class SmoothedPowerlawAndPeak(Distribution):
         log_prob_m1 = jnp.log(
             (1 - self.lambda_peak)
             + jnp.exp(
-                doubly_truncated_power_law_log_prob(
+                self.log_rate_pl
+                + doubly_truncated_power_law_log_prob(
                     x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
                 )
             )
-            + self.lambda_peak * norm.pdf(m1, loc=self.loc, scale=self.scale)
+            + jnp.exp(self.log_rate_peak)
+            * self.lambda_peak
+            * norm.pdf(m1, loc=self.loc, scale=self.scale)
         )
         return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q

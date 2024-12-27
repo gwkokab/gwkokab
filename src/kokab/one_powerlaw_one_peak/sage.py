@@ -20,7 +20,6 @@ from glob import glob
 
 from jax import random as jrd
 
-import kokab
 from gwkokab.debug import enable_debugging
 from gwkokab.inference import (
     Bake,
@@ -30,16 +29,14 @@ from gwkokab.inference import (
 from gwkokab.parameters import (
     MASS_RATIO,
     PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
     SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import (
     ImportanceSamplingPoissonMean,
     InverseTransformSamplingPoissonMean,
 )
 from kokab.one_powerlaw_one_peak.common import (
-    create_model,
+    create_smoothed_powerlaw_and_peak,
     create_smoothed_powerlaw_and_peak_raw,
 )
 from kokab.utils import sage_parser
@@ -56,11 +53,6 @@ def make_parser() -> ArgumentParser:
     parser = sage_parser.get_parser(parser)
 
     model_group = parser.add_argument_group("Model Options")
-    model_group.add_argument(
-        "--no-spin",
-        action="store_true",
-        help="Do not include spin parameters in the model.",
-    )
     model_group.add_argument(
         "--raw",
         action="store_true",
@@ -98,13 +90,10 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
-    has_spin = not args.no_spin
-
     with open(args.prior_json, "r") as f:
         prior_dict = json.load(f)
 
     model_parameters = [
-        "log_rate",
         "alpha",
         "beta",
         "loc",
@@ -113,36 +102,21 @@ def main() -> None:
         "mmax",
         "delta",
         "lambda_peak",
+        "log_rate_pl",
+        "log_rate_peak",
     ]
 
     parameters = [PRIMARY_MASS_SOURCE]
     if args.raw:
-        kokab.one_powerlaw_one_peak.common.build_smoothing_powerlaw_and_peak = (
-            create_smoothed_powerlaw_and_peak_raw
-        )
+        build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak_raw
         parameters.append(MASS_RATIO)
     else:
+        build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak
         parameters.append(SECONDARY_MASS_SOURCE)
-
-    if has_spin:
-        parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
-
-        model_parameters.extend(
-            [
-                "chi1_high",
-                "chi1_loc",
-                "chi1_low",
-                "chi1_scale",
-                "chi2_high",
-                "chi2_loc",
-                "chi2_low",
-                "chi2_scale",
-            ]
-        )
 
     model_prior_param = get_processed_priors(model_parameters, prior_dict)
 
-    model = Bake(create_model)(use_spin=has_spin, **model_prior_param)
+    model = Bake(build_smoothing_powerlaw_and_peak)(**model_prior_param)
 
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json
@@ -175,8 +149,6 @@ def main() -> None:
     )
 
     constants = model.constants
-
-    constants["use_spin"] = int(has_spin)
 
     with open("constants.json", "w") as f:
         json.dump(constants, f)
