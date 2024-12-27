@@ -589,20 +589,24 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "mmin": constraints.positive,
         "mmax": constraints.positive,
         "delta": constraints.positive,
+        "log_scale": constraints.less_than_eq(0.0),
     }
-    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta"]
+    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta", "log_scale"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha, beta, mmin, mmax, delta, *, validate_args=None) -> None:
+    def __init__(
+        self, alpha, beta, mmin, mmax, delta, log_scale=0.0, *, validate_args=None
+    ) -> None:
         """
         :param alpha: Power law index for primary mass
         :param beta: Power law index for mass ratio
         :param mmin: Minimum mass
         :param mmax: Maximum mass
         :param delta: width of the smoothing window
+        :param log_scale: log of the scaling factor for the distribution
         """
-        self.alpha, self.beta, self.mmin, self.mmax, self.delta = promote_shapes(
-            alpha, beta, mmin, mmax, delta
+        self.alpha, self.beta, self.mmin, self.mmax, self.delta, self.log_scale = (
+            promote_shapes(alpha, beta, mmin, mmax, delta, log_scale)
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
@@ -610,6 +614,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
             jnp.shape(delta),
+            jnp.shape(log_scale),
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(SmoothedPowerlawPrimaryMassRatio, self).__init__(
@@ -641,7 +646,13 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
+        return (
+            log_prob_m1
+            + log_prob_q
+            + log_smoothing_m1
+            + log_smoothing_q
+            + self.log_scale
+        )
 
 
 class SmoothedGaussianPrimaryMassRatio(Distribution):
@@ -670,12 +681,23 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "beta": constraints.real,
         "mmin": constraints.positive,
         "delta": constraints.positive,
+        "log_scale": constraints.less_than_eq(0.0),
     }
-    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta"]
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "log_scale"]
     pytree_aux_fields = ("_support", "_norm")
 
     def __init__(
-        self, loc, scale, beta, mmin, delta, low=None, high=None, *, validate_args=None
+        self,
+        loc,
+        scale,
+        beta,
+        mmin,
+        delta,
+        low=None,
+        high=None,
+        log_scale=0.0,
+        *,
+        validate_args=None,
     ) -> None:
         """
         :param loc: mean of the Gaussian distribution
@@ -685,9 +707,10 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         :param delta: width of the smoothing window
         :param low: lower bound of the Gaussian distribution, defaults to -inf
         :param high: upper bound of the Gaussian distribution, defaults to inf
+        :param log_scale: log of the scaling factor for the distribution
         """
-        self.loc, self.scale, self.beta, self.mmin, self.delta = promote_shapes(
-            loc, scale, beta, mmin, delta
+        self.loc, self.scale, self.beta, self.mmin, self.delta, self.log_scale = (
+            promote_shapes(loc, scale, beta, mmin, delta, log_scale)
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(loc),
@@ -697,6 +720,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             jnp.shape(delta),
             jnp.shape(low),
             jnp.shape(high),
+            jnp.shape(log_scale),
         )
         support_low = mmin
         if low is not None:
@@ -736,7 +760,14 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
+
+        return (
+            log_prob_m1
+            + log_prob_q
+            + log_smoothing_m1
+            + log_smoothing_q
+            + self.log_scale
+        )
 
 
 class SmoothedPowerlawAndPeak(Distribution):
