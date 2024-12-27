@@ -20,13 +20,7 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 import pandas as pd
 from jaxtyping import Array
 
-from gwkokab.parameters import (
-    MASS_RATIO,
-    PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
-    SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
-)
+from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from kokab.one_powerlaw_one_peak.common import (
     create_smoothed_powerlaw_and_peak,
     create_smoothed_powerlaw_and_peak_raw,
@@ -115,16 +109,12 @@ def main() -> None:
         args.constants, args.nf_samples_mapping
     )
 
-    has_spin = constants.get("use_spin", False)
-
     parameters = [PRIMARY_MASS_SOURCE.name]
     if args.raw:
         build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak_raw  # noqa
-        parameters.append(MASS_RATIO)
+        parameters.append(MASS_RATIO.name)
     else:
-        parameters.append(SECONDARY_MASS_SOURCE)
-    if has_spin:
-        parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
+        parameters.append(SECONDARY_MASS_SOURCE.name)
 
     model_without_rate_pdf = get_model_pdf(constants, nf_samples_mapping)
     compute_and_save_ppd(model_without_rate_pdf, args.range, args.filename, parameters)
