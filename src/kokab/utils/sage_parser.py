@@ -100,6 +100,11 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "keys: local_sampler_kwargs, nf_model_kwargs, sampler_kwargs, data_dump_kwargs,"
         " and their respective values.",
     )
+    flowMC_group.add_argument(
+        "--adam-optimizer",
+        help="Use Adam optimizer before running flowMC.",
+        action="store_true",
+    )
 
     prior_group = parser.add_argument_group("Prior Options")
     prior_group.add_argument(
