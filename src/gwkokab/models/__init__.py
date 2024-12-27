@@ -20,6 +20,7 @@ from ._models import (
     NDistribution,
     PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
+    SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
