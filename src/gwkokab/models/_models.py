@@ -896,9 +896,10 @@ class SmoothedPowerlawAndPeak(Distribution):
         qs = jnp.linspace(0.001, 1, 50)
         m1s_grid, qs_grid = jnp.meshgrid(m1s, qs, indexing="ij")
         _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(m1s)), m1s)
-        _Z_q = jnp.trapezoid(jnp.exp(self._log_prob_q(m1s_grid, qs_grid)), qs, axis=0)
+        _log_prob_q = self._log_prob_q(jnp.stack([m1s_grid, qs_grid], axis=-1))
+        _Z_q = jnp.trapezoid(jnp.exp(_log_prob_q), qs, axis=1)
         self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
-        self._Z_q = partial(jnp.interp, xp=m1s, fp=_Z_q)
+        self._Z_q = partial(jnp.interp, xp=m1s, fp=_Z_q, left=1.0, right=1.0)
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
@@ -909,7 +910,7 @@ class SmoothedPowerlawAndPeak(Distribution):
             (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
         )
         log_prob_m1 = jnp.log(
-            (1 - self.lambda_peak)
+            (1.0 - self.lambda_peak)
             * jnp.exp(
                 self.log_rate_pl
                 + doubly_truncated_power_law_log_prob(
@@ -920,9 +921,12 @@ class SmoothedPowerlawAndPeak(Distribution):
             * self.lambda_peak
             * norm.pdf(m1, loc=self.loc, scale=self.scale)
         )
-        return log_prob_m1 + log_smoothing_m1
+        return jnp.where(self.delta == 0.0, -jnp.inf, log_prob_m1 + log_smoothing_m1)
 
-    def _log_prob_q(self, m1: Array, q: Array) -> Array:
+    @validate_sample
+    def _log_prob_q(self, m1q: Array) -> Array:
+        m1 = m1q[..., 0]
+        q = m1q[..., 1]
         m2 = m1 * q
         log_smoothing_q = log_planck_taper_window(
             (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
@@ -934,15 +938,15 @@ class SmoothedPowerlawAndPeak(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        return log_prob_q + log_smoothing_q
+        return jnp.where(self.delta == 0.0, -jnp.inf, log_prob_q + log_smoothing_q)
 
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
-        q = value[..., 1]
 
         log_prob_m1 = self._log_prob_m1(m1) - self._log_Z_m1
-        log_prob_q = self._log_prob_q(m1, q) - jnp.where(
-            self.delta == 0.0, 1.0, jnp.log(self._Z_q(m1))
+        _Z_q = self._Z_q(m1)
+        log_prob_q = self._log_prob_q(value) - jnp.where(
+            self.delta == 0.0, 1.0, jnp.where(_Z_q == 0.0, 1.0, jnp.log(_Z_q))
         )
         return log_prob_m1 + log_prob_q
