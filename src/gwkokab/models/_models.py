@@ -809,8 +809,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         "log_rate_pl",
         "log_rate_peak",
     ]
-    pytree_aux_fields = ("_support",)
-    pytree_data_fields = ("_log_Z_m1", "_Z_q")
+    pytree_aux_fields = ("_support", "_Z_q")
+    pytree_data_fields = ("_log_Z_m1",)
 
     def __init__(
         self,
@@ -898,14 +898,13 @@ class SmoothedPowerlawAndPeak(Distribution):
         _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(m1s)), m1s)
         _Z_q = jnp.trapezoid(jnp.exp(self._log_prob_q(m1s_grid, qs_grid)), qs, axis=0)
         self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
-        _Z_q = jnp.where(self.delta == 0.0, 1.0, _Z_q)
         self._Z_q = partial(jnp.interp, xp=m1s, fp=_Z_q)
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
         return self._support
 
-    def _log_prob_m1(self, m1) -> Array:
+    def _log_prob_m1(self, m1: Array) -> Array:
         log_smoothing_m1 = log_planck_taper_window(
             (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
         )
@@ -923,7 +922,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         return log_prob_m1 + log_smoothing_m1
 
-    def _log_prob_q(self, m1, q) -> Array:
+    def _log_prob_q(self, m1: Array, q: Array) -> Array:
         m2 = m1 * q
         log_smoothing_q = log_planck_taper_window(
             (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
@@ -943,6 +942,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         q = value[..., 1]
 
         log_prob_m1 = self._log_prob_m1(m1) - self._log_Z_m1
-        log_prob_q = self._log_prob_q(m1, q) - jnp.log(self._Z_q(m1))
-
+        log_prob_q = self._log_prob_q(m1, q) - jnp.where(
+            self.delta == 0.0, 1.0, jnp.log(self._Z_q(m1))
+        )
         return log_prob_m1 + log_prob_q
