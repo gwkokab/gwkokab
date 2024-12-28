@@ -892,36 +892,42 @@ class SmoothedPowerlawAndPeak(Distribution):
         super(SmoothedPowerlawAndPeak, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
-        m1s = jnp.linspace(mmin, mmax, 50)
-        qs = jnp.linspace(0.001, 1, 50)
+
+        m1s = jnp.linspace(mmin, mmax, 1000)
+        qs = jnp.linspace(0, 1, 100)
+
         m1s_grid, qs_grid = jnp.meshgrid(m1s, qs, indexing="ij")
+
         _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(m1s)), m1s)
+        self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
+
         _log_prob_q = self._log_prob_q(jnp.stack([m1s_grid, qs_grid], axis=-1))
         _Z_q = jnp.trapezoid(jnp.exp(_log_prob_q), qs, axis=1)
-        self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
         self._Z_q = partial(jnp.interp, xp=m1s, fp=_Z_q, left=1.0, right=1.0)
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
         return self._support
 
-    def _log_prob_m1(self, m1: Array) -> Array:
+    def _log_prob_m1(
+        self, m1: Array, log_rate_pl: Array = 0.0, log_rate_peak: Array = 0.0
+    ) -> Array:
         log_smoothing_m1 = log_planck_taper_window(
             (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
         )
         log_prob_m1 = jnp.log(
             (1.0 - self.lambda_peak)
             * jnp.exp(
-                self.log_rate_pl
+                log_rate_pl
                 + doubly_truncated_power_law_log_prob(
                     x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
                 )
             )
-            + jnp.exp(self.log_rate_peak)
+            + jnp.exp(log_rate_peak)
             * self.lambda_peak
             * norm.pdf(m1, loc=self.loc, scale=self.scale)
         )
-        return jnp.where(self.delta == 0.0, -jnp.inf, log_prob_m1 + log_smoothing_m1)
+        return log_prob_m1 + log_smoothing_m1
 
     @validate_sample
     def _log_prob_q(self, m1q: Array) -> Array:
@@ -938,15 +944,18 @@ class SmoothedPowerlawAndPeak(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        return jnp.where(self.delta == 0.0, -jnp.inf, log_prob_q + log_smoothing_q)
+        return log_prob_q + log_smoothing_q
 
     @validate_sample
     def log_prob(self, value):
         m1 = value[..., 0]
 
-        log_prob_m1 = self._log_prob_m1(m1) - self._log_Z_m1
-        _Z_q = self._Z_q(m1)
-        log_prob_q = self._log_prob_q(value) - jnp.where(
-            self.delta == 0.0, 1.0, jnp.where(_Z_q == 0.0, 1.0, jnp.log(_Z_q))
+        log_prob_m1 = self._log_prob_m1(
+            m1, log_rate_pl=self.log_rate_pl, log_rate_peak=self.log_rate_peak
         )
-        return log_prob_m1 + log_prob_q
+
+        log_prob_q = self._log_prob_q(value)
+
+        log_Z = self._log_Z_m1 + jnp.log(self._Z_q(m1))
+
+        return log_prob_m1 + log_prob_q - log_Z
