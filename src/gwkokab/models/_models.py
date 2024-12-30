@@ -891,8 +891,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
 
-        self._m1s = jnp.linspace(mmin, mmax, 7)
-        qs = jnp.linspace(jnp.zeros(batch_shape), jnp.ones(batch_shape), 5)
+        self._m1s = jnp.linspace(mmin, mmax, 1000)
+        qs = jnp.linspace(jnp.zeros(batch_shape), jnp.ones(batch_shape), 100)
 
         if batch_shape:
             # TODO: check https://github.com/jax-ml/jax/issues/25696 and update accordingly
