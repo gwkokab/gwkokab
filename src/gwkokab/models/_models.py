@@ -810,8 +810,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         "log_rate_pl",
         "log_rate_peak",
     ]
-    pytree_aux_fields = ("_support", "_Z_q")
-    pytree_data_fields = ("_log_Z_m1", "_m1s")
+    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_log_Z_m1", "_m1s", "_Z_q")
 
     def __init__(
         self,
@@ -891,8 +891,16 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
 
-        self._m1s = jnp.linspace(mmin, mmax, 1000)
-        qs = jnp.linspace(jnp.zeros(batch_shape), jnp.ones(batch_shape), 100)
+        mmin = jnp.broadcast_to(mmin, batch_shape)
+        mmax = jnp.broadcast_to(mmax, batch_shape)
+
+        _m1s = jnp.linspace(mmin, mmax, 10, dtype=jnp.result_type(float))
+        qs = jnp.linspace(
+            jnp.zeros(batch_shape),
+            jnp.ones(batch_shape),
+            10,
+            dtype=jnp.result_type(float),
+        )
 
         if batch_shape:
             # TODO: check https://github.com/jax-ml/jax/issues/25696 and update accordingly
@@ -902,15 +910,17 @@ class SmoothedPowerlawAndPeak(Distribution):
         else:
             meshgrid_fn = partial(jnp.meshgrid, indexing="ij")
 
-        _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(self._m1s)), self._m1s, axis=0)
+        _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s)), _m1s, axis=0)
         self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
 
-        m1qs_grid = jnp.stack(meshgrid_fn(self._m1s, qs), axis=-1)
+        m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
         _log_prob_q = self._log_prob_q(m1qs_grid)
 
         self._Z_q = jnp.trapezoid(
             jnp.exp(_log_prob_q), jnp.expand_dims(qs, axis=0), axis=1
         )
+
+        self._m1s = _m1s
 
         super(SmoothedPowerlawAndPeak, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
