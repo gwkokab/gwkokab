@@ -894,11 +894,11 @@ class SmoothedPowerlawAndPeak(Distribution):
         mmin = jnp.broadcast_to(mmin, batch_shape)
         mmax = jnp.broadcast_to(mmax, batch_shape)
 
-        _m1s = jnp.linspace(mmin, mmax, 10, dtype=jnp.result_type(float))
+        _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
         qs = jnp.linspace(
             jnp.zeros(batch_shape),
             jnp.ones(batch_shape),
-            10,
+            250,
             dtype=jnp.result_type(float),
         )
 
