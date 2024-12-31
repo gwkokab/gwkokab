@@ -13,7 +13,9 @@ authors = [
 ]
 name = "gwkokab"
 version = "0.1.1.dev"
-maintainers = [{ name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" }]
+maintainers = [
+    { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
+]
 description = "A JAX-based gravitational-wave population inference toolkit for parametric models"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -58,7 +60,12 @@ keywords = [
 ]
 
 [project.optional-dependencies]
-dev = ["pre-commit>=4.0.0", "pytest>=8.3.0", "ruff>=0.8.0", "setuptools>=75.6.0"]
+dev = [
+    "pre-commit>=4.0.0",
+    "pytest>=8.3.0",
+    "ruff>=0.8.0",
+    "setuptools>=75.6.0",
+]
 
 docs = [
     "flatbuffers>=24.3.25",
@@ -90,6 +97,7 @@ gwk_batch_scatter2d = "cli_gwkokab.batch_scatter2d:main"
 gwk_batch_scatter3d = "cli_gwkokab.batch_scatter3d:main"
 gwk_chain_plot = "cli_gwkokab.chain_plot:main"
 gwk_corner_plot = "cli_gwkokab.corner_plot:main"
+gwk_ess_plot = "cli_gwkokab.ess_plot:main"
 gwk_joint_plot = "cli_gwkokab.joint_plot:main"
 gwk_ppd_plot = "cli_gwkokab.ppd_plot:main"
 gwk_r_hat_plot = "cli_gwkokab.r_hat_plot:main"
@@ -123,7 +131,11 @@ filterwarnings = [
     "once:No GPU:UserWarning",
     "once::DeprecationWarning",
 ]
-doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
+doctest_optionflags = [
+    "ELLIPSIS",
+    "NORMALIZE_WHITESPACE",
+    "IGNORE_EXCEPTION_DETAIL",
+]
 
 [tool.docformatter]
 # The ``summaries`` are not (yet) 75 characters because the summary lines can't be
