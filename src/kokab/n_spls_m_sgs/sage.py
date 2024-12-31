@@ -150,6 +150,8 @@ def main() -> None:
         ("mmin_pl", N_pl),
         ("delta_pl", N_pl),
         ("log_rate", N_pl + N_g),
+        ("lamb_scale_g", N_g),
+        ("lamb_scale_pl", N_pl),
         ("loc_g", N_g),
         ("scale_g", N_g),
         ("beta_g", N_g),
@@ -319,6 +321,14 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
 
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
+
+    if args.adam_optimizer:
+        from flowMC.strategy.optimization import optimization_Adam
+
+        adam_kwargs = read_json(args.adam_json)
+        Adam_opt = optimization_Adam(**adam_kwargs)
+
+        FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
 
     handler = flowMChandler(
         logpdf=poisson_likelihood.log_posterior,

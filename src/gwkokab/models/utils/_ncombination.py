@@ -300,6 +300,7 @@ def create_smoothed_powerlaws_raw(
     mmin_name = "mmin_pl"
     mmax_name = "mmax_pl"
     delta_name = "delta_pl"
+    log_scale_name = "lamb_scale_pl"
     for i in range(N):
         alpha = fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
         if alpha is None:
@@ -321,12 +322,21 @@ def create_smoothed_powerlaws_raw(
         if delta is None:
             raise ValueError(f"Missing parameter {delta_name}_{i}")
 
+        log_scale = fetch_first_matching_value(
+            params, f"{log_scale_name}_{i}", log_scale_name
+        )
+        if log_scale is None:
+            log_scale = 0.0
+        else:
+            log_scale = jnp.log(log_scale)
+
         smoothed_powerlaw = SmoothedPowerlawPrimaryMassRatio(
             alpha=alpha,
             beta=beta,
             mmin=mmin,
             mmax=mmax,
             delta=delta,
+            log_scale=log_scale,
             validate_args=validate_args,
         )
         smoothed_powerlaws_collection.append(smoothed_powerlaw)
@@ -356,6 +366,7 @@ def create_smoothed_gaussians_raw(
     delta_name = "delta_g"
     low_name = "low_g"
     high_name = "high_g"
+    log_scale_name = "lamb_scale_g"
     for i in range(N):
         loc = fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
         if loc is None:
@@ -380,6 +391,14 @@ def create_smoothed_gaussians_raw(
         low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
         high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
 
+        log_scale = fetch_first_matching_value(
+            params, f"{log_scale_name}_{i}", log_scale_name
+        )
+        if log_scale is None:
+            log_scale = 0.0
+        else:
+            log_scale = jnp.log(log_scale)
+
         smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
             loc=loc,
             scale=scale,
@@ -388,6 +407,7 @@ def create_smoothed_gaussians_raw(
             delta=delta,
             low=low,
             high=high,
+            log_scale=log_scale,
             validate_args=validate_args,
         )
         smoothed_gaussians_collection.append(smoothed_gaussian)
