@@ -20,15 +20,11 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from flowMC.strategy.optimization import optimization_Adam
 
 from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
 
 from .priors import available as available_priors
 from .regex import match_all
-
-
-Adam_opt = optimization_Adam(n_steps=10000, learning_rate=1e-2, noise_level=1)
 
 
 def read_json(json_file: str) -> dict:

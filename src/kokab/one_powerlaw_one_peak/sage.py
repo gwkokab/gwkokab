@@ -41,7 +41,6 @@ from kokab.one_powerlaw_one_peak.common import (
 )
 from kokab.utils import sage_parser
 from kokab.utils.common import (
-    Adam_opt,
     flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
@@ -168,6 +167,11 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
 
     if args.adam_optimizer:
+        from flowMC.strategy.optimization import optimization_Adam
+
+        adam_kwargs = read_json(args.adam_json)
+        Adam_opt = optimization_Adam(**adam_kwargs)
+
         FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
 
     handler = flowMChandler(
