@@ -13,9 +13,11 @@
 # limitations under the License.
 
 
+from functools import partial
 from typing_extensions import Callable, List, Tuple
 
 import h5py
+import jax
 import numpy as np
 from jax import numpy as jnp
 from jaxtyping import Array
@@ -35,7 +37,9 @@ def compute_probs(
     :return: The PPD of the model as a multidimensional array corresponding to the
         parameter grid.
     """
+    max_axis = int(np.argmax([int(n) for _, _, n in ranges]))
 
+    @partial(jax.vmap, in_axes=(max_axis,), out_axes=max_axis)
     def _prob(x: Array) -> Array:
         x_expanded = jnp.expand_dims(x, axis=-2)
         prob = jnp.exp(logpdf(x_expanded))
@@ -46,8 +50,16 @@ def compute_probs(
     xx_mesh = jnp.stack(mesh, axis=-1)
     shape = xx_mesh.shape
     xx_mesh = xx_mesh.reshape(-1, shape[-1])
-    prob_vec = jnp.array(
-        [_prob(x) for x in track(xx_mesh, description="Computing PPD")]
+    max_dim_size = shape[max_axis]
+    prob_vec = jnp.concatenate(
+        [
+            _prob(x)
+            for x in track(
+                jnp.array_split(xx_mesh, max_dim_size, axis=0),
+                description="Computing PPD",
+            )
+        ],
+        axis=0,
     )
     prob_vec = prob_vec.reshape(*shape[:-1], -1)
 
