@@ -14,6 +14,7 @@
 
 
 import json
+import warnings
 from collections.abc import Sequence
 from typing import List
 
@@ -23,6 +24,24 @@ import pandas as pd
 from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
 from kokab.utils.priors import available as available_priors
 from kokab.utils.regex import match_all
+
+
+def read_json(json_file: str) -> dict:
+    """Read json file and return.
+
+    Parameters
+    ----------
+    json_file : str
+        path of the json file
+
+    Returns
+    -------
+    dict
+        json file content as dict
+    """
+    with open(json_file, "r") as f:
+        content = json.load(f)
+    return content
 
 
 def expand_arguments(arg: str, n: int) -> List[str]:
@@ -40,15 +59,12 @@ def expand_arguments(arg: str, n: int) -> List[str]:
     return [f"{arg}_{i}" for i in range(n)]
 
 
-def flowMC_json_read_and_process(json_file: str) -> dict:
+def flowMC_default_parameters(**kwargs: dict) -> dict:
     """Convert a json file to a dictionary."""
-    with open(json_file, "r") as f:
-        flowMC_json = json.load(f)
 
     key_key_value = [
         ("data_dump_kwargs", "out_dir", "sampler_data"),
         ("local_sampler_kwargs", "jit", True),
-        ("local_sampler_kwargs", "sampler", "MALA"),
         ("nf_model_kwargs", "model", "MaskedCouplingRQSpline"),
         ("sampler_kwargs", "data", None),
         ("sampler_kwargs", "logging", True),
@@ -59,9 +75,24 @@ def flowMC_json_read_and_process(json_file: str) -> dict:
     ]
 
     for key1, key2, value in key_key_value:
-        flowMC_json[key1][key2] = value
+        kwargs[key1][key2] = value
 
-    return flowMC_json
+    local_sampler_name = kwargs["local_sampler_kwargs"].get("sampler")
+    if local_sampler_name is None:
+        raise ValueError("Local sampler name is not provided.")
+
+    if local_sampler_name == "HMC":
+        condition_matrix = kwargs["local_sampler_kwargs"].get("condition_matrix")
+        if condition_matrix is None:
+            warnings.warn(
+                "HMC Sampler: `condition_matrix` is not provided. Using identity matrix."
+            )
+            condition_matrix = np.eye(kwargs["sampler_kwargs"]["n_dim"])
+        kwargs["local_sampler_kwargs"]["condition_matrix"] = np.asarray(
+            condition_matrix
+        )
+
+    return kwargs
 
 
 def get_posterior_data(

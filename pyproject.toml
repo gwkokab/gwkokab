@@ -83,6 +83,7 @@ gwk_batch_scatter2d = "cli_gwkokab.batch_scatter2d:main"
 gwk_batch_scatter3d = "cli_gwkokab.batch_scatter3d:main"
 gwk_chain_plot = "cli_gwkokab.chain_plot:main"
 gwk_corner_plot = "cli_gwkokab.corner_plot:main"
+gwk_ess_plot = "cli_gwkokab.ess_plot:main"
 gwk_joint_plot = "cli_gwkokab.joint_plot:main"
 gwk_ppd_plot = "cli_gwkokab.ppd_plot:main"
 gwk_r_hat_plot = "cli_gwkokab.r_hat_plot:main"
@@ -98,9 +99,11 @@ sage_ecc_matters = "kokab.ecc_matters.sage:main"
 sage_n_pls_m_gs = "kokab.n_pls_m_gs.sage:main"
 sage_n_spls_m_sgs = "kokab.n_spls_m_sgs.sage:main"
 sage_chi_eff_q_relation = "kokab.chi_eff_q_relation.sage:main"
+sage_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.sage:main"
 ## PPD scripts
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
 ppd_n_spls_m_sgs = "kokab.n_spls_m_sgs.ppd:main"
+ppd_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.ppd:main"
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]

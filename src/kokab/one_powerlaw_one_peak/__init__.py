@@ -13,4 +13,4 @@
 # limitations under the License.
 
 
-from . import one_powerlaw_one_peak as one_powerlaw_one_peak, utils as utils
+from . import common as common, ppd as ppd, sage as sage

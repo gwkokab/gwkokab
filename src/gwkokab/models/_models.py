@@ -13,14 +13,16 @@
 # limitations under the License.
 
 
+from functools import partial
 from typing_extensions import Optional
 
 import chex
+import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
-from jax.scipy.stats import truncnorm, uniform
-from jaxtyping import Array
+from jax.scipy.stats import norm, truncnorm, uniform
+from jaxtyping import Array, ArrayLike
 from numpyro.distributions import (
     CategoricalProbs,
     constraints,
@@ -589,20 +591,24 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "mmin": constraints.positive,
         "mmax": constraints.positive,
         "delta": constraints.positive,
+        "log_scale": constraints.less_than_eq(0.0),
     }
-    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta"]
+    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta", "log_scale"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha, beta, mmin, mmax, delta, *, validate_args=None) -> None:
+    def __init__(
+        self, alpha, beta, mmin, mmax, delta, log_scale=0.0, *, validate_args=None
+    ) -> None:
         """
         :param alpha: Power law index for primary mass
         :param beta: Power law index for mass ratio
         :param mmin: Minimum mass
         :param mmax: Maximum mass
         :param delta: width of the smoothing window
+        :param log_scale: log of the scaling factor for the distribution
         """
-        self.alpha, self.beta, self.mmin, self.mmax, self.delta = promote_shapes(
-            alpha, beta, mmin, mmax, delta
+        self.alpha, self.beta, self.mmin, self.mmax, self.delta, self.log_scale = (
+            promote_shapes(alpha, beta, mmin, mmax, delta, log_scale)
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
@@ -610,6 +616,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
             jnp.shape(delta),
+            jnp.shape(log_scale),
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(SmoothedPowerlawPrimaryMassRatio, self).__init__(
@@ -641,7 +648,13 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
+        return (
+            log_prob_m1
+            + log_prob_q
+            + log_smoothing_m1
+            + log_smoothing_q
+            + self.log_scale
+        )
 
 
 class SmoothedGaussianPrimaryMassRatio(Distribution):
@@ -670,12 +683,23 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "beta": constraints.real,
         "mmin": constraints.positive,
         "delta": constraints.positive,
+        "log_scale": constraints.less_than_eq(0.0),
     }
-    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta"]
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "log_scale"]
     pytree_aux_fields = ("_support", "_norm")
 
     def __init__(
-        self, loc, scale, beta, mmin, delta, low=None, high=None, *, validate_args=None
+        self,
+        loc,
+        scale,
+        beta,
+        mmin,
+        delta,
+        low=None,
+        high=None,
+        log_scale=0.0,
+        *,
+        validate_args=None,
     ) -> None:
         """
         :param loc: mean of the Gaussian distribution
@@ -685,9 +709,10 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         :param delta: width of the smoothing window
         :param low: lower bound of the Gaussian distribution, defaults to -inf
         :param high: upper bound of the Gaussian distribution, defaults to inf
+        :param log_scale: log of the scaling factor for the distribution
         """
-        self.loc, self.scale, self.beta, self.mmin, self.delta = promote_shapes(
-            loc, scale, beta, mmin, delta
+        self.loc, self.scale, self.beta, self.mmin, self.delta, self.log_scale = (
+            promote_shapes(loc, scale, beta, mmin, delta, log_scale)
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(loc),
@@ -697,6 +722,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             jnp.shape(delta),
             jnp.shape(low),
             jnp.shape(high),
+            jnp.shape(log_scale),
         )
         support_low = mmin
         if low is not None:
@@ -736,4 +762,237 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
+
+        return (
+            log_prob_m1
+            + log_prob_q
+            + log_smoothing_m1
+            + log_smoothing_q
+            + self.log_scale
+        )
+
+
+class SmoothedPowerlawAndPeak(Distribution):
+    r"""It is a mixture of power law and Gaussian distribution with a smoothing
+    kernel.
+
+    .. math::
+
+        p(m_1, q\mid \alpha, \beta, \mu, \sigma, m_{\text{min}}, m_{\text{max}}, \delta, \lambda_{\text{peak}}) =
+        \left((1-\lambda_{\text{peak})m_1^{\alpha}+\lambda_{\text{peak}\mathcal{N}(m_1\mid\mu,\sigma)\right)
+        q^{\beta}
+        S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)
+        S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),
+        \qqquad m_{\text{min}}\leq m_1q \leq m_1\leq m_{\text{max}}
+    """
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "loc": constraints.real,
+        "scale": constraints.positive,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
+        "delta": constraints.positive,
+        "lambda_peak": constraints.unit_interval,
+        "log_rate_pl": constraints.real,
+        "log_rate_peak": constraints.real,
+    }
+    reparametrized_params = [
+        "alpha",
+        "beta",
+        "loc",
+        "scale",
+        "mmin",
+        "mmax",
+        "delta",
+        "lambda_peak",
+        "log_rate_pl",
+        "log_rate_peak",
+    ]
+    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_log_Z_m1", "_m1s", "_Z_q")
+
+    def __init__(
+        self,
+        alpha: ArrayLike,
+        beta: ArrayLike,
+        loc: ArrayLike,
+        scale: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        delta: ArrayLike,
+        lambda_peak: ArrayLike,
+        log_rate_pl: ArrayLike,
+        log_rate_peak: ArrayLike,
+        *,
+        validate_args=None,
+    ):
+        """
+        Parameters
+        ----------
+        alpha : ArrayLike
+            Power law index for primary mass
+        beta : ArrayLike
+            Power law index for mass ratio
+        loc : ArrayLike
+            Mean of the Gaussian distribution
+        scale : ArrayLike
+            Standard deviation of the Gaussian distribution
+        mmin : ArrayLike
+            Minimum mass
+        mmax : ArrayLike
+            Maximum mass
+        delta : ArrayLike
+            Width of the smoothing window
+        lambda_peak : ArrayLike
+            Fraction of masses in the Gaussian peak
+        log_rate_pl : ArrayLike
+            Logarithm of the rate of the power law component
+        log_rate_peak : ArrayLike
+            Logarithm of the rate of the Gaussian peak component
+        validate_args : bool, optional
+            Whether to validate input, by default None
+        """
+        (
+            self.alpha,
+            self.beta,
+            self.loc,
+            self.scale,
+            self.mmin,
+            self.mmax,
+            self.delta,
+            self.lambda_peak,
+            self.log_rate_pl,
+            self.log_rate_peak,
+        ) = promote_shapes(
+            alpha,
+            beta,
+            loc,
+            scale,
+            mmin,
+            mmax,
+            delta,
+            lambda_peak,
+            log_rate_pl,
+            log_rate_peak,
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha),
+            jnp.shape(beta),
+            jnp.shape(loc),
+            jnp.shape(scale),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(delta),
+            jnp.shape(lambda_peak),
+            jnp.shape(log_rate_pl),
+            jnp.shape(log_rate_peak),
+        )
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+
+        mmin = jnp.broadcast_to(mmin, batch_shape)
+        mmax = jnp.broadcast_to(mmax, batch_shape)
+
+        _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
+        qs = jnp.linspace(
+            jnp.zeros(batch_shape),
+            jnp.ones(batch_shape),
+            250,
+            dtype=jnp.result_type(float),
+        )
+
+        if batch_shape:
+            # TODO: check https://github.com/jax-ml/jax/issues/25696 and update accordingly
+            meshgrid_fn = jax.vmap(
+                partial(jnp.meshgrid, indexing="ij"), in_axes=(-1, -1), out_axes=-1
+            )
+        else:
+            meshgrid_fn = partial(jnp.meshgrid, indexing="ij")
+
+        _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s)), _m1s, axis=0)
+        self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
+
+        m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
+        _log_prob_q = self._log_prob_q(m1qs_grid)
+
+        self._Z_q = jnp.trapezoid(
+            jnp.exp(_log_prob_q), jnp.expand_dims(qs, axis=0), axis=1
+        )
+
+        self._m1s = _m1s
+
+        super(SmoothedPowerlawAndPeak, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    def _log_prob_m1(
+        self, m1: Array, log_rate_pl: Array = 0.0, log_rate_peak: Array = 0.0
+    ) -> Array:
+        log_smoothing_m1 = log_planck_taper_window(
+            (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_prob_m1 = jnp.log(
+            (1.0 - self.lambda_peak)
+            * jnp.exp(
+                log_rate_pl
+                + doubly_truncated_power_law_log_prob(
+                    x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+                )
+            )
+            + self.lambda_peak
+            * jnp.exp(log_rate_peak + norm.logpdf(m1, loc=self.loc, scale=self.scale))
+        )
+        return log_prob_m1 + log_smoothing_m1
+
+    @validate_sample
+    def _log_prob_q(self, m1q: Array) -> Array:
+        m1 = m1q[..., 0]
+        q = m1q[..., 1]
+        m2 = m1 * q
+        log_smoothing_q = log_planck_taper_window(
+            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_prob_q = jnp.where(
+            jnp.less_equal(m1, self.mmin),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
+        )
+        return log_prob_q + log_smoothing_q
+
+    @validate_sample
+    def log_prob(self, value: ArrayLike) -> Array:
+        m1 = value[..., 0]
+
+        log_prob_m1 = self._log_prob_m1(
+            m1, log_rate_pl=self.log_rate_pl, log_rate_peak=self.log_rate_peak
+        )
+
+        log_prob_q = self._log_prob_q(value)
+
+        def _Z_q(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
+            return jax.vmap(partial(jnp.interp, xp=m1s, fp=Z_qs, left=1.0, right=1.0))(
+                m1
+            )
+
+        if self.batch_shape:
+            log_Z_q = jnp.log(
+                jax.vmap(
+                    _Z_q,
+                    in_axes=(-1, -1),
+                    out_axes=-1,
+                )(self._m1s, self._Z_q)
+            )
+            log_Z_q = jnp.reshape(log_Z_q, log_prob_q.shape)
+        else:
+            log_Z_q = jnp.log(_Z_q(self._m1s, self._Z_q))
+
+        log_Z = lax.stop_gradient(self._log_Z_m1 + log_Z_q)
+
+        return log_prob_m1 + log_prob_q - log_Z
