@@ -232,7 +232,7 @@ def create_powerlaws(
     return powerlaws_collection
 
 
-zgrid = jnp.linspace(0.001, 10.0, 1000.0)
+zgrid = jnp.linspace(0.001, 10.0, 1000)
 dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
 
 
