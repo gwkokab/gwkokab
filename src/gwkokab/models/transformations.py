@@ -13,6 +13,10 @@
 # limitations under the License.
 
 
+#
+"""Provides implementation of various transformations using
+:class:`~numpyro.distributions.transforms.Transform`."""
+
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import constraints
@@ -70,7 +74,7 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         f: (m_1, q)\to (m_1, m_1q)
 
     .. math::
-        \mathrm{det}(J_f) = m_1
+        f^{-1}: (m_1, m_2)\to (m_1, m_2/m_1)
     """
 
     domain = constraints.independent(
@@ -79,7 +83,9 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         ),
         1,
     )
+    r""":math:`\mathcal{D}(f) = \mathbb{R}^2_+\times[0, 1]`"""
     codomain = positive_decreasing_vector
+    r""":math:`\mathcal{C}(f)=\{(m_1, m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
 
     def __call__(self, x: Array):
         m1 = x[..., 0]
@@ -96,6 +102,10 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
         return m1q
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
+        r"""
+        .. math::
+            \ln\left(|\mathrm{det}(J_f)|\right) = \ln(|m_1|)
+        """
         m1 = x[..., 0]
         return jnp.log(jnp.abs(m1))
 
@@ -114,9 +124,6 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     .. math::
         f: (m_1, m_2)\to \left(\frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}}, \frac{m_1m_2}{(m_1+m_2)^{2}}\right)
 
-    .. math::
-        \mathrm{det}(J_f)=\frac{\delta_m\mathcal{M}}{m_1+m_2}
-
     .. seealso::
 
         :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
@@ -127,12 +134,14 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     """
 
     domain = positive_decreasing_vector
+    r""":math:`\mathcal{D}(f)=\{(m_1,m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
     codomain = constraints.independent(
         constraints.interval(
             jnp.zeros((2,)), jnp.array([jnp.finfo(jnp.result_type(float)).max, 0.25])
         ),
         1,
     )
+    r""":math:`\mathcal{C}(f) = \mathbb{R}^2_+\times[0, 0.25]`"""
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -148,6 +157,9 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
+        r"""
+        .. math::
+            \ln\left(|\mathrm{det}(J_f)|\right)=\ln(M_c)+\ln(\eta)+\ln(m_1-m_2)-\ln(m_1+m_2)-\ln(m_1)-\ln(m_2)"""
         m1 = x[..., 0]
         m2 = x[..., 1]
         Mc = y[..., 0]
@@ -175,13 +187,12 @@ class DeltaToSymmetricMassRatio(Transform):
 
     .. math::
         \delta = f^{-1}(\eta) = \sqrt{1-4\eta}
-
-    .. math::
-        \mathrm{det}(J_f) = -\frac{\delta}{2}
     """
 
     domain = constraints.unit_interval
+    r""":math:`\mathcal{D}(f) = [0, 1]`"""
     codomain = constraints.interval(0.0, 0.25)
+    r""":math:`\mathcal{C}(f) = [0, 0.25]`"""
 
     def __call__(self, x):
         delta_sq = jnp.square(x)
@@ -192,6 +203,10 @@ class DeltaToSymmetricMassRatio(Transform):
         return jnp.sqrt(jnp.subtract(1, eta4))
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
+        r"""
+        .. math::
+            \ln\left(|\mathrm{det}(J_f)|\right) = \ln(\delta) - \ln(2)
+        """
         return jnp.subtract(jnp.log(x), jnp.log(2.0))
 
     def tree_flatten(self):
@@ -207,15 +222,6 @@ class ComponentMassesToChirpMassAndDelta(Transform):
     .. math::
         f: (m_1, m_2) \to (M_c, \delta)
 
-    .. math::
-        M_c = \frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}}
-
-    .. math::
-        \delta = \frac{m_1-m_2}{m1+m_2}
-
-    .. math::
-        \mathrm{det}(J_f) = -\frac{2M_c}{(m_1+m_2)^2}
-
     .. seealso::
 
         :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
@@ -226,12 +232,14 @@ class ComponentMassesToChirpMassAndDelta(Transform):
     """
 
     domain = positive_decreasing_vector
+    r""":math:`\mathcal{D}(f)=\{(m_1,m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
     codomain = constraints.independent(
         constraints.interval(
             jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
         ),
         1,
     )
+    r""":math:`\mathcal{C}(f) = \mathbb{R}^2_+\times[0, 1]`"""
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -248,6 +256,10 @@ class ComponentMassesToChirpMassAndDelta(Transform):
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
+        r"""
+        .. math::
+            \ln\left(|\mathrm{det}(J_f)|\right) = \ln(2M_c) - 2\ln(m_1+m_2)
+        """
         m1 = x[..., 0]
         m2 = x[..., 1]
         M = total_mass(m1=m1, m2=m2)
@@ -265,10 +277,16 @@ class ComponentMassesToChirpMassAndDelta(Transform):
 
 
 class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
-    r"""Transforms source mass and redshift to detected mass and redshift."""
+    r"""Transforms source mass and redshift to detected mass and redshift.
+
+    .. math::
+        f: (m_{\text{source}}, z) \to (m_{\text{detected}}, z)
+    """
 
     domain = constraints.independent(constraints.positive, 1)
+    r""":math:`\mathcal{D}(f) = \mathbb{R}^2_+`"""
     codomain = constraints.independent(constraints.positive, 1)
+    r""":math:`\mathcal{C}(f) = \mathbb{R}^2_+`"""
 
     def __call__(self, x):
         m_source = x[..., 0]
@@ -283,8 +301,12 @@ class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
         return jnp.stack((m_source, z), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
+        r"""
+        .. math::
+            \ln\left(|\mathrm{det}(J_f)|\right) = \ln(1+z)
+        """
         z = x[..., 1]
-        return jnp.log(1 + z)
+        return jnp.log1p(z)
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -296,6 +318,9 @@ class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
 class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
     r"""Transforms component masses and redshift to detected masses and redshift.
 
+    .. math::
+        f: (m_1, m_2, z) \to (m_{1, \text{detected}}, m_{2, \text{detected}}, z)
+
     .. seealso::
 
         :class:`ComponentMassesToChirpMassAndDelta`
@@ -306,7 +331,9 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
     """
 
     domain = constraints.independent(constraints.positive, 1)
+    r""":math:`\mathcal{D}(f) = \mathbb{R}^3_+`"""
     codomain = constraints.independent(constraints.positive, 1)
+    r""":math:`\mathcal{C}(f) = \mathbb{R}^3_+`"""
 
     def __call__(self, x):
         m1_source = x[..., 0]
@@ -325,8 +352,12 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
         return jnp.stack((m1_source, m2_source, z), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
+        r"""
+        .. math::
+            \ln\left(|\mathrm{det}(J_f)|\right) = 2\ln(1+z)
+        """
         z = x[..., 2]
-        return 2 * jnp.log(1.0 + z)
+        return 2 * jnp.log1p(z)
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -338,6 +369,12 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
 class ComponentMassesToPrimaryMassAndMassRatio(Transform):
     r"""Transforms component masses and redshift to primary mass and mass ratio.
 
+    .. math::
+        f: (m_1, m_2) \to (m_1, q)
+
+    .. math::
+        f^{-1}: (m_1, q) \to (m_1, m_2)
+
     .. seealso::
 
         :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
@@ -348,12 +385,14 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
     """
 
     domain = positive_decreasing_vector
+    r""":math:`\mathcal{D}(f)=\{(m_1,m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
     codomain = constraints.independent(
         constraints.open_interval(
             jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
         ),
         1,
     )
+    r""":math:`\mathcal{C}(f) = \mathbb{R}^2_+\times(0, 1)`"""
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -384,6 +423,12 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
 class ComponentMassesToMassRatioAndSecondaryMass(Transform):
     r"""Transforms component masses and redshift to mass ratio and secondary mass.
 
+    .. math::
+        f: (m_1, m_2) \to (q, m_2)
+
+    .. math::
+        f^{-1}: (q, m_2) \to (m_1, m_2)
+
     .. seealso::
 
         :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
@@ -394,12 +439,14 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
     """
 
     domain = positive_decreasing_vector
+    r""":math:`\mathcal{D}(f)=\{(m_1,m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
     codomain = constraints.independent(
         constraints.interval(
             jnp.zeros(2), jnp.array([1.0, jnp.finfo(jnp.result_type(float)).max])
         ),
         1,
     )
+    r""":math:`\mathcal{C}(f) = [0, 1]\times\mathbb{R}_+`"""
 
     def __call__(self, x):
         m1 = x[..., 0]
@@ -414,6 +461,10 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
+        r"""
+        .. math::
+            \ln\left(|\mathrm{det}(J_f)|\right) = \ln(q) - \ln(m_1)
+        """
         m1 = x[..., 0]
         q = y[..., 0]
         return jnp.log(q) - jnp.log(m1)
@@ -427,6 +478,9 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
 
 class ComponentMassesToTotalMassAndMassRatio(Transform):
     r"""Transforms component masses to total mass and mass ratio.
+
+    .. math::
+        f: (m_1, m_2) \to (M, q)
 
     .. seealso::
 

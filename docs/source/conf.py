@@ -161,6 +161,11 @@ intersphinx_mapping = {
 def skip_util_classes(app, what, name, obj, skip, options):
     if what == "module" and "._" in name:  # skip private modules
         skip = True
+        return skip
+    if not skip and what == "method":  # skip private modules
+        if "tree_flatten" in name:
+            skip = True
+            return skip
     return skip
 
 

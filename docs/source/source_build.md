@@ -19,4 +19,4 @@ To install [GWKokab][GWKokab] in development mode, use the following command:
 pip install -e .[dev,docs]
 ```
 
-[GWKokab]: www.github.com/gwkokab/gwkokab
+[GWKokab]: https://www.github.com/gwkokab/gwkokab

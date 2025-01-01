@@ -17,8 +17,9 @@ import sys
 from collections.abc import Mapping, Sequence
 
 import equinox as eqx
-from numpyro.distributions import Distribution, ImproperUniform, Uniform
 from numpyro.distributions.constraints import real
+from numpyro.distributions.continuous import Uniform
+from numpyro.distributions.distribution import Distribution, ImproperUniform
 
 
 class Parameter(eqx.Module):

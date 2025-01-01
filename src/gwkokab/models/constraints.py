@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#
+"""Provides implementation of various constraints using
+:class:`~numpyro.distributions.constraints.Constraint`."""
 
 from collections.abc import Sequence
 
@@ -277,17 +280,3 @@ positive_increasing_vector = _PositiveIncreasingVector()
 positive_decreasing_vector = _PositiveDecreasingVector()
 all_constraint = _AllConstraint
 any_constraint = _AnyConstraint
-
-
-# create docs
-
-mass_sandwich.__doc__ = _MassSandwichConstraint.__doc__
-mass_ratio_mass_sandwich.__doc__ = _MassRatioMassSandwichConstraint.__doc__
-increasing_vector.__doc__ = _IncreasingVector.__doc__
-decreasing_vector.__doc__ = _DecreasingVector.__doc__
-strictly_increasing_vector.__doc__ = _StrictlyIncreasingVector.__doc__
-strictly_decreasing_vector.__doc__ = _StrictlyDecreasingVector.__doc__
-positive_increasing_vector.__doc__ = _PositiveIncreasingVector.__doc__
-positive_decreasing_vector.__doc__ = _PositiveDecreasingVector.__doc__
-all_constraint.__doc__ = _AllConstraint.__doc__
-any_constraint.__doc__ = _AnyConstraint.__doc__

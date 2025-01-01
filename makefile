@@ -13,6 +13,7 @@ help:
 	@echo "  install      - Install package"
 	@echo "  uninstall    - Remove package"
 	@echo "  cache_clean  - Clean pip and uv cache"
+	@echo "  docs		  - Generate documentation"
 
 install: uninstall
 ifndef UV_CHECK
@@ -30,3 +31,7 @@ cache_clean: uninstall
 ifdef UV_CHECK
 	$(UV) cache clean
 endif
+
+docs: install
+	cd docs && make html
+	cd ..

@@ -12,6 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#
+"""
+Provides implementation of various models, constraints, and transformations using
+`NumPyro <https://github.com/pyro-ppl/numpyro>`_.
+"""
 
 from . import (
     constraints as constraints,
