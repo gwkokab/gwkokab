@@ -37,10 +37,6 @@ from gwkokab.poisson_mean import (
 )
 from kokab.utils import sage_parser
 from kokab.utils.common import (
-    flowMC_json_read_and_process,
-
-from ..utils import sage_parser
-from ..utils.common import (
     flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
