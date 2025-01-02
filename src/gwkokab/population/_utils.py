@@ -26,9 +26,20 @@ from rich.progress import (
 def ensure_dat_extension(filename: str) -> str:
     """Transform a filename to end with .dat if it does not have an extension.
 
-    :param filename: name of the file
-    :raises ValueError: if filename has an extension other than .dat
-    :return: filename ending with .dat
+    Parameters
+    ----------
+    filename : str
+        Name of the file
+
+    Returns
+    -------
+    str
+        Filename ending with .dat
+
+    Raises
+    ------
+    ValueError
+        If filename has an extension other than .dat
     """
     if filename.endswith(".dat"):
         return filename
@@ -49,11 +60,21 @@ def get_progress_bar(
 ) -> Progress:
     """Create a progress bar with customizable columns.
 
-    :param name: Name to display in the progress bar
-    :param verbose: Whether to show the progress bar
-    :param text_width: Width of the name column
-    :param bar_width: Width of the progress bar
-    :return: Configured Progress object
+    Parameters
+    ----------
+    name : str
+        Name to display in the progress bar
+    verbose : bool, optional
+        Whether to show the progress bar, by default True
+    text_width : int, optional
+        Width of the name column, by default 25
+    bar_width : int, optional
+        Width of the progress bar, by default 40
+
+    Returns
+    -------
+    Progress
+        Configured Progress object
     """
     return Progress(
         SpinnerColumn(),

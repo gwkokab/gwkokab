@@ -31,11 +31,10 @@ def banana_error_m1_m2(
     scale_Mc: float = 1.0,
     scale_eta: float = 1.0,
 ) -> Array:
-    r"""Add banana error to the given values. Section 3 of the
-    `Model-independent inference on compact-binary
-    observations <https://doi.org/10.1093/mnras/stw2883>`_ discusses the banana
-    error. It adds errors in the chirp mass and symmetric mass ratio and then
-    converts back to masses.
+    r"""Add banana error to the given values. Section 3 of the `Model-independent
+    inference on compact-binary observations <https://doi.org/10.1093/mnras/stw2883>`_
+    discusses the banana error. It adds errors in the chirp mass and symmetric mass
+    ratio and then converts back to masses.
 
     .. math::
 
@@ -45,12 +44,21 @@ def banana_error_m1_m2(
         \eta = \eta^{T}
         \left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
 
-    :param x: given values as m1 and m2
-    :param size: number of samples
-    :param key: jax random key
-    :param scale_Mc: scale of the chirp mass error, defaults to 1.0
-    :param scale_eta: scale of the symmetric mass ratio error, defaults to 1.0
-    :return: error values
+    x : Array
+        given values as m1 and m2
+    size : int
+        number of samples
+    key : PRNGKeyArray
+        jax random key
+    scale_Mc : float
+        scale of the chirp mass error, defaults to 1.0
+    scale_eta : float
+        scale of the symmetric mass ratio error, defaults to 1.0
+
+    Returns
+    -------
+    Array
+        m1 and m2 with banana
     """
     m1 = x[..., 0]
     m2 = x[..., 1]

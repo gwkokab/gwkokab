@@ -22,12 +22,10 @@ from . import (
     constraints as constraints,
     transformations as transformations,
     utils as utils,
-    wrappers as wrappers,
 )
 from ._models import (
     FlexibleMixtureModel as FlexibleMixtureModel,
     MassGapModel as MassGapModel,
-    NDistribution as NDistribution,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,

@@ -46,41 +46,11 @@ from .utils import (
 __all__ = [
     "FlexibleMixtureModel",
     "MassGapModel",
-    "NDistribution",
     "PowerlawPrimaryMassRatio",
     "SmoothedGaussianPrimaryMassRatio",
     "SmoothedPowerlawPrimaryMassRatio",
     "Wysocki2019MassModel",
 ]
-
-
-def NDistribution(
-    distribution: Distribution, n: int, *, validate_args=None, **params
-) -> MixtureGeneral:
-    """Mixture of any :math:`n` distributions.
-
-    :param distribution: distribution to mix
-    :param n: number of components
-    :return: Mixture of :math:`n` distributions
-    """
-    arg_names = distribution.arg_constraints.keys()
-    mixing_dist = CategoricalProbs(
-        probs=jnp.divide(jnp.ones(n), n), validate_args=validate_args
-    )
-    args_per_component = [
-        {arg: params.get(f"{arg}_{i}") for arg in arg_names} for i in range(n)
-    ]
-    component_dists = jtr.map(
-        lambda x: distribution(**x),
-        args_per_component,
-        is_leaf=lambda x: isinstance(x, dict),
-    )
-    return MixtureGeneral(
-        mixing_dist,
-        component_dists,
-        support=distribution.support,
-        validate_args=validate_args,
-    )
 
 
 class PowerlawPrimaryMassRatio(Distribution):
@@ -108,15 +78,26 @@ class PowerlawPrimaryMassRatio(Distribution):
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha, beta, mmin, mmax, *, validate_args=None) -> None:
+    def __init__(
+        self,
+        alpha: ArrayLike,
+        beta: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        *,
+        validate_args: Optional[bool] = None,
+    ) -> None:
         """
-        :param alpha: Power law index for primary mass
-        :param beta: Power law index for mass ratio
-        :param mmin: Minimum mass
-        :param mmax: Maximum mass
-        :param default_params: If :code:`True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If :code:`False`, the
-            model will use primary mass and mass ratio.
+        Parameters
+        ----------
+        alpha : ArrayLike
+            Power law index for primary mass
+        beta : ArrayLike
+            Power law index for mass ratio
+        mmin : ArrayLike
+            Minimum mass
+        mmax : ArrayLike
+            Maximum mass
         """
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(
             alpha, beta, mmin, mmax
@@ -180,11 +161,23 @@ class Wysocki2019MassModel(Distribution):
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha_m, mmin, mmax, *, validate_args=None) -> None:
-        r"""
-        :param alpha_m: index of the power law distribution
-        :param mmin: lower mass limit
-        :param mmax: upper mass limit
+    def __init__(
+        self,
+        alpha_m: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        *,
+        validate_args: Optional[bool] = None,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        alpha_m : ArrayLike
+            index of the power law distribution
+        mmin : ArrayLike
+            lower mass limit
+        mmax : ArrayLike
+            upper mass limit
         """
         self.alpha_m, self.mmin, self.mmax = promote_shapes(alpha_m, mmin, mmax)
         batch_shape = lax.broadcast_shapes(
@@ -227,22 +220,43 @@ class MassGapModel(Distribution):
     r"""See Eq. (2) of `No evidence for a dip in the binary black hole mass spectrum
     <http://arxiv.org/abs/2406.11111>`_.
 
-    :param alpha: Spectral-index of power-law component
-    :param lam: Fraction of masses in Gaussian peaks
-    :param lam1: Fraction of peak-masses in lower-mass peak
-    :param mu1: Location of lower-mass peak
-    :param sigma1: Width of lower-mass peak
-    :param mu2: Location of upper-mass peak
-    :param sigma2: Width of upper-mass peak
-    :param gamma_low: Lower-edge location of gap
-    :param gamma_high: Upper-edge location of gap
-    :param eta_low: Sharpness of gap's lower-edge
-    :param eta_high: Sharpness of gap's upper-edge
-    :param depth_of_gap: Depth of gap
-    :param mmin: Maximum allowed mass
-    :param mmax: Minimum allowed mass
-    :param delta_m: Length of minimum-mass roll-off
-    :param beta_q: Power-law index of pairing function
+    .. warning::
+        This model is not rigorously tested and should be used with caution.
+
+    Parameter
+    ---------
+    alpha : ArrayLike
+        Spectral-index of power-law component
+    lam : ArrayLike
+        Fraction of masses in Gaussian peaks
+    lam1 : ArrayLike
+        Fraction of peak-masses in lower-mass peak
+    mu1 : ArrayLike
+        Location of lower-mass peak
+    sigma1 : ArrayLike
+        Width of lower-mass peak
+    mu2 : ArrayLike
+        Location of upper-mass peak
+    sigma2 : ArrayLike
+        Width of upper-mass peak
+    gamma_low : ArrayLike
+        Lower-edge location of gap
+    gamma_high : ArrayLike
+        Upper-edge location of gap
+    eta_low : ArrayLike
+        Sharpness of gap's lower-edge
+    eta_high : ArrayLike
+        Sharpness of gap's upper-edge
+    depth_of_gap : ArrayLike
+        Depth of gap
+    mmin : ArrayLike
+        Maximum allowed mass
+    mmax : ArrayLike
+        Minimum allowed mass
+    delta_m : ArrayLike
+        Length of minimum-mass roll-off
+    beta_q : ArrayLike
+        Power-law index of pairing function
     """
 
     arg_constraints = {
@@ -284,22 +298,22 @@ class MassGapModel(Distribution):
 
     def __init__(
         self,
-        alpha,
-        lam,
-        lam1,
-        mu1,
-        sigma1,
-        mu2,
-        sigma2,
-        gamma_low,
-        gamma_high,
-        eta_low,
-        eta_high,
-        depth_of_gap,
-        mmin,
-        mmax,
-        delta_m,
-        beta_q,
+        alpha: ArrayLike,
+        lam: ArrayLike,
+        lam1: ArrayLike,
+        mu1: ArrayLike,
+        sigma1: ArrayLike,
+        mu2: ArrayLike,
+        sigma2: ArrayLike,
+        gamma_low: ArrayLike,
+        gamma_high: ArrayLike,
+        eta_low: ArrayLike,
+        eta_high: ArrayLike,
+        depth_of_gap: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        delta_m: ArrayLike,
+        beta_q: ArrayLike,
         *,
         validate_args=None,
     ):
@@ -505,22 +519,40 @@ def FlexibleMixtureModel(
         \mathcal{N}(s_{1z}\mid \mu^{s_z}_i,\sigma^{s_z}_i)
         \mathcal{N}(s_{2z}\mid \mu^{s_z}_i,\sigma^{s_z}_i)
 
-    where :math:`w_i` is the weight for the ith component and :math:`p_i(\theta)` is the
+    .. warning::
+        This model is not rigorously tested and should be used with caution.
 
-    :param N: Number of components
-    :param weights: weights for each component
-    :param mu_Mc_i: ith value for :code:`mu_Mc`
-    :param sigma_Mc_i: ith value for :code:`sigma_Mc`
-    :param mu_sz_i: ith value for :code:`mu_sz`
-    :param sigma_sz_i: ith value for :code:`sigma_sz`
-    :param alpha_q_i: ith value for :code:`alpha_q`
-    :param q_min_i: ith value for :code:`q_min`
-    :param mu_Mc: default value for :code:`mu_Mc`
-    :param sigma_Mc: default value for :code:`sigma_Mc`
-    :param mu_sz: default value for :code:`mu_sz`
-    :param sigma_sz: default value for :code:`sigma_sz`
-    :param alpha_q: default value for :code:`alpha_q`
-    :param q_min: default value for :code:`q_min`
+    Parameters
+    ----------
+
+    N : ArrayLike
+        Number of components
+    weights : ArrayLike
+        weights for each component
+    mu_Mc_i : ArrayLike
+        ith value for :code:`mu_Mc`
+    sigma_Mc_i : ArrayLike
+        ith value for :code:`sigma_Mc`
+    mu_sz_i : ArrayLike
+        ith value for :code:`mu_sz`
+    sigma_sz_i : ArrayLike
+        ith value for :code:`sigma_sz`
+    alpha_q_i : ArrayLike
+        ith value for :code:`alpha_q`
+    q_min_i : ArrayLike
+        ith value for :code:`q_min`
+    mu_Mc : ArrayLike
+        default value for :code:`mu_Mc`
+    sigma_Mc : ArrayLike
+        default value for :code:`sigma_Mc`
+    mu_sz : ArrayLike
+        default value for :code:`mu_sz`
+    sigma_sz : ArrayLike
+        default value for :code:`sigma_sz`
+    alpha_q : ArrayLike
+        default value for :code:`alpha_q`
+    q_min : ArrayLike
+        default value for :code:`q_min`
     """
     chex.assert_axis_dimension(weights, 0, N)
     ranges = list(range(N))
@@ -597,15 +629,31 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
     pytree_aux_fields = ("_support",)
 
     def __init__(
-        self, alpha, beta, mmin, mmax, delta, log_scale=0.0, *, validate_args=None
+        self,
+        alpha: ArrayLike,
+        beta: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        delta: ArrayLike,
+        log_scale: ArrayLike = 0.0,
+        *,
+        validate_args: Optional[bool] = None,
     ) -> None:
         """
-        :param alpha: Power law index for primary mass
-        :param beta: Power law index for mass ratio
-        :param mmin: Minimum mass
-        :param mmax: Maximum mass
-        :param delta: width of the smoothing window
-        :param log_scale: log of the scaling factor for the distribution
+        Parameters
+        ----------
+        alpha : ArrayLike
+            Power law index for primary mass
+        beta : ArrayLike
+            Power law index for mass ratio
+        mmin : ArrayLike
+            Minimum mass
+        mmax : ArrayLike
+            Maximum mass
+        delta : ArrayLike
+            width of the smoothing window
+        log_scale : ArrayLike
+            log of the scaling factor for the distribution
         """
         self.alpha, self.beta, self.mmin, self.mmax, self.delta, self.log_scale = (
             promote_shapes(alpha, beta, mmin, mmax, delta, log_scale)
@@ -702,14 +750,24 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         validate_args=None,
     ) -> None:
         """
-        :param loc: mean of the Gaussian distribution
-        :param scale: standard deviation of the Gaussian distribution
-        :param beta: Power law index for mass ratio
-        :param mmin: Minimum mass
-        :param delta: width of the smoothing window
-        :param low: lower bound of the Gaussian distribution, defaults to -inf
-        :param high: upper bound of the Gaussian distribution, defaults to inf
-        :param log_scale: log of the scaling factor for the distribution
+        Parameters
+        ----------
+        loc : ArrayLike
+            mean of the Gaussian distribution
+        scale : ArrayLike
+            standard deviation of the Gaussian distribution
+        beta : ArrayLike
+            Power law index for mass ratio
+        mmin : ArrayLike
+            Minimum mass
+        delta : ArrayLike
+            width of the smoothing window
+        low : ArrayLike
+            lower bound of the Gaussian distribution, defaults to -inf
+        high : ArrayLike
+            upper bound of the Gaussian distribution, defaults to inf
+        log_scale : ArrayLike
+            log of the scaling factor for the distribution
         """
         self.loc, self.scale, self.beta, self.mmin, self.delta, self.log_scale = (
             promote_shapes(loc, scale, beta, mmin, delta, log_scale)

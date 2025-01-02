@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from typing import Optional
 from typing_extensions import Tuple
 
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
@@ -30,10 +31,20 @@ class JointDistribution(Distribution):
     pytree_data_fields = ("marginal_distributions", "shaped_values", "_support")
 
     def __init__(
-        self, *marginal_distributions: Distribution, validate_args=None
+        self,
+        *marginal_distributions: Distribution,
+        validate_args: Optional[bool] = None,
     ) -> None:
-        r"""
-        :param marginal_distributions: A sequence of marginal distributions.
+        """
+        Parameters
+        ----------
+        validate_args : _type_, optional
+            Whether to validate input arguments, by default None
+
+        Raises
+        ------
+        ValueError
+            If no marginal distributions are provided.
         """
         if not marginal_distributions:
             raise ValueError("At least one marginal distribution is required.")

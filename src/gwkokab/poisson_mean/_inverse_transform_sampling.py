@@ -48,10 +48,14 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         scale: Union[int, float, Array] = 1.0,
     ) -> None:
         r"""
-        :param logVT_fn: Log of the Volume Time Sensitivity function.
-        :param key: PRNG key.
-        :param num_samples: Number of samples
-        :param scale: scale factor, defaults to 1.0
+        logVT_fn : Callable[[Array], Array]
+            Log of the Volume Time Sensitivity function.
+        key : PRNGKeyArray
+            PRNG key.
+        num_samples : int
+            Number of samples
+        scale : Union[int, float, Array]
+            scale factor, by default 1.0
         """
         self.scale = scale
         self.key = key

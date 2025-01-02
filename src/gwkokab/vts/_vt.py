@@ -56,3 +56,4 @@ class _Available:
 
 
 available = _Available()
+"""Available volume-time sensitivity models."""

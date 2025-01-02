@@ -50,18 +50,33 @@ def _build_non_mass_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    r"""Build distributions for non-mass parameters.
+    """Build distributions for non-mass parameters.
 
-    :param N: Number of components
-    :param component_type: type of component, either "pl" or "g"
-    :param mass_distributions: list of mass distributions
-    :param use_spin: whether to include spin
-    :param use_tilt: whether to include tilt
-    :param use_eccentricity: whether to include eccentricity
-    :param use_redshift: whether to include redshift
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :return: list of distributions
+    Parameters
+    ----------
+    N : int
+        Number of components
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    mass_distributions : List[Distribution]
+        list of mass distributions
+    use_spin : bool
+        whether to include spin
+    use_tilt : bool
+        whether to include tilt
+    use_eccentricity : bool
+        whether to include eccentricity
+    use_redshift : bool
+        whether to include redshift
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of distributions
     """
     build_distributions = mass_distributions
 
@@ -132,16 +147,29 @@ def _build_pl_component_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
-    r"""Build distributions for power-law components.
+    """Build distributions for power-law components.
 
-    :param N: Number of components
-    :param use_spin: whether to include spin
-    :param use_tilt: whether to include tilt
-    :param use_eccentricity: whether to include eccentricity
-    :param use_redshift: whether to include redshift
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :return: list of JointDistribution
+    Parameters
+    ----------
+    N : int
+        Number of components
+    use_spin : bool
+        whether to include spin
+    use_tilt : bool
+        whether to include tilt
+    use_eccentricity : bool
+        whether to include eccentricity
+    use_redshift : bool
+        whether to include redshift
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, by default None
+
+    Returns
+    -------
+    List[JointDistribution]
+        list of JointDistribution
     """
     powerlaws = create_powerlaws(N=N, params=params, validate_args=validate_args)
 
@@ -178,16 +206,29 @@ def _build_g_component_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
-    r"""Build distributions for Gaussian components.
+    """Build distributions for Gaussian components.
 
-    :param N: Number of components
-    :param use_spin: whether to include spin
-    :param use_tilt: whether to include tilt
-    :param use_eccentricity: whether to include eccentricity
-    :param use_redshift: whether to include redshift
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :return: list of JointDistribution
+    Parameters
+    ----------
+    N : int
+        Number of components
+    use_spin : bool
+        whether to include spin
+    use_tilt : bool
+        whether to include tilt
+    use_eccentricity : bool
+        whether to include eccentricity
+    use_redshift : bool
+        whether to include redshift
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, by default None
+
+    Returns
+    -------
+    List[JointDistribution]
+        list of JointDistribution
     """
     m1_dists = create_truncated_normal_distributions(
         N=N,
@@ -316,14 +357,28 @@ def NPowerlawMGaussian(
         chi[1-2]_mean_(pl|g)_[0-N_pl+N_g]
         chi[1-2]_variance_(pl|g)_[0-N_pl+N_g]
 
-    :param N_pl: Number of power-law components
-    :param N_g: Number of Gaussian components
-    :param use_spin: whether to include spin, defaults to False
-    :param use_tilt: whether to include tilt, defaults to False
-    :param use_eccentricity: whether to include eccentricity, defaults to False
-    :param use_redshift: whether to include redshift, defaults to False
-    :param validate_args: whether to validate arguments, defaults to None
-    :return: Mixture of power-law and Gaussian components
+    Parameters
+    ----------
+
+    N_pl : int
+        Number of power-law components
+    N_g : int
+        Number of Gaussian components
+    use_spin : bool
+        whether to include spin, defaults to False
+    use_tilt : bool
+        whether to include tilt, defaults to False
+    use_eccentricity : bool
+        whether to include eccentricity, defaults to False
+    use_redshift : bool
+        whether to include redshift, defaults to False
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None
+
+    Returns
+    -------
+    ScaledMixture
+        scaled mixture of distributions
     """
     if N_pl > 0:
         pl_component_dist = _build_pl_component_distributions(

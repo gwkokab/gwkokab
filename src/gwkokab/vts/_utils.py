@@ -41,10 +41,19 @@ __all__ = [
 def mse_loss_fn(model: PyTree, x: Array, y: Array) -> Array:
     """Mean squared error loss function.
 
-    :param model: Model to approximate the log of the VT function
-    :param x: input data
-    :param y: output data
-    :return: mean squared error
+    Parameters
+    ----------
+    model : PyTree
+        Model to approximate the log of the VT function
+    x : Array
+        input data
+    y : Array
+        output data
+
+    Returns
+    -------
+    Array
+        mean squared error
     """
     y_pred = jax.vmap(model)(x)
     return jnp.mean(jnp.square(y - y_pred))  # mean squared error
@@ -54,9 +63,17 @@ def mse_loss_fn(model: PyTree, x: Array, y: Array) -> Array:
 def predict(model: PyTree, x: Array) -> Array:
     """Predict the output of the model given the input data.
 
-    :param model: Model to approximate the log of the VT function
-    :param x: input data
-    :return: predicted output
+    Parameters
+    ----------
+    model : PyTree
+        Model to approximate the log of the VT function
+    x : Array
+        input data
+
+    Returns
+    -------
+    Array
+        predicted output
     """
     return jax.vmap(model)(x)
 
@@ -64,8 +81,15 @@ def predict(model: PyTree, x: Array) -> Array:
 def read_data(data_path: str) -> pd.DataFrame:
     """Read the data from the given path.
 
-    :param data_path: path to the data
-    :return: data in a DataFrame
+    Parameters
+    ----------
+    data_path : str
+        path to the data
+
+    Returns
+    -------
+    pd.DataFrame
+        data in a DataFrame
     """
     with h5py.File(data_path, "r") as vt_file:
         keys = list(vt_file.keys())
@@ -78,15 +102,25 @@ def make_model(
     key: PRNGKeyArray,
     input_layer: int,
     output_layer: int,
-    hidden_layers: Optional[list[int]] = None,
-) -> PyTree:
+    hidden_layers: Optional[List[int]] = None,
+) -> eqx.nn.Sequential:
     """Make a neural network model to approximate the log of the VT function.
 
-    :param key: jax random key
-    :param input_layer: input layer of the model
-    :param output_layer: output layer of the model
-    :param hidden_layers: hidden layers of the model
-    :return: neural network model
+    Parameters
+    ----------
+    key : PRNGKeyArray
+        jax random key
+    input_layer : int
+        input layer of the model
+    output_layer : int
+        output layer of the model
+    hidden_layers : Optional[List[int]], optional
+        hidden layers of the model, by default None
+
+    Returns
+    -------
+    eqx.nn.Sequential
+        neural network model
     """
     assert is_prng_key(key)
     if hidden_layers is None:
@@ -132,12 +166,21 @@ def make_model(
 
 
 def save_model(
-    *, filename: str, model: eqx.nn.Sequential, names: Optional[Sequence[str]] = None
+    *,
+    filename: str,
+    model: eqx.nn.Sequential,
+    names: Optional[Sequence[str]] = None,
 ) -> None:
     """Save the model to the given file.
 
-    :param filename: Name of the file to save the model
-    :param model: Model to approximate the log of the VT function
+    Parameters
+    ----------
+    filename : str
+        Name of the file to save the model
+    model : eqx.nn.Sequential
+        Model to approximate the log of the VT function
+    names : Optional[Sequence[str]], optional
+        names of the parameters, by default None
     """
     if not filename.endswith(".hdf5"):
         if "." in filename:
@@ -162,8 +205,15 @@ def save_model(
 def load_model(filename) -> Tuple[List[str], eqx.nn.Sequential]:
     """Load the model from the given file.
 
-    :param filename: Name of the file to load the model
-    :return: names of the parameters and the model
+    Parameters
+    ----------
+    filename : _type_
+        Name of the file to load the model
+
+    Returns
+    -------
+    Tuple[List[str], eqx.nn.Sequential]
+        names of the parameters and the model
     """
     layers: List[Any] = []
     with h5py.File(filename, "r") as f:

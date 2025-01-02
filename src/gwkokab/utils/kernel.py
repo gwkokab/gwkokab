@@ -15,11 +15,11 @@
 
 import jax
 from jax import nn as jnn, numpy as jnp
-from jaxtyping import Array
+from jaxtyping import ArrayLike
 
 
 @jax.jit
-def log_planck_taper_window(x: Array) -> Array:
+def log_planck_taper_window(x: ArrayLike) -> ArrayLike:
     r"""If :math:`x` is the point at which to evaluate the window, then the Planck
     taper window is defined as,
 
@@ -33,8 +33,15 @@ def log_planck_taper_window(x: Array) -> Array:
 
     This function evaluates the log of the Planck taper window :math:`\ln{S(x)}`.
 
-    :param x: point at which to evaluate the window
-    :return: window value
+    Parameters
+    ----------
+    x: ArrayLike
+        point at which to evaluate the window
+
+    Returns
+    -------
+    ArrayLike
+        window value
     """
     inv_1 = jnp.where(x == 0.0, 0.0, 1.0 / jnp.where(x == 0.0, 1.0, x))
     inv_2 = jnp.where(x == 1.0, 0.0, 1.0 / jnp.where(x == 1.0, 1.0, x - 1.0))

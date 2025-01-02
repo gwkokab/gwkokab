@@ -126,11 +126,11 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
 
     .. seealso::
 
-        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        :class:`ComponentMassesToChirpMassAndDelta`
-        :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        :class:`ComponentMassesToPrimaryMassAndMassRatio`
-        :class:`ComponentMassesToTotalMassAndMassRatio`
+        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        - :class:`ComponentMassesToChirpMassAndDelta`
+        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
+        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
+        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -224,11 +224,11 @@ class ComponentMassesToChirpMassAndDelta(Transform):
 
     .. seealso::
 
-        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        :class:`ComponentMassesToPrimaryMassAndMassRatio`
-        :class:`ComponentMassesToTotalMassAndMassRatio`
+        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
+        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
+        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -323,11 +323,11 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
 
     .. seealso::
 
-        :class:`ComponentMassesToChirpMassAndDelta`
-        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        :class:`ComponentMassesToPrimaryMassAndMassRatio`
-        :class:`ComponentMassesToTotalMassAndMassRatio`
+        - :class:`ComponentMassesToChirpMassAndDelta`
+        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
+        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
+        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = constraints.independent(constraints.positive, 1)
@@ -377,11 +377,11 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
 
     .. seealso::
 
-        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        :class:`ComponentMassesToChirpMassAndDelta`
-        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        :class:`ComponentMassesToTotalMassAndMassRatio`
+        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        - :class:`ComponentMassesToChirpMassAndDelta`
+        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
+        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -431,11 +431,11 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
 
     .. seealso::
 
-        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        :class:`ComponentMassesToChirpMassAndDelta`
-        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        :class:`ComponentMassesToPrimaryMassAndMassRatio`
-        :class:`ComponentMassesToTotalMassAndMassRatio`
+        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        - :class:`ComponentMassesToChirpMassAndDelta`
+        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
+        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -484,11 +484,11 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
 
     .. seealso::
 
-        :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        :class:`ComponentMassesToChirpMassAndDelta`
-        :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        :class:`ComponentMassesToPrimaryMassAndMassRatio`
+        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
+        - :class:`ComponentMassesToChirpMassAndDelta`
+        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
+        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
+        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#
+"""All necessary constants for the package."""
 
 ### define units in SI
 C_SI = 299792458.0  # m/s

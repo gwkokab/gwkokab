@@ -14,33 +14,40 @@
 
 
 from functools import partial
-from typing_extensions import Any, Callable, Dict, Self, Tuple
+from typing import Any, Callable, Dict, Self, Tuple
 
 from jax import lax, random as jrd
 from jax.tree_util import register_pytree_node_class
-from numpyro.distributions import Distribution
+from numpyro.distributions.distribution import Distribution
 
 
 @register_pytree_node_class
 class Bake(object):
-    r"""It is designed to be a simple and flexible way to define a distribution for
-    the inference. It has a similar interface to the
-    :class:`~numpyro.distributions.distribution.Distribution` class, but it allows
-    for the parameters of the distribution to be fixed or variable.
-
-    :param dist: A distribution or a function that returns a distribution
-    :type dist: Distribution | Callable[[], Distribution]
-    """
-
     def __init__(self, dist: Distribution | Callable[..., Distribution]) -> None:
-        self.dist = dist
+        """It is designed to be a simple and flexible way to define a distribution
+        for the inference. It has a similar interface to the
+        :class:`~numpyro.distributions.distribution.Distribution` class, but it
+        allows for the parameters of the distribution to be fixed or variable.
+
+        Parameters
+        ----------
+        dist : Distribution | Callable[..., Distribution]
+            A distribution or a function that returns a distribution
+        """
+        self._dist = dist
 
     def __call__(self, **kwargs: Any) -> Self:
-        r"""Set the parameters of the distribution.
+        """Set the parameters of the distribution.
 
-        :raises ValueError: If the type of a parameter is invalid
-        :return: The Bake object
-        :rtype: Self
+        Returns
+        -------
+        Self
+            The Bake object
+
+        Raises
+        ------
+        ValueError
+            If the type of a parameter is invalid
         """
         constants: Dict[str, int | float | None] = dict()
         variables: Dict[str, Distribution] = dict()
@@ -72,21 +79,24 @@ class Bake(object):
     def get_dist(
         self,
     ) -> Tuple[Dict[str, Distribution], Dict[str, str], Callable[..., Distribution]]:
-        r"""Return the distribution with the fixed parameters set.
+        """Return the distribution with the fixed parameters set.
 
-        :return: A tuple containing the distribution with the fixed parameters set
+        Returns
+        -------
+        Tuple[Dict[str, Distribution], Dict[str, str], Callable[..., Distribution]]
+            A tuple containing the distribution with the fixed parameters set
             and a function that returns the distribution with the fixed parameters
             set.
-        :rtype: Tuple[Dict[str, Distribution], Dict[str, str], Callable[...,
-            Distribution]]
         """
-        return self.variables, self.duplicates, partial(self.dist, **self.constants)
+        return self.variables, self.duplicates, partial(self._dist, **self.constants)
 
     def get_dummy(self) -> Distribution:
-        r"""Return a dummy distribution for debug and testing purposes.
+        """Return a dummy distribution for debug and testing purposes.
 
-        :return: A dummy distribution
-        :rtype: Distribution
+        Returns
+        -------
+        Distribution
+            A dummy distribution
         """
         key = jrd.PRNGKey(0)
         variables = {
@@ -94,10 +104,10 @@ class Bake(object):
             for name, prior in self.variables.items()
         }
         duplicates = {name: variables[value] for name, value in self.duplicates.items()}
-        return self.dist(**self.constants, **variables, **duplicates)
+        return self._dist(**self.constants, **variables, **duplicates)
 
     def tree_flatten(self):
-        return (self.dist, self.variables, self.constants, self.duplicates), None
+        return (self._dist, self.variables, self.constants, self.duplicates), None
 
     @classmethod
     def tree_unflatten(cls, aux_data, children):

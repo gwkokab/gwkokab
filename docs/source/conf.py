@@ -162,10 +162,21 @@ def skip_util_classes(app, what, name, obj, skip, options):
     if what == "module" and "._" in name:  # skip private modules
         skip = True
         return skip
-    if not skip and what == "method":  # skip private modules
-        if "tree_flatten" in name:
+    if what == "method":  # skip private modules
+        if "tree_flatten" in name or "tree_unflatten" in name:
             skip = True
             return skip
+    if what == "attribute" and (
+        "pytree_data_fields" in name
+        or "pytree_aux_fields" in name
+        or "arg_constraints" in name
+        or "reparametrized_params" in name
+    ):
+        skip = True
+        return skip
+    if what == "module" and "cli_gwkokab" in name:
+        skip = True
+        return skip
     return skip
 
 

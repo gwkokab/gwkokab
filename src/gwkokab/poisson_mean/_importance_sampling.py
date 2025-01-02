@@ -66,12 +66,21 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         add_peak: bool = False,
     ) -> None:
         r"""
-        :param logVT_fn: Log of the Volume Time Sensitivity function.
-        :param parameters: List of parameters.
-        :param key: PRNG key.
-        :param num_samples: Number of samples
-        :param scale: scale factor, defaults to 1.0
-        :param add_peak: Add a peak at the maxima and at the expectation of the proposal distribution, defaults to False
+        Parameters
+        ----------
+
+        logVT_fn : Callable[[Array], Array]
+            Log of the Volume Time Sensitivity function.
+        parameters : Sequence[Parameter]
+            List of parameters.
+        key : PRNGKeyArray
+            PRNG key.
+        num_samples : int
+            Number of samples
+        scale : Union[int, float, Array]
+            scale factor, defaults to 1.0
+        add_peak : bool
+            Add a peak at the maxima and at the expectation of the proposal distribution, by defaults False
         """
         self.scale = scale
         hyper_uniform = JointDistribution(

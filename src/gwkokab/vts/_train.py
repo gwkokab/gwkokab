@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import optax
 from jax import numpy as jnp, random as jrd
-from jaxtyping import Array, PyTree
+from jaxtyping import Array
 from rich.console import Console
 from rich.progress import (
     BarColumn,
@@ -40,11 +40,21 @@ def _train_test_data_split(
 ) -> tuple[Array, Array, Array, Array]:
     """Split the data into training and testing sets.
 
-    :param X: Input data
-    :param Y: Output data
-    :param batch_size: batch size for training
-    :param test_size: fraction of the data to use for testing, defaults to 0.2
-    :return: training and testing sets
+    Parameters
+    ----------
+    X : Array
+        Input data
+    Y : Array
+        Output data
+    batch_size : int
+        batch size for training
+    test_size : float, optional
+        fraction of the data to use for testing, by default 0.2
+
+    Returns
+    -------
+    tuple[Array, Array, Array, Array]
+        training and testing sets
     """
     n = len(X)
     indices = np.random.permutation(n)
@@ -75,17 +85,29 @@ def train_regressor(
 ) -> None:
     """Train the model to approximate the log of the VT function.
 
-    :param input_keys: list of input keys
-    :param output_keys: list of output keys
-    :param hidden_layers: list of hidden layers
-    :param batch_size: batch size for training
-    :param data_path: path to the data
-    :param checkpoint_path: path to save the model
-    :param epochs: number of epochs to train the model
-    :param validation_split: fraction of the data to use for validation, defaults to
-        0.2
-    :param learning_rate: learning rate for the optimizer, defaults to 1e-3
-    :raises ValueError: if checkpoint path does not end with .hdf5
+    input_keys : list[str]
+        list of input keys
+    output_keys : list[str]
+        list of output keys
+    hidden_layers : list[int]
+        list of hidden layers
+    batch_size : int
+        batch size for training
+    data_path : str
+        path to the data
+    checkpoint_path : Optional[str]
+        path to save the model, by default None
+    epochs : int
+        number of epochs to train the model
+    validation_split : float
+        fraction of the data to use for validation, by default 0.2
+    learning_rate : float
+        learning rate for the optimizer, by default 1e-3
+
+    Raises
+    ------
+    ValueError
+        if checkpoint path does not end with :code:`.hdf5`
     """
     if checkpoint_path is None:
         raise ValueError("No checkpoint path provided, model will not be saved.")
@@ -96,18 +118,28 @@ def train_regressor(
 
     @eqx.filter_jit
     def make_step(
-        model: PyTree,
+        model: eqx.nn.Sequential,
         x: Array,
         y: Array,
         opt_state: optax.OptState,
-    ) -> tuple[PyTree, optax.OptState, Array]:
+    ) -> tuple[eqx.nn.Sequential, optax.OptState, Array]:
         """Make a step in the optimization process.
 
-        :param model: Model to approximate the log of the VT function
-        :param x: input data
-        :param y: output data
-        :param opt_state: optimizer state
-        :return: optimizer state
+        Parameters
+        ----------
+        model : eqx.nn.Sequential
+            Model to approximate the log of the VT function
+        x : Array
+            input data
+        y : Array
+            output data
+        opt_state : optax.OptState
+            optimizer state
+
+        Returns
+        -------
+        tuple[eqx.nn.Sequential, optax.OptState, Array]
+            optimizer state
         """
         loss, grads = mse_loss_fn(model, x, y)
         updates, opt_state = optimizer.update(grads, opt_state)
@@ -115,18 +147,28 @@ def train_regressor(
         return model, opt_state, loss
 
     def train_step(
-        model: PyTree,
+        model: eqx.nn.Sequential,
         x: Array,
         y: Array,
         opt_state: optax.OptState,
-    ) -> tuple[PyTree, optax.OptState, Array]:
+    ) -> tuple[eqx.nn.Sequential, optax.OptState, Array]:
         """Train the model for one epoch.
 
-        :param model: Model to approximate the log of the VT function
-        :param x: input data
-        :param y: output data
-        :param opt_state: optimizer state
-        :return: optimizer state
+        Parameters
+        ----------
+        model : eqx.nn.Sequential
+            Model to approximate the log of the VT function
+        x : Array
+            input data
+        y : Array
+            output data
+        opt_state : optax.OptState
+            optimizer state
+
+        Returns
+        -------
+        tuple[eqx.nn.Sequential, optax.OptState, Array]
+            optimizer state
         """
         model, opt_state, loss = make_step(model, x, y, opt_state)
         return model, opt_state, loss
