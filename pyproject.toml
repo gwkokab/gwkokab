@@ -75,6 +75,7 @@ docs = [
     "sphinx-autoapi",
     "sphinx-copybutton",
     "sphinx>=2.0",
+    "sphinx_design",
 ]
 test = ["astropy>=6.1.4"]
 
