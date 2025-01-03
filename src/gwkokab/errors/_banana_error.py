@@ -17,7 +17,7 @@ import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 
-from .utils.transformations import chirp_mass, symmetric_mass_ratio
+from ..utils.transformations import chirp_mass, symmetric_mass_ratio
 
 
 __all__ = ["banana_error_m1_m2"]

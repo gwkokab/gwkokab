@@ -22,8 +22,9 @@ from .math import (
 from .transformations import (
     cart_to_polar as cart_to_polar,
     cart_to_spherical as cart_to_spherical,
+    chi_a as chi_a,
     chi_costilt_to_chiz as chi_costilt_to_chiz,
-    chieff as chieff,
+    chi_eff as chi_eff,
     chirp_mass as chirp_mass,
     delta_m as delta_m,
     delta_m_to_symmetric_mass_ratio as delta_m_to_symmetric_mass_ratio,
