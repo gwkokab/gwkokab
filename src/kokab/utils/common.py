@@ -76,7 +76,8 @@ def flowMC_default_parameters(**kwargs: dict) -> dict:
     ]
 
     for key1, key2, value in key_key_value:
-        kwargs[key1][key2] = value
+        if kwargs[key1].get(key2) is None:
+            kwargs[key1][key2] = value
 
     local_sampler_name = kwargs["local_sampler_kwargs"].get("sampler")
     if local_sampler_name is None:
