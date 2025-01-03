@@ -158,7 +158,7 @@ intersphinx_mapping = {
 
 
 # source: https://sphinx-autoapi.readthedocs.io/en/latest/reference/config.html#event-autoapi-skip-member
-def skip_util_classes(app, what, name, obj, skip, options):
+def skip_util_classes(app, what, name: str, obj, skip, options):
     if what == "module" and "._" in name:  # skip private modules
         skip = True
         return skip
@@ -175,6 +175,16 @@ def skip_util_classes(app, what, name, obj, skip, options):
         skip = True
         return skip
     if what == "module" and "cli_gwkokab" in name:
+        skip = True
+        return skip
+    if name == "kokab.utils":
+        skip = True
+        return skip
+    if (
+        what == "module"
+        and name.startswith("kokab")
+        and ("sage" in name or "genie" in name or "common" in name or "ppd" in name)
+    ):
         skip = True
         return skip
     return skip

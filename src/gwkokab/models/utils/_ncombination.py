@@ -54,7 +54,8 @@ def combine_distributions(
     base_dists: List[List[Distribution]], add_dists: List[Distribution]
 ):
     """Helper function to combine base distributions with additional distributions
-    like spin, tilt, or eccentricity."""
+    like spin, tilt, or eccentricity.
+    """
     return [dists + [add_dist] for dists, add_dist in zip(base_dists, add_dists)]
 
 

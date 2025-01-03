@@ -15,7 +15,8 @@
 
 #
 """Provides implementation of various transformations using
-:class:`~numpyro.distributions.transforms.Transform`."""
+:class:`~numpyro.distributions.transforms.Transform`.
+"""
 
 from jax import numpy as jnp
 from jaxtyping import Array

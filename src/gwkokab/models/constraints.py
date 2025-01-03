@@ -14,7 +14,8 @@
 
 #
 """Provides implementation of various constraints using
-:class:`~numpyro.distributions.constraints.Constraint`."""
+:class:`~numpyro.distributions.constraints.Constraint`.
+"""
 
 from collections.abc import Sequence
 
@@ -137,7 +138,8 @@ class _IncreasingVector(_SingletonConstraint):
 
 class _DecreasingVector(_SingletonConstraint):
     r"""Constrain values to be decreasing, i.e. :math:`\forall i<j, x_i \geq
-    x_j`."""
+    x_j`.
+    """
 
     event_dim = 1
 
@@ -153,7 +155,8 @@ class _DecreasingVector(_SingletonConstraint):
 
 class _StrictlyIncreasingVector(_SingletonConstraint):
     r"""Constrain values to be strictly increasing, i.e. :math:`\forall i<j, x_i <
-    x_j`."""
+    x_j`.
+    """
 
     event_dim = 1
 
@@ -169,7 +172,8 @@ class _StrictlyIncreasingVector(_SingletonConstraint):
 
 class _StrictlyDecreasingVector(_SingletonConstraint):
     r"""Constrain values to be strictly decreasing, i.e. :math:`\forall i<j,x_i >
-    x_j`."""
+    x_j`.
+    """
 
     event_dim = 1
 
@@ -185,7 +189,8 @@ class _StrictlyDecreasingVector(_SingletonConstraint):
 
 class _PositiveIncreasingVector(_SingletonConstraint):
     r"""Constrain values to be positive and increasing, i.e. :math:`\forall i<j, x_i
-    \leq x_j`."""
+    \leq x_j`.
+    """
 
     event_dim = 1
 
@@ -201,7 +206,8 @@ class _PositiveIncreasingVector(_SingletonConstraint):
 
 class _PositiveDecreasingVector(_SingletonConstraint):
     r"""Constrain values to be positive and decreasing, i.e. :math:`\forall i<j, x_i
-    \geq x_j`."""
+    \geq x_j`.
+    """
 
     event_dim = 1
 

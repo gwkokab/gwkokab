@@ -13,7 +13,9 @@ authors = [
 ]
 name = "gwkokab"
 version = "0.1.1.dev"
-maintainers = [{ name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" }]
+maintainers = [
+    { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
+]
 description = "A JAX-based gravitational-wave population inference toolkit for parametric models"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -58,7 +60,12 @@ keywords = [
 ]
 
 [project.optional-dependencies]
-dev = ["pre-commit>=4.0.0", "pytest>=8.3.0", "ruff>=0.8.0", "setuptools>=75.6.0"]
+dev = [
+    "pre-commit>=4.0.0",
+    "pytest>=8.3.0",
+    "ruff>=0.8.0",
+    "setuptools>=75.6.0",
+]
 docs = [
     "astroid<3",
     "furo",
@@ -117,7 +124,11 @@ filterwarnings = [
     "once:No GPU:UserWarning",
     "once::DeprecationWarning",
 ]
-doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DETAIL"]
+doctest_optionflags = [
+    "ELLIPSIS",
+    "NORMALIZE_WHITESPACE",
+    "IGNORE_EXCEPTION_DETAIL",
+]
 
 [tool.docformatter]
 # The ``summaries`` are not (yet) 75 characters because the summary lines can't be
@@ -125,5 +136,4 @@ doctest_optionflags = ["ELLIPSIS", "NORMALIZE_WHITESPACE", "IGNORE_EXCEPTION_DET
 recursive = true
 wrap-summaries = 84
 wrap-descriptions = 84
-black = true
-syntax = "sphinx"
+syntax = "numpy"

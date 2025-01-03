@@ -12,5 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#
+"""Kokab namespace provides a comprehensive suite of models and utilities for
+population analysis of compact binary coalescences (CBCs).
 
-from . import one_powerlaw_one_peak as one_powerlaw_one_peak, utils as utils
+It includes command-line interfaces (CLIs) for generating mock posterior estimates,
+conducting population analyses, and producing visualizations. A detailed list of
+available models is accessible at :doc:`/autoapi/gwkokab/models/index`.
+"""
+
+from . import utils as utils
