@@ -53,8 +53,8 @@ class PopulationFactory:
             x.shape[0], dtype=bool
         ),
     ) -> None:
-        """Class with methods equipped to generate population for each realizations
-        and adding errors in it.
+        """Class with methods equipped to generate population for each realizations and
+        adding errors in it.
 
         Parameters
         ----------

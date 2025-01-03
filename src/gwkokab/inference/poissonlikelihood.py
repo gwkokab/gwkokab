@@ -30,8 +30,8 @@ __all__ = ["PoissonLikelihood"]
 
 
 class PoissonLikelihood(eqx.Module):
-    r"""This class is used to provide a likelihood function for the inhomogeneous
-    Poisson process. The likelihood is given by,
+    r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
+    process. The likelihood is given by,
 
     .. math::
         \log\mathcal{L}(\Lambda) \propto -\mu(\Lambda)

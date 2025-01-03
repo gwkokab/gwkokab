@@ -27,10 +27,10 @@ from ._abc import PoissonMeanABC
 
 
 class ImportanceSamplingPoissonMean(PoissonMeanABC):
-    r"""It is very cheap to generate random samples from the proposal distribution
-    and evaluate the importance weights and reusing them for rest of the
-    calculations. We assume a proposal distribution :math:`\rho_{\phi}` and
-    calculate the importance weights as,
+    r"""It is very cheap to generate random samples from the proposal distribution and
+    evaluate the importance weights and reusing them for rest of the calculations. We
+    assume a proposal distribution :math:`\rho_{\phi}` and calculate the importance
+    weights as,
 
     .. math::
         w_i = \frac{\operatorname{VT(\omega_i)}}{\rho_{\phi}(\omega_i)},

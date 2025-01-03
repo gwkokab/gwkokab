@@ -54,8 +54,8 @@ __all__ = [
 
 
 class PowerlawPrimaryMassRatio(Distribution):
-    r"""Power law model for two-dimensional mass distribution, modelling primary mass
-    and conditional mass ratio distribution.
+    r"""Power law model for two-dimensional mass distribution, modelling primary mass and
+    conditional mass ratio distribution.
 
     .. math::
         p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
@@ -706,8 +706,8 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
 
 
 class SmoothedGaussianPrimaryMassRatio(Distribution):
-    r""":class:`~numpyro.distributions.continuous.Normal` with smoothing kernel on
-    the lower edge.
+    r""":class:`~numpyro.distributions.continuous.Normal` with smoothing kernel on the
+    lower edge.
 
     .. math::
         p(m_1,q\mid\mu,\sigma^2,\beta,m_{\text{min}},m_{\text{max}},\delta) = \mathcal{N}(m_1\mid\mu,\sigma^2)S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)p(q \mid m_1,\beta,m_{\text{min}},\delta)
@@ -831,8 +831,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
 
 
 class SmoothedPowerlawAndPeak(Distribution):
-    r"""It is a mixture of power law and Gaussian distribution with a smoothing
-    kernel.
+    r"""It is a mixture of power law and Gaussian distribution with a smoothing kernel.
 
     .. math::
 

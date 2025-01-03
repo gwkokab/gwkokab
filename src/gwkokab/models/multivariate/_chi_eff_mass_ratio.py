@@ -25,8 +25,7 @@ from gwkokab.utils.transformations import chieff, mass_ratio
 
 
 class ChiEffMassRatioConstraint(constraints.Constraint):
-    r"""Constraint for the :class:`ChiEffMassRatioCorrelated` model. It is defined
-    as,
+    r"""Constraint for the :class:`ChiEffMassRatioCorrelated` model. It is defined as,
 
     .. math::
 

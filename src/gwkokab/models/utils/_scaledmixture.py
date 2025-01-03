@@ -24,8 +24,8 @@ from numpyro.distributions.mixtures import MixtureGeneral
 
 
 class ScaledMixture(MixtureGeneral):
-    r"""A finite mixture of component distributions from different families. This is
-    a generalization of :class:`~numpyro.distributions.Mixture` where the component
+    r"""A finite mixture of component distributions from different families. This is a
+    generalization of :class:`~numpyro.distributions.Mixture` where the component
     distributions are scaled by a set of rates.
 
     **Example**

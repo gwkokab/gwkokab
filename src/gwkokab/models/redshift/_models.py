@@ -48,8 +48,7 @@ def cumtrapz(y: Array, x: Array) -> Array:
 
 
 class PowerlawRedshift(Distribution):
-    r"""A power-law redshift distribution. The probability density function is given
-    by.
+    r"""A power-law redshift distribution. The probability density function is given by.
 
     .. math::
 

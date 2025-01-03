@@ -39,8 +39,7 @@ class VolumeTimeSensitivityInterface(eqx.Module):
 
     @abstractmethod
     def get_vmapped_logVT(self) -> Callable[[Array], Array]:
-        """Gets a vectorized log volume-time sensitivity function for batch
-        processing.
+        """Gets a vectorized log volume-time sensitivity function for batch processing.
 
         Returns
         -------

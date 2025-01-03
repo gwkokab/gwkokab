@@ -20,8 +20,8 @@ from jaxtyping import ArrayLike
 
 @jax.jit
 def log_planck_taper_window(x: ArrayLike) -> ArrayLike:
-    r"""If :math:`x` is the point at which to evaluate the window, then the Planck
-    taper window is defined as,
+    r"""If :math:`x` is the point at which to evaluate the window, then the Planck taper
+    window is defined as,
 
     .. math::
 

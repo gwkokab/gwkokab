@@ -24,10 +24,10 @@ from numpyro.distributions.distribution import Distribution
 @register_pytree_node_class
 class Bake(object):
     def __init__(self, dist: Distribution | Callable[..., Distribution]) -> None:
-        """It is designed to be a simple and flexible way to define a distribution
-        for the inference. It has a similar interface to the
-        :class:`~numpyro.distributions.distribution.Distribution` class, but it
-        allows for the parameters of the distribution to be fixed or variable.
+        """It is designed to be a simple and flexible way to define a distribution for
+        the inference. It has a similar interface to the
+        :class:`~numpyro.distributions.distribution.Distribution` class, but it allows
+        for the parameters of the distribution to be fixed or variable.
 
         Parameters
         ----------

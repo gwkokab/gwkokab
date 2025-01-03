@@ -160,8 +160,8 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
 
     :param vt_params: list of VT parameters
     :param parameters: list of model parameters
-    :raises ValueError: if the parameters in the VT do not match the parameters in
-        the model
+    :raises ValueError: if the parameters in the VT do not match the parameters in the
+        model
     """
     if set(vt_params) - set(parameters):
         raise ValueError(

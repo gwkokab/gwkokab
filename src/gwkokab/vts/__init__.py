@@ -14,11 +14,10 @@
 
 
 #
-"""The population analysis and estimation of merger rates of compact binaries is one
-of the important topics in gravitational wave astronomy.
+"""The population analysis and estimation of merger rates of compact binaries is one of
+the important topics in gravitational wave astronomy.
 
-The primary ingredient in these analyses is the population-averaged sensitive
-volume.
+The primary ingredient in these analyses is the population-averaged sensitive volume.
 """
 
 from ._abc import VolumeTimeSensitivityInterface as VolumeTimeSensitivityInterface

@@ -135,6 +135,6 @@ doctest_optionflags = [
 # The ``summaries`` are not (yet) 75 characters because the summary lines can't be
 # automatically wrapped and must be re-written, which should be done at some point.
 recursive = true
-wrap-summaries = 84
-wrap-descriptions = 84
+wrap-summaries = 88
+wrap-descriptions = 88
 syntax = "numpy"

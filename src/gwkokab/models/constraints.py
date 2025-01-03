@@ -80,8 +80,8 @@ class _MassSandwichConstraint(Constraint):
 
 
 class _MassRatioMassSandwichConstraint(Constraint):
-    r"""Constrain primary mass to lie within a sandwiched interval and the mass ratio
-    to lie within a given interval. This is a transformed version of the
+    r"""Constrain primary mass to lie within a sandwiched interval and the mass ratio to
+    lie within a given interval. This is a transformed version of the
     :class:`_MassSandwichConstraint`.
 
     .. math::
@@ -137,9 +137,7 @@ class _IncreasingVector(_SingletonConstraint):
 
 
 class _DecreasingVector(_SingletonConstraint):
-    r"""Constrain values to be decreasing, i.e. :math:`\forall i<j, x_i \geq
-    x_j`.
-    """
+    r"""Constrain values to be decreasing, i.e. :math:`\forall i<j, x_i \geq x_j`."""
 
     event_dim = 1
 

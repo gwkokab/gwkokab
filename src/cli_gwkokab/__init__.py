@@ -13,10 +13,10 @@
 # limitations under the License.
 
 #
-r"""During analysis, we often need to create various types of plots to visualize data
-or results. The GWKokab core team has identified several common plot types based on
-recurring data patterns. These plots may require input from a single file or
-multiple files, depending on the specific requirements.
+r"""During analysis, we often need to create various types of plots to visualize data or
+results. The GWKokab core team has identified several common plot types based on
+recurring data patterns. These plots may require input from a single file or multiple
+files, depending on the specific requirements.
 
 To streamline the process of generating these plots, we have developed a set of
 command-line interfaces (CLIs) built on top of the following libraries:

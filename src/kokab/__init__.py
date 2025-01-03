@@ -13,8 +13,8 @@
 # limitations under the License.
 
 #
-"""Kokab namespace provides a comprehensive suite of models and utilities for
-population analysis of compact binary coalescences (CBCs).
+"""Kokab namespace provides a comprehensive suite of models and utilities for population
+analysis of compact binary coalescences (CBCs).
 
 It includes command-line interfaces (CLIs) for generating mock posterior estimates,
 conducting population analyses, and producing visualizations. A detailed list of

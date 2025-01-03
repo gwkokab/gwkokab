@@ -25,8 +25,8 @@ from ._abc import PoissonMeanABC
 
 
 class InverseTransformSamplingPoissonMean(PoissonMeanABC):
-    r"""Samples are generated from :math:`\rho_{\Omega\mid\Lambda}` by using the
-    inverse transform sampling method. The estimator is given by,
+    r"""Samples are generated from :math:`\rho_{\Omega\mid\Lambda}` by using the inverse
+    transform sampling method. The estimator is given by,
 
     .. math::
 
