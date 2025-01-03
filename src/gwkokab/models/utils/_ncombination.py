@@ -53,8 +53,9 @@ __all__ = [
 def combine_distributions(
     base_dists: List[List[Distribution]], add_dists: List[Distribution]
 ):
-    """Helper function to combine base distributions with additional distributions
-    like spin, tilt, or eccentricity."""
+    """Helper function to combine base distributions with additional distributions like
+    spin, tilt, or eccentricity.
+    """
     return [dists + [add_dist] for dists, add_dist in zip(base_dists, add_dists)]
 
 
@@ -284,8 +285,8 @@ def create_smoothed_powerlaws_raw(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary
-    mass and mass ratio. We call it the raw version because it does not include the
+    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
+    and mass ratio. We call it the raw version because it does not include the
     transformation to component masses.
 
     :param N: Number of components
@@ -348,8 +349,8 @@ def create_smoothed_gaussians_raw(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary
-    mass and mass ratio. We call it the raw version because it does not include the
+    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
+    and mass ratio. We call it the raw version because it does not include the
     transformation to component masses.
 
     :param N: Number of components
@@ -419,8 +420,8 @@ def create_smoothed_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary
-    mass and secondary mass. It includes the transformation to component masses.
+    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
+    and secondary mass. It includes the transformation to component masses.
 
     :param N: Number of components
     :param params: dictionary of parameters
@@ -448,8 +449,8 @@ def create_smoothed_gaussians(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary
-    mass and secondary mass. It includes the transformation to component masses.
+    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
+    and secondary mass. It includes the transformation to component masses.
 
     :param N: Number of components
     :param params: dictionary of parameters

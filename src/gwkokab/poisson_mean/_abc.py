@@ -17,7 +17,7 @@ from abc import abstractmethod
 from typing import Union
 
 import equinox as eqx
-from jaxtyping import Array
+from jax import Array
 from numpyro.distributions import Distribution
 
 from ..models.utils import ScaledMixture
@@ -42,8 +42,8 @@ class PoissonMeanABC(eqx.Module):
 
     .. seealso::
 
-        :class:`ImportanceSamplingPoissonMean`
-        :class:`InverseTransformSamplingPoissonMean`
+        - :class:`ImportanceSamplingPoissonMean`
+        - :class:`InverseTransformSamplingPoissonMean`
     """
 
     scale: Union[int, float, Array] = eqx.field(init=False, default=1.0, static=True)

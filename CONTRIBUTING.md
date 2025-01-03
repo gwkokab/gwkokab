@@ -1,6 +1,6 @@
 <!-- Most things are copied from JAX developer documentation https://jax.readthedocs.io/en/latest/contributing.html -->
 
-# Contributing to GWKokab ✴️
+# Contributing to GWKokab
 
 Everyone can contribute to GWKokab, and we
 value everyone's contributions. There are several ways to contribute, including:
@@ -12,8 +12,8 @@ value everyone's contributions. There are several ways to contribute, including:
 ## Ways to contribute
 
 We welcome pull requests, in particular for those issues marked with
-[contributions welcome 🙌](https://github.com/gwkokab/gwkokab/issues?q=is%3Aissue+is%3Aopen+label%3A%22contributions+welcome+%F0%9F%99%8C%22)
-or [good first issue 👌](https://github.com/gwkokab/gwkokab/labels/good%20first%20issue%20%3Aok_hand%3A).
+[contributions welcome](https://github.com/gwkokab/gwkokab/issues?q=is%3Aissue+is%3Aopen+label%3A%22contributions+welcome%22)
+or [good first issue](https://github.com/gwkokab/gwkokab/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 For other proposals, we ask that you first open a GitHub
 [Issue](https://github.com/gwkokab/gwkokab/issues/new/choose) or

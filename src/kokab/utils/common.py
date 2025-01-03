@@ -22,9 +22,8 @@ import numpy as np
 import pandas as pd
 
 from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
-
-from .priors import available as available_priors
-from .regex import match_all
+from kokab.utils.priors import available as available_priors
+from kokab.utils.regex import match_all
 
 
 def read_json(json_file: str) -> dict:
@@ -162,8 +161,8 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
 
     :param vt_params: list of VT parameters
     :param parameters: list of model parameters
-    :raises ValueError: if the parameters in the VT do not match the parameters in
-        the model
+    :raises ValueError: if the parameters in the VT do not match the parameters in the
+        model
     """
     if set(vt_params) - set(parameters):
         raise ValueError(

@@ -30,8 +30,8 @@ def compute_probs(
 ) -> Array:
     r"""Compute the probability density function of a model.
 
-    :param logpdf: A callable that computes the log-probability density function of
-        the model.
+    :param logpdf: A callable that computes the log-probability density function of the
+        model.
     :param ranges: A list of tuples `(start, end, num_points)` for each parameter,
         defining the grid over which to compute the PPD.
     :return: The PPD of the model as a multidimensional array corresponding to the

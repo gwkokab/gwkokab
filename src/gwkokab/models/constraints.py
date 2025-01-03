@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#
+"""Provides implementation of various constraints using
+:class:`~numpyro.distributions.constraints.Constraint`.
+"""
 
 from collections.abc import Sequence
 
@@ -76,8 +80,8 @@ class _MassSandwichConstraint(Constraint):
 
 
 class _MassRatioMassSandwichConstraint(Constraint):
-    r"""Constrain primary mass to lie within a sandwiched interval and the mass ratio
-    to lie within a given interval. This is a transformed version of the
+    r"""Constrain primary mass to lie within a sandwiched interval and the mass ratio to
+    lie within a given interval. This is a transformed version of the
     :class:`_MassSandwichConstraint`.
 
     .. math::
@@ -133,8 +137,7 @@ class _IncreasingVector(_SingletonConstraint):
 
 
 class _DecreasingVector(_SingletonConstraint):
-    r"""Constrain values to be decreasing, i.e. :math:`\forall i<j, x_i \geq
-    x_j`."""
+    r"""Constrain values to be decreasing, i.e. :math:`\forall i<j, x_i \geq x_j`."""
 
     event_dim = 1
 
@@ -150,7 +153,8 @@ class _DecreasingVector(_SingletonConstraint):
 
 class _StrictlyIncreasingVector(_SingletonConstraint):
     r"""Constrain values to be strictly increasing, i.e. :math:`\forall i<j, x_i <
-    x_j`."""
+    x_j`.
+    """
 
     event_dim = 1
 
@@ -166,7 +170,8 @@ class _StrictlyIncreasingVector(_SingletonConstraint):
 
 class _StrictlyDecreasingVector(_SingletonConstraint):
     r"""Constrain values to be strictly decreasing, i.e. :math:`\forall i<j,x_i >
-    x_j`."""
+    x_j`.
+    """
 
     event_dim = 1
 
@@ -182,7 +187,8 @@ class _StrictlyDecreasingVector(_SingletonConstraint):
 
 class _PositiveIncreasingVector(_SingletonConstraint):
     r"""Constrain values to be positive and increasing, i.e. :math:`\forall i<j, x_i
-    \leq x_j`."""
+    \leq x_j`.
+    """
 
     event_dim = 1
 
@@ -198,7 +204,8 @@ class _PositiveIncreasingVector(_SingletonConstraint):
 
 class _PositiveDecreasingVector(_SingletonConstraint):
     r"""Constrain values to be positive and decreasing, i.e. :math:`\forall i<j, x_i
-    \geq x_j`."""
+    \geq x_j`.
+    """
 
     event_dim = 1
 
@@ -277,17 +284,3 @@ positive_increasing_vector = _PositiveIncreasingVector()
 positive_decreasing_vector = _PositiveDecreasingVector()
 all_constraint = _AllConstraint
 any_constraint = _AnyConstraint
-
-
-# create docs
-
-mass_sandwich.__doc__ = _MassSandwichConstraint.__doc__
-mass_ratio_mass_sandwich.__doc__ = _MassRatioMassSandwichConstraint.__doc__
-increasing_vector.__doc__ = _IncreasingVector.__doc__
-decreasing_vector.__doc__ = _DecreasingVector.__doc__
-strictly_increasing_vector.__doc__ = _StrictlyIncreasingVector.__doc__
-strictly_decreasing_vector.__doc__ = _StrictlyDecreasingVector.__doc__
-positive_increasing_vector.__doc__ = _PositiveIncreasingVector.__doc__
-positive_decreasing_vector.__doc__ = _PositiveDecreasingVector.__doc__
-all_constraint.__doc__ = _AllConstraint.__doc__
-any_constraint.__doc__ = _AnyConstraint.__doc__

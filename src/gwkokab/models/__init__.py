@@ -12,17 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#
+"""
+Provides implementation of various models, constraints, and transformations using
+`NumPyro <https://github.com/pyro-ppl/numpyro>`_.
+"""
 
-from . import constraints, transformations, utils, wrappers
+from . import (
+    constraints as constraints,
+    transformations as transformations,
+    utils as utils,
+)
 from ._models import (
-    FlexibleMixtureModel,
-    MassGapModel,
-    NDistribution,
-    PowerlawPrimaryMassRatio,
+    FlexibleMixtureModel as FlexibleMixtureModel,
+    MassGapModel as MassGapModel,
+    PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
-    Wysocki2019MassModel,
+    Wysocki2019MassModel as Wysocki2019MassModel,
 )
 from .multivariate import (
     ChiEffMassRatioConstraint as ChiEffMassRatioConstraint,
@@ -38,16 +46,3 @@ from .spin import (
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
 )
-
-
-__all__ = [
-    "constraints",
-    "transformations",
-    "utils",
-    "wrappers",
-    "FlexibleMixtureModel",
-    "MassGapModel",
-    "NDistribution",
-    "PowerlawPrimaryMassRatio",
-    "Wysocki2019MassModel",
-]

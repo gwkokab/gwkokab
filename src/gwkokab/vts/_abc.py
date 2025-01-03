@@ -20,28 +20,31 @@ from jaxtyping import Array
 
 
 class VolumeTimeSensitivityInterface(eqx.Module):
-    r"""Interface for volume time sensitivity.
-
-    :param shuffle_indices: The indices to shuffle the input to the model.
-    """
+    """Interface for volume time sensitivity."""
 
     shuffle_indices: Sequence[int] = eqx.field(init=False, static=True)
+    """The indices to shuffle the input to the model."""
 
     @abstractmethod
     def get_logVT(self) -> Callable[[Array], Array]:
         """Gets the log volume-time sensitivity function.
 
-        :return: A function that takes an input array of shape (n_features,) and
+        Returns
+        -------
+        Callable[[Array], Array]
+            A function that takes an input array of shape (n_features,) and
             returns the log volume-time sensitivity as an array of shape ().
         """
         raise NotImplementedError
 
     @abstractmethod
     def get_vmapped_logVT(self) -> Callable[[Array], Array]:
-        """Gets a vectorized log volume-time sensitivity function for batch
-        processing.
+        """Gets a vectorized log volume-time sensitivity function for batch processing.
 
-        :return: A function that takes a batch of inputs as an array of shape
+        Returns
+        -------
+        Callable[[Array], Array]
+            A function that takes a batch of inputs as an array of shape
             (batch_size, n_features) and returns an array of log volume-time
             sensitivities with shape (batch_size,).
         """

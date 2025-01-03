@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import TypeVar
+from typing import Optional, TypeVar
 from typing_extensions import Dict
 
 
@@ -21,13 +21,21 @@ _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
 
 
-def fetch_first_matching_value(dictionary: Dict[_KT, _VT], *keys: _KT) -> _VT | None:
+def fetch_first_matching_value(dictionary: Dict[_KT, _VT], *keys: _KT) -> Optional[_VT]:
     """Get the first value in the dictionary that matches one of the keys.
 
-    :param dictionary: The dictionary to search.
-    :param keys: The keys to search for in order.
-    :return: The value of the first key that is found in the dictionary, or None if
-        no key is found.
+    Parameters
+    ----------
+    dictionary : Dict[_KT, _VT]
+        The dictionary to search.
+    keys : _KT
+        The keys to search for.
+
+    Returns
+    -------
+    Optional[_VT]
+        The value of the first key that is found in the dictionary, or None if no key is
+        found.
     """
     for key in keys:
         if key in dictionary:
