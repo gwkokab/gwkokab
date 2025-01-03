@@ -14,7 +14,7 @@
 
 
 from functools import partial
-from typing import Any, Callable, Dict, Self, Tuple
+from typing import Any, Callable, Dict, Tuple
 
 from jax import lax, random as jrd
 from jax.tree_util import register_pytree_node_class
@@ -36,7 +36,7 @@ class Bake(object):
         """
         self._dist = dist
 
-    def __call__(self, **kwargs: Any) -> Self:
+    def __call__(self, **kwargs: Any) -> "Bake":
         """Set the parameters of the distribution.
 
         Returns
