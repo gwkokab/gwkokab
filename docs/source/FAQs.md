@@ -20,6 +20,7 @@ if you only need to run inference, you can just implement the
 Here is an example of a simple population model:
 
 ```{code-block} python
+
 >>> import numpyro
 >>> from jax import random as jrd
 >>> from numpyro.distributions import Distribution
@@ -40,6 +41,7 @@ Here is an example of a simple population model:
 >>> samples = MyPopulationModel(0.0, 1.0).sample(jrd.PRNGKey(0), (1000,))
 >>> samples.shape
 (1000,)
+
 ```
 
 ## GWKokab is slow on GPU
