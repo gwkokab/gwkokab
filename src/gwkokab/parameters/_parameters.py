@@ -17,8 +17,9 @@ import sys
 from collections.abc import Mapping, Sequence
 
 import equinox as eqx
-from numpyro.distributions import Distribution, ImproperUniform, Uniform
 from numpyro.distributions.constraints import real
+from numpyro.distributions.continuous import Uniform
+from numpyro.distributions.distribution import Distribution, ImproperUniform
 
 
 class Parameter(eqx.Module):
@@ -94,7 +95,9 @@ ECCENTRICITY = Parameter(name="ecc", prior=standard_uniform)
 
 # Redshift
 
-REDSHIFT = Parameter(name="redshift", prior=Uniform(0.0, 10.0, validate_args=True))
+REDSHIFT = Parameter(
+    name="redshift", prior=Uniform(0.001, 3.0 + 1e-6, validate_args=True)
+)
 
 
 # Copyright (c) 2024 Colm Talbot
@@ -102,22 +105,6 @@ REDSHIFT = Parameter(name="redshift", prior=Uniform(0.0, 10.0, validate_args=Tru
 
 
 class _Available:
-    """Available parameters.
-
-    .. code::
-
-        >>> from gwkokab.parameters import available
-        >>> Mc_by_var = available["CHIRP_MASS"]
-        >>> Mc_by_var.name
-        'chirp_mass'
-        >>> Mc_by_name = available["chirp_mass"]
-        >>> Mc_by_name.name
-        'chirp_mass'
-
-    Original implementation is in
-    `wcosmo.astropy.available <https://github.com/ColmTalbot/wcosmo/blob/d15ee7d158b83226dcf0e1f319d96883472a05a5/wcosmo/astropy.py#L452-L464>`_
-    """
-
     names_to_keys: Mapping[str, Parameter] = {
         CHIRP_MASS.name: CHIRP_MASS,
         COS_TILT_1.name: COS_TILT_1,
@@ -179,3 +166,18 @@ class _Available:
 
 
 available = _Available()
+"""Available parameters.
+
+.. code::
+
+    >>> from gwkokab.parameters import available
+    >>> Mc_by_var = available["CHIRP_MASS"]
+    >>> Mc_by_var.name
+    'chirp_mass'
+    >>> Mc_by_name = available["chirp_mass"]
+    >>> Mc_by_name.name
+    'chirp_mass'
+
+Original implementation is in
+`wcosmo.astropy.available <https://github.com/ColmTalbot/wcosmo/blob/d15ee7d158b83226dcf0e1f319d96883472a05a5/wcosmo/astropy.py#L452-L464>`_
+"""

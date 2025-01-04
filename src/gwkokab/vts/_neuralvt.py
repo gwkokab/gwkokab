@@ -24,13 +24,18 @@ from ._utils import load_model
 
 
 class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
-    model: eqx.nn.Sequential = eqx.field(init=False)
+    neural_vt_model: eqx.nn.Sequential = eqx.field(init=False)
+    """The neural volume-time sensitivity model."""
 
     def __init__(self, parameters: Sequence[str], filename: str) -> None:
         """Convenience class for loading a neural vt.
 
-        :param parameters: The names of the parameters that the model expects.
-        :param filename: The filename of the neural vt.
+        Parameters
+        ----------
+        parameters : Sequence[str]
+            The names of the parameters that the model expects.
+        filename : str
+            The filename of the neural vt.
         """
         if not parameters:
             raise ValueError("parameters sequence cannot be empty")
@@ -39,7 +44,7 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         if not all(isinstance(p, str) for p in parameters):
             raise TypeError("all parameters must be strings")
 
-        names, self.model = load_model(filename)
+        names, self.neural_vt_model = load_model(filename)
         if any(name not in parameters for name in names):
             raise ValueError(
                 f"Model in {filename} expects parameters {names}, but received "
@@ -53,18 +58,18 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         @jax.jit
         def _logVT(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
-            return self.model(x_new)
+            return self.neural_vt_model(x_new)
 
         return _logVT
 
     def get_vmapped_logVT(self) -> Callable[[Array], Array]:
         """Gets the vmapped logVT function for batch processing."""
 
-        model_vmap = jax.vmap(self.model)
+        neural_vt_model_vmap = jax.vmap(self.neural_vt_model)
 
         @jax.jit
         def _logVT(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
-            return jnp.squeeze(model_vmap(x_new), axis=-1)
+            return jnp.squeeze(neural_vt_model_vmap(x_new), axis=-1)
 
         return _logVT

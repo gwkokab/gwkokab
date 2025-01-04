@@ -21,6 +21,7 @@ import jax
 import numpy as np
 from jax import numpy as jnp
 from jaxtyping import Array
+from rich.progress import track
 
 
 def compute_probs(
@@ -29,8 +30,8 @@ def compute_probs(
 ) -> Array:
     r"""Compute the probability density function of a model.
 
-    :param logpdf: A callable that computes the log-probability density function of
-        the model.
+    :param logpdf: A callable that computes the log-probability density function of the
+        model.
     :param ranges: A list of tuples `(start, end, num_points)` for each parameter,
         defining the grid over which to compute the PPD.
     :return: The PPD of the model as a multidimensional array corresponding to the
@@ -39,7 +40,7 @@ def compute_probs(
     max_axis = int(np.argmax([int(n) for _, _, n in ranges]))
 
     @partial(jax.vmap, in_axes=(max_axis,), out_axes=max_axis)
-    def _prob_vmapped(x: Array) -> Array:
+    def _prob(x: Array) -> Array:
         x_expanded = jnp.expand_dims(x, axis=-2)
         prob = jnp.exp(logpdf(x_expanded))
         return prob
@@ -47,7 +48,21 @@ def compute_probs(
     xx = [jnp.linspace(a, b, int(n)) for a, b, n in ranges]
     mesh = jnp.meshgrid(*xx, indexing="ij")
     xx_mesh = jnp.stack(mesh, axis=-1)
-    prob_vec = _prob_vmapped(xx_mesh)
+    shape = xx_mesh.shape
+    xx_mesh = xx_mesh.reshape(-1, shape[-1])
+    max_dim_size = shape[max_axis]
+    prob_vec = jnp.concatenate(
+        [
+            _prob(x)
+            for x in track(
+                jnp.array_split(xx_mesh, max_dim_size, axis=0),
+                description="Computing PPD",
+            )
+        ],
+        axis=0,
+    )
+    prob_vec = prob_vec.reshape(*shape[:-1], -1)
+
     return prob_vec
 
 

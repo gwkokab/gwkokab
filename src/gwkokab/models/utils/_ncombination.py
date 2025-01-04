@@ -15,7 +15,7 @@
 
 from typing_extensions import Dict, List, Literal, Optional
 
-from jax import numpy as jnp
+from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
@@ -53,8 +53,9 @@ __all__ = [
 def combine_distributions(
     base_dists: List[List[Distribution]], add_dists: List[Distribution]
 ):
-    """Helper function to combine base distributions with additional distributions
-    like spin, tilt, or eccentricity."""
+    """Helper function to combine base distributions with additional distributions like
+    spin, tilt, or eccentricity.
+    """
     return [dists + [add_dist] for dists, add_dist in zip(base_dists, add_dists)]
 
 
@@ -279,12 +280,14 @@ def create_powerlaw_redshift(
     return powerlaw_redshift_collection
 
 
-def create_smoothed_powerlaws(
+def create_smoothed_powerlaws_raw(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws.
+    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
+    and mass ratio. We call it the raw version because it does not include the
+    transformation to component masses.
 
     :param N: Number of components
     :param params: dictionary of parameters
@@ -298,6 +301,7 @@ def create_smoothed_powerlaws(
     mmin_name = "mmin_pl"
     mmax_name = "mmax_pl"
     delta_name = "delta_pl"
+    log_scale_name = "lamb_scale_pl"
     for i in range(N):
         alpha = fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
         if alpha is None:
@@ -319,29 +323,35 @@ def create_smoothed_powerlaws(
         if delta is None:
             raise ValueError(f"Missing parameter {delta_name}_{i}")
 
+        log_scale = fetch_first_matching_value(
+            params, f"{log_scale_name}_{i}", log_scale_name
+        )
+        if log_scale is None:
+            log_scale = 0.0
+        else:
+            log_scale = jnp.log(log_scale)
+
         smoothed_powerlaw = SmoothedPowerlawPrimaryMassRatio(
             alpha=alpha,
             beta=beta,
             mmin=mmin,
             mmax=mmax,
             delta=delta,
+            log_scale=log_scale,
             validate_args=validate_args,
         )
-        transformed_smoothed_powerlaw = TransformedDistribution(
-            base_distribution=smoothed_powerlaw,
-            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-            validate_args=validate_args,
-        )
-        smoothed_powerlaws_collection.append(transformed_smoothed_powerlaw)
+        smoothed_powerlaws_collection.append(smoothed_powerlaw)
     return smoothed_powerlaws_collection
 
 
-def create_smoothed_gaussians(
+def create_smoothed_gaussians_raw(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions.
+    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
+    and mass ratio. We call it the raw version because it does not include the
+    transformation to component masses.
 
     :param N: Number of components
     :param params: dictionary of parameters
@@ -357,6 +367,7 @@ def create_smoothed_gaussians(
     delta_name = "delta_g"
     low_name = "low_g"
     high_name = "high_g"
+    log_scale_name = "lamb_scale_g"
     for i in range(N):
         loc = fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
         if loc is None:
@@ -381,6 +392,14 @@ def create_smoothed_gaussians(
         low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
         high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
 
+        log_scale = fetch_first_matching_value(
+            params, f"{log_scale_name}_{i}", log_scale_name
+        )
+        if log_scale is None:
+            log_scale = 0.0
+        else:
+            log_scale = jnp.log(log_scale)
+
         smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
             loc=loc,
             scale=scale,
@@ -389,12 +408,66 @@ def create_smoothed_gaussians(
             delta=delta,
             low=low,
             high=high,
+            log_scale=log_scale,
             validate_args=validate_args,
         )
-        transformed_smoothed_gaussian = TransformedDistribution(
+        smoothed_gaussians_collection.append(smoothed_gaussian)
+    return smoothed_gaussians_collection
+
+
+def create_smoothed_powerlaws(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[TransformedDistribution]:
+    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
+    and secondary mass. It includes the transformation to component masses.
+
+    :param N: Number of components
+    :param params: dictionary of parameters
+    :param validate_args: whether to validate arguments, defaults to None
+    :raises ValueError: if alpha, beta, mmin, mmax or delta is missing
+    :return: list of SmoothedPowerlawPrimaryMassRatio for powerlaws
+    """
+    smoothed_powerlaws_collection = create_smoothed_powerlaws_raw(
+        N, params, validate_args
+    )
+    smoothed_powerlaws_collection = jtr.map(
+        lambda smoothed_powerlaw: TransformedDistribution(
+            base_distribution=smoothed_powerlaw,
+            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            validate_args=validate_args,
+        ),
+        smoothed_powerlaws_collection,
+        is_leaf=lambda x: isinstance(x, SmoothedPowerlawPrimaryMassRatio),
+    )
+    return smoothed_powerlaws_collection
+
+
+def create_smoothed_gaussians(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[TransformedDistribution]:
+    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
+    and secondary mass. It includes the transformation to component masses.
+
+    :param N: Number of components
+    :param params: dictionary of parameters
+    :param validate_args: whether to validate arguments, defaults to None
+    :raises ValueError: if loc, scale, beta, mmin, delta, low, or high is missing
+    :return: list of SmoothedGaussianPrimaryMassRatio distributions
+    """
+    smoothed_gaussians_collection = create_smoothed_gaussians_raw(
+        N, params, validate_args
+    )
+    smoothed_gaussians_collection = jtr.map(
+        lambda smoothed_gaussian: TransformedDistribution(
             base_distribution=smoothed_gaussian,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,
-        )
-        smoothed_gaussians_collection.append(transformed_smoothed_gaussian)
+        ),
+        smoothed_gaussians_collection,
+        is_leaf=lambda x: isinstance(x, SmoothedGaussianPrimaryMassRatio),
+    )
     return smoothed_gaussians_collection

@@ -13,14 +13,16 @@
 # limitations under the License.
 
 
+from functools import partial
 from typing_extensions import Optional
 
 import chex
+import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
-from jax.scipy.stats import truncnorm, uniform
-from jaxtyping import Array
+from jax.scipy.stats import norm, truncnorm, uniform
+from jaxtyping import Array, ArrayLike
 from numpyro.distributions import (
     CategoricalProbs,
     constraints,
@@ -44,7 +46,6 @@ from .utils import (
 __all__ = [
     "FlexibleMixtureModel",
     "MassGapModel",
-    "NDistribution",
     "PowerlawPrimaryMassRatio",
     "SmoothedGaussianPrimaryMassRatio",
     "SmoothedPowerlawPrimaryMassRatio",
@@ -52,38 +53,9 @@ __all__ = [
 ]
 
 
-def NDistribution(
-    distribution: Distribution, n: int, *, validate_args=None, **params
-) -> MixtureGeneral:
-    """Mixture of any :math:`n` distributions.
-
-    :param distribution: distribution to mix
-    :param n: number of components
-    :return: Mixture of :math:`n` distributions
-    """
-    arg_names = distribution.arg_constraints.keys()
-    mixing_dist = CategoricalProbs(
-        probs=jnp.divide(jnp.ones(n), n), validate_args=validate_args
-    )
-    args_per_component = [
-        {arg: params.get(f"{arg}_{i}") for arg in arg_names} for i in range(n)
-    ]
-    component_dists = jtr.map(
-        lambda x: distribution(**x),
-        args_per_component,
-        is_leaf=lambda x: isinstance(x, dict),
-    )
-    return MixtureGeneral(
-        mixing_dist,
-        component_dists,
-        support=distribution.support,
-        validate_args=validate_args,
-    )
-
-
 class PowerlawPrimaryMassRatio(Distribution):
-    r"""Power law model for two-dimensional mass distribution, modelling primary mass
-    and conditional mass ratio distribution.
+    r"""Power law model for two-dimensional mass distribution, modelling primary mass and
+    conditional mass ratio distribution.
 
     .. math::
         p(m_1,q\mid\alpha,\beta) = p(m_1\mid\alpha)p(q \mid m_1, \beta)
@@ -106,15 +78,26 @@ class PowerlawPrimaryMassRatio(Distribution):
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha, beta, mmin, mmax, *, validate_args=None) -> None:
+    def __init__(
+        self,
+        alpha: ArrayLike,
+        beta: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        *,
+        validate_args: Optional[bool] = None,
+    ) -> None:
         """
-        :param alpha: Power law index for primary mass
-        :param beta: Power law index for mass ratio
-        :param mmin: Minimum mass
-        :param mmax: Maximum mass
-        :param default_params: If :code:`True`, the model will use the default
-            parameters i.e. primary mass and secondary mass. If :code:`False`, the
-            model will use primary mass and mass ratio.
+        Parameters
+        ----------
+        alpha : ArrayLike
+            Power law index for primary mass
+        beta : ArrayLike
+            Power law index for mass ratio
+        mmin : ArrayLike
+            Minimum mass
+        mmax : ArrayLike
+            Maximum mass
         """
         self.alpha, self.beta, self.mmin, self.mmax = promote_shapes(
             alpha, beta, mmin, mmax
@@ -178,11 +161,23 @@ class Wysocki2019MassModel(Distribution):
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha_m, mmin, mmax, *, validate_args=None) -> None:
-        r"""
-        :param alpha_m: index of the power law distribution
-        :param mmin: lower mass limit
-        :param mmax: upper mass limit
+    def __init__(
+        self,
+        alpha_m: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        *,
+        validate_args: Optional[bool] = None,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        alpha_m : ArrayLike
+            index of the power law distribution
+        mmin : ArrayLike
+            lower mass limit
+        mmax : ArrayLike
+            upper mass limit
         """
         self.alpha_m, self.mmin, self.mmax = promote_shapes(alpha_m, mmin, mmax)
         batch_shape = lax.broadcast_shapes(
@@ -225,22 +220,43 @@ class MassGapModel(Distribution):
     r"""See Eq. (2) of `No evidence for a dip in the binary black hole mass spectrum
     <http://arxiv.org/abs/2406.11111>`_.
 
-    :param alpha: Spectral-index of power-law component
-    :param lam: Fraction of masses in Gaussian peaks
-    :param lam1: Fraction of peak-masses in lower-mass peak
-    :param mu1: Location of lower-mass peak
-    :param sigma1: Width of lower-mass peak
-    :param mu2: Location of upper-mass peak
-    :param sigma2: Width of upper-mass peak
-    :param gamma_low: Lower-edge location of gap
-    :param gamma_high: Upper-edge location of gap
-    :param eta_low: Sharpness of gap's lower-edge
-    :param eta_high: Sharpness of gap's upper-edge
-    :param depth_of_gap: Depth of gap
-    :param mmin: Maximum allowed mass
-    :param mmax: Minimum allowed mass
-    :param delta_m: Length of minimum-mass roll-off
-    :param beta_q: Power-law index of pairing function
+    .. warning::
+        This model is not rigorously tested and should be used with caution.
+
+    Parameter
+    ---------
+    alpha : ArrayLike
+        Spectral-index of power-law component
+    lam : ArrayLike
+        Fraction of masses in Gaussian peaks
+    lam1 : ArrayLike
+        Fraction of peak-masses in lower-mass peak
+    mu1 : ArrayLike
+        Location of lower-mass peak
+    sigma1 : ArrayLike
+        Width of lower-mass peak
+    mu2 : ArrayLike
+        Location of upper-mass peak
+    sigma2 : ArrayLike
+        Width of upper-mass peak
+    gamma_low : ArrayLike
+        Lower-edge location of gap
+    gamma_high : ArrayLike
+        Upper-edge location of gap
+    eta_low : ArrayLike
+        Sharpness of gap's lower-edge
+    eta_high : ArrayLike
+        Sharpness of gap's upper-edge
+    depth_of_gap : ArrayLike
+        Depth of gap
+    mmin : ArrayLike
+        Maximum allowed mass
+    mmax : ArrayLike
+        Minimum allowed mass
+    delta_m : ArrayLike
+        Length of minimum-mass roll-off
+    beta_q : ArrayLike
+        Power-law index of pairing function
     """
 
     arg_constraints = {
@@ -282,22 +298,22 @@ class MassGapModel(Distribution):
 
     def __init__(
         self,
-        alpha,
-        lam,
-        lam1,
-        mu1,
-        sigma1,
-        mu2,
-        sigma2,
-        gamma_low,
-        gamma_high,
-        eta_low,
-        eta_high,
-        depth_of_gap,
-        mmin,
-        mmax,
-        delta_m,
-        beta_q,
+        alpha: ArrayLike,
+        lam: ArrayLike,
+        lam1: ArrayLike,
+        mu1: ArrayLike,
+        sigma1: ArrayLike,
+        mu2: ArrayLike,
+        sigma2: ArrayLike,
+        gamma_low: ArrayLike,
+        gamma_high: ArrayLike,
+        eta_low: ArrayLike,
+        eta_high: ArrayLike,
+        depth_of_gap: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        delta_m: ArrayLike,
+        beta_q: ArrayLike,
         *,
         validate_args=None,
     ):
@@ -503,22 +519,40 @@ def FlexibleMixtureModel(
         \mathcal{N}(s_{1z}\mid \mu^{s_z}_i,\sigma^{s_z}_i)
         \mathcal{N}(s_{2z}\mid \mu^{s_z}_i,\sigma^{s_z}_i)
 
-    where :math:`w_i` is the weight for the ith component and :math:`p_i(\theta)` is the
+    .. warning::
+        This model is not rigorously tested and should be used with caution.
 
-    :param N: Number of components
-    :param weights: weights for each component
-    :param mu_Mc_i: ith value for :code:`mu_Mc`
-    :param sigma_Mc_i: ith value for :code:`sigma_Mc`
-    :param mu_sz_i: ith value for :code:`mu_sz`
-    :param sigma_sz_i: ith value for :code:`sigma_sz`
-    :param alpha_q_i: ith value for :code:`alpha_q`
-    :param q_min_i: ith value for :code:`q_min`
-    :param mu_Mc: default value for :code:`mu_Mc`
-    :param sigma_Mc: default value for :code:`sigma_Mc`
-    :param mu_sz: default value for :code:`mu_sz`
-    :param sigma_sz: default value for :code:`sigma_sz`
-    :param alpha_q: default value for :code:`alpha_q`
-    :param q_min: default value for :code:`q_min`
+    Parameters
+    ----------
+
+    N : ArrayLike
+        Number of components
+    weights : ArrayLike
+        weights for each component
+    mu_Mc_i : ArrayLike
+        ith value for :code:`mu_Mc`
+    sigma_Mc_i : ArrayLike
+        ith value for :code:`sigma_Mc`
+    mu_sz_i : ArrayLike
+        ith value for :code:`mu_sz`
+    sigma_sz_i : ArrayLike
+        ith value for :code:`sigma_sz`
+    alpha_q_i : ArrayLike
+        ith value for :code:`alpha_q`
+    q_min_i : ArrayLike
+        ith value for :code:`q_min`
+    mu_Mc : ArrayLike
+        default value for :code:`mu_Mc`
+    sigma_Mc : ArrayLike
+        default value for :code:`sigma_Mc`
+    mu_sz : ArrayLike
+        default value for :code:`mu_sz`
+    sigma_sz : ArrayLike
+        default value for :code:`sigma_sz`
+    alpha_q : ArrayLike
+        default value for :code:`alpha_q`
+    q_min : ArrayLike
+        default value for :code:`q_min`
     """
     chex.assert_axis_dimension(weights, 0, N)
     ranges = list(range(N))
@@ -589,20 +623,40 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "mmin": constraints.positive,
         "mmax": constraints.positive,
         "delta": constraints.positive,
+        "log_scale": constraints.less_than_eq(0.0),
     }
-    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta"]
+    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta", "log_scale"]
     pytree_aux_fields = ("_support",)
 
-    def __init__(self, alpha, beta, mmin, mmax, delta, *, validate_args=None) -> None:
+    def __init__(
+        self,
+        alpha: ArrayLike,
+        beta: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        delta: ArrayLike,
+        log_scale: ArrayLike = 0.0,
+        *,
+        validate_args: Optional[bool] = None,
+    ) -> None:
         """
-        :param alpha: Power law index for primary mass
-        :param beta: Power law index for mass ratio
-        :param mmin: Minimum mass
-        :param mmax: Maximum mass
-        :param delta: width of the smoothing window
+        Parameters
+        ----------
+        alpha : ArrayLike
+            Power law index for primary mass
+        beta : ArrayLike
+            Power law index for mass ratio
+        mmin : ArrayLike
+            Minimum mass
+        mmax : ArrayLike
+            Maximum mass
+        delta : ArrayLike
+            width of the smoothing window
+        log_scale : ArrayLike
+            log of the scaling factor for the distribution
         """
-        self.alpha, self.beta, self.mmin, self.mmax, self.delta = promote_shapes(
-            alpha, beta, mmin, mmax, delta
+        self.alpha, self.beta, self.mmin, self.mmax, self.delta, self.log_scale = (
+            promote_shapes(alpha, beta, mmin, mmax, delta, log_scale)
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
@@ -610,6 +664,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             jnp.shape(mmin),
             jnp.shape(mmax),
             jnp.shape(delta),
+            jnp.shape(log_scale),
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
         super(SmoothedPowerlawPrimaryMassRatio, self).__init__(
@@ -635,18 +690,24 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
         log_prob_q = jnp.where(
-            jnp.equal(m1, self.mmin),
+            jnp.less_equal(m1, self.mmin),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
+        return (
+            log_prob_m1
+            + log_prob_q
+            + log_smoothing_m1
+            + log_smoothing_q
+            + self.log_scale
+        )
 
 
 class SmoothedGaussianPrimaryMassRatio(Distribution):
-    r""":class:`~numpyro.distributions.continuous.Normal` with smoothing kernel on
-    the lower edge.
+    r""":class:`~numpyro.distributions.continuous.Normal` with smoothing kernel on the
+    lower edge.
 
     .. math::
         p(m_1,q\mid\mu,\sigma^2,\beta,m_{\text{min}},m_{\text{max}},\delta) = \mathcal{N}(m_1\mid\mu,\sigma^2)S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)p(q \mid m_1,\beta,m_{\text{min}},\delta)
@@ -670,24 +731,46 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "beta": constraints.real,
         "mmin": constraints.positive,
         "delta": constraints.positive,
+        "log_scale": constraints.less_than_eq(0.0),
     }
-    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "low", "high"]
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "log_scale"]
     pytree_aux_fields = ("_support", "_norm")
 
     def __init__(
-        self, loc, scale, beta, mmin, delta, low=None, high=None, *, validate_args=None
+        self,
+        loc,
+        scale,
+        beta,
+        mmin,
+        delta,
+        low=None,
+        high=None,
+        log_scale=0.0,
+        *,
+        validate_args=None,
     ) -> None:
         """
-        :param loc: mean of the Gaussian distribution
-        :param scale: standard deviation of the Gaussian distribution
-        :param beta: Power law index for mass ratio
-        :param mmin: Minimum mass
-        :param delta: width of the smoothing window
-        :param low: lower bound of the Gaussian distribution, defaults to -inf
-        :param high: upper bound of the Gaussian distribution, defaults to inf
+        Parameters
+        ----------
+        loc : ArrayLike
+            mean of the Gaussian distribution
+        scale : ArrayLike
+            standard deviation of the Gaussian distribution
+        beta : ArrayLike
+            Power law index for mass ratio
+        mmin : ArrayLike
+            Minimum mass
+        delta : ArrayLike
+            width of the smoothing window
+        low : ArrayLike
+            lower bound of the Gaussian distribution, defaults to -inf
+        high : ArrayLike
+            upper bound of the Gaussian distribution, defaults to inf
+        log_scale : ArrayLike
+            log of the scaling factor for the distribution
         """
-        self.loc, self.scale, self.beta, self.mmin, self.delta, self.low, self.high = (
-            promote_shapes(loc, scale, beta, mmin, delta, low, high)
+        self.loc, self.scale, self.beta, self.mmin, self.delta, self.log_scale = (
+            promote_shapes(loc, scale, beta, mmin, delta, log_scale)
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(loc),
@@ -697,16 +780,20 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             jnp.shape(delta),
             jnp.shape(low),
             jnp.shape(high),
+            jnp.shape(log_scale),
         )
-        self._support = mass_ratio_mass_sandwich(mmin, jnp.inf)
+        support_low = mmin
+        if low is not None:
+            support_low = jnp.minimum(mmin, low)
+        self._support = mass_ratio_mass_sandwich(support_low, jnp.inf)
         super(SmoothedGaussianPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
         self._norm = TruncatedNormal(
             loc=self.loc,
             scale=self.scale,
-            low=self.low,
-            high=self.high,
+            low=low,
+            high=high,
             validate_args=validate_args,
         )
 
@@ -727,10 +814,242 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         )
         log_prob_m1 = self._norm.log_prob(m1)
         log_prob_q = jnp.where(
-            jnp.equal(m1, self.mmin),
+            jnp.less_equal(m1, self.mmin),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        return log_prob_m1 + log_prob_q + log_smoothing_m1 + log_smoothing_q
+
+        return (
+            log_prob_m1
+            + log_prob_q
+            + log_smoothing_m1
+            + log_smoothing_q
+            + self.log_scale
+        )
+
+
+class SmoothedPowerlawAndPeak(Distribution):
+    r"""It is a mixture of power law and Gaussian distribution with a smoothing kernel.
+
+    .. math::
+
+        p(m_1, q\mid \alpha, \beta, \mu, \sigma, m_{\text{min}}, m_{\text{max}}, \delta, \lambda_{\text{peak}}) =
+        \left((1-\lambda_{\text{peak})m_1^{\alpha}+\lambda_{\text{peak}\mathcal{N}(m_1\mid\mu,\sigma)\right)
+        q^{\beta}
+        S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)
+        S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),
+        \qqquad m_{\text{min}}\leq m_1q \leq m_1\leq m_{\text{max}}
+    """
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "beta": constraints.real,
+        "loc": constraints.real,
+        "scale": constraints.positive,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
+        "delta": constraints.positive,
+        "lambda_peak": constraints.unit_interval,
+        "log_rate_pl": constraints.real,
+        "log_rate_peak": constraints.real,
+    }
+    reparametrized_params = [
+        "alpha",
+        "beta",
+        "loc",
+        "scale",
+        "mmin",
+        "mmax",
+        "delta",
+        "lambda_peak",
+        "log_rate_pl",
+        "log_rate_peak",
+    ]
+    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_log_Z_m1", "_m1s", "_Z_q")
+
+    def __init__(
+        self,
+        alpha: ArrayLike,
+        beta: ArrayLike,
+        loc: ArrayLike,
+        scale: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        delta: ArrayLike,
+        lambda_peak: ArrayLike,
+        log_rate_pl: ArrayLike,
+        log_rate_peak: ArrayLike,
+        *,
+        validate_args=None,
+    ):
+        """
+        Parameters
+        ----------
+        alpha : ArrayLike
+            Power law index for primary mass
+        beta : ArrayLike
+            Power law index for mass ratio
+        loc : ArrayLike
+            Mean of the Gaussian distribution
+        scale : ArrayLike
+            Standard deviation of the Gaussian distribution
+        mmin : ArrayLike
+            Minimum mass
+        mmax : ArrayLike
+            Maximum mass
+        delta : ArrayLike
+            Width of the smoothing window
+        lambda_peak : ArrayLike
+            Fraction of masses in the Gaussian peak
+        log_rate_pl : ArrayLike
+            Logarithm of the rate of the power law component
+        log_rate_peak : ArrayLike
+            Logarithm of the rate of the Gaussian peak component
+        validate_args : bool, optional
+            Whether to validate input, by default None
+        """
+        (
+            self.alpha,
+            self.beta,
+            self.loc,
+            self.scale,
+            self.mmin,
+            self.mmax,
+            self.delta,
+            self.lambda_peak,
+            self.log_rate_pl,
+            self.log_rate_peak,
+        ) = promote_shapes(
+            alpha,
+            beta,
+            loc,
+            scale,
+            mmin,
+            mmax,
+            delta,
+            lambda_peak,
+            log_rate_pl,
+            log_rate_peak,
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha),
+            jnp.shape(beta),
+            jnp.shape(loc),
+            jnp.shape(scale),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+            jnp.shape(delta),
+            jnp.shape(lambda_peak),
+            jnp.shape(log_rate_pl),
+            jnp.shape(log_rate_peak),
+        )
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+
+        mmin = jnp.broadcast_to(mmin, batch_shape)
+        mmax = jnp.broadcast_to(mmax, batch_shape)
+
+        _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
+        qs = jnp.linspace(
+            jnp.zeros(batch_shape),
+            jnp.ones(batch_shape),
+            250,
+            dtype=jnp.result_type(float),
+        )
+
+        if batch_shape:
+            # TODO: check https://github.com/jax-ml/jax/issues/25696 and update accordingly
+            meshgrid_fn = jax.vmap(
+                partial(jnp.meshgrid, indexing="ij"), in_axes=(-1, -1), out_axes=-1
+            )
+        else:
+            meshgrid_fn = partial(jnp.meshgrid, indexing="ij")
+
+        _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s)), _m1s, axis=0)
+        self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
+
+        m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
+        _log_prob_q = self._log_prob_q(m1qs_grid)
+
+        self._Z_q = jnp.trapezoid(
+            jnp.exp(_log_prob_q), jnp.expand_dims(qs, axis=0), axis=1
+        )
+
+        self._m1s = _m1s
+
+        super(SmoothedPowerlawAndPeak, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    def _log_prob_m1(
+        self, m1: Array, log_rate_pl: Array = 0.0, log_rate_peak: Array = 0.0
+    ) -> Array:
+        log_smoothing_m1 = log_planck_taper_window(
+            (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_prob_m1 = jnp.log(
+            (1.0 - self.lambda_peak)
+            * jnp.exp(
+                log_rate_pl
+                + doubly_truncated_power_law_log_prob(
+                    x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+                )
+            )
+            + self.lambda_peak
+            * jnp.exp(log_rate_peak + norm.logpdf(m1, loc=self.loc, scale=self.scale))
+        )
+        return log_prob_m1 + log_smoothing_m1
+
+    @validate_sample
+    def _log_prob_q(self, m1q: Array) -> Array:
+        m1 = m1q[..., 0]
+        q = m1q[..., 1]
+        m2 = m1 * q
+        log_smoothing_q = log_planck_taper_window(
+            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
+        )
+        log_prob_q = jnp.where(
+            jnp.less_equal(m1, self.mmin),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
+        )
+        return log_prob_q + log_smoothing_q
+
+    @validate_sample
+    def log_prob(self, value: ArrayLike) -> Array:
+        m1 = value[..., 0]
+
+        log_prob_m1 = self._log_prob_m1(
+            m1, log_rate_pl=self.log_rate_pl, log_rate_peak=self.log_rate_peak
+        )
+
+        log_prob_q = self._log_prob_q(value)
+
+        def _Z_q(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
+            return jax.vmap(partial(jnp.interp, xp=m1s, fp=Z_qs, left=1.0, right=1.0))(
+                m1
+            )
+
+        if self.batch_shape:
+            log_Z_q = jnp.log(
+                jax.vmap(
+                    _Z_q,
+                    in_axes=(-1, -1),
+                    out_axes=-1,
+                )(self._m1s, self._Z_q)
+            )
+            log_Z_q = jnp.reshape(log_Z_q, log_prob_q.shape)
+        else:
+            log_Z_q = jnp.log(_Z_q(self._m1s, self._Z_q))
+
+        log_Z = lax.stop_gradient(self._log_Z_m1 + log_Z_q)
+
+        return log_prob_m1 + log_prob_q - log_Z

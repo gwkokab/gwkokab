@@ -34,9 +34,6 @@ error_magazine = ModelRegistry()
 
 
 class PopulationFactory:
-    r"""Class with methods equipped to generate population for each realizations and
-    adding errors in it."""
-
     error_dir: str = "posteriors"
     event_filename: str = "event_{}"
     injection_filename: str = "injections"
@@ -56,7 +53,35 @@ class PopulationFactory:
             x.shape[0], dtype=bool
         ),
     ) -> None:
-        r"""Check if the parameters are provided."""
+        """Class with methods equipped to generate population for each realizations and
+        adding errors in it.
+
+        Parameters
+        ----------
+        model : ScaledMixture
+            Model for the population.
+        parameters : List[str]
+            Parameters for the model in order.
+        logVT_fn : Callable[[Array], Array]
+            logarithm of volume time sensitivity function.
+        ERate_fn : Callable[[ScaledMixture], Array]
+            Expected rate function.
+        num_realizations : int, optional
+            Number of realizations to generate, by default 5
+        error_size : int, optional
+            Size of the error to add in the population, by default 2_000
+        constraint : _type_, optional
+            Constraint for the population, by default :code:`lambda x: jnp.ones(x.shape[0], dtype=bool)`
+
+        Raises
+        ------
+        ValueError
+            If model is not provided.
+        ValueError
+            If provided model is not a `ScaledMixture` model.
+        ValueError
+            If parameters are not provided.
+        """
         self.model = model
         self.parameters = parameters
         self.logVT_fn = logVT_fn
@@ -212,7 +237,13 @@ class PopulationFactory:
             )
 
     def produce(self, key: Optional[PRNGKeyArray] = None) -> None:
-        r"""Generate realizations and add errors to the populations."""
+        """Generate realizations and add errors to the populations.
+
+        Parameters
+        ----------
+        key : Optional[PRNGKeyArray], optional
+            Pseudo-random number generator key for reproducibility, by default None
+        """
         if key is None:
             key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
         else:

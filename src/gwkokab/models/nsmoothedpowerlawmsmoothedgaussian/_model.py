@@ -15,9 +15,9 @@
 
 from typing_extensions import Dict, List, Literal, Optional
 
-from jax import numpy as jnp, tree as jtr
+from jax import numpy as jnp
 from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution, TransformedDistribution
+from numpyro.distributions import constraints, Distribution
 
 from ..utils import (
     combine_distributions,
@@ -32,6 +32,8 @@ from ..utils import (
 )
 
 
+build_powerlaw_distributions = create_smoothed_powerlaws
+build_gaussian_distributions = create_smoothed_gaussians
 build_spin_distributions = create_beta_distributions
 build_tilt_distributions = create_truncated_normal_distributions_for_cos_tilt
 build_eccentricity_distributions = create_truncated_normal_distributions
@@ -49,18 +51,33 @@ def _build_non_mass_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    r"""Build distributions for non-mass parameters.
+    """Build distributions for non-mass parameters.
 
-    :param N: Number of components
-    :param component_type: type of component, either "pl" or "g"
-    :param mass_distributions: list of mass distributions
-    :param use_spin: whether to include spin
-    :param use_tilt: whether to include tilt
-    :param use_eccentricity: whether to include eccentricity
-    :param use_redshift: whether to include redshift
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :return: list of distributions
+    Parameters
+    ----------
+    N : int
+        Number of components
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    mass_distributions : List[Distribution]
+        list of mass distributions
+    use_spin : bool
+        whether to include spin
+    use_tilt : bool
+        whether to include tilt
+    use_eccentricity : bool
+        whether to include eccentricity
+    use_redshift : bool
+        whether to include redshift
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of distributions
     """
     build_distributions = mass_distributions
 
@@ -131,26 +148,35 @@ def _build_pl_component_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
-    r"""Build distributions for power-law components.
+    """Build distributions for power-law components.
 
-    :param N: Number of components
-    :param use_spin: whether to include spin
-    :param use_tilt: whether to include tilt
-    :param use_eccentricity: whether to include eccentricity
-    :param use_redshift: whether to include redshift
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :return: list of JointDistribution
+    Parameters
+    ----------
+    N : int
+        Number of components
+    use_spin : bool
+        whether to include spin
+    use_tilt : bool
+        whether to include tilt
+    use_eccentricity : bool
+        whether to include eccentricity
+    use_redshift : bool
+        whether to include redshift
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, by default None
+
+    Returns
+    -------
+    List[JointDistribution]
+        list of JointDistribution
     """
-    smoothed_powerlaws = create_smoothed_powerlaws(
+    smoothed_powerlaws = build_powerlaw_distributions(
         N=N, params=params, validate_args=validate_args
     )
 
-    mass_distributions = jtr.map(
-        lambda powerlaw: [powerlaw],
-        smoothed_powerlaws,
-        is_leaf=lambda x: isinstance(x, TransformedDistribution),
-    )
+    mass_distributions = [[powerlaw] for powerlaw in smoothed_powerlaws]
 
     build_distributions = _build_non_mass_distributions(
         N=N,
@@ -179,28 +205,37 @@ def _build_g_component_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
-    r"""Build distributions for Gaussian components.
+    """Build distributions for Gaussian components.
 
-    :param N: Number of components
-    :param use_spin: whether to include spin
-    :param use_tilt: whether to include tilt
-    :param use_eccentricity: whether to include eccentricity
-    :param use_redshift: whether to include redshift
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :return: list of JointDistribution
+    Parameters
+    ----------
+    N : int
+        Number of components
+    use_spin : bool
+        whether to include spin
+    use_tilt : bool
+        whether to include tilt
+    use_eccentricity : bool
+        whether to include eccentricity
+    use_redshift : bool
+        whether to include redshift
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, by default None
+
+    Returns
+    -------
+    List[JointDistribution]
+        list of JointDistribution
     """
-    m1_q_dists = create_smoothed_gaussians(
+    m1_q_dists = build_gaussian_distributions(
         N=N,
         params=params,
         validate_args=validate_args,
     )
 
-    mass_distributions = jtr.map(
-        lambda m1q: [m1q],
-        m1_q_dists,
-        is_leaf=lambda x: isinstance(x, TransformedDistribution),
-    )
+    mass_distributions = [[m1q] for m1q in m1_q_dists]
 
     build_distributions = _build_non_mass_distributions(
         N=N,
@@ -307,14 +342,28 @@ def NSmoothedPowerlawMSmoothedGaussian(
         chi[1-2]_mean_(pl|g)_[0-N_pl+N_g]
         chi[1-2]_variance_(pl|g)_[0-N_pl+N_g]
 
-    :param N_pl: Number of power-law components
-    :param N_g: Number of Gaussian components
-    :param use_spin: whether to include spin, defaults to False
-    :param use_tilt: whether to include tilt, defaults to False
-    :param use_eccentricity: whether to include eccentricity, defaults to False
-    :param use_redshift: whether to include redshift, defaults to False
-    :param validate_args: whether to validate arguments, defaults to None
-    :return: Mixture of power-law and Gaussian components
+    Parameters
+    ----------
+
+    N_pl : int
+        Number of power-law components
+    N_g : int
+        Number of Gaussian components
+    use_spin : bool
+        whether to include spin, defaults to False
+    use_tilt : bool
+        whether to include tilt, defaults to False
+    use_eccentricity : bool
+        whether to include eccentricity, defaults to False
+    use_redshift : bool
+        whether to include redshift, defaults to False
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None
+
+    Returns
+    -------
+    ScaledMixture
+        Mixture of power-law and Gaussian components
     """
     if N_pl > 0:
         pl_component_dist = _build_pl_component_distributions(
@@ -346,7 +395,10 @@ def NSmoothedPowerlawMSmoothedGaussian(
         component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
-    log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
+    log_rates = jnp.stack(
+        [params.get(f"log_rate_{i}", 0.0) for i in range(N)],
+        axis=-1,
+    )
 
     return ScaledMixture(
         log_rates,

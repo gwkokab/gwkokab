@@ -13,7 +13,10 @@
 # limitations under the License.
 
 
+from typing import Optional
+
 from jax import numpy as jnp
+from jax.typing import ArrayLike
 from numpyro.distributions import (
     Beta,
     CategoricalProbs,
@@ -30,7 +33,13 @@ from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 
 
 def GaussianSpinModel(
-    mu_eff, sigma_eff, mu_p, sigma_p, rho, *, validate_args=None
+    mu_eff: ArrayLike,
+    sigma_eff: ArrayLike,
+    mu_p: ArrayLike,
+    sigma_p: ArrayLike,
+    rho: ArrayLike,
+    *,
+    validate_args: Optional[bool] = None,
 ) -> MultivariateNormal:
     r"""Bivariate normal distribution for the effective and precessing spins.
     See Eq. (D3) and (D4) in `Population Properties of Compact Objects from
@@ -52,14 +61,25 @@ def GaussianSpinModel(
     :math:`\chi_{\text{eff}}\in[-1,1]` and :math:`\chi_{p}` is the precessing spin and
     :math:`\chi_{p}\in[0,1]`.
 
-    :param mu_eff: mean of the effective spin
-    :param sigma_eff: standard deviation of the effective spin
-    :param mu_p: mean of the precessing spin
-    :param sigma_p: standard deviation of the precessing spin
-    :param rho: correlation coefficient between the effective and precessing
+    Parameters
+    ----------
+
+    mu_eff : ArrayLike
+        mean of the effective spin
+    sigma_eff : ArrayLike
+        standard deviation of the effective spin
+    mu_p : ArrayLike
+        mean of the precessing spin
+    sigma_p : ArrayLike
+        standard deviation of the precessing spin
+    rho : ArrayLike
+        correlation coefficient between the effective and precessing
         spins
-    :return: Multivariate normal distribution for the effective and precessing
-        spins
+
+    Returns
+    -------
+    MultivariateNormal
+        Multivariate normal distribution for the effective and precessing spins
     """
     return MultivariateNormal(
         loc=jnp.array([mu_eff, mu_p]),
@@ -74,7 +94,11 @@ def GaussianSpinModel(
 
 
 def IndependentSpinOrientationGaussianIsotropic(
-    zeta, sigma1, sigma2, *, validate_args=None
+    zeta: ArrayLike,
+    sigma1: ArrayLike,
+    sigma2: ArrayLike,
+    *,
+    validate_args: Optional[bool] = None,
 ) -> MixtureGeneral:
     r"""A mixture model of spin orientations with isotropic and normally
     distributed components. See Eq. (4) of `Determining the population
@@ -87,10 +111,20 @@ def IndependentSpinOrientationGaussianIsotropic(
 
     where :math:`\mathbb{I}(\cdot)` is the indicator function.
 
-    :param zeta: The mixing probability of the second component.
-    :param sigma1: The standard deviation of the first component.
-    :param sigma2: The standard deviation of the second component.
-    :return: Mixture model of spin orientations.
+    Parameters
+    ----------
+
+    zeta : ArrayLike
+        The mixing probability of the second component.
+    sigma1 : ArrayLike
+        The standard deviation of the first component.
+    sigma2 : ArrayLike
+        The standard deviation of the second component.
+
+    Returns
+    -------
+    MixtureGeneral
+        Mixture model of spin orientations.
     """
     mixing_probs = jnp.array([1 - zeta, zeta])
     component_0_dist = Uniform(low=-1, high=1, validate_args=validate_args)
@@ -112,17 +146,31 @@ def IndependentSpinOrientationGaussianIsotropic(
 
 
 def BetaFromMeanVar(
-    mean, variance, loc=0.0, scale=1.0, *, validate_args=None
+    mean: ArrayLike,
+    variance: ArrayLike,
+    loc: ArrayLike = 0.0,
+    scale: ArrayLike = 1.0,
+    *,
+    validate_args: Optional[bool] = None,
 ) -> TransformedDistribution:
     r"""Beta distribution parameterized by the expected value and variance.
 
-    :param mean: Expected value of the beta distribution.
-    :param variance: Variance of the beta distribution.
-    :param loc: lower bound of the beta distribution, defaults to 0.0
-    :param scale: width of the beta distribution, defaults to 1.0
-    :param validate_args: Whether to enable validation of distribution, defaults to
-        None
-    :return: Transformed distribution of the beta distribution
+    Parameters
+    ----------
+
+    mean : ArrayLike
+        Expected value of the beta distribution.
+    variance : ArrayLike
+        Variance of the beta distribution.
+    loc : ArrayLike
+        lower bound of the beta distribution, defaults to 0.0
+    scale : ArrayLike
+        width of the beta distribution, defaults to 1.0
+
+    Returns
+    -------
+    TransformedDistribution
+        Transformed distribution of the beta distribution.
     """
     alpha, beta = beta_dist_mean_variance_to_concentrations(mean, variance, loc, scale)
     return TransformedDistribution(

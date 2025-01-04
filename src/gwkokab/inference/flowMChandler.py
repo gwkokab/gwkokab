@@ -15,6 +15,7 @@
 from collections.abc import Callable
 from typing import Any, Optional
 
+import jax
 from flowMC.nfmodel.base import NFModel
 from flowMC.nfmodel.realNVP import RealNVP  # noqa F401
 from flowMC.nfmodel.rqSpline import MaskedCouplingRQSpline  # noqa F401
@@ -53,8 +54,15 @@ class flowMChandler(object):
     def make_local_sampler(self) -> ProposalBase:
         """Make a local sampler based on the given arguments.
 
-        :raises ValueError: If the sampler is not recognized.
-        :return: A local sampler.
+        Returns
+        -------
+        ProposalBase
+            A local sampler.
+
+        Raises
+        ------
+        ValueError
+            If the sampler is not recognized.
         """
         sampler_name = self.local_sampler_kwargs["sampler"]
         if sampler_name not in ["flowHMC", "GaussianRandomWalk", "HMC", "MALA"]:
@@ -65,8 +73,15 @@ class flowMChandler(object):
     def make_nf_model(self) -> NFModel:
         """Make a normalizing flow model based on the given arguments.
 
-        :raises ValueError: If the model is not recognized.
-        :return: A normalizing flow model.
+        Returns
+        -------
+        NFModel
+            A normalizing flow model.
+
+        Raises
+        ------
+        ValueError
+            If the model is not recognized
         """
         model_name = self.nf_model_kwargs["model"]
         if model_name not in ["RealNVP", "MaskedCouplingRQSpline"]:
@@ -77,7 +92,10 @@ class flowMChandler(object):
     def make_sampler(self) -> Sampler:
         """Make a sampler based on the given arguments.
 
-        :return: A sampler.
+        Returns
+        -------
+        Sampler
+            A sampler.
         """
         return Sampler(
             local_sampler=self.make_local_sampler(),
@@ -85,8 +103,18 @@ class flowMChandler(object):
             **self.sampler_kwargs,
         )
 
-    def run(self) -> None:
-        """Run the flowMC sampler and save the data."""
+    def run(self, debug_nans: bool = False) -> None:
+        """Run the flowMC sampler and save the data.
+
+        Parameters
+        ----------
+        debug_nans : bool, optional
+            Whether to debug NaNs, by default False
+        """
         sampler = self.make_sampler()
-        sampler.sample(self.initial_position, self.data)
+        if debug_nans:
+            with jax.debug_nans(True):
+                sampler.sample(self.initial_position, self.data)
+        else:
+            sampler.sample(self.initial_position, self.data)
         save_data_from_sampler(sampler, **self.data_dump_kwargs)

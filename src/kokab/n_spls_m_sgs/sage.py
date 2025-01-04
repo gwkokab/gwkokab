@@ -19,7 +19,6 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import List, Tuple
 
-import numpy as np
 from jax import random as jrd
 
 import gwkokab
@@ -30,11 +29,16 @@ from gwkokab.inference import (
     PoissonLikelihood,
 )
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
-from gwkokab.models.utils import create_truncated_normal_distributions
+from gwkokab.models.utils import (
+    create_smoothed_gaussians_raw,
+    create_smoothed_powerlaws_raw,
+    create_truncated_normal_distributions,
+)
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
+    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
@@ -45,13 +49,13 @@ from gwkokab.poisson_mean import (
     ImportanceSamplingPoissonMean,
     InverseTransformSamplingPoissonMean,
 )
-
-from ..utils import sage_parser
-from ..utils.common import (
+from kokab.utils import sage_parser
+from kokab.utils.common import (
     expand_arguments,
-    flowMC_json_read_and_process,
+    flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
+    read_json,
     vt_json_read_and_process,
 )
 
@@ -96,6 +100,14 @@ def make_parser() -> ArgumentParser:
         action="store_true",
         help="Use truncated normal distributions for spin parameters.",
     )
+    model_group.add_argument(
+        "--raw",
+        action="store_true",
+        help="The raw parameters for this model are primary mass and mass ratio. To"
+        "align with the rest of the codebase, we transform primary mass and mass ratio"
+        "to primary and secondary mass. This flag will use the raw parameters i.e."
+        "primary mass and mass ratio.",
+    )
 
     return parser
 
@@ -120,11 +132,6 @@ def main() -> None:
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
 
-    FLOWMC_HANDLER_KWARGS = flowMC_json_read_and_process(args.flowMC_json)
-
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
-
     N_pl = args.n_pl
     N_g = args.n_g
 
@@ -133,8 +140,7 @@ def main() -> None:
     has_eccentricity = not args.no_eccentricity
     has_redshift = not args.no_redshift
 
-    with open(args.prior_json, "r") as f:
-        prior_dict = json.load(f)
+    prior_dict = read_json(args.prior_json)
 
     all_params: List[Tuple[str, int]] = [
         ("alpha_pl", N_pl),
@@ -143,6 +149,8 @@ def main() -> None:
         ("mmin_pl", N_pl),
         ("delta_pl", N_pl),
         ("log_rate", N_pl + N_g),
+        ("lamb_scale_g", N_g),
+        ("lamb_scale_pl", N_pl),
         ("loc_g", N_g),
         ("scale_g", N_g),
         ("beta_g", N_g),
@@ -152,7 +160,14 @@ def main() -> None:
         ("high_g", N_g),
     ]
 
-    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
+    parameters = [PRIMARY_MASS_SOURCE]
+
+    if args.raw:
+        gwkokab.models.nsmoothedpowerlawmsmoothedgaussian._model.build_powerlaw_distributions = create_smoothed_powerlaws_raw
+        gwkokab.models.nsmoothedpowerlawmsmoothedgaussian._model.build_gaussian_distributions = create_smoothed_gaussians_raw
+        parameters.append(MASS_RATIO)
+    else:
+        parameters.append(SECONDARY_MASS_SOURCE)
 
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
@@ -255,14 +270,14 @@ def main() -> None:
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
             parameters,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
     elif args.erate_estimator == "ITS":
         erate_estimator = InverseTransformSamplingPoissonMean(
             logVT,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
@@ -291,6 +306,11 @@ def main() -> None:
     with open("nf_samples_mapping.json", "w") as f:
         json.dump(poisson_likelihood.variables_index, f)
 
+    FLOWMC_HANDLER_KWARGS = read_json(args.flowMC_json)
+
+    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
+    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
+
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
     initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))
 
@@ -299,10 +319,20 @@ def main() -> None:
 
     FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
 
+    FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
+
+    if args.adam_optimizer:
+        from flowMC.strategy.optimization import optimization_Adam
+
+        adam_kwargs = read_json(args.adam_json)
+        Adam_opt = optimization_Adam(**adam_kwargs)
+
+        FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
+
     handler = flowMChandler(
         logpdf=poisson_likelihood.log_posterior,
         initial_position=initial_position,
         **FLOWMC_HANDLER_KWARGS,
     )
 
-    handler.run()
+    handler.run(args.debug_nans)

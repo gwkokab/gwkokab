@@ -28,15 +28,20 @@ def save_data_from_sampler(
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
 ) -> None:
-    """This functions saves the data from a sampler to disk. The data saved includes
-    the samples from the flow, the chains from the training and production phases,
-    the log probabilities, the global and local acceptance rates, and the loss
-    values.
+    """This functions saves the data from a sampler to disk. The data saved includes the
+    samples from the flow, the chains from the training and production phases, the log
+    probabilities, the global and local acceptance rates, and the loss values.
 
-    :param sampler: Sampler object
-    :param out_dir: path to the output directory
-    :param labels: list of labels for the samples, defaults to None
-    :param n_samples: number of samples to draw from the flow, defaults to 5000
+    Parameters
+    ----------
+    sampler : Sampler
+        The sampler object.
+    out_dir : str
+        The output directory.
+    labels : Optional[list[str]], optional
+        list of labels for the samples, by default None
+    n_samples : int, optional
+        number of samples to draw from the flow, by default 5000
     """
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]

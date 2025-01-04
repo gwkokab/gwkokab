@@ -21,13 +21,12 @@ import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
-from ..models.utils import ScaledMixture
 from ._abc import PoissonMeanABC
 
 
 class InverseTransformSamplingPoissonMean(PoissonMeanABC):
-    r"""Samples are generated from :math:`\rho_{\Omega\mid\Lambda}` by using the
-    inverse transform sampling method. The estimator is given by,
+    r"""Samples are generated from :math:`\rho_{\Omega\mid\Lambda}` by using the inverse
+    transform sampling method. The estimator is given by,
 
     .. math::
 
@@ -37,22 +36,26 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
     This method is very useful when the target distribution is easy to sample from.
     """
 
-    logVT_fn: Callable[[ScaledMixture], Array] = eqx.field(init=False)
+    logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
     num_samples: int = eqx.field(init=False, static=True)
     key: PRNGKeyArray = eqx.field(init=False)
 
     def __init__(
         self,
-        logVT_fn: Callable[[ScaledMixture], Array],
+        logVT_fn: Callable[[Array], Array],
         key: PRNGKeyArray,
         num_samples: int,
         scale: Union[int, float, Array] = 1.0,
     ) -> None:
         r"""
-        :param logVT_fn: Log of the Volume Time Sensitivity function.
-        :param key: PRNG key.
-        :param num_samples: Number of samples
-        :param scale: scale factor, defaults to 1.0
+        logVT_fn : Callable[[Array], Array]
+            Log of the Volume Time Sensitivity function.
+        key : PRNGKeyArray
+            PRNG key.
+        num_samples : int
+            Number of samples
+        scale : Union[int, float, Array]
+            scale factor, by default 1.0
         """
         self.scale = scale
         self.key = key

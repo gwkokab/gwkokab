@@ -28,11 +28,10 @@ from gwkokab.poisson_mean import (
     InverseTransformSamplingPoissonMean,
 )
 from gwkokab.population import error_magazine, PopulationFactory
-
-from ..utils import genie_parser
-from ..utils.common import vt_json_read_and_process
-from ..utils.regex import match_all
-from .common import constraint, EccentricityMattersModel
+from kokab.ecc_matters.common import constraint, EccentricityMattersModel
+from kokab.utils import genie_parser
+from kokab.utils.common import vt_json_read_and_process
+from kokab.utils.regex import match_all
 
 
 m1_source = PRIMARY_MASS_SOURCE.name

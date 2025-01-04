@@ -27,10 +27,10 @@ from ._abc import PoissonMeanABC
 
 
 class ImportanceSamplingPoissonMean(PoissonMeanABC):
-    r"""It is very cheap to generate random samples from the proposal distribution
-    and evaluate the importance weights and reusing them for rest of the
-    calculations. We assume a proposal distribution :math:`\rho_{\phi}` and
-    calculate the importance weights as,
+    r"""It is very cheap to generate random samples from the proposal distribution and
+    evaluate the importance weights and reusing them for rest of the calculations. We
+    assume a proposal distribution :math:`\rho_{\phi}` and calculate the importance
+    weights as,
 
     .. math::
         w_i = \frac{\operatorname{VT(\omega_i)}}{\rho_{\phi}(\omega_i)},
@@ -58,7 +58,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
 
     def __init__(
         self,
-        logVT_fn: Callable[[ScaledMixture], Array],
+        logVT_fn: Callable[[Array], Array],
         parameters: Sequence[Parameter],
         key: PRNGKeyArray,
         num_samples: int,
@@ -66,12 +66,21 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         add_peak: bool = False,
     ) -> None:
         r"""
-        :param logVT_fn: Log of the Volume Time Sensitivity function.
-        :param parameters: List of parameters.
-        :param key: PRNG key.
-        :param num_samples: Number of samples
-        :param scale: scale factor, defaults to 1.0
-        :param add_peak: Add a peak at the maxima and at the expectation of the proposal distribution, defaults to False
+        Parameters
+        ----------
+
+        logVT_fn : Callable[[Array], Array]
+            Log of the Volume Time Sensitivity function.
+        parameters : Sequence[Parameter]
+            List of parameters.
+        key : PRNGKeyArray
+            PRNG key.
+        num_samples : int
+            Number of samples
+        scale : Union[int, float, Array]
+            scale factor, defaults to 1.0
+        add_peak : bool
+            Add a peak at the maxima and at the expectation of the proposal distribution, by defaults False
         """
         self.scale = scale
         hyper_uniform = JointDistribution(
@@ -162,6 +171,10 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         self.samples = proposal_samples
 
     def __call__(self, model: ScaledMixture) -> Array:
-        return jnp.mean(
-            jnp.exp(self.log_weights + model.log_prob(self.samples)), axis=-1
+        log_prob = model.log_prob(self.samples)
+
+        probs = jnp.where(
+            jnp.isneginf(log_prob), 0.0, jnp.exp(self.log_weights + log_prob)
         )
+
+        return jnp.mean(probs, axis=-1)

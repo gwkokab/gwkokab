@@ -14,16 +14,34 @@
 
 
 import json
+import warnings
 from collections.abc import Sequence
 from typing import List
 
 import numpy as np
 import pandas as pd
-from numpyro.distributions import Uniform
 
-from gwkokab.vts import available as gwk_vts, VolumeTimeSensitivityInterface
+from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
+from kokab.utils.priors import available as available_priors
+from kokab.utils.regex import match_all
 
-from .regex import match_all
+
+def read_json(json_file: str) -> dict:
+    """Read json file and return.
+
+    Parameters
+    ----------
+    json_file : str
+        path of the json file
+
+    Returns
+    -------
+    dict
+        json file content as dict
+    """
+    with open(json_file, "r") as f:
+        content = json.load(f)
+    return content
 
 
 def expand_arguments(arg: str, n: int) -> List[str]:
@@ -41,15 +59,12 @@ def expand_arguments(arg: str, n: int) -> List[str]:
     return [f"{arg}_{i}" for i in range(n)]
 
 
-def flowMC_json_read_and_process(json_file: str) -> dict:
+def flowMC_default_parameters(**kwargs: dict) -> dict:
     """Convert a json file to a dictionary."""
-    with open(json_file, "r") as f:
-        flowMC_json = json.load(f)
 
     key_key_value = [
         ("data_dump_kwargs", "out_dir", "sampler_data"),
         ("local_sampler_kwargs", "jit", True),
-        ("local_sampler_kwargs", "sampler", "MALA"),
         ("nf_model_kwargs", "model", "MaskedCouplingRQSpline"),
         ("sampler_kwargs", "data", None),
         ("sampler_kwargs", "logging", True),
@@ -60,9 +75,25 @@ def flowMC_json_read_and_process(json_file: str) -> dict:
     ]
 
     for key1, key2, value in key_key_value:
-        flowMC_json[key1][key2] = value
+        if kwargs[key1].get(key2) is None:
+            kwargs[key1][key2] = value
 
-    return flowMC_json
+    local_sampler_name = kwargs["local_sampler_kwargs"].get("sampler")
+    if local_sampler_name is None:
+        raise ValueError("Local sampler name is not provided.")
+
+    if local_sampler_name == "HMC":
+        condition_matrix = kwargs["local_sampler_kwargs"].get("condition_matrix")
+        if condition_matrix is None:
+            warnings.warn(
+                "HMC Sampler: `condition_matrix` is not provided. Using identity matrix."
+            )
+            condition_matrix = np.eye(kwargs["sampler_kwargs"]["n_dim"])
+        kwargs["local_sampler_kwargs"]["condition_matrix"] = np.asarray(
+            condition_matrix
+        )
+
+    return kwargs
 
 
 def get_posterior_data(
@@ -116,12 +147,9 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
     """
     matched_prior_params = match_all(params, priors)
     for key, value in matched_prior_params.items():
-        if isinstance(value, list):
-            if len(value) != 2:
-                raise ValueError(f"Invalid prior value for {key}: {value}")
-            matched_prior_params[key] = Uniform(
-                low=value[0], high=value[1], validate_args=True
-            )
+        if isinstance(value, dict):
+            dist_type = value.pop("dist")
+            matched_prior_params[key] = available_priors[dist_type](**value)
     for param in params:
         if param not in matched_prior_params:
             raise ValueError(f"Missing prior for {param}")
@@ -133,8 +161,8 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
 
     :param vt_params: list of VT parameters
     :param parameters: list of model parameters
-    :raises ValueError: if the parameters in the VT do not match the parameters in
-        the model
+    :raises ValueError: if the parameters in the VT do not match the parameters in the
+        model
     """
     if set(vt_params) - set(parameters):
         raise ValueError(
@@ -159,5 +187,5 @@ def vt_json_read_and_process(
 
     vt_type = vt_settings["type"]
     vt_settings.pop("type")
-    vt = gwk_vts[vt_type]
+    vt = available_vts[vt_type]
     return vt(parameters, vt_path, **vt_settings)

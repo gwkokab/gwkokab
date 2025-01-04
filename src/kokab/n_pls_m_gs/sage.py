@@ -19,7 +19,6 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import List, Tuple
 
-import numpy as np
 from jax import random as jrd
 
 import gwkokab
@@ -41,13 +40,13 @@ from gwkokab.poisson_mean import (
     ImportanceSamplingPoissonMean,
     InverseTransformSamplingPoissonMean,
 )
-
-from ..utils import sage_parser
-from ..utils.common import (
+from kokab.utils import sage_parser
+from kokab.utils.common import (
     expand_arguments,
-    flowMC_json_read_and_process,
+    flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
+    read_json,
     vt_json_read_and_process,
 )
 
@@ -116,11 +115,6 @@ def main() -> None:
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
 
-    FLOWMC_HANDLER_KWARGS = flowMC_json_read_and_process(args.flowMC_json)
-
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
-
     N_pl = args.n_pl
     N_g = args.n_g
 
@@ -129,8 +123,7 @@ def main() -> None:
     has_eccentricity = not args.no_eccentricity
     has_redshift = not args.no_redshift
 
-    with open(args.prior_json, "r") as f:
-        prior_dict = json.load(f)
+    prior_dict = read_json(args.prior_json)
 
     all_params: List[Tuple[str, int]] = [
         ("alpha_pl", N_pl),
@@ -250,14 +243,14 @@ def main() -> None:
         erate_estimator = ImportanceSamplingPoissonMean(
             logVT,
             parameters,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
     elif args.erate_estimator == "ITS":
         erate_estimator = InverseTransformSamplingPoissonMean(
             logVT,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+            KEY4,
             args.n_samples,
             args.analysis_time,
         )
@@ -286,6 +279,11 @@ def main() -> None:
     with open("nf_samples_mapping.json", "w") as f:
         json.dump(poisson_likelihood.variables_index, f)
 
+    FLOWMC_HANDLER_KWARGS = read_json(args.flowMC_json)
+
+    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
+    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
+
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
     initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))
 
@@ -294,10 +292,20 @@ def main() -> None:
 
     FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
 
+    FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
+
+    if args.adam_optimizer:
+        from flowMC.strategy.optimization import optimization_Adam
+
+        adam_kwargs = read_json(args.adam_json)
+        Adam_opt = optimization_Adam(**adam_kwargs)
+
+        FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
+
     handler = flowMChandler(
         logpdf=poisson_likelihood.log_posterior,
         initial_position=initial_position,
         **FLOWMC_HANDLER_KWARGS,
     )
 
-    handler.run()
+    handler.run(args.debug_nans)

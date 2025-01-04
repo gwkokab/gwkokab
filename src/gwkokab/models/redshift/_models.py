@@ -24,11 +24,13 @@
 # SOFTWARE.
 
 
+from typing import Optional
+
 import jax.numpy as jnp
-from jax import random, vmap
+from jax import Array, random, vmap
 from jax.lax import broadcast_shapes
 from jax.scipy.integrate import trapezoid
-from jaxtyping import Array
+from jax.typing import ArrayLike
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
@@ -46,14 +48,13 @@ def cumtrapz(y: Array, x: Array) -> Array:
 
 
 class PowerlawRedshift(Distribution):
-    r"""A power-law redshift distribution. The probability density function is given
-    by.
+    r"""A power-law redshift distribution. The probability density function is given by.
 
     .. math::
 
         p(z) \propto \frac{dV_c}{dz} (1 + z)^{\lambda - 1}
 
-    .. doctest::
+    .. code:: python
 
         >>> import jax.numpy as jnp
         >>> from astropy.cosmology import Planck15
@@ -67,10 +68,38 @@ class PowerlawRedshift(Distribution):
 
     arg_constraints = {"z_max": constraints.positive, "lamb": constraints.real}
     reparametrized_params = ["z_max", "lamb"]
+    pytree_aux_fields = ("zs", "dVdc_", "pdfs", "norm", "cdfgrid")
+    pytree_data_fields = ("_support",)
 
     def __init__(
-        self, lamb, z_max, zgrid, dVcdz, low=0.0, high=1000.0, validate_args=None
-    ):
+        self,
+        lamb: ArrayLike,
+        z_max: ArrayLike,
+        zgrid: Array,
+        dVcdz: Array,
+        low: ArrayLike = 0.0,
+        high: ArrayLike = 1000.0,
+        *,
+        validate_args: Optional[bool] = None,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        lamb : ArrayLike
+            power-law index
+        z_max : ArrayLike
+            maximum redshift
+        zgrid : Array
+            grid of redshifts
+        dVcdz : Array
+            differential comoving volume upon the :code:`zgrid` grid
+        low : ArrayLike, optional
+            lower truncation, by default 0.0
+        high : ArrayLike, optional
+            upper truncation, by default 1000.0
+        validate_args : Optional[bool], optional
+            whether to validate input, by default None
+        """
         self.z_max, self.lamb = promote_shapes(z_max, lamb)
         self._support = constraints.interval(low, high)
         batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(lamb))

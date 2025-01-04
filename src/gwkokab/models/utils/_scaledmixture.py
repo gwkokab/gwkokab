@@ -13,24 +13,24 @@
 # limitations under the License.
 
 
+from typing import Optional
 from typing_extensions import List
 
 import jax
 from jax import numpy as jnp
-from jaxtyping import Array
-from numpyro.distributions import CategoricalProbs, Distribution
+from jaxtyping import Array, ArrayLike
+from numpyro.distributions import CategoricalProbs, constraints, Distribution
 from numpyro.distributions.mixtures import MixtureGeneral
-from numpyro.distributions.util import validate_sample
 
 
 class ScaledMixture(MixtureGeneral):
-    r"""A finite mixture of component distributions from different families. This is
-    a generalization of :class:`~numpyro.distributions.Mixture` where the component
+    r"""A finite mixture of component distributions from different families. This is a
+    generalization of :class:`~numpyro.distributions.Mixture` where the component
     distributions are scaled by a set of rates.
 
     **Example**
 
-    .. doctest::
+    .. code::
 
        >>> import jax
        >>> import jax.random as jrd
@@ -54,8 +54,8 @@ class ScaledMixture(MixtureGeneral):
         log_scales: Array,
         component_distributions: List[Distribution],
         *,
-        support=None,
-        validate_args=None,
+        support: Optional[constraints.Constraint] = None,
+        validate_args: Optional[bool] = None,
     ):
         self._log_scales = log_scales
         mixing_distribution = CategoricalProbs(
@@ -68,7 +68,7 @@ class ScaledMixture(MixtureGeneral):
             validate_args=validate_args,
         )
 
-    def component_log_probs(self, value):
+    def component_log_probs(self, value: ArrayLike) -> ArrayLike:
         # modified implementation of numpyro.distributions.MixtureGeneral.component_log_probs
         component_log_probs = []
         for d in self.component_distributions:
@@ -79,13 +79,3 @@ class ScaledMixture(MixtureGeneral):
             component_log_probs.append(log_prob)
         component_log_probs = jnp.stack(component_log_probs, axis=-1)
         return self._log_scales + component_log_probs
-
-    @validate_sample
-    def log_prob(self, value: Array, intermediates=None) -> Array:
-        # https://github.com/pyro-ppl/numpyro/issues/1870
-        del intermediates
-        sum_log_probs = self.component_log_probs(value)
-        safe_sum_log_probs = jnp.where(
-            jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
-        )
-        return jax.nn.logsumexp(safe_sum_log_probs, axis=-1)

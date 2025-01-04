@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#
+"""Provides essential classes and functions for the inference module."""
 
-from .bake import Bake
-from .flowMChandler import flowMChandler
+from .bake import Bake as Bake
+from .flowMChandler import flowMChandler as flowMChandler
 from .poissonlikelihood import PoissonLikelihood as PoissonLikelihood
 from .utils import save_data_from_sampler as save_data_from_sampler
-
-
-__all__ = ["Bake", "flowMChandler"]

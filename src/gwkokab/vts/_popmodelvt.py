@@ -39,12 +39,24 @@ from ._abc import VolumeTimeSensitivityInterface
 
 
 def _check_and_get(name: str, f: h5py.File) -> Array:
-    r"""Check if the name is in the file and return the value.
+    """Check if the name is in the file and return the value.
 
-    :param name: name of the dataset
-    :param f: h5py file object
-    :raises ValueError: if the name is not in the file
-    :return: the value of the dataset
+    Parameters
+    ----------
+    name : str
+        name of the dataset
+    f : h5py.File
+        h5py file object
+
+    Returns
+    -------
+    Array
+        the value of the dataset
+
+    Raises
+    ------
+    ValueError
+        if the name is not in the file
     """
     if name in f:
         return f[name][()]
@@ -54,7 +66,9 @@ def _check_and_get(name: str, f: h5py.File) -> Array:
 
 class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     logVT_interpolator: RegularGridInterpolator = eqx.field(init=False, static=True)
+    """Interpolator for the log volume time sensitivity function."""
     m_min: float = eqx.field(converter=float, init=False, static=True)
+    """Minimum mass."""
 
     def __init__(
         self,
@@ -67,11 +81,16 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         r"""Convenience class for loading a volume time sensitivity function generated
         by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_.
 
-        :param parameters: The names of the parameters that the model expects.
-        :param filename: The filename of the volume time sensitivity function.
-        :param zero_spin: Load with zero spin or not. :code:`True` for zero spin, :code:`False` otherwise.
-        :param scale_factor: Scale factor for the volume time sensitivity function, defaults to 1
-        :param m_min: Minimum mass, defaults to 0.5
+        parameters : Sequence[str]
+            The names of the parameters that the model expects.
+        filename : str
+            The filename of the volume time sensitivity function.
+        zero_spin : bool
+            Load with zero spin or not. :code:`True` for zero spin, :code:`False` otherwise.
+        scale_factor : int
+            Scale factor for the volume time sensitivity function, by default 1
+        m_min : float
+            Minimum mass, by default 0.5
         """
         self.m_min = m_min
         if (
@@ -168,13 +187,14 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         .. math::
             m_2 = \frac{M(M\tilde{q} + m_{\text{min}}(1-2\tilde{q}))}{M(1+\tilde{q}) - 2m_{\text{min}}\tilde{q}}
 
-        where :math:`M = \exp{(\log{(M)})}`.
+        where :math:`M = \exp{(\log{(M)})}`. `source <https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L1025-1037>`_.
 
-        source: https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L1025-1037
-
-        :param logM: Logarithm of the total mass
-        :param q_tilde: Reduced mass ratio
-        :param m_min: Minimum mass
+        Parameters
+        ----------
+        logM : Array
+            Logarithm of the total mass
+        q_tilde : Array
+            Reduced mass ratio
         :return: Primary and secondary masses
         """
         M = jnp.exp(logM)
@@ -202,13 +222,21 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             epsilon of the singularity. VT does not change on a fast enough scale for this
             to make any measurable difference.
 
-        source: https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L998-1022
+        `source <https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L998-1022>`_
 
-        :param m1: Primary mass
-        :param m2: Secondary mass
-        :param m_min: Minimum mass
-        :param eps: tolerance for numerical stability, defaults to 1e-8
-        :return: coordinates in the form of :math:`\log{(M)}`, :math:`\tilde{q}`
+        Parameters
+        ----------
+        m1 : Array
+            Primary mass
+        m2 : Array
+            Secondary mass
+        eps : float
+            tolerance for numerical stability, defaults to 1e-8
+
+        Returns
+        -------
+        Tuple[Array, Array]
+            coordinates in the form of :math:`\log{(M)}`, :math:`\tilde{q}`
         """
         M = m1 + m2
 
@@ -358,7 +386,9 @@ _correction_bases_aligned_spin = {
 
 class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
     coeffs: Array = eqx.field(converter=jnp.asarray, init=False, static=True)
+    """Coefficients for the basis functions."""
     basis: Sequence[Callable[..., float | Array]] = eqx.field(init=False, static=True)
+    """Basis functions to use for the correction."""
 
     def __init__(
         self,
@@ -374,13 +404,20 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_
         with calibrated corrections.
 
-        :param parameters: The names of the parameters that the model expects.
-        :param filename: The filename of the volume time sensitivity function.
-        :param zero_spin: Load with zero spin or not. :code:`True` for zero spin, :code:`False` otherwise.
-        :param coeffs: Coefficients for the basis functions
-        :param basis: Basis functions to use for the correction
-        :param scale_factor: Scale factor for the volume time sensitivity function, defaults to 1
-        :param m_min: Minimum mass, defaults to 0.5
+        parameters : Sequence[str]
+            The names of the parameters that the model expects.
+        filename : str
+            The filename of the volume time sensitivity function.
+        zero_spin : bool
+            Load with zero spin or not. :code:`True` for zero spin, :code:`False` otherwise.
+        coeffs : Sequence[int | float]
+            Coefficients for the basis functions
+        basis : str
+            Basis functions to use for the correction
+        scale_factor : int
+            Scale factor for the volume time sensitivity function, by default 1
+        m_min : float
+            Minimum mass, by default 0.5
         """
         self.coeffs = jnp.asarray(coeffs)
         if zero_spin:

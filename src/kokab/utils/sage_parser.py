@@ -19,8 +19,7 @@ from numpyro.distributions.distribution import enable_validation
 
 
 def get_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the Sage
-    script.
+    """Populate the command line argument parser with the arguments for the Sage script.
 
     :param parser: Parser to add the arguments to
     :return: the command line argument parser
@@ -101,12 +100,32 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         " and their respective values.",
     )
 
+    adam_group = parser.add_argument_group("Adam Options")
+    adam_group.add_argument(
+        "--adam-optimizer",
+        help="Use Adam optimizer before running flowMC.",
+        action="store_true",
+    )
+    adam_group.add_argument(
+        "--adam-json",
+        help="Path to a JSON file containing the Adam optimizer options.",
+        type=str,
+    )
+
     prior_group = parser.add_argument_group("Prior Options")
     prior_group.add_argument(
         "--prior-json",
         type=str,
         help="Path to a JSON file containing the prior distributions.",
         required=True,
+    )
+
+    debug_group = parser.add_argument_group("Debug Options")
+    debug_group.add_argument(
+        "--debug-nans",
+        help="Checks for NaNs in each computation. See details in the documentation: "
+        "https://jax.readthedocs.io/en/latest/_autosummary/jax.debug_nans.html#jax.debug_nans.",
+        action="store_true",
     )
 
     return parser

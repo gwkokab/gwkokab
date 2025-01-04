@@ -13,11 +13,11 @@
 # limitations under the License.
 
 
+import warnings
 from collections.abc import Callable, Mapping, Sequence
 
 import equinox as eqx
-from jax import nn as jnn, numpy as jnp, tree as jtr
-from jaxtyping import Array
+from jax import Array, nn as jnn, numpy as jnp, tree as jtr
 from numpyro.distributions import Distribution
 
 from ..debug import debug_flush
@@ -30,8 +30,8 @@ __all__ = ["PoissonLikelihood"]
 
 
 class PoissonLikelihood(eqx.Module):
-    r"""This class is used to provide a likelihood function for the inhomogeneous
-    Poisson process. The likelihood is given by,
+    r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
+    process. The likelihood is given by,
 
     .. math::
         \log\mathcal{L}(\Lambda) \propto -\mu(\Lambda)
@@ -61,9 +61,6 @@ class PoissonLikelihood(eqx.Module):
         \frac{1}{N_{\mathrm{samples}}}
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
-
-    :param custom_vt: Custom VT function to use.
-    :param time: Time interval for the Poisson process.
     """
 
     parameters: Sequence[Parameter] = eqx.field(static=True)
@@ -72,24 +69,38 @@ class PoissonLikelihood(eqx.Module):
     ref_priors: JointDistribution = eqx.field(static=True)
     priors: JointDistribution = eqx.field(static=True)
     variables_index: Mapping[str, int] = eqx.field(static=True)
-    ERate_fn: Callable[[ScaledMixture], Array] = eqx.field(static=True)
+    ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=True)
 
     def __init__(
         self,
         model: Bake,
         parameters: Sequence[Parameter],
         data: Sequence[Array],
-        ERate_fn: Callable[[ScaledMixture], Array],
+        ERate_fn: Callable[[Distribution | ScaledMixture], Array],
     ) -> None:
+        """
+        Parameters
+        ----------
+        model : Bake
+            model to be used for the likelihood calculation.
+        parameters : Sequence[Parameter]
+            Parameters to be used for the likelihood calculation.
+        data : Sequence[Array]
+            Data to be used for the likelihood calculation.
+        ERate_fn : Callable[[Distribution  |  ScaledMixture], Array]
+            Expected rate function to be used for the likelihood calculation.
+        """
         self.data = data
         self.model = model
         self.parameters = parameters
         self.ERate_fn = ERate_fn
 
         dummy_model = model.get_dummy()
-        assert isinstance(
-            dummy_model, ScaledMixture
-        ), "Model must be a scaled mixture model."
+        if not isinstance(dummy_model, ScaledMixture):
+            warnings.warn(
+                "The model provided is not a ScaledMixture. This means rate estimation "
+                "will not be possible."
+            )
 
         variables, duplicates, self.model = model.get_dist()
         self.variables_index = {key: i for i, key in enumerate(variables.keys())}
@@ -105,20 +116,44 @@ class PoissonLikelihood(eqx.Module):
     def log_likelihood(self, x: Array) -> Array:
         """The log likelihood function for the inhomogeneous Poisson process.
 
-        :param x: Recovered parameters.
-        :param data: Data provided by the user/sampler.
-        :return: Log likelihood value for the given parameters.
+        Parameters
+        ----------
+        x : Array
+            Recovered parameters.
+
+        Returns
+        -------
+        Array
+            Log likelihood value for the given parameters.
         """
         mapped_params = {name: x[..., i] for name, i in self.variables_index.items()}
 
         debug_flush("mapped params: {mp}", mp=mapped_params)
 
-        model: ScaledMixture = self.model(**mapped_params)
+        model: Distribution = self.model(**mapped_params)
+
+        def _nth_prob(y: Array) -> Array:
+            """Calculate the likelihood for the nth event.
+
+            Parameters
+            ----------
+            y : Array
+                The data for the nth event.
+
+            Returns
+            -------
+            Array
+                The likelihood for the nth event.
+            """
+            _log_prob = model.log_prob(y) - self.ref_priors.log_prob(y)
+            return jnn.logsumexp(
+                _log_prob,
+                axis=-1,
+                where=~jnp.isneginf(_log_prob),  # to avoid nans
+            ) - jnp.log(y.shape[0])
 
         log_likelihood = jtr.reduce(
-            lambda x, y: x
-            + jnn.logsumexp(model.log_prob(y) - self.ref_priors.log_prob(y), axis=-1)
-            - jnp.log(y.shape[0]),
+            lambda x, y: x + _nth_prob(y),
             self.data,
             jnp.zeros(()),
             is_leaf=lambda x: isinstance(x, Array),
@@ -133,14 +168,19 @@ class PoissonLikelihood(eqx.Module):
         return log_likelihood - expected_rates
 
     def log_posterior(self, x: Array, _: dict) -> Array:
-        r"""The likelihood function for the inhomogeneous Poisson process.
+        """The likelihood function for the inhomogeneous Poisson process.
 
-        .. math::
-            \log p(\Lambda\mid\text{data}) \propto \log\pi(\Lambda) + \log\mathcal{L}(\Lambda)
+        Parameters
+        ----------
+        x : Array
+            Recovered parameters.
+        _ : dict
+            Dictionary of additional arguments. (Unused)
 
-        :param x: Recovered parameters.
-        :param data: Data provided by the user/sampler.
-        :return: Log likelihood value for the given parameters.
+        Returns
+        -------
+        Array
+            Log likelihood value for the given parameters.
         """
         log_prior = self.priors.log_prob(x)
         log_likelihood = self.log_likelihood(x)
