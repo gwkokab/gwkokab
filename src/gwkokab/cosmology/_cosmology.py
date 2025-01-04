@@ -174,7 +174,7 @@ class Cosmology(object):
         return dDc
 
     def dVcdz(self, z: ArrayLike, Dc=None) -> ArrayLike:
-        """Calculate the comoving volume element per unit redshift.
+        r"""Calculate the comoving volume element per unit redshift.
 
         .. math::
             \frac{dV_c}{dz}=4\pi D_c^2\frac{dD_c}{dz}
