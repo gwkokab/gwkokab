@@ -59,8 +59,9 @@ def psi_coefficient(chi1z: Array, chi2z: Array, m1: Array, m2: Array) -> Array:
 
 
 def psi_from_chi_eff_and_eta(chi_eff: Array, eta: Array) -> Array:
-    r"""Calculate :math:`\psi` from :math:`\chi_{\text{eff}}` and :math:`\eta` with
-    the assumption of :math:`\chi_{2z} = 0`."""
+    r"""Calculate :math:`\psi` from :math:`\chi_{\text{eff}}` and :math:`\eta` with the
+    assumption of :math:`\chi_{2z} = 0`.
+    """
     _q = mass_ratio(eta=eta)
     _δ_η_χ_a = chi_eff * eta * (1 - _q)
     return jnp.power(eta, -0.6) * (
