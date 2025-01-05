@@ -14,9 +14,4 @@
 
 
 from ._banana_error import banana_error_m1_m2 as banana_error_m1_m2
-from ._chi_eff_error import (
-    chi_eff_approximate_prior_prob as chi_eff_approximate_prior_prob,
-    chi_eff_from_psi_and_eta as chi_eff_from_psi_and_eta,
-    psi_coefficient as psi_coefficient,
-    psi_from_chi_eff_and_eta as psi_from_chi_eff_and_eta,
-)
+from ._chi_eff_error import chi_eff_from_m1_m2_chi1_chi2 as chi_eff_from_m1_m2_chi1_chi2

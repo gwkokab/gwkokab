@@ -44,6 +44,8 @@ def banana_error_m1_m2(
         \eta = \eta^{T}
         \left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
 
+    Parameters
+    ----------
     x : Array
         given values as m1 and m2
     size : int
@@ -69,32 +71,32 @@ def banana_error_m1_m2(
     r0p = jrd.normal(key=keys[1])
     r = jrd.normal(key=keys[2], shape=(size,)) * scale_Mc
     rp = jrd.normal(key=keys[3], shape=(size,)) * scale_eta
-    rho = 9.0 * jnp.power(jrd.uniform(key=keys[4]), -1.0 / 3.0)
+    ρ = 9.0 * jnp.power(jrd.uniform(key=keys[4]), -1.0 / 3.0)
 
     Mc_true = chirp_mass(m1=m1, m2=m2)
-    eta_true = symmetric_mass_ratio(m1=m1, m2=m2)
+    η_true = symmetric_mass_ratio(m1=m1, m2=m2)
 
     v_PN_param = (jnp.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (
         1.0 / 3.0
     )  # 'v' parameter
     v_PN_param_max = 0.2
     v_PN_param = jnp.min(jnp.array([v_PN_param, v_PN_param_max]))
-    snr_fac = rho / 12.0
+    snr_fac = ρ / 12.0
     # this ignores range due to redshift / distance, based on a low-order est
     ln_mc_error_pseudo_fisher = (
         1.5 * 0.3 * (v_PN_param / v_PN_param_max) ** (7.0) / snr_fac
     )
 
-    beta = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
+    β = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
 
-    Mc = Mc_true * (1.0 + beta * (r0 + r))
-    eta = eta_true * (1.0 + 0.03 * (12.0 / rho) * (r0p + rp))
+    Mc = Mc_true * (1.0 + β * (r0 + r))
+    η = η_true * (1.0 + 0.03 * (12.0 / ρ) * (r0p + rp))
 
-    etaV = 1.0 - 4.0 * eta
-    etaV_sqrt = jnp.where(etaV >= 0, jnp.sqrt(etaV), jnp.nan)
+    ηV = 1.0 - 4.0 * η
+    ηV_sqrt = jnp.where(ηV >= 0, jnp.sqrt(ηV), jnp.nan)
 
-    factor = 0.5 * Mc * jnp.power(eta, -0.6)
-    m1_final = factor * (1.0 + etaV_sqrt)
-    m2_final = factor * (1.0 - etaV_sqrt)
+    factor = 0.5 * Mc * jnp.power(η, -0.6)
+    m1_final = factor * (1.0 + ηV_sqrt)
+    m2_final = factor * (1.0 - ηV_sqrt)
 
-    return jnp.column_stack([m1_final, m2_final])
+    return jnp.stack([m1_final, m2_final], axis=-1)

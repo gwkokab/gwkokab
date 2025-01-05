@@ -14,20 +14,22 @@
 
 
 import jax.numpy as jnp
-import numpy as np
-from jaxtyping import Array
-from scipy import interpolate
+import jax.random as jrd
+import RIFT.lalsimutils as lalsimutils
+from jaxtyping import Array, PRNGKeyArray
+from numpyro.distributions import TruncatedNormal
 
 from ..utils.transformations import (
     chi_a,
     chi_eff,
+    chirp_mass,
     delta_m,
     mass_ratio,
     symmetric_mass_ratio,
 )
 
 
-def psi_coefficient(chi1z: Array, chi2z: Array, m1: Array, m2: Array) -> Array:
+def _psi_coefficient(chi1z: Array, chi2z: Array, m1: Array, m2: Array) -> Array:
     r"""Calculate the :math:`\psi`-coefficient of the 1.5 PN phase term. See equation
     (A2) of `Gravitational-wave astrophysics with effective-spin measurements:
     asymmetries and selection biases <http://arxiv.org/abs/1805.03046>`_
@@ -41,11 +43,21 @@ def psi_coefficient(chi1z: Array, chi2z: Array, m1: Array, m2: Array) -> Array:
     :func:`~gwkokab.utils.transformations.delta_m`, and
     :func:`~gwkokab.utils.transformations.chi_a` respectively.
 
-    :param chi1z: Projection of the primary spin onto the z-axis.
-    :param chi2z: Projection of the secondary spin onto the z-axis.
-    :param m1: Primary mass.
-    :param m2: Secondary mass.
-    :return: Coefficient of the 1.5 PN phase term.
+    Parameters
+    ----------
+    chi1z : Array
+        Projection of the primary spin onto the z-axis.
+    chi2z : Array
+        Projection of the secondary spin onto the z-axis.
+    m1 : Array
+        Primary mass.
+    m2 : Array
+        Secondary mass.
+
+    Returns
+    -------
+    Array
+        Coefficient of the 1.5 PN phase term.
     """
     _q = mass_ratio(m1=m1, m2=m2)
     η = symmetric_mass_ratio(q=_q)
@@ -58,7 +70,7 @@ def psi_coefficient(chi1z: Array, chi2z: Array, m1: Array, m2: Array) -> Array:
     )
 
 
-def psi_from_chi_eff_and_eta(chi_eff: Array, eta: Array) -> Array:
+def _psi_from_chi_eff_and_eta(chi_eff: Array, eta: Array) -> Array:
     r"""Calculate :math:`\psi` from :math:`\chi_{\text{eff}}` and :math:`\eta` with the
     assumption of :math:`\chi_{2z} = 0`.
     """
@@ -70,15 +82,22 @@ def psi_from_chi_eff_and_eta(chi_eff: Array, eta: Array) -> Array:
     )
 
 
-def chi_eff_from_psi_and_eta(psi: Array, eta: Array) -> Array:
+def _chi_eff_from_psi_and_eta(psi: Array, eta: Array) -> Array:
     r"""Calculation of :math:`\chi_{\text{eff}}` from :math:`\psi` and :math:`\eta`, by
     rearranging equation (A2) of `Gravitational-wave astrophysics with effective-spin
     measurements: asymmetries and selection biases <http://arxiv.org/abs/1805.03046>`_.
     Assuming :math:`\chi_{2z} = 0`.
 
-    :param psi: :math:`\psi`-coefficient of the 1.5 PN phase term.
-    :param eta: Symmetric mass ratio.
-    :return: Calculation of :math:`\chi_{\text{eff}}` from :math:`\psi` and :math:`\eta`.
+    Parameters
+    ----------
+    psi : Array
+        :math:`\psi`-coefficient of the 1.5 PN phase term.
+    eta : Array
+        Symmetric mass ratio.
+    Returns
+    -------
+    Array
+        Calculation of :math:`\chi_{\text{eff}}` from :math:`\psi` and :math:`\eta`.
     """
     q = mass_ratio(eta=eta)
     A = 128.0 / (76.0 * eta)
@@ -87,7 +106,7 @@ def chi_eff_from_psi_and_eta(psi: Array, eta: Array) -> Array:
     return A * (B / C)
 
 
-def chi_eff_approximate_prior_prob(chi_eff: Array) -> Array:
+def _chi_eff_approximate_prior_prob(chi_eff: Array) -> Array:
     r"""Approximate prior for :math:`\chi_{\text{eff}}`, from equation B7 of
     `Gravitational-wave astrophysics with effective-spin measurements: asymmetries and
     selection biases <http://arxiv.org/abs/1805.03046>`_.
@@ -99,8 +118,15 @@ def chi_eff_approximate_prior_prob(chi_eff: Array) -> Array:
     to 1, and :math:`w=0.23` is a value found to fit well to all priors in a study done
     in cited paper.
 
-    :param chi_eff: The effective spin.
-    :return: Approximate prior for :math:`\chi_{\text{eff}}`.
+    Parameters
+    ----------
+    chi_eff : Array
+        The effective spin.
+
+    Returns
+    -------
+    Array
+        Approximate prior for :math:`\chi_{\text{eff}}`.
     """
     χ_max = 1
     w = 0.23  # value found to fit well to all priors by the cited paper in docstring
@@ -110,16 +136,59 @@ def chi_eff_approximate_prior_prob(chi_eff: Array) -> Array:
     return A / (B + C)
 
 
-def chi_eff_draw_prob(a1z_samps, q_samps):
-    Xeff_samps = a1z_samps / (1 + q_samps)
-    # 2d histogram
-    H, Xeffedges, qedges = np.histogram2d(Xeff_samps, q_samps, bins=100, density=True)
-    # 2D histogram density normalises as bin_count / sample_count / bin_area
-    # so multiply by bin_area below, so that sum(H)=1
-    H = H * (Xeffedges[1] - Xeffedges[0]) * (qedges[1] - qedges[0])
-    # interpolate
-    Xeffpts = Xeffedges[0:-1] + ((Xeffedges[1] - Xeffedges[0]) / 2)  # bin midpoints
-    qpts = qedges[0:-1] + ((qedges[1] - qedges[0]) / 2)
-    func = interpolate.RectBivariateSpline(Xeffpts, qpts, H)
-    # return function
-    return func
+def chi_eff_from_m1_m2_chi1_chi2(
+    x: Array,
+    size: int,
+    key: PRNGKeyArray,
+    *,
+    scale_eta: Array = 1.0,
+    scale_chi_eff: Array = 1.0,
+) -> Array:
+    m1 = x[..., 0]
+    m2 = x[..., 1]
+    a1z = x[..., 2]
+    a2z = x[..., 3]
+
+    Mc_true = chirp_mass(m1=m1, m2=m2)
+    η_true = symmetric_mass_ratio(m1=m1, m2=m2)
+    χ_true = chi_eff(chi1z=a1z, chi2z=a2z, m1=m1, m2=m2)
+
+    keys = jrd.split(key, 3)
+
+    ρ = 9.0 * jnp.power(jrd.uniform(key=keys[0]), -1.0 / 3.0)
+
+    v_PN_param = (jnp.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (
+        1.0 / 3.0
+    )  # 'v' parameter
+    v_PN_param_max = 0.2
+    v_PN_param = jnp.min(jnp.array([v_PN_param, v_PN_param_max]))
+    snr_fac = ρ / 12.0
+    # this ignores range due to redshift / distance, based on a low-order est
+    ln_mc_error_pseudo_fisher = (
+        1.5 * 0.3 * (v_PN_param / v_PN_param_max) ** (7.0) / snr_fac
+    )
+
+    β = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
+
+    scale_eta *= β
+    scale_chi_eff *= β
+
+    # make a gaussian in ψ, then convert to χeff
+    ψ_mean = _psi_from_chi_eff_and_eta(χ_true, η_true)
+
+    # estimate sigma on psi from sigma on χeff.
+    # χeff maximum range is -1 to 1: 2. psi maximum range is -4.2 to -1.2: 3.0.
+    # scale χeff uncertainties by 3.0 / 2.
+    ψ_sigma = scale_chi_eff * 3.0 / 2.0
+
+    eta_samps = TruncatedNormal(
+        loc=η_true, scale=scale_eta, low=0.0, high=0.25, validate_args=True
+    ).sample(key=keys[1], sample_shape=(size,))
+
+    psi_samps = TruncatedNormal(
+        loc=ψ_mean, scale=ψ_sigma, low=-4.2, high=-1.2, validate_args=True
+    ).sample(key=keys[2], sample_shape=(size,))
+
+    χ_eff_samps = _chi_eff_from_psi_and_eta(psi_samps, eta_samps)
+
+    return χ_eff_samps
