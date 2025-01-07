@@ -13,9 +13,8 @@
 # limitations under the License.
 
 
-from ._debug import (
-    debug as debug,
-    debug_flush as debug_flush,
-    debug_mode as debug_mode,
-    enable_debugging as enable_debugging,
+from ._logger import (
+    enable_logging as enable_logging,
+    logger as logger,
+    set_log_level as set_log_level,
 )

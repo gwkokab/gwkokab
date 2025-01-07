@@ -20,7 +20,7 @@ import equinox as eqx
 from jax import Array, nn as jnn, numpy as jnp, tree as jtr
 from numpyro.distributions import Distribution
 
-from ..debug import debug_flush
+from ..logger import logger
 from ..models.utils import JointDistribution, ScaledMixture
 from ..parameters import Parameter
 from .bake import Bake
@@ -128,7 +128,7 @@ class PoissonLikelihood(eqx.Module):
         """
         mapped_params = {name: x[..., i] for name, i in self.variables_index.items()}
 
-        debug_flush("mapped params: {mp}", mp=mapped_params)
+        logger.debug("mapped params: {mp}", mp=mapped_params)
 
         model: Distribution = self.model(**mapped_params)
 
@@ -159,11 +159,11 @@ class PoissonLikelihood(eqx.Module):
             is_leaf=lambda x: isinstance(x, Array),
         )
 
-        debug_flush("model_log_likelihood: {mll}", mll=log_likelihood)
+        logger.debug("model_log_likelihood: {mll}", mll=log_likelihood)
 
         expected_rates = self.ERate_fn(model)
 
-        debug_flush("expected_rate={expr}", expr=expected_rates)
+        logger.debug("expected_rate={expr}", expr=expected_rates)
 
         return log_likelihood - expected_rates
 
@@ -184,7 +184,7 @@ class PoissonLikelihood(eqx.Module):
         """
         log_prior = self.priors.log_prob(x)
         log_likelihood = self.log_likelihood(x)
-        debug_flush(
+        logger.debug(
             "log_prior: {lp}\nlog_likelihood: {ll}", lp=log_prior, ll=log_likelihood
         )
         return log_prior + log_likelihood

@@ -22,12 +22,12 @@ from typing import List, Tuple
 from jax import random as jrd
 
 import gwkokab
-from gwkokab.debug import enable_debugging
 from gwkokab.inference import (
     Bake,
     flowMChandler,
     PoissonLikelihood,
 )
+from gwkokab.logger import enable_logging
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
 from gwkokab.models.utils import (
     create_smoothed_gaussians_raw,
@@ -124,7 +124,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.verbose:
-        enable_debugging()
+        enable_logging()
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
