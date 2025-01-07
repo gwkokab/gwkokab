@@ -13,8 +13,4 @@
 # limitations under the License.
 
 
-from ._logger import (
-    enable_logging as enable_logging,
-    logger as logger,
-    set_log_level as set_log_level,
-)
+from ._logger import enable_logging as enable_logging, logger as logger
