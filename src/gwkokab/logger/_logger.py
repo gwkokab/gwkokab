@@ -15,6 +15,7 @@
 
 import atexit as _atexit
 import sys
+from typing import Literal
 
 import jax
 from loguru._logger import Core as _Core, Logger as _Logger
@@ -162,13 +163,19 @@ logger = Logger(
 _atexit.register(logger.remove)
 
 
-def set_log_level(log_level: str = "DEBUG") -> None:
-    """Set the log level.
+def enable_logging(
+    log_level: Literal[
+        "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"
+    ] = "TRACE",
+) -> None:
+    """Enable logging with the specified log level.
+
+    _extended_summary_
 
     Parameters
     ----------
-    log_level : str, optional
-        The log level, by default "DEBUG".
+    log_level : Literal[ &quot;TRACE&quot;, &quot;DEBUG&quot;, &quot;INFO&quot;, &quot;SUCCESS&quot;, &quot;WARNING&quot;, &quot;ERROR&quot;, &quot;CRITICAL&quot; ], optional
+        The log level to use, by default &quot;TRACE&quot;
     """
     logger.remove()
     logger.add(
@@ -178,10 +185,5 @@ def set_log_level(log_level: str = "DEBUG") -> None:
         "<level>{level: <8}</level> | "
         "<level>{message}</level>",
     )
-
-
-def enable_logging() -> None:
-    """Enable logging."""
-    set_log_level()
     global DEBUG
     DEBUG = True
