@@ -22,9 +22,9 @@ __version__ = importlib.metadata.version("gwkokab")
 from . import (
     constants as constants,
     cosmology as cosmology,
-    debug as debug,
     errors as errors,
     inference as inference,
+    logger as logger,
     models as models,
     parameters as parameters,
     poisson_mean as poisson_mean,
