@@ -162,12 +162,6 @@ logger = Logger(
 _atexit.register(logger.remove)
 
 
-def enable_logging() -> None:
-    """Enable logging."""
-    global DEBUG
-    DEBUG = True
-
-
 def set_log_level(log_level: str = "DEBUG") -> None:
     """Set the log level.
 
@@ -184,3 +178,10 @@ def set_log_level(log_level: str = "DEBUG") -> None:
         "<level>{level: <8}</level> | "
         "<level>{message}</level>",
     )
+
+
+def enable_logging() -> None:
+    """Enable logging."""
+    set_log_level()
+    global DEBUG
+    DEBUG = True
