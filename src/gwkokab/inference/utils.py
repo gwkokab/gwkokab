@@ -21,6 +21,30 @@ from flowMC.Sampler import Sampler
 from jax import random as jrd
 
 
+def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray]:
+    """This function pads the arrays with None to make them the same length.
+
+    Parameters
+    ----------
+    length : int
+        The length of the arrays.
+    arrays : np.ndarray
+        The arrays to pad.
+
+    Returns
+    -------
+    tuple[np.ndarray]
+        The padded arrays.
+    """
+    padded_arrays = []
+    for array in arrays:
+        padded_array = np.empty((length,))
+        padded_array[..., : array.shape[0]] = array
+        padded_array[..., array.shape[0] :] = None
+        padded_arrays.append(padded_array)
+    return tuple(padded_arrays)
+
+
 def save_data_from_sampler(
     sampler: Sampler,
     *,
@@ -78,16 +102,29 @@ def save_data_from_sampler(
 
     np.savetxt(
         rf"{out_dir}/global_accs.dat",
-        np.column_stack((train_global_accs.mean(0), prod_global_accs.mean(0))),
+        np.column_stack(
+            _same_length_arrays(
+                max(train_global_accs.shape[1], prod_global_accs.shape[1]),
+                train_global_accs.mean(0),
+                prod_global_accs.mean(0),
+            )
+        ),
         header="train prod",
         comments="#",
     )
     np.savetxt(
         rf"{out_dir}/local_accs.dat",
-        np.column_stack((train_local_accs.mean(0), prod_local_accs.mean(0))),
+        np.column_stack(
+            _same_length_arrays(
+                max(train_local_accs.shape[1], prod_local_accs.shape[1]),
+                train_local_accs.mean(0),
+                prod_local_accs.mean(0),
+            )
+        ),
         header="train prod",
         comments="#",
     )
+
     np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
 
     for i in range(n_chains):
@@ -103,7 +140,13 @@ def save_data_from_sampler(
         )
         np.savetxt(
             rf"{out_dir}/log_prob_{i}.dat",
-            np.column_stack((train_log_prob[i, :], prod_log_prob[i, :])),
+            np.column_stack(
+                _same_length_arrays(
+                    max(train_log_prob[i].shape[0], prod_log_prob[i].shape[0]),
+                    train_log_prob[i],
+                    prod_log_prob[i],
+                )
+            ),
             header="train prod",
             comments="#",
         )
