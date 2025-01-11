@@ -59,7 +59,9 @@ class PowerlawRedshift(Distribution):
         >>> import jax.numpy as jnp
         >>> from astropy.cosmology import Planck15
         >>> z_grid = jnp.linspace(0.001, 1, 1000)
-        >>> dVcdz_grid = Planck15.differential_comoving_volume(z_grid).value * 4.0 * jnp.pi
+        >>> dVcdz_grid = (
+        ...     Planck15.differential_comoving_volume(z_grid).value * 4.0 * jnp.pi
+        ... )
         >>> d = PowerlawRedshift(lamb=0.0, z_max=1.0, zgrid=z_grid, dVcdz=dVcdz_grid)
         >>> lpdfs = d.log_prob(self.grid)
         >>> lpdfs.shape
