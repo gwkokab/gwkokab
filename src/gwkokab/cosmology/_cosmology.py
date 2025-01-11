@@ -84,9 +84,9 @@ class Cosmology(object):
         self._OmegaKappa = 1.0 - (
             self._OmegaMatter + self._OmegaRadiation + self._OmegaLambda
         )
-        assert (
-            self._OmegaKappa == 0
-        ), "we only implement flat cosmologies! OmegaKappa must be 0"
+        assert self._OmegaKappa == 0, (
+            "we only implement flat cosmologies! OmegaKappa must be 0"
+        )
 
         self.extend(max_z, dz=dz)
 

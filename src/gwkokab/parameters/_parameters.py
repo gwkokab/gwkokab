@@ -29,7 +29,9 @@ class Parameter(eqx.Module):
 
         >>> from gwkokab.parameters import Parameter
         >>> from numpyro.distributions import Uniform
-        >>> Mc = Parameter(name="chirp_mass", prior=Uniform(0.5, 300.0, validate_args=True))
+        >>> Mc = Parameter(
+        ...     name="chirp_mass", prior=Uniform(0.5, 300.0, validate_args=True)
+        ... )
         >>> Mc.name
         'chirp_mass'
         >>> Mc.prior.low
