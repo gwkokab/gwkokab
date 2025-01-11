@@ -1,3 +1,6 @@
+# uv lock
+uv.lock
+
 # ppd files data ignores
 **/*.hdf5
 
