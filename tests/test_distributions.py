@@ -118,6 +118,14 @@ generic_nspmsg = {
     "ecc_scale_g_0": 0.7,
     "ecc_loc_g_1": 0.0,
     "ecc_scale_g_1": 0.6,
+    "ecc_low_pl_0": 0.0,
+    "ecc_low_g_0": 0.0,
+    "ecc_low_pl_1": 0.0,
+    "ecc_low_g_1": 0.0,
+    "ecc_high_pl_0": 1.0,
+    "ecc_high_g_0": 1.0,
+    "ecc_high_pl_1": 1.0,
+    "ecc_high_g_1": 1.0,
 }
 
 
@@ -184,6 +192,14 @@ generic_npmg = {
     "ecc_scale_g_0": 0.7,
     "ecc_loc_g_1": 0.0,
     "ecc_scale_g_1": 0.6,
+    "ecc_low_pl_0": 0.0,
+    "ecc_low_g_0": 0.0,
+    "ecc_low_pl_1": 0.0,
+    "ecc_low_g_1": 0.0,
+    "ecc_high_pl_0": 1.0,
+    "ecc_high_g_0": 1.0,
+    "ecc_high_pl_1": 1.0,
+    "ecc_high_g_1": 1.0,
 }
 
 
