@@ -132,6 +132,10 @@ def main() -> None:
         ("m2_loc_g", N_g),
         ("m1_scale_g", N_g),
         ("m2_scale_g", N_g),
+        ("m1_low_g", N_g),
+        ("m2_low_g", N_g),
+        ("m1_high_g", N_g),
+        ("m2_high_g", N_g),
         ("mmax_pl", N_pl),
         ("mmin_pl", N_pl),
     ]
