@@ -21,7 +21,7 @@ import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy.special import expit, logsumexp
-from jax.scipy.stats import norm, truncnorm, uniform
+from jax.scipy.stats import truncnorm, uniform
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import (
     CategoricalProbs,
@@ -878,6 +878,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         scale: ArrayLike,
         mmin: ArrayLike,
         mmax: ArrayLike,
+        low: ArrayLike,
+        high: ArrayLike,
         delta: ArrayLike,
         lambda_peak: ArrayLike,
         log_rate_pl: ArrayLike,
@@ -900,6 +902,10 @@ class SmoothedPowerlawAndPeak(Distribution):
             Minimum mass
         mmax : ArrayLike
             Maximum mass
+        low : ArrayLike
+            Lower bound of the Gaussian distribution
+        high : ArrayLike
+            Upper bound of the Gaussian distribution
         delta : ArrayLike
             Width of the smoothing window
         lambda_peak : ArrayLike
@@ -918,6 +924,8 @@ class SmoothedPowerlawAndPeak(Distribution):
             self.scale,
             self.mmin,
             self.mmax,
+            self.low,
+            self.high,
             self.delta,
             self.lambda_peak,
             self.log_rate_pl,
@@ -929,6 +937,8 @@ class SmoothedPowerlawAndPeak(Distribution):
             scale,
             mmin,
             mmax,
+            low,
+            high,
             delta,
             lambda_peak,
             log_rate_pl,
@@ -941,6 +951,8 @@ class SmoothedPowerlawAndPeak(Distribution):
             jnp.shape(scale),
             jnp.shape(mmin),
             jnp.shape(mmax),
+            jnp.shape(low),
+            jnp.shape(high),
             jnp.shape(delta),
             jnp.shape(lambda_peak),
             jnp.shape(log_rate_pl),
@@ -1002,7 +1014,16 @@ class SmoothedPowerlawAndPeak(Distribution):
                 )
             )
             + self.lambda_peak
-            * jnp.exp(log_rate_peak + norm.logpdf(m1, loc=self.loc, scale=self.scale))
+            * jnp.exp(
+                log_rate_peak
+                + truncnorm.logpdf(
+                    m1,
+                    a=(self.loc - self.low) / self.scale,
+                    b=(self.high - self.loc) / self.scale,
+                    loc=self.loc,
+                    scale=self.scale,
+                )
+            )
         )
         return log_prob_m1 + log_smoothing_m1
 
