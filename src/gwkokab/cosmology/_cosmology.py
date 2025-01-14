@@ -84,9 +84,9 @@ class Cosmology(object):
         self._OmegaKappa = 1.0 - (
             self._OmegaMatter + self._OmegaRadiation + self._OmegaLambda
         )
-        assert (
-            self._OmegaKappa == 0
-        ), "we only implement flat cosmologies! OmegaKappa must be 0"
+        assert self._OmegaKappa == 0, (
+            "we only implement flat cosmologies! OmegaKappa must be 0"
+        )
 
         self.extend(max_z, dz=dz)
 
@@ -174,7 +174,7 @@ class Cosmology(object):
         return dDc
 
     def dVcdz(self, z: ArrayLike, Dc=None) -> ArrayLike:
-        """Calculate the comoving volume element per unit redshift.
+        r"""Calculate the comoving volume element per unit redshift.
 
         .. math::
             \frac{dV_c}{dz}=4\pi D_c^2\frac{dD_c}{dz}

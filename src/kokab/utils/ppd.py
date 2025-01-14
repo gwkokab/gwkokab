@@ -128,12 +128,12 @@ def save_probs(
     domains: List[Tuple[float, float, int]],
     headers: List[str],
 ) -> None:
-    assert ppd_array.ndim == len(
-        domains
-    ), "Number of ranges must match the number of dimensions of the PPD array."
-    assert ppd_array.ndim == len(
-        headers
-    ), "Number of headers must match the number of dimensions of the PPD array."
+    assert ppd_array.ndim == len(domains), (
+        "Number of ranges must match the number of dimensions of the PPD array."
+    )
+    assert ppd_array.ndim == len(headers), (
+        "Number of headers must match the number of dimensions of the PPD array."
+    )
 
     with h5py.File(filename, "w") as f:
         f.create_dataset("domains", data=np.array(domains))
