@@ -64,11 +64,11 @@ def match_all(
         pattern_found = False
         for pattern, value in pattern_dict_with_val.items():
             matched_duplicate = matches_regex(pattern, pattern_dict_with_val[duplicate])
-            if not isinstance(value, list) and matched_duplicate:  # do not match list
+            if not isinstance(value, dict) and matched_duplicate:  # do not match dict
                 matches[duplicate] = value
                 pattern_found = True
                 break
-            elif isinstance(value, list):
+            elif isinstance(value, dict):
                 pattern_found = True
                 matches[duplicate] = pattern_dict_with_val[duplicate]
         if not pattern_found:
