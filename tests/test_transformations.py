@@ -20,7 +20,7 @@ from gwkokab.utils.transformations import (
     cart_to_polar,
     cart_to_spherical,
     chi_costilt_to_chiz,
-    chieff,
+    chi_eff,
     chirp_mass,
     delta_m,
     delta_m_to_symmetric_mass_ratio,
@@ -117,7 +117,7 @@ def test_chi_costilt_to_chiz(chi, costilt):
 @pytest.mark.parametrize("chi1", _chi1)
 @pytest.mark.parametrize("chi2", _chi2)
 def test_m1_m2_chi1z_chi2z(m1, m2, chi1, chi2):
-    chieff_ = chieff(m1=m1, m2=m2, chi1z=chi1, chi2z=chi2)
+    chieff_ = chi_eff(m1=m1, m2=m2, chi1z=chi1, chi2z=chi2)
     chieff__ = (m1 * chi1 + m2 * chi2) / (m1 + m2)
     assert jnp.allclose(chieff__, chieff_)
     chiminus_ = m1_m2_chi1z_chi2z_to_chiminus(m1=m1, m2=m2, chi1z=chi1, chi2z=chi2)

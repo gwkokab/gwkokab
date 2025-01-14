@@ -21,7 +21,7 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from gwkokab.models.utils import doubly_truncated_power_law_log_prob
-from gwkokab.utils.transformations import chieff, mass_ratio
+from gwkokab.utils.transformations import chi_eff, mass_ratio
 
 
 class ChiEffMassRatioConstraint(constraints.Constraint):
@@ -293,8 +293,8 @@ class ChiEffMassRatioCorrelated(Distribution):
         # log_prob(chi_eff)
         invalid_mass_mask = jnp.less(m1, m2)
         q = jnp.where(invalid_mass_mask, 1.0, mass_ratio(m1=m1, m2=m2))
-        chi_eff = jnp.where(
-            invalid_mass_mask, 1.0, chieff(m1=m1, m2=m2, chi1z=a1, chi2z=a2)
+        _chi_eff = jnp.where(
+            invalid_mass_mask, 1.0, chi_eff(m1=m1, m2=m2, chi1z=a1, chi2z=a2)
         )
         mu_eff = self.mu_eff_0 + self.alpha * (q - 1)
         sigma_eff = jnp.power(10, self.log10_sigma_eff_0 + self.beta * (q - 1))
@@ -303,7 +303,7 @@ class ChiEffMassRatioCorrelated(Distribution):
             invalid_mass_mask,
             -jnp.inf,
             truncnorm.logpdf(
-                x=chi_eff,
+                x=_chi_eff,
                 a=(-1.0 - mu_eff) / sigma_eff,
                 b=(1.0 - mu_eff) / sigma_eff,
                 loc=mu_eff,
