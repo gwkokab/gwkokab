@@ -95,6 +95,8 @@ def main() -> None:
         "scale",
         "mmin",
         "mmax",
+        "low",
+        "high",
         "delta",
         "lambda_peak",
         "log_rate_pl",
