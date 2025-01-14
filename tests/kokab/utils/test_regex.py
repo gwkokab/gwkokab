@@ -21,7 +21,7 @@ def test_match_all():
     pattern_dict_with_val = {
         "beta_[0-9]+": 0.1,
         "gamma_[0-9]+": 0.2,
-        "delta_[0-9]+": {0.3, 0.4},
+        "delta_[0-9]+": {1: 0.4},
         "alpha_0": "beta_0",
         "alpha_1": "delta_1",
     }
