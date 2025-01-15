@@ -850,6 +850,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         "scale": constraints.positive,
         "mmin": constraints.positive,
         "mmax": constraints.positive,
+        "low": constraints.positive,
+        "high": constraints.positive,
         "delta": constraints.positive,
         "lambda_peak": constraints.unit_interval,
         "log_rate_pl": constraints.real,
@@ -862,6 +864,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         "scale",
         "mmin",
         "mmax",
+        "low",
+        "high",
         "delta",
         "lambda_peak",
         "log_rate_pl",
@@ -1006,22 +1010,26 @@ class SmoothedPowerlawAndPeak(Distribution):
             (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
         )
         log_prob_m1 = jnp.log(
-            (1.0 - self.lambda_peak)
-            * jnp.exp(
-                log_rate_pl
-                + doubly_truncated_power_law_log_prob(
-                    x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+            (
+                (1.0 - self.lambda_peak)
+                * jnp.exp(
+                    log_rate_pl
+                    + doubly_truncated_power_law_log_prob(
+                        x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+                    )
                 )
             )
-            + self.lambda_peak
-            * jnp.exp(
-                log_rate_peak
-                + truncnorm.logpdf(
-                    m1,
-                    a=(self.loc - self.low) / self.scale,
-                    b=(self.high - self.loc) / self.scale,
-                    loc=self.loc,
-                    scale=self.scale,
+            + (
+                self.lambda_peak
+                * jnp.exp(
+                    log_rate_peak
+                    + truncnorm.logpdf(
+                        m1,
+                        a=(self.low - self.loc) / self.scale,
+                        b=(self.high - self.loc) / self.scale,
+                        loc=self.loc,
+                        scale=self.scale,
+                    )
                 )
             )
         )
