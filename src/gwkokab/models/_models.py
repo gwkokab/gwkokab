@@ -1012,12 +1012,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         log_prob_m1 = jnp.log(
             (
                 (1.0 - self.lambda_peak)
-                * jnp.exp(
-                    log_rate_pl
-                    + doubly_truncated_power_law_log_prob(
-                        x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
-                    )
-                )
+                * jnp.power(m1, self.alpha)
+                * jnp.exp(log_rate_pl)
             )
             + (
                 self.lambda_peak
@@ -1044,11 +1040,7 @@ class SmoothedPowerlawAndPeak(Distribution):
             (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
         )
         log_prob_q = jnp.where(
-            jnp.less_equal(m1, self.mmin),
-            -jnp.inf,
-            doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
-            ),
+            jnp.less_equal(m1, self.mmin), -jnp.inf, self.beta * jnp.log(q)
         )
         return log_prob_q + log_smoothing_q
 
