@@ -99,8 +99,7 @@ def main() -> None:
         "high",
         "delta",
         "lambda_peak",
-        "log_rate_pl",
-        "log_rate_peak",
+        "log_rate",
     ]
 
     parameters = [PRIMARY_MASS_SOURCE]
