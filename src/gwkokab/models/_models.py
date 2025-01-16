@@ -854,8 +854,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         "high": constraints.positive,
         "delta": constraints.positive,
         "lambda_peak": constraints.unit_interval,
-        "log_rate_pl": constraints.real,
-        "log_rate_peak": constraints.real,
+        "log_rate": constraints.real,
     }
     reparametrized_params = [
         "alpha",
@@ -868,8 +867,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         "high",
         "delta",
         "lambda_peak",
-        "log_rate_pl",
-        "log_rate_peak",
+        "log_rate",
     ]
     pytree_aux_fields = ("_support", "_norm")
     pytree_data_fields = ("_log_Z_m1", "_m1s", "_Z_q")
@@ -886,8 +884,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         high: ArrayLike,
         delta: ArrayLike,
         lambda_peak: ArrayLike,
-        log_rate_pl: ArrayLike,
-        log_rate_peak: ArrayLike,
+        log_rate: ArrayLike,
         *,
         validate_args=None,
     ):
@@ -914,10 +911,8 @@ class SmoothedPowerlawAndPeak(Distribution):
             Width of the smoothing window
         lambda_peak : ArrayLike
             Fraction of masses in the Gaussian peak
-        log_rate_pl : ArrayLike
-            Logarithm of the rate of the power law component
-        log_rate_peak : ArrayLike
-            Logarithm of the rate of the Gaussian peak component
+        log_rate : ArrayLike
+            Logarithm of the rate
         validate_args : bool, optional
             Whether to validate input, by default None
         """
@@ -932,8 +927,7 @@ class SmoothedPowerlawAndPeak(Distribution):
             self.high,
             self.delta,
             self.lambda_peak,
-            self.log_rate_pl,
-            self.log_rate_peak,
+            self.log_rate,
         ) = promote_shapes(
             alpha,
             beta,
@@ -945,8 +939,7 @@ class SmoothedPowerlawAndPeak(Distribution):
             high,
             delta,
             lambda_peak,
-            log_rate_pl,
-            log_rate_peak,
+            log_rate,
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha),
@@ -959,8 +952,7 @@ class SmoothedPowerlawAndPeak(Distribution):
             jnp.shape(high),
             jnp.shape(delta),
             jnp.shape(lambda_peak),
-            jnp.shape(log_rate_pl),
-            jnp.shape(log_rate_peak),
+            jnp.shape(log_rate),
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
         self._norm = TruncatedNormal(
@@ -1010,21 +1002,16 @@ class SmoothedPowerlawAndPeak(Distribution):
     def support(self) -> constraints.Constraint:
         return self._support
 
-    def _log_prob_m1(
-        self, m1: Array, log_rate_pl: Array = 0.0, log_rate_peak: Array = 0.0
-    ) -> Array:
+    def _log_prob_m1(self, m1: Array) -> Array:
         log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
         log_prob_m1 = jnp.log(
-            (
-                (1.0 - self.lambda_peak)
-                * jnp.exp(
-                    log_rate_pl
-                    + doubly_truncated_power_law_log_prob(
-                        x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
-                    )
+            (1.0 - self.lambda_peak)
+            * jnp.exp(
+                doubly_truncated_power_law_log_prob(
+                    x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
                 )
             )
-            + (self.lambda_peak * jnp.exp(log_rate_peak + self._norm.log_prob(m1)))
+            + self.lambda_peak * jnp.exp(self._norm.log_prob(m1))
         )
         return log_prob_m1 + log_smoothing_m1
 
@@ -1043,10 +1030,7 @@ class SmoothedPowerlawAndPeak(Distribution):
     def log_prob(self, value: ArrayLike) -> Array:
         m1 = value[..., 0]
 
-        log_prob_m1 = self._log_prob_m1(
-            m1, log_rate_pl=self.log_rate_pl, log_rate_peak=self.log_rate_peak
-        )
-
+        log_prob_m1 = self._log_prob_m1(m1)
         log_prob_q = self._log_prob_q(value)
 
         def _Z_q(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
@@ -1068,4 +1052,4 @@ class SmoothedPowerlawAndPeak(Distribution):
 
         log_Z = lax.stop_gradient(self._log_Z_m1 + log_Z_q)
 
-        return log_prob_m1 + log_prob_q - log_Z
+        return self.log_rate + log_prob_m1 + log_prob_q - log_Z
