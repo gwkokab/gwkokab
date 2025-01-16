@@ -1071,6 +1071,6 @@ class SmoothedPowerlawAndPeak(Distribution):
         else:
             log_Z_q = jnp.log(_Z_q(self._m1s, self._Z_q))
 
-        log_Z = lax.stop_gradient(self._log_Z_m1 + log_Z_q)
+        log_Z = self._log_Z_m1 + log_Z_q
 
-        return jnp.where(self.delta == 0.0, -jnp.inf, log_prob_m1 + log_prob_q - log_Z)
+        return log_prob_m1 + log_prob_q - log_Z
