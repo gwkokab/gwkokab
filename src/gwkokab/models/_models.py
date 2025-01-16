@@ -924,12 +924,12 @@ class SmoothedPowerlawAndPeak(Distribution):
         (
             self.alpha,
             self.beta,
-            loc,
-            scale,
+            self.loc,
+            self.scale,
             self.mmin,
             self.mmax,
-            low,
-            high,
+            self.low,
+            self.high,
             self.delta,
             self.lambda_peak,
             self.log_rate_pl,
@@ -964,10 +964,10 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
         self._norm = TruncatedNormal(
-            loc=loc,
-            scale=scale,
-            low=low,
-            high=high,
+            loc=self.loc,
+            scale=self.scale,
+            low=self.low,
+            high=self.high,
             validate_args=validate_args,
         )
 
