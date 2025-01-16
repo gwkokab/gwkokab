@@ -1006,9 +1006,7 @@ class SmoothedPowerlawAndPeak(Distribution):
     def _log_prob_m1(
         self, m1: Array, log_rate_pl: Array = 0.0, log_rate_peak: Array = 0.0
     ) -> Array:
-        log_smoothing_m1 = log_planck_taper_window(
-            (m1 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
-        )
+        log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
         log_prob_m1 = jnp.log(
             (
                 (1.0 - self.lambda_peak)
@@ -1040,9 +1038,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         m1 = m1q[..., 0]
         q = m1q[..., 1]
         m2 = m1 * q
-        log_smoothing_q = log_planck_taper_window(
-            (m2 - self.mmin) / jnp.where(self.delta == 0.0, 1.0, self.delta)
-        )
+        log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
         log_prob_q = jnp.where(
             jnp.less_equal(m1, self.mmin), -jnp.inf, self.beta * jnp.log(q)
         )
@@ -1077,4 +1073,4 @@ class SmoothedPowerlawAndPeak(Distribution):
 
         log_Z = lax.stop_gradient(self._log_Z_m1 + log_Z_q)
 
-        return log_prob_m1 + log_prob_q - log_Z
+        return jnp.where(self.delta == 0.0, -jnp.inf, log_prob_m1 + log_prob_q - log_Z)
