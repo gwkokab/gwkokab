@@ -871,7 +871,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         "log_rate_pl",
         "log_rate_peak",
     ]
-    pytree_aux_fields = ("_support",)
+    pytree_aux_fields = ("_support", "_norm")
     pytree_data_fields = ("_log_Z_m1", "_m1s", "_Z_q")
 
     def __init__(
@@ -924,12 +924,12 @@ class SmoothedPowerlawAndPeak(Distribution):
         (
             self.alpha,
             self.beta,
-            self.loc,
-            self.scale,
+            loc,
+            scale,
             self.mmin,
             self.mmax,
-            self.low,
-            self.high,
+            low,
+            high,
             self.delta,
             self.lambda_peak,
             self.log_rate_pl,
@@ -963,6 +963,13 @@ class SmoothedPowerlawAndPeak(Distribution):
             jnp.shape(log_rate_peak),
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._norm = TruncatedNormal(
+            loc=loc,
+            scale=scale,
+            low=low,
+            high=high,
+            validate_args=validate_args,
+        )
 
         mmin = jnp.broadcast_to(mmin, batch_shape)
         mmax = jnp.broadcast_to(mmax, batch_shape)
@@ -1017,19 +1024,7 @@ class SmoothedPowerlawAndPeak(Distribution):
                     )
                 )
             )
-            + (
-                self.lambda_peak
-                * jnp.exp(
-                    log_rate_peak
-                    + truncnorm.logpdf(
-                        m1,
-                        a=(self.low - self.loc) / self.scale,
-                        b=(self.high - self.loc) / self.scale,
-                        loc=self.loc,
-                        scale=self.scale,
-                    )
-                )
-            )
+            + (self.lambda_peak * jnp.exp(log_rate_peak + self._norm.log_prob(m1)))
         )
         return log_prob_m1 + log_smoothing_m1
 
@@ -1073,4 +1068,4 @@ class SmoothedPowerlawAndPeak(Distribution):
 
         log_Z = lax.stop_gradient(self._log_Z_m1 + log_Z_q)
 
-        return jnp.where(self.delta == 0.0, -jnp.inf, log_prob_m1 + log_prob_q - log_Z)
+        return log_prob_m1 + log_prob_q - log_Z
