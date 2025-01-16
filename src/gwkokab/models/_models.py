@@ -990,7 +990,17 @@ class SmoothedPowerlawAndPeak(Distribution):
         else:
             meshgrid_fn = partial(jnp.meshgrid, indexing="ij")
 
-        _Z_m1 = jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s)), _m1s, axis=0)
+        _Z_m1 = jnp.trapezoid(
+            jnp.exp(
+                self._log_prob_m1(
+                    _m1s,
+                    log_rate_pl=self.log_rate_pl,
+                    log_rate_peak=self.log_rate_peak,
+                )
+            ),
+            _m1s,
+            axis=0,
+        )
         self._log_Z_m1 = jnp.where(self.delta == 0.0, 0.0, jnp.log(_Z_m1))
 
         m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
