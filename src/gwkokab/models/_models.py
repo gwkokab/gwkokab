@@ -997,20 +997,10 @@ class SmoothedPowerlawAndPeak(Distribution):
         return self._support
 
     def _powerlaw_prob(self, m1: Array) -> Array:
-        return jnp.exp(
-            doubly_truncated_power_law_log_prob(
-                x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
-            )
-        )
+        return jnp.power(m1, self.alpha)
 
     def _gaussian_prob(self, m1: Array) -> Array:
-        return truncnorm.pdf(
-            m1,
-            a=(self.low - self.loc) / self.scale,
-            b=(self.high - self.loc) / self.scale,
-            loc=self.loc,
-            scale=self.scale,
-        )
+        return jnp.exp(-0.5 * jnp.square((m1 - self.loc) / self.scale))
 
     def _log_prob_m1(
         self, m1: Array, Z_powerlaw: ArrayLike = 1.0, Z_gaussian: ArrayLike = 1.0
