@@ -33,8 +33,7 @@ def create_smoothed_powerlaw_and_peak_raw(
     high: ArrayLike,
     delta: ArrayLike,
     lambda_peak: ArrayLike,
-    log_rate_pl: ArrayLike,
-    log_rate_peak: ArrayLike,
+    log_rate: ArrayLike,
 ) -> SmoothedPowerlawAndPeak:
     """Create a smoothed powerlaw and peak model with raw parameters."""
     return SmoothedPowerlawAndPeak(
@@ -48,8 +47,7 @@ def create_smoothed_powerlaw_and_peak_raw(
         high=high,
         delta=delta,
         lambda_peak=lambda_peak,
-        log_rate_pl=log_rate_pl,
-        log_rate_peak=log_rate_peak,
+        log_rate=log_rate,
     )
 
 
@@ -64,8 +62,7 @@ def create_smoothed_powerlaw_and_peak(
     high: ArrayLike,
     delta: ArrayLike,
     lambda_peak: ArrayLike,
-    log_rate_pl: ArrayLike,
-    log_rate_peak: ArrayLike,
+    log_rate: ArrayLike,
 ) -> TransformedDistribution:
     """Create a smoothed powerlaw and peak model with raw parameters."""
     return TransformedDistribution(
@@ -80,8 +77,7 @@ def create_smoothed_powerlaw_and_peak(
             high=high,
             delta=delta,
             lambda_peak=lambda_peak,
-            log_rate_pl=log_rate_pl,
-            log_rate_peak=log_rate_peak,
+            log_rate=log_rate,
         ),
         transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
     )
