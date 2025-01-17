@@ -866,7 +866,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         "log_rate",
     ]
     pytree_aux_fields = ("_support",)
-    pytree_data_fields = ("_Z_powerlaw", "_Z_gaussian", "_m1s", "_Z_q")
+    pytree_data_fields = ("_Z_powerlaw", "_m1s", "_Z_q")
 
     def __init__(
         self,
@@ -975,9 +975,6 @@ class SmoothedPowerlawAndPeak(Distribution):
         self._Z_powerlaw = jnp.trapezoid(
             self._powerlaw_prob(_m1s) * smoothing_m1, _m1s, axis=0
         )
-        self._Z_gaussian = jnp.trapezoid(
-            self._gaussian_prob(_m1s) * smoothing_m1, _m1s, axis=0
-        )
 
         m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
         _log_prob_q = self._log_prob_q(m1qs_grid)
@@ -1000,18 +997,23 @@ class SmoothedPowerlawAndPeak(Distribution):
         return jnp.power(m1, self.alpha)
 
     def _gaussian_prob(self, m1: Array) -> Array:
-        return jnp.exp(-0.5 * jnp.square((m1 - self.loc) / self.scale))
+        return truncnorm.pdf(
+            m1,
+            a=(self.mmin - self.loc) / self.scale,
+            b=(self.mmax - self.loc) / self.scale,
+            loc=self.loc,
+            scale=self.scale,
+        )
 
-    def _log_prob_m1(
-        self, m1: Array, Z_powerlaw: ArrayLike = 1.0, Z_gaussian: ArrayLike = 1.0
-    ) -> Array:
+    def _log_prob_m1(self, m1: Array, Z_powerlaw: ArrayLike = 1.0) -> Array:
         log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
         powerlaw_prob = self._powerlaw_prob(m1) / Z_powerlaw
-        gaussian_prob = self._gaussian_prob(m1) / Z_gaussian
+        gaussian_prob = self._gaussian_prob(m1)
         log_prob_m1 = jnp.log(
-            (1.0 - self.lambda_peak) * powerlaw_prob + self.lambda_peak * gaussian_prob
+            (1.0 - self.lambda_peak) * powerlaw_prob * jnp.exp(log_smoothing_m1)
+            + self.lambda_peak * gaussian_prob
         )
-        return log_prob_m1 + log_smoothing_m1
+        return log_prob_m1
 
     @validate_sample
     def _log_prob_q(self, m1q: Array) -> Array:
@@ -1032,9 +1034,7 @@ class SmoothedPowerlawAndPeak(Distribution):
     def log_prob(self, value: ArrayLike) -> Array:
         m1 = value[..., 0]
 
-        log_prob_m1 = self._log_prob_m1(
-            m1, Z_powerlaw=self._Z_powerlaw, Z_gaussian=self._Z_gaussian
-        )
+        log_prob_m1 = self._log_prob_m1(m1, Z_powerlaw=self._Z_powerlaw)
 
         log_prob_q = self._log_prob_q(value)
 
