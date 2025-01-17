@@ -867,7 +867,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         "lambda_peak",
         "log_rate",
     ]
-    pytree_aux_fields = ("_support", "_norm")
+    pytree_aux_fields = ("_support",)
 
     def __init__(
         self,
@@ -952,13 +952,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             jnp.shape(log_rate),
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
-        self._norm = TruncatedNormal(
-            loc=self.loc,
-            scale=self.scale,
-            low=self.low,
-            high=self.high,
-            validate_args=validate_args,
-        )
 
         super(SmoothedPowerlawAndPeak, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
@@ -970,18 +963,23 @@ class SmoothedPowerlawAndPeak(Distribution):
 
     def _log_prob_m1(self, m1: Array) -> Array:
         log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
-        log_prob_m1 = jnp.log(
-            (1.0 - self.lambda_peak)
-            * jnp.exp(
-                doubly_truncated_power_law_log_prob(
-                    x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
-                )
+        powerlaw_prob = jnp.exp(
+            doubly_truncated_power_law_log_prob(
+                x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
             )
-            + self.lambda_peak * jnp.exp(self._norm.log_prob(m1))
+        )
+        normal_prob = truncnorm.pdf(
+            m1,
+            a=(self.mmin - self.loc) / self.scale,
+            b=(self.mmax - self.loc) / self.scale,
+            loc=self.loc,
+            scale=self.scale,
+        )
+        log_prob_m1 = jnp.log(
+            (1.0 - self.lambda_peak) * powerlaw_prob + self.lambda_peak * normal_prob
         )
         return log_prob_m1 + log_smoothing_m1
 
-    @validate_sample
     def _log_prob_q(self, m1q: Array) -> Array:
         m1 = m1q[..., 0]
         q = m1q[..., 1]
