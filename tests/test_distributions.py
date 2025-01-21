@@ -923,8 +923,9 @@ def test_cdf_and_icdf(jax_dist, params):
     d = jax_dist(**params)
     if d.event_dim > 0:
         pytest.skip("skip testing cdf/icdf methods of multivariate distributions")
-    samples = d.sample(key=jrd.PRNGKey(0), sample_shape=(100,))
-    quantiles = jrd.uniform(jrd.PRNGKey(1), (100,) + d.shape())
+    key1, key2 = jrd.split(jrd.PRNGKey(0))
+    samples = d.sample(key=key1, sample_shape=(100,))
+    quantiles = jrd.uniform(key2, (100,) + d.shape())
     try:
         atol = 1e-5
         rtol = 1e-5
