@@ -955,6 +955,64 @@ class SmoothedPowerlawAndPeak(Distribution):
         mmin = jnp.broadcast_to(mmin, batch_shape)
         mmax = jnp.broadcast_to(mmax, batch_shape)
 
+        key = jrd.PRNGKey(0)
+        key1, key2 = jrd.split(key, num=2)
+
+        delta_region_dist = TruncatedNormal(
+            loc=mmin + delta / 2.0,
+            scale=1.0,
+            low=mmin,
+            high=mmin + delta,
+            validate_args=validate_args,
+        )
+
+        mixing_dist = CategoricalProbs(
+            jnp.array([1.0 - 0.05, 0.05]), validate_args=validate_args
+        )
+
+        powerlaw_mixture: Distribution = MixtureGeneral(
+            mixing_dist,
+            [
+                DoublyTruncatedPowerLaw(
+                    alpha=alpha, low=mmin, high=mmax, validate_args=validate_args
+                ),
+                delta_region_dist,
+            ],
+            validate_args=validate_args,
+        )
+        gaussian_mixture: Distribution = MixtureGeneral(
+            mixing_dist,
+            [
+                TruncatedNormal(
+                    loc=loc,
+                    scale=scale,
+                    low=mmin,
+                    high=mmax,
+                    validate_args=validate_args,
+                ),
+                delta_region_dist,
+            ],
+            validate_args=validate_args,
+        )
+
+        powerlaw_samples = powerlaw_mixture.sample(key1, (10_000,))
+        gaussian_samples = gaussian_mixture.sample(key2, (10_000,))
+
+        self._Z_powerlaw = jnp.mean(
+            self._powerlaw_prob(powerlaw_samples)
+            * jnp.exp(
+                log_planck_taper_window((powerlaw_samples - self.mmin) / self.delta)
+                - powerlaw_mixture.log_prob(powerlaw_samples)
+            )
+        )
+        self._Z_gaussian = jnp.mean(
+            self._gaussian_prob(gaussian_samples)
+            * jnp.exp(
+                log_planck_taper_window((gaussian_samples - self.mmin) / self.delta)
+                - gaussian_mixture.log_prob(gaussian_samples)
+            )
+        )
+
         _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
         qs = jnp.linspace(
             jnp.zeros(batch_shape),
@@ -970,14 +1028,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             )
         else:
             meshgrid_fn = partial(jnp.meshgrid, indexing="ij")
-
-        smoothing_m1 = jnp.exp(log_planck_taper_window((_m1s - self.mmin) / self.delta))
-        self._Z_powerlaw = jnp.trapezoid(
-            self._powerlaw_prob(_m1s) * smoothing_m1, _m1s, axis=0
-        )
-        self._Z_gaussian = jnp.trapezoid(
-            self._gaussian_prob(_m1s) * smoothing_m1, _m1s, axis=0
-        )
 
         m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
         _log_prob_q = self._log_prob_q(m1qs_grid)
