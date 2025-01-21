@@ -25,6 +25,7 @@ from numpyro.distributions import (
     Distribution,
     DoublyTruncatedPowerLaw,
     MixtureGeneral,
+    TransformedDistribution,
     TruncatedNormal,
 )
 
@@ -55,6 +56,8 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         self.logVT_fn = jax.vmap(lambda xx: jnp.exp(logVT_fn(xx)), in_axes=0)
 
     def __call__(self, model: SmoothedPowerlawAndPeak) -> Array:
+        if isinstance(model, TransformedDistribution):
+            model = model.base_dist
         delta_region_dist = TruncatedNormal(
             loc=model.mmin + model.delta / 2.0,
             scale=1.0,
