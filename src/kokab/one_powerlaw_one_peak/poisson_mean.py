@@ -111,18 +111,16 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             ],
             validate_args=model._validate_args,
         )
-        transformation = PrimaryMassAndMassRatioToComponentMassesTransform()
+
         powerlaw_component = JointDistribution(
             m1_powerlaw_mixture,
             m2_mixture,
-            transform=transformation,
             validate_args=model._validate_args,
         )
 
         gaussian_component = JointDistribution(
             m1_gaussian_mixture,
             m2_mixture,
-            transform=transformation,
             validate_args=model._validate_args,
         )
 
@@ -130,6 +128,8 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
 
         powerlaw_samples = powerlaw_component.sample(key1, (10_000,))
         gaussian_samples = gaussian_component.sample(key2, (10_000,))
+
+        transformation = PrimaryMassAndMassRatioToComponentMassesTransform()
 
         rate_powerlaw = jnp.mean(
             model._powerlaw_prob(powerlaw_samples)
