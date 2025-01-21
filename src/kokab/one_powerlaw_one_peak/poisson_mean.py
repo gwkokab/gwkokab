@@ -53,7 +53,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         self.scale = scale
         self.key = key
         self.num_samples = num_samples
-        self.logVT_fn = jax.vmap(lambda xx: jnp.exp(logVT_fn(xx)), in_axes=1)
+        self.logVT_fn = logVT_fn
 
     def __call__(self, model: SmoothedPowerlawAndPeak) -> Array:
         if isinstance(model, TransformedDistribution):
