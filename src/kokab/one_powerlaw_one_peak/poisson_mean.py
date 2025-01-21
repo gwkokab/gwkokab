@@ -17,7 +17,6 @@ from collections.abc import Callable
 from typing import Union
 
 import equinox as eqx
-import jax
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import (
