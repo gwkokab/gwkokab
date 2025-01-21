@@ -876,8 +876,6 @@ class SmoothedPowerlawAndPeak(Distribution):
         scale: ArrayLike,
         mmin: ArrayLike,
         mmax: ArrayLike,
-        low: ArrayLike,
-        high: ArrayLike,
         delta: ArrayLike,
         lambda_peak: ArrayLike,
         log_rate: ArrayLike,
@@ -899,10 +897,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             Minimum mass
         mmax : ArrayLike
             Maximum mass
-        low : ArrayLike
-            Lower bound of the Gaussian distribution
-        high : ArrayLike
-            Upper bound of the Gaussian distribution
         delta : ArrayLike
             Width of the smoothing window
         lambda_peak : ArrayLike
@@ -919,8 +913,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             self.scale,
             self.mmin,
             self.mmax,
-            self.low,
-            self.high,
             self.delta,
             self.lambda_peak,
             self.log_rate,
@@ -931,8 +923,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             scale,
             mmin,
             mmax,
-            low,
-            high,
             delta,
             lambda_peak,
             log_rate,
@@ -944,8 +934,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             jnp.shape(scale),
             jnp.shape(mmin),
             jnp.shape(mmax),
-            jnp.shape(low),
-            jnp.shape(high),
             jnp.shape(delta),
             jnp.shape(lambda_peak),
             jnp.shape(log_rate),
