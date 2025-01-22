@@ -41,6 +41,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
     logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
     num_samples: int = eqx.field(init=False, static=True)
     key: PRNGKeyArray = eqx.field(init=False)
+    mixing_dist: CategoricalProbs = eqx.field(init=False)
 
     def __init__(
         self,
@@ -53,6 +54,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         self.key = key
         self.num_samples = num_samples
         self.logVT_fn = logVT_fn
+        self.mixing_dist = CategoricalProbs(jnp.array([1.0 - 0.05, 0.05]))
 
     def __call__(self, model: SmoothedPowerlawAndPeak) -> Array:
         if isinstance(model, TransformedDistribution):
@@ -65,12 +67,8 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             validate_args=model._validate_args,
         )
 
-        mixing_dist = CategoricalProbs(
-            jnp.array([1.0 - 0.05, 0.05]), validate_args=model._validate_args
-        )
-
         m1_powerlaw_mixture: Distribution = MixtureGeneral(
-            mixing_dist,
+            self.mixing_dist,
             [
                 DoublyTruncatedPowerLaw(
                     alpha=model.alpha,
@@ -83,7 +81,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             validate_args=model._validate_args,
         )
         m1_gaussian_mixture: Distribution = MixtureGeneral(
-            mixing_dist,
+            self.mixing_dist,
             [
                 TruncatedNormal(
                     loc=model.loc,
@@ -98,7 +96,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         )
 
         m2_mixture: Distribution = MixtureGeneral(
-            mixing_dist,
+            self.mixing_dist,
             [
                 DoublyTruncatedPowerLaw(
                     alpha=model.beta,
@@ -125,8 +123,8 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
 
         key1, key2 = jrd.split(self.key, num=2)
 
-        powerlaw_samples = powerlaw_component.sample(key1, (10_000,))
-        gaussian_samples = gaussian_component.sample(key2, (10_000,))
+        powerlaw_samples = powerlaw_component.sample(key1, (self.num_samples,))
+        gaussian_samples = gaussian_component.sample(key2, (self.num_samples,))
 
         transformation = PrimaryMassAndMassRatioToComponentMassesTransform()
 
@@ -165,12 +163,10 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             )
         )
 
-        total_estimated_rate = (1 - model.lambda_peak) / lax.stop_gradient(
-            model._Z_powerlaw
-        ) * rate_powerlaw + model.lambda_peak / lax.stop_gradient(
-            model._Z_gaussian
-        ) * rate_gaussian
+        total_estimated_rate = (
+            (1 - model.lambda_peak) / model._Z_powerlaw * rate_powerlaw
+        ) + (model.lambda_peak / model._Z_gaussian * rate_gaussian)
 
         total_estimated_rate = total_estimated_rate * jnp.exp(model.log_rate)
 
-        return total_estimated_rate
+        return self.scale * total_estimated_rate
