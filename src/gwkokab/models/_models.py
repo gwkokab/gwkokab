@@ -1081,6 +1081,7 @@ class SmoothedPowerlawAndPeak(Distribution):
             _Z_q_val = jnp.reshape(_Z_q_val, shape)
         else:
             _Z_q_val = _Z_q_inner(self._m1s, self._Z_q_given_m1)
+        return _Z_q_val
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> Array:
