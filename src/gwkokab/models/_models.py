@@ -1092,7 +1092,7 @@ class SmoothedPowerlawAndPeak(Distribution):
 
         log_prob_q = self._log_prob_q(value)
 
-        log_Z_q = jnp.log(self._Z_q(m1), log_prob_q.shape)
+        log_Z_q = jnp.log(self._Z_q(m1, log_prob_q.shape))
 
         log_Z = lax.stop_gradient(log_Z_q)
 
