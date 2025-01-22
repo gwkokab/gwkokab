@@ -164,8 +164,6 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             + model.lambda_peak / model._Z_gaussian * rate_gaussian
         )
 
-        total_estimated_rate = total_estimated_rate * (
-            jnp.exp(model.log_rate) / model._Z_q
-        )
+        total_estimated_rate = total_estimated_rate * jnp.exp(model.log_rate)
 
         return total_estimated_rate
