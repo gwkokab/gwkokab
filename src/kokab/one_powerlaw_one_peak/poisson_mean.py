@@ -17,7 +17,7 @@ from collections.abc import Callable
 from typing import Union
 
 import equinox as eqx
-from jax import numpy as jnp, random as jrd
+from jax import lax, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import (
     CategoricalProbs,
@@ -133,7 +133,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         rate_powerlaw = jnp.mean(
             (
                 model._powerlaw_prob(powerlaw_samples[..., 0])
-                / model._Z_q(powerlaw_samples[..., 0])
+                / lax.stop_gradient(model._Z_q(powerlaw_samples[..., 0]))
             )
             * jnp.exp(
                 self.logVT_fn(powerlaw_samples)
@@ -150,7 +150,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         rate_gaussian = jnp.mean(
             (
                 model._gaussian_prob(gaussian_samples[..., 0])
-                / model._Z_q(gaussian_samples[..., 0])
+                / lax.stop_gradient(model._Z_q(gaussian_samples[..., 0]))
             )
             * jnp.exp(
                 self.logVT_fn(gaussian_samples)
