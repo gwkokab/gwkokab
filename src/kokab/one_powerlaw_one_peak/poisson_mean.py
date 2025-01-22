@@ -131,7 +131,10 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         transformation = PrimaryMassAndMassRatioToComponentMassesTransform()
 
         rate_powerlaw = jnp.mean(
-            model._powerlaw_prob(powerlaw_samples[..., 0])
+            (
+                model._powerlaw_prob(powerlaw_samples[..., 0])
+                / model._Z_q(powerlaw_samples[..., 0])
+            )
             * jnp.exp(
                 self.logVT_fn(powerlaw_samples)
                 + model._log_prob_q(transformation._inverse(powerlaw_samples))
@@ -145,7 +148,10 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             )
         )
         rate_gaussian = jnp.mean(
-            model._gaussian_prob(gaussian_samples[..., 0])
+            (
+                model._gaussian_prob(gaussian_samples[..., 0])
+                / model._Z_q(gaussian_samples[..., 0])
+            )
             * jnp.exp(
                 self.logVT_fn(gaussian_samples)
                 + model._log_prob_q(transformation._inverse(gaussian_samples))

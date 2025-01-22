@@ -866,7 +866,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         "log_rate",
     ]
     pytree_aux_fields = ("_support",)
-    pytree_data_fields = ("_Z_powerlaw", "_Z_gaussian", "_m1s", "_Z_q")
+    pytree_data_fields = ("_Z_powerlaw", "_Z_gaussian", "_m1s", "_Z_q_given_m1")
 
     def __init__(
         self,
@@ -1020,7 +1020,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
         _log_prob_q = self._log_prob_q(m1qs_grid)
 
-        self._Z_q = jnp.trapezoid(
+        self._Z_q_given_m1 = jnp.trapezoid(
             jnp.exp(_log_prob_q), jnp.expand_dims(qs, axis=0), axis=1
         )
 
@@ -1066,6 +1066,22 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         return log_prob_q + log_smoothing_q
 
+    def _Z_q(self, m1: ArrayLike, shape: tuple[int, ...] = ()) -> ArrayLike:
+        def _Z_q_inner(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
+            return jax.vmap(partial(jnp.interp, xp=m1s, fp=Z_qs, left=1.0, right=1.0))(
+                m1
+            )
+
+        if self.batch_shape:
+            _Z_q_val = jax.vmap(
+                _Z_q_inner,
+                in_axes=(-1, -1),
+                out_axes=-1,
+            )(self._m1s, self._Z_q_given_m1)
+            _Z_q_val = jnp.reshape(_Z_q_val, shape)
+        else:
+            _Z_q_val = _Z_q_inner(self._m1s, self._Z_q_given_m1)
+
     @validate_sample
     def log_prob(self, value: ArrayLike) -> Array:
         m1 = value[..., 0]
@@ -1076,22 +1092,7 @@ class SmoothedPowerlawAndPeak(Distribution):
 
         log_prob_q = self._log_prob_q(value)
 
-        def _Z_q(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
-            return jax.vmap(partial(jnp.interp, xp=m1s, fp=Z_qs, left=1.0, right=1.0))(
-                m1
-            )
-
-        if self.batch_shape:
-            log_Z_q = jnp.log(
-                jax.vmap(
-                    _Z_q,
-                    in_axes=(-1, -1),
-                    out_axes=-1,
-                )(self._m1s, self._Z_q)
-            )
-            log_Z_q = jnp.reshape(log_Z_q, log_prob_q.shape)
-        else:
-            log_Z_q = jnp.log(_Z_q(self._m1s, self._Z_q))
+        log_Z_q = jnp.log(self._Z_q(m1), log_prob_q.shape)
 
         log_Z = lax.stop_gradient(log_Z_q)
 
