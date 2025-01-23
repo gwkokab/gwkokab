@@ -127,6 +127,8 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         gaussian_samples = gaussian_component.sample(key2, (self.num_samples,))
 
         transformation = PrimaryMassAndMassRatioToComponentMassesTransform()
+        powerlaw_samples_q = transformation._inverse(powerlaw_samples)
+        gaussian_samples_q = transformation._inverse(gaussian_samples)
 
         rate_powerlaw = jnp.mean(
             (
@@ -135,7 +137,10 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             )
             * jnp.exp(
                 self.logVT_fn(powerlaw_samples)
-                + model._log_prob_q(transformation._inverse(powerlaw_samples))
+                + model._log_prob_q(powerlaw_samples_q)
+                - transformation.log_abs_det_jacobian(
+                    powerlaw_samples_q, powerlaw_samples
+                )
                 + jnp.sum(
                     log_planck_taper_window(
                         (powerlaw_samples - model.mmin) / model.delta
@@ -152,7 +157,10 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             )
             * jnp.exp(
                 self.logVT_fn(gaussian_samples)
-                + model._log_prob_q(transformation._inverse(gaussian_samples))
+                + model._log_prob_q(gaussian_samples_q)
+                - transformation.log_abs_det_jacobian(
+                    gaussian_samples_q, gaussian_samples
+                )
                 + jnp.sum(
                     log_planck_taper_window(
                         (gaussian_samples - model.mmin) / model.delta
