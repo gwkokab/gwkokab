@@ -64,12 +64,12 @@ class PoissonLikelihood(eqx.Module):
     """
 
     parameters: Sequence[Parameter] = eqx.field(static=True)
-    data: Sequence[Array]
+    data: Sequence[Array] = eqx.field(static=False)
     model: Callable[..., Distribution] = eqx.field(static=True)
     ref_priors: JointDistribution = eqx.field(static=True)
     priors: JointDistribution = eqx.field(static=True)
     variables_index: Mapping[str, int] = eqx.field(static=True)
-    ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=True)
+    ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=False)
 
     def __init__(
         self,
@@ -185,6 +185,6 @@ class PoissonLikelihood(eqx.Module):
         log_prior = self.priors.log_prob(x)
         log_likelihood = self.log_likelihood(x)
         logger.debug(
-            "log_prior: {lp}\nlog_likelihood: {ll}", lp=log_prior, ll=log_likelihood
+            "log_prior + log_likelihood = {lp} + {ll}", lp=log_prior, ll=log_likelihood
         )
         return log_prior + log_likelihood

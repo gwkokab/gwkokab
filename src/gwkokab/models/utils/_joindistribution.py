@@ -28,7 +28,8 @@ from gwkokab.models.constraints import all_constraint
 class JointDistribution(Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
-    pytree_data_fields = ("marginal_distributions", "shaped_values", "_support")
+    pytree_aux_fields = ("marginal_distributions", "shaped_values")
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
