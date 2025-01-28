@@ -46,7 +46,7 @@ class PoissonMeanABC(eqx.Module):
         - :class:`InverseTransformSamplingPoissonMean`
     """
 
-    scale: Union[int, float, Array] = eqx.field(init=False, default=1.0, static=True)
+    scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
 
     @abstractmethod
     def __call__(self, model: Distribution | ScaledMixture) -> Array:

@@ -60,7 +60,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         if isinstance(model, TransformedDistribution):
             model = model.base_dist
         delta_region_dist = TruncatedNormal(
-            loc=model.mmin + model.delta / 2.0,
+            loc=model.mmin + model.delta * 0.5,
             scale=1.0,
             low=model.mmin,
             high=model.mmin + model.delta,

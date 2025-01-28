@@ -76,7 +76,7 @@ class PowerlawPrimaryMassRatio(Distribution):
         "mmax": constraints.positive,
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
-    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
@@ -159,7 +159,7 @@ class Wysocki2019MassModel(Distribution):
         "mmax": constraints.positive,
     }
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
-    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
@@ -626,7 +626,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "log_scale": constraints.less_than_eq(0.0),
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta", "log_scale"]
-    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
@@ -734,7 +734,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "log_scale": constraints.less_than_eq(0.0),
     }
     reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "log_scale"]
-    pytree_aux_fields = ("_support", "_norm")
+    pytree_data_fields = ("_support", "_norm")
 
     def __init__(
         self,
@@ -865,8 +865,13 @@ class SmoothedPowerlawAndPeak(Distribution):
         "lambda_peak",
         "log_rate",
     ]
-    pytree_aux_fields = ("_support",)
-    pytree_data_fields = ("_Z_powerlaw", "_Z_gaussian", "_m1s", "_Z_q_given_m1")
+    pytree_data_fields = (
+        "_Z_powerlaw",
+        "_Z_gaussian",
+        "_m1s",
+        "_Z_q_given_m1",
+        "_support",
+    )
 
     def __init__(
         self,
