@@ -66,7 +66,7 @@ class PoissonLikelihood(eqx.Module):
     parameters: Sequence[Parameter] = eqx.field(static=True)
     data: Sequence[Array] = eqx.field(static=False)
     model: Callable[..., Distribution] = eqx.field(static=True)
-    ref_priors: JointDistribution = eqx.field(static=True)
+    log_ref_priors: Sequence[Array] = eqx.field(static=False)
     priors: JointDistribution = eqx.field(static=True)
     variables_index: Mapping[str, int] = eqx.field(static=True)
     ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=False)
@@ -74,7 +74,7 @@ class PoissonLikelihood(eqx.Module):
     def __init__(
         self,
         model: Bake,
-        parameters: Sequence[Parameter],
+        log_ref_priors: Sequence[Array],
         data: Sequence[Array],
         ERate_fn: Callable[[Distribution | ScaledMixture], Array],
     ) -> None:
@@ -83,16 +83,16 @@ class PoissonLikelihood(eqx.Module):
         ----------
         model : Bake
             model to be used for the likelihood calculation.
-        parameters : Sequence[Parameter]
-            Parameters to be used for the likelihood calculation.
+        log_ref_priors : Sequence[Array]
+            Log reference priors to be used for the likelihood calculation.
         data : Sequence[Array]
             Data to be used for the likelihood calculation.
-        ERate_fn : Callable[[Distribution  |  ScaledMixture], Array]
+        ERate_fn : Callable[[Distribution | ScaledMixture], Array]
             Expected rate function to be used for the likelihood calculation.
         """
         self.data = data
         self.model = model
-        self.parameters = parameters
+        self.log_ref_priors = log_ref_priors
         self.ERate_fn = ERate_fn
 
         dummy_model = model.get_dummy()
@@ -108,9 +108,6 @@ class PoissonLikelihood(eqx.Module):
         for key, value in duplicates.items():
             self.variables_index[key] = self.variables_index[value]
 
-        self.ref_priors = JointDistribution(
-            *map(lambda x: x.prior, self.parameters), validate_args=True
-        )
         self.priors = JointDistribution(*variables.values(), validate_args=True)
 
     def log_likelihood(self, x: Array) -> Array:
@@ -132,7 +129,7 @@ class PoissonLikelihood(eqx.Module):
 
         model: Distribution = self.model(**mapped_params)
 
-        def _nth_prob(y: Array) -> Array:
+        def _nth_prob(y: Array, log_ref_prior_y: Array) -> Array:
             """Calculate the likelihood for the nth event.
 
             Parameters
@@ -145,7 +142,7 @@ class PoissonLikelihood(eqx.Module):
             Array
                 The likelihood for the nth event.
             """
-            _log_prob = model.log_prob(y) - self.ref_priors.log_prob(y)
+            _log_prob = model.log_prob(y) - log_ref_prior_y
             return jnn.logsumexp(
                 _log_prob,
                 axis=-1,
@@ -154,9 +151,9 @@ class PoissonLikelihood(eqx.Module):
 
         log_likelihood = jtr.reduce(
             lambda x, y: x + _nth_prob(y),
-            self.data,
+            list(zip(self.data, self.log_ref_priors)),
             jnp.zeros(()),
-            is_leaf=lambda x: isinstance(x, Array),
+            is_leaf=lambda x: isinstance(x, tuple),
         )
 
         logger.debug("model_log_likelihood: {mll}", mll=log_likelihood)

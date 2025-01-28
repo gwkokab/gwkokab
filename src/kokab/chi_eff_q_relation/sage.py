@@ -18,6 +18,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
+import numpy as np
 from jax import numpy as jnp, random as jrd
 from numpyro.distributions import Uniform
 
@@ -140,10 +141,13 @@ def main() -> None:
     else:
         raise ValueError("Invalid estimator for expected rate.")
 
+    data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
+    log_ref_priors = [np.zeros(d.shape) for d in data]
+
     poisson_likelihood = PoissonLikelihood(
         model=model,
-        parameters=parameters,
-        data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        log_ref_priors=log_ref_priors,
+        data=data,
         ERate_fn=erate_estimator.__call__,
     )
 

@@ -18,6 +18,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
+import numpy as np
 from jax import random as jrd
 
 from gwkokab.inference import (
@@ -121,10 +122,13 @@ def main() -> None:
         args.analysis_time,
     )
 
+    data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
+    log_ref_priors = [np.zeros(d.shape) for d in data]
+
     poisson_likelihood = PoissonLikelihood(
         model=model,
-        parameters=parameters,
-        data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        log_ref_priors=log_ref_priors,
+        data=data,
         ERate_fn=erate_estimator.__call__,
     )
 
