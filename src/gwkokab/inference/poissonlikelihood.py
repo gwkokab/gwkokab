@@ -23,7 +23,6 @@ from numpyro.distributions import Distribution
 
 from ..logger import logger
 from ..models.utils import JointDistribution, ScaledMixture
-from ..parameters import Parameter
 from .bake import Bake
 
 
@@ -64,7 +63,6 @@ class PoissonLikelihood(eqx.Module):
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
 
-    parameters: Sequence[Parameter] = eqx.field(static=True)
     data: Sequence[Array] = eqx.field(static=False)
     model: Callable[..., Distribution] = eqx.field(static=True)
     log_ref_priors: Sequence[Array] = eqx.field(static=False)
@@ -147,7 +145,7 @@ class PoissonLikelihood(eqx.Module):
                 _log_prob,
                 axis=-1,
                 where=~jnp.isneginf(_log_prob),  # to avoid nans
-            ) - jnp.log(y.shape[0])
+            ) - jnp.log(event_data.shape[0])
 
         log_likelihood = jtr.reduce(
             lambda x, y: x + _nth_prob(y),

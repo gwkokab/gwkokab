@@ -123,7 +123,7 @@ def main() -> None:
     )
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [np.zeros(d.shape) for d in data]
+    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     poisson_likelihood = PoissonLikelihood(
         model=model,
