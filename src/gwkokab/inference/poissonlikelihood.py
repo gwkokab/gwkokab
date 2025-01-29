@@ -15,6 +15,7 @@
 
 import warnings
 from collections.abc import Callable, Mapping, Sequence
+from typing import Tuple
 
 import equinox as eqx
 from jax import Array, nn as jnn, numpy as jnp, tree as jtr
@@ -125,11 +126,9 @@ class PoissonLikelihood(eqx.Module):
         """
         mapped_params = {name: x[..., i] for name, i in self.variables_index.items()}
 
-        logger.debug("mapped params: {mp}", mp=mapped_params)
-
         model: Distribution = self.model(**mapped_params)
 
-        def _nth_prob(y: Array, log_ref_prior_y: Array) -> Array:
+        def _nth_prob(y: Tuple[Array, Array]) -> Array:
             """Calculate the likelihood for the nth event.
 
             Parameters
@@ -142,7 +141,8 @@ class PoissonLikelihood(eqx.Module):
             Array
                 The likelihood for the nth event.
             """
-            _log_prob = model.log_prob(y) - log_ref_prior_y
+            event_data, log_ref_prior_y = y
+            _log_prob = model.log_prob(event_data) - log_ref_prior_y
             return jnn.logsumexp(
                 _log_prob,
                 axis=-1,
@@ -156,11 +156,17 @@ class PoissonLikelihood(eqx.Module):
             is_leaf=lambda x: isinstance(x, tuple),
         )
 
-        logger.debug("model_log_likelihood: {mll}", mll=log_likelihood)
-
         expected_rates = self.ERate_fn(model)
 
-        logger.debug("expected_rate={expr}", expr=expected_rates)
+        logger.debug(
+            "PoissionLikelihood: \n"
+            "\tmapped_params = {mp}\n"
+            "\tmodel_log_likelihood = {mll}\n"
+            "\texpected_rate = {expr}",
+            mp=mapped_params,
+            mll=log_likelihood,
+            expr=expected_rates,
+        )
 
         return log_likelihood - expected_rates
 
@@ -182,6 +188,8 @@ class PoissonLikelihood(eqx.Module):
         log_prior = self.priors.log_prob(x)
         log_likelihood = self.log_likelihood(x)
         logger.debug(
-            "log_prior + log_likelihood = {lp} + {ll}", lp=log_prior, ll=log_likelihood
+            "PoissionLikelihood:\n\tlog_prior + log_likelihood = {lp} + {ll}",
+            lp=log_prior,
+            ll=log_likelihood,
         )
         return log_prior + log_likelihood
