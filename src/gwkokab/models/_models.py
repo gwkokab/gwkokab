@@ -106,7 +106,10 @@ class PowerlawPrimaryMassRatio(Distribution):
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax)
         )
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = mass_ratio_mass_sandwich(
+            lax.stop_gradient(mmin),
+            lax.stop_gradient(mmax),
+        )
         super(PowerlawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
