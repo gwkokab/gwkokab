@@ -146,7 +146,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
                     ),
                     axis=-1,
                 )
-                - powerlaw_component.log_prob(powerlaw_samples)
+                - lax.stop_gradient(powerlaw_component.log_prob(powerlaw_samples))
             )
         )
         rate_gaussian = jnp.mean(
@@ -166,7 +166,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
                     ),
                     axis=-1,
                 )
-                - gaussian_component.log_prob(gaussian_samples)
+                - lax.stop_gradient(gaussian_component.log_prob(gaussian_samples))
             )
         )
 
