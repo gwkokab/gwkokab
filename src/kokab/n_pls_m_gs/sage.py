@@ -19,6 +19,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import List, Tuple
 
+import numpy as np
 from jax import random as jrd
 
 import gwkokab
@@ -261,10 +262,13 @@ def main() -> None:
     else:
         raise ValueError("Invalid estimator for expected rate.")
 
+    data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
+    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
+
     poisson_likelihood = PoissonLikelihood(
         model=model,
-        parameters=parameters,
-        data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        log_ref_priors=log_ref_priors,
+        data=data,
         ERate_fn=erate_estimator.__call__,
     )
 

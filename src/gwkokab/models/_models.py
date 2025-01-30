@@ -20,6 +20,7 @@ import chex
 import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
+from jax.scipy import special
 from jax.scipy.special import expit, logsumexp
 from jax.scipy.stats import truncnorm, uniform
 from jaxtyping import Array, ArrayLike
@@ -31,9 +32,11 @@ from numpyro.distributions import (
     MixtureGeneral,
     Normal,
     TruncatedNormal,
+    Uniform,
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
 
+from ..logger import logger
 from ..utils.kernel import log_planck_taper_window
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
@@ -76,7 +79,7 @@ class PowerlawPrimaryMassRatio(Distribution):
         "mmax": constraints.positive,
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
-    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
@@ -128,6 +131,13 @@ class PowerlawPrimaryMassRatio(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
+        logger.debug(
+            "PowerlawPrimaryMassRatio: log_prob_m1({m1}) + log_prob_q({q}) = {lpm1} + {lpq}",
+            m1=m1,
+            q=q,
+            lpm1=log_prob_m1,
+            lpq=log_prob_q,
+        )
         return log_prob_m1 + log_prob_q
 
     def sample(self, key, sample_shape=()):
@@ -159,7 +169,7 @@ class Wysocki2019MassModel(Distribution):
         "mmax": constraints.positive,
     }
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
-    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
@@ -203,6 +213,14 @@ class Wysocki2019MassModel(Distribution):
         )
         log_prob_m2_given_m1 = uniform.logpdf(
             m2, loc=self.mmin, scale=jnp.subtract(m1, self.mmin)
+        )
+        logger.debug(
+            "Wysocki2019MassModel: log_prob_m1({m1}) + log_prob_m2_given_m1({m2})"
+            " = {lpm1} + {lpm2}",
+            m1=m1,
+            m2=m2,
+            lpm1=log_prob_m1,
+            lpm2=log_prob_m2_given_m1,
         )
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
@@ -626,7 +644,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "log_scale": constraints.less_than_eq(0.0),
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta", "log_scale"]
-    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
@@ -696,6 +714,20 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
+        # SmoothedPowerlawPrimaryMassRatio
+        logger.debug(
+            "SmoothedPowerlawPrimaryMassRatio:\n"
+            "\tlog_prob_m1({m1}) = {lpm1}"
+            "\tlog_prob_q({q}) = {lpq}",
+            "\tlog_smoothing_m1({m1}) = {lpsm1}",
+            "\tlog_smoothing_q({q}) = {lpsq}",
+            m1=m1,
+            q=q,
+            lpm1=log_prob_m1,
+            lpq=log_prob_q,
+            lpsm1=log_smoothing_m1,
+            lpsq=log_smoothing_q,
+        )
         return (
             log_prob_m1
             + log_prob_q
@@ -734,7 +766,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "log_scale": constraints.less_than_eq(0.0),
     }
     reparametrized_params = ["loc", "scale", "beta", "mmin", "delta", "log_scale"]
-    pytree_aux_fields = ("_support", "_norm")
+    pytree_data_fields = ("_support", "_norm")
 
     def __init__(
         self,
@@ -821,6 +853,20 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             ),
         )
 
+        logger.debug(
+            "SmoothedGaussianPrimaryMassRatio:\n"
+            "\tlog_prob_m1({m1}) = {lpm1}"
+            "\tlog_prob_q({q}) = {lpq}",
+            "\tlog_smoothing_m1({m1}) = {lpsm1}",
+            "\tlog_smoothing_q({q}) = {lpsq}",
+            m1=m1,
+            q=q,
+            lpm1=log_prob_m1,
+            lpq=log_prob_q,
+            lpsm1=log_smoothing_m1,
+            lpsq=log_smoothing_q,
+        )
+
         return (
             log_prob_m1
             + log_prob_q
@@ -865,8 +911,13 @@ class SmoothedPowerlawAndPeak(Distribution):
         "lambda_peak",
         "log_rate",
     ]
-    pytree_aux_fields = ("_support",)
-    pytree_data_fields = ("_Z_powerlaw", "_Z_gaussian", "_m1s", "_Z_q")
+    pytree_data_fields = (
+        "_Z_powerlaw",
+        "_Z_gaussian",
+        "_m1s",
+        "_Z_q_given_m1",
+        "_support",
+    )
 
     def __init__(
         self,
@@ -876,8 +927,6 @@ class SmoothedPowerlawAndPeak(Distribution):
         scale: ArrayLike,
         mmin: ArrayLike,
         mmax: ArrayLike,
-        low: ArrayLike,
-        high: ArrayLike,
         delta: ArrayLike,
         lambda_peak: ArrayLike,
         log_rate: ArrayLike,
@@ -899,10 +948,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             Minimum mass
         mmax : ArrayLike
             Maximum mass
-        low : ArrayLike
-            Lower bound of the Gaussian distribution
-        high : ArrayLike
-            Upper bound of the Gaussian distribution
         delta : ArrayLike
             Width of the smoothing window
         lambda_peak : ArrayLike
@@ -919,8 +964,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             self.scale,
             self.mmin,
             self.mmax,
-            self.low,
-            self.high,
             self.delta,
             self.lambda_peak,
             self.log_rate,
@@ -931,8 +974,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             scale,
             mmin,
             mmax,
-            low,
-            high,
             delta,
             lambda_peak,
             log_rate,
@@ -944,8 +985,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             jnp.shape(scale),
             jnp.shape(mmin),
             jnp.shape(mmax),
-            jnp.shape(low),
-            jnp.shape(high),
             jnp.shape(delta),
             jnp.shape(lambda_peak),
             jnp.shape(log_rate),
@@ -958,9 +997,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         key = jrd.PRNGKey(0)
         key1, key2 = jrd.split(key, num=2)
 
-        delta_region_dist = TruncatedNormal(
-            loc=mmin + delta / 2.0,
-            scale=1.0,
+        delta_region_dist = Uniform(
             low=mmin,
             high=mmin + delta,
             validate_args=validate_args,
@@ -974,7 +1011,10 @@ class SmoothedPowerlawAndPeak(Distribution):
             mixing_dist,
             [
                 DoublyTruncatedPowerLaw(
-                    alpha=alpha, low=mmin, high=mmax, validate_args=validate_args
+                    alpha=alpha,
+                    low=mmin,
+                    high=mmin + delta,
+                    validate_args=validate_args,
                 ),
                 delta_region_dist,
             ],
@@ -987,7 +1027,7 @@ class SmoothedPowerlawAndPeak(Distribution):
                     loc=loc,
                     scale=scale,
                     low=mmin,
-                    high=mmax,
+                    high=mmin + delta,
                     validate_args=validate_args,
                 ),
                 delta_region_dist,
@@ -1004,6 +1044,11 @@ class SmoothedPowerlawAndPeak(Distribution):
                 log_planck_taper_window((powerlaw_samples - self.mmin) / self.delta)
                 - powerlaw_mixture.log_prob(powerlaw_samples)
             )
+        ) + jnp.where(
+            jnp.equal(alpha, -1.0),
+            jnp.log(mmax) - jnp.log(mmin + delta),
+            (jnp.power(mmax, alpha + 1) - jnp.power(mmin + delta, alpha + 1))
+            / (alpha + 1.0),
         )
         self._Z_gaussian = jnp.mean(
             self._gaussian_prob(gaussian_samples)
@@ -1011,6 +1056,9 @@ class SmoothedPowerlawAndPeak(Distribution):
                 log_planck_taper_window((gaussian_samples - self.mmin) / self.delta)
                 - gaussian_mixture.log_prob(gaussian_samples)
             )
+        ) + jnp.sqrt(2.0 * jnp.pi) * scale * (
+            special.ndtr((mmax - loc) / scale)
+            - special.ndtr((mmin + delta - loc) / scale)
         )
 
         _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
@@ -1032,7 +1080,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
         _log_prob_q = self._log_prob_q(m1qs_grid)
 
-        self._Z_q = jnp.trapezoid(
+        self._Z_q_given_m1 = jnp.trapezoid(
             jnp.exp(_log_prob_q), jnp.expand_dims(qs, axis=0), axis=1
         )
 
@@ -1078,33 +1126,45 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         return log_prob_q + log_smoothing_q
 
-    @validate_sample
-    def log_prob(self, value: ArrayLike) -> Array:
-        m1 = value[..., 0]
-
-        log_prob_m1 = self._log_prob_m1(
-            m1, Z_powerlaw=self._Z_powerlaw, Z_gaussian=self._Z_gaussian
-        )
-
-        log_prob_q = self._log_prob_q(value)
-
-        def _Z_q(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
+    def _Z_q(self, m1: ArrayLike, shape: tuple[int, ...] = ()) -> ArrayLike:
+        def _Z_q_inner(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
             return jax.vmap(partial(jnp.interp, xp=m1s, fp=Z_qs, left=1.0, right=1.0))(
                 m1
             )
 
         if self.batch_shape:
-            log_Z_q = jnp.log(
-                jax.vmap(
-                    _Z_q,
-                    in_axes=(-1, -1),
-                    out_axes=-1,
-                )(self._m1s, self._Z_q)
-            )
-            log_Z_q = jnp.reshape(log_Z_q, log_prob_q.shape)
+            _Z_q_val = jax.vmap(
+                _Z_q_inner,
+                in_axes=(-1, -1),
+                out_axes=-1,
+            )(self._m1s, self._Z_q_given_m1)
+            _Z_q_val = jnp.reshape(_Z_q_val, shape)
         else:
-            log_Z_q = jnp.log(_Z_q(self._m1s, self._Z_q))
+            _Z_q_val = _Z_q_inner(self._m1s, self._Z_q_given_m1)
+        return _Z_q_val
 
-        log_Z = lax.stop_gradient(log_Z_q)
+    @validate_sample
+    def log_prob(self, value: ArrayLike) -> Array:
+        m1 = value[..., 0]
 
-        return self.log_rate + log_prob_m1 + log_prob_q - log_Z
+        log_prob_m1 = self._log_prob_m1(
+            m1,
+            Z_powerlaw=lax.stop_gradient(self._Z_powerlaw),
+            Z_gaussian=lax.stop_gradient(self._Z_gaussian),
+        )
+
+        log_prob_q = self._log_prob_q(value)
+
+        log_Z_q = lax.stop_gradient(jnp.log(self._Z_q(m1, log_prob_q.shape)))
+
+        logger.debug(
+            "SmoothedPowerlawAndPeak:\n"
+            "\tlog_prob_m1({m1}) = {lpm1}"
+            "\tlog_prob_q({q}) = {lpq}",
+            m1=m1,
+            q=value[..., 1],
+            lpm1=log_prob_m1,
+            lpq=log_prob_q,
+        )
+
+        return self.log_rate + log_prob_m1 + log_prob_q - log_Z_q
