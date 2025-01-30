@@ -20,6 +20,7 @@ import chex
 import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
+from jax.scipy import special
 from jax.scipy.special import expit, logsumexp
 from jax.scipy.stats import truncnorm, uniform
 from jaxtyping import Array, ArrayLike
@@ -31,6 +32,7 @@ from numpyro.distributions import (
     MixtureGeneral,
     Normal,
     TruncatedNormal,
+    Uniform,
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -995,9 +997,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         key = jrd.PRNGKey(0)
         key1, key2 = jrd.split(key, num=2)
 
-        delta_region_dist = TruncatedNormal(
-            loc=mmin + delta / 2.0,
-            scale=1.0,
+        delta_region_dist = Uniform(
             low=mmin,
             high=mmin + delta,
             validate_args=validate_args,
@@ -1011,7 +1011,10 @@ class SmoothedPowerlawAndPeak(Distribution):
             mixing_dist,
             [
                 DoublyTruncatedPowerLaw(
-                    alpha=alpha, low=mmin, high=mmax, validate_args=validate_args
+                    alpha=alpha,
+                    low=mmin,
+                    high=mmin + delta,
+                    validate_args=validate_args,
                 ),
                 delta_region_dist,
             ],
@@ -1024,7 +1027,7 @@ class SmoothedPowerlawAndPeak(Distribution):
                     loc=loc,
                     scale=scale,
                     low=mmin,
-                    high=mmax,
+                    high=mmin + delta,
                     validate_args=validate_args,
                 ),
                 delta_region_dist,
@@ -1041,6 +1044,11 @@ class SmoothedPowerlawAndPeak(Distribution):
                 log_planck_taper_window((powerlaw_samples - self.mmin) / self.delta)
                 - powerlaw_mixture.log_prob(powerlaw_samples)
             )
+        ) + jnp.where(
+            jnp.equal(alpha, -1.0),
+            jnp.log(mmax) - jnp.log(mmin + delta),
+            (jnp.power(mmax, alpha + 1) - jnp.power(mmin + delta, alpha + 1))
+            / (alpha + 1.0),
         )
         self._Z_gaussian = jnp.mean(
             self._gaussian_prob(gaussian_samples)
@@ -1048,6 +1056,9 @@ class SmoothedPowerlawAndPeak(Distribution):
                 log_planck_taper_window((gaussian_samples - self.mmin) / self.delta)
                 - gaussian_mixture.log_prob(gaussian_samples)
             )
+        ) + jnp.sqrt(2.0 * jnp.pi) * scale * (
+            special.ndtr((mmax - loc) / scale)
+            - special.ndtr((mmin + delta - loc) / scale)
         )
 
         _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
