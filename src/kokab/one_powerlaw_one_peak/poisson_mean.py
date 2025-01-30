@@ -26,6 +26,7 @@ from numpyro.distributions import (
     MixtureGeneral,
     TransformedDistribution,
     TruncatedNormal,
+    Uniform,
 )
 
 from gwkokab.models import SmoothedPowerlawAndPeak
@@ -59,9 +60,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
     def __call__(self, model: SmoothedPowerlawAndPeak) -> Array:
         if isinstance(model, TransformedDistribution):
             model = model.base_dist
-        delta_region_dist = TruncatedNormal(
-            loc=model.mmin + model.delta * 0.5,
-            scale=1.0,
+        delta_region_dist = Uniform(
             low=model.mmin,
             high=model.mmin + model.delta,
             validate_args=model._validate_args,
@@ -172,8 +171,8 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         )
 
         total_estimated_rate = (
-            (1 - model.lambda_peak) / model._Z_powerlaw * rate_powerlaw
-        ) + (model.lambda_peak / model._Z_gaussian * rate_gaussian)
+            (1 - model.lambda_peak) * rate_powerlaw / model._Z_powerlaw
+        ) + (model.lambda_peak * rate_gaussian / model._Z_gaussian)
 
         total_estimated_rate = total_estimated_rate * jnp.exp(model.log_rate)
 
