@@ -61,9 +61,15 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
     def __call__(self, model: SmoothedPowerlawAndPeak) -> Array:
         if isinstance(model, TransformedDistribution):
             model = model.base_dist
-        delta_region_dist_m1m2 = Uniform(
-            low=jnp.array([model.mmin, model.mmin]),
-            high=jnp.array([model.mmin + model.delta, model.mmin + model.delta]),
+        delta_region_dist = Uniform(
+            low=model.mmin,
+            high=model.mmin + model.delta,
+            validate_args=model._validate_args,
+        )
+
+        delta_region_dist_m1m2 = JointDistribution(
+            delta_region_dist,
+            delta_region_dist,
             validate_args=model._validate_args,
         )
 
