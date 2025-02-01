@@ -60,63 +60,54 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
     def __call__(self, model: SmoothedPowerlawAndPeak) -> Array:
         if isinstance(model, TransformedDistribution):
             model = model.base_dist
-        delta_region_dist = Uniform(
+        delta_region_dist_m1m2 = Uniform(
+            low=jnp.array([model.mmin, model.mmin]),
+            high=jnp.array([model.mmin + model.delta, model.mmin + model.delta]),
+            validate_args=model._validate_args,
+        )
+
+        m1_powerlaw = DoublyTruncatedPowerLaw(
+            alpha=model.alpha,
             low=model.mmin,
-            high=model.mmin + model.delta,
+            high=model.mmax,
+            validate_args=model._validate_args,
+        )
+        m2_powerlaw = DoublyTruncatedPowerLaw(
+            alpha=model.beta,
+            low=model.mmin,
+            high=model.mmax,
+            validate_args=model._validate_args,
+        )
+        m1_gaussian = TruncatedNormal(
+            loc=model.loc,
+            scale=model.scale,
+            low=model.mmin,
+            high=model.mmax,
             validate_args=model._validate_args,
         )
 
-        m1_powerlaw_mixture: Distribution = MixtureGeneral(
+        powerlaw_component: Distribution = MixtureGeneral(
             self.mixing_dist,
             [
-                DoublyTruncatedPowerLaw(
-                    alpha=model.alpha,
-                    low=model.mmin,
-                    high=model.mmax,
+                JointDistribution(
+                    m1_powerlaw,
+                    m2_powerlaw,
                     validate_args=model._validate_args,
                 ),
-                delta_region_dist,
+                delta_region_dist_m1m2,
             ],
             validate_args=model._validate_args,
         )
-        m1_gaussian_mixture: Distribution = MixtureGeneral(
+        gaussian_component: Distribution = MixtureGeneral(
             self.mixing_dist,
             [
-                TruncatedNormal(
-                    loc=model.loc,
-                    scale=model.scale,
-                    low=model.mmin,
-                    high=model.mmax,
+                JointDistribution(
+                    m1_gaussian,
+                    m2_powerlaw,
                     validate_args=model._validate_args,
                 ),
-                delta_region_dist,
+                delta_region_dist_m1m2,
             ],
-            validate_args=model._validate_args,
-        )
-
-        m2_mixture: Distribution = MixtureGeneral(
-            self.mixing_dist,
-            [
-                DoublyTruncatedPowerLaw(
-                    alpha=model.beta,
-                    low=model.mmin,
-                    high=model.mmax,
-                    validate_args=model._validate_args,
-                ),
-                delta_region_dist,
-            ],
-            validate_args=model._validate_args,
-        )
-
-        powerlaw_component = JointDistribution(
-            m1_powerlaw_mixture,
-            m2_mixture,
-            validate_args=model._validate_args,
-        )
-
-        gaussian_component = JointDistribution(
-            m1_gaussian_mixture,
-            m2_mixture,
             validate_args=model._validate_args,
         )
 
