@@ -137,16 +137,13 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             * jnp.exp(
                 self.logVT_fn(powerlaw_samples)
                 + model._log_prob_q(powerlaw_samples_q)
-                - transformation.log_abs_det_jacobian(
+                + transformation.log_abs_det_jacobian(
                     powerlaw_samples_q, powerlaw_samples
                 )
-                + jnp.sum(
-                    log_planck_taper_window(
-                        (powerlaw_samples - model.mmin) / model.delta
-                    ),
-                    axis=-1,
-                )
-                - lax.stop_gradient(powerlaw_component.log_prob(powerlaw_samples))
+                + log_planck_taper_window(
+                    (powerlaw_samples[..., 0] - model.mmin) / model.delta
+                ),
+                -lax.stop_gradient(powerlaw_component.log_prob(powerlaw_samples)),
             )
         )
         rate_gaussian = jnp.mean(
@@ -157,14 +154,11 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             * jnp.exp(
                 self.logVT_fn(gaussian_samples)
                 + model._log_prob_q(gaussian_samples_q)
-                - transformation.log_abs_det_jacobian(
+                + transformation.log_abs_det_jacobian(
                     gaussian_samples_q, gaussian_samples
                 )
-                + jnp.sum(
-                    log_planck_taper_window(
-                        (gaussian_samples - model.mmin) / model.delta
-                    ),
-                    axis=-1,
+                + log_planck_taper_window(
+                    (gaussian_samples[..., 0] - model.mmin) / model.delta
                 )
                 - lax.stop_gradient(gaussian_component.log_prob(gaussian_samples))
             )
