@@ -1149,8 +1149,8 @@ class SmoothedPowerlawAndPeak(Distribution):
 
         log_prob_m1 = self._log_prob_m1(
             m1,
-            Z_powerlaw=lax.stop_gradient(self._Z_powerlaw),
-            Z_gaussian=lax.stop_gradient(self._Z_gaussian),
+            Z_powerlaw=self._Z_powerlaw,
+            Z_gaussian=self._Z_gaussian,
         )
 
         log_prob_q = self._log_prob_q(value)
