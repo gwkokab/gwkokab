@@ -76,8 +76,3 @@ jobs:
           PY_COLORS: 1
         run: |
           uv run pytest docs --tb=short --doctest-glob='*.md' --doctest-glob='*.rst' --doctest-continue-on-failure
-      - name: Render documentation
-        run: |
-          source .venv/bin/activate
-          cd docs
-          make html
