@@ -21,6 +21,7 @@ from jax import lax, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import (
     CategoricalProbs,
+    constraints,
     Distribution,
     DoublyTruncatedPowerLaw,
     MixtureGeneral,
@@ -96,6 +97,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
                 ),
                 delta_region_dist_m1m2,
             ],
+            support=constraints.interval(model.mmin, model.mmax),
             validate_args=model._validate_args,
         )
         gaussian_component: Distribution = MixtureGeneral(
@@ -108,6 +110,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
                 ),
                 delta_region_dist_m1m2,
             ],
+            support=constraints.interval(model.mmin, model.mmax),
             validate_args=model._validate_args,
         )
 
