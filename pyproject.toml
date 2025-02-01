@@ -68,7 +68,7 @@ dev = [
     "setuptools>=75.6.0",
 ]
 docs = [
-    "astroid<3",
+    "astroid<4",
     "furo",
     "ipython!=8.7.0",
     "myst-nb",
