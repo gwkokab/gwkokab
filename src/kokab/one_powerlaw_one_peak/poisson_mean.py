@@ -61,6 +61,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
     def __call__(self, model: SmoothedPowerlawAndPeak) -> Array:
         if isinstance(model, TransformedDistribution):
             model = model.base_dist
+
         delta_region_dist = Uniform(
             low=model.mmin,
             high=model.mmin + model.delta,
@@ -103,7 +104,13 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
                 ),
                 delta_region_dist_m1m2,
             ],
-            support=constraints.interval(model.mmin, model.mmax),
+            support=constraints.independent(
+                constraints.interval(
+                    jnp.array([model.mmin, model.mmin]),
+                    jnp.array([model.mmax, model.mmax]),
+                ),
+                1,
+            ),
             validate_args=model._validate_args,
         )
         gaussian_component: Distribution = MixtureGeneral(
@@ -116,7 +123,13 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
                 ),
                 delta_region_dist_m1m2,
             ],
-            support=constraints.interval(model.mmin, model.mmax),
+            support=constraints.independent(
+                constraints.interval(
+                    jnp.array([model.mmin, model.mmin]),
+                    jnp.array([model.mmax, model.mmax]),
+                ),
+                1,
+            ),
             validate_args=model._validate_args,
         )
 
