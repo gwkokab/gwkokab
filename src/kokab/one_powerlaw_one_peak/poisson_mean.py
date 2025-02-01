@@ -168,7 +168,11 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             (1 - model.lambda_peak)
             * rate_powerlaw
             / lax.stop_gradient(model._Z_powerlaw)
-        ) + (model.lambda_peak * rate_gaussian / lax.stop_gradient(model._Z_gaussian))
+        )
+
+        total_estimated_rate += (model.lambda_peak * rate_gaussian) / lax.stop_gradient(
+            model._Z_gaussian
+        )
 
         total_estimated_rate = total_estimated_rate * jnp.exp(model.log_rate)
 
