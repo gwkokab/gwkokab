@@ -137,7 +137,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             * jnp.exp(
                 self.logVT_fn(powerlaw_samples)
                 + model._log_prob_q(powerlaw_samples_q)
-                + transformation.log_abs_det_jacobian(
+                - transformation.log_abs_det_jacobian(
                     powerlaw_samples_q, powerlaw_samples
                 )
                 + log_planck_taper_window(
@@ -154,7 +154,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             * jnp.exp(
                 self.logVT_fn(gaussian_samples)
                 + model._log_prob_q(gaussian_samples_q)
-                + transformation.log_abs_det_jacobian(
+                - transformation.log_abs_det_jacobian(
                     gaussian_samples_q, gaussian_samples
                 )
                 + log_planck_taper_window(
