@@ -142,8 +142,8 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
                 )
                 + log_planck_taper_window(
                     (powerlaw_samples[..., 0] - model.mmin) / model.delta
-                ),
-                -lax.stop_gradient(powerlaw_component.log_prob(powerlaw_samples)),
+                )
+                - lax.stop_gradient(powerlaw_component.log_prob(powerlaw_samples)),
             )
         )
         rate_gaussian = jnp.mean(
