@@ -32,7 +32,6 @@ from numpyro.distributions import (
     MixtureGeneral,
     Normal,
     TruncatedNormal,
-    Uniform,
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -919,6 +918,16 @@ class SmoothedPowerlawAndPeak(Distribution):
         "_support",
     )
 
+    @staticmethod
+    def _powerlaw_norm_constant(
+        alpha: ArrayLike, low: ArrayLike, high: ArrayLike
+    ) -> ArrayLike:
+        return jnp.where(
+            jnp.equal(alpha, -1.0),
+            jnp.log(high) - jnp.log(low),
+            (jnp.power(high, alpha + 1) - jnp.power(low, alpha + 1)) / (alpha + 1.0),
+        )
+
     def __init__(
         self,
         alpha: ArrayLike,
@@ -997,68 +1006,40 @@ class SmoothedPowerlawAndPeak(Distribution):
         key = jrd.PRNGKey(0)
         key1, key2 = jrd.split(key, num=2)
 
-        delta_region_dist = Uniform(
+        powerlaw_samples = DoublyTruncatedPowerLaw(
+            alpha=alpha,
             low=mmin,
             high=mmin + delta,
             validate_args=validate_args,
-        )
-
-        mixing_dist = CategoricalProbs(
-            jnp.array([1.0 - 0.05, 0.05]), validate_args=validate_args
-        )
-
-        powerlaw_mixture: Distribution = MixtureGeneral(
-            mixing_dist,
-            [
-                DoublyTruncatedPowerLaw(
-                    alpha=alpha,
-                    low=mmin,
-                    high=mmin + delta,
-                    validate_args=validate_args,
-                ),
-                delta_region_dist,
-            ],
+        ).sample(key1, (10_000,))
+        gaussian_samples = TruncatedNormal(
+            loc=loc,
+            scale=scale,
+            low=mmin,
+            high=mmin + delta,
             validate_args=validate_args,
-        )
-        gaussian_mixture: Distribution = MixtureGeneral(
-            mixing_dist,
-            [
-                TruncatedNormal(
-                    loc=loc,
-                    scale=scale,
-                    low=mmin,
-                    high=mmin + delta,
-                    validate_args=validate_args,
-                ),
-                delta_region_dist,
-            ],
-            validate_args=validate_args,
-        )
+        ).sample(key2, (10_000,))
 
-        powerlaw_samples = powerlaw_mixture.sample(key1, (10_000,))
-        gaussian_samples = gaussian_mixture.sample(key2, (10_000,))
-
-        self._Z_powerlaw = jnp.mean(
-            self._powerlaw_prob(powerlaw_samples)
-            * jnp.exp(
+        self._Z_powerlaw = self._powerlaw_norm_constant(
+            alpha=alpha, low=mmin, high=mmin + delta
+        ) * jnp.mean(
+            jnp.exp(
                 log_planck_taper_window((powerlaw_samples - self.mmin) / self.delta)
-                - powerlaw_mixture.log_prob(powerlaw_samples)
             )
-        ) + jnp.where(
-            jnp.equal(alpha, -1.0),
-            jnp.log(mmax) - jnp.log(mmin + delta),
-            (jnp.power(mmax, alpha + 1) - jnp.power(mmin + delta, alpha + 1))
-            / (alpha + 1.0),
-        )
-        self._Z_gaussian = jnp.mean(
-            self._gaussian_prob(gaussian_samples)
-            * jnp.exp(
-                log_planck_taper_window((gaussian_samples - self.mmin) / self.delta)
-                - gaussian_mixture.log_prob(gaussian_samples)
+        ) + self._powerlaw_norm_constant(alpha=alpha, low=mmin + delta, high=mmax)
+
+        gaussian_low = special.ndtr((mmin - loc) / scale)
+        gaussian_mid = special.ndtr((mmin + delta - loc) / scale)
+        gaussian_high = special.ndtr((mmax - loc) / scale)
+        self._Z_gaussian = jnp.sqrt(2.0 * jnp.pi) * (
+            (gaussian_mid - gaussian_low)
+            * jnp.mean(
+                jnp.exp(
+                    log_planck_taper_window((gaussian_samples - self.mmin) / self.delta)
+                )
             )
-        ) + jnp.sqrt(2.0 * jnp.pi) * scale * (
-            special.ndtr((mmax - loc) / scale)
-            - special.ndtr((mmin + delta - loc) / scale)
+            + gaussian_high
+            - gaussian_mid
         )
 
         _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
@@ -1098,7 +1079,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         return jnp.power(m1, self.alpha)
 
     def _gaussian_prob(self, m1: Array) -> Array:
-        return jnp.exp(-0.5 * jnp.square((m1 - self.loc) / self.scale))
+        return jnp.exp(-0.5 * jnp.square((m1 - self.loc) / self.scale)) / self.scale
 
     def _log_prob_m1(
         self, m1: Array, Z_powerlaw: ArrayLike = 1.0, Z_gaussian: ArrayLike = 1.0
