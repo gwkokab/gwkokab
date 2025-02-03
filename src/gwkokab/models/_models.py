@@ -22,7 +22,7 @@ from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy import special
 from jax.scipy.special import expit, logsumexp
-from jax.scipy.stats import truncnorm, uniform
+from jax.scipy.stats import norm, truncnorm, uniform
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import (
     CategoricalProbs,
@@ -1031,7 +1031,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         gaussian_low = special.ndtr((mmin - loc) / scale)
         gaussian_mid = special.ndtr((mmin + delta - loc) / scale)
         gaussian_high = special.ndtr((mmax - loc) / scale)
-        self._Z_gaussian = jnp.sqrt(2.0 * jnp.pi) * (
+        self._Z_gaussian = (
             (gaussian_mid - gaussian_low)
             * jnp.mean(
                 jnp.exp(
@@ -1079,7 +1079,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         return jnp.power(m1, self.alpha)
 
     def _gaussian_prob(self, m1: Array) -> Array:
-        return jnp.exp(-0.5 * jnp.square((m1 - self.loc) / self.scale)) / self.scale
+        return norm.pdf(m1, loc=self.loc, scale=self.scale)
 
     def _log_prob_m1(
         self, m1: Array, Z_powerlaw: ArrayLike = 1.0, Z_gaussian: ArrayLike = 1.0
