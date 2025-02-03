@@ -143,10 +143,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         gaussian_samples_q = transformation._inverse(gaussian_samples)
 
         rate_powerlaw = jnp.mean(
-            (
-                model._powerlaw_prob(powerlaw_samples[..., 0])
-                / lax.stop_gradient(model._Z_q(powerlaw_samples[..., 0]))
-            )
+            model._powerlaw_prob(powerlaw_samples[..., 0])
             * jnp.exp(
                 self.logVT_fn(powerlaw_samples)
                 + model._log_prob_q(powerlaw_samples_q)
@@ -160,10 +157,7 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             )
         )
         rate_gaussian = jnp.mean(
-            (
-                model._gaussian_prob(gaussian_samples[..., 0])
-                / lax.stop_gradient(model._Z_q(gaussian_samples[..., 0]))
-            )
+            model._gaussian_prob(gaussian_samples[..., 0])
             * jnp.exp(
                 self.logVT_fn(gaussian_samples)
                 + model._log_prob_q(gaussian_samples_q)
