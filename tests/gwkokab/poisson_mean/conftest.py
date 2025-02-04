@@ -60,7 +60,9 @@ _mixture_dist_batched_by_dist = ScaledMixture(
             validate_args=True,
         ),
     ],
-    support=constraints.unit_interval,
+    support=constraints.independent(
+        constraints.interval(jnp.zeros((2,)), jnp.ones((2,))), 1
+    ),
 )
 
 

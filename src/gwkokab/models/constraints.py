@@ -239,7 +239,7 @@ class _AllConstraint(Constraint):
         return mask
 
     def tree_flatten(self):
-        return self.constraints, (("constraints",), dict())
+        return (self.constraints,), (("constraints",), dict())
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _AllConstraint):
@@ -263,7 +263,7 @@ class _AnyConstraint(Constraint):
         return mask
 
     def tree_flatten(self):
-        return self.constraints, (("constraints",), dict())
+        return (self.constraints,), (("constraints",), dict())
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _AnyConstraint):

@@ -45,7 +45,7 @@ class TestVariants(parameterized.TestCase):
         dist: type[Distribution],
         log_vt_fn: Callable[[Array], Array],
         value: ArrayLike,
-    ):
+    ) -> None:
         key = jrd.PRNGKey(0)
 
         pmean_estimator = InverseTransformSamplingPoissonMean(
