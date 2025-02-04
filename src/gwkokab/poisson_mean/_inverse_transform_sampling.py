@@ -17,10 +17,10 @@ from collections.abc import Callable
 from typing import Union
 
 import equinox as eqx
-import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
+from ..models.utils import ScaledMixture
 from ._abc import PoissonMeanABC
 
 
@@ -60,10 +60,10 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         self.scale = scale
         self.key = key
         self.num_samples = num_samples
-        self.logVT_fn = jax.vmap(lambda xx: jnp.mean(jnp.exp(logVT_fn(xx))), in_axes=1)
+        self.logVT_fn = logVT_fn
 
-    def __call__(self, model):
+    def __call__(self, model: ScaledMixture) -> Array:
         values = model.component_sample(self.key, (self.num_samples,))
-        VT = self.logVT_fn(values)
+        VT = jnp.mean(jnp.exp(self.logVT_fn(values)), axis=0)
         rates = jnp.exp(model._log_scales)
-        return self.scale * jnp.dot(VT, rates)
+        return self.scale * jnp.sum(VT * rates, axis=-1)
