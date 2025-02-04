@@ -48,6 +48,8 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         scale: Union[int, float, Array] = 1.0,
     ) -> None:
         r"""
+        Parameters
+        ----------
         logVT_fn : Callable[[Array], Array]
             Log of the Volume Time Sensitivity function.
         key : PRNGKeyArray
@@ -64,7 +66,11 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
 
     def __call__(self, model: ScaledMixture) -> Array:
         samples = model.component_sample(self.key, (self.num_samples,))
-        values = jnp.squeeze(samples, axis=model.mixture_dim)
+        shape = (self.num_samples,)
+        if model.mixture_size > 1:
+            shape += (model.mixture_size,)
+        shape = model.shape(shape)
+        values = samples.reshape(*shape)
         VT = jnp.mean(jnp.exp(self.logVT_fn(values)), axis=0)
         rates = jnp.exp(model._log_scales)
         return self.scale * jnp.sum(VT * rates, axis=-1)
