@@ -17,11 +17,9 @@ from functools import partial
 from typing import Any, Callable, Dict, Tuple
 
 from jax import lax, random as jrd
-from jax.tree_util import register_pytree_node_class
 from numpyro.distributions.distribution import Distribution
 
 
-@register_pytree_node_class
 class Bake(object):
     def __init__(self, dist: Distribution | Callable[..., Distribution]) -> None:
         """It is designed to be a simple and flexible way to define a distribution for
@@ -105,17 +103,3 @@ class Bake(object):
         }
         duplicates = {name: variables[value] for name, value in self.duplicates.items()}
         return self._dist(**self.constants, **variables, **duplicates)
-
-    def tree_flatten(self):
-        return (self._dist, self.variables, self.constants, self.duplicates), None
-
-    @classmethod
-    def tree_unflatten(cls, aux_data, children):
-        del aux_data
-        obj = cls.__new__(cls)
-        setattr(obj, "dist", children[0])
-        setattr(obj, "variables", children[1])
-        setattr(obj, "constants", children[2])
-        setattr(obj, "duplicates", children[3])
-        Bake.__init__(obj)
-        return obj

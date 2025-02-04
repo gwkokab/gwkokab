@@ -18,6 +18,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
+import numpy as np
 from jax import random as jrd
 
 from gwkokab.inference import (
@@ -31,14 +32,11 @@ from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
     SECONDARY_MASS_SOURCE,
 )
-from gwkokab.poisson_mean import (
-    ImportanceSamplingPoissonMean,
-    InverseTransformSamplingPoissonMean,
-)
 from kokab.one_powerlaw_one_peak.common import (
     create_smoothed_powerlaw_and_peak,
     create_smoothed_powerlaw_and_peak_raw,
 )
+from kokab.one_powerlaw_one_peak.poisson_mean import ImportanceSamplingPoissonMean
 from kokab.utils import sage_parser
 from kokab.utils.common import (
     flowMC_default_parameters,
@@ -95,8 +93,6 @@ def main() -> None:
         "scale",
         "mmin",
         "mmax",
-        "low",
-        "high",
         "delta",
         "lambda_peak",
         "log_rate",
@@ -119,28 +115,20 @@ def main() -> None:
     )
     logVT = nvt.get_vmapped_logVT()
 
-    if args.erate_estimator == "IS":
-        erate_estimator = ImportanceSamplingPoissonMean(
-            logVT,
-            parameters,
-            KEY4,
-            args.n_samples,
-            args.analysis_time,
-        )
-    elif args.erate_estimator == "ITS":
-        erate_estimator = InverseTransformSamplingPoissonMean(
-            logVT,
-            KEY4,
-            args.n_samples,
-            args.analysis_time,
-        )
-    else:
-        raise ValueError("Invalid estimator for expected rate.")
+    erate_estimator = ImportanceSamplingPoissonMean(
+        logVT,
+        KEY4,
+        args.n_samples,
+        args.analysis_time,
+    )
+
+    data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
+    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     poisson_likelihood = PoissonLikelihood(
         model=model,
-        parameters=parameters,
-        data=get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS),
+        log_ref_priors=log_ref_priors,
+        data=data,
         ERate_fn=erate_estimator.__call__,
     )
 
