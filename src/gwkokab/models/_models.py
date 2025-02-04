@@ -13,9 +13,11 @@
 # limitations under the License.
 
 
+from functools import partial
 from typing_extensions import Optional
 
 import chex
+import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy import special
@@ -908,7 +910,13 @@ class SmoothedPowerlawAndPeak(Distribution):
         "lambda_peak",
         "log_rate",
     ]
-    pytree_data_fields = ("_Z_powerlaw", "_Z_gaussian", "_support")
+    pytree_data_fields = (
+        "_Z_powerlaw",
+        "_Z_gaussian",
+        "_m1s",
+        "_Z_q_given_m1",
+        "_support",
+    )
 
     @staticmethod
     def _powerlaw_norm_constant(
@@ -1034,6 +1042,31 @@ class SmoothedPowerlawAndPeak(Distribution):
             - gaussian_mid
         )
 
+        _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
+        qs = jnp.linspace(
+            jnp.zeros(batch_shape),
+            jnp.ones(batch_shape),
+            250,
+            dtype=jnp.result_type(float),
+        )
+
+        if batch_shape:
+            # TODO: check https://github.com/jax-ml/jax/issues/25696 and update accordingly
+            meshgrid_fn = jax.vmap(
+                partial(jnp.meshgrid, indexing="ij"), in_axes=(-1, -1), out_axes=-1
+            )
+        else:
+            meshgrid_fn = partial(jnp.meshgrid, indexing="ij")
+
+        m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
+        _log_prob_q = self._log_prob_q(m1qs_grid)
+
+        self._Z_q_given_m1 = jnp.trapezoid(
+            jnp.exp(_log_prob_q), jnp.expand_dims(qs, axis=0), axis=1
+        )
+
+        self._m1s = _m1s
+
         super(SmoothedPowerlawAndPeak, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
@@ -1059,6 +1092,7 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         return log_prob_m1 + log_smoothing_m1
 
+    @validate_sample
     def _log_prob_q(self, m1q: Array) -> Array:
         m1 = m1q[..., 0]
         q = m1q[..., 1]
@@ -1071,37 +1105,24 @@ class SmoothedPowerlawAndPeak(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        Z_q_analytical = jnp.where(
-            jnp.less(self.mmin + self.delta, m1),
-            self._powerlaw_norm_constant(
-                alpha=self.beta, low=self.mmin + self.delta, high=m1
-            ),
-            0.0,
-        )
-        boundary_point = jnp.where(
-            jnp.less(self.mmin + self.delta, m1), m1, self.mmin + self.delta
-        )
-        u = jrd.uniform(
-            jrd.PRNGKey(0),
-            shape=lax.broadcast_shapes((1000, 1), self.batch_shape, m1.shape),
-        )
-        m2_samples = doubly_truncated_power_law_icdf(
-            q=u,
-            alpha=self.beta,
-            low=self.mmin,
-            high=boundary_point,
-        )
-        log_Z_q = jnp.log(
-            self._powerlaw_norm_constant(
-                alpha=self.beta, low=self.mmin, high=boundary_point
+        return log_prob_q + log_smoothing_q
+
+    def _Z_q(self, m1: ArrayLike, shape: tuple[int, ...] = ()) -> ArrayLike:
+        def _Z_q_inner(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
+            return jax.vmap(partial(jnp.interp, xp=m1s, fp=Z_qs, left=1.0, right=1.0))(
+                m1
             )
-            * jnp.mean(
-                jnp.exp(log_planck_taper_window((m2_samples - self.mmin) / self.delta)),
-                axis=0,
-            )
-            + Z_q_analytical
-        ) - (self.beta + 1.0) * jnp.log(m1)
-        return log_prob_q + log_smoothing_q - log_Z_q
+
+        if self.batch_shape:
+            _Z_q_val = jax.vmap(
+                _Z_q_inner,
+                in_axes=(-1, -1),
+                out_axes=-1,
+            )(self._m1s, self._Z_q_given_m1)
+            _Z_q_val = jnp.reshape(_Z_q_val, shape)
+        else:
+            _Z_q_val = _Z_q_inner(self._m1s, self._Z_q_given_m1)
+        return _Z_q_val
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> Array:
@@ -1115,6 +1136,8 @@ class SmoothedPowerlawAndPeak(Distribution):
 
         log_prob_q = self._log_prob_q(value)
 
+        log_Z_q = lax.stop_gradient(jnp.log(self._Z_q(m1, log_prob_q.shape)))
+
         logger.debug(
             "SmoothedPowerlawAndPeak:\n"
             "\tlog_prob_m1({m1}) = {lpm1}"
@@ -1125,4 +1148,4 @@ class SmoothedPowerlawAndPeak(Distribution):
             lpq=log_prob_q,
         )
 
-        return self.log_rate + log_prob_m1 + log_prob_q
+        return self.log_rate + log_prob_m1 + log_prob_q - log_Z_q
