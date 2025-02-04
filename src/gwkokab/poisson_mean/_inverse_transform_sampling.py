@@ -63,7 +63,8 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         self.logVT_fn = logVT_fn
 
     def __call__(self, model: ScaledMixture) -> Array:
-        values = model.component_sample(self.key, (self.num_samples,))
+        samples = model.component_sample(self.key, (self.num_samples,))
+        values = jnp.squeeze(samples, axis=model.mixture_dim)
         VT = jnp.mean(jnp.exp(self.logVT_fn(values)), axis=0)
         rates = jnp.exp(model._log_scales)
         return self.scale * jnp.sum(VT * rates, axis=-1)
