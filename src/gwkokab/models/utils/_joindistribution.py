@@ -16,7 +16,7 @@
 from typing import Optional
 from typing_extensions import Tuple
 
-from jax import lax, numpy as jnp, random as jrd, tree as jtr
+from jax import lax, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import validate_sample
@@ -78,17 +78,18 @@ class JointDistribution(Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
-        def log_prob_i(d: Distribution, v: Array) -> Array:
-            log_p = d.log_prob(v)
-            return log_p
-
-        log_probs = jtr.reduce(
-            lambda x, y: x + log_prob_i(y[0], value[..., y[1]]),
-            list(zip(self.marginal_distributions, self.shaped_values)),
-            jnp.zeros(self.batch_shape),
-            is_leaf=lambda x: isinstance(x, tuple),
+        return jnp.sum(
+            jnp.stack(
+                [
+                    m_dist.log_prob(value[..., slice_])
+                    for m_dist, slice_ in zip(
+                        self.marginal_distributions, self.shaped_values
+                    )
+                ],
+                axis=-1,
+            ),
+            axis=-1,
         )
-        return log_probs
 
     def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
         assert is_prng_key(key)
