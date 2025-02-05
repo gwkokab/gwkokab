@@ -17,7 +17,7 @@ from collections.abc import Callable
 from typing import Union
 
 import equinox as eqx
-from jax import numpy as jnp
+from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
 from ..models.utils import ScaledMixture
@@ -65,18 +65,11 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         self.logVT_fn = logVT_fn
 
     def __call__(self, model: ScaledMixture) -> Array:
-        samples = model.component_sample(self.key, (self.num_samples,))
-        if model.mixture_size > 1:
-            shape = (self.num_samples * model.mixture_size,)
-            logVT_fn = self.logVT_fn
-        else:
-            shape = (self.num_samples,)
-            logVT_fn = self.logVT_fn
-        shape = model.shape(shape)
-        values = samples.reshape(*shape)
-        logVT_value = logVT_fn(values)
-        if model.mixture_size > 1:
-            logVT_value = logVT_value.reshape(self.num_samples, model.mixture_size)
-        VT = jnp.mean(jnp.exp(logVT_value), axis=0)
-        rates = jnp.exp(model._log_scales)
-        return self.scale * jnp.sum(VT * rates, axis=-1)
+        values = model.component_sample(self.key, (self.num_samples,))
+        logVT_value = jnp.stack(
+            [self.logVT_fn(values[:, i, :]) for i in range(model.mixture_size)],
+            axis=-1,
+        )
+        logVT_component = jnn.logsumexp(logVT_value, axis=0) - jnp.log(self.num_samples)
+        log_exp_rate_component = model._log_scales + logVT_component
+        return self.scale * jnp.sum(jnp.exp(log_exp_rate_component), axis=-1)

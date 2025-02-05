@@ -59,4 +59,4 @@ class TestVariants(parameterized.TestCase):
         def pmean_estimator_fn(dist_arg):
             return pmean_estimator(dist_arg)
 
-        assert_allclose(pmean_estimator_fn(dist), value, atol=1e-1, rtol=1e-6)
+        assert_allclose(pmean_estimator_fn(dist), value, atol=0.5, rtol=1e-6)

@@ -25,38 +25,40 @@ from numpyro.distributions import constraints
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
 
+_a = np.array
+
 _scaled_dist = ScaledMixture(
-    log_scales=np.log(np.array([2.0])),
-    component_distributions=[dist.Beta(2.0, 1.0, validate_args=True)],
+    log_scales=np.log(_a([2.0])),
+    component_distributions=[dist.Beta(_a([2.0]), _a([1.0]), validate_args=True)],
     support=constraints.unit_interval,
 )
 
 _mixture_dist = ScaledMixture(
-    log_scales=np.log(np.array([2.0, 3.0])),
+    log_scales=np.log(_a([2.0, 3.0])),
     component_distributions=[
-        dist.Uniform(0.0, 1.0, validate_args=True),
-        dist.Beta(2.0, 1.0, validate_args=True),
+        dist.Uniform(_a([0.0]), _a([1.0]), validate_args=True),
+        dist.Beta(_a([2.0]), _a([1.0]), validate_args=True),
     ],
     support=constraints.unit_interval,
 )
 
 
 _mixture_dist_batched_by_dist = ScaledMixture(
-    log_scales=np.log(np.array([1.0, 2.0, 3.0])),
+    log_scales=np.log(_a([1.0, 2.0, 3.0])),
     component_distributions=[
         JointDistribution(
-            dist.Uniform(validate_args=True),
-            dist.Uniform(validate_args=True),
+            dist.Uniform(_a([0.0]), _a([1.0]), validate_args=True),
+            dist.Uniform(_a([0.0]), _a([1.0]), validate_args=True),
             validate_args=True,
         ),
         JointDistribution(
-            dist.Uniform(validate_args=True),
-            dist.Uniform(validate_args=True),
+            dist.Uniform(_a([0.0]), _a([1.0]), validate_args=True),
+            dist.Uniform(_a([0.0]), _a([1.0]), validate_args=True),
             validate_args=True,
         ),
         JointDistribution(
-            dist.Beta(2.0, 1.0, validate_args=True),
-            dist.Beta(2.0, 1.0, validate_args=True),
+            dist.Beta(_a([2.0]), _a([1.0]), validate_args=True),
+            dist.Beta(_a([2.0]), _a([1.0]), validate_args=True),
             validate_args=True,
         ),
     ],
@@ -83,23 +85,27 @@ DIST_LOG_VT_VALUE: List[
     (_scaled_dist, lambda x: 4 * jnp.log(x), 2.0 * _beta_moments(4, 2.0, 1.0)),
     (
         _mixture_dist,
-        lambda x: jnp.log(x),
-        2.0 * _unif_moments(1, 0.0, 1.0) + 3.0 * _beta_moments(1, 2.0, 1.0),
+        lambda x: jnp.sum(jnp.log(x), axis=-1),
+        2.0 * np.square(_unif_moments(1, 0.0, 1.0))
+        + 3.0 * np.square(_beta_moments(1, 2.0, 1.0)),
     ),
     (
         _mixture_dist,
-        lambda x: 2 * jnp.log(x),
-        2.0 * _unif_moments(2, 0.0, 1.0) + 3.0 * _beta_moments(2, 2.0, 1.0),
+        lambda x: 2 * jnp.sum(jnp.log(x), axis=-1),
+        2.0 * np.square(_unif_moments(2, 0.0, 1.0))
+        + 3.0 * np.square(_beta_moments(2, 2.0, 1.0)),
     ),
     (
         _mixture_dist,
-        lambda x: 3 * jnp.log(x),
-        2.0 * _unif_moments(3, 0.0, 1.0) + 3.0 * _beta_moments(3, 2.0, 1.0),
+        lambda x: 3 * jnp.sum(jnp.log(x), axis=-1),
+        2.0 * np.square(_unif_moments(3, 0.0, 1.0))
+        + 3.0 * np.square(_beta_moments(3, 2.0, 1.0)),
     ),
     (
         _mixture_dist,
-        lambda x: 4 * jnp.log(x),
-        2.0 * _unif_moments(4, 0.0, 1.0) + 3.0 * _beta_moments(4, 2.0, 1.0),
+        lambda x: 4 * jnp.sum(jnp.log(x), axis=-1),
+        2.0 * np.square(_unif_moments(4, 0.0, 1.0))
+        + 3.0 * np.square(_beta_moments(4, 2.0, 1.0)),
     ),
     (
         _mixture_dist_batched_by_dist,
