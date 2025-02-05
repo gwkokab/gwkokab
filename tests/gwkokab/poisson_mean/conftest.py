@@ -39,7 +39,9 @@ _mixture_dist = ScaledMixture(
         dist.Uniform(_a([0.0]), _a([1.0]), validate_args=True),
         dist.Beta(_a([2.0]), _a([1.0]), validate_args=True),
     ],
-    support=constraints.unit_interval,
+    support=constraints.independent(
+        constraints.interval(jnp.zeros((1,)), jnp.ones((1,))), 1
+    ),
 )
 
 
@@ -79,10 +81,26 @@ def _beta_moments(k: int, a: ArrayLike, b: ArrayLike) -> Array:
 DIST_LOG_VT_VALUE: List[
     Tuple[type[dist.Distribution], Callable[[Array], Array], ArrayLike]
 ] = [
-    (_scaled_dist, lambda x: jnp.log(x), 2.0 * _beta_moments(1, 2.0, 1.0)),
-    (_scaled_dist, lambda x: 2 * jnp.log(x), 2.0 * _beta_moments(2, 2.0, 1.0)),
-    (_scaled_dist, lambda x: 3 * jnp.log(x), 2.0 * _beta_moments(3, 2.0, 1.0)),
-    (_scaled_dist, lambda x: 4 * jnp.log(x), 2.0 * _beta_moments(4, 2.0, 1.0)),
+    (
+        _scaled_dist,
+        lambda x: jnp.sum(jnp.log(x), axis=-1),
+        2.0 * _beta_moments(1, 2.0, 1.0),
+    ),
+    (
+        _scaled_dist,
+        lambda x: 2 * jnp.sum(jnp.log(x), axis=-1),
+        2.0 * _beta_moments(2, 2.0, 1.0),
+    ),
+    (
+        _scaled_dist,
+        lambda x: 3 * jnp.sum(jnp.log(x), axis=-1),
+        2.0 * _beta_moments(3, 2.0, 1.0),
+    ),
+    (
+        _scaled_dist,
+        lambda x: 4 * jnp.sum(jnp.log(x), axis=-1),
+        2.0 * _beta_moments(4, 2.0, 1.0),
+    ),
     (
         _mixture_dist,
         lambda x: jnp.sum(jnp.log(x), axis=-1),

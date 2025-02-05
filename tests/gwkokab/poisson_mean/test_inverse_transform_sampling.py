@@ -51,7 +51,7 @@ class TestVariants(parameterized.TestCase):
         pmean_estimator = InverseTransformSamplingPoissonMean(
             logVT_fn=log_vt_fn,
             key=key,
-            num_samples=10_000,
+            num_samples=50_000,
             scale=1.0,
         )
 
@@ -59,4 +59,4 @@ class TestVariants(parameterized.TestCase):
         def pmean_estimator_fn(dist_arg):
             return pmean_estimator(dist_arg)
 
-        assert_allclose(pmean_estimator_fn(dist), value, atol=0.5, rtol=1e-6)
+        assert_allclose(pmean_estimator_fn(dist), value, atol=0.2, rtol=1e-6)
