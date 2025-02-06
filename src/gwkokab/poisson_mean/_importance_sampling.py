@@ -104,34 +104,16 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             validate_args=True,
         )
 
-        # proposal_dist = hyper_uniform
-
         proposal_samples = proposal_dist.sample(key, (num_samples,))
 
-        if len(parameters) == 1:
-            mask = parameters[0].prior.support(proposal_samples)
-        else:
-            mask = parameters[0].prior.support(proposal_samples[..., 0])
-            for i in range(1, len(parameters)):
-                mask &= parameters[i].prior.support(proposal_samples[..., i])
+        logVT = logVT_fn(proposal_samples)
+        proposal_log_prob = proposal_dist.log_prob(proposal_samples)
 
-        proposal_samples = proposal_samples[mask]
-
-        self.log_weights = (
-            logVT_fn(proposal_samples)
-            - proposal_dist.log_prob(proposal_samples)
-            + jnp.log(self.scale)
-        )
+        self.log_weights = logVT - proposal_log_prob + jnp.log(self.scale)
         self.samples = proposal_samples
 
     def __call__(self, model: ScaledMixture) -> Array:
-        if model.batch_shape:
-            samples = jnp.broadcast_to(
-                self.samples, self.samples.shape + model.batch_shape
-            )
-            log_prob = model.log_prob(samples)
-        else:
-            log_prob = model.log_prob(self.samples)
+        log_prob = model.log_prob(self.samples).reshape(self.log_weights.shape)
 
         probs = jnp.where(
             jnp.isneginf(log_prob), 0.0, jnp.exp(self.log_weights + log_prob)
