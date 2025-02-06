@@ -1,6 +1,7 @@
 # Copyright Contributors to the Pyro project.
 # SPDX-License-Identifier: Apache-2.0
 
+
 from collections import namedtuple
 
 import jax
@@ -30,6 +31,27 @@ PARAMETRIZED_CONSTRAINTS = {
     "mass_sandwich": T(constraints.mass_sandwich, (_a(10.0), _a(30.0)), dict()),
     "mass_ratio_mass_sandwich": T(
         constraints.mass_ratio_mass_sandwich, (_a(10.0), _a(30.0)), dict()
+    ),
+    "all_constraint": T(
+        constraints.all_constraint,
+        (),
+        {
+            "constraints": [
+                constraints.decreasing_vector,
+                constraints.positive_decreasing_vector,
+            ],
+            "event_slices": [0, 1],
+        },
+    ),
+    "any_constraint": T(
+        constraints.any_constraint,
+        (),
+        {
+            "constraints": [
+                constraints.decreasing_vector,
+                constraints.positive_decreasing_vector,
+            ]
+        },
     ),
 }
 

@@ -17,7 +17,7 @@ from collections.abc import Callable, Sequence
 from typing import Union
 
 import equinox as eqx
-from jax import numpy as jnp, random as jrd
+from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 from numpyro import distributions as dist
 
@@ -63,12 +63,10 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         key: PRNGKeyArray,
         num_samples: int,
         scale: Union[int, float, Array] = 1.0,
-        add_peak: bool = False,
     ) -> None:
         r"""
         Parameters
         ----------
-
         logVT_fn : Callable[[Array], Array]
             Log of the Volume Time Sensitivity function.
         parameters : Sequence[Parameter]
@@ -79,8 +77,6 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             Number of samples
         scale : Union[int, float, Array]
             scale factor, defaults to 1.0
-        add_peak : bool
-            Add a peak at the maxima and at the expectation of the proposal distribution, by defaults False
         """
         self.scale = scale
         hyper_uniform = JointDistribution(
@@ -99,79 +95,25 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
             validate_args=True,
         )
 
-        uniform_key, proposal_key = jrd.split(key)
         component_distributions = [hyper_uniform, hyper_log_uniform]
-        if add_peak:
-            uniform_samples = hyper_uniform.sample(uniform_key, (num_samples,))
-
-            logVT_val = logVT_fn(uniform_samples)
-
-            VT_max_at = jnp.argmax(logVT_val)
-            loc_vector_at_highest_density = uniform_samples[VT_max_at]
-
-            loc_vector_by_expectation = jnp.average(
-                uniform_samples,
-                axis=0,
-                weights=jnp.exp(logVT_val - hyper_uniform.log_prob(uniform_samples)),
-            )
-            covariance_matrix = jnp.cov(uniform_samples.T)
-            component_distributions.append(
-                JointDistribution(
-                    *[
-                        dist.TruncatedNormal(
-                            loc_vector_by_expectation[i],
-                            jnp.sqrt(covariance_matrix[i, i]),
-                            low=param.prior.low,
-                            high=param.prior.high,
-                            validate_args=True,
-                        )
-                        for i, param in enumerate(parameters)
-                    ],
-                    validate_args=True,
-                )
-            )
-            component_distributions.append(
-                JointDistribution(
-                    *[
-                        dist.TruncatedNormal(
-                            loc_vector_at_highest_density[i],
-                            jnp.sqrt(covariance_matrix[i, i]),
-                            low=param.prior.low,
-                            high=param.prior.high,
-                            validate_args=True,
-                        )
-                        for i, param in enumerate(parameters)
-                    ],
-                    validate_args=True,
-                )
-            )
-
-        n = len(component_distributions)
 
         proposal_dist = dist.MixtureGeneral(
-            dist.Categorical(probs=jnp.ones(n) / n, validate_args=True),
+            dist.Categorical(probs=jnp.array([1.0 - 0.05, 0.05]), validate_args=True),
             component_distributions,
             support=hyper_uniform.support,
             validate_args=True,
         )
 
-        proposal_samples = proposal_dist.sample(proposal_key, (num_samples,))
+        proposal_samples = proposal_dist.sample(key, (num_samples,))
 
-        mask = parameters[0].prior.support(proposal_samples[..., 0])
-        for i in range(1, len(parameters)):
-            mask &= parameters[i].prior.support(proposal_samples[..., i])
+        logVT = logVT_fn(proposal_samples)
+        proposal_log_prob = proposal_dist.log_prob(proposal_samples)
 
-        proposal_samples = proposal_samples[mask]
-
-        self.log_weights = (
-            logVT_fn(proposal_samples)
-            - proposal_dist.log_prob(proposal_samples)
-            + jnp.log(self.scale)
-        )
+        self.log_weights = logVT - proposal_log_prob + jnp.log(self.scale)
         self.samples = proposal_samples
 
     def __call__(self, model: ScaledMixture) -> Array:
-        log_prob = model.log_prob(self.samples)
+        log_prob = model.log_prob(self.samples).reshape(self.log_weights.shape)
 
         probs = jnp.where(
             jnp.isneginf(log_prob), 0.0, jnp.exp(self.log_weights + log_prob)

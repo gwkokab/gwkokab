@@ -223,7 +223,7 @@ class _AllConstraint(Constraint):
     r"""Constrain values to satisfy multiple constraints."""
 
     def __init__(
-        self, *constraints: type[Constraint], event_slices: Sequence[int | slice]
+        self, constraints: Sequence[Constraint], event_slices: Sequence[int | slice]
     ):
         assert len(constraints) == len(event_slices), (
             f"Number of constraints ({len(constraints)}) must match the number of "
@@ -239,7 +239,10 @@ class _AllConstraint(Constraint):
         return mask
 
     def tree_flatten(self):
-        return self.constraints, (("constraints",), dict())
+        return (self.constraints, self.event_slices), (
+            ("constraints", "event_slices"),
+            dict(),
+        )
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _AllConstraint):
@@ -253,7 +256,7 @@ class _AllConstraint(Constraint):
 class _AnyConstraint(Constraint):
     r"""Constrain values to satisfy at least one of the constraints."""
 
-    def __init__(self, *constraints: type[Constraint]):
+    def __init__(self, constraints: Sequence[Constraint]):
         self.constraints = constraints
 
     def __call__(self, x):
@@ -263,7 +266,7 @@ class _AnyConstraint(Constraint):
         return mask
 
     def tree_flatten(self):
-        return self.constraints, (("constraints",), dict())
+        return (self.constraints,), (("constraints",), dict())
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _AnyConstraint):

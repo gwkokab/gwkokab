@@ -17,10 +17,10 @@ from collections.abc import Callable
 from typing import Union
 
 import equinox as eqx
-import jax
-from jax import numpy as jnp
+from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
+from ..models.utils import ScaledMixture
 from ._abc import PoissonMeanABC
 
 
@@ -48,6 +48,8 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         scale: Union[int, float, Array] = 1.0,
     ) -> None:
         r"""
+        Parameters
+        ----------
         logVT_fn : Callable[[Array], Array]
             Log of the Volume Time Sensitivity function.
         key : PRNGKeyArray
@@ -60,10 +62,14 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         self.scale = scale
         self.key = key
         self.num_samples = num_samples
-        self.logVT_fn = jax.vmap(lambda xx: jnp.mean(jnp.exp(logVT_fn(xx))), in_axes=1)
+        self.logVT_fn = logVT_fn
 
-    def __call__(self, model):
+    def __call__(self, model: ScaledMixture) -> Array:
         values = model.component_sample(self.key, (self.num_samples,))
-        VT = self.logVT_fn(values)
-        rates = jnp.exp(model._log_scales)
-        return self.scale * jnp.dot(VT, rates)
+        logVT_value = jnp.stack(
+            [self.logVT_fn(values[:, i, :]) for i in range(model.mixture_size)],
+            axis=-1,
+        )
+        logVT_component = jnn.logsumexp(logVT_value, axis=0) - jnp.log(self.num_samples)
+        log_exp_rate_component = model._log_scales + logVT_component
+        return self.scale * jnp.sum(jnp.exp(log_exp_rate_component), axis=-1)

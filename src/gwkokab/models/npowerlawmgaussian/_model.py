@@ -415,6 +415,6 @@ def NPowerlawMGaussian(
     return ScaledMixture(
         log_rates,
         component_dists,
-        support=any_constraint(*[c_d.support for c_d in component_dists]),
+        support=any_constraint([c_d.support for c_d in component_dists]),
         validate_args=validate_args,
     )
