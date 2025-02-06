@@ -31,17 +31,22 @@ _scaled_dist = ScaledMixture(
     log_scales=np.log(_a([2.0])),
     component_distributions=[dist.Beta(_a([2.0]), _a([1.0]), validate_args=True)],
     support=constraints.unit_interval,
+    validate_args=True,
 )
 
 _mixture_dist = ScaledMixture(
-    log_scales=np.log(_a([2.0, 3.0])),
+    log_scales=np.log(_a([2.0])),
     component_distributions=[
-        dist.Uniform(_a([0.0]), _a([1.0]), validate_args=True),
-        dist.Beta(_a([2.0]), _a([1.0]), validate_args=True),
+        JointDistribution(
+            dist.Uniform(_a([0.0]), _a([1.0]), validate_args=True),
+            dist.Beta(_a([2.0]), _a([1.0]), validate_args=True),
+            validate_args=True,
+        ),
     ],
     support=constraints.independent(
         constraints.interval(jnp.zeros((1,)), jnp.ones((1,))), 1
     ),
+    validate_args=True,
 )
 
 
@@ -67,6 +72,7 @@ _mixture_dist_batched_by_dist = ScaledMixture(
     support=constraints.independent(
         constraints.interval(jnp.zeros((2,)), jnp.ones((2,))), 1
     ),
+    validate_args=True,
 )
 
 
@@ -75,7 +81,7 @@ def _unif_moments(k: int, low: ArrayLike, high: ArrayLike) -> Array:
 
 
 def _beta_moments(k: int, a: ArrayLike, b: ArrayLike) -> Array:
-    return np.prod([(a + i) / (a + b + i) for i in range(k)])
+    return np.prod([float(a + i) / float(a + b + i) for i in range(k)])
 
 
 DIST_LOG_VT_VALUE: List[
@@ -83,69 +89,65 @@ DIST_LOG_VT_VALUE: List[
 ] = [
     (
         _scaled_dist,
-        lambda x: jnp.sum(jnp.log(x), axis=-1),
+        lambda x: jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
         2.0 * _beta_moments(1, 2.0, 1.0),
     ),
     (
         _scaled_dist,
-        lambda x: 2 * jnp.sum(jnp.log(x), axis=-1),
+        lambda x: 2.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
         2.0 * _beta_moments(2, 2.0, 1.0),
     ),
     (
         _scaled_dist,
-        lambda x: 3 * jnp.sum(jnp.log(x), axis=-1),
+        lambda x: 3.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
         2.0 * _beta_moments(3, 2.0, 1.0),
     ),
     (
         _scaled_dist,
-        lambda x: 4 * jnp.sum(jnp.log(x), axis=-1),
+        lambda x: 4.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
         2.0 * _beta_moments(4, 2.0, 1.0),
     ),
     (
         _mixture_dist,
-        lambda x: jnp.sum(jnp.log(x), axis=-1),
-        2.0 * np.square(_unif_moments(1, 0.0, 1.0))
-        + 3.0 * np.square(_beta_moments(1, 2.0, 1.0)),
+        lambda x: jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
+        2.0 * _unif_moments(1, 0.0, 1.0) * _beta_moments(1, 2.0, 1.0),
     ),
     (
         _mixture_dist,
-        lambda x: 2 * jnp.sum(jnp.log(x), axis=-1),
-        2.0 * np.square(_unif_moments(2, 0.0, 1.0))
-        + 3.0 * np.square(_beta_moments(2, 2.0, 1.0)),
+        lambda x: 2.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
+        2.0 * _unif_moments(2, 0.0, 1.0) * _beta_moments(2, 2.0, 1.0),
     ),
     (
         _mixture_dist,
-        lambda x: 3 * jnp.sum(jnp.log(x), axis=-1),
-        2.0 * np.square(_unif_moments(3, 0.0, 1.0))
-        + 3.0 * np.square(_beta_moments(3, 2.0, 1.0)),
+        lambda x: 3.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
+        2.0 * _unif_moments(3, 0.0, 1.0) * _beta_moments(3, 2.0, 1.0),
     ),
     (
         _mixture_dist,
-        lambda x: 4 * jnp.sum(jnp.log(x), axis=-1),
-        2.0 * np.square(_unif_moments(4, 0.0, 1.0))
-        + 3.0 * np.square(_beta_moments(4, 2.0, 1.0)),
+        lambda x: 4.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
+        2.0 * _unif_moments(4, 0.0, 1.0) * _beta_moments(4, 2.0, 1.0),
     ),
     (
         _mixture_dist_batched_by_dist,
-        lambda x: jnp.sum(jnp.log(x), axis=-1),
+        lambda x: jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
         3.0 * np.square(_unif_moments(1, 0.0, 1.0))
         + 3.0 * np.square(_beta_moments(1, 2.0, 1.0)),
     ),
     (
         _mixture_dist_batched_by_dist,
-        lambda x: 2 * jnp.sum(jnp.log(x), axis=-1),
+        lambda x: 2.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
         3.0 * np.square(_unif_moments(2, 0.0, 1.0))
         + 3.0 * np.square(_beta_moments(2, 2.0, 1.0)),
     ),
     (
         _mixture_dist_batched_by_dist,
-        lambda x: 3 * jnp.sum(jnp.log(x), axis=-1),
+        lambda x: 3.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
         3.0 * np.square(_unif_moments(3, 0.0, 1.0))
         + 3.0 * np.square(_beta_moments(3, 2.0, 1.0)),
     ),
     (
         _mixture_dist_batched_by_dist,
-        lambda x: 4 * jnp.sum(jnp.log(x), axis=-1),
+        lambda x: 4.0 * jnp.sum(jnp.log(x), axis=-1, dtype=jnp.float64),
         3.0 * np.square(_unif_moments(4, 0.0, 1.0))
         + 3.0 * np.square(_beta_moments(4, 2.0, 1.0)),
     ),
