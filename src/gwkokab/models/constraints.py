@@ -223,7 +223,7 @@ class _AllConstraint(Constraint):
     r"""Constrain values to satisfy multiple constraints."""
 
     def __init__(
-        self, *constraints: type[Constraint], event_slices: Sequence[int | slice]
+        self, constraints: Sequence[Constraint], event_slices: Sequence[int | slice]
     ):
         assert len(constraints) == len(event_slices), (
             f"Number of constraints ({len(constraints)}) must match the number of "
@@ -256,7 +256,7 @@ class _AllConstraint(Constraint):
 class _AnyConstraint(Constraint):
     r"""Constrain values to satisfy at least one of the constraints."""
 
-    def __init__(self, *constraints: type[Constraint]):
+    def __init__(self, constraints: Sequence[Constraint]):
         self.constraints = constraints
 
     def __call__(self, x):
