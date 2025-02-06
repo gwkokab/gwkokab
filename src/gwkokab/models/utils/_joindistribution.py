@@ -68,7 +68,7 @@ class JointDistribution(Distribution):
             validate_args=validate_args,
         )
         self._support = all_constraint(
-            *[m_d.support for m_d in marginal_distributions],
+            constraints=[m_d.support for m_d in marginal_distributions],
             event_slices=self.shaped_values,
         )
 
