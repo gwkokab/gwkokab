@@ -190,4 +190,11 @@ class PoissonLikelihood(eqx.Module):
             lp=log_prior,
             ll=log_likelihood,
         )
-        return log_prior + log_likelihood
+        log_posterior = log_prior + log_likelihood
+        log_posterior = jnp.nan_to_num(
+            log_posterior,
+            nan=-jnp.inf,
+            posinf=-jnp.inf,
+            neginf=-jnp.inf,
+        )
+        return log_posterior
