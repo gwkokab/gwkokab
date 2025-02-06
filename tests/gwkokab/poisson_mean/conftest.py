@@ -44,7 +44,7 @@ _mixture_dist = ScaledMixture(
         ),
     ],
     support=constraints.independent(
-        constraints.interval(jnp.zeros((1,)), jnp.ones((1,))), 1
+        constraints.interval(jnp.zeros((2,)), jnp.ones((2,))), 1
     ),
     validate_args=True,
 )
