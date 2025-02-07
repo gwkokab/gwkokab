@@ -43,9 +43,9 @@ def cumtrapz(y: Array, x: Array) -> Array:
     def _area(i: Array, d: Array) -> Array:
         return d * (y[i] + y[i + 1]) * 0.5
 
-    difs = jnp.diff(x)
+    diffs = jnp.diff(x)
     idxs = jnp.arange(1, len(y))
-    res = jnp.cumsum(_area(idxs, difs))
+    res = jnp.cumsum(_area(idxs, diffs))
     return jnp.concatenate([jnp.array([0]), res])
 
 
