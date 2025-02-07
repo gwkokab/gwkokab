@@ -16,7 +16,8 @@
 from typing_extensions import Tuple
 
 from jax import numpy as jnp
-from jaxtyping import ArrayLike
+from jaxtyping import Array, ArrayLike
+from quadax import cumulative_trapezoid
 
 
 def beta_dist_concentrations_to_mean_variance(
@@ -103,3 +104,24 @@ def beta_dist_mean_variance_to_concentrations(
     alpha = -mean_shifted_by_low * shared_term
     beta = mean_shifted_by_high * shared_term
     return alpha, beta
+
+
+def cumtrapz(y: Array, x: Array) -> Array:
+    """Calculate the cumulative trapezoidal integration of y with respect to x.
+
+    Parameters
+    ----------
+    y : Array
+        array to integrate
+    x : Array
+        array to integrate over
+
+    Returns
+    -------
+    Array
+        The result of the cumulative trapezoidal integration of y with respect to x.
+    """
+    y_cum = y
+    for index in range(x.shape[-1]):
+        y_cum = cumulative_trapezoid(y=y_cum, x=x[..., index], axis=index, initial=0.0)
+    return y_cum

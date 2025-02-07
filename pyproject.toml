@@ -47,6 +47,7 @@ dependencies = [
     "numpy<3",
     "numpyro>=0.16.0",
     "pandas>=2.2.0",
+    "quadax>=0.2.5",
     "rich>=13.9.4",
     "RIFT>=0.0.15.11",
     "seaborn>=0.13.0",
