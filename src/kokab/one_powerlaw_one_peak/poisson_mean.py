@@ -71,10 +71,8 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
         else:
             values = model.sample(self.key, (self.num_samples,))
             log_rate = model.log_rate
-        logVT_value = jnp.stack(
-            [self.logVT_fn(values[:, i, :]) for i in range(2)], axis=-1
-        )
+        logVT_value = self.logVT_fn(values)
         log_exp_rate_component = (
             log_rate + jnn.logsumexp(logVT_value, axis=0) - jnp.log(self.num_samples)
         )
-        return self.scale * jnp.sum(jnp.exp(log_exp_rate_component), axis=-1)
+        return self.scale * jnp.exp(log_exp_rate_component)
