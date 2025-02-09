@@ -66,11 +66,10 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
 
     def __call__(self, model: TransformedDistribution) -> Array:
         if isinstance(model, TransformedDistribution):
-            values = model.base_dist.sample(self.key, (self.num_samples,))
             log_rate = model.base_dist.log_rate
         else:
-            values = model.sample(self.key, (self.num_samples,))
             log_rate = model.log_rate
+        values = model.sample(self.key, (self.num_samples,))
         logVT_value = self.logVT_fn(values)
         log_exp_rate_component = (
             log_rate + jnn.logsumexp(logVT_value, axis=0) - jnp.log(self.num_samples)
