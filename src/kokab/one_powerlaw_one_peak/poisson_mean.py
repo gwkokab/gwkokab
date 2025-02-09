@@ -66,13 +66,15 @@ class InverseTransformSamplingPoissonMean(PoissonMeanABC):
 
     def __call__(self, model: TransformedDistribution) -> Array:
         if isinstance(model, TransformedDistribution):
-            values = model.base_dist.component_sample(self.key, (self.num_samples,))
+            values = model.base_dist.sample(self.key, (self.num_samples,))
+            log_rate = model.base_dist.log_rate
         else:
-            values = model.component_sample(self.key, (self.num_samples,))
+            values = model.sample(self.key, (self.num_samples,))
+            log_rate = model.log_rate
         logVT_value = jnp.stack(
-            [self.logVT_fn(values[:, i, :]) for i in range(model.mixture_size)],
-            axis=-1,
+            [self.logVT_fn(values[:, i, :]) for i in range(2)], axis=-1
         )
-        logVT_component = jnn.logsumexp(logVT_value, axis=0) - jnp.log(self.num_samples)
-        log_exp_rate_component = model._log_scales + logVT_component
+        log_exp_rate_component = (
+            log_rate + jnn.logsumexp(logVT_value, axis=0) - jnp.log(self.num_samples)
+        )
         return self.scale * jnp.sum(jnp.exp(log_exp_rate_component), axis=-1)
