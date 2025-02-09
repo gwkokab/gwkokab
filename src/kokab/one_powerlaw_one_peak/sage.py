@@ -46,7 +46,7 @@ from kokab.utils.common import (
     vt_json_read_and_process,
 )
 
-from .inverse_transform_sampling import InverseTransformSamplingPoissonMean
+from .poisson_mean import InverseTransformSamplingPoissonMean
 
 
 def make_parser() -> ArgumentParser:
