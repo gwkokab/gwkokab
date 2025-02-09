@@ -1195,20 +1195,26 @@ class SmoothedPowerlawAndPeak(Distribution):
         U = jrd.uniform(key, shape=sample_shape + (2,))
         U_m1, U_q = jnp.unstack(U, axis=-1)
 
-        m1 = interpax.interp1d(
-            U_m1, self._cdf_m1, self._m1s, method="linear", extrap=True
+        m1 = lax.stop_gradient(
+            interpax.interp1d(
+                U_m1, self._cdf_m1, self._m1s, method="linear", extrap=True
+            )
         )
 
-        cdf_q_given_m1 = interpax.interp1d(
-            m1, self._m1s, self._cdf_q_given_m1, method="linear", extrap=True
+        cdf_q_given_m1 = lax.stop_gradient(
+            interpax.interp1d(
+                m1, self._m1s, self._cdf_q_given_m1, method="linear", extrap=True
+            )
         )
 
-        q = jax.vmap(
-            lambda u, _cdf_q_given_m1: interpax.interp1d(
-                u, _cdf_q_given_m1, q_line, method="linear", extrap=True
-            ),
-            in_axes=(0, 0),
-            out_axes=0,
-        )(U_q, cdf_q_given_m1)
+        q = lax.stop_gradient(
+            jax.vmap(
+                lambda u, _cdf_q_given_m1: interpax.interp1d(
+                    u, _cdf_q_given_m1, q_line, method="linear", extrap=True
+                ),
+                in_axes=(0, 0),
+                out_axes=0,
+            )(U_q, cdf_q_given_m1)
+        )
 
         return jnp.stack([m1, q], axis=-1)
