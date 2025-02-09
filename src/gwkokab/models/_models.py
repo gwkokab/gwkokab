@@ -17,10 +17,13 @@ from functools import partial
 from typing_extensions import Optional
 
 import chex
+import interpax
 import jax
+import quadax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy import special
+from jax.scipy.interpolate import RegularGridInterpolator
 from jax.scipy.special import expit, logsumexp
 from jax.scipy.stats import norm, truncnorm, uniform
 from jaxtyping import Array, ArrayLike
@@ -34,9 +37,11 @@ from numpyro.distributions import (
     TruncatedNormal,
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
+from numpyro.util import is_prng_key
 
 from ..logger import logger
 from ..utils.kernel import log_planck_taper_window
+from ..utils.math import cumtrapz
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
     doubly_truncated_power_law_icdf,
@@ -916,6 +921,8 @@ class SmoothedPowerlawAndPeak(Distribution):
         "_m1s",
         "_Z_q_given_m1",
         "_support",
+        "_cdf_m1",
+        "_cdf_q_give_m1",
     )
 
     @staticmethod
@@ -1044,7 +1051,7 @@ class SmoothedPowerlawAndPeak(Distribution):
 
         _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
         qs = jnp.linspace(
-            jnp.zeros(batch_shape),
+            jnp.full(batch_shape, 0.001, dtype=jnp.result_type(float)),
             jnp.ones(batch_shape),
             250,
             dtype=jnp.result_type(float),
@@ -1061,11 +1068,25 @@ class SmoothedPowerlawAndPeak(Distribution):
         m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
         _log_prob_q = self._log_prob_q(m1qs_grid)
 
-        self._Z_q_given_m1 = jnp.trapezoid(
-            jnp.exp(_log_prob_q), jnp.expand_dims(qs, axis=0), axis=1
+        self._Z_q_given_m1 = jnp.clip(
+            jnp.trapezoid(jnp.exp(_log_prob_q), jnp.expand_dims(qs, axis=0), axis=1),
+            min=jnp.finfo(jnp.result_type(float)).tiny,
+            max=jnp.finfo(jnp.result_type(float)).max,
         )
 
         self._m1s = _m1s
+
+        _pdf_m1 = jnp.exp(
+            self._log_prob_m1(
+                _m1s, Z_powerlaw=self._Z_powerlaw, Z_gaussian=self._Z_gaussian
+            )
+        )
+        self._cdf_m1 = cumtrapz(_pdf_m1, jnp.expand_dims(_m1s, axis=-1))
+
+        _pdf_q_given_m1 = jnp.exp(_log_prob_q) / self._Z_q_given_m1
+        self._cdf_q_given_m1 = quadax.cumulative_trapezoid(
+            _pdf_q_given_m1, x=qs, axis=1, initial=0.0
+        )
 
         super(SmoothedPowerlawAndPeak, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
@@ -1094,15 +1115,15 @@ class SmoothedPowerlawAndPeak(Distribution):
 
     @validate_sample
     def _log_prob_q(self, m1q: Array) -> Array:
-        m1 = m1q[..., 0]
-        q = m1q[..., 1]
+        m1, q = jnp.unstack(m1q, axis=-1)
         m2 = m1 * q
         log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
+        safe_q = jnp.where(jnp.less_equal(m1, self.mmin), self.mmin, q)
         log_prob_q = jnp.where(
             jnp.less_equal(m1, self.mmin),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+                x=safe_q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
         return log_prob_q + log_smoothing_q
@@ -1149,3 +1170,45 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
 
         return self.log_rate + log_prob_m1 + log_prob_q - log_Z_q
+
+    def cdf(self, value: ArrayLike) -> ArrayLike:
+        interpolate = RegularGridInterpolator(
+            (self._m1s, jnp.linspace(0.001, 1.0, 250)),
+            self._cdf_q_given_m1,
+            bounds_error=False,
+            fill_value=1.0,
+        )
+        cdf_q_given_m1 = interpolate(value)
+        del interpolate
+        m1, q = jnp.unstack(value, axis=-1)
+        cdf_m1 = jnp.interp(m1, self._m1s, self._cdf_m1, left=0.0, right=1.0)
+        return jnp.where(
+            jnp.less_equal(m1, self.mmin) | jnp.less_equal(q, 0.001),
+            0.0,
+            cdf_q_given_m1 * cdf_m1,
+        )
+
+    def sample(self, key, sample_shape: tuple[int, ...] = ()) -> ArrayLike:
+        assert is_prng_key(key)
+        q_line = jnp.linspace(0.001, 1.0, self._m1s.shape[-1])
+
+        U = jrd.uniform(key, shape=sample_shape + (2,))
+        U_m1, U_q = jnp.unstack(U, axis=-1)
+
+        m1 = interpax.interp1d(
+            U_m1, self._cdf_m1, self._m1s, method="linear", extrap=True
+        )
+
+        cdf_q_given_m1 = interpax.interp1d(
+            m1, self._m1s, self._cdf_q_given_m1, method="linear", extrap=True
+        )
+
+        q = jax.vmap(
+            lambda u, _cdf_q_given_m1: interpax.interp1d(
+                u, _cdf_q_given_m1, q_line, method="linear", extrap=True
+            ),
+            in_axes=(0, 0),
+            out_axes=0,
+        )(U_q, cdf_q_given_m1)
+
+        return jnp.stack([m1, q], axis=-1)
