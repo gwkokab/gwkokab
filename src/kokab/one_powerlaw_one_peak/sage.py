@@ -32,10 +32,7 @@ from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
     SECONDARY_MASS_SOURCE,
 )
-from gwkokab.poisson_mean import (
-    ImportanceSamplingPoissonMean,
-    InverseTransformSamplingPoissonMean,
-)
+from gwkokab.poisson_mean import ImportanceSamplingPoissonMean
 from kokab.one_powerlaw_one_peak.common import (
     create_smoothed_powerlaw_and_peak,
     create_smoothed_powerlaw_and_peak_raw,
@@ -48,6 +45,8 @@ from kokab.utils.common import (
     read_json,
     vt_json_read_and_process,
 )
+
+from .inverse_transform_sampling import InverseTransformSamplingPoissonMean
 
 
 def make_parser() -> ArgumentParser:
