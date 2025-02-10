@@ -67,7 +67,7 @@ def get_model_pdf(
     rate_scaled: bool = False,
 ) -> Callable[[Array], Array]:
     nf_samples = pd.read_csv(
-        "sampler_data/nf_samples.dat", delimiter=" ", skiprows=1
+        "sampler_data/nf_samples.dat", delimiter=" ", skiprows=0
     ).to_numpy()
 
     if not rate_scaled:
