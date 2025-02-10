@@ -1049,11 +1049,13 @@ class SmoothedPowerlawAndPeak(Distribution):
             - gaussian_mid
         )
 
-        _m1s = jnp.linspace(mmin, mmax, 250, dtype=jnp.result_type(float))
+        grid_size = 100
+
+        _m1s = jnp.linspace(mmin, mmax, grid_size, dtype=jnp.result_type(float))
         qs = jnp.linspace(
             jnp.full(batch_shape, 0.001, dtype=jnp.result_type(float)),
             jnp.ones(batch_shape),
-            250,
+            grid_size,
             dtype=jnp.result_type(float),
         )
 
@@ -1074,8 +1076,6 @@ class SmoothedPowerlawAndPeak(Distribution):
             max=jnp.finfo(jnp.result_type(float)).max,
         )
 
-        self._m1s = _m1s
-
         _pdf_m1 = jnp.exp(
             self._log_prob_m1(
                 _m1s, Z_powerlaw=self._Z_powerlaw, Z_gaussian=self._Z_gaussian
@@ -1084,9 +1084,15 @@ class SmoothedPowerlawAndPeak(Distribution):
         self._cdf_m1 = cumtrapz(_pdf_m1, jnp.expand_dims(_m1s, axis=-1))
 
         _pdf_q_given_m1 = jnp.exp(_log_prob_q) / self._Z_q_given_m1
+
         self._cdf_q_given_m1 = quadax.cumulative_trapezoid(
-            _pdf_q_given_m1, x=qs, axis=1, initial=0.0
+            _pdf_q_given_m1,
+            x=jnp.linspace(0.001, 1, grid_size),
+            axis=-1 - len(batch_shape),
+            initial=0.0,
         )
+
+        self._m1s = _m1s
 
         super(SmoothedPowerlawAndPeak, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
@@ -1113,17 +1119,15 @@ class SmoothedPowerlawAndPeak(Distribution):
         )
         return log_prob_m1 + log_smoothing_m1
 
-    @validate_sample
     def _log_prob_q(self, m1q: Array) -> Array:
         m1, q = jnp.unstack(m1q, axis=-1)
         m2 = m1 * q
         log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
-        safe_q = jnp.where(jnp.less_equal(m1, self.mmin), self.mmin, q)
         log_prob_q = jnp.where(
             jnp.less_equal(m1, self.mmin),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
-                x=safe_q, alpha=self.beta, low=self.mmin / m1, high=1.0
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
         return log_prob_q + log_smoothing_q
