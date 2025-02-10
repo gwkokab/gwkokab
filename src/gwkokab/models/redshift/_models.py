@@ -27,7 +27,7 @@
 from typing import Optional
 
 import jax.numpy as jnp
-from jax import Array, random, vmap
+from jax import Array, random
 from jax.lax import broadcast_shapes
 from jax.scipy.integrate import trapezoid
 from jax.typing import ArrayLike
@@ -36,17 +36,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
 from ...logger import logger
-
-
-def cumtrapz(y: Array, x: Array) -> Array:
-    @vmap
-    def _area(i: Array, d: Array) -> Array:
-        return d * (y[i] + y[i + 1]) * 0.5
-
-    diffs = jnp.diff(x)
-    idxs = jnp.arange(1, len(y))
-    res = jnp.cumsum(_area(idxs, diffs))
-    return jnp.concatenate([jnp.array([0]), res])
+from ...utils.math import cumtrapz
 
 
 class PowerlawRedshift(Distribution):
@@ -115,7 +105,7 @@ class PowerlawRedshift(Distribution):
         self.pdfs = self.dVdc_ * (1 + self.zs) ** (lamb - 1)
         self.norm = trapezoid(self.pdfs, self.zs)
         self.pdfs /= self.norm
-        self.cdfgrid = cumtrapz(self.pdfs, self.zs)
+        self.cdfgrid = cumtrapz(self.pdfs, self.zs.reshape(-1, 1))
         self.cdfgrid = self.cdfgrid.at[-1].set(1)
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)

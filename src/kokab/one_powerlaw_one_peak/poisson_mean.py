@@ -17,33 +17,28 @@ from collections.abc import Callable
 from typing import Union
 
 import equinox as eqx
-from jax import lax, numpy as jnp, random as jrd
+from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
-from numpyro.distributions import (
-    CategoricalProbs,
-    constraints,
-    Distribution,
-    DoublyTruncatedPowerLaw,
-    MixtureGeneral,
-    TransformedDistribution,
-    TruncatedNormal,
-    Uniform,
-)
+from numpyro.distributions import TransformedDistribution
 
-from gwkokab.models import SmoothedPowerlawAndPeak
-from gwkokab.models.transformations import (
-    PrimaryMassAndMassRatioToComponentMassesTransform,
-)
-from gwkokab.models.utils import JointDistribution
 from gwkokab.poisson_mean import PoissonMeanABC
-from gwkokab.utils.kernel import log_planck_taper_window
 
 
-class ImportanceSamplingPoissonMean(PoissonMeanABC):
+class InverseTransformSamplingPoissonMean(PoissonMeanABC):
+    r"""Samples are generated from :math:`\rho_{\Omega\mid\Lambda}` by using the inverse
+    transform sampling method. The estimator is given by,
+
+    .. math::
+
+        \hat{\mu}_{\Omega\mid\Lambda} \approx \frac{1}{N}\sum_{i=1}^{N}\operatorname{VT}(\omega_i),
+        \qquad \forall 0<i\leq N, \omega_i \sim \rho_{\Omega\mid\Lambda}.
+
+    This method is very useful when the target distribution is easy to sample from.
+    """
+
     logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
     num_samples: int = eqx.field(init=False, static=True)
     key: PRNGKeyArray = eqx.field(init=False)
-    mixing_dist: CategoricalProbs = eqx.field(init=False)
 
     def __init__(
         self,
@@ -52,136 +47,31 @@ class ImportanceSamplingPoissonMean(PoissonMeanABC):
         num_samples: int,
         scale: Union[int, float, Array] = 1.0,
     ) -> None:
+        r"""
+        Parameters
+        ----------
+        logVT_fn : Callable[[Array], Array]
+            Log of the Volume Time Sensitivity function.
+        key : PRNGKeyArray
+            PRNG key.
+        num_samples : int
+            Number of samples
+        scale : Union[int, float, Array]
+            scale factor, by default 1.0
+        """
         self.scale = scale
         self.key = key
         self.num_samples = num_samples
         self.logVT_fn = logVT_fn
-        self.mixing_dist = CategoricalProbs(jnp.array([1.0 - 0.05, 0.05]))
 
-    def __call__(self, model: SmoothedPowerlawAndPeak) -> Array:
+    def __call__(self, model: TransformedDistribution) -> Array:
         if isinstance(model, TransformedDistribution):
-            model = model.base_dist
-
-        delta_region_dist = Uniform(
-            low=model.mmin,
-            high=model.mmin + model.delta,
-            validate_args=model._validate_args,
+            log_rate = model.base_dist.log_rate
+        else:
+            log_rate = model.log_rate
+        values = model.sample(self.key, (self.num_samples,))
+        logVT_value = self.logVT_fn(values)
+        log_exp_rate_component = (
+            log_rate + jnn.logsumexp(logVT_value, axis=0) - jnp.log(self.num_samples)
         )
-
-        delta_region_dist_m1m2 = JointDistribution(
-            delta_region_dist,
-            delta_region_dist,
-            validate_args=model._validate_args,
-        )
-
-        m1_powerlaw = DoublyTruncatedPowerLaw(
-            alpha=model.alpha,
-            low=model.mmin,
-            high=model.mmax,
-            validate_args=model._validate_args,
-        )
-        m2_powerlaw = DoublyTruncatedPowerLaw(
-            alpha=model.beta,
-            low=model.mmin,
-            high=model.mmax,
-            validate_args=model._validate_args,
-        )
-        m1_gaussian = TruncatedNormal(
-            loc=model.loc,
-            scale=model.scale,
-            low=model.mmin,
-            high=model.mmax,
-            validate_args=model._validate_args,
-        )
-
-        powerlaw_component: Distribution = MixtureGeneral(
-            self.mixing_dist,
-            [
-                JointDistribution(
-                    m1_powerlaw,
-                    m2_powerlaw,
-                    validate_args=model._validate_args,
-                ),
-                delta_region_dist_m1m2,
-            ],
-            support=constraints.independent(
-                constraints.interval(
-                    jnp.array([model.mmin, model.mmin]),
-                    jnp.array([model.mmax, model.mmax]),
-                ),
-                1,
-            ),
-            validate_args=model._validate_args,
-        )
-        gaussian_component: Distribution = MixtureGeneral(
-            self.mixing_dist,
-            [
-                JointDistribution(
-                    m1_gaussian,
-                    m2_powerlaw,
-                    validate_args=model._validate_args,
-                ),
-                delta_region_dist_m1m2,
-            ],
-            support=constraints.independent(
-                constraints.interval(
-                    jnp.array([model.mmin, model.mmin]),
-                    jnp.array([model.mmax, model.mmax]),
-                ),
-                1,
-            ),
-            validate_args=model._validate_args,
-        )
-
-        key1, key2 = jrd.split(self.key, num=2)
-
-        powerlaw_samples = powerlaw_component.sample(key1, (self.num_samples,))
-        gaussian_samples = gaussian_component.sample(key2, (self.num_samples,))
-
-        transformation = PrimaryMassAndMassRatioToComponentMassesTransform()
-        powerlaw_samples_q = transformation._inverse(powerlaw_samples)
-        gaussian_samples_q = transformation._inverse(gaussian_samples)
-
-        rate_powerlaw = jnp.mean(
-            (
-                model._powerlaw_prob(powerlaw_samples[..., 0])
-                / lax.stop_gradient(model._Z_q(powerlaw_samples[..., 0]))
-            )
-            * jnp.exp(
-                self.logVT_fn(powerlaw_samples)
-                + model._log_prob_q(powerlaw_samples_q)
-                - transformation.log_abs_det_jacobian(
-                    powerlaw_samples_q, powerlaw_samples
-                )
-                + log_planck_taper_window(
-                    (powerlaw_samples[..., 0] - model.mmin) / model.delta
-                )
-                - lax.stop_gradient(powerlaw_component.log_prob(powerlaw_samples)),
-            )
-        )
-        rate_gaussian = jnp.mean(
-            (
-                model._gaussian_prob(gaussian_samples[..., 0])
-                / lax.stop_gradient(model._Z_q(gaussian_samples[..., 0]))
-            )
-            * jnp.exp(
-                self.logVT_fn(gaussian_samples)
-                + model._log_prob_q(gaussian_samples_q)
-                - transformation.log_abs_det_jacobian(
-                    gaussian_samples_q, gaussian_samples
-                )
-                + log_planck_taper_window(
-                    (gaussian_samples[..., 0] - model.mmin) / model.delta
-                )
-                - lax.stop_gradient(gaussian_component.log_prob(gaussian_samples))
-            )
-        )
-
-        total_estimated_rate = (
-            (1 - model.lambda_peak) * rate_powerlaw / model._Z_powerlaw
-        )
-        total_estimated_rate += (model.lambda_peak * rate_gaussian) / model._Z_gaussian
-
-        total_estimated_rate = total_estimated_rate * jnp.exp(model.log_rate)
-
-        return self.scale * total_estimated_rate
+        return self.scale * jnp.exp(log_exp_rate_component)
