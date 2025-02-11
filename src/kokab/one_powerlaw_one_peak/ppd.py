@@ -20,16 +20,9 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 import pandas as pd
 from jaxtyping import Array
 
-import kokab
-from gwkokab.parameters import MASS_RATIO, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
-from kokab.one_powerlaw_one_peak.common import (
-    create_smoothed_powerlaw_and_peak,
-    create_smoothed_powerlaw_and_peak_raw,
-)
+from gwkokab.models import SmoothedPowerlawAndPeak
+from gwkokab.parameters import PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from kokab.utils import ppd, ppd_parser
-
-
-build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak
 
 
 def make_parser() -> ArgumentParser:
@@ -71,7 +64,7 @@ def get_model_pdf(
     ).to_numpy()
 
     if not rate_scaled:
-        model = build_smoothing_powerlaw_and_peak(
+        model = SmoothedPowerlawAndPeak(
             **constants,
             **{
                 name: (nf_samples[..., i] if not name.startswith("log_rate") else 0.0)
@@ -79,7 +72,7 @@ def get_model_pdf(
             },
         )
     else:
-        model = build_smoothing_powerlaw_and_peak(
+        model = SmoothedPowerlawAndPeak(
             **constants,
             **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
         )
@@ -110,14 +103,7 @@ def main() -> None:
         args.constants, args.nf_samples_mapping
     )
 
-    parameters = [PRIMARY_MASS_SOURCE.name]
-    if args.raw:
-        kokab.one_powerlaw_one_peak.ppd.build_smoothing_powerlaw_and_peak = (
-            create_smoothed_powerlaw_and_peak_raw
-        )
-        parameters.append(MASS_RATIO.name)
-    else:
-        parameters.append(SECONDARY_MASS_SOURCE.name)
+    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
 
     model_without_rate_pdf = get_model_pdf(constants, nf_samples_mapping)
     compute_and_save_ppd(model_without_rate_pdf, args.range, args.filename, parameters)
