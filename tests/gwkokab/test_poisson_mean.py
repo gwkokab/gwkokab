@@ -193,3 +193,78 @@ class TestVariants(parameterized.TestCase):
             return pmean_estimator(dist_arg)
 
         assert_allclose(pmean_estimator_fn(dist), value, atol=5e-3, rtol=1e-6)
+
+    @chex.variants(  # pyright: ignore
+        with_jit=True,
+        without_jit=True,
+        with_device=True,
+        without_device=True,
+        with_pmap=True,
+    )
+    @parameterized.named_parameters(
+        [
+            (str(i), dist, log_vt_fn, value)
+            for i, (dist, log_vt_fn, value) in enumerate(DIST_LOG_VT_VALUE)
+        ]
+    )
+    def test_importance_sampling_poisson_mean(
+        self,
+        dist: ScaledMixture,
+        log_vt_fn: Callable[[Array], Array],
+        value: ArrayLike,
+    ) -> None:
+        key = jrd.PRNGKey(0)
+
+        pmean_estimator = PoissonMean(
+            logVT_fn=log_vt_fn,
+            proposal_dists=[
+                dist.component_distributions[i] for i in range(dist.mixture_size)
+            ],
+            key=key,
+            num_samples=50_000,
+            scale=1.0,
+        )
+
+        @self.variant  # pyright: ignore
+        def pmean_estimator_fn(dist_arg):
+            return pmean_estimator(dist_arg)
+
+        assert_allclose(pmean_estimator_fn(dist), value, atol=5e-3, rtol=1e-6)
+
+    @chex.variants(  # pyright: ignore
+        with_jit=True,
+        without_jit=True,
+        with_device=True,
+        without_device=True,
+        with_pmap=True,
+    )
+    @parameterized.named_parameters(
+        [
+            (str(i), dist, log_vt_fn, value)
+            for i, (dist, log_vt_fn, value) in enumerate(DIST_LOG_VT_VALUE)
+        ]
+    )
+    def test_inverse_transform_sampling_poisson_and_importance_sampling_poisson_mean(
+        self,
+        dist: ScaledMixture,
+        log_vt_fn: Callable[[Array], Array],
+        value: ArrayLike,
+    ) -> None:
+        key = jrd.PRNGKey(0)
+
+        pmean_estimator = PoissonMean(
+            logVT_fn=log_vt_fn,
+            proposal_dists=[
+                dist.component_distributions[i] if i % 2 else "self"
+                for i in range(dist.mixture_size)
+            ],
+            key=key,
+            num_samples=50_000,
+            scale=1.0,
+        )
+
+        @self.variant  # pyright: ignore
+        def pmean_estimator_fn(dist_arg):
+            return pmean_estimator(dist_arg)
+
+        assert_allclose(pmean_estimator_fn(dist), value, atol=5e-3, rtol=1e-6)

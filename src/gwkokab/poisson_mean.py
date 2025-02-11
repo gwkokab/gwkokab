@@ -19,7 +19,7 @@ from typing import List, Literal, Optional, Tuple, Union
 import equinox as eqx
 from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
-from numpyro.distributions.distribution import DistributionLike
+from numpyro.distributions.distribution import Distribution, DistributionLike
 
 from .logger import logger
 from .models.utils import ScaledMixture
@@ -112,15 +112,20 @@ class PoissonMean(eqx.Module):
                     proposal_log_weights_and_samples.append(None)
                 else:
                     raise ValueError(f"Unknown proposal distribution: {dist}")
-            elif isinstance(dist, DistributionLike):
+            elif isinstance(dist, Distribution):
                 samples = dist.sample(key, (num_samples,))
-                log_weights = logVT_fn(samples) - dist.log_prob(samples)
+                print(
+                    samples.shape, logVT_fn(samples).shape, dist.log_prob(samples).shape
+                )
+                proposal_log_prob = dist.log_prob(samples).reshape(num_samples)
+                logVT_samples = logVT_fn(samples).reshape(num_samples)
+                log_weights = logVT_samples - proposal_log_prob
                 assert log_weights.shape == (num_samples,), (
                     f"Expected log_weights to have shape {(num_samples,)}, "
                     f"but got {log_weights.shape}"
                 )
-                assert samples.shape == (num_samples,), (
-                    f"Expected samples to have shape {(num_samples,)}, "
+                assert samples.shape[0] == num_samples, (
+                    f"Expected samples to have shape {(num_samples, -1)}, "
                     f"but got {samples.shape}"
                 )
                 assert jnp.all(jnp.isfinite(log_weights)), (
@@ -155,8 +160,11 @@ class PoissonMean(eqx.Module):
                 per_component_per_sample_estimated_rates.append(self.logVT_fn(samples))
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
+                proposal_log_prob = component_dist.log_prob(samples).reshape(
+                    self.num_samples
+                )
                 per_component_per_sample_estimated_rates.append(
-                    log_weights + component_dist.log_prob(samples)
+                    log_weights + proposal_log_prob
                 )
 
         per_component_per_sample_estimated_rates = jnp.stack(
