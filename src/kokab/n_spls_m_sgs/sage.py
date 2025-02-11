@@ -153,9 +153,8 @@ def main() -> None:
         ("scale_g", N_g),
         ("beta_g", N_g),
         ("mmin_g", N_g),
+        ("mmax_g", N_g),
         ("delta_g", N_g),
-        ("low_g", N_g),
-        ("high_g", N_g),
     ]
 
     parameters = [PRIMARY_MASS_SOURCE]
