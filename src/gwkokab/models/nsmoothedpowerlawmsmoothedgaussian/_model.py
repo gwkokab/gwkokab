@@ -17,8 +17,9 @@ from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
-from numpyro.distributions import constraints, Distribution
+from numpyro.distributions import constraints, Distribution, TransformedDistribution
 
+from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..utils import (
     combine_distributions,
@@ -433,22 +434,28 @@ def SmoothedPowerlawAndPeak(
         S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),
         \qqquad m_{\text{min}}\leq m_1q \leq m_1\leq m_{\text{max}}
     """
-    smoothed_powerlaw = SmoothedPowerlawPrimaryMassRatio(
-        alpha=alpha,
-        beta=beta,
-        mmin=mmin,
-        mmax=mmax,
-        delta=delta,
-        validate_args=validate_args,
+    smoothed_powerlaw = TransformedDistribution(
+        SmoothedPowerlawPrimaryMassRatio(
+            alpha=alpha,
+            beta=beta,
+            mmin=mmin,
+            mmax=mmax,
+            delta=delta,
+            validate_args=validate_args,
+        ),
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
     )
-    smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
-        loc=loc,
-        scale=scale,
-        beta=beta,
-        mmin=mmin,
-        mmax=mmax,
-        delta=delta,
-        validate_args=validate_args,
+    smoothed_gaussian = TransformedDistribution(
+        SmoothedGaussianPrimaryMassRatio(
+            loc=loc,
+            scale=scale,
+            beta=beta,
+            mmin=mmin,
+            mmax=mmax,
+            delta=delta,
+            validate_args=validate_args,
+        ),
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
     )
     return ScaledMixture(
         log_scales=jnp.array(
