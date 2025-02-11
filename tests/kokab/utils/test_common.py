@@ -32,6 +32,11 @@ def test_get_posterior_data():
         {"dist": "Uniform", "low": -5, "high": 10},
         {"dist": "Normal", "loc": 0.1, "scale": 10},
         {"dist": "HalfNormal", "scale": 10},
+        {"dist": "Uniform", "low": 0, "high": 0},
+        {"dist": "Normal", "loc": 0, "scale": 0},
+        pytest.param(
+            {"dist": "InvalidDist", "param": 1}, marks=pytest.mark.xfail(strict=True)
+        ),  # Invalid distribution
     ],
 )
 def test_get_dist(meta_dict: Dict) -> None:
