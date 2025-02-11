@@ -37,11 +37,8 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-from gwkokab.poisson_mean import (
-    ImportanceSamplingPoissonMean,
-    InverseTransformSamplingPoissonMean,
-)
-from kokab.utils import sage_parser
+from gwkokab.poisson_mean import PoissonMean
+from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
     expand_arguments,
     flowMC_default_parameters,
@@ -244,23 +241,8 @@ def main() -> None:
     )
     logVT = nvt.get_vmapped_logVT()
 
-    if args.erate_estimator == "IS":
-        erate_estimator = ImportanceSamplingPoissonMean(
-            logVT,
-            parameters,
-            KEY4,
-            args.n_samples,
-            args.analysis_time,
-        )
-    elif args.erate_estimator == "ITS":
-        erate_estimator = InverseTransformSamplingPoissonMean(
-            logVT,
-            KEY4,
-            args.n_samples,
-            args.analysis_time,
-        )
-    else:
-        raise ValueError("Invalid estimator for expected rate.")
+    pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
+    erate_estimator = PoissonMean(logVT, KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]

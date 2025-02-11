@@ -16,10 +16,12 @@
 import json
 import warnings
 from collections.abc import Sequence
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
+from numpyro import distributions as dist
+from numpyro.distributions.distribution import DistributionLike
 
 from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
 from kokab.utils.priors import available as available_priors
@@ -190,3 +192,30 @@ def vt_json_read_and_process(
     vt_settings.pop("type")
     vt = available_vts[vt_type]
     return vt(parameters, vt_path, **vt_settings)
+
+
+def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:
+    """Get the distribution from the dictionary. It expects the dictionary to have the
+    key 'dist' which is the name of the distribution and the rest of the keys to be the
+    parameters of the distribution.
+
+    Example
+    -------
+    >>> std_normal = get_dist({"dist": "Normal", "loc": 0.0, "scale": 1.0})
+    >>> std_normal.loc
+    0.0
+    >>> std_normal.scale
+    1.0
+
+    Parameters
+    ----------
+    meta_dict : dict[str, Union[str, float]]
+        Dictionary containing the distribution name and its parameters
+
+    Returns
+    -------
+    DistributionLike
+        The distribution object
+    """
+    dist_name = meta_dict.pop("dist")
+    return getattr(dist, dist_name)(**meta_dict)

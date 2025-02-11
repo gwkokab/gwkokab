@@ -16,13 +16,17 @@
 from collections.abc import Callable
 from typing import List, Tuple
 
+import chex
 import numpy as np
 import numpyro.distributions as dist
-from jax import numpy as jnp
+from absl.testing import parameterized
+from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, ArrayLike
+from numpy.testing import assert_allclose
 from numpyro.distributions import constraints
 
 from gwkokab.models.utils import JointDistribution, ScaledMixture
+from gwkokab.poisson_mean import PoissonMean
 
 
 _a = np.array
@@ -152,3 +156,115 @@ DIST_LOG_VT_VALUE: List[
         + 3.0 * np.square(_beta_moments(4, 2.0, 1.0)),
     ),
 ]
+
+
+class TestVariants(parameterized.TestCase):
+    @chex.variants(  # pyright: ignore
+        with_jit=True,
+        without_jit=True,
+        with_device=True,
+        without_device=True,
+        with_pmap=True,
+    )
+    @parameterized.named_parameters(
+        [
+            (str(i), dist, log_vt_fn, value)
+            for i, (dist, log_vt_fn, value) in enumerate(DIST_LOG_VT_VALUE)
+        ]
+    )
+    def test_inverse_transform_sampling_poisson_mean(
+        self,
+        dist: ScaledMixture,
+        log_vt_fn: Callable[[Array], Array],
+        value: ArrayLike,
+    ) -> None:
+        key = jrd.PRNGKey(0)
+
+        pmean_estimator = PoissonMean(
+            logVT_fn=log_vt_fn,
+            proposal_dists=["self" for _ in range(dist.mixture_size)],
+            key=key,
+            num_samples=50_000,
+            scale=1.0,
+        )
+
+        @self.variant  # pyright: ignore
+        def pmean_estimator_fn(dist_arg):
+            return pmean_estimator(dist_arg)
+
+        assert_allclose(pmean_estimator_fn(dist), value, atol=5e-3, rtol=1e-6)
+
+    @chex.variants(  # pyright: ignore
+        with_jit=True,
+        without_jit=True,
+        with_device=True,
+        without_device=True,
+        with_pmap=True,
+    )
+    @parameterized.named_parameters(
+        [
+            (str(i), dist, log_vt_fn, value)
+            for i, (dist, log_vt_fn, value) in enumerate(DIST_LOG_VT_VALUE)
+        ]
+    )
+    def test_importance_sampling_poisson_mean(
+        self,
+        dist: ScaledMixture,
+        log_vt_fn: Callable[[Array], Array],
+        value: ArrayLike,
+    ) -> None:
+        key = jrd.PRNGKey(0)
+
+        pmean_estimator = PoissonMean(
+            logVT_fn=log_vt_fn,
+            proposal_dists=[
+                dist.component_distributions[i] for i in range(dist.mixture_size)
+            ],
+            key=key,
+            num_samples=50_000,
+            scale=1.0,
+        )
+
+        @self.variant  # pyright: ignore
+        def pmean_estimator_fn(dist_arg):
+            return pmean_estimator(dist_arg)
+
+        assert_allclose(pmean_estimator_fn(dist), value, atol=5e-3, rtol=1e-6)
+
+    @chex.variants(  # pyright: ignore
+        with_jit=True,
+        without_jit=True,
+        with_device=True,
+        without_device=True,
+        with_pmap=True,
+    )
+    @parameterized.named_parameters(
+        [
+            (str(i), dist, log_vt_fn, value)
+            for i, (dist, log_vt_fn, value) in enumerate(DIST_LOG_VT_VALUE)
+        ]
+    )
+    def test_inverse_transform_sampling_poisson_and_importance_sampling_poisson_mean(
+        self,
+        dist: ScaledMixture,
+        log_vt_fn: Callable[[Array], Array],
+        value: ArrayLike,
+    ) -> None:
+        key = jrd.PRNGKey(0)
+
+        pmean_estimator = PoissonMean(
+            logVT_fn=log_vt_fn,
+            proposal_dists=[
+                dist.component_distributions[i] if i % 2 else "self"
+                for i in range(dist.mixture_size)
+            ],
+            key=key,
+            num_samples=50_000,
+            scale=1.0,
+        )
+
+        @self.variant  # pyright: ignore
+        def pmean_estimator_fn(dist_arg):
+            return pmean_estimator(dist_arg)
+
+        assert_allclose(pmean_estimator_fn(dist), value, atol=1e-2, rtol=1e-6)

@@ -58,26 +58,14 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         type=str,
         required=True,
     )
-    vt_group.add_argument(
-        "--analysis-time",
-        help="Analysis time of the VT",
-        default=1.0,
-        type=float,
-    )
 
-    erate_group = parser.add_argument_group("Expected Rate Options")
+    pmean_group = parser.add_argument_group("Poisson Mean Options")
 
-    erate_group.add_argument(
-        "--erate-estimator",
-        help="Estimator for the expected rate. IS: Importance Sampling, ITS: Inverse Transform Sampling",
-        choices=["IS", "ITS"],
-        default="ITS",
-    )
-    erate_group.add_argument(
-        "--n-samples",
-        help="Number of samples to compute expected rate.",
-        default=10_000,
-        type=int,
+    pmean_group.add_argument(
+        "--pmean-json",
+        help="Path to the JSON file containing the Poisson mean options.",
+        type=str,
+        required=True,
     )
 
     return parser
