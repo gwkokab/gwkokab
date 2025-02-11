@@ -221,19 +221,47 @@ CONTINUOUS = [
     ),
     (
         SmoothedGaussianPrimaryMassRatio,
-        {"loc": 70.0, "scale": 2.1, "beta": 1.0, "mmin": 10.0, "delta": 4.1},
+        {
+            "loc": 70.0,
+            "scale": 2.1,
+            "beta": 1.0,
+            "mmin": 10.0,
+            "mmax": 100.0,
+            "delta": 4.1,
+        },
     ),
     (
         SmoothedGaussianPrimaryMassRatio,
-        {"loc": 80.0, "scale": 1.1, "beta": -8.0, "mmin": 70.0, "delta": 3.14},
+        {
+            "loc": 80.0,
+            "scale": 1.1,
+            "beta": -8.0,
+            "mmin": 70.0,
+            "mmax": 100.0,
+            "delta": 3.14,
+        },
     ),
     (
         SmoothedGaussianPrimaryMassRatio,
-        {"loc": 20.0, "scale": 3.14, "beta": 9.0, "mmin": 5.0, "delta": 0.8},
+        {
+            "loc": 20.0,
+            "scale": 3.14,
+            "beta": 9.0,
+            "mmin": 5.0,
+            "mmax": 100.0,
+            "delta": 0.8,
+        },
     ),
     (
         SmoothedGaussianPrimaryMassRatio,
-        {"loc": 65.0, "scale": 3.14, "beta": 3.0, "mmin": 50.0, "delta": 7.4},
+        {
+            "loc": 65.0,
+            "scale": 3.14,
+            "beta": 3.0,
+            "mmin": 50.0,
+            "mmax": 100.0,
+            "delta": 7.4,
+        },
     ),
     (
         SmoothedPowerlawPrimaryMassRatio,
