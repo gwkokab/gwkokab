@@ -689,12 +689,12 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
 
         _m1s_delta = jnp.linspace(mmin, mmin + delta, 30, dtype=jnp.result_type(float))
 
-        _logZ = lax.stop_gradient(
+        _Z = lax.stop_gradient(
             jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0)
         ) + self._powerlaw_norm_constant(
             alpha=self.alpha, low=self.mmin + self.delta, high=self.mmax
         )
-        self._logZ = jnp.where(jnp.isnan(_logZ) | jnp.isinf(_logZ), 0.0, _logZ)
+        self._logZ = jnp.where(jnp.isnan(_Z) | jnp.isinf(_Z), 0.0, jnp.log(_Z))
 
         del _m1s_delta
 
@@ -874,7 +874,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
 
         _m1s_delta = jnp.linspace(mmin, mmin + delta, 30, dtype=jnp.result_type(float))
 
-        _logZ = (
+        _Z = (
             lax.stop_gradient(
                 jnp.trapezoid(
                     jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0
@@ -883,7 +883,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             + special.ndtr((self.mmax - self.loc) / self.scale)
             - special.ndtr((self.mmin + self.delta - self.loc) / self.scale)
         )
-        self._logZ = jnp.where(jnp.isnan(_logZ) | jnp.isinf(_logZ), 0.0, _logZ)
+        self._logZ = jnp.where(jnp.isnan(_Z) | jnp.isinf(_Z), 0.0, jnp.log(_Z))
 
         del _m1s_delta
 
