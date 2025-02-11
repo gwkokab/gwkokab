@@ -79,16 +79,10 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     erate_group = parser.add_argument_group("Expected Rate Options")
 
     erate_group.add_argument(
-        "--erate-estimator",
-        help="Estimator for the expected rate. IS: Importance Sampling, ITS: Inverse Transform Sampling",
-        choices=["IS", "ITS"],
-        default="ITS",
-    )
-    erate_group.add_argument(
-        "--n-samples",
-        help="Number of samples to compute expected rate.",
-        default=10_000,
-        type=int,
+        "--erate-json",
+        help="Path to the JSON file containing the expected rate options.",
+        type=str,
+        required=True,
     )
 
     flowMC_group = parser.add_argument_group("flowMC Options")

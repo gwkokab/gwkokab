@@ -90,7 +90,7 @@ class PoissonMean(eqx.Module):
         ----------
         logVT_fn : Callable[[Array], Array]
             Log of the Volume Time Sensitivity function.
-        proposal_dists : List[Literal["self"], DistributionLike]
+        proposal_dists : List[Union[Literal[&quot;self&quot;], DistributionLike]]
             List of proposal distributions. If "self" is given, the proposal distribution
             is the target distribution itself.
         key : PRNGKeyArray
@@ -99,6 +99,13 @@ class PoissonMean(eqx.Module):
             Number of samples
         scale : Union[int, float, Array]
             scale factor, by default 1.0
+
+        Raises
+        ------
+        ValueError
+            If the proposal distribution is unknown.
+        ValueError
+            If the proposal distribution is not a distribution.
         """
         self.scale = scale
         self.key = key
@@ -117,7 +124,7 @@ class PoissonMean(eqx.Module):
                 print(
                     samples.shape, logVT_fn(samples).shape, dist.log_prob(samples).shape
                 )
-                proposal_log_prob = dist.log_prob(samples).reshape(num_samples)
+                proposal_log_prob: Array = dist.log_prob(samples).reshape(num_samples)
                 logVT_samples = logVT_fn(samples).reshape(num_samples)
                 log_weights = logVT_samples - proposal_log_prob
                 assert log_weights.shape == (num_samples,), (

@@ -23,10 +23,7 @@ from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
-from gwkokab.poisson_mean import (
-    ImportanceSamplingPoissonMean,
-    InverseTransformSamplingPoissonMean,
-)
+from gwkokab.poisson_mean import PoissonMean
 from gwkokab.population import error_magazine, PopulationFactory
 from kokab.ecc_matters.common import constraint, EccentricityMattersModel
 from kokab.utils import genie_parser
@@ -129,23 +126,13 @@ def main() -> None:
     nvt = vt_json_read_and_process(model_parameters, args.vt_path, args.vt_json)
     logVT = nvt.get_vmapped_logVT()
 
-    if args.erate_estimator == "IS":
-        erate_estimator = ImportanceSamplingPoissonMean(
-            logVT,
-            [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY],
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
-            args.n_samples,
-            args.analysis_time,
-        )
-    elif args.erate_estimator == "ITS":
-        erate_estimator = InverseTransformSamplingPoissonMean(
-            logVT,
-            jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
-            args.n_samples,
-            args.analysis_time,
-        )
-    else:
-        raise ValueError("Invalid estimator for expected rate.")
+    erate_estimator = PoissonMean(
+        logVT,
+        ["self"],
+        jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+        args.n_samples,
+        args.analysis_time,
+    )
 
     popfactory = PopulationFactory(
         model=model,

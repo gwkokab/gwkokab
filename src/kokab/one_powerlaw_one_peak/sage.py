@@ -32,11 +32,11 @@ from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
     SECONDARY_MASS_SOURCE,
 )
+from gwkokab.poisson_mean import PoissonMean
 from kokab.one_powerlaw_one_peak.common import (
     create_smoothed_powerlaw_and_peak,
     create_smoothed_powerlaw_and_peak_raw,
 )
-from kokab.one_powerlaw_one_peak.poisson_mean import ImportanceSamplingPoissonMean
 from kokab.utils import sage_parser
 from kokab.utils.common import (
     flowMC_default_parameters,
@@ -115,8 +115,9 @@ def main() -> None:
     )
     logVT = nvt.get_vmapped_logVT()
 
-    erate_estimator = ImportanceSamplingPoissonMean(
+    erate_estimator = PoissonMean(
         logVT,
+        ["self"],  # TODO: parse erate-json and make distribution for them
         KEY4,
         args.n_samples,
         args.analysis_time,
