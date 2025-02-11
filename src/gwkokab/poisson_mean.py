@@ -121,9 +121,6 @@ class PoissonMean(eqx.Module):
                     raise ValueError(f"Unknown proposal distribution: {dist}")
             elif isinstance(dist, Distribution):
                 samples = dist.sample(key, (num_samples,))
-                print(
-                    samples.shape, logVT_fn(samples).shape, dist.log_prob(samples).shape
-                )
                 proposal_log_prob: Array = dist.log_prob(samples).reshape(num_samples)
                 logVT_samples = logVT_fn(samples).reshape(num_samples)
                 log_weights = logVT_samples - proposal_log_prob
@@ -147,6 +144,18 @@ class PoissonMean(eqx.Module):
         self.proposal_log_weights_and_samples = proposal_log_weights_and_samples
 
     def __call__(self, model: ScaledMixture) -> Array:
+        r"""Estimate the rate/s by using the given model.
+
+        Parameters
+        ----------
+        model : ScaledMixture
+            Model instance.
+
+        Returns
+        -------
+        Array
+            Estimated rate/s.
+        """
         assert isinstance(model, ScaledMixture), (
             f"Expected model to be an instance of ScaledMixture, but got {type(model)}"
         )

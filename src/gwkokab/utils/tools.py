@@ -47,6 +47,8 @@ def fetch_first_matching_value(dictionary: Dict[_KT, _VT], *keys: _KT) -> Option
 def error_if(cond: bool, err: Exception = ValueError, msg: str = "") -> None:
     """Raise an error if condition is met.
 
+    Reference: utils of `interpax <https://github.com/f0uriest/interpax>`_.
+
     Parameters
     ----------
     cond : bool
@@ -60,10 +62,6 @@ def error_if(cond: bool, err: Exception = ValueError, msg: str = "") -> None:
     ------
     err
         The error raised if the condition is met.
-
-    Reference
-    ---------
-    utils of `interpax <https://github.com/f0uriest/interpax>`_.
     """
     if cond:
         raise err(msg)
@@ -71,6 +69,8 @@ def error_if(cond: bool, err: Exception = ValueError, msg: str = "") -> None:
 
 def warn_if(cond: bool, err: Warning = UserWarning, msg: str = "") -> None:
     """Raise a warning if condition is met.
+
+    Reference: utils of `interpax <https://github.com/f0uriest/interpax>`_.
 
     Parameters
     ----------
@@ -80,10 +80,6 @@ def warn_if(cond: bool, err: Warning = UserWarning, msg: str = "") -> None:
         The warning to raise, by default UserWarning
     msg : str, optional
         The message to include with the warning, by default ""
-
-    Reference
-    ---------
-    utils of `interpax <https://github.com/f0uriest/interpax>`_.
     """
     if cond:
         warnings.warn(msg, err)
