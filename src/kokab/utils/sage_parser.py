@@ -44,12 +44,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     sage_group.add_argument(
-        "--analysis-time",
-        help="Analysis time of the VT",
-        default=1.0,
-        type=float,
-    )
-    sage_group.add_argument(
         "--seed",
         help="Seed for the random number generator.",
         default=37,
@@ -76,11 +70,11 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
 
-    erate_group = parser.add_argument_group("Expected Rate Options")
+    pmean_group = parser.add_argument_group("Poisson Mean Options")
 
-    erate_group.add_argument(
-        "--erate-json",
-        help="Path to the JSON file containing the expected rate options.",
+    pmean_group.add_argument(
+        "--pmean-json",
+        help="Path to the JSON file containing the Poisson mean options.",
         type=str,
         required=True,
     )

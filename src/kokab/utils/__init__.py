@@ -12,9 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 from . import (
     common as common,
     genie_parser as genie_parser,
+    poisson_mean_parser as poisson_mean_parser,
     ppd as ppd,
     ppd_parser as ppd_parser,
     regex as regex,
