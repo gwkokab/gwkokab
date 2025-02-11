@@ -17,7 +17,7 @@ from collections.abc import Callable
 from typing import List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
-from jax import nn as jnn, numpy as jnp
+from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions.distribution import Distribution, DistributionLike
 
@@ -108,7 +108,6 @@ class PoissonMean(eqx.Module):
             If the proposal distribution is not a distribution.
         """
         self.scale = scale
-        self.key = key
         self.num_samples = num_samples
         self.logVT_fn = logVT_fn
 
@@ -139,9 +138,11 @@ class PoissonMean(eqx.Module):
                     f"Expected samples to be finite, but got {samples}"
                 )
                 proposal_log_weights_and_samples.append((log_weights, samples))
+                key, _ = jrd.split(key)
             else:
                 raise ValueError(f"Unknown proposal distribution: {dist}")
         self.proposal_log_weights_and_samples = proposal_log_weights_and_samples
+        self.key = key
 
     def __call__(self, model: ScaledMixture) -> Array:
         r"""Estimate the rate/s by using the given model.
