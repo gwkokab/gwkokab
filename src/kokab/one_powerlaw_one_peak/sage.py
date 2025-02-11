@@ -37,7 +37,7 @@ from kokab.one_powerlaw_one_peak.common import (
     create_smoothed_powerlaw_and_peak,
     create_smoothed_powerlaw_and_peak_raw,
 )
-from kokab.utils import sage_parser
+from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
     flowMC_default_parameters,
     get_posterior_data,
@@ -115,13 +115,8 @@ def main() -> None:
     )
     logVT = nvt.get_vmapped_logVT()
 
-    erate_estimator = PoissonMean(
-        logVT,
-        ["self"],  # TODO: parse erate-json and make distribution for them
-        KEY4,
-        args.n_samples,
-        args.analysis_time,
-    )
+    pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
+    erate_estimator = PoissonMean(logVT, KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]

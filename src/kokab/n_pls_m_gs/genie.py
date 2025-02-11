@@ -39,7 +39,7 @@ from gwkokab.parameters import (
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.population import error_magazine, PopulationFactory
 from kokab.n_pls_m_gs.common import constraint
-from kokab.utils import genie_parser
+from kokab.utils import genie_parser, poisson_mean_parser
 from kokab.utils.common import expand_arguments, vt_json_read_and_process
 from kokab.utils.regex import match_all
 
@@ -362,12 +362,9 @@ def main() -> None:
     nvt = vt_json_read_and_process(parameters_name, args.vt_path, args.vt_json)
     logVT = nvt.get_vmapped_logVT()
 
+    pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(
-        logVT,
-        ["self"],
-        jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
-        args.n_samples,
-        args.analysis_time,
+        logVT, jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)), **pmean_kwargs
     )
 
     popfactory = PopulationFactory(

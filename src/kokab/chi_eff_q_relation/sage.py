@@ -24,7 +24,6 @@ from numpyro.distributions import Uniform
 from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
 from gwkokab.logger import enable_logging
 from gwkokab.models import ChiEffMassRatioCorrelated
-from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import (
     Parameter,
     PRIMARY_MASS_SOURCE,
@@ -33,7 +32,7 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import PoissonMean
-from kokab.utils import sage_parser
+from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
     flowMC_default_parameters,
     get_posterior_data,
@@ -120,13 +119,8 @@ def main() -> None:
     )
     logVT = nvt.get_vmapped_logVT()
 
-    erate_estimator = PoissonMean(
-        logVT,
-        [JointDistribution(param.prior for param in parameters)],
-        KEY4,
-        args.n_samples,
-        args.analysis_time,
-    )
+    pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
+    erate_estimator = PoissonMean(logVT, KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     log_ref_priors = [REDSHIFT.prior.log_prob(d[..., 4]) for d in data]
