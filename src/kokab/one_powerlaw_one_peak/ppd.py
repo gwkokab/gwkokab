@@ -19,8 +19,10 @@ from typing_extensions import Callable, Dict, List, Tuple, Union
 
 import pandas as pd
 from jaxtyping import Array
+from numpyro.distributions import TransformedDistribution
 
 from gwkokab.models import SmoothedPowerlawAndPeak
+from gwkokab.models.transformations import ComponentMassesToPrimaryMassAndMassRatio
 from gwkokab.parameters import PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from kokab.utils import ppd, ppd_parser
 
@@ -60,21 +62,33 @@ def get_model_pdf(
     rate_scaled: bool = False,
 ) -> Callable[[Array], Array]:
     nf_samples = pd.read_csv(
-        "sampler_data/nf_samples.dat", delimiter=" ", skiprows=1
+        "sampler_data/nf_samples.dat", delimiter=" ", skiprows=0
     ).to_numpy()
 
     if not rate_scaled:
-        model = SmoothedPowerlawAndPeak(
-            **constants,
-            **{
-                name: (nf_samples[..., i] if not name.startswith("log_rate") else 0.0)
-                for name, i in nf_samples_mapping.items()
-            },
+        model = TransformedDistribution(
+            SmoothedPowerlawAndPeak(
+                **constants,
+                **{
+                    name: (
+                        nf_samples[..., i] if not name.startswith("log_rate") else 0.0
+                    )
+                    for name, i in nf_samples_mapping.items()
+                },
+                validate_args=True,
+            ),
+            transforms=ComponentMassesToPrimaryMassAndMassRatio(),
+            validate_args=True,
         )
     else:
-        model = SmoothedPowerlawAndPeak(
-            **constants,
-            **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
+        model = TransformedDistribution(
+            SmoothedPowerlawAndPeak(
+                **constants,
+                **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
+                validate_args=True,
+            ),
+            transforms=ComponentMassesToPrimaryMassAndMassRatio(),
+            validate_args=True,
         )
 
     return model.log_prob
