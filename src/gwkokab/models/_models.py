@@ -694,7 +694,9 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         ) + self._powerlaw_norm_constant(
             alpha=self.alpha, low=self.mmin + self.delta, high=self.mmax
         )
-        self._logZ = jnp.where(jnp.isnan(_Z) | jnp.isinf(_Z), 0.0, jnp.log(_Z))
+        self._logZ = jnp.where(
+            jnp.isnan(_Z) | jnp.isinf(_Z) | jnp.less(_Z, 0.0), 0.0, jnp.log(_Z)
+        )
 
         del _m1s_delta
 
@@ -796,7 +798,14 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        log_Z_q = lax.stop_gradient(jnp.log(self._Z_q(m1, log_prob_m1.shape)))
+        _Z_q = self._Z_q(m1, log_prob_m1.shape)
+        log_Z_q = lax.stop_gradient(
+            jnp.where(
+                jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
+                0.0,
+                jnp.log(_Z_q),
+            )
+        )
         log_prob_q = self._log_prob_q(value, log_Z_q)
         return log_prob_m1 + log_prob_q
 
@@ -883,7 +892,9 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             + special.ndtr((self.mmax - self.loc) / self.scale)
             - special.ndtr((self.mmin + self.delta - self.loc) / self.scale)
         )
-        self._logZ = jnp.where(jnp.isnan(_Z) | jnp.isinf(_Z), 0.0, jnp.log(_Z))
+        self._logZ = jnp.where(
+            jnp.isnan(_Z) | jnp.isinf(_Z) | jnp.less(_Z, 0.0), 0.0, jnp.log(_Z)
+        )
 
         del _m1s_delta
 
@@ -975,6 +986,13 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        log_Z_q = lax.stop_gradient(jnp.log(self._Z_q(m1, log_prob_m1.shape)))
+        _Z_q = self._Z_q(m1, log_prob_m1.shape)
+        log_Z_q = lax.stop_gradient(
+            jnp.where(
+                jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
+                0.0,
+                jnp.log(_Z_q),
+            )
+        )
         log_prob_q = self._log_prob_q(value, log_Z_q)
         return log_prob_m1 + log_prob_q
