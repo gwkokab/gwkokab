@@ -22,6 +22,9 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 
+plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
+
+
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Command line interface for plotting Effective Sample Size per draw.",
@@ -136,4 +139,4 @@ def main() -> None:
         sub_plot.bar_label(c, labels=labels, label_type="edge")
 
     plt.tight_layout()
-    plt.savefig(args.output, dpi=300)
+    plt.savefig(args.output, dpi=300, bbox_inches="tight")

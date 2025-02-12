@@ -20,6 +20,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 
+plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
+
+
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Command line interface for plotting chains.",
@@ -152,4 +155,4 @@ def main() -> None:
     plt.xscale(args.x_scale)
     plt.yscale(args.y_scale)
     plt.tight_layout()
-    fig.savefig(args.output.name)
+    fig.savefig(args.output.name, bbox_inches="tight")

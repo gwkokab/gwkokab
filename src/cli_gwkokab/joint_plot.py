@@ -17,6 +17,10 @@ import argparse
 
 import pandas as pd
 import seaborn as sns
+from matplotlib import pyplot as plt
+
+
+plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -114,4 +118,4 @@ def main() -> None:
     g.plot_joint(sns.kdeplot, fill=True, thresh=0, cmap=args.cmap)
     g.set_axis_labels(args.xlabel, args.ylabel)
     g.fig.suptitle(args.title)
-    g.savefig(args.output.name)
+    g.savefig(args.output.name, bbox_inches="tight")

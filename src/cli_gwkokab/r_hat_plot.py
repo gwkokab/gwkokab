@@ -22,6 +22,9 @@ from arviz.utils import _var_names, get_coords
 from matplotlib import pyplot as plt
 
 
+plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
+
+
 def make_parser() -> argparse.ArgumentParser:
     """Create the command line argument parser.
 
@@ -121,9 +124,14 @@ def main() -> None:
     plt.axhline(1, c="k", ls="--")
     plt.xlabel("Iteration")
     plt.ylabel(r"$\hat{R}$")
-    plt.legend()
+    plt.legend(
+        loc="center left",
+        bbox_to_anchor=(1, 0.5),
+        fancybox=True,
+        shadow=True,
+    )
     plt.yscale(args.y_scale)
     plt.xscale(args.x_scale)
     plt.title(args.title)
     plt.tight_layout()
-    plt.savefig(args.output, dpi=300)
+    plt.savefig(args.output, dpi=300, bbox_inches="tight")
