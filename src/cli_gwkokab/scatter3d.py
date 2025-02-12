@@ -20,6 +20,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 
+plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
+
+
 def make_parser() -> argparse.ArgumentParser:
     """Create the command line argument parser.
 
@@ -163,8 +166,6 @@ def main() -> None:
             ),
         )
     plt.tight_layout()
-    plt.savefig(
-        args.output.name,
-    )
+    plt.savefig(args.output.name, bbox_inches="tight")
 
     args.data.close()

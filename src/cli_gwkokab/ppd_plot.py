@@ -23,6 +23,9 @@ from matplotlib import pyplot as plt
 from kokab.utils.ppd import get_all_marginals
 
 
+plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
+
+
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="PPD plot",
@@ -195,6 +198,6 @@ def main() -> None:
 
         plt.legend()
         plt.tight_layout()
-        fig.savefig(f"{args.dir}/{prefix}{head}_ppd_plot.png")
+        fig.savefig(f"{args.dir}/{prefix}{head}_ppd_plot.pdf", bbox_inches="tight")
         plt.close("all")
         i += 1
