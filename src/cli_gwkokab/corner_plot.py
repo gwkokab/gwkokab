@@ -17,6 +17,10 @@ import argparse
 
 import corner
 import pandas as pd
+from matplotlib import pyplot as plt
+
+
+plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -139,4 +143,4 @@ def main() -> None:
     )
     scaling_factor = args.scale
     figure.set_size_inches(scaling_factor * args.size[0], scaling_factor * args.size[1])
-    figure.savefig(args.output.name)
+    figure.savefig(args.output.name, bbox_inches="tight")

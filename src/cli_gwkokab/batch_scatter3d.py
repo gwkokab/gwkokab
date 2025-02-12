@@ -21,6 +21,9 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 
+plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
+
+
 def make_parser() -> argparse.ArgumentParser:
     """Create the command line argument parser.
 
