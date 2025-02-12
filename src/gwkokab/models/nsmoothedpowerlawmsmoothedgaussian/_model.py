@@ -422,7 +422,7 @@ def SmoothedPowerlawAndPeak(
     log_rate: ArrayLike,
     *,
     validate_args=None,
-):
+) -> ScaledMixture:
     r"""It is a mixture of power law and Gaussian distribution with a smoothing kernel.
 
     .. math::
@@ -444,6 +444,7 @@ def SmoothedPowerlawAndPeak(
             validate_args=validate_args,
         ),
         transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+        validate_args=validate_args,
     )
     smoothed_gaussian = TransformedDistribution(
         SmoothedGaussianPrimaryMassRatio(
@@ -456,13 +457,15 @@ def SmoothedPowerlawAndPeak(
             validate_args=validate_args,
         ),
         transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+        validate_args=validate_args,
     )
     return ScaledMixture(
-        log_scales=jnp.array(
+        log_scales=jnp.stack(
             [
                 jnp.log1p(-lambda_peak) + log_rate,
                 jnp.log(lambda_peak) + log_rate,
-            ]
+            ],
+            axis=-1,
         ),
         component_distributions=[smoothed_powerlaw, smoothed_gaussian],
         support=smoothed_powerlaw.support,

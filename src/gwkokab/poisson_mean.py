@@ -165,7 +165,7 @@ class PoissonMean(eqx.Module):
             f"but got {len(self.proposal_log_weights_and_samples)}"
         )
 
-        per_component_per_sample_estimated_rates = []
+        per_component_per_sample_log_estimated_rates = []
 
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
@@ -174,26 +174,29 @@ class PoissonMean(eqx.Module):
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
                 samples = component_dist.sample(self.key, (self.num_samples,))
-                per_component_per_sample_estimated_rates.append(self.logVT_fn(samples))
+                per_component_per_sample_log_estimated_rates.append(
+                    self.logVT_fn(samples)
+                )
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
                 component_log_prob = component_dist.log_prob(samples).reshape(
                     self.num_samples
                 )
-                per_component_per_sample_estimated_rates.append(
+                per_component_per_sample_log_estimated_rates.append(
                     log_weights + component_log_prob
                 )
 
-        per_component_per_sample_estimated_rates = jnp.stack(
-            per_component_per_sample_estimated_rates, axis=-1
+        per_component_per_sample_log_estimated_rates = jnp.stack(
+            per_component_per_sample_log_estimated_rates, axis=-1
         )
-        per_component_estimated_rates = (
+        per_component_log_estimated_rates = (
             model._log_scales
-            + jnn.logsumexp(per_component_per_sample_estimated_rates, axis=0)
+            + jnn.logsumexp(per_component_per_sample_log_estimated_rates, axis=0)
             - jnp.log(self.num_samples)
         )
+        per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)
         logger.debug(
             "per_component_estimated_rates: {per_component_estimated_rates}",
             per_component_estimated_rates=per_component_estimated_rates,
         )
-        return self.scale * jnp.sum(jnp.exp(per_component_estimated_rates), axis=-1)
+        return self.scale * jnp.sum(per_component_estimated_rates, axis=-1)
