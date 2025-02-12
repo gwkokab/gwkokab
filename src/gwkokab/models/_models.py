@@ -17,6 +17,7 @@ from functools import partial
 from typing_extensions import Optional
 
 import chex
+import interpax
 import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
@@ -616,6 +617,11 @@ def FlexibleMixtureModel(
     )
 
 
+_m1s = jnp.linspace(0.5, 200.0, 120, dtype=jnp.result_type(float))
+_qs = jnp.linspace(0.001, 1.0, 120, dtype=jnp.result_type(float))
+_m1qs_grid = jnp.stack(jnp.meshgrid(_m1s, _qs, indexing="ij"), axis=-1)
+
+
 class SmoothedPowerlawPrimaryMassRatio(Distribution):
     r""":class:`PowerlawPrimaryMassRatio` with smoothing kernel on the lower edge.
 
@@ -641,7 +647,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "delta": constraints.positive,
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta"]
-    pytree_data_fields = ("_support", "_logZ", "_Z_q_given_m1", "_m1s")
+    pytree_data_fields = ("_support", "_logZ", "_Z_q_given_m1")
 
     def __init__(
         self,
@@ -702,41 +708,13 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
 
         # Compute the normalization constant for mass ratio distribution
 
-        grid_size = 100
-
-        _m1s = jnp.linspace(mmin, mmax, grid_size, dtype=jnp.result_type(float))
-        qs = jnp.linspace(
-            jnp.full(batch_shape, 0.001, dtype=jnp.result_type(float)),
-            jnp.ones(batch_shape),
-            grid_size,
-            dtype=jnp.result_type(float),
-        )
-
-        if batch_shape:
-            # TODO: check https://github.com/jax-ml/jax/issues/25696 and update accordingly
-            meshgrid_fn = jax.vmap(
-                partial(jnp.meshgrid, indexing="ij"), in_axes=(-1, -1), out_axes=-1
-            )
-        else:
-            meshgrid_fn = partial(jnp.meshgrid, indexing="ij")
-
-        m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
-        del qs
-
-        _prob_q = jnp.exp(self._log_prob_q(m1qs_grid))
-        del m1qs_grid
-
-        q_line = jnp.linspace(0.001, 1, grid_size)
+        _prob_q = jnp.exp(self._log_prob_q(jnp.expand_dims(_m1qs_grid, axis=-2)))
 
         self._Z_q_given_m1 = jnp.clip(
-            jnp.trapezoid(_prob_q, jnp.expand_dims(q_line, axis=0), axis=1),
+            jnp.trapezoid(_prob_q, _qs, axis=1).reshape(*(_m1s.shape + batch_shape)),
             min=jnp.finfo(jnp.result_type(float)).tiny,
             max=jnp.finfo(jnp.result_type(float)).max,
         )
-
-        del q_line
-
-        self._m1s = _m1s
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
@@ -752,25 +730,6 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             (jnp.power(high, alpha + 1) - jnp.power(low, alpha + 1)) / (alpha + 1.0),
         )
 
-    def _Z_q(self, m1: ArrayLike, shape: tuple[int, ...] = ()) -> ArrayLike:
-        def _Z_q_inner(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
-            if not shape:
-                return jnp.interp(m1, m1s, Z_qs, left=1.0, right=1.0)
-            return jax.vmap(partial(jnp.interp, xp=m1s, fp=Z_qs, left=1.0, right=1.0))(
-                m1
-            )
-
-        if self.batch_shape:
-            _Z_q_val = jax.vmap(
-                _Z_q_inner,
-                in_axes=(-1, -1),
-                out_axes=-1,
-            )(self._m1s, self._Z_q_given_m1)
-            _Z_q_val = jnp.reshape(_Z_q_val, shape)
-        else:
-            _Z_q_val = _Z_q_inner(self._m1s, self._Z_q_given_m1)
-        return _Z_q_val
-
     def _log_prob_m1(self, m1: Array, logZ: ArrayLike = 0.0) -> Array:
         log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
         log_prob_powerlaw = self.alpha * jnp.log(m1)
@@ -782,6 +741,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             neginf=-jnp.inf,
         )
 
+    @validate_sample
     def _log_prob_q(self, value: Array, logZ: ArrayLike = 0.0) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
@@ -798,7 +758,14 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        _Z_q = self._Z_q(m1, log_prob_m1.shape)
+        if m1.ndim > 1:
+            _Z_q = jax.vmap(
+                partial(interpax.interp1d, x=_m1s, f=self._Z_q_given_m1),
+                in_axes=1,
+                out_axes=1,
+            )(m1)
+        else:
+            _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
         log_Z_q = lax.stop_gradient(
             jnp.where(
                 jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
@@ -839,7 +806,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "delta": constraints.positive,
     }
     reparametrized_params = ["loc", "scale", "beta", "mmin", "mmax", "delta"]
-    pytree_data_fields = ("_support", "_logZ", "_Z_q_given_m1", "_m1s")
+    pytree_data_fields = ("_support", "_logZ", "_Z_q_given_m1")
 
     def __init__(
         self, loc, scale, beta, mmin, mmax, delta, *, validate_args=None
@@ -900,64 +867,17 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
 
         # Compute the normalization constant for mass ratio distribution
 
-        grid_size = 100
-
-        _m1s = jnp.linspace(mmin, mmax, grid_size, dtype=jnp.result_type(float))
-        qs = jnp.linspace(
-            jnp.full(batch_shape, 0.001, dtype=jnp.result_type(float)),
-            jnp.ones(batch_shape),
-            grid_size,
-            dtype=jnp.result_type(float),
-        )
-
-        if batch_shape:
-            # TODO: check https://github.com/jax-ml/jax/issues/25696 and update accordingly
-            meshgrid_fn = jax.vmap(
-                partial(jnp.meshgrid, indexing="ij"), in_axes=(-1, -1), out_axes=-1
-            )
-        else:
-            meshgrid_fn = partial(jnp.meshgrid, indexing="ij")
-
-        m1qs_grid = jnp.stack(meshgrid_fn(_m1s, qs), axis=-1)
-        del qs
-
-        _prob_q = jnp.exp(self._log_prob_q(m1qs_grid))
-        del m1qs_grid
-
-        q_line = jnp.linspace(0.001, 1, grid_size)
+        _prob_q = jnp.exp(self._log_prob_q(jnp.expand_dims(_m1qs_grid, axis=-2)))
 
         self._Z_q_given_m1 = jnp.clip(
-            jnp.trapezoid(_prob_q, jnp.expand_dims(q_line, axis=0), axis=1),
+            jnp.trapezoid(_prob_q, _qs, axis=1).reshape(*(_m1s.shape + batch_shape)),
             min=jnp.finfo(jnp.result_type(float)).tiny,
             max=jnp.finfo(jnp.result_type(float)).max,
         )
 
-        del q_line
-
-        self._m1s = _m1s
-
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
         return self._support
-
-    def _Z_q(self, m1: ArrayLike, shape: tuple[int, ...] = ()) -> ArrayLike:
-        def _Z_q_inner(m1s: ArrayLike, Z_qs: ArrayLike) -> ArrayLike:
-            if not shape:
-                return jnp.interp(m1, m1s, Z_qs, left=1.0, right=1.0)
-            return jax.vmap(partial(jnp.interp, xp=m1s, fp=Z_qs, left=1.0, right=1.0))(
-                m1
-            )
-
-        if self.batch_shape:
-            _Z_q_val = jax.vmap(
-                _Z_q_inner,
-                in_axes=(-1, -1),
-                out_axes=-1,
-            )(self._m1s, self._Z_q_given_m1)
-            _Z_q_val = jnp.reshape(_Z_q_val, shape)
-        else:
-            _Z_q_val = _Z_q_inner(self._m1s, self._Z_q_given_m1)
-        return _Z_q_val
 
     def _log_prob_m1(self, m1: Array, logZ: ArrayLike = 0.0) -> Array:
         log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
@@ -970,6 +890,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             neginf=-jnp.inf,
         )
 
+    @validate_sample
     def _log_prob_q(self, value: Array, logZ: ArrayLike = 0.0) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
@@ -986,7 +907,14 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        _Z_q = self._Z_q(m1, log_prob_m1.shape)
+        if m1.ndim > 1:
+            _Z_q = jax.vmap(
+                partial(interpax.interp1d, x=_m1s, f=self._Z_q_given_m1),
+                in_axes=1,
+                out_axes=1,
+            )(m1)
+        else:
+            _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
         log_Z_q = lax.stop_gradient(
             jnp.where(
                 jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
