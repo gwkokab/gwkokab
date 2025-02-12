@@ -177,11 +177,11 @@ class PoissonMean(eqx.Module):
                 per_component_per_sample_estimated_rates.append(self.logVT_fn(samples))
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
-                proposal_log_prob = component_dist.log_prob(samples).reshape(
+                component_log_prob = component_dist.log_prob(samples).reshape(
                     self.num_samples
                 )
                 per_component_per_sample_estimated_rates.append(
-                    log_weights + proposal_log_prob
+                    log_weights + component_log_prob
                 )
 
         per_component_per_sample_estimated_rates = jnp.stack(
