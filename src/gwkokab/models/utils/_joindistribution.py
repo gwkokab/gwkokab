@@ -22,14 +22,13 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
 
-from gwkokab.models.constraints import all_constraint
-
 
 class JointDistribution(Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
     pytree_aux_fields = ("marginal_distributions", "shaped_values")
-    pytree_data_fields = ("_support",)
+    # pytree_data_fields = ("_support",)
+    support = constraints.real_vector
 
     def __init__(
         self,
@@ -67,14 +66,6 @@ class JointDistribution(Distribution):
             event_shape=(k,),
             validate_args=validate_args,
         )
-        self._support = all_constraint(
-            constraints=[m_d.support for m_d in marginal_distributions],
-            event_slices=self.shaped_values,
-        )
-
-    @constraints.dependent_property(is_discrete=False)
-    def support(self):
-        return self._support
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:

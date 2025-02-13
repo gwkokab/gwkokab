@@ -65,7 +65,7 @@ class ScaledMixture(Distribution):
             raise ValueError(
                 "The 'component_distributions' argument must be a list of Distribution objects"
             )
-        self._mixture_size = len(component_distributions)
+        self._mixture_size = log_scales.shape[-1]
         for d in component_distributions:
             if not isinstance(d, Distribution):
                 raise ValueError(
