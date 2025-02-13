@@ -266,7 +266,7 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
         return _logVT
 
-    def get_vmapped_logVT(self) -> Callable[[Array], Array]:
+    def get_mapped_logVT(self) -> Callable[[Array], Array]:
         return lambda x: jax.lax.map(self.get_logVT(), x)
 
 

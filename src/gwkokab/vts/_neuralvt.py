@@ -63,7 +63,7 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
         return _logVT
 
-    def get_vmapped_logVT(self) -> Callable[[Array], Array]:
+    def get_mapped_logVT(self) -> Callable[[Array], Array]:
         """Gets the vmapped logVT function for batch processing."""
 
         @jax.jit
