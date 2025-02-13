@@ -144,4 +144,4 @@ def main() -> None:
         **FLOWMC_HANDLER_KWARGS,
     )
 
-    handler.run(args.debug_nans)
+    handler.run(debug_nans=args.debug_nans, profile_memory=args.profile_memory)
