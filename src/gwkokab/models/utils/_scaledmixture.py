@@ -47,7 +47,13 @@ class ScaledMixture(MixtureGeneral):
        ()
     """
 
-    pytree_data_fields = ("_log_scales",)
+    pytree_data_fields = (  # to be consistent with MixtureGeneral
+        "_mixing_distribution",
+        "_component_distributions",
+        "_support",
+        "_log_scales",
+    )
+    pytree_aux_fields = ("_mixture_size",)
 
     def __init__(
         self,
