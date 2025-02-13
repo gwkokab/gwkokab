@@ -115,5 +115,10 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "https://jax.readthedocs.io/en/latest/_autosummary/jax.debug_nans.html#jax.debug_nans.",
         action="store_true",
     )
+    debug_group.add_argument(
+        "--profile-memory",
+        help="Enable memory profiling.",
+        action="store_true",
+    )
 
     return parser
