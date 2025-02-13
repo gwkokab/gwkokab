@@ -38,8 +38,8 @@ class VolumeTimeSensitivityInterface(eqx.Module):
         raise NotImplementedError
 
     @abstractmethod
-    def get_vmapped_logVT(self) -> Callable[[Array], Array]:
-        """Gets a vectorized log volume-time sensitivity function for batch processing.
+    def get_mapped_logVT(self) -> Callable[[Array], Array]:
+        """Gets a mapped log volume-time sensitivity function for batch processing.
 
         Returns
         -------
