@@ -69,9 +69,9 @@ class PoissonMean(eqx.Module):
     improve the performance of the importance sampling.
     """
 
-    logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
-    num_samples: int = eqx.field(init=False, static=True)
     key: PRNGKeyArray = eqx.field(init=False)
+    logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
+    num_samples_per_component: List[int] = eqx.field(init=False, static=True)
     proposal_log_weights_and_samples: List[Optional[Tuple[Array, Array]]] = eqx.field(
         init=False
     )
@@ -82,10 +82,12 @@ class PoissonMean(eqx.Module):
         logVT_fn: Callable[[Array], Array],
         proposal_dists: List[Union[Literal["self"], DistributionLike]],
         key: PRNGKeyArray,
-        num_samples: int,
+        num_samples: int = 10_000,
+        self_num_samples: Optional[int] = None,
+        num_samples_per_component: Optional[List[int]] = None,
         scale: Union[int, float, Array] = 1.0,
     ) -> None:
-        r"""
+        """
         Parameters
         ----------
         logVT_fn : Callable[[Array], Array]
@@ -96,7 +98,11 @@ class PoissonMean(eqx.Module):
         key : PRNGKeyArray
             PRNG key.
         num_samples : int
-            Number of samples
+            Number of samples, by default 10_000
+        self_num_samples : Optional[int], optional
+            Number of samples for distribution using Inverse Transform Sampling, by default None
+        num_samples_per_component : Optional[List[int]], optional
+            Number of samples for each component, by default None
         scale : Union[int, float, Array]
             scale factor, by default 1.0
 
@@ -107,28 +113,41 @@ class PoissonMean(eqx.Module):
         ValueError
             If the proposal distribution is not a distribution.
         """
+        if num_samples_per_component is not None:
+            assert len(proposal_dists) == len(num_samples_per_component), (
+                f"Mismatch between the number of proposal distributions "
+                f"({len(proposal_dists)}) and the number of samples per component "
+                f"({len(num_samples_per_component)})"
+            )
+            self.num_samples_per_component = num_samples_per_component
+        else:
+            self.num_samples_per_component = [
+                num_samples for _ in range(len(proposal_dists))
+            ]
         self.scale = scale
-        self.num_samples = num_samples
         self.logVT_fn = logVT_fn
 
         proposal_log_weights_and_samples = []
-        for dist in proposal_dists:
+        for index, dist in enumerate(proposal_dists):
             if isinstance(dist, str):
                 if dist.strip().lower() == "self":
                     proposal_log_weights_and_samples.append(None)
+                    if self_num_samples is not None:
+                        self.num_samples_per_component[index] = self_num_samples
                 else:
                     raise ValueError(f"Unknown proposal distribution: {dist}")
             elif isinstance(dist, Distribution):
-                samples = dist.sample(key, (num_samples,))
-                proposal_log_prob: Array = dist.log_prob(samples).reshape(num_samples)
-                logVT_samples = logVT_fn(samples).reshape(num_samples)
+                _num_samples = self.num_samples_per_component[index]
+                samples = dist.sample(key, (_num_samples,))
+                proposal_log_prob: Array = dist.log_prob(samples).reshape(_num_samples)
+                logVT_samples = logVT_fn(samples).reshape(_num_samples)
                 log_weights = logVT_samples - proposal_log_prob
-                assert log_weights.shape == (num_samples,), (
-                    f"Expected log_weights to have shape {(num_samples,)}, "
+                assert log_weights.shape == (_num_samples,), (
+                    f"Expected log_weights to have shape {(_num_samples,)}, "
                     f"but got {log_weights.shape}"
                 )
-                assert samples.shape[0] == num_samples, (
-                    f"Expected samples to have shape {(num_samples, -1)}, "
+                assert samples.shape[0] == _num_samples, (
+                    f"Expected samples to have shape {(_num_samples, -1)}, "
                     f"but got {samples.shape}"
                 )
                 assert jnp.all(jnp.isfinite(log_weights)), (
@@ -165,34 +184,29 @@ class PoissonMean(eqx.Module):
             f"but got {len(self.proposal_log_weights_and_samples)}"
         )
 
-        per_component_per_sample_log_estimated_rates = []
+        per_component_log_estimated_rates = []
 
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
             component_dist: DistributionLike = model._component_distributions[i]
+            num_samples = self.num_samples_per_component[i]
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
-                samples = component_dist.sample(self.key, (self.num_samples,))
-                per_component_per_sample_log_estimated_rates.append(
-                    self.logVT_fn(samples)
-                )
+                samples = component_dist.sample(self.key, (num_samples,))
+                per_sample_log_estimated_rates = self.logVT_fn(samples)
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
                 component_log_prob = component_dist.log_prob(samples).reshape(
-                    self.num_samples
+                    num_samples
                 )
-                per_component_per_sample_log_estimated_rates.append(
-                    log_weights + component_log_prob
-                )
+                per_sample_log_estimated_rates = log_weights + component_log_prob
+            per_component_log_estimated_rates.append(
+                jnn.logsumexp(per_sample_log_estimated_rates) - jnp.log(num_samples)
+            )
 
-        per_component_per_sample_log_estimated_rates = jnp.stack(
-            per_component_per_sample_log_estimated_rates, axis=-1
-        )
-        per_component_log_estimated_rates = (
-            model._log_scales
-            + jnn.logsumexp(per_component_per_sample_log_estimated_rates, axis=0)
-            - jnp.log(self.num_samples)
+        per_component_log_estimated_rates = model._log_scales + jnp.stack(
+            per_component_log_estimated_rates, axis=-1
         )
         per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)
         logger.debug(
