@@ -205,7 +205,7 @@ class PoissonMean(eqx.Module):
                 jnn.logsumexp(per_sample_log_estimated_rates) - jnp.log(num_samples)
             )
 
-        per_component_log_estimated_rates = model._log_scales + jnp.stack(
+        per_component_log_estimated_rates = model.log_scales + jnp.stack(
             per_component_log_estimated_rates, axis=-1
         )
         per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)
