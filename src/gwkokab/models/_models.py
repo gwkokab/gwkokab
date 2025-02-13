@@ -18,7 +18,6 @@ from typing_extensions import Optional
 
 import chex
 import interpax
-import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy import special
@@ -759,11 +758,11 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
         if m1.ndim > 1:
-            _Z_q = jax.vmap(
+            _Z_q = lax.map(
                 partial(interpax.interp1d, x=_m1s, f=self._Z_q_given_m1),
-                in_axes=1,
-                out_axes=1,
-            )(m1)
+                m1,
+                batch_size=m1.shape[0],
+            )
         else:
             _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
         log_Z_q = lax.stop_gradient(
@@ -908,11 +907,11 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
         if m1.ndim > 1:
-            _Z_q = jax.vmap(
+            _Z_q = lax.map(
                 partial(interpax.interp1d, x=_m1s, f=self._Z_q_given_m1),
-                in_axes=1,
-                out_axes=1,
-            )(m1)
+                m1,
+                batch_size=m1.shape[0],
+            )
         else:
             _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
         log_Z_q = lax.stop_gradient(
