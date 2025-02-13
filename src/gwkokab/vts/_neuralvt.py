@@ -12,11 +12,12 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+
 from collections.abc import Callable, Sequence
 
 import equinox as eqx
 import jax
-from jax import numpy as jnp
+from jax import lax, numpy as jnp
 from jaxtyping import Array
 
 from ._abc import VolumeTimeSensitivityInterface
@@ -62,14 +63,12 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
         return _logVT
 
-    def get_vmapped_logVT(self) -> Callable[[Array], Array]:
+    def get_mapped_logVT(self) -> Callable[[Array], Array]:
         """Gets the vmapped logVT function for batch processing."""
-
-        neural_vt_model_vmap = jax.vmap(self.neural_vt_model)
 
         @jax.jit
         def _logVT(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
-            return jnp.squeeze(neural_vt_model_vmap(x_new), axis=-1)
+            return jnp.squeeze(lax.map(self.neural_vt_model, x_new), axis=-1)
 
         return _logVT

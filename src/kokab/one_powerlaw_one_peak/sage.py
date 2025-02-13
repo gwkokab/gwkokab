@@ -92,7 +92,7 @@ def main() -> None:
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json
     )
-    logVT = nvt.get_vmapped_logVT()
+    logVT = nvt.get_mapped_logVT()
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)

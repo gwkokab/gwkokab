@@ -266,8 +266,8 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
         return _logVT
 
-    def get_vmapped_logVT(self) -> Callable[[Array], Array]:
-        return jax.vmap(self.get_logVT(), in_axes=0, out_axes=0)
+    def get_mapped_logVT(self) -> Callable[[Array], Array]:
+        return lambda x: jax.lax.map(self.get_logVT(), x)
 
 
 # source: https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L554-709

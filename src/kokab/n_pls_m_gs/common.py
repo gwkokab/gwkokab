@@ -13,25 +13,7 @@
 # limitations under the License.
 
 
-from collections.abc import Sequence
-from typing_extensions import Callable
-
-from jax import numpy as jnp, vmap
 from jaxtyping import Array
-
-from gwkokab.vts import load_model
-
-
-def get_logVT(
-    vt_path: str, selection_indexes: Sequence[int]
-) -> Callable[[Array], Array]:
-    _, logVT = load_model(vt_path)
-
-    def m1m2_trimmed_logVT(x: Array) -> Array:
-        m1m2 = x[..., selection_indexes]
-        return jnp.squeeze(vmap(logVT)(m1m2), axis=-1)
-
-    return m1m2_trimmed_logVT
 
 
 def constraint(
