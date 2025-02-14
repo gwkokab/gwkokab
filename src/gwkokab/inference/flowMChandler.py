@@ -13,7 +13,6 @@
 # limitations under the License.
 
 
-import datetime
 from collections.abc import Callable
 from typing import Any, Optional
 
@@ -105,7 +104,12 @@ class flowMChandler(object):
             **self.sampler_kwargs,
         )
 
-    def run(self, debug_nans: bool = False, profile_memory: bool = False) -> None:
+    def run(
+        self,
+        debug_nans: bool = False,
+        profile_memory: bool = False,
+        file_prefix: Optional[str] = None,
+    ) -> None:
         """Run the flowMC sampler and save the data.
 
         Parameters
@@ -114,15 +118,23 @@ class flowMChandler(object):
             Whether to debug NaNs, by default False
         profile_memory : bool, optional
             Whether to profile memory, by default False
+        file_prefix : Optional[str], optional
+            Prefix for the file name, by default None
         """
         sampler = self.make_sampler()
         if debug_nans:
             with jax.debug_nans(True):
                 sampler.sample(self.initial_position, self.data)
-        if profile_memory:
-            time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        elif profile_memory:
             sampler.sample(self.initial_position, self.data)
-            jax.profiler.save_device_memory_profile(f"gwkokab_memory_{time}.prof")
+
+            import datetime
+
+            time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+            filename = f"memory_{time}.prof"
+            if file_prefix:
+                filename = f"{file_prefix}_{filename}"
+            jax.profiler.save_device_memory_profile(filename)
         else:
             sampler.sample(self.initial_position, self.data)
         save_data_from_sampler(sampler, **self.data_dump_kwargs)

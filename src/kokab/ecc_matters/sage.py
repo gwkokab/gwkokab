@@ -129,4 +129,8 @@ def main() -> None:
         **FLOWMC_HANDLER_KWARGS,
     )
 
-    handler.run(debug_nans=args.debug_nans, profile_memory=args.profile_memory)
+    handler.run(
+        debug_nans=args.debug_nans,
+        profile_memory=args.profile_memory,
+        file_prefix="ecc_matters",
+    )
