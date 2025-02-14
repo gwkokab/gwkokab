@@ -119,7 +119,7 @@ class flowMChandler(object):
         if debug_nans:
             with jax.debug_nans(True):
                 sampler.sample(self.initial_position, self.data)
-        if profile_memory:
+        elif profile_memory:
             time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
             sampler.sample(self.initial_position, self.data)
             jax.profiler.save_device_memory_profile(f"gwkokab_memory_{time}.prof")
