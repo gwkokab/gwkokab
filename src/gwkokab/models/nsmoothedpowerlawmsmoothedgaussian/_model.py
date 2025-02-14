@@ -468,6 +468,6 @@ def SmoothedPowerlawAndPeak(
             axis=-1,
         ),
         component_distributions=[smoothed_powerlaw, smoothed_gaussian],
-        support=smoothed_powerlaw.support,
+        support=constraints.real_vector,
         validate_args=validate_args,
     )
