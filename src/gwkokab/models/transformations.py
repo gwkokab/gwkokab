@@ -89,15 +89,13 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
     r""":math:`\mathcal{C}(f)=\{(m_1, m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
 
     def __call__(self, x: Array):
-        m1 = x[..., 0]
-        q = x[..., 1]
+        m1, q = jnp.unstack(x, axis=-1)
         m2 = jnp.multiply(m1, q)
         m1m2 = jnp.stack((m1, m2), axis=-1)
         return m1m2
 
     def _inverse(self, y: Array):
-        m1 = y[..., 0]
-        m2 = y[..., 1]
+        m1, m2 = jnp.unstack(y, axis=-1)
         q = mass_ratio(m2=m2, m1=m1)
         m1q = jnp.stack((m1, q), axis=-1)
         return m1q
@@ -145,15 +143,13 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     r""":math:`\mathcal{C}(f) = \mathbb{R}^2_+\times[0, 0.25]`"""
 
     def __call__(self, x):
-        m1 = x[..., 0]
-        m2 = x[..., 1]
+        m1, m2 = jnp.unstack(x, axis=-1)
         Mc = chirp_mass(m1=m1, m2=m2)
         eta = symmetric_mass_ratio(m1=m1, m2=m2)
         return jnp.stack((Mc, eta), axis=-1)
 
     def _inverse(self, y):
-        Mc = y[..., 0]
-        eta = y[..., 1]
+        Mc, eta = jnp.unstack(y, axis=-1)
         m1, m2 = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
         return jnp.stack((m1, m2), axis=-1)
 
@@ -161,10 +157,8 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
         r"""
         .. math::
             \ln\left(|\mathrm{det}(J_f)|\right)=\ln(M_c)+\ln(\eta)+\ln(m_1-m_2)-\ln(m_1+m_2)-\ln(m_1)-\ln(m_2)"""
-        m1 = x[..., 0]
-        m2 = x[..., 1]
-        Mc = y[..., 0]
-        eta = y[..., 1]
+        m1, m2 = jnp.unstack(x, axis=-1)
+        Mc, eta = jnp.unstack(y, axis=-1)
         # The factor of 2 is omitted to align with empirical results from test cases.
         # Further investigation may be required to reconcile theory with implementation.
         log_detJ = jnp.log(Mc) + jnp.log(eta) + jnp.log(m1 - m2)
@@ -250,8 +244,7 @@ class ComponentMassesToChirpMassAndDelta(Transform):
         return jnp.stack((Mc, delta), axis=-1)
 
     def _inverse(self, y):
-        Mc = y[..., 0]
-        delta = y[..., 1]
+        Mc, delta = jnp.unstack(y, axis=-1)
         eta = delta_m_to_symmetric_mass_ratio(delta_m=delta)
         m1, m2 = Mc_eta_to_m1_m2(Mc=Mc, eta=eta)
         return jnp.stack((m1, m2), axis=-1)
@@ -261,8 +254,7 @@ class ComponentMassesToChirpMassAndDelta(Transform):
         .. math::
             \ln\left(|\mathrm{det}(J_f)|\right) = \ln(2M_c) - 2\ln(m_1+m_2)
         """
-        m1 = x[..., 0]
-        m2 = x[..., 1]
+        m1, m2 = jnp.unstack(x, axis=-1)
         M = total_mass(m1=m1, m2=m2)
         log_Mc = jnp.log(y[..., 0])
         log_detJ = jnp.log(2.0)
@@ -290,14 +282,12 @@ class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
     r""":math:`\mathcal{C}(f) = \mathbb{R}^2_+`"""
 
     def __call__(self, x):
-        m_source = x[..., 0]
-        z = x[..., 1]
+        m_source, z = jnp.unstack(x, axis=-1)
         m_detected = m_source * (1 + z)
         return jnp.stack((m_detected, z), axis=-1)
 
     def _inverse(self, y):
-        m_detected = y[..., 0]
-        z = y[..., 1]
+        m_detected, z = jnp.unstack(y, axis=-1)
         m_source = m_detected / (1 + z)
         return jnp.stack((m_source, z), axis=-1)
 
@@ -337,17 +327,13 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
     r""":math:`\mathcal{C}(f) = \mathbb{R}^3_+`"""
 
     def __call__(self, x):
-        m1_source = x[..., 0]
-        m2_source = x[..., 1]
-        z = x[..., 2]
+        m1_source, m2_source, z = jnp.unstack(x, axis=-1)
         m1_detected = m1_source * (1 + z)
         m2_detected = m2_source * (1 + z)
         return jnp.stack((m1_detected, m2_detected, z), axis=-1)
 
     def _inverse(self, y):
-        m1_detected = y[..., 0]
-        m2_detected = y[..., 1]
-        z = y[..., 2]
+        m1_detected, m2_detected, z = jnp.unstack(y, axis=-1)
         m1_source = m1_detected / (1 + z)
         m2_source = m2_detected / (1 + z)
         return jnp.stack((m1_source, m2_source, z), axis=-1)
@@ -396,23 +382,18 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
     r""":math:`\mathcal{C}(f) = \mathbb{R}^2_+\times(0, 1)`"""
 
     def __call__(self, x):
-        m1 = x[..., 0]
-        m2 = x[..., 1]
-        m1_safe = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
-        m2_safe = jnp.where(m2 == 0.0, jnp.finfo(m2.dtype).tiny, m2)
-        q = mass_ratio(m1=m1_safe, m2=m2_safe)
-        return jnp.stack((m1_safe, q), axis=-1)
+        m1, m2 = jnp.unstack(x, axis=-1)
+        q = mass_ratio(m1=m1, m2=m2)
+        return jnp.stack((m1, q), axis=-1)
 
     def _inverse(self, y):
-        m1 = y[..., 0]
-        q = y[..., 1]
+        m1, q = jnp.unstack(y, axis=-1)
         m2 = m1_q_to_m2(m1=m1, q=q)
         return jnp.stack((m1, m2), axis=-1)
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         m1 = x[..., 0]
-        m1_safe = jnp.where(m1 == 0.0, jnp.finfo(m1.dtype).tiny, m1)
-        return -jnp.log(m1_safe)
+        return -jnp.log(m1)
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -450,14 +431,12 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
     r""":math:`\mathcal{C}(f) = [0, 1]\times\mathbb{R}_+`"""
 
     def __call__(self, x):
-        m1 = x[..., 0]
-        m2 = x[..., 1]
+        m1, m2 = jnp.unstack(x, axis=-1)
         q = mass_ratio(m1=m1, m2=m2)
         return jnp.stack((q, m2), axis=-1)
 
     def _inverse(self, y):
-        q = y[..., 0]
-        m2 = y[..., 1]
+        q, m2 = jnp.unstack(y, axis=-1)
         m1 = m2_q_to_m1(m2=m2, q=q)
         return jnp.stack((m1, m2), axis=-1)
 
@@ -501,15 +480,13 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
     )
 
     def __call__(self, x):
-        m1 = x[..., 0]
-        m2 = x[..., 1]
+        m1, m2 = jnp.unstack(x, axis=-1)
         M = total_mass(m1=m1, m2=m2)
         q = mass_ratio(m1=m1, m2=m2)
         return jnp.stack((M, q), axis=-1)
 
     def _inverse(self, y):
-        M = y[..., 0]
-        q = y[..., 1]
+        M, q = jnp.unstack(y, axis=-1)
         safe_q = jnp.where(q == -1.0, 1.0, q)
         m1 = jnp.where(q == -1.0, jnp.inf, M / (1 + safe_q))
         m2 = m1_q_to_m2(m1=m1, q=q)

@@ -17,9 +17,7 @@ from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
-from numpyro.distributions import Distribution, TransformedDistribution
-
-from gwkokab.models.constraints import any_constraint
+from numpyro.distributions import constraints, Distribution, TransformedDistribution
 
 from ..utils import (
     combine_distributions,
@@ -415,6 +413,6 @@ def NPowerlawMGaussian(
     return ScaledMixture(
         log_rates,
         component_dists,
-        support=any_constraint([c_d.support for c_d in component_dists]),
+        support=constraints.real_vector,
         validate_args=validate_args,
     )

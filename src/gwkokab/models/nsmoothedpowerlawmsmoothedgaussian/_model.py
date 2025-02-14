@@ -16,9 +16,11 @@
 from typing_extensions import Dict, List, Literal, Optional
 
 from jax import numpy as jnp
-from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution
+from jaxtyping import Array, ArrayLike
+from numpyro.distributions import constraints, Distribution, TransformedDistribution
 
+from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
+from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
@@ -403,6 +405,69 @@ def NSmoothedPowerlawMSmoothedGaussian(
     return ScaledMixture(
         log_rates,
         component_dists,
+        support=constraints.real_vector,
+        validate_args=validate_args,
+    )
+
+
+def SmoothedPowerlawAndPeak(
+    alpha: ArrayLike,
+    beta: ArrayLike,
+    loc: ArrayLike,
+    scale: ArrayLike,
+    mmin: ArrayLike,
+    mmax: ArrayLike,
+    delta: ArrayLike,
+    lambda_peak: ArrayLike,
+    log_rate: ArrayLike,
+    *,
+    validate_args=None,
+) -> ScaledMixture:
+    r"""It is a mixture of power law and Gaussian distribution with a smoothing kernel.
+
+    .. math::
+
+        p(m_1, q\mid \alpha, \beta, \mu, \sigma, m_{\text{min}}, m_{\text{max}}, \delta, \lambda_{\text{peak}}) =
+        \left((1-\lambda_{\text{peak})m_1^{\alpha}+\lambda_{\text{peak}\mathcal{N}(m_1\mid\mu,\sigma)\right)
+        q^{\beta}
+        S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)
+        S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),
+        \qqquad m_{\text{min}}\leq m_1q \leq m_1\leq m_{\text{max}}
+    """
+    smoothed_powerlaw = TransformedDistribution(
+        SmoothedPowerlawPrimaryMassRatio(
+            alpha=alpha,
+            beta=beta,
+            mmin=mmin,
+            mmax=mmax,
+            delta=delta,
+            validate_args=validate_args,
+        ),
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+        validate_args=validate_args,
+    )
+    smoothed_gaussian = TransformedDistribution(
+        SmoothedGaussianPrimaryMassRatio(
+            loc=loc,
+            scale=scale,
+            beta=beta,
+            mmin=mmin,
+            mmax=mmax,
+            delta=delta,
+            validate_args=validate_args,
+        ),
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+        validate_args=validate_args,
+    )
+    return ScaledMixture(
+        log_scales=jnp.stack(
+            [
+                jnp.log1p(-lambda_peak) + log_rate,
+                jnp.log(lambda_peak) + log_rate,
+            ],
+            axis=-1,
+        ),
+        component_distributions=[smoothed_powerlaw, smoothed_gaussian],
         support=constraints.real_vector,
         validate_args=validate_args,
     )

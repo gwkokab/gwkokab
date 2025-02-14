@@ -15,4 +15,5 @@
 
 from ._model import (
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
+    SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,
 )

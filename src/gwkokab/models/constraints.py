@@ -102,8 +102,8 @@ class _MassRatioMassSandwichConstraint(Constraint):
         self.mmax = mmax
 
     def __call__(self, x):
-        m1 = x[..., 0]
-        m2 = x[..., 1] * m1
+        m1, q = jnp.unstack(x, axis=-1)
+        m2 = q * m1
         mask = 0.0 < self.mmin
         mask &= self.mmin <= m2
         mask &= m2 <= m1

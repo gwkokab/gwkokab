@@ -26,4 +26,4 @@
     - :code:`ppd_one_powerlaw_one_peak`
 """
 
-from . import common as common, ppd as ppd, sage as sage
+from . import ppd as ppd, sage as sage

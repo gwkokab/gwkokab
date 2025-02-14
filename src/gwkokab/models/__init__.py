@@ -28,7 +28,6 @@ from ._models import (
     MassGapModel as MassGapModel,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
-    SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
@@ -39,6 +38,7 @@ from .multivariate import (
 from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
 from .nsmoothedpowerlawmsmoothedgaussian import (
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
+    SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,
 )
 from .redshift import PowerlawRedshift as PowerlawRedshift
 from .spin import (

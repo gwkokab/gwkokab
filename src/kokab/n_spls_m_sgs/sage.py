@@ -153,9 +153,8 @@ def main() -> None:
         ("scale_g", N_g),
         ("beta_g", N_g),
         ("mmin_g", N_g),
+        ("mmax_g", N_g),
         ("delta_g", N_g),
-        ("low_g", N_g),
-        ("high_g", N_g),
     ]
 
     parameters = [PRIMARY_MASS_SOURCE]
@@ -265,7 +264,7 @@ def main() -> None:
     logVT = nvt.get_mapped_logVT()
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(logVT, KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
@@ -321,4 +320,8 @@ def main() -> None:
         **FLOWMC_HANDLER_KWARGS,
     )
 
-    handler.run(debug_nans=args.debug_nans, profile_memory=args.profile_memory)
+    handler.run(
+        debug_nans=args.debug_nans,
+        profile_memory=args.profile_memory,
+        file_prefix="n_spls_m_sgs",
+    )
