@@ -14,9 +14,8 @@
 
 
 from typing import Optional
-from typing_extensions import Tuple
 
-from jax import lax, numpy as jnp, random as jrd
+from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import validate_sample
@@ -39,7 +38,7 @@ class JointDistribution(Distribution):
         """
         Parameters
         ----------
-        validate_args : _type_, optional
+        validate_args : Optional[bool], optional
             Whether to validate input arguments, by default None
 
         Raises
@@ -49,22 +48,35 @@ class JointDistribution(Distribution):
         """
         if not marginal_distributions:
             raise ValueError("At least one marginal distribution is required.")
-        self.marginal_distributions = marginal_distributions
-        self.shaped_values: Tuple[int | slice, ...] = tuple()
-        batch_shape = lax.broadcast_shapes(
-            *tuple(d.batch_shape for d in self.marginal_distributions)
+        assert all(isinstance(d, Distribution) for d in marginal_distributions), (
+            "All marginal distributions must be instances of Distribution."
         )
-        k = 0
-        for d in self.marginal_distributions:
-            if d.event_shape:
-                self.shaped_values += (slice(k, k + d.event_shape[0]),)
-                k += d.event_shape[0]
-            else:
-                self.shaped_values += (k,)
-                k += 1
+        batch_shape = marginal_distributions[0].batch_shape
+        assert all(d.batch_shape == batch_shape for d in marginal_distributions), (
+            "All marginal distributions must have the same batch shape."
+        )
+        event_shape_dim = max(map(lambda d: d.event_dim, marginal_distributions))
+        event_shape_per_dist = tuple(
+            (event_shape_dim - d.event_dim) * (1,) + d.event_shape
+            for d in marginal_distributions
+        )
+        event_shape = tuple(map(sum, tuple(zip(*event_shape_per_dist))))
+        self.shaped_values = [[slice(i) for i in event_shape_per_dist[0]]]
+        for i in range(1, len(marginal_distributions)):
+            prev = self.shaped_values[i - 1]
+            self.shaped_values.append(
+                [
+                    slice(prev[j].stop, prev[j].stop + k)
+                    for j, k in enumerate(event_shape_per_dist[i])
+                ]
+            )
+
+        print(event_shape_per_dist, self.shaped_values)
+
+        self.marginal_distributions = marginal_distributions
         super(JointDistribution, self).__init__(
             batch_shape=batch_shape,
-            event_shape=(k,),
+            event_shape=event_shape,
             validate_args=validate_args,
         )
         self._support = all_constraint(
@@ -78,18 +90,13 @@ class JointDistribution(Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
-        return jnp.sum(
-            jnp.stack(
-                [
-                    m_dist.log_prob(value[..., slice_])
-                    for m_dist, slice_ in zip(
-                        self.marginal_distributions, self.shaped_values
-                    )
-                ],
-                axis=-1,
-            ),
-            axis=-1,
-        )
+        print(self.batch_shape, self.event_shape, self.shaped_values)
+        log_prob_stack = [
+            m_dist.log_prob(value[..., *slice_])
+            for m_dist, slice_ in zip(self.marginal_distributions, self.shaped_values)
+        ]
+        print([s.shape for s in log_prob_stack])
+        return jnp.sum(jnp.stack(log_prob_stack, axis=-1), axis=-1)
 
     def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
         assert is_prng_key(key)
