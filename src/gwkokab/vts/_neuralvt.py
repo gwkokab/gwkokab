@@ -14,6 +14,7 @@
 
 
 from collections.abc import Callable, Sequence
+from typing import Optional
 
 import equinox as eqx
 import jax
@@ -28,7 +29,12 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     neural_vt_model: eqx.nn.Sequential = eqx.field(init=False)
     """The neural volume-time sensitivity model."""
 
-    def __init__(self, parameters: Sequence[str], filename: str) -> None:
+    def __init__(
+        self,
+        parameters: Sequence[str],
+        filename: str,
+        batch_size: Optional[int] = None,
+    ) -> None:
         """Convenience class for loading a neural vt.
 
         Parameters
@@ -37,6 +43,8 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             The names of the parameters that the model expects.
         filename : str
             The filename of the neural vt.
+        batch_size : Optional[int], optional
+            The batch size :func:`jax.lax.map` should use, by default None.
         """
         if not parameters:
             raise ValueError("parameters sequence cannot be empty")
@@ -44,7 +52,12 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             raise TypeError(f"parameters must be a Sequence, got {type(parameters)}")
         if not all(isinstance(p, str) for p in parameters):
             raise TypeError("all parameters must be strings")
+        if not isinstance(batch_size, int):
+            raise TypeError(f"batch_size must be an integer, got {type(batch_size)}")
+        if batch_size < 1:
+            raise ValueError(f"batch_size must be a positive integer, got {batch_size}")
 
+        self.batch_size = batch_size
         names, self.neural_vt_model = load_model(filename)
         if any(name not in parameters for name in names):
             raise ValueError(
@@ -65,12 +78,13 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
     def get_mapped_logVT(self) -> Callable[[Array], Array]:
         """Gets the vmapped logVT function for batch processing."""
+        _batch_size = self.batch_size
 
         @jax.jit
         def _logVT(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
             return jnp.squeeze(
-                lax.map(self.neural_vt_model, x_new, batch_size=1000), axis=-1
+                lax.map(self.neural_vt_model, x_new, batch_size=_batch_size), axis=-1
             )
 
         return _logVT

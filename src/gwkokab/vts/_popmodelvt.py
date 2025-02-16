@@ -13,7 +13,7 @@
 #  limitations under the License.
 
 from collections.abc import Callable, Sequence
-from typing import Literal, overload, Tuple
+from typing import Literal, Optional, overload, Tuple
 
 import equinox as eqx
 import h5py
@@ -77,6 +77,7 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         zero_spin: bool,
         scale_factor: int = 1,
         m_min: float = 0.5,
+        batch_size: Optional[int] = None,
     ) -> None:
         r"""Convenience class for loading a volume time sensitivity function generated
         by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_.
@@ -91,7 +92,15 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             Scale factor for the volume time sensitivity function, by default 1
         m_min : float
             Minimum mass, by default 0.5
+        batch_size : Optional[int], optional
+            The batch size :func:`jax.lax.map` should use, by default None.
         """
+        if not isinstance(batch_size, int):
+            raise TypeError(f"batch_size must be an integer, got {type(batch_size)}")
+        if batch_size < 1:
+            raise ValueError(f"batch_size must be a positive integer, got {batch_size}")
+
+        self.batch_size = batch_size
         self.m_min = m_min
         if (
             PRIMARY_MASS_SOURCE.name not in parameters
@@ -267,7 +276,8 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         return _logVT
 
     def get_mapped_logVT(self) -> Callable[[Array], Array]:
-        return lambda x: jax.lax.map(self.get_logVT(), x)
+        _batch_size = self.batch_size
+        return lambda x: jax.lax.map(self.get_logVT(), x, batch_size=_batch_size)
 
 
 # source: https://gitlab.com/dwysocki/bayesian-parametric-population-models/-/blob/master/src/pop_models/astro_models/gw_ifo_vt.py?ref_type=heads#L554-709
