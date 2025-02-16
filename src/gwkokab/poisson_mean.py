@@ -73,7 +73,7 @@ class PoissonMean(eqx.Module):
     logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
     num_samples_per_component: List[int] = eqx.field(init=False, static=True)
     proposal_log_weights_and_samples: List[Optional[Tuple[Array, Array]]] = eqx.field(
-        init=False
+        init=False,static=True
     )
     scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
 
