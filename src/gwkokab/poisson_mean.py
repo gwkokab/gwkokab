@@ -71,9 +71,9 @@ class PoissonMean(eqx.Module):
 
     key: PRNGKeyArray = eqx.field(init=False)
     logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
-    num_samples_per_component: List[int] = eqx.field(init=False)
+    num_samples_per_component: List[int] = eqx.field(init=False, static=True)
     proposal_log_weights_and_samples: List[Optional[Tuple[Array, Array]]] = eqx.field(
-        init=False, static=True
+        init=False
     )
     scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
 
