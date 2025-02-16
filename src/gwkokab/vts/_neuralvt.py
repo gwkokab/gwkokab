@@ -69,6 +69,8 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         @jax.jit
         def _logVT(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
-            return jnp.squeeze(lax.map(self.neural_vt_model, x_new, batch_size=1000), axis=-1)
+            return jnp.squeeze(
+                lax.map(self.neural_vt_model, x_new, batch_size=1000), axis=-1
+            )
 
         return _logVT
