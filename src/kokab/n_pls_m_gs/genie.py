@@ -364,7 +364,9 @@ def main() -> None:
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(
-        logVT, jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)), **pmean_kwargs
+        logVT,
+        key=jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
+        **pmean_kwargs,
     )
 
     popfactory = PopulationFactory(

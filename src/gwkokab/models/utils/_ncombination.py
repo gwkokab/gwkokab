@@ -306,7 +306,6 @@ def create_smoothed_powerlaws_raw(
     mmin_name = "mmin_pl"
     mmax_name = "mmax_pl"
     delta_name = "delta_pl"
-    log_scale_name = "lamb_scale_pl"
     for i in range(N):
         alpha = fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
         if alpha is None:
@@ -328,21 +327,12 @@ def create_smoothed_powerlaws_raw(
         if delta is None:
             raise ValueError(f"Missing parameter {delta_name}_{i}")
 
-        log_scale = fetch_first_matching_value(
-            params, f"{log_scale_name}_{i}", log_scale_name
-        )
-        if log_scale is None:
-            log_scale = 0.0
-        else:
-            log_scale = jnp.log(log_scale)
-
         smoothed_powerlaw = SmoothedPowerlawPrimaryMassRatio(
             alpha=alpha,
             beta=beta,
             mmin=mmin,
             mmax=mmax,
             delta=delta,
-            log_scale=log_scale,
             validate_args=validate_args,
         )
         smoothed_powerlaws_collection.append(smoothed_powerlaw)
@@ -369,10 +359,8 @@ def create_smoothed_gaussians_raw(
     scale_name = "scale_g"
     beta_name = "beta_g"
     mmin_name = "mmin_g"
+    mmax_name = "mmax_g"
     delta_name = "delta_g"
-    low_name = "low_g"
-    high_name = "high_g"
-    log_scale_name = "lamb_scale_g"
     for i in range(N):
         loc = fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
         if loc is None:
@@ -390,35 +378,21 @@ def create_smoothed_gaussians_raw(
         if mmin is None:
             raise ValueError(f"Missing parameter {mmin_name}_{i}")
 
+        mmax = fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
+        if mmax is None:
+            raise ValueError(f"Missing parameter {mmax_name}_{i}")
+
         delta = fetch_first_matching_value(params, f"{delta_name}_{i}", delta_name)
         if delta is None:
             raise ValueError(f"Missing parameter {delta_name}_{i}")
-
-        low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
-        if low is None:
-            raise ValueError(f"Missing parameter {low_name}_{i}")
-
-        high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
-        if high is None:
-            raise ValueError(f"Missing parameter {high_name}_{i}")
-
-        log_scale = fetch_first_matching_value(
-            params, f"{log_scale_name}_{i}", log_scale_name
-        )
-        if log_scale is None:
-            log_scale = 0.0
-        else:
-            log_scale = jnp.log(log_scale)
 
         smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
             loc=loc,
             scale=scale,
             beta=beta,
             mmin=mmin,
+            mmax=mmax,
             delta=delta,
-            low=low,
-            high=high,
-            log_scale=log_scale,
             validate_args=validate_args,
         )
         smoothed_gaussians_collection.append(smoothed_gaussian)

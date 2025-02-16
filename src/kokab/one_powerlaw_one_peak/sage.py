@@ -27,16 +27,12 @@ from gwkokab.inference import (
     PoissonLikelihood,
 )
 from gwkokab.logger import enable_logging
+from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
-    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     SECONDARY_MASS_SOURCE,
 )
 from gwkokab.poisson_mean import PoissonMean
-from kokab.one_powerlaw_one_peak.common import (
-    create_smoothed_powerlaw_and_peak,
-    create_smoothed_powerlaw_and_peak_raw,
-)
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
     flowMC_default_parameters,
@@ -50,16 +46,6 @@ from kokab.utils.common import (
 def make_parser() -> ArgumentParser:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = sage_parser.get_parser(parser)
-
-    model_group = parser.add_argument_group("Model Options")
-    model_group.add_argument(
-        "--raw",
-        action="store_true",
-        help="The raw parameters for this model are primary mass and mass ratio. To"
-        "align with the rest of the codebase, we transform primary mass and mass ratio"
-        "to primary and secondary mass. This flag will use the raw parameters i.e."
-        "primary mass and mass ratio.",
-    )
 
     return parser
 
@@ -98,17 +84,10 @@ def main() -> None:
         "log_rate",
     ]
 
-    parameters = [PRIMARY_MASS_SOURCE]
-    if args.raw:
-        build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak_raw
-        parameters.append(MASS_RATIO)
-    else:
-        build_smoothing_powerlaw_and_peak = create_smoothed_powerlaw_and_peak
-        parameters.append(SECONDARY_MASS_SOURCE)
-
+    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
     model_prior_param = get_processed_priors(model_parameters, prior_dict)
 
-    model = Bake(build_smoothing_powerlaw_and_peak)(**model_prior_param)
+    model = Bake(SmoothedPowerlawAndPeak)(**model_prior_param)
 
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json
@@ -116,7 +95,7 @@ def main() -> None:
     logVT = nvt.get_mapped_logVT()
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(logVT, KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
@@ -165,4 +144,8 @@ def main() -> None:
         **FLOWMC_HANDLER_KWARGS,
     )
 
-    handler.run(debug_nans=args.debug_nans, profile_memory=args.profile_memory)
+    handler.run(
+        debug_nans=args.debug_nans,
+        profile_memory=args.profile_memory,
+        file_prefix="one_powerlaw_one_peak",
+    )

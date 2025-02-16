@@ -14,6 +14,7 @@
 
 from abc import abstractmethod
 from collections.abc import Callable, Sequence
+from typing import Optional
 
 import equinox as eqx
 from jaxtyping import Array
@@ -24,6 +25,8 @@ class VolumeTimeSensitivityInterface(eqx.Module):
 
     shuffle_indices: Sequence[int] = eqx.field(init=False, static=True)
     """The indices to shuffle the input to the model."""
+    batch_size: Optional[int] = eqx.field(init=False, static=True, default=None)
+    """The batch size used by :func:`jax.lax.map` in mapped functions."""
 
     @abstractmethod
     def get_logVT(self) -> Callable[[Array], Array]:
@@ -44,8 +47,8 @@ class VolumeTimeSensitivityInterface(eqx.Module):
         Returns
         -------
         Callable[[Array], Array]
-            A function that takes a batch of inputs as an array of shape
-            (batch_size, n_features) and returns an array of log volume-time
-            sensitivities with shape (batch_size,).
+            A function that takes a stack of inputs as an array of shape
+            (n_example, n_features) and returns an array of log volume-time
+            sensitivities with shape (n_example,).
         """
         raise NotImplementedError
