@@ -52,10 +52,15 @@ class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             raise TypeError(f"parameters must be a Sequence, got {type(parameters)}")
         if not all(isinstance(p, str) for p in parameters):
             raise TypeError("all parameters must be strings")
-        if not isinstance(batch_size, int):
-            raise TypeError(f"batch_size must be an integer, got {type(batch_size)}")
-        if batch_size < 1:
-            raise ValueError(f"batch_size must be a positive integer, got {batch_size}")
+        if batch_size is not None:
+            if not isinstance(batch_size, int):
+                raise TypeError(
+                    f"batch_size must be an integer, got {type(batch_size)}"
+                )
+            if batch_size < 1:
+                raise ValueError(
+                    f"batch_size must be a positive integer, got {batch_size}"
+                )
 
         self.batch_size = batch_size
         names, self.neural_vt_model = load_model(filename)
