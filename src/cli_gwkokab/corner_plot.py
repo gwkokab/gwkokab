@@ -20,9 +20,6 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 
-plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
-
-
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Corner plotter.",
@@ -118,6 +115,11 @@ def make_parser() -> argparse.ArgumentParser:
         default="#3498DB",
         type=str,
     )
+    parser.add_argument(
+        "--use-latex",
+        help="use LaTeX for rendering text",
+        action="store_true",
+    )
 
     return parser
 
@@ -127,6 +129,9 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
+    plt.rcParams.update(
+        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
+    )
     data = pd.read_csv(args.data.name, delimiter=" ", skiprows=1).to_numpy()
     figure = corner.corner(
         data,

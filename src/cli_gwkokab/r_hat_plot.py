@@ -22,9 +22,6 @@ from arviz.utils import _var_names, get_coords
 from matplotlib import pyplot as plt
 
 
-plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
-
-
 def make_parser() -> argparse.ArgumentParser:
     """Create the command line argument parser.
 
@@ -79,6 +76,11 @@ def make_parser() -> argparse.ArgumentParser:
         nargs="+",
         type=str,
     )
+    parser.add_argument(
+        "--use-latex",
+        help="use LaTeX for rendering text",
+        action="store_true",
+    )
 
     return parser
 
@@ -87,6 +89,10 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    plt.rcParams.update(
+        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
+    )
 
     chains_filenames = glob(args.chains_regex)
     chains = np.array([np.loadtxt(filename) for filename in chains_filenames])

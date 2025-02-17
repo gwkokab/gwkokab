@@ -20,9 +20,6 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 
-plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
-
-
 def make_parser() -> argparse.ArgumentParser:
     """Create the command line argument parser.
 
@@ -124,6 +121,11 @@ def make_parser() -> argparse.ArgumentParser:
         default=0.3,
         type=float,
     )
+    parser.add_argument(
+        "--use-latex",
+        help="use LaTeX for rendering text",
+        action="store_true",
+    )
 
     return parser
 
@@ -132,6 +134,10 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    plt.rcParams.update(
+        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
+    )
 
     data = pd.read_csv(args.data.name, delimiter=" ")
     x = data[args.x_value_column_name].to_numpy()
