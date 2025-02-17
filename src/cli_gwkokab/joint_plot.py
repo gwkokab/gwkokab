@@ -20,9 +20,6 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 
-plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
-
-
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Joint plot",
@@ -97,6 +94,11 @@ def make_parser() -> argparse.ArgumentParser:
         default="#180F29",
         type=str,
     )
+    parser.add_argument(
+        "--use-latex",
+        help="use LaTeX for rendering text",
+        action="store_true",
+    )
 
     return parser
 
@@ -105,6 +107,10 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    plt.rcParams.update(
+        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
+    )
 
     data = pd.read_csv(args.data.name, delimiter=" ")
 

@@ -22,9 +22,6 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 
 
-plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
-
-
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Command line interface for plotting Effective Sample Size per draw.",
@@ -66,6 +63,11 @@ def make_parser() -> argparse.ArgumentParser:
         default=6,
         type=int,
     )
+    parser.add_argument(
+        "--use-latex",
+        help="use LaTeX for rendering text",
+        action="store_true",
+    )
 
     return parser
 
@@ -74,6 +76,10 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    plt.rcParams.update(
+        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
+    )
 
     train_paths = glob.glob(args.train_chain_regex)
     prod_paths = glob.glob(args.production_chain_regex)

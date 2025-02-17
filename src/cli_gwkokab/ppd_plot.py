@@ -23,9 +23,6 @@ from matplotlib import pyplot as plt
 from kokab.utils.ppd import get_all_marginals
 
 
-plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
-
-
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="PPD plot",
@@ -96,6 +93,11 @@ def make_parser() -> argparse.ArgumentParser:
         default=(10, 10),
         type=float,
     )
+    parser.add_argument(
+        "--use-latex",
+        help="use LaTeX for rendering text",
+        action="store_true",
+    )
 
     return parser
 
@@ -131,6 +133,10 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    plt.rcParams.update(
+        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
+    )
 
     prefix = "" if args.prefix is None else args.prefix
 

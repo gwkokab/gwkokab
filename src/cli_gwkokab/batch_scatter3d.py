@@ -21,9 +21,6 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 
-plt.rcParams.update({"text.usetex": True, "font.family": "Times New Roman"})
-
-
 def make_parser() -> argparse.ArgumentParser:
     """Create the command line argument parser.
 
@@ -139,6 +136,11 @@ def make_parser() -> argparse.ArgumentParser:
         default=".",
         type=str,
     )
+    parser.add_argument(
+        "--use-latex",
+        help="use LaTeX for rendering text",
+        action="store_true",
+    )
 
     return parser
 
@@ -149,6 +151,10 @@ def main() -> None:
     args = parser.parse_args()
 
     file_list = glob.glob(args.data_regex)
+
+    plt.rcParams.update(
+        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
+    )
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
