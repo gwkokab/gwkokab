@@ -115,9 +115,7 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    plt.rcParams.update(
-        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
-    )
+    plt.rcParams.update({"text.usetex": args.use_latex})
 
     file_list = glob.glob(args.data_regex)
 

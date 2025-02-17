@@ -77,9 +77,7 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    plt.rcParams.update(
-        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
-    )
+    plt.rcParams.update({"text.usetex": args.use_latex})
 
     train_paths = glob.glob(args.train_chain_regex)
     prod_paths = glob.glob(args.production_chain_regex)
