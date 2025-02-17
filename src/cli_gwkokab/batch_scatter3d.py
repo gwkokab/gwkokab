@@ -152,9 +152,7 @@ def main() -> None:
 
     file_list = glob.glob(args.data_regex)
 
-    plt.rcParams.update(
-        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
-    )
+    plt.rcParams.update({"text.usetex": args.use_latex})
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")

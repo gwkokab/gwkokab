@@ -90,9 +90,7 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    plt.rcParams.update(
-        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
-    )
+    plt.rcParams.update({"text.usetex": args.use_latex})
 
     chains_filenames = glob(args.chains_regex)
     chains = np.array([np.loadtxt(filename) for filename in chains_filenames])

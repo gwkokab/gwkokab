@@ -135,9 +135,7 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    plt.rcParams.update(
-        {"text.usetex": args.use_latex, "font.family": "Times New Roman"}
-    )
+    plt.rcParams.update({"text.usetex": args.use_latex})
 
     data = pd.read_csv(args.data.name, delimiter=" ")
     x = data[args.x_value_column_name].to_numpy()
