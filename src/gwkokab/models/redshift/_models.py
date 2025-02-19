@@ -27,7 +27,8 @@
 from typing import Optional
 
 import jax.numpy as jnp
-from jax import Array, random, vmap
+import quadax
+from jax import Array, random
 from jax.lax import broadcast_shapes
 from jax.scipy.integrate import trapezoid
 from jax.typing import ArrayLike
@@ -36,17 +37,6 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
 from ...logger import logger
-
-
-def cumtrapz(y: Array, x: Array) -> Array:
-    @vmap
-    def _area(i: Array, d: Array) -> Array:
-        return d * (y[i] + y[i + 1]) * 0.5
-
-    diffs = jnp.diff(x)
-    idxs = jnp.arange(1, len(y))
-    res = jnp.cumsum(_area(idxs, diffs))
-    return jnp.concatenate([jnp.array([0]), res])
 
 
 class PowerlawRedshift(Distribution):
@@ -70,10 +60,22 @@ class PowerlawRedshift(Distribution):
         (1000,)
     """
 
-    arg_constraints = {"z_max": constraints.positive, "lamb": constraints.real}
-    reparametrized_params = ["z_max", "lamb"]
-    pytree_aux_fields = ("zs", "dVdc_", "pdfs", "norm", "cdfgrid")
-    pytree_data_fields = ("_support",)
+    arg_constraints = {
+        "z_max": constraints.positive,
+        "lamb": constraints.real,
+        "zgrid": constraints.real_vector,
+        "dVcdz": constraints.real_vector,
+    }
+    reparametrized_params = ["z_max", "lamb", "zgrid", "dVcdz"]
+    pytree_data_fields = (
+        "_support",
+        "cdfgrid",
+        "dVcdz",
+        "lamb",
+        "norm",
+        "z_max",
+        "zgrid",
+    )
 
     def __init__(
         self,
@@ -81,8 +83,6 @@ class PowerlawRedshift(Distribution):
         z_max: ArrayLike,
         zgrid: Array,
         dVcdz: Array,
-        low: ArrayLike = 0.0,
-        high: ArrayLike = 1000.0,
         *,
         validate_args: Optional[bool] = None,
     ) -> None:
@@ -97,26 +97,29 @@ class PowerlawRedshift(Distribution):
             grid of redshifts
         dVcdz : Array
             differential comoving volume upon the :code:`zgrid` grid
-        low : ArrayLike, optional
-            lower truncation, by default 0.0
-        high : ArrayLike, optional
-            upper truncation, by default 1000.0
         validate_args : Optional[bool], optional
             whether to validate input, by default None
         """
         self.z_max, self.lamb = promote_shapes(z_max, lamb)
-        self._support = constraints.interval(low, high)
-        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(lamb))
+        self.zgrid = zgrid
+        self.dVcdz = dVcdz
+        pdfs = dVcdz * jnp.power(1.0 + self.zgrid, self.lamb - 1.0)
+        self.norm = trapezoid(pdfs, self.zgrid)
+        pdfs /= self.norm
+        self.cdfgrid: Array = quadax.cumulative_trapezoid(
+            pdfs, x=self.zgrid, initial=0.0
+        )
+        self.cdfgrid = self.cdfgrid.at[-1].set(1)
+        self._support = constraints.interval(0.0, z_max)
+        batch_shape = broadcast_shapes(
+            jnp.shape(z_max),
+            jnp.shape(lamb),
+            jnp.shape(zgrid)[:-1],
+            jnp.shape(dVcdz)[:-1],
+        )
         super(PowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
-        self.zs = zgrid
-        self.dVdc_ = dVcdz
-        self.pdfs = self.dVdc_ * (1 + self.zs) ** (lamb - 1)
-        self.norm = trapezoid(self.pdfs, self.zs)
-        self.pdfs /= self.norm
-        self.cdfgrid = cumtrapz(self.pdfs, self.zs)
-        self.cdfgrid = self.cdfgrid.at[-1].set(1)
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
@@ -129,7 +132,7 @@ class PowerlawRedshift(Distribution):
     @validate_sample
     def log_prob(self, value, dVdc=None):
         if dVdc is None:
-            dVdc = jnp.interp(value, self.zs, self.dVdc_)
+            dVdc = jnp.interp(value, self.zgrid, self.dVcdz)
         logger.debug(f"PowerlawRedshift: dVdc={dVdc}")
         return jnp.where(
             jnp.less_equal(value, self.z_max),
@@ -138,7 +141,7 @@ class PowerlawRedshift(Distribution):
         )
 
     def cdf(self, value):
-        return jnp.interp(value, self.zs, self.cdfgrid)
+        return jnp.interp(value, self.zgrid, self.cdfgrid)
 
     def icdf(self, q):
-        return jnp.interp(q, self.cdfgrid, self.zs)
+        return jnp.interp(q, self.cdfgrid, self.zgrid)
