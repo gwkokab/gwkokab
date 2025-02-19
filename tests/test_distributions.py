@@ -407,8 +407,8 @@ CONTINUOUS = [
         {
             "lamb": 0.0,
             "z_max": 2.3,
-            "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2015_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
+            "zgrid": jnp.linspace(0.001, 2.3, 1000),
+            "dVcdz": PLANCK_2015_Cosmology.dVcdz(jnp.linspace(0.001, 2.3, 1000))
             * 4.0
             * jnp.pi,
         },
@@ -429,8 +429,8 @@ CONTINUOUS = [
         {
             "lamb": 0.0,
             "z_max": 2.3,
-            "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2018_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
+            "zgrid": jnp.linspace(0.001, 2.3, 1000),
+            "dVcdz": PLANCK_2018_Cosmology.dVcdz(jnp.linspace(0.001, 2.3, 1000))
             * 4.0
             * jnp.pi,
         },
@@ -810,7 +810,7 @@ def test_dist_shape(jax_dist_cls, params, prepend_shape):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_has_rsample(jax_dist, params):
-    if not isinstance(jax_dist, dist.Distribution):
+    if isinstance(jax_dist, types.FunctionType):
         pytest.skip("skip testing for non-distribution")
     jax_dist = jax_dist(**params)
     masked_dist = jax_dist.mask(False)
@@ -975,7 +975,7 @@ def test_cdf_and_icdf(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_gof(jax_dist, params):
-    if not isinstance(jax_dist, dist.Distribution):
+    if isinstance(jax_dist, types.FunctionType):
         pytest.skip("skip testing for non-distribution")
     if jax_dist.__name__ in ("PowerlawPrimaryMassRatio",):
         pytest.skip("Failure rate is lower than expected.")
@@ -1053,13 +1053,12 @@ def test_log_prob_gradient(jax_dist, params):
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
 def test_distribution_constraints(jax_dist, params, prepend_shape):
-    if not isinstance(jax_dist, dist.Distribution):
+    if isinstance(jax_dist, types.FunctionType):
         pytest.skip("skip testing for non-distribution")
     valid_params = {}
     oob_params = {}
     key = jrd.PRNGKey(1)
     dependent_constraint = False
-    # for i in range(len(params)):
     for name, value in params.items():
         if value is None:
             oob_params[name] = None
@@ -1150,7 +1149,7 @@ def test_expand(jax_dist, params, prepend_shape, sample_shape):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_dist_pytree(jax_dist, params):
-    if not isinstance(jax_dist, dist.Distribution):
+    if isinstance(jax_dist, types.FunctionType):
         pytest.skip("skip testing for non-distribution")
 
     def f(x):
@@ -1219,7 +1218,7 @@ def _tree_equal(t1, t2):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_vmap_dist(jax_dist, params):
-    if not isinstance(jax_dist, dist.Distribution):
+    if isinstance(jax_dist, types.FunctionType):
         pytest.skip("skip testing for non-distribution")
     param_names = list(inspect.signature(jax_dist).parameters.keys())
     vmappable_param_idxs = _get_vmappable_dist_init_params(jax_dist)
