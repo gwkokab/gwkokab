@@ -77,7 +77,7 @@ class PowerlawPrimaryMassRatio(Distribution):
         "mmax": constraints.positive,
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
-    pytree_data_fields = ("_support",)
+    pytree_data_fields = ("_support", "alpha", "beta", "mmax", "mmin")
 
     def __init__(
         self,
@@ -167,7 +167,7 @@ class Wysocki2019MassModel(Distribution):
         "mmax": constraints.positive,
     }
     reparametrized_params = ["alpha_m", "mmin", "mmax"]
-    pytree_data_fields = ("_support",)
+    pytree_data_fields = ("_support", "alpha_m", "mmax", "mmin")
 
     def __init__(
         self,
@@ -646,7 +646,16 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "delta": constraints.positive,
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta"]
-    pytree_data_fields = ("_support", "_logZ", "_Z_q_given_m1")
+    pytree_data_fields = (
+        "_logZ",
+        "_support",
+        "_Z_q_given_m1",
+        "alpha",
+        "beta",
+        "delta",
+        "mmax",
+        "mmin",
+    )
 
     def __init__(
         self,
@@ -805,7 +814,17 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "delta": constraints.positive,
     }
     reparametrized_params = ["loc", "scale", "beta", "mmin", "mmax", "delta"]
-    pytree_data_fields = ("_support", "_logZ", "_Z_q_given_m1")
+    pytree_data_fields = (
+        "_logZ",
+        "_support",
+        "_Z_q_given_m1",
+        "beta",
+        "delta",
+        "loc",
+        "mmax",
+        "mmin",
+        "scale",
+    )
 
     def __init__(
         self, loc, scale, beta, mmin, mmax, delta, *, validate_args=None
