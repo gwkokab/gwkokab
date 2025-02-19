@@ -141,8 +141,19 @@ class ChiEffMassRatioCorrelated(Distribution):
         "kappa",
     ]
     pytree_data_fields = (
-        # "_z_powerlaw",
         "_support",
+        "alpha",
+        "beta",
+        "gamma",
+        "kappa",
+        "lamb",
+        "lambda_peak",
+        "loc_m",
+        "log10_sigma_eff_0",
+        "mmax",
+        "mmin",
+        "mu_eff_0",
+        "scale_m",
     )
 
     def __init__(

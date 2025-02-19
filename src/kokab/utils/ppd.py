@@ -14,54 +14,90 @@
 
 
 from functools import partial
-from typing_extensions import Callable, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 import h5py
 import jax
 import numpy as np
 from jax import numpy as jnp
-from jaxtyping import Array
-from rich.progress import track
+from jaxtyping import Array, ArrayLike
+from numpyro.distributions.distribution import DistributionLike
+
+from gwkokab.utils.tools import error_if
+
+
+def wipe_log_rate(
+    nf_samples: Array,
+    nf_samples_mapping: Dict[str, int],
+    constants: Dict[str, Union[int, float]],
+) -> Tuple[Array, Dict[str, Union[int, float]]]:
+    """Set the log rate parameters to zero and remove them from the samples.
+
+    Parameters
+    ----------
+    nf_samples : Array
+        Normalizing flow samples.
+    nf_samples_mapping : Dict[str, int]
+        Mapping of the normalizing flow samples.
+    constants : Dict[str, Union[int, float]]
+        Constants.
+
+    Returns
+    -------
+    Tuple[Array, Dict[str, Union[int, float]]]
+        The normalizing flow samples and the updated constants.
+    """
+    for key in list(nf_samples_mapping.keys()).copy():
+        if key.startswith("log_rate"):
+            index = nf_samples_mapping.pop(key)
+            constants[key] = 0.0
+            nf_samples = np.delete(nf_samples, index, axis=-1)
+    return nf_samples, constants
 
 
 def compute_probs(
-    logpdf: Callable[[Array], Array],
-    ranges: List[Tuple[float, float, int]],
+    params: Array,
+    xx_mesh: Array,
+    model: DistributionLike,
+    constants: Dict[str, ArrayLike],
+    nf_samples_mapping: Dict[str, int],
 ) -> Array:
-    r"""Compute the probability density function of a model.
+    """Compute the probability density function of a model.
 
-    :param logpdf: A callable that computes the log-probability density function of the
-        model.
-    :param ranges: A list of tuples `(start, end, num_points)` for each parameter,
-        defining the grid over which to compute the PPD.
-    :return: The PPD of the model as a multidimensional array corresponding to the
-        parameter grid.
+    Parameters
+    ----------
+    params : Array
+        A callable that computes the log-probability density function of the model.
+    xx_mesh : Array
+        A list of tuples `(start, end, num_points)` for each parameter, defining the
+        grid over which to compute the PPD.
+    model : DistributionLike
+        The PPD of the model as a multidimensional array corresponding to the parameter
+        grid.
+    constants : Dict[str, ArrayLike]
+        A dictionary of constants for the model.
+    nf_samples_mapping : Dict[str, int]
+        A dictionary mapping the normalizing flow samples to the model parameters.
+
+    Returns
+    -------
+    Array
+        The probability density function of the model.
     """
-    max_axis = int(np.argmax([int(n) for _, _, n in ranges]))
 
-    @partial(jax.vmap, in_axes=(max_axis,), out_axes=max_axis)
+    logpdf = model(
+        **constants,
+        **{k: params[v] for k, v in nf_samples_mapping.items()},
+        validate_args=True,
+    ).log_prob
+
+    @jax.vmap
     def _prob(x: Array) -> Array:
         x_expanded = jnp.expand_dims(x, axis=-2)
         prob = jnp.exp(logpdf(x_expanded))
         return prob
 
-    xx = [jnp.linspace(a, b, int(n)) for a, b, n in ranges]
-    mesh = jnp.meshgrid(*xx, indexing="ij")
-    xx_mesh = jnp.stack(mesh, axis=-1)
-    shape = xx_mesh.shape
-    xx_mesh = xx_mesh.reshape(-1, shape[-1])
-    max_dim_size = shape[max_axis]
-    prob_vec = jnp.concatenate(
-        [
-            _prob(x)
-            for x in track(
-                jnp.array_split(xx_mesh, max_dim_size, axis=0),
-                description="Computing PPD",
-            )
-        ],
-        axis=0,
-    )
-    prob_vec = prob_vec.reshape(*shape[:-1], -1)
+    prob_vec = _prob(xx_mesh)
 
     return prob_vec
 
@@ -71,15 +107,24 @@ def _compute_marginal_probs(
     axis: int,
     domain: List[Tuple[float, float, int]],
 ) -> Array:
-    r"""Compute the marginal probabilities of a model.
+    """Compute the marginal probabilities of a model.
 
     The function computes the marginal probabilities of a model by summing over the
     specified axis.
 
-    :param probs_array: The probabilities of the model.
-    :param axis: The axis
-    :param domain: The domain of the axis.
-    :return: The marginal probabilities of the model.
+    Parameters
+    ----------
+    probs_array : Array
+        The probabilities of the model.
+    axis : int
+        The axis along which to compute the marginal probabilities.
+    domain : List[Tuple[float, float, int]]
+        The domain of the axis.
+
+    Returns
+    -------
+    Array
+        The marginal probabilities of the model.
     """
     assert axis < probs_array.ndim, "Axis must be less than the number of dimensions."
     j = 0
@@ -104,21 +149,19 @@ def get_all_marginals(
 ) -> List[Array]:
     """Compute marginal probabilities for all axes.
 
-    :param probs: The probability array.
-    :param domains: List of domains for each axis.
-    :return: List of marginal probability arrays, one for each axis.
+    Parameters
+    ----------
+    probs : Array
+        The probability array.
+    domains : List[Tuple[float, float, int]]
+        List of domains for each axis.
+
+    Returns
+    -------
+    List[Array]
+        List of marginal probability arrays, one for each axis.
     """
     return [_compute_marginal_probs(probs, axis, domains) for axis in range(probs.ndim)]
-
-
-def get_ppd(probs: Array, axis: int = -1) -> Array:
-    """Compute the posterior predictive distribution.
-
-    :param probs: The probability array.
-    :param axis: The axis along which to compute the mean (default: -1).
-    :return: The posterior predictive distribution.
-    """
-    return np.mean(probs, axis=axis)
 
 
 def save_probs(
@@ -128,11 +171,30 @@ def save_probs(
     domains: List[Tuple[float, float, int]],
     headers: List[str],
 ) -> None:
-    assert ppd_array.ndim == len(domains), (
-        "Number of ranges must match the number of dimensions of the PPD array."
+    """Save the PPD and marginal probabilities to a file.
+
+    Parameters
+    ----------
+    ppd_array : Array
+        The ppd array.
+    marginal_probs : List[Array]
+        List of marginal probabilities.
+    filename : str
+        The name of the file to save the PPD and marginal probabilities.
+    domains : List[Tuple[float, float, int]]
+        List of domains for each axis
+    headers : List[str]
+        List of headers for the PPD and marginal probabilities
+    """
+    error_if(
+        ppd_array.ndim != len(domains),
+        AssertionError,
+        "Number of ranges must match the number of dimensions of the PPD array.",
     )
-    assert ppd_array.ndim == len(headers), (
-        "Number of headers must match the number of dimensions of the PPD array."
+    error_if(
+        ppd_array.ndim != len(headers),
+        AssertionError,
+        "Number of headers must match the number of dimensions of the PPD array.",
     )
 
     with h5py.File(filename, "w") as f:
@@ -142,3 +204,39 @@ def save_probs(
         marginal_probs_group = f.create_group("marginals")
         for marginal_prob, head in zip(marginal_probs, headers):
             marginal_probs_group.create_dataset(head, data=marginal_prob)
+
+
+def compute_and_save_ppd(
+    model: DistributionLike,
+    nf_samples: Array,
+    domains: List[Tuple[float, float, int]],
+    output_file: str,
+    parameters: List[str],
+    constants: Dict[str, ArrayLike],
+    nf_samples_mapping: Dict[str, int],
+) -> None:
+    xx = [jnp.linspace(a, b, int(n)) for a, b, n in domains]
+    mesh = jnp.meshgrid(*xx, indexing="ij")
+    del xx
+    xx_mesh = jnp.stack(mesh, axis=-1)
+    del mesh
+    shape = xx_mesh.shape
+    xx_mesh = xx_mesh.reshape(-1, shape[-1])
+
+    prob_values: Array = jax.lax.map(
+        partial(
+            compute_probs,
+            xx_mesh=xx_mesh,
+            model=model,
+            constants=constants,
+            nf_samples_mapping=nf_samples_mapping,
+        ),
+        nf_samples,
+    )
+    del nf_samples
+    del xx_mesh
+    prob_values = prob_values.reshape(-1, *shape[:-1])
+    prob_values = np.moveaxis(prob_values, 0, -1)
+    ppd_values = np.mean(prob_values, axis=-1)
+    marginals = get_all_marginals(prob_values, domains)
+    save_probs(ppd_values, marginals, output_file, domains, parameters)

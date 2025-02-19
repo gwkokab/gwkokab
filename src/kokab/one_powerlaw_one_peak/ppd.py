@@ -13,18 +13,17 @@
 # limitations under the License.
 
 
-import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing_extensions import Callable, Dict, List, Tuple, Union
 
 import pandas as pd
-from jaxtyping import Array
 from numpyro.distributions import TransformedDistribution
 
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.models.transformations import ComponentMassesToPrimaryMassAndMassRatio
 from gwkokab.parameters import PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
+from kokab.utils.common import read_json
 
 
 def make_parser() -> ArgumentParser:
@@ -43,86 +42,49 @@ def make_parser() -> ArgumentParser:
     return parser
 
 
-def load_configuration(
-    constants_file: str, nf_samples_mapping_file: str
-) -> Tuple[Dict[str, Union[int, float, bool]], Dict[str, int]]:
-    try:
-        with open(constants_file, "r") as f:
-            constants: Dict[str, Union[int, float, bool]] = json.load(f)
-        with open(nf_samples_mapping_file, "r") as f:
-            nf_samples_mapping: Dict[str, int] = json.load(f)
-        return constants, nf_samples_mapping
-    except (FileNotFoundError, json.JSONDecodeError) as e:
-        raise ValueError(f"Error loading configuration: {e}")
-
-
-def get_model_pdf(
-    constants: Dict[str, Union[int, float, bool]],
-    nf_samples_mapping: Dict[str, int],
-    rate_scaled: bool = False,
-) -> Callable[[Array], Array]:
-    nf_samples = pd.read_csv(
-        "sampler_data/nf_samples.dat", delimiter=" ", skiprows=0
-    ).to_numpy()
-
-    if not rate_scaled:
-        model = TransformedDistribution(
-            SmoothedPowerlawAndPeak(
-                **constants,
-                **{
-                    name: (
-                        nf_samples[..., i] if not name.startswith("log_rate") else 0.0
-                    )
-                    for name, i in nf_samples_mapping.items()
-                },
-                validate_args=True,
-            ),
-            transforms=ComponentMassesToPrimaryMassAndMassRatio(),
-            validate_args=True,
-        )
-    else:
-        model = TransformedDistribution(
-            SmoothedPowerlawAndPeak(
-                **constants,
-                **{name: nf_samples[..., i] for name, i in nf_samples_mapping.items()},
-                validate_args=True,
-            ),
-            transforms=ComponentMassesToPrimaryMassAndMassRatio(),
-            validate_args=True,
-        )
-
-    return model.log_prob
-
-
-def compute_and_save_ppd(
-    logpdf: Callable[[Array], Array],
-    domains: List[Tuple[float, float, int]],
-    output_file: str,
-    parameters: List[str],
-) -> None:
-    prob_values = ppd.compute_probs(logpdf, domains)
-    ppd_values = ppd.get_ppd(prob_values, axis=-1)
-    marginals = ppd.get_all_marginals(prob_values, domains)
-    ppd.save_probs(ppd_values, marginals, output_file, domains, parameters)
+def model(**params) -> TransformedDistribution:
+    validate_args = params.pop("validate_args", True)
+    return TransformedDistribution(
+        SmoothedPowerlawAndPeak(**params, validate_args=validate_args),
+        transforms=ComponentMassesToPrimaryMassAndMassRatio(),
+        validate_args=validate_args,
+    )
 
 
 def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    if not str(args.filename).endswith(".hdf5"):
-        raise ValueError("Output file must be an HDF5 file.")
-
-    constants, nf_samples_mapping = load_configuration(
-        args.constants, args.nf_samples_mapping
+    error_if(
+        not str(args.filename).endswith(".hdf5"),
+        "Output file must be an HDF5 file.",
     )
+
+    constants = read_json(args.constants)
+    nf_samples_mapping = read_json(args.nf_samples_mapping)
 
     parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
 
-    model_without_rate_pdf = get_model_pdf(constants, nf_samples_mapping)
-    compute_and_save_ppd(model_without_rate_pdf, args.range, args.filename, parameters)
+    nf_samples = pd.read_csv("sampler_data/nf_samples.dat", delimiter=" ").to_numpy()
 
-    model_with_rate_pdf = get_model_pdf(constants, nf_samples_mapping, rate_scaled=True)
-    compute_and_save_ppd(
-        model_with_rate_pdf, args.range, "rate_scaled_" + args.filename, parameters
+    ppd.compute_and_save_ppd(
+        model,
+        nf_samples,
+        args.range,
+        "rate_scaled_" + args.filename,
+        parameters,
+        constants,
+        nf_samples_mapping,
+    )
+
+    nf_samples, constants = ppd.wipe_log_rate(nf_samples, nf_samples_mapping, constants)
+
+    ppd.compute_and_save_ppd(
+        model,
+        nf_samples,
+        args.range,
+        args.filename,
+        parameters,
+        constants,
+        nf_samples_mapping,
     )
