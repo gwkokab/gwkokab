@@ -40,9 +40,17 @@ def read_json(json_file: str) -> dict:
     -------
     dict
         json file content as dict
+
+    Raises
+    ------
+    ValueError
+        If the file is not found or if the file is not a valid json file
     """
-    with open(json_file, "r") as f:
-        content = json.load(f)
+    try:
+        with open(json_file, "r") as f:
+            content = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        raise ValueError(f"Error loading configuration: {e}")
     return content
 
 
