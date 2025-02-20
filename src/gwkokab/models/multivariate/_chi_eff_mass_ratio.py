@@ -126,20 +126,6 @@ class ChiEffMassRatioCorrelated(Distribution):
         "log10_sigma_eff_0": constraints.real,
         "kappa": constraints.real,
     }
-    reparametrized_params = [
-        "lambda_peak",
-        "lamb",
-        "loc_m",
-        "scale_m",
-        "mmin",
-        "mmax",
-        "gamma",
-        "alpha",
-        "beta",
-        "mu_eff_0",
-        "log10_sigma_eff_0",
-        "kappa",
-    ]
     pytree_data_fields = (
         "_support",
         "alpha",

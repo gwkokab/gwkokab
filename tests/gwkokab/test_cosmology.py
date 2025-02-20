@@ -22,7 +22,7 @@ from gwkokab.cosmology import Cosmology, PLANCK_2015_Cosmology, PLANCK_2018_Cosm
 
 class TestCosmology(parameterized.TestCase):
     @chex.variants(  # pyright: ignore
-        with_jit=False,  # test case failing
+        with_jit=True,  # test case failing
         without_jit=True,
         with_device=True,
         without_device=True,
@@ -44,7 +44,7 @@ class TestCosmology(parameterized.TestCase):
         assert jnp.allclose(z, _z_to_z(z), atol=1e-3)
 
     @chex.variants(  # pyright: ignore
-        with_jit=False,  # test case failing
+        with_jit=True,  # test case failing
         without_jit=True,
         with_device=True,
         without_device=True,

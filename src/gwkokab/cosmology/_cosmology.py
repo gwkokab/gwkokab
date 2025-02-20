@@ -26,6 +26,9 @@
 # adapted from code written by Reed Essick included in the gw-distributions package at:
 # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/utils/cosmology.py
 
+
+from typing import Optional
+
 import jax.numpy as jnp
 from jax.lax import fori_loop
 from jaxtyping import ArrayLike
@@ -126,7 +129,6 @@ class Cosmology(object):
 
         X = jnp.array([self._z, Dc, Vc])
         extended_X = fori_loop(0, self._z.shape[0] - 1, self.update, X)
-        # extended_X = lax.scan(self.update, X, jnp.arange(0, self.z.shape[0] - 1))
         self._Dc = extended_X[1]
         self.Vc = extended_X[2]
 
@@ -147,12 +149,15 @@ class Cosmology(object):
             Dimensionless Hubble parameter
         """
         zp1 = 1.0 + z
-        return (
+        zp1_sq = jnp.square(zp1)
+        zp1_cu = zp1 * zp1_sq
+        zp1_q = zp1_sq * zp1_sq
+        return jnp.sqrt(
             self._OmegaLambda
-            + self._OmegaKappa * zp1**2
-            + self._OmegaMatter * zp1**3
-            + self._OmegaRadiation * zp1**4
-        ) ** 0.5
+            + self._OmegaKappa * zp1_sq
+            + self._OmegaMatter * zp1_cu
+            + self._OmegaRadiation * zp1_q
+        )
 
     def dDcdz(self, z: ArrayLike) -> ArrayLike:
         r"""
@@ -173,7 +178,7 @@ class Cosmology(object):
         dDc = self._c_over_Ho / self.z_to_E(z)
         return dDc
 
-    def dVcdz(self, z: ArrayLike, Dc=None) -> ArrayLike:
+    def dVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
         r"""Calculate the comoving volume element per unit redshift.
 
         .. math::
@@ -183,7 +188,7 @@ class Cosmology(object):
         ----------
         z : ArrayLike
             Redshifts
-        Dc : _type_, optional
+        Dc : Optional[ArrayLike], optional
             Distance to the source, by default None
 
         Returns
@@ -193,7 +198,7 @@ class Cosmology(object):
         """
         return jnp.exp(self.logdVcdz(z, Dc=Dc))
 
-    def logdVcdz(self, z: ArrayLike, Dc: ArrayLike = None) -> ArrayLike:
+    def logdVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
         r"""Return :math:`\ln(\frac{dV_c}{dz})`. Useful when constructing probability
         distributions without overflow errors.
 
@@ -201,7 +206,7 @@ class Cosmology(object):
         ----------
         z : ArrayLike
             Redshifts
-        Dc : ArrayLike, optional
+        Dc : Optional[ArrayLike], optional
             Distance to the source, by default None
 
         Returns

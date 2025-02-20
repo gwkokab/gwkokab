@@ -47,6 +47,9 @@ class ScaledMixture(Distribution):
        ()
     """
 
+    arg_constraints = {
+        "log_scales": constraints.real_vector,
+    }
     pytree_data_fields = ("_component_distributions", "_support", "log_scales")
     pytree_aux_fields = ("_mixture_size",)
 

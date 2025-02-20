@@ -117,8 +117,7 @@ class PowerlawPrimaryMassRatio(Distribution):
 
     @validate_sample
     def log_prob(self, value):
-        m1 = value[..., 0]
-        q = value[..., 1]
+        m1, q = jnp.unstack(value, axis=-1)
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
         )
@@ -645,7 +644,6 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "mmax": constraints.positive,
         "delta": constraints.positive,
     }
-    reparametrized_params = ["alpha", "beta", "mmin", "mmax", "delta"]
     pytree_data_fields = (
         "_logZ",
         "_support",
@@ -749,12 +747,13 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
             neginf=-jnp.inf,
         )
 
-    @validate_sample
     def _log_prob_q(self, value: Array, logZ: ArrayLike = 0.0) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
         log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q - logZ
+        mask = self.support(value)
+        log_prob_q = jnp.where(mask, log_prob_q, -jnp.inf)
         return jnp.nan_to_num(
             log_prob_q,
             nan=-jnp.inf,
@@ -813,7 +812,6 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "mmax": constraints.positive,
         "delta": constraints.positive,
     }
-    reparametrized_params = ["loc", "scale", "beta", "mmin", "mmax", "delta"]
     pytree_data_fields = (
         "_logZ",
         "_support",
@@ -908,12 +906,13 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             neginf=-jnp.inf,
         )
 
-    @validate_sample
     def _log_prob_q(self, value: Array, logZ: ArrayLike = 0.0) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
         log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q - logZ
+        mask = self.support(value)
+        log_prob_q = jnp.where(mask, log_prob_q, -jnp.inf)
         return jnp.nan_to_num(
             log_prob_q,
             nan=-jnp.inf,
