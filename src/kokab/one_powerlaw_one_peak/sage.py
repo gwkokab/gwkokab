@@ -33,6 +33,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
 )
 from gwkokab.poisson_mean import PoissonMean
+from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
     flowMC_default_parameters,
@@ -85,6 +86,11 @@ def main() -> None:
     ]
 
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
+    error_if(
+        set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
+        "The parameters in the posterior data do not match the parameters in the model.",
+    )
+
     model_prior_param = get_processed_priors(model_parameters, prior_dict)
 
     model = Bake(SmoothedPowerlawAndPeak)(**model_prior_param)

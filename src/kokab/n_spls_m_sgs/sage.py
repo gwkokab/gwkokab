@@ -47,6 +47,7 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import PoissonMean
+from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
     expand_arguments,
@@ -241,6 +242,11 @@ def main() -> None:
                 ("redshift_z_max_pl", N_pl),
             ]
         )
+
+    error_if(
+        set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
+        "The parameters in the posterior data do not match the parameters in the model.",
+    )
 
     extended_params = []
     for params in all_params:
