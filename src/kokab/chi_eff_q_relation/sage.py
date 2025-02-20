@@ -32,6 +32,7 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import PoissonMean
+from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
     flowMC_default_parameters,
@@ -113,6 +114,10 @@ def main() -> None:
         SECONDARY_SPIN_MAGNITUDE,
         REDSHIFT,
     ]
+    error_if(
+        set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
+        "The parameters in the posterior data do not match the parameters in the model.",
+    )
 
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json

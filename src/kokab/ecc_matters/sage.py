@@ -25,6 +25,7 @@ from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
 from gwkokab.logger import enable_logging
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.poisson_mean import PoissonMean
+from gwkokab.utils.tools import error_if
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
@@ -73,6 +74,10 @@ def main() -> None:
     model = Bake(EccentricityMattersModel)(**model_prior_param)
 
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY]
+    error_if(
+        set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
+        "The parameters in the posterior data do not match the parameters in the model.",
+    )
 
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json
