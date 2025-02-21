@@ -222,8 +222,8 @@ def load_model(filename) -> Tuple[List[str], eqx.nn.Sequential]:
         i = 0
         while f.get(f"layer_{i}"):
             layer_i = f[f"layer_{i}"]
-            weight_i = layer_i[f"weight_{i}"][:]
-            bias_i = layer_i[f"bias_{i}"][:]
+            weight_i = jax.device_put(np.asarray(layer_i[f"weight_{i}"][:]))
+            bias_i = jax.device_put(np.asarray(layer_i[f"bias_{i}"][:]))
             nn = eqx.nn.Linear(
                 in_features=weight_i.shape[1],
                 out_features=weight_i.shape[0],
