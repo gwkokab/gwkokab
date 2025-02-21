@@ -18,6 +18,7 @@ import warnings
 from collections.abc import Sequence
 from typing import List, Union
 
+import jax
 import numpy as np
 import pandas as pd
 from numpyro import distributions as dist
@@ -125,7 +126,7 @@ def get_posterior_data(
             raise KeyError(
                 f"The file '{event}' is missing required columns: {missing_columns}"
             )
-        data = df[posterior_columns].to_numpy()
+        data = jax.device_put(df[posterior_columns].to_numpy())
         data_list.append(data)
     return data_list
 
