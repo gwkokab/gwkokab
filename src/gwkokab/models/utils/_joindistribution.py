@@ -48,7 +48,7 @@ class JointDistribution(Distribution):
         """
         if not marginal_distributions:
             raise ValueError("At least one marginal distribution is required.")
-        self.marginal_distributions = marginal_distributions
+        self.marginal_distributions = list(marginal_distributions)
         self.shaped_values: Tuple[int | slice, ...] = tuple()
         batch_shape = lax.broadcast_shapes(
             *tuple(d.batch_shape for d in self.marginal_distributions)
