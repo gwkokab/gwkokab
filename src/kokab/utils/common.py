@@ -126,8 +126,9 @@ def get_posterior_data(
             raise KeyError(
                 f"The file '{event}' is missing required columns: {missing_columns}"
             )
-        data = jax.device_put(df[posterior_columns].to_numpy())
+        data = df[posterior_columns].to_numpy()
         data_list.append(data)
+    data_list = jax.device_put(data_list, may_alias=True)
     return data_list
 
 
