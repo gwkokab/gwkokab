@@ -49,8 +49,8 @@ def model(**params) -> DistributionLike:
     _model._component_distributions[0].marginal_distributions[0] = (
         _model._component_distributions[0].marginal_distributions[0].base_dist
     )
-    _model._component_distributions[1].marginal_distributions[1] = (
-        _model._component_distributions[1].marginal_distributions[1].base_dist
+    _model._component_distributions[1].marginal_distributions[0] = (
+        _model._component_distributions[1].marginal_distributions[0].base_dist
     )
     return _model
 
