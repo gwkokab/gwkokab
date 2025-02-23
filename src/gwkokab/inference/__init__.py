@@ -16,6 +16,4 @@
 """Provides essential classes and functions for the inference module."""
 
 from .bake import Bake as Bake
-from .flowMChandler import flowMChandler as flowMChandler
 from .poissonlikelihood import PoissonLikelihood as PoissonLikelihood
-from .utils import save_data_from_sampler as save_data_from_sampler
