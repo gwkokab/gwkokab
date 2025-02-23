@@ -36,7 +36,7 @@ classifiers = [
 dependencies = [
     "arviz>=0.20.0",
     "chex>=0.1.87",
-    "flowMC>=0.3.4",
+    "flowMC==0.3.4",
     "h5py>=3.12.1",
     "interpax>=0.3.5",
     "jax>=0.4.30",
