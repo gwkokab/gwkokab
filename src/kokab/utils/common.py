@@ -18,6 +18,7 @@ import warnings
 from collections.abc import Sequence
 from typing import List, Union
 
+import jax
 import numpy as np
 import pandas as pd
 from numpyro import distributions as dist
@@ -127,6 +128,7 @@ def get_posterior_data(
             )
         data = df[posterior_columns].to_numpy()
         data_list.append(data)
+    data_list = jax.device_put(data_list, may_alias=True)
     return data_list
 
 

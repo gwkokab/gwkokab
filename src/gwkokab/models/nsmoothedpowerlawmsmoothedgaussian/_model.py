@@ -19,8 +19,10 @@ from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import constraints, Distribution, TransformedDistribution
 
+from ...cosmology import PLANCK_2015_Cosmology
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
+from ..redshift import PowerlawRedshift
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
@@ -468,6 +470,89 @@ def SmoothedPowerlawAndPeak(
             axis=-1,
         ),
         component_distributions=[smoothed_powerlaw, smoothed_gaussian],
+        support=constraints.real_vector,
+        validate_args=validate_args,
+    )
+
+
+def SmoothedPowerlawPeakAndPowerlawRedshift(
+    alpha: ArrayLike,
+    beta: ArrayLike,
+    loc: ArrayLike,
+    scale: ArrayLike,
+    mmin: ArrayLike,
+    mmax: ArrayLike,
+    delta: ArrayLike,
+    lambda_peak: ArrayLike,
+    z_max: ArrayLike,
+    lamb: ArrayLike,
+    log_rate: ArrayLike,
+    *,
+    validate_args=None,
+) -> ScaledMixture:
+    r"""It is a mixture of Powerlaw and Gaussian distribution with a smoothing kernel,
+    joined with a Powerlaw Redshift distribution.
+
+    .. math::
+
+        p(m_1, q\mid \alpha, \beta, \mu, \sigma, m_{\text{min}}, m_{\text{max}}, \delta, \lambda_{\text{peak}}) =
+        \left((1-\lambda_{\text{peak})m_1^{\alpha}+\lambda_{\text{peak}\mathcal{N}(m_1\mid\mu,\sigma)\right)
+        q^{\beta}
+        S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)
+        S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),
+        \qqquad m_{\text{min}}\leq m_1q \leq m_1\leq m_{\text{max}}
+    """
+    smoothed_powerlaw = TransformedDistribution(
+        SmoothedPowerlawPrimaryMassRatio(
+            alpha=alpha,
+            beta=beta,
+            mmin=mmin,
+            mmax=mmax,
+            delta=delta,
+            validate_args=validate_args,
+        ),
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+        validate_args=validate_args,
+    )
+    smoothed_gaussian = TransformedDistribution(
+        SmoothedGaussianPrimaryMassRatio(
+            loc=loc,
+            scale=scale,
+            beta=beta,
+            mmin=mmin,
+            mmax=mmax,
+            delta=delta,
+            validate_args=validate_args,
+        ),
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+        validate_args=validate_args,
+    )
+
+    zgrid = jnp.linspace(0.001, z_max, 1000)
+    dVcdz = PLANCK_2015_Cosmology.dVcdz(zgrid)
+    powerlaw_z = PowerlawRedshift(
+        z_max=z_max,
+        lamb=lamb,
+        zgrid=zgrid,
+        dVcdz=dVcdz,
+        validate_args=validate_args,
+    )
+    return ScaledMixture(
+        log_scales=jnp.stack(
+            [
+                jnp.log1p(-lambda_peak) + log_rate,
+                jnp.log(lambda_peak) + log_rate,
+            ],
+            axis=-1,
+        ),
+        component_distributions=[
+            JointDistribution(
+                smoothed_powerlaw, powerlaw_z, validate_args=validate_args
+            ),
+            JointDistribution(
+                smoothed_gaussian, powerlaw_z, validate_args=validate_args
+            ),
+        ],
         support=constraints.real_vector,
         validate_args=validate_args,
     )

@@ -19,6 +19,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import List, Tuple
 
+import jax
 import numpy as np
 from jax import random as jrd
 
@@ -252,7 +253,9 @@ def main() -> None:
     erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
+    log_ref_priors = jax.device_put(
+        [np.zeros(d.shape[:-1]) for d in data], may_alias=True
+    )
 
     poisson_likelihood = PoissonLikelihood(
         model=model,

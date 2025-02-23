@@ -18,6 +18,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
+import jax
 from jax import numpy as jnp, random as jrd
 from numpyro.distributions import Uniform
 
@@ -129,7 +130,9 @@ def main() -> None:
     erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [REDSHIFT.prior.log_prob(d[..., 4]) for d in data]
+    log_ref_priors = jax.device_put(
+        [REDSHIFT.prior.log_prob(d[..., 4]) for d in data], may_alias=True
+    )
 
     poisson_likelihood = PoissonLikelihood(
         model=model,

@@ -18,16 +18,14 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
+import jax
 import numpy as np
 from jax import random as jrd
 
 from gwkokab.inference import Bake, PoissonLikelihood
 from gwkokab.logger import enable_logging
-from gwkokab.models import SmoothedPowerlawAndPeak
-from gwkokab.parameters import (
-    PRIMARY_MASS_SOURCE,
-    SECONDARY_MASS_SOURCE,
-)
+from gwkokab.models import SmoothedPowerlawPeakAndPowerlawRedshift
+from gwkokab.parameters import PRIMARY_MASS_SOURCE, REDSHIFT, SECONDARY_MASS_SOURCE
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
@@ -73,16 +71,18 @@ def main() -> None:
     model_parameters = [
         "alpha",
         "beta",
-        "loc",
-        "scale",
-        "mmin",
-        "mmax",
         "delta",
+        "lamb",
         "lambda_peak",
+        "loc",
         "log_rate",
+        "mmax",
+        "mmin",
+        "scale",
+        "z_max",
     ]
 
-    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
+    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, REDSHIFT]
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
         "The parameters in the posterior data do not match the parameters in the model.",
@@ -90,7 +90,7 @@ def main() -> None:
 
     model_prior_param = get_processed_priors(model_parameters, prior_dict)
 
-    model = Bake(SmoothedPowerlawAndPeak)(**model_prior_param)
+    model = Bake(SmoothedPowerlawPeakAndPowerlawRedshift)(**model_prior_param)
 
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json
@@ -101,7 +101,9 @@ def main() -> None:
     erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
+    log_ref_priors = jax.device_put(
+        [np.zeros(d.shape[:-1]) for d in data], may_alias=True
+    )
 
     poisson_likelihood = PoissonLikelihood(
         model=model,
