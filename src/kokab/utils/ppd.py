@@ -13,7 +13,6 @@
 # limitations under the License.
 
 
-from functools import partial
 from typing import Dict, List, Tuple, Union
 
 import h5py
@@ -53,53 +52,6 @@ def wipe_log_rate(
             constants[key] = 0.0
             nf_samples = np.delete(nf_samples, index, axis=-1)
     return nf_samples, constants
-
-
-def compute_probs(
-    params: Array,
-    xx_mesh: Array,
-    model: DistributionLike,
-    constants: Dict[str, ArrayLike],
-    nf_samples_mapping: Dict[str, int],
-) -> Array:
-    """Compute the probability density function of a model.
-
-    Parameters
-    ----------
-    params : Array
-        A callable that computes the log-probability density function of the model.
-    xx_mesh : Array
-        A list of tuples `(start, end, num_points)` for each parameter, defining the
-        grid over which to compute the PPD.
-    model : DistributionLike
-        The PPD of the model as a multidimensional array corresponding to the parameter
-        grid.
-    constants : Dict[str, ArrayLike]
-        A dictionary of constants for the model.
-    nf_samples_mapping : Dict[str, int]
-        A dictionary mapping the normalizing flow samples to the model parameters.
-
-    Returns
-    -------
-    Array
-        The probability density function of the model.
-    """
-
-    logpdf = model(
-        **constants,
-        **{k: params[v] for k, v in nf_samples_mapping.items()},
-        validate_args=True,
-    ).log_prob
-
-    @jax.vmap
-    def _prob(x: Array) -> Array:
-        x_expanded = jnp.expand_dims(x, axis=-2)
-        prob = jnp.exp(logpdf(x_expanded))
-        return prob
-
-    prob_vec = _prob(xx_mesh)
-
-    return prob_vec
 
 
 def _compute_marginal_probs(
@@ -223,18 +175,36 @@ def compute_and_save_ppd(
     shape = xx_mesh.shape
     xx_mesh = xx_mesh.reshape(-1, shape[-1])
 
+    def compute_probs(params: Array) -> Array:
+        """Compute the probability density function of a model.
+
+        Parameters
+        ----------
+        params : Array
+            A callable that computes the log-probability density function of the model.
+
+        Returns
+        -------
+        Array
+            The probability density function of the model.
+        """
+
+        logpdf = model(
+            **constants,
+            **{k: params[v] for k, v in nf_samples_mapping.items()},
+            validate_args=True,
+        ).log_prob
+
+        logpdf = jax.vmap(logpdf)
+
+        prob_vec = jnp.exp(logpdf(xx_mesh))
+
+        return prob_vec
+
     prob_values: Array = jax.lax.map(
-        partial(
-            compute_probs,
-            xx_mesh=xx_mesh,
-            model=model,
-            constants=constants,
-            nf_samples_mapping=nf_samples_mapping,
-        ),
-        nf_samples,
+        jax.jit(compute_probs, donate_argnums=0), nf_samples
     )
     del nf_samples
-    del xx_mesh
     prob_values = prob_values.reshape(-1, *shape[:-1])
     prob_values = np.moveaxis(prob_values, 0, -1)
     ppd_values = np.mean(prob_values, axis=-1)
