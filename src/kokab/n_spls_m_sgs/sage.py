@@ -23,11 +23,7 @@ import numpy as np
 from jax import random as jrd
 
 import gwkokab
-from gwkokab.inference import (
-    Bake,
-    flowMChandler,
-    PoissonLikelihood,
-)
+from gwkokab.inference import Bake, PoissonLikelihood
 from gwkokab.logger import enable_logging
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
 from gwkokab.models.utils import (
@@ -57,6 +53,7 @@ from kokab.utils.common import (
     read_json,
     vt_json_read_and_process,
 )
+from kokab.utils.flowMC_helper import flowMChandler
 
 
 def make_parser() -> ArgumentParser:
