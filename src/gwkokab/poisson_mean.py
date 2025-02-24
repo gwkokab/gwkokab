@@ -118,6 +118,7 @@ class PoissonMean(eqx.Module):
             If the proposal distribution is not a distribution.
         """
         if isinstance(logVT_estimator, RealInjectionVolumeTimeSensitivity):
+            self.key = key
             self.proposal_log_weights_and_samples = [
                 (jnp.log(logVT_estimator.sampling_prob), logVT_estimator.injections)
             ]
