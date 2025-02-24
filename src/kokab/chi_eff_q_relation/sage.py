@@ -124,10 +124,9 @@ def main() -> None:
     nvt = vt_json_read_and_process(
         [param.name for param in parameters], args.vt_path, args.vt_json
     )
-    logVT = nvt.get_mapped_logVT()
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     log_ref_priors = jax.device_put(
