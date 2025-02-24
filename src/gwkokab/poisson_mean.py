@@ -23,6 +23,8 @@ from numpyro.distributions.distribution import Distribution, DistributionLike
 
 from .logger import logger
 from .models.utils import ScaledMixture
+from .utils.tools import error_if
+from .vts import RealInjectionVolumeTimeSensitivity, VolumeTimeSensitivityInterface
 
 
 class PoissonMean(eqx.Module):
@@ -70,8 +72,10 @@ class PoissonMean(eqx.Module):
     """
 
     key: PRNGKeyArray = eqx.field(init=False)
-    logVT_fn: Callable[[Array], Array] = eqx.field(init=False)
-    num_samples_per_component: List[int] = eqx.field(init=False, static=True)
+    logVT_fn: Optional[Callable[[Array], Array]] = eqx.field(init=False, default=None)
+    num_samples_per_component: Optional[List[int]] = eqx.field(
+        init=False, static=True, default=None
+    )
     proposal_log_weights_and_samples: List[Optional[Tuple[Array, Array]]] = eqx.field(
         init=False
     )
@@ -79,9 +83,9 @@ class PoissonMean(eqx.Module):
 
     def __init__(
         self,
-        logVT_fn: Callable[[Array], Array],
-        proposal_dists: List[Union[Literal["self"], DistributionLike]],
+        logVT_estimator: VolumeTimeSensitivityInterface,
         key: PRNGKeyArray,
+        proposal_dists: Optional[List[Union[Literal["self"], DistributionLike]]] = None,
         num_samples: int = 10_000,
         self_num_samples: Optional[int] = None,
         num_samples_per_component: Optional[List[int]] = None,
@@ -90,13 +94,64 @@ class PoissonMean(eqx.Module):
         """
         Parameters
         ----------
-        logVT_fn : Callable[[Array], Array]
+        logVT_estimator : Callable[[Array], Array]
             Log of the Volume Time Sensitivity function.
+        key : PRNGKeyArray
+            PRNG key.
         proposal_dists : List[Union[Literal[&quot;self&quot;], DistributionLike]]
             List of proposal distributions. If "self" is given, the proposal distribution
             is the target distribution itself.
+        num_samples : int
+            Number of samples, by default 10_000
+        self_num_samples : Optional[int], optional
+            Number of samples for distribution using Inverse Transform Sampling, by default None
+        num_samples_per_component : Optional[List[int]], optional
+            Number of samples for each component, by default None
+        scale : Union[int, float, Array]
+            scale factor, by default 1.0
+
+        Raises
+        ------
+        ValueError
+            If the proposal distribution is unknown.
+        ValueError
+            If the proposal distribution is not a distribution.
+        """
+        if isinstance(logVT_estimator, RealInjectionVolumeTimeSensitivity):
+            self.proposal_log_weights_and_samples = [
+                (jnp.log(logVT_estimator.sampling_prob), logVT_estimator.injections)
+            ]
+        else:
+            self.__init_for_per_component_rate__(
+                logVT_estimator=logVT_estimator,
+                key=key,
+                proposal_dists=proposal_dists,
+                num_samples=num_samples,
+                self_num_samples=self_num_samples,
+                num_samples_per_component=num_samples_per_component,
+                scale=scale,
+            )
+
+    def __init_for_per_component_rate__(
+        self,
+        logVT_estimator: VolumeTimeSensitivityInterface,
+        key: PRNGKeyArray,
+        proposal_dists: Optional[List[Union[Literal["self"], DistributionLike]]] = None,
+        num_samples: int = 10_000,
+        self_num_samples: Optional[int] = None,
+        num_samples_per_component: Optional[List[int]] = None,
+        scale: Union[int, float, Array] = 1.0,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        logVT_estimator : Callable[[Array], Array]
+            Log of the Volume Time Sensitivity function.
         key : PRNGKeyArray
             PRNG key.
+        proposal_dists : List[Union[Literal[&quot;self&quot;], DistributionLike]]
+            List of proposal distributions. If "self" is given, the proposal distribution
+            is the target distribution itself.
         num_samples : int
             Number of samples, by default 10_000
         self_num_samples : Optional[int], optional
@@ -114,10 +169,12 @@ class PoissonMean(eqx.Module):
             If the proposal distribution is not a distribution.
         """
         if num_samples_per_component is not None:
-            assert len(proposal_dists) == len(num_samples_per_component), (
-                f"Mismatch between the number of proposal distributions "
+            error_if(
+                len(proposal_dists) != len(num_samples_per_component),
+                AssertionError,
+                "Mismatch between the number of proposal distributions "
                 f"({len(proposal_dists)}) and the number of samples per component "
-                f"({len(num_samples_per_component)})"
+                f"({len(num_samples_per_component)})",
             )
             self.num_samples_per_component = num_samples_per_component
         else:
@@ -125,7 +182,7 @@ class PoissonMean(eqx.Module):
                 num_samples for _ in range(len(proposal_dists))
             ]
         self.scale = scale
-        self.logVT_fn = logVT_fn
+        self.logVT_fn = logVT_estimator.get_mapped_logVT()
 
         proposal_log_weights_and_samples = []
         for index, dist in enumerate(proposal_dists):
@@ -140,21 +197,29 @@ class PoissonMean(eqx.Module):
                 _num_samples = self.num_samples_per_component[index]
                 samples = dist.sample(key, (_num_samples,))
                 proposal_log_prob: Array = dist.log_prob(samples).reshape(_num_samples)
-                logVT_samples = logVT_fn(samples).reshape(_num_samples)
+                logVT_samples = self.logVT_fn(samples).reshape(_num_samples)
                 log_weights = logVT_samples - proposal_log_prob
-                assert log_weights.shape == (_num_samples,), (
+                error_if(
+                    log_weights.shape != (_num_samples,),
+                    AssertionError,
                     f"Expected log_weights to have shape {(_num_samples,)}, "
-                    f"but got {log_weights.shape}"
+                    f"but got {log_weights.shape}",
                 )
-                assert samples.shape[0] == _num_samples, (
+                error_if(
+                    samples.shape[0] != _num_samples,
+                    AssertionError,
                     f"Expected samples to have shape {(_num_samples, -1)}, "
-                    f"but got {samples.shape}"
+                    f"but got {samples.shape}",
                 )
-                assert jnp.all(jnp.isfinite(log_weights)), (
-                    f"Expected log_weights to be finite, but got {log_weights}"
+                error_if(
+                    not jnp.all(jnp.isfinite(log_weights)),
+                    AssertionError,
+                    f"Expected log_weights to be finite, but got {log_weights}",
                 )
-                assert jnp.all(jnp.isfinite(samples)), (
-                    f"Expected samples to be finite, but got {samples}"
+                error_if(
+                    not jnp.all(jnp.isfinite(samples)),
+                    AssertionError,
+                    f"Expected samples to be finite, but got {samples}",
                 )
                 proposal_log_weights_and_samples.append((log_weights, samples))
                 key, _ = jrd.split(key)
@@ -176,12 +241,35 @@ class PoissonMean(eqx.Module):
         Array
             Estimated rate/s.
         """
-        assert isinstance(model, ScaledMixture), (
-            f"Expected model to be an instance of ScaledMixture, but got {type(model)}"
+        if self.num_samples_per_component is None:  # injection based sampling method
+            log_weights, samples = self.proposal_log_weights_and_samples[0]
+            return (self.scale / log_weights.shape[0]) * jnp.exp(
+                jnn.logsumexp(log_weights + model.log_prob(samples))
+            )
+        else:  # per component rate estimation
+            return self.calculate_per_component_rate(model)
+
+    def calculate_per_component_rate(self, model: ScaledMixture) -> Array:
+        r"""Estimate the per component rate/s by using the given model.
+
+        Parameters
+        ----------
+        model : ScaledMixture
+            Model instance.
+
+        Returns
+        -------
+        Array
+            Estimated rate/s.
+        """
+        error_if(
+            not isinstance(model, ScaledMixture),
+            f"Expected model to be an instance of ScaledMixture, but got {type(model)}",
         )
-        assert len(self.proposal_log_weights_and_samples) == model.mixture_size, (
+        error_if(
+            len(self.proposal_log_weights_and_samples) != model.mixture_size,
             f"Expected {model.mixture_size} proposal distributions, "
-            f"but got {len(self.proposal_log_weights_and_samples)}"
+            f"but got {len(self.proposal_log_weights_and_samples)}",
         )
 
         per_component_log_estimated_rates = []
