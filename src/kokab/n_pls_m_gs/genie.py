@@ -359,7 +359,7 @@ def main() -> None:
         has_redshift=has_redshift,
     )
 
-    nvt = vt_json_read_and_process(parameters_name, args.vt_path, args.vt_json)
+    nvt = vt_json_read_and_process(parameters_name, args.vt_json)
     logVT = nvt.get_mapped_logVT()
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
