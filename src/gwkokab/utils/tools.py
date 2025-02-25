@@ -14,8 +14,7 @@
 
 
 import warnings
-from typing import Optional, TypeVar
-from typing_extensions import Dict
+from typing import Dict, Optional, TypeVar
 
 
 _KT = TypeVar("_KT")

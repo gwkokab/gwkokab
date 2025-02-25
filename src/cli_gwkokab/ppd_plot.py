@@ -14,7 +14,7 @@
 
 
 import argparse
-from typing_extensions import Any, List, Tuple
+from typing import Any, List, Tuple
 
 import h5py
 import numpy as np
