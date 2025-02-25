@@ -13,8 +13,7 @@
 # limitations under the License.
 
 
-from typing import Optional
-from typing_extensions import List
+from typing import List, Optional
 
 import jax
 from jax import lax, numpy as jnp

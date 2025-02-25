@@ -14,7 +14,7 @@
 
 
 from functools import partial
-from typing_extensions import Optional
+from typing import Optional
 
 import chex
 import interpax
