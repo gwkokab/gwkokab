@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing_extensions import Tuple
+from typing import Tuple
 
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike

@@ -13,8 +13,7 @@
 # limitations under the License.
 
 
-from typing import Optional
-from typing_extensions import Tuple
+from typing import Optional, Tuple
 
 from jax import lax, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
