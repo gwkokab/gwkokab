@@ -21,6 +21,9 @@ The primary ingredient in these analyses is the population-averaged sensitive vo
 """
 
 from ._abc import VolumeTimeSensitivityInterface as VolumeTimeSensitivityInterface
+from ._injvt import (
+    RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
+)
 from ._neuralvt import NeuralNetVolumeTimeSensitivity as NeuralNetVolumeTimeSensitivity
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity as PopModelsCalibratedVolumeTimeSensitivity,
