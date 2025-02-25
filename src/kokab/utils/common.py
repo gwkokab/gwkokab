@@ -16,7 +16,7 @@
 import json
 import warnings
 from collections.abc import Sequence
-from typing import List, Union
+from typing import Dict, List, Union
 
 import jax
 import numpy as np
@@ -185,23 +185,29 @@ def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
 
 
 def vt_json_read_and_process(
-    parameters: Sequence[str], vt_path: str, settings_path: str
+    parameters: Sequence[str], settings_path: str
 ) -> VolumeTimeSensitivityInterface:
-    r"""Read and process the VT JSON file.
+    """Read and process the VT JSON file.
 
-    :param parameters: list of parameters
-    :param vt_path: path to the VT
-    :param settings_path: path to the VT settings
-    :raises ValueError: if the VT is not found
-    :return: VT object
+    Parameters
+    ----------
+    parameters : Sequence[str]
+        list of parameters
+    settings_path : str
+        path to the VT settings
+
+    Returns
+    -------
+    VolumeTimeSensitivityInterface
+        VT object
     """
     with open(settings_path, "r") as f:
-        vt_settings = json.load(f)
+        vt_settings: Dict = json.load(f)
 
-    vt_type = vt_settings["type"]
-    vt_settings.pop("type")
+    vt_type = vt_settings.pop("type")
+    vt_path = vt_settings.pop("filename")
     vt = available_vts[vt_type]
-    return vt(parameters, vt_path, **vt_settings)
+    return vt(parameters=parameters, filename=vt_path, **vt_settings)
 
 
 def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:

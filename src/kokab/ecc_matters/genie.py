@@ -123,7 +123,7 @@ def main() -> None:
 
     model_parameters = [m1_source, m2_source, ecc]
 
-    nvt = vt_json_read_and_process(model_parameters, args.vt_path, args.vt_json)
+    nvt = vt_json_read_and_process(model_parameters, args.vt_json)
     logVT = nvt.get_mapped_logVT()
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)

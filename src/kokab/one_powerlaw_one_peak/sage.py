@@ -92,9 +92,7 @@ def main() -> None:
 
     model = Bake(SmoothedPowerlawPeakAndPowerlawRedshift)(**model_prior_param)
 
-    nvt = vt_json_read_and_process(
-        [param.name for param in parameters], args.vt_path, args.vt_json
-    )
+    nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
