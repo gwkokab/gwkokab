@@ -13,10 +13,10 @@
 # limitations under the License.
 
 
-from collections.abc import Callable
 from typing import List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
+import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions.distribution import Distribution, DistributionLike
@@ -72,11 +72,13 @@ class PoissonMean(eqx.Module):
     """
 
     key: PRNGKeyArray = eqx.field(init=False)
-    logVT_fn: Optional[Callable[[Array], Array]] = eqx.field(init=False, default=None)
+    logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(
+        init=False, default=None
+    )
     num_samples_per_component: Optional[List[int]] = eqx.field(
         init=False, static=True, default=None
     )
-    proposal_log_weights_and_samples: List[Optional[Tuple[Array, Array]]] = eqx.field(
+    proposal_log_weights_and_samples: Tuple[Optional[Tuple[Array, Array]]] = eqx.field(
         init=False
     )
     scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
@@ -94,8 +96,8 @@ class PoissonMean(eqx.Module):
         """
         Parameters
         ----------
-        logVT_estimator : Callable[[Array], Array]
-            Log of the Volume Time Sensitivity function.
+        logVT_estimator : VolumeTimeSensitivityInterface
+            Volume Time Sensitivity estimator.
         key : PRNGKeyArray
             PRNG key.
         proposal_dists : List[Union[Literal[&quot;self&quot;], DistributionLike]]
@@ -119,12 +121,13 @@ class PoissonMean(eqx.Module):
         """
         if isinstance(logVT_estimator, RealInjectionVolumeTimeSensitivity):
             self.key = key
-            self.proposal_log_weights_and_samples = [
-                (jnp.log(logVT_estimator.sampling_prob), logVT_estimator.injections)
-            ]
+            self.proposal_log_weights_and_samples = (
+                (jnp.log(logVT_estimator.sampling_prob), logVT_estimator.injections),
+                (logVT_estimator.batch_size, None),
+            )
         else:
+            self.logVT_estimator = logVT_estimator
             self.__init_for_per_component_rate__(
-                logVT_estimator=logVT_estimator,
                 key=key,
                 proposal_dists=proposal_dists,
                 num_samples=num_samples,
@@ -135,7 +138,6 @@ class PoissonMean(eqx.Module):
 
     def __init_for_per_component_rate__(
         self,
-        logVT_estimator: VolumeTimeSensitivityInterface,
         key: PRNGKeyArray,
         proposal_dists: Optional[List[Union[Literal["self"], DistributionLike]]] = None,
         num_samples: int = 10_000,
@@ -183,7 +185,7 @@ class PoissonMean(eqx.Module):
                 num_samples for _ in range(len(proposal_dists))
             ]
         self.scale = scale
-        self.logVT_fn = logVT_estimator.get_mapped_logVT()
+        logVT_fn = self.logVT_estimator.get_mapped_logVT()
 
         proposal_log_weights_and_samples = []
         for index, dist in enumerate(proposal_dists):
@@ -198,7 +200,7 @@ class PoissonMean(eqx.Module):
                 _num_samples = self.num_samples_per_component[index]
                 samples = dist.sample(key, (_num_samples,))
                 proposal_log_prob: Array = dist.log_prob(samples).reshape(_num_samples)
-                logVT_samples = self.logVT_fn(samples).reshape(_num_samples)
+                logVT_samples = logVT_fn(samples).reshape(_num_samples)
                 log_weights = logVT_samples - proposal_log_prob
                 error_if(
                     log_weights.shape != (_num_samples,),
@@ -226,7 +228,7 @@ class PoissonMean(eqx.Module):
                 key, _ = jrd.split(key)
             else:
                 raise ValueError(f"Unknown proposal distribution: {dist}")
-        self.proposal_log_weights_and_samples = proposal_log_weights_and_samples
+        self.proposal_log_weights_and_samples = tuple(proposal_log_weights_and_samples)
         self.key = key
 
     def __call__(self, model: ScaledMixture) -> Array:
@@ -244,8 +246,10 @@ class PoissonMean(eqx.Module):
         """
         if self.num_samples_per_component is None:  # injection based sampling method
             log_weights, samples = self.proposal_log_weights_and_samples[0]
+            batch_size, _ = self.proposal_log_weights_and_samples[1]
+            model_log_prob = jax.lax.map(model.log_prob, samples, batch_size=batch_size)
             return (self.scale / log_weights.shape[0]) * jnp.exp(
-                jnn.logsumexp(log_weights + model.log_prob(samples))
+                jnn.logsumexp(log_weights + model_log_prob)
             )
         else:  # per component rate estimation
             return self.calculate_per_component_rate(model)
@@ -275,6 +279,8 @@ class PoissonMean(eqx.Module):
 
         per_component_log_estimated_rates = []
 
+        logVT_fn = self.logVT_estimator.get_mapped_logVT()
+
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
             component_dist: DistributionLike = model._component_distributions[i]
@@ -283,7 +289,7 @@ class PoissonMean(eqx.Module):
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
                 samples = component_dist.sample(self.key, (num_samples,))
-                per_sample_log_estimated_rates = self.logVT_fn(samples)
+                per_sample_log_estimated_rates = logVT_fn(samples)
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
                 component_log_prob = component_dist.log_prob(samples).reshape(

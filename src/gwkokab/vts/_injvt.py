@@ -14,6 +14,7 @@
 
 
 from collections.abc import Sequence
+from typing import Optional
 
 import equinox as eqx
 import h5py
@@ -46,7 +47,12 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     sampling_prob: Array = eqx.field(init=False)
     """Array of sampling probabilities of shape (n_injections,)."""
 
-    def __init__(self, parameters: Sequence[str], filename: str) -> None:
+    def __init__(
+        self,
+        parameters: Sequence[str],
+        filename: str,
+        batch_size: Optional[int] = None,
+    ) -> None:
         """Convenience class for loading a neural vt.
 
         Parameters
@@ -69,6 +75,17 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             not all(isinstance(p, str) for p in parameters),
             "all parameters must be strings",
         )
+        if batch_size is not None:
+            error_if(
+                not isinstance(batch_size, int),
+                f"batch_size must be an integer, got {type(batch_size)}",
+            )
+            error_if(
+                batch_size < 1,
+                f"batch_size must be a positive integer, got {batch_size}",
+            )
+
+        self.batch_size = batch_size
 
         with h5py.File(filename, "r") as f:
             self.injections = jax.device_put(
