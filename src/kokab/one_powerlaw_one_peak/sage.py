@@ -85,7 +85,7 @@ def main() -> None:
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, REDSHIFT]
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
-        "The parameters in the posterior data do not match the parameters in the model.",
+        msg="The parameters in the posterior data do not match the parameters in the model.",
     )
 
     model_prior_param = get_processed_priors(model_parameters, prior_dict)

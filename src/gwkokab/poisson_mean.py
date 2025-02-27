@@ -269,11 +269,11 @@ class PoissonMean(eqx.Module):
         """
         error_if(
             not isinstance(model, ScaledMixture),
-            f"Expected model to be an instance of ScaledMixture, but got {type(model)}",
+            msg=f"Expected model to be an instance of ScaledMixture, but got {type(model)}",
         )
         error_if(
             len(self.proposal_log_weights_and_samples) != model.mixture_size,
-            f"Expected {model.mixture_size} proposal distributions, "
+            msg=f"Expected {model.mixture_size} proposal distributions, "
             f"but got {len(self.proposal_log_weights_and_samples)}",
         )
 

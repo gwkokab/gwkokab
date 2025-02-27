@@ -62,27 +62,27 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         filename : str
             The filename of the neural vt.
         """
-        error_if(not parameters, "parameters sequence cannot be empty")
+        error_if(not parameters, msg="parameters sequence cannot be empty")
         error_if(
             not isinstance(parameters, Sequence),
-            f"parameters must be a Sequence, got {type(parameters)}",
+            msg=f"parameters must be a Sequence, got {type(parameters)}",
         )
         error_if(
             not set(parameters).difference(_PARAM_MAPPING.values()),
-            f"parameters must be one of the following: {set(_PARAM_MAPPING.values())}",
+            msg=f"parameters must be one of the following: {set(_PARAM_MAPPING.values())}",
         )
         error_if(
             not all(isinstance(p, str) for p in parameters),
-            "all parameters must be strings",
+            msg="all parameters must be strings",
         )
         if batch_size is not None:
             error_if(
                 not isinstance(batch_size, int),
-                f"batch_size must be an integer, got {type(batch_size)}",
+                msg=f"batch_size must be an integer, got {type(batch_size)}",
             )
             error_if(
                 batch_size < 1,
-                f"batch_size must be a positive integer, got {batch_size}",
+                msg=f"batch_size must be a positive integer, got {batch_size}",
             )
 
         self.batch_size = batch_size

@@ -78,7 +78,7 @@ def main() -> None:
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, ECCENTRICITY]
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
-        "The parameters in the posterior data do not match the parameters in the model.",
+        msg="The parameters in the posterior data do not match the parameters in the model.",
     )
 
     nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
