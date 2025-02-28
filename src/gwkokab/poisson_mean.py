@@ -16,7 +16,6 @@
 from typing import List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
-import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions.distribution import Distribution, DistributionLike
@@ -123,7 +122,7 @@ class PoissonMean(eqx.Module):
             self.key = key
             self.proposal_log_weights_and_samples = (
                 (jnp.log(logVT_estimator.sampling_prob), logVT_estimator.injections),
-                (logVT_estimator.batch_size, None),
+                # (logVT_estimator.batch_size, None),
             )
         else:
             self.logVT_estimator = logVT_estimator
@@ -246,8 +245,9 @@ class PoissonMean(eqx.Module):
         """
         if self.num_samples_per_component is None:  # injection based sampling method
             log_weights, samples = self.proposal_log_weights_and_samples[0]
-            batch_size, _ = self.proposal_log_weights_and_samples[1]
-            model_log_prob = jax.lax.map(model.log_prob, samples, batch_size=batch_size)
+            # batch_size, _ = self.proposal_log_weights_and_samples[1]
+            # model_log_prob = jax.lax.map(model.log_prob, samples, batch_size=batch_size)
+            model_log_prob = model.log_prob(samples)
             return (self.scale / log_weights.shape[0]) * jnp.exp(
                 jnn.logsumexp(log_weights + model_log_prob)
             )
