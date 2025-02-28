@@ -14,11 +14,11 @@
 
 
 import warnings
-import jax
 from collections.abc import Callable, Mapping, Sequence
 from typing import Tuple
 
 import equinox as eqx
+import jax
 from jax import Array, nn as jnn, numpy as jnp, tree as jtr
 from numpyro.distributions import Distribution
 
