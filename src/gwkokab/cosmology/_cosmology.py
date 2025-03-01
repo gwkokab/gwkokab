@@ -29,8 +29,9 @@
 
 from typing import Optional
 
+import equinox as eqx
 import jax.numpy as jnp
-from jax.lax import fori_loop
+import quadax
 from jaxtyping import ArrayLike
 
 from gwkokab.constants import C_SI
@@ -39,7 +40,7 @@ from gwkokab.constants import C_SI
 DEFAULT_DZ = 1e-3  # should be good enough for most numeric integrations we want to do
 
 
-class Cosmology(object):
+class Cosmology(eqx.Module):
     """A class for basic cosmology calculations using jax.
 
     See https://arxiv.org/pdf/astro-ph/9905116 for description of parameters and functions.
@@ -49,6 +50,16 @@ class Cosmology(object):
         We work in SI units throughout, though distances are specified in Mpc.
     ```
     """
+
+    _c_over_Ho: ArrayLike = eqx.field(init=False)
+    _Dc: ArrayLike = eqx.field(init=False)
+    _Ho: ArrayLike = eqx.field(init=False)
+    _OmegaKappa: ArrayLike = eqx.field(init=False)
+    _OmegaLambda: ArrayLike = eqx.field(init=False)
+    _OmegaMatter: ArrayLike = eqx.field(init=False)
+    _OmegaRadiation: ArrayLike = eqx.field(init=False)
+    _z: ArrayLike = eqx.field(init=False)
+    Vc: ArrayLike = eqx.field(init=False)
 
     def __init__(
         self,
@@ -91,46 +102,17 @@ class Cosmology(object):
             "we only implement flat cosmologies! OmegaKappa must be 0"
         )
 
-        self.extend(max_z, dz=dz)
+        self._z = jnp.arange(0, max_z, dz)
+        self._Dc = quadax.cumulative_trapezoid(
+            self.dDcdz(self._z), x=self._z, initial=0, axis=0
+        )
+        self.Vc = quadax.cumulative_trapezoid(
+            self.dVcdz(self._z, self._Dc), x=self._z, initial=0, axis=0
+        )
 
     @property
     def DL(self):
         return self._Dc * (1.0 + self._z)
-
-    def update(self, i, x):
-        z = x[0]
-        dz = z[1] - z[0]
-        Dc = x[1]
-        Vc = x[2]
-
-        dDcdz = self.dDcdz(z[i])
-        dVcdz = self.dVcdz(z[i], Dc[i])
-        new_dDcdz = self.dDcdz(z[i] + dz)
-        Dc = Dc.at[i + 1].set(Dc[i] + 0.5 * (dDcdz + new_dDcdz) * dz)
-
-        new_dVcdz = self.dVcdz(z[i] + dz, Dc[i + 1])
-        Vc = Vc.at[i + 1].set(Vc[i] + 0.5 * (dVcdz + new_dVcdz) * dz)
-
-        return jnp.array([z, Dc, Vc])
-
-    def extend(self, max_z, dz=DEFAULT_DZ):
-        """Integrate to solve for distance measures.
-
-        Parameters
-        ----------
-        max_z : Array
-            Maximum redshift to integrate to.
-        dz : int, optional
-            Step size for integration. Default is 1e-3.
-        """
-        self._z = jnp.arange(0, max_z, dz)
-        Dc = jnp.zeros_like(self._z)
-        Vc = jnp.zeros_like(self._z)
-
-        X = jnp.array([self._z, Dc, Vc])
-        extended_X = fori_loop(0, self._z.shape[0] - 1, self.update, X)
-        self._Dc = extended_X[1]
-        self.Vc = extended_X[2]
 
     def z_to_E(self, z: ArrayLike) -> ArrayLike:
         r"""Dimensionless Hubble parameter.
