@@ -30,11 +30,13 @@ from ._abc import VolumeTimeSensitivityInterface
 
 _PARAM_MAPPING = {
     parameters.PRIMARY_MASS_SOURCE.name: "mass1_source",
+    parameters.PRIMARY_SPIN_MAGNITUDE.name: "spin1z",
     parameters.PRIMARY_SPIN_X.name: "spin1x",
     parameters.PRIMARY_SPIN_Y.name: "spin1y",
     parameters.PRIMARY_SPIN_Z.name: "spin1z",
     parameters.REDSHIFT.name: "redshift",
     parameters.SECONDARY_MASS_SOURCE.name: "mass2_source",
+    parameters.SECONDARY_SPIN_MAGNITUDE.name: "spin2z",
     parameters.SECONDARY_SPIN_X.name: "spin2x",
     parameters.SECONDARY_SPIN_Y.name: "spin2y",
     parameters.SECONDARY_SPIN_Z.name: "spin2z",
