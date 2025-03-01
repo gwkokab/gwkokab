@@ -24,7 +24,7 @@ from jaxtyping import Array
 
 from gwkokab import parameters
 
-from ..utils.tools import error_if
+from ..utils.tools import error_if, warn_if
 from ._abc import VolumeTimeSensitivityInterface
 
 
@@ -75,25 +75,22 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             not all(isinstance(p, str) for p in parameters),
             msg="all parameters must be strings",
         )
-        if batch_size is not None:
-            error_if(
-                not isinstance(batch_size, int),
-                msg=f"batch_size must be an integer, got {type(batch_size)}",
-            )
-            error_if(
-                batch_size < 1,
-                msg=f"batch_size must be a positive integer, got {batch_size}",
-            )
-
-        self.batch_size = batch_size
+        warn_if(
+            batch_size is not None,
+            msg="batch_size is not used for injection based VTs",
+        )
 
         with h5py.File(filename, "r") as f:
             self.injections = jax.device_put(
                 np.stack(
-                    [f["injections"][_PARAM_MAPPING[p]] for p in parameters], axis=-1
-                )
+                    [f["injections"][_PARAM_MAPPING[p]][:] for p in parameters], axis=-1
+                ),
+                may_alias=True,
             )
-            self.sampling_prob = jax.device_put(f["injections"]["sampling_pdf"][:])
+            self.sampling_prob = jax.device_put(
+                f["injections"]["sampling_pdf"][:],
+                may_alias=True,
+            )
 
     def get_logVT(self):
         raise NotImplementedError("Injection based VTs do not have a logVT method.")
