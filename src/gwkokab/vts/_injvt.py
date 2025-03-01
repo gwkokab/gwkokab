@@ -14,7 +14,7 @@
 
 
 from collections.abc import Sequence
-from typing import Optional
+from typing import Literal, Optional
 
 import equinox as eqx
 import h5py
@@ -22,24 +22,24 @@ import jax
 import numpy as np
 from jaxtyping import Array
 
-from gwkokab import parameters
+from gwkokab import parameters as gwk_parameters
 
 from ..utils.tools import error_if, warn_if
 from ._abc import VolumeTimeSensitivityInterface
 
 
 _PARAM_MAPPING = {
-    parameters.PRIMARY_MASS_SOURCE.name: "mass1_source",
-    parameters.PRIMARY_SPIN_MAGNITUDE.name: "spin1z",
-    parameters.PRIMARY_SPIN_X.name: "spin1x",
-    parameters.PRIMARY_SPIN_Y.name: "spin1y",
-    parameters.PRIMARY_SPIN_Z.name: "spin1z",
-    parameters.REDSHIFT.name: "redshift",
-    parameters.SECONDARY_MASS_SOURCE.name: "mass2_source",
-    parameters.SECONDARY_SPIN_MAGNITUDE.name: "spin2z",
-    parameters.SECONDARY_SPIN_X.name: "spin2x",
-    parameters.SECONDARY_SPIN_Y.name: "spin2y",
-    parameters.SECONDARY_SPIN_Z.name: "spin2z",
+    gwk_parameters.PRIMARY_MASS_SOURCE.name: "mass1_source",
+    gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name: "spin1z",
+    gwk_parameters.PRIMARY_SPIN_X.name: "spin1x",
+    gwk_parameters.PRIMARY_SPIN_Y.name: "spin1y",
+    gwk_parameters.PRIMARY_SPIN_Z.name: "spin1z",
+    gwk_parameters.REDSHIFT.name: "redshift",
+    gwk_parameters.SECONDARY_MASS_SOURCE.name: "mass2_source",
+    gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name: "spin2z",
+    gwk_parameters.SECONDARY_SPIN_X.name: "spin2x",
+    gwk_parameters.SECONDARY_SPIN_Y.name: "spin2y",
+    gwk_parameters.SECONDARY_SPIN_Z.name: "spin2z",
 }
 
 
@@ -54,6 +54,7 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         parameters: Sequence[str],
         filename: str,
         batch_size: Optional[int] = None,
+        spin_case: Literal["aligned_spin", "full_spin"] = "aligned_spin",
     ) -> None:
         """Convenience class for loading a neural vt.
 
@@ -63,6 +64,10 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             The names of the parameters that the model expects.
         filename : str
             The filename of the neural vt.
+        batch_size: Optional[int]
+            The batch size of the neural vt.
+        spin_case : Literal[&quot;aligned_spin&quot;, &quot;full_spin&quot;]
+            The spin case of the injections. Default is 'aligned_spin'.
         """
         error_if(not parameters, msg="parameters sequence cannot be empty")
         error_if(
@@ -81,14 +86,37 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             batch_size is not None,
             msg="batch_size is not used for injection based VTs",
         )
+        error_if(
+            spin_case not in ["aligned_spin", "full_spin"],
+            msg=f"spin_case must be one of 'aligned_spin' or 'full_spin', got {spin_case}",
+        )
+
+        if spin_case == "aligned_spin":
+            spin_converter = lambda sx, sy, sz: np.abs(sz)
+        else:
+            spin_converter = lambda sx, sy, sz: np.sqrt(
+                np.square(sx) + np.square(sy) + np.square(sz)
+            )
 
         with h5py.File(filename, "r") as f:
-            self.injections = jax.device_put(
-                np.stack(
-                    [f["injections"][_PARAM_MAPPING[p]][:] for p in parameters], axis=-1
-                ),
-                may_alias=True,
-            )
+            injs = []
+            for p in parameters:
+                if p == gwk_parameters.PRIMARY_MASS_SOURCE.name:
+                    _inj = spin_converter(
+                        f["injections"]["spin1x"][:],
+                        f["injections"]["spin1y"][:],
+                        f["injections"]["spin1z"][:],
+                    )
+                elif gwk_parameters.SECONDARY_MASS_SOURCE.name:
+                    _inj = spin_converter(
+                        f["injections"]["spin2x"][:],
+                        f["injections"]["spin2y"][:],
+                        f["injections"]["spin2z"][:],
+                    )
+                else:
+                    _inj = f["injections"][_PARAM_MAPPING[p]][:]
+                injs.append(_inj)
+            self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
             self.sampling_prob = jax.device_put(
                 f["injections"]["sampling_pdf"][:],
                 may_alias=True,
