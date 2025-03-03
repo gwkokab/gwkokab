@@ -89,10 +89,12 @@ def poisson_mean_parser(
     """
     with open(filepath, "r") as file:
         pmean_json: PoissonMeanConfig = json.load(file)
-    proposal_distribution = []
-    proposal_distribution_dict = pmean_json.pop("proposal_dists")
-    proposal_distribution = [
-        parse_distribution(dist) for dist in proposal_distribution_dict
-    ]
-    pmean_json["proposal_dists"] = proposal_distribution
+    try:
+        proposal_distribution_dict = pmean_json.pop("proposal_dists")
+        proposal_distribution = [
+            parse_distribution(dist) for dist in proposal_distribution_dict
+        ]
+        pmean_json["proposal_dists"] = proposal_distribution
+    except KeyError:
+        pass
     return pmean_json
