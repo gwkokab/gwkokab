@@ -229,7 +229,7 @@ class PoissonMean(eqx.Module):
         self.proposal_log_weights_and_samples = tuple(proposal_log_weights_and_samples)
         self.key = key
 
-    def __call__(self, model: ScaledMixture) -> Array:
+    def __call__(self, model: ScaledMixture, n_events: Optional[int] = None) -> Array:
         r"""Estimate the rate/s by using the given model.
 
         Parameters
@@ -246,9 +246,15 @@ class PoissonMean(eqx.Module):
             log_weights, samples = self.proposal_log_weights_and_samples[0]
             num_samples = log_weights.shape[0]
             model_log_prob = model.log_prob(samples).reshape(num_samples)
-            return (self.scale / num_samples) * jnp.exp(
-                jnn.logsumexp(model_log_prob - log_weights, axis=-1)
+            _probs = jnp.exp(model_log_prob - log_weights)
+            mu = jnp.mean(_probs)
+            var = jnp.var(_probs)
+            converged = mu**2 > 4 * n_events * var
+            logger.debug("mu: {mu}, var: {var}", mu=mu, var=var)
+            correction = jnp.nan_to_num(
+                jnp.inf * (1 - converged), nan=0, posinf=jnp.inf
             )
+            return mu + correction
         else:  # per component rate estimation
             return self.calculate_per_component_rate(model)
 
@@ -279,6 +285,8 @@ class PoissonMean(eqx.Module):
 
         logVT_fn = self.logVT_estimator.get_mapped_logVT()
 
+        mc_error = 0.0
+
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
             component_dist: DistributionLike = model._component_distributions[i]
@@ -294,9 +302,11 @@ class PoissonMean(eqx.Module):
                     num_samples
                 )
                 per_sample_log_estimated_rates = log_weights + component_log_prob
-            per_component_log_estimated_rates.append(
-                jnn.logsumexp(per_sample_log_estimated_rates) - jnp.log(num_samples)
-            )
+            ln_mu = jnn.logsumexp(per_sample_log_estimated_rates) - jnp.log(num_samples)
+            mc_error += jnp.exp(
+                jnn.logsumexp(2.0 * (per_sample_log_estimated_rates - jnp.exp(ln_mu)))
+            ) / (num_samples - 1)  # sample variance
+            per_component_log_estimated_rates.append(ln_mu)
 
         per_component_log_estimated_rates = model.log_scales + jnp.stack(
             per_component_log_estimated_rates, axis=-1
@@ -306,4 +316,4 @@ class PoissonMean(eqx.Module):
             "per_component_estimated_rates: {per_component_estimated_rates}",
             per_component_estimated_rates=per_component_estimated_rates,
         )
-        return self.scale * jnp.sum(per_component_estimated_rates, axis=-1)
+        return self.scale * (jnp.sum(per_component_estimated_rates, axis=-1) + mc_error)
