@@ -95,6 +95,6 @@ def poisson_mean_parser(
             parse_distribution(dist) for dist in proposal_distribution_dict
         ]
         pmean_json["proposal_dists"] = proposal_distribution
-    finally:
+    except KeyError:
         pass
     return pmean_json
