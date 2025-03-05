@@ -65,7 +65,7 @@ class _MassSandwichConstraint(Constraint):
         mask = jnp.logical_and(jnp.less(0.0, self.mmin), jnp.less_equal(self.mmin, m2))
         mask = jnp.logical_and(mask, jnp.less_equal(m2, m1))
         mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
-        return mask
+        return jnp.asarray(mask, dtype=bool)
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
@@ -106,7 +106,7 @@ class _MassRatioMassSandwichConstraint(Constraint):
         mask = jnp.logical_and(jnp.less(0.0, self.mmin), jnp.less_equal(self.mmin, m2))
         mask = jnp.logical_and(mask, jnp.less_equal(m2, m1))
         mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
-        return mask
+        return jnp.asarray(mask, dtype=bool)
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
