@@ -68,9 +68,7 @@ class PoissonLikelihood(eqx.Module):
     log_ref_priors: Sequence[Array] = eqx.field(static=False)
     priors: JointDistribution = eqx.field(static=False)
     variables_index: Mapping[str, int] = eqx.field(static=True)
-    ERate_fn: Callable[[Distribution | ScaledMixture, int], Array] = eqx.field(
-        static=False
-    )
+    ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=False)
 
     def __init__(
         self,
@@ -157,7 +155,7 @@ class PoissonLikelihood(eqx.Module):
             is_leaf=lambda x: isinstance(x, tuple),
         )
 
-        expected_rates = self.ERate_fn(model, len(self.data))
+        expected_rates = self.ERate_fn(model)
 
         logger.debug(
             "PoissionLikelihood: \n"
