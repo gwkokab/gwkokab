@@ -20,6 +20,7 @@
 from collections.abc import Sequence
 
 from jax import numpy as jnp
+from jaxtyping import Array
 from numpyro.distributions.constraints import (
     _SingletonConstraint,
     Constraint,
@@ -59,13 +60,11 @@ class _MassSandwichConstraint(Constraint):
         self.mmin = mmin
         self.mmax = mmax
 
-    def __call__(self, x):
-        m1 = x[..., 0]
-        m2 = x[..., 1]
-        mask = 0.0 < self.mmin
-        mask &= self.mmin <= m2
-        mask &= m2 <= m1
-        mask &= m1 <= self.mmax
+    def __call__(self, x: Array) -> Array:
+        m1, m2 = jnp.unstack(x, axis=-1)
+        mask = jnp.logical_and(jnp.less(0.0, self.mmin), jnp.less_equal(self.mmin, m2))
+        mask = jnp.logical_and(mask, jnp.less_equal(m2, m1))
+        mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
         return mask
 
     def tree_flatten(self):
@@ -101,13 +100,12 @@ class _MassRatioMassSandwichConstraint(Constraint):
         self.mmin = mmin
         self.mmax = mmax
 
-    def __call__(self, x):
+    def __call__(self, x: Array) -> Array:
         m1, q = jnp.unstack(x, axis=-1)
-        m2 = q * m1
-        mask = 0.0 < self.mmin
-        mask &= self.mmin <= m2
-        mask &= m2 <= m1
-        mask &= m1 <= self.mmax
+        m2 = jnp.multiply(m1, q)
+        mask = jnp.logical_and(jnp.less(0.0, self.mmin), jnp.less_equal(self.mmin, m2))
+        mask = jnp.logical_and(mask, jnp.less_equal(m2, m1))
+        mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
         return mask
 
     def tree_flatten(self):
