@@ -107,7 +107,7 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                         f["injections"]["spin1y"][:],
                         f["injections"]["spin1z"][:],
                     )
-                elif gwk_parameters.SECONDARY_MASS_SOURCE.name:
+                elif p == gwk_parameters.SECONDARY_MASS_SOURCE.name:
                     _inj = spin_converter(
                         f["injections"]["spin2x"][:],
                         f["injections"]["spin2y"][:],
