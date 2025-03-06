@@ -118,14 +118,13 @@ def main() -> None:
     ]
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
-        "The parameters in the posterior data do not match the parameters in the model.",
+        msg="The parameters in the posterior data do not match the parameters in the model.",
     )
 
     nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
-    logVT = nvt.get_mapped_logVT()
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     log_ref_priors = jax.device_put(

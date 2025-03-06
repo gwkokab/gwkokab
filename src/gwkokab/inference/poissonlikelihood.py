@@ -141,6 +141,7 @@ class PoissonLikelihood(eqx.Module):
             """
             event_data, log_ref_prior_y = y
             _log_prob = model.log_prob(event_data) - log_ref_prior_y
+
             return jnn.logsumexp(
                 _log_prob,
                 axis=-1,

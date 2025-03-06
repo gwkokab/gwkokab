@@ -16,6 +16,9 @@ import sys
 from typing import List
 
 from ._abc import VolumeTimeSensitivityInterface
+from ._injvt import (
+    RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
+)
 from ._neuralvt import NeuralNetVolumeTimeSensitivity
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity,
@@ -30,6 +33,8 @@ def __getattr__(name):
         return PopModelsVolumeTimeSensitivity
     elif name == "PopModelsCalibratedVolumeTimeSensitivity":
         return PopModelsCalibratedVolumeTimeSensitivity
+    elif name == "RealInjectionVolumeTimeSensitivity":
+        return RealInjectionVolumeTimeSensitivity
     else:
         raise AttributeError(f"module {__name__} has no attribute {name}")
 
@@ -43,6 +48,7 @@ class _Available:
         "NeuralNetVolumeTimeSensitivity",
         "PopModelsCalibratedVolumeTimeSensitivity",
         "PopModelsVolumeTimeSensitivity",
+        "RealInjectionVolumeTimeSensitivity",
     ]
 
     def keys(self) -> List[str]:
