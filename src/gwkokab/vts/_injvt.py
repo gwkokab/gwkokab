@@ -101,13 +101,13 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         with h5py.File(filename, "r") as f:
             injs = []
             for p in parameters:
-                if p == gwk_parameters.PRIMARY_MASS_SOURCE.name:
+                if p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
                         f["injections"]["spin1x"][:],
                         f["injections"]["spin1y"][:],
                         f["injections"]["spin1z"][:],
                     )
-                elif p == gwk_parameters.SECONDARY_MASS_SOURCE.name:
+                elif p == gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
                         f["injections"]["spin2x"][:],
                         f["injections"]["spin2y"][:],
