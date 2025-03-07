@@ -178,10 +178,6 @@ def compute_and_save_ppd(
     shape = xx_mesh.shape
     xx_mesh = xx_mesh.reshape(-1, shape[-1])
 
-    print("nf_samples.shape", nf_samples.shape)
-    print(nf_samples)
-    print(constants, nf_samples_mapping)
-
     def _compute_probs(params: np.ndarray) -> np.ndarray:
         _model = model(
             **constants,
