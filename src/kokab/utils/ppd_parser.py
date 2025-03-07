@@ -58,5 +58,11 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         type=float,
         required=True,
     )
+    ppd_group.add_argument(
+        "--n-threads",
+        help="Number of threads to use for the computation.",
+        type=int,
+        default=1,
+    )
 
     return parser

@@ -69,7 +69,9 @@ def main() -> None:
 
     parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name, REDSHIFT.name]
 
-    nf_samples = pd.read_csv("sampler_data/nf_samples.dat", delimiter=" ").to_numpy()
+    nf_samples = pd.read_csv(
+        "sampler_data/nf_samples.dat", delimiter=" ", comment="#", header=None
+    ).to_numpy()
 
     ppd.compute_and_save_ppd(
         model,
@@ -79,6 +81,7 @@ def main() -> None:
         parameters,
         constants,
         nf_samples_mapping,
+        args.n_threads,
     )
 
     nf_samples, constants = ppd.wipe_log_rate(nf_samples, nf_samples_mapping, constants)
@@ -91,4 +94,5 @@ def main() -> None:
         parameters,
         constants,
         nf_samples_mapping,
+        args.n_threads,
     )
