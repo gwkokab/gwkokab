@@ -13,23 +13,22 @@
 # limitations under the License.
 
 
+from multiprocessing import pool
 from typing import Dict, List, Tuple, Union
 
 import h5py
-import jax
 import numpy as np
-from jax import numpy as jnp
-from jaxtyping import Array, ArrayLike
+from jaxtyping import ArrayLike
 from numpyro.distributions.distribution import DistributionLike
 
 from gwkokab.utils.tools import error_if
 
 
 def wipe_log_rate(
-    nf_samples: Array,
+    nf_samples: np.ndarray,
     nf_samples_mapping: Dict[str, int],
     constants: Dict[str, Union[int, float]],
-) -> Tuple[Array, Dict[str, Union[int, float]]]:
+) -> Tuple[np.ndarray, Dict[str, Union[int, float]]]:
     """Set the log rate parameters to zero and remove them from the samples.
 
     Parameters
@@ -51,14 +50,17 @@ def wipe_log_rate(
             index = nf_samples_mapping.pop(key)
             constants[key] = 0.0
             nf_samples = np.delete(nf_samples, index, axis=-1)
+            for key, value in nf_samples_mapping.items():
+                if value > index:
+                    nf_samples_mapping[key] -= 1
     return nf_samples, constants
 
 
 def _compute_marginal_probs(
-    probs_array: Array,
+    probs_array: np.ndarray,
     axis: int,
     domain: List[Tuple[float, float, int]],
-) -> Array:
+) -> np.ndarray:
     """Compute the marginal probabilities of a model.
 
     The function computes the marginal probabilities of a model by summing over the
@@ -85,9 +87,9 @@ def _compute_marginal_probs(
         if i == axis:
             continue
         num_points = int(num_points)
-        marginal_density = jnp.trapezoid(
+        marginal_density = np.trapezoid(
             y=marginal_density,
-            x=jnp.linspace(start, end, num_points),
+            x=np.linspace(start, end, num_points),
             axis=i - j,
         )
         j += 1
@@ -96,9 +98,9 @@ def _compute_marginal_probs(
 
 
 def get_all_marginals(
-    probs: Array,
+    probs: np.ndarray,
     domains: List[Tuple[float, float, int]],
-) -> List[Array]:
+) -> List[np.ndarray]:
     """Compute marginal probabilities for all axes.
 
     Parameters
@@ -117,8 +119,8 @@ def get_all_marginals(
 
 
 def save_probs(
-    ppd_array: Array,
-    marginal_probs: List[Array],
+    ppd_array: np.ndarray,
+    marginal_probs: List[np.ndarray],
     filename: str,
     domains: List[Tuple[float, float, int]],
     headers: List[str],
@@ -160,50 +162,44 @@ def save_probs(
 
 def compute_and_save_ppd(
     model: DistributionLike,
-    nf_samples: Array,
+    nf_samples: np.ndarray,
     domains: List[Tuple[float, float, int]],
     output_file: str,
     parameters: List[str],
     constants: Dict[str, ArrayLike],
     nf_samples_mapping: Dict[str, int],
+    n_threads: int = 1,
 ) -> None:
-    xx = [jnp.linspace(a, b, int(n)) for a, b, n in domains]
-    mesh = jnp.meshgrid(*xx, indexing="ij")
+    xx = [np.linspace(a, b, int(n)) for a, b, n in domains]
+    mesh = np.meshgrid(*xx, indexing="ij")
     del xx
-    xx_mesh = jnp.stack(mesh, axis=-1)
+    xx_mesh = np.stack(mesh, axis=-1)
     del mesh
     shape = xx_mesh.shape
     xx_mesh = xx_mesh.reshape(-1, shape[-1])
 
-    def compute_probs(params: Array) -> Array:
-        """Compute the probability density function of a model.
-
-        Parameters
-        ----------
-        params : Array
-            A callable that computes the log-probability density function of the model.
-
-        Returns
-        -------
-        Array
-            The probability density function of the model.
-        """
-
-        logpdf = model(
+    def _compute_probs(params: np.ndarray) -> np.ndarray:
+        _model = model(
             **constants,
             **{k: params[v] for k, v in nf_samples_mapping.items()},
             validate_args=True,
-        ).log_prob
+        )
+        prob_value = np.exp(_model.log_prob(xx_mesh))
+        del params
+        del _model
+        return prob_value
 
-        logpdf = jax.vmap(logpdf)
+    with pool.ThreadPool(n_threads) as p:
+        prob_values = np.asarray(
+            [
+                p.apply_async(_compute_probs, args=(nf_samples[i],)).get()
+                for i in range(nf_samples.shape[0])
+            ]
+        )
 
-        prob_vec = jnp.exp(logpdf(xx_mesh))
+        p.close()
+        p.join()
 
-        return prob_vec
-
-    prob_values: Array = jax.lax.map(
-        jax.jit(compute_probs, donate_argnums=0), nf_samples
-    )
     del nf_samples
     prob_values = prob_values.reshape(-1, *shape[:-1])
     prob_values = np.moveaxis(prob_values, 0, -1)

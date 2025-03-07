@@ -77,7 +77,9 @@ def main() -> None:
     if has_eccentricity:
         parameters.append(ECCENTRICITY.name)
 
-    nf_samples = pd.read_csv("sampler_data/nf_samples.dat", delimiter=" ").to_numpy()
+    nf_samples = pd.read_csv(
+        "sampler_data/nf_samples.dat", delimiter=" ", comment="#", header=None
+    ).to_numpy()
 
     ppd.compute_and_save_ppd(
         NPowerlawMGaussian,
