@@ -146,8 +146,6 @@ class PoissonMean(eqx.Module):
         """
         Parameters
         ----------
-        logVT_estimator : Callable[[Array], Array]
-            Log of the Volume Time Sensitivity function.
         key : PRNGKeyArray
             PRNG key.
         proposal_dists : List[Union[Literal[&quot;self&quot;], DistributionLike]]
