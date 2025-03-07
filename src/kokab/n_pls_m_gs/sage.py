@@ -24,7 +24,7 @@ import numpy as np
 from jax import random as jrd
 
 import gwkokab
-from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
+from gwkokab.inference import Bake, PoissonLikelihood
 from gwkokab.logger import enable_logging
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
@@ -49,6 +49,7 @@ from kokab.utils.common import (
     read_json,
     vt_json_read_and_process,
 )
+from kokab.utils.flowMC_helper import flowMChandler
 
 
 def make_parser() -> ArgumentParser:
@@ -224,7 +225,7 @@ def main() -> None:
 
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
-        "The parameters in the posterior data do not match the parameters in the model.",
+        msg="The parameters in the posterior data do not match the parameters in the model.",
     )
 
     extended_params = []
@@ -243,16 +244,15 @@ def main() -> None:
         **model_prior_param,
     )
 
-    nvt = vt_json_read_and_process(
-        [param.name for param in parameters], args.vt_path, args.vt_json
-    )
-    logVT = nvt.get_mapped_logVT()
+    nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [jax.device_put(np.zeros(d.shape[:-1])) for d in data]
+    log_ref_priors = jax.device_put(
+        [np.zeros(d.shape[:-1]) for d in data], may_alias=True
+    )
 
     poisson_likelihood = PoissonLikelihood(
         model=model,

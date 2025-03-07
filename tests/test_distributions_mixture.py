@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing_extensions import Sequence, Tuple
+from collections.abc import Sequence
+from typing import Tuple
 
 import jax
 import jax.numpy as jnp

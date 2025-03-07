@@ -95,10 +95,15 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         batch_size : Optional[int], optional
             The batch size :func:`jax.lax.map` should use, by default None.
         """
-        if not isinstance(batch_size, int):
-            raise TypeError(f"batch_size must be an integer, got {type(batch_size)}")
-        if batch_size < 1:
-            raise ValueError(f"batch_size must be a positive integer, got {batch_size}")
+        if batch_size is not None:
+            if not isinstance(batch_size, int):
+                raise TypeError(
+                    f"batch_size must be an integer, got {type(batch_size)}"
+                )
+            if batch_size < 1:
+                raise ValueError(
+                    f"batch_size must be a positive integer, got {batch_size}"
+                )
 
         self.batch_size = batch_size
         self.m_min = m_min

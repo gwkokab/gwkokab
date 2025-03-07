@@ -23,7 +23,9 @@ from jaxtyping import Array
 class VolumeTimeSensitivityInterface(eqx.Module):
     """Interface for volume time sensitivity."""
 
-    shuffle_indices: Sequence[int] = eqx.field(init=False, static=True)
+    shuffle_indices: Optional[Sequence[int]] = eqx.field(
+        init=False, static=True, default=None
+    )
     """The indices to shuffle the input to the model."""
     batch_size: Optional[int] = eqx.field(init=False, static=True, default=None)
     """The batch size used by :func:`jax.lax.map` in mapped functions."""

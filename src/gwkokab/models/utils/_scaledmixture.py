@@ -13,8 +13,7 @@
 # limitations under the License.
 
 
-from typing import Optional
-from typing_extensions import List
+from typing import List, Optional
 
 import jax
 from jax import lax, numpy as jnp
@@ -101,8 +100,7 @@ class ScaledMixture(Distribution):
         self._component_distributions = component_distributions
 
         batch_shape = lax.broadcast_shapes(
-            jnp.shape(self.log_prob)[:-1],
-            *(d.batch_shape for d in component_distributions),
+            *(d.batch_shape for d in component_distributions)
         )
         event_shape = component_distributions[0].event_shape
         for d in component_distributions[1:]:

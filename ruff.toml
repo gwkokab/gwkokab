@@ -58,6 +58,6 @@ docstring-code-line-length = "dynamic"
 
 [lint.isort]
 combine-as-imports = true
-extra-standard-library = ["typing_extensions"]
+extra-standard-library = []
 lines-after-imports = 2
 order-by-type = false

@@ -47,12 +47,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     vt_group = parser.add_argument_group("VT Options")
 
     vt_group.add_argument(
-        "--vt-path",
-        help="Path to the neural VT",
-        type=str,
-        required=True,
-    )
-    vt_group.add_argument(
         "--vt-json",
         help="Path to the JSON file containing the VT options.",
         type=str,

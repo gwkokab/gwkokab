@@ -13,8 +13,7 @@
 # limitations under the License.
 
 
-from functools import partial
-from typing_extensions import Optional
+from typing import Optional
 
 import chex
 import interpax
@@ -765,14 +764,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        if m1.ndim > 1:
-            _Z_q = lax.map(
-                partial(interpax.interp1d, x=_m1s, f=self._Z_q_given_m1),
-                m1,
-                batch_size=m1.shape[0],
-            )
-        else:
-            _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
+        _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
         log_Z_q = lax.stop_gradient(
             jnp.where(
                 jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
@@ -924,14 +916,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        if m1.ndim > 1:
-            _Z_q = lax.map(
-                partial(interpax.interp1d, x=_m1s, f=self._Z_q_given_m1),
-                m1,
-                batch_size=m1.shape[0],
-            )
-        else:
-            _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
+        _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
         log_Z_q = lax.stop_gradient(
             jnp.where(
                 jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),

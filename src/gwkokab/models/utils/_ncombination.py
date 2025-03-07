@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing_extensions import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array

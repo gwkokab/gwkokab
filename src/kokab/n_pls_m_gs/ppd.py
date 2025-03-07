@@ -59,7 +59,7 @@ def main() -> None:
 
     error_if(
         not str(args.filename).endswith(".hdf5"),
-        "Output file must be an HDF5 file.",
+        msg="Output file must be an HDF5 file.",
     )
 
     constants = read_json(args.constants)

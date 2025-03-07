@@ -36,7 +36,7 @@ classifiers = [
 dependencies = [
     "arviz>=0.20.0",
     "chex>=0.1.87",
-    "flowMC>=0.3.4",
+    "flowMC==0.3.4",
     "h5py>=3.12.1",
     "interpax>=0.3.5",
     "jax>=0.4.30",
@@ -52,7 +52,6 @@ dependencies = [
     "rich>=13.9.4",
     "RIFT>=0.0.15.11",
     "seaborn>=0.13.0",
-    "typing_extensions>=4.12.0",
 ]
 keywords = [
     "astrophysics",

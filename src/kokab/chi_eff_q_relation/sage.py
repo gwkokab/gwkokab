@@ -22,7 +22,7 @@ import jax
 from jax import numpy as jnp, random as jrd
 from numpyro.distributions import Uniform
 
-from gwkokab.inference import Bake, flowMChandler, PoissonLikelihood
+from gwkokab.inference import Bake, PoissonLikelihood
 from gwkokab.logger import enable_logging
 from gwkokab.models import ChiEffMassRatioCorrelated
 from gwkokab.parameters import (
@@ -42,6 +42,7 @@ from kokab.utils.common import (
     read_json,
     vt_json_read_and_process,
 )
+from kokab.utils.flowMC_helper import flowMChandler
 
 
 class RedshiftReferencePrior(Uniform):
@@ -117,19 +118,18 @@ def main() -> None:
     ]
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
-        "The parameters in the posterior data do not match the parameters in the model.",
+        msg="The parameters in the posterior data do not match the parameters in the model.",
     )
 
-    nvt = vt_json_read_and_process(
-        [param.name for param in parameters], args.vt_path, args.vt_json
-    )
-    logVT = nvt.get_mapped_logVT()
+    nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(logVT, key=KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [jax.device_put(REDSHIFT.prior.log_prob(d[..., 4])) for d in data]
+    log_ref_priors = jax.device_put(
+        [REDSHIFT.prior.log_prob(d[..., 4]) for d in data], may_alias=True
+    )
 
     poisson_likelihood = PoissonLikelihood(
         model=model,

@@ -16,11 +16,10 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import pandas as pd
-from numpyro.distributions import TransformedDistribution
+from numpyro.distributions.distribution import DistributionLike
 
-from gwkokab.models import SmoothedPowerlawAndPeak
-from gwkokab.models.transformations import ComponentMassesToPrimaryMassAndMassRatio
-from gwkokab.parameters import PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.models import SmoothedPowerlawPeakAndPowerlawRedshift
+from gwkokab.parameters import PRIMARY_MASS_SOURCE, REDSHIFT, SECONDARY_MASS_SOURCE
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
 from kokab.utils.common import read_json
@@ -42,13 +41,18 @@ def make_parser() -> ArgumentParser:
     return parser
 
 
-def model(**params) -> TransformedDistribution:
+def model(**params) -> DistributionLike:
     validate_args = params.pop("validate_args", True)
-    return TransformedDistribution(
-        SmoothedPowerlawAndPeak(**params, validate_args=validate_args),
-        transforms=ComponentMassesToPrimaryMassAndMassRatio(),
-        validate_args=validate_args,
+    _model = SmoothedPowerlawPeakAndPowerlawRedshift(
+        **params, validate_args=validate_args
     )
+    _model._component_distributions[0].marginal_distributions[0] = (
+        _model._component_distributions[0].marginal_distributions[0].base_dist
+    )
+    _model._component_distributions[1].marginal_distributions[0] = (
+        _model._component_distributions[1].marginal_distributions[0].base_dist
+    )
+    return _model
 
 
 def main() -> None:
@@ -57,13 +61,13 @@ def main() -> None:
 
     error_if(
         not str(args.filename).endswith(".hdf5"),
-        "Output file must be an HDF5 file.",
+        msg="Output file must be an HDF5 file.",
     )
 
     constants = read_json(args.constants)
     nf_samples_mapping = read_json(args.nf_samples_mapping)
 
-    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name, REDSHIFT.name]
 
     nf_samples = pd.read_csv("sampler_data/nf_samples.dat", delimiter=" ").to_numpy()
 
