@@ -2,8 +2,14 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+include-package-data = true
+
 [tool.setuptools.packages]
 find = { where = ["src/"] }
+
+[tool.setuptools.package-data]
+"gwkokab.vts._pdet" = ["scaler_HLV_O3.json", "weights_HLV_O3.hdf5"]
 
 [project]
 authors = [
