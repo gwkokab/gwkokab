@@ -23,10 +23,7 @@ from numpyro.distributions.distribution import Distribution, DistributionLike
 from .logger import logger
 from .models.utils import ScaledMixture
 from .utils.tools import error_if
-from .vts import (
-    RealInjectionVolumeTimeSensitivity,
-    VolumeTimeSensitivityInterface,
-)
+from .vts import RealInjectionVolumeTimeSensitivity, VolumeTimeSensitivityInterface
 
 
 class PoissonMean(eqx.Module):
