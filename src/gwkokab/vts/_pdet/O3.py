@@ -1,11 +1,11 @@
 import warnings
 from functools import partial
-from typing import List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrd
-import unxt
 import wcosmo
 from astropy import units
 from jaxtyping import Array, PRNGKeyArray
@@ -43,6 +43,13 @@ class pdet_O3(Emulator):
     therefore be interpreted as the probability of a CBC detection if that CBC occurred
     during a random time between the startdate and enddate of O3.
     """
+
+    all_parameters: List[str] = eqx.field(static=True)
+    proposal_dist: Dict[str, List[float]] = eqx.field(static=True)
+    parameters: List[str] = eqx.field(static=True)
+    extra_shape: Tuple[int, ...] = eqx.field(static=True)
+    interp_DL: Array = eqx.field(static=False)
+    interp_z: Array = eqx.field(static=False)
 
     def __init__(
         self,
@@ -101,12 +108,12 @@ class pdet_O3(Emulator):
         self.extra_shape = (1000,)
 
         if model_weights is None:
-            model_weights = "./weights_HLV_O3.hdf5"
+            model_weights = "src/gwkokab/vts/_pdet/weights_HLV_O3.hdf5"
         else:
             warnings.warn("Overriding default weights", UserWarning)
 
         if scaler is None:
-            scaler = "./scaler_HLV_O3.json"
+            scaler = "src/gwkokab/vts/_pdet/scaler_HLV_O3.json"
         else:
             warnings.warn("Overriding default weights", UserWarning)
 
@@ -118,9 +125,7 @@ class pdet_O3(Emulator):
 
         self.interp_DL = jnp.logspace(-4, jnp.log10(15.0), 500)
         self.interp_z = z_at_value(
-            lambda z: Planck15.luminosity_distance(
-                unxt.Quantity(z, units.Gpc)
-            ).to_value(units.Gpc),
+            lambda z: Planck15.luminosity_distance(z) * units.Gpc,
             self.interp_DL,
         )
 
@@ -250,7 +255,7 @@ class pdet_O3(Emulator):
 
     def predict(self, key: PRNGKeyArray, params: Array) -> Array:
         parameter_dict = {
-            parameter: jax.lax.dynamic_index_in_dim(params, i, axis=-1)
+            parameter: jax.lax.dynamic_index_in_dim(params, i, axis=-1, keepdims=False)
             for i, parameter in enumerate(self.parameters)
         }
 
@@ -323,9 +328,19 @@ class pdet_O3(Emulator):
 
             prediction = self.__call__(_features)
             prediction = jnp.nan_to_num(
-                prediction, nan=0.0, posinf=jnp.inf, neginf=-jnp.inf
+                # prediction, nan=-jnp.inf, posinf=jnp.inf, neginf=-jnp.inf
+                prediction,
+                nan=0.0,
+                posinf=jnp.inf,
+                neginf=-jnp.inf,
             )
 
             return jnp.mean(prediction, axis=0)
 
         return _predict(keys, features)
+
+    def get_logVT(self) -> Callable[[Array], Array]:
+        raise NotImplementedError("logVT is not implemented for pdet_O3")
+
+    def get_mapped_logVT(self) -> Callable[[Array], Array]:
+        return lambda x: jnp.log(self.predict(jrd.PRNGKey(111), x))
