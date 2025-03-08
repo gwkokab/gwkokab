@@ -1,3 +1,4 @@
+import os
 import warnings
 from functools import partial
 from typing import Callable, Dict, List, Optional, Tuple
@@ -108,12 +109,14 @@ class pdet_O3(Emulator):
         self.extra_shape = (1000,)
 
         if model_weights is None:
-            model_weights = "src/gwkokab/vts/_pdet/weights_HLV_O3.hdf5"
+            model_weights = os.path.join(
+                os.path.dirname(__file__), "./weights_HLV_O3.hdf5"
+            )
         else:
             warnings.warn("Overriding default weights", UserWarning)
 
         if scaler is None:
-            scaler = "src/gwkokab/vts/_pdet/scaler_HLV_O3.json"
+            scaler = os.path.join(os.path.dirname(__file__), "./scaler_HLV_O3.json")
         else:
             warnings.warn("Overriding default weights", UserWarning)
 
@@ -328,7 +331,6 @@ class pdet_O3(Emulator):
 
             prediction = self.__call__(_features)
             prediction = jnp.nan_to_num(
-                # prediction, nan=-jnp.inf, posinf=jnp.inf, neginf=-jnp.inf
                 prediction,
                 nan=0.0,
                 posinf=jnp.inf,
