@@ -29,7 +29,7 @@ from kokab.utils.priors import available as available_priors
 from kokab.utils.regex import match_all
 
 
-def read_json(json_file: str) -> dict:
+def read_json(json_file: str) -> Dict:
     """Read json file and return.
 
     Parameters
@@ -201,13 +201,14 @@ def vt_json_read_and_process(
     VolumeTimeSensitivityInterface
         VT object
     """
-    with open(settings_path, "r") as f:
-        vt_settings: Dict = json.load(f)
-
+    vt_settings = read_json(settings_path)
     vt_type = vt_settings.pop("type")
-    vt_path = vt_settings.pop("filename")
     vt = available_vts[vt_type]
-    return vt(parameters=parameters, filename=vt_path, **vt_settings)
+    if vt_type == "pdet_O3":
+        return vt(parameters=parameters, **vt_settings)
+    else:
+        vt_path = vt_settings.pop("filename")
+        return vt(parameters=parameters, filename=vt_path, **vt_settings)
 
 
 def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:
