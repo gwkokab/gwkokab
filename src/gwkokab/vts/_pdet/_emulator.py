@@ -1,7 +1,7 @@
 import json
 from abc import abstractmethod
 from collections.abc import Callable
-from typing import LiteralString, Optional, Tuple
+from typing import Optional, Tuple
 
 import equinox as eqx
 import h5py
@@ -161,8 +161,8 @@ class Emulator(VolumeTimeSensitivityInterface):
         self,
         key: PRNGKeyArray,
         shape: tuple[int, ...],
-        parameter_dict: dict[LiteralString, Array],
-    ) -> Tuple[PRNGKeyArray, dict[LiteralString, Array]]:
+        parameter_dict: dict[str, Array],
+    ) -> Tuple[PRNGKeyArray, dict[str, Array]]:
         """Method to check provided set of compact binary parameters for any missing
         information, and/or to augment provided parameters with any additional derived
         information expected by the neural network. If extrinsic parameters (e.g. sky
