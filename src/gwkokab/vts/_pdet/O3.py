@@ -45,7 +45,11 @@ class pdet_O3(Emulator):
     """
 
     def __init__(
-        self, model_weights=None, scaler=None, parameters: Optional[List[str]] = None
+        self,
+        model_weights=None,
+        scaler=None,
+        parameters: Optional[List[str]] = None,
+        batch_size: Optional[int] = None,
     ):
         """Instantiates a `p_det_O3` object, subclassed from the `emulator` class.
 
@@ -60,6 +64,10 @@ class pdet_O3(Emulator):
             Filepath to saved `sklearn.preprocessing.StandardScaler` object, if
             one wishes to override the provided default (loaded when
             `scaler==None`).
+        parameters : `list`
+            List of parameters to be used by the emulator.
+        batch_size : `int`
+            Batch size to be used by `jax.vmap`
         """
 
         if parameters is None:
@@ -124,6 +132,7 @@ class pdet_O3(Emulator):
             hidden_depth,
             activation,
             final_activation,
+            batch_size,
         )
 
     def _transform_parameters(
@@ -241,7 +250,8 @@ class pdet_O3(Emulator):
 
     def predict(self, key: PRNGKeyArray, params: Array) -> Array:
         parameter_dict = {
-            parameter: params[..., i] for i, parameter in enumerate(self.parameters)
+            parameter: jax.lax.dynamic_index_in_dim(params, i, axis=-1)
+            for i, parameter in enumerate(self.parameters)
         }
 
         shape = jnp.shape(params)[:-1]

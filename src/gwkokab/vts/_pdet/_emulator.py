@@ -20,7 +20,7 @@ class Emulator(VolumeTimeSensitivityInterface):
     networks/observing runs.
     """
 
-    nn_vmapped: Callable[[Array], Array] = eqx.field()
+    nn_vt: eqx.nn.MLP = eqx.field()
     scaler: dict[str, Array] = eqx.field()
 
     def __init__(
@@ -32,6 +32,7 @@ class Emulator(VolumeTimeSensitivityInterface):
         hidden_layer_depth: int,
         activation: Callable,
         final_activation: Callable,
+        batch_size: Optional[int] = None,
     ):
         """Instantiate an `emulator` object.
 
@@ -51,6 +52,8 @@ class Emulator(VolumeTimeSensitivityInterface):
             Number of hidden layers
         activation : `func`
             Activation function to be applied to hidden layers
+        batch_size: `int`
+            Batch size to be used by `jax.vmap`
 
         Returns
         -------
@@ -105,7 +108,8 @@ class Emulator(VolumeTimeSensitivityInterface):
 
         weight_data.close()
 
-        self.nn_vmapped = jax.vmap(nn)
+        self.nn_vt = nn
+        self.batch_size = batch_size
 
     def _transform_parameters(self, *args, **kwargs) -> Array:
         """OVERWRITE UPON SUBCLASSING.
@@ -150,7 +154,7 @@ class Emulator(VolumeTimeSensitivityInterface):
 
         # Apply scaling, evaluate the network, and return
         scaled_x = (transformed_x - self.scaler["mean"]) / self.scaler["scale"]
-        return self.nn_vmapped(scaled_x)
+        return jax.lax.map(self.nn_vt, scaled_x, batch_size=self.batch_size)
 
     @abstractmethod
     def check_input(
