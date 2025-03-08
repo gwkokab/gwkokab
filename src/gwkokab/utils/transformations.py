@@ -329,6 +329,22 @@ def Mc_eta_to_m1_m2(Mc: ArrayLike, eta: ArrayLike) -> tuple[ArrayLike, ArrayLike
     return m1, m2
 
 
+def _eta_from_q(q: ArrayLike) -> ArrayLike:
+    safe_q_from_neg = jnp.where(q <= 0, 1, q)
+    log_eta = jnp.where(
+        q <= 0, -jnp.inf, jnp.log(safe_q_from_neg) - 2.0 * jnp.log1p(safe_q_from_neg)
+    )
+    return jnp.exp(log_eta)
+
+
+def eta_from_q(q: ArrayLike) -> ArrayLike:
+    r"""
+    .. math::
+        \eta(q) = \frac{q}{(1 + q)^2}
+    """
+    return jax.jit(_eta_from_q, inline=True)(q)
+
+
 def polar_to_cart(r: ArrayLike, theta: ArrayLike) -> tuple[ArrayLike, ArrayLike]:
     r"""
     .. math::
