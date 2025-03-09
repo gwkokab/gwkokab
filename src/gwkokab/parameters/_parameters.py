@@ -17,6 +17,7 @@ import sys
 from collections.abc import Mapping, Sequence
 
 import equinox as eqx
+from jax import numpy as jnp
 from numpyro.distributions.constraints import real
 from numpyro.distributions.continuous import Uniform
 from numpyro.distributions.distribution import Distribution, ImproperUniform
@@ -102,6 +103,17 @@ REDSHIFT = Parameter(
 )
 
 
+COS_INCLINATION = Parameter(name="cos_inclination", prior=two_sided_uniform)
+PHI_12 = Parameter(name="phi_12", prior=standard_uniform)
+POLARIZATION_ANGLE = Parameter(
+    name="polarization_angle", prior=Uniform(0.0, jnp.pi, validate_args=True)
+)
+RIGHT_ASCENSION = Parameter(
+    name="right_ascension", prior=Uniform(0.0, 2.0 * jnp.pi, validate_args=True)
+)
+SIN_DECLINATION = Parameter(name="sin_declination", prior=two_sided_uniform)
+
+
 # Copyright (c) 2024 Colm Talbot
 # SPDX-License-Identifier: MIT
 
@@ -109,11 +121,14 @@ REDSHIFT = Parameter(
 class _Available:
     names_to_keys: Mapping[str, Parameter] = {
         CHIRP_MASS.name: CHIRP_MASS,
+        COS_INCLINATION.name: COS_INCLINATION,
         COS_TILT_1.name: COS_TILT_1,
         COS_TILT_2.name: COS_TILT_2,
         ECCENTRICITY.name: ECCENTRICITY,
         EFFECTIVE_SPIN_MAGNITUDE.name: EFFECTIVE_SPIN_MAGNITUDE,
         MASS_RATIO.name: MASS_RATIO,
+        PHI_12.name: PHI_12,
+        POLARIZATION_ANGLE.name: POLARIZATION_ANGLE,
         PRIMARY_MASS_DETECTED.name: PRIMARY_MASS_DETECTED,
         PRIMARY_MASS_SOURCE.name: PRIMARY_MASS_SOURCE,
         PRIMARY_SPIN_MAGNITUDE.name: PRIMARY_SPIN_MAGNITUDE,
@@ -122,22 +137,27 @@ class _Available:
         PRIMARY_SPIN_Z.name: PRIMARY_SPIN_Z,
         REDSHIFT.name: REDSHIFT,
         REDUCED_MASS.name: REDUCED_MASS,
+        RIGHT_ASCENSION.name: RIGHT_ASCENSION,
         SECONDARY_MASS_DETECTED.name: SECONDARY_MASS_DETECTED,
         SECONDARY_MASS_SOURCE.name: SECONDARY_MASS_SOURCE,
         SECONDARY_SPIN_MAGNITUDE.name: SECONDARY_SPIN_MAGNITUDE,
         SECONDARY_SPIN_X.name: SECONDARY_SPIN_X,
         SECONDARY_SPIN_Y.name: SECONDARY_SPIN_Y,
         SECONDARY_SPIN_Z.name: SECONDARY_SPIN_Z,
+        SIN_DECLINATION.name: SIN_DECLINATION,
         SYMMETRIC_MASS_RATIO.name: SYMMETRIC_MASS_RATIO,
     }
 
-    params: Sequence[str | Parameter] = [
+    params: Sequence[str] = [
         "CHIRP_MASS",
+        "COS_INCLINATION",
         "COS_TILT_1",
         "COS_TILT_2",
         "ECCENTRICITY",
         "EFFECTIVE_SPIN_MAGNITUDE",
         "MASS_RATIO",
+        "PHI_12",
+        "POLARIZATION_ANGLE",
         "PRIMARY_MASS_DETECTED",
         "PRIMARY_MASS_SOURCE",
         "PRIMARY_SPIN_MAGNITUDE",
@@ -146,12 +166,14 @@ class _Available:
         "PRIMARY_SPIN_Z",
         "REDSHIFT",
         "REDUCED_MASS",
+        "RIGHT_ASCENSION",
         "SECONDARY_MASS_DETECTED",
         "SECONDARY_MASS_SOURCE",
         "SECONDARY_SPIN_MAGNITUDE",
         "SECONDARY_SPIN_X",
         "SECONDARY_SPIN_Y",
         "SECONDARY_SPIN_Z",
+        "SIN_DECLINATION",
         "SYMMETRIC_MASS_RATIO",
     ]
 

@@ -1,9 +1,3 @@
-# uv lock
-uv.lock
-
-# ppd files data ignores
-**/*.hdf5
-
 # temp ignores
 *.aux
 *.fdb_latexmk

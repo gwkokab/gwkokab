@@ -25,6 +25,7 @@ from ._injvt import (
     RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
 )
 from ._neuralvt import NeuralNetVolumeTimeSensitivity as NeuralNetVolumeTimeSensitivity
+from ._pdet import pdet_O3 as pdet_O3
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity as PopModelsCalibratedVolumeTimeSensitivity,
     PopModelsVolumeTimeSensitivity as PopModelsVolumeTimeSensitivity,

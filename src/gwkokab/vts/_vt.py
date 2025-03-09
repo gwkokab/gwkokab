@@ -20,6 +20,7 @@ from ._injvt import (
     RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
 )
 from ._neuralvt import NeuralNetVolumeTimeSensitivity
+from ._pdet import pdet_O3
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity,
     PopModelsVolumeTimeSensitivity,
@@ -27,16 +28,19 @@ from ._popmodelvt import (
 
 
 def __getattr__(name):
-    if name == "NeuralNetVolumeTimeSensitivity":
-        return NeuralNetVolumeTimeSensitivity
-    elif name == "PopModelsVolumeTimeSensitivity":
-        return PopModelsVolumeTimeSensitivity
-    elif name == "PopModelsCalibratedVolumeTimeSensitivity":
-        return PopModelsCalibratedVolumeTimeSensitivity
-    elif name == "RealInjectionVolumeTimeSensitivity":
-        return RealInjectionVolumeTimeSensitivity
-    else:
-        raise AttributeError(f"module {__name__} has no attribute {name}")
+    match name:
+        case "NeuralNetVolumeTimeSensitivity":
+            return NeuralNetVolumeTimeSensitivity
+        case "PopModelsVolumeTimeSensitivity":
+            return PopModelsVolumeTimeSensitivity
+        case "PopModelsCalibratedVolumeTimeSensitivity":
+            return PopModelsCalibratedVolumeTimeSensitivity
+        case "RealInjectionVolumeTimeSensitivity":
+            return RealInjectionVolumeTimeSensitivity
+        case "pdet_O3":
+            return pdet_O3
+        case _:
+            raise AttributeError(f"module {__name__} has no attribute {name}")
 
 
 # Copyright (c) 2024 Colm Talbot
@@ -49,6 +53,7 @@ class _Available:
         "PopModelsCalibratedVolumeTimeSensitivity",
         "PopModelsVolumeTimeSensitivity",
         "RealInjectionVolumeTimeSensitivity",
+        "pdet_O3",
     ]
 
     def keys(self) -> List[str]:
