@@ -81,7 +81,7 @@ docs = [
 ]
 test = []
 cuda12 = ["jax[cuda12]>=0.4.30"]
-tpu = ["jax[tpu]>=0.4.30"]
+# tpu = ["jax[tpu]>=0.4.30"]
 
 [project.urls]
 Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
