@@ -14,25 +14,13 @@ Link associated items using GitHub keywords:
 - "Related to #789"
 -->
 
-## Detailed Description
+## Description
 <!--
 Include comprehensive details about:
 - Technical implementation approach
 - Core components modified
 - Key architectural decisions
 - Dependencies affected
--->
-
-## Breaking Changes
-
-- [ ] No breaking changes
-- [ ] Contains breaking changes
-
-<!--
-If breaking changes exist, specify:
-- Exact changes introduced
-- Impact on existing functionality
-- Required migration steps
 -->
 
 ## Additional Notes (Optional)
