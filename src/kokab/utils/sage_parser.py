@@ -114,5 +114,11 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Enable memory profiling.",
         action="store_true",
     )
+    debug_group.add_argument(
+        "--check-leaks",
+        help="Check for JAX Tracer leaks. See details in the documentation: "
+        "https://jax.readthedocs.io/en/latest/_autosummary/jax.checking_leaks.html#jax.checking_leaks.",
+        action="store_true",
+    )
 
     return parser
