@@ -79,7 +79,9 @@ docs = [
     "sphinx>=2.0",
     "sphinx_design",
 ]
-test = ["astropy>=6.1.4"]
+test = []
+cuda12 = ["jax[cuda12]>=0.4.30"]
+# tpu = ["jax[tpu]>=0.4.30"]
 
 [project.urls]
 Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
