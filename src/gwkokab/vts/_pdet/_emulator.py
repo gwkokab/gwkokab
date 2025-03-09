@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 import equinox as eqx
 import h5py
 import jax
-import jax.numpy as jnp
+from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
 from ...utils.tools import warn_if
@@ -81,9 +81,11 @@ class Emulator(VolumeTimeSensitivityInterface):
 
         # Load scaling parameters
         with open(scaler, "r") as f:
-            self.scaler = json.load(f)
-            self.scaler["mean"] = jnp.array(self.scaler["mean"])
-            self.scaler["scale"] = jnp.array(self.scaler["scale"])
+            _scaler = json.load(f)
+            self.scaler = {
+                "mean": jax.device_put(jnp.asarray(_scaler["mean"]), may_alias=True),
+                "scale": jax.device_put(jnp.asarray(_scaler["scale"]), may_alias=True),
+            }
 
         # Define helper functions with which to access MLP weights and biases
         # Needed by `eqx.tree_at`
@@ -100,10 +102,14 @@ class Emulator(VolumeTimeSensitivityInterface):
             else:
                 key = "dense_{0}".format(i)
 
-            layer_weights = weight_data["{0}/{0}/kernel:0".format(key)][()].T
+            layer_weights = jax.device_put(
+                weight_data["{0}/{0}/kernel:0".format(key)][()].T, may_alias=True
+            )
             nn = eqx.tree_at(get_weights(i), nn, layer_weights)
 
-            layer_biases = weight_data["{0}/{0}/bias:0".format(key)][()].T
+            layer_biases = jax.device_put(
+                weight_data["{0}/{0}/bias:0".format(key)][()].T, may_alias=True
+            )
             nn = eqx.tree_at(get_biases(i), nn, layer_biases)
 
         weight_data.close()
@@ -154,7 +160,7 @@ class Emulator(VolumeTimeSensitivityInterface):
 
         # Apply scaling, evaluate the network, and return
         scaled_x = (transformed_x - self.scaler["mean"]) / self.scaler["scale"]
-        return jax.lax.map(self.nn_vt, scaled_x, batch_size=self.batch_size)
+        return jax.vmap(self.nn_vt)(scaled_x)
 
     @abstractmethod
     def check_input(

@@ -1,7 +1,6 @@
 import os
 import warnings
-from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, Optional, Sequence, Tuple
 
 import equinox as eqx
 import jax
@@ -26,6 +25,7 @@ from ...parameters import (
     SECONDARY_SPIN_MAGNITUDE,
     SIN_DECLINATION,
 )
+from ...utils.tools import error_if
 from ...utils.transformations import eta_from_q, mass_ratio
 from ._emulator import Emulator
 
@@ -45,18 +45,19 @@ class pdet_O3(Emulator):
     during a random time between the startdate and enddate of O3.
     """
 
-    all_parameters: List[str] = eqx.field(static=True)
-    proposal_dist: Dict[str, List[float]] = eqx.field(static=True)
-    parameters: List[str] = eqx.field(static=True)
+    all_parameters: Sequence[str] = eqx.field(static=True)
+    proposal_dist: Dict[str, Tuple[float, float]] = eqx.field(static=True)
+    parameters: Sequence[str] = eqx.field(static=True)
     extra_shape: Tuple[int, ...] = eqx.field(static=True)
     interp_DL: Array = eqx.field(static=False)
     interp_z: Array = eqx.field(static=False)
+    is_full: bool = eqx.field(static=True)
 
     def __init__(
         self,
         model_weights=None,
         scaler=None,
-        parameters: Optional[List[str]] = None,
+        parameters: Optional[Sequence[str]] = None,
         batch_size: Optional[int] = None,
     ):
         """Instantiates a `p_det_O3` object, subclassed from the `emulator` class.
@@ -78,10 +79,9 @@ class pdet_O3(Emulator):
             Batch size to be used by `jax.vmap`
         """
 
-        if parameters is None:
-            raise ValueError("Must provide list of parameters")
+        error_if(parameters is None, msg="Must provide list of parameters")
 
-        self.all_parameters = [
+        self.all_parameters = (
             PRIMARY_MASS_SOURCE.name,
             SECONDARY_MASS_SOURCE.name,
             PRIMARY_SPIN_MAGNITUDE.name,
@@ -94,15 +94,34 @@ class pdet_O3(Emulator):
             POLARIZATION_ANGLE.name,
             RIGHT_ASCENSION.name,
             SIN_DECLINATION.name,
-        ]
+        )
 
-        self.proposal_dist = {
-            REDSHIFT.name: [0.0, 10.0],
-            COS_INCLINATION.name: [-1.0, 1.0],
-            POLARIZATION_ANGLE.name: [0.0, jnp.pi],
-            RIGHT_ASCENSION.name: [0.0, 2.0 * jnp.pi],
-            SIN_DECLINATION.name: [-1.0, 1.0],
-        }
+        error_if(
+            PRIMARY_MASS_SOURCE.name not in parameters,
+            msg="Must include {0} parameter".format(PRIMARY_MASS_SOURCE.name),
+        )
+        error_if(
+            SECONDARY_MASS_SOURCE.name not in parameters,
+            msg="Must include {0} parameter".format(SECONDARY_MASS_SOURCE.name),
+        )
+
+        self.is_full = set(self.all_parameters) == set(parameters)
+        self.proposal_dist = {}
+        if not self.is_full:
+            # if not every parameter is provided, we are only storing the bounds of the
+            # missing parameters
+            missing_params = set(self.all_parameters) - set(parameters)
+
+            proposal_dist = {
+                REDSHIFT.name: (0.0, 10.0),
+                COS_INCLINATION.name: (-1.0, 1.0),
+                POLARIZATION_ANGLE.name: (0.0, jnp.pi),
+                RIGHT_ASCENSION.name: (0.0, 2.0 * jnp.pi),
+                SIN_DECLINATION.name: (-1.0, 1.0),
+            }
+            for param in missing_params:
+                if param in proposal_dist:
+                    self.proposal_dist[param] = proposal_dist[param]
 
         self.parameters = parameters
 
@@ -178,8 +197,8 @@ class pdet_O3(Emulator):
 
         # Generalized precessing spin
         Omg = q * (3.0 + 4.0 * q) / (4.0 + 3.0 * q)
-        chi_1p = a1_trials * jnp.sqrt(1.0 - cost1_trials**2)
-        chi_2p = a2_trials * jnp.sqrt(1.0 - cost2_trials**2)
+        chi_1p = a1_trials * jnp.sqrt(1.0 - jnp.square(cost1_trials))
+        chi_2p = a2_trials * jnp.sqrt(1.0 - jnp.square(cost2_trials))
         chi_p_gen = jnp.sqrt(
             jnp.square(chi_1p)
             + jnp.square(Omg * chi_2p)
@@ -231,10 +250,6 @@ class pdet_O3(Emulator):
             parameters
         """
 
-        for param in (PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name):
-            if param not in parameter_dict:
-                raise RuntimeError("Must include {0} parameter".format(param))
-
         missing_params = {}
 
         if PRIMARY_SPIN_MAGNITUDE.name not in parameter_dict:
@@ -257,89 +272,63 @@ class pdet_O3(Emulator):
         return key, parameter_dict
 
     def predict(self, key: PRNGKeyArray, params: Array) -> Array:
-        parameter_dict = {
-            parameter: jax.lax.dynamic_index_in_dim(params, i, axis=-1, keepdims=False)
-            for i, parameter in enumerate(self.parameters)
-        }
-
         shape = jnp.shape(params)[:-1]
-        key, parameter_dict = self.check_input(key, shape, parameter_dict)
-        keys = jax.random.split(key, shape)
+        if self.is_full:
+            parameter_dict = {
+                parameter: jax.lax.dynamic_index_in_dim(
+                    params, i, axis=-1, keepdims=False
+                )
+                for i, parameter in enumerate(self.parameters)
+            }
 
-        features = jnp.stack(
-            [
-                parameter_dict[param]
-                for param in self.all_parameters
-                if parameter_dict.get(param) is not None
-            ],
-            axis=-1,
-        )
+            @jax.jit
+            def _predict(_features: Array) -> Array:
+                prediction = self.__call__(_features)
+                prediction = jnp.nan_to_num(
+                    prediction, nan=0.0, posinf=jnp.inf, neginf=-jnp.inf
+                )
+                return prediction
 
-        @partial(jax.vmap, in_axes=(0, 0), out_axes=0)
-        def _predict(key: PRNGKeyArray, _features: Array) -> Array:
-            _features = jnp.broadcast_to(_features, self.extra_shape + _features.shape)
-            if parameter_dict.get(REDSHIFT.name) is None:
-                z = jrd.uniform(key, self.extra_shape, minval=0.0, maxval=10.0)
-                _features = jnp.insert(
-                    _features, self.all_parameters.index(REDSHIFT.name), z, axis=1
-                )
-                _, key = jrd.split(key)
-            if parameter_dict.get(COS_INCLINATION.name) is None:
-                cos_inclination = jrd.uniform(
-                    key, self.extra_shape, minval=-1.0, maxval=1.0
-                )
-                _features = jnp.insert(
-                    _features,
-                    self.all_parameters.index(COS_INCLINATION.name),
-                    cos_inclination,
-                    axis=1,
-                )
-                _, key = jrd.split(key)
-            if parameter_dict.get(POLARIZATION_ANGLE.name) is None:
-                polarization_angle = jrd.uniform(
-                    key, self.extra_shape, minval=0.0, maxval=jnp.pi
-                )
-                _features = jnp.insert(
-                    _features,
-                    self.all_parameters.index(POLARIZATION_ANGLE.name),
-                    polarization_angle,
-                    axis=1,
-                )
-                _, key = jrd.split(key)
-            if parameter_dict.get(RIGHT_ASCENSION.name) is None:
-                right_ascension = jrd.uniform(
-                    key, self.extra_shape, minval=0.0, maxval=2.0 * jnp.pi
-                )
-                _features = jnp.insert(
-                    _features,
-                    self.all_parameters.index(RIGHT_ASCENSION.name),
-                    right_ascension,
-                    axis=1,
-                )
-                _, key = jrd.split(key)
-            if parameter_dict.get(SIN_DECLINATION.name) is None:
-                sin_declination = jrd.uniform(
-                    key, self.extra_shape, minval=-1.0, maxval=1.0
-                )
-                _features = jnp.insert(
-                    _features,
-                    self.all_parameters.index(SIN_DECLINATION.name),
-                    sin_declination,
-                    axis=1,
-                )
-                _, key = jrd.split(key)
-
-            prediction = self.__call__(_features)
-            prediction = jnp.nan_to_num(
-                prediction,
-                nan=0.0,
-                posinf=jnp.inf,
-                neginf=-jnp.inf,
+            features = jnp.stack(
+                [parameter_dict[param] for param in self.all_parameters],
+                axis=-1,
             )
+        else:
+            parameter_dict = {
+                parameter: jnp.broadcast_to(
+                    jax.lax.dynamic_index_in_dim(params, i, axis=-1, keepdims=False),
+                    self.extra_shape + shape,
+                )
+                for i, parameter in enumerate(self.parameters)
+            }
+            key, parameter_dict = self.check_input(
+                key, self.extra_shape + shape, parameter_dict
+            )
+            for param in self.proposal_dist.keys():
+                parameter_dict[param] = jrd.uniform(
+                    key,
+                    self.extra_shape + shape,
+                    minval=self.proposal_dist[param][0],
+                    maxval=self.proposal_dist[param][1],
+                )
 
-            return jnp.mean(prediction, axis=0)
+            @jax.jit
+            def _predict(_features: Array) -> Array:
+                prediction = self.__call__(_features)
+                prediction = jnp.nan_to_num(
+                    prediction, nan=0.0, posinf=jnp.inf, neginf=-jnp.inf
+                )
+                return jnp.mean(prediction, axis=0)
 
-        return _predict(keys, features)
+            features = jnp.stack(
+                [parameter_dict[param] for param in self.all_parameters],
+                axis=-1,
+            )
+            features = jnp.moveaxis(features, 1, 0)
+
+        return jnp.squeeze(
+            jax.lax.map(_predict, features, batch_size=self.batch_size), axis=-1
+        )
 
     def get_logVT(self) -> Callable[[Array], Array]:
         raise NotImplementedError("logVT is not implemented for pdet_O3")
