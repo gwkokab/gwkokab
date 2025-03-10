@@ -240,6 +240,7 @@ class flowMChandler(object):
         self,
         debug_nans: bool = False,
         profile_memory: bool = False,
+        check_leaks: bool = False,
         file_prefix: Optional[str] = None,
     ) -> None:
         """Run the flowMC sampler and save the data.
@@ -267,6 +268,9 @@ class flowMChandler(object):
             if file_prefix:
                 filename = f"{file_prefix}_{filename}"
             jax.profiler.save_device_memory_profile(filename)
+        elif check_leaks:
+            with jax.checking_leaks(True):
+                sampler.sample(self.initial_position, self.data)
         else:
             sampler.sample(self.initial_position, self.data)
         _save_data_from_sampler(sampler, **self.data_dump_kwargs)

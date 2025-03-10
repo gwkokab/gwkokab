@@ -2,6 +2,12 @@ PIP=pip
 UV=uv
 PIP_FLAGS=--upgrade
 TARGET?=gwkokab
+PLATFORM?=
+ifeq ($(PLATFORM),)
+	_PLATFORM=.
+else
+	_PLATFORM=.[$(PLATFORM)]
+endif
 
 .PHONY: install uninstall cache_clean help
 
@@ -10,17 +16,17 @@ UV_CHECK := $(shell command -v $(UV) 2> /dev/null)
 
 help:
 	@echo "Available targets:"
-	@echo "  install      - Install package"
-	@echo "  uninstall    - Remove package"
-	@echo "  cache_clean  - Clean pip and uv cache"
-	@echo "  docs		  - Generate documentation"
+	@echo "  install PLATFORM=... - Install package"
+	@echo "  uninstall            - Remove package"
+	@echo "  cache_clean          - Clean pip and uv cache"
+	@echo "  docs		          - Generate documentation"
 
 install: uninstall
 ifndef UV_CHECK
 	@echo "uv is not installed. Continuing without uv."
-	$(PIP) install $(PIP_FLAGS) .
+	$(PIP) install $(PIP_FLAGS) $(_PLATFORM)
 else
-	$(UV) $(PIP) install $(PIP_FLAGS) .
+	$(UV) $(PIP) install $(PIP_FLAGS) $(_PLATFORM)
 endif
 
 uninstall:
