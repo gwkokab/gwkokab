@@ -30,6 +30,11 @@ from ...utils.transformations import eta_from_q, mass_ratio
 from ._emulator import Emulator
 
 
+# Disable units for wcosmo until the resolution of
+# https://github.com/GalacticDynamics/quaxed/issues/133
+wcosmo.disable_units()
+
+
 Planck15: wcosmo.astropy.FlatLambdaCDM = getattr(wcosmo.astropy, "Planck15")
 
 
