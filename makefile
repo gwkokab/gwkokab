@@ -24,7 +24,7 @@ else
 endif
 
 uninstall:
-	$(PIP) uninstall $(TARGET) -y
+	$(UV) $(PIP) uninstall $(TARGET)
 
 cache_clean: uninstall
 	$(PIP) cache purge
