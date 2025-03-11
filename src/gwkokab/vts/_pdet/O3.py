@@ -63,6 +63,7 @@ class pdet_O3(Emulator):
         scaler=None,
         parameters: Optional[Sequence[str]] = None,
         batch_size: Optional[int] = None,
+        scale: float = 1.0,
     ):
         """Instantiates a `p_det_O3` object, subclassed from the `emulator` class.
 
@@ -164,6 +165,7 @@ class pdet_O3(Emulator):
             activation,
             final_activation,
             batch_size,
+            scale,
         )
 
     def _transform_parameters(
@@ -336,4 +338,4 @@ class pdet_O3(Emulator):
         raise NotImplementedError("logVT is not implemented for pdet_O3")
 
     def get_mapped_logVT(self) -> Callable[[Array], Array]:
-        return lambda x: jnp.log(self.predict(jrd.PRNGKey(111), x))
+        return lambda x: jnp.log(self.scale * self.predict(jrd.PRNGKey(111), x))

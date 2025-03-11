@@ -33,6 +33,7 @@ class Emulator(VolumeTimeSensitivityInterface):
         activation: Callable,
         final_activation: Callable,
         batch_size: Optional[int] = None,
+        scale: float = 1.0,
     ):
         """Instantiate an `emulator` object.
 
@@ -115,6 +116,7 @@ class Emulator(VolumeTimeSensitivityInterface):
         weight_data.close()
 
         self.nn_vt = nn
+        self.scale = scale
         self.batch_size = batch_size
 
     def _transform_parameters(self, *args, **kwargs) -> Array:
