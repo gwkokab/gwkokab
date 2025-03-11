@@ -22,6 +22,7 @@ class Emulator(VolumeTimeSensitivityInterface):
 
     nn_vt: eqx.nn.MLP = eqx.field()
     scaler: dict[str, Array] = eqx.field()
+    scale: float = eqx.field()
 
     def __init__(
         self,
