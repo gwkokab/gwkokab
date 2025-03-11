@@ -103,10 +103,7 @@ def _save_data_from_sampler(
         jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
     )
 
-    samples = sampler.sample_flow(
-        n_samples=n_samples + 50_000,
-        rng_key=jrd.PRNGKey(key_weighted),
-    )
+    samples = sampler.sample_flow(n_samples=n_samples + 50_000, rng_key=key_weighted)
     weights = np.asarray(
         jnn.softmax(
             sampler.local_sampler.logpdf_vmap(samples, None)
@@ -118,10 +115,7 @@ def _save_data_from_sampler(
     np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", samples, header=header)
 
     samples = np.asarray(
-        sampler.sample_flow(
-            n_samples=n_samples,
-            rng_key=jrd.PRNGKey(key_unweighted),
-        )
+        sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
     )
 
     np.savetxt(rf"{out_dir}/nf_samples_unweighted.dat", samples, header=header)
