@@ -27,6 +27,7 @@ from .transformations import (
     chirp_mass as chirp_mass,
     delta_m as delta_m,
     delta_m_to_symmetric_mass_ratio as delta_m_to_symmetric_mass_ratio,
+    eta_from_q as eta_from_q,
     log_chirp_mass as log_chirp_mass,
     m1_m2_chi1_chi2_costilt1_costilt2_to_chieff as m1_m2_chi1_chi2_costilt1_costilt2_to_chieff,
     m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus as m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus,
