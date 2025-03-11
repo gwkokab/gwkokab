@@ -32,6 +32,12 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     ppd_group = parser.add_argument_group("PPD Options")
 
     ppd_group.add_argument(
+        "--sample-filename",
+        help="Path of the file to save the samples.",
+        type=str,
+        required=True,
+    )
+    ppd_group.add_argument(
         "--filename",
         help="Path of the file to save the PPD.",
         type=str,

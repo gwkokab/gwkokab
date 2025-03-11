@@ -80,7 +80,7 @@ def main() -> None:
     ranges = ppd_ranges(parameters, args.range)
 
     nf_samples = pd.read_csv(
-        "sampler_data/nf_samples.dat", delimiter=" ", comment="#", header=None
+        args.sample_filename, delimiter=" ", comment="#", header=None
     ).to_numpy()
 
     ppd.compute_and_save_ppd(
