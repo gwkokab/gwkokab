@@ -28,7 +28,7 @@ from flowMC.proposal.Gaussian_random_walk import GaussianRandomWalk  # noqa F401
 from flowMC.proposal.HMC import HMC  # noqa F401
 from flowMC.proposal.MALA import MALA  # noqa F401
 from flowMC.Sampler import Sampler  # noqa F401
-from jax import random as jrd
+from jax import nn as jnn, random as jrd
 from jaxtyping import Array
 
 
@@ -98,12 +98,19 @@ def _save_data_from_sampler(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    samples = np.array(
-        sampler.sample_flow(
-            n_samples=n_samples,
-            rng_key=jrd.PRNGKey(np.random.randint(1, 2**32 - 1)),
+    samples = sampler.sample_flow(
+        n_samples=n_samples + 50_000,
+        rng_key=jrd.PRNGKey(np.random.randint(1, 2**32 - 1)),
+    )
+
+    weights = np.asarray(
+        jnn.softmax(
+            sampler.local_sampler.logpdf_vmap(samples, None)
+            - sampler.nf_model.log_prob(samples)
         )
     )
+
+    samples = samples[np.random.choice(n_samples + 50_000, size=n_samples, p=weights)]
 
     header = " ".join(labels)
 
