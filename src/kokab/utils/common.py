@@ -16,7 +16,7 @@
 import json
 import warnings
 from collections.abc import Sequence
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import jax
 import numpy as np
@@ -236,3 +236,25 @@ def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:
     """
     dist_name = meta_dict.pop("dist")
     return getattr(dist, dist_name)(**meta_dict)
+
+
+def ppd_ranges(
+    parameters: List[str], ranges: List[Tuple[str, float, float, int]]
+) -> List[Tuple[float, float, int]]:
+    """Convert the PPD ranges to the format required by the PPD function.
+
+    :param parameters: list of parameters
+    :param ranges: list of ranges
+    :return: list of ranges
+    """
+    _ranges: List[Tuple[float, float, int]] = [None] * len(parameters)
+    for name, *_range in ranges:
+        if name in parameters:
+            _ranges[parameters.index(name)] = (
+                float(_range[0]),
+                float(_range[1]),
+                int(_range[2]),
+            )
+        else:
+            raise ValueError(f"Parameter {name} not found in {parameters}.")
+    return _ranges

@@ -51,11 +51,11 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     ppd_group.add_argument(
         "--range",
-        help="Range of the PPD for each parameter. The format is 'min max step'. "
+        help="Range of the PPD for each parameter. The format is 'name min max step'. "
         "Repeat for each parameter.",
-        nargs=3,
+        nargs=4,
         action="append",
-        type=float,
+        type=str,
         required=True,
     )
     ppd_group.add_argument(
