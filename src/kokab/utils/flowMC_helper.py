@@ -28,7 +28,7 @@ from flowMC.proposal.Gaussian_random_walk import GaussianRandomWalk  # noqa F401
 from flowMC.proposal.HMC import HMC  # noqa F401
 from flowMC.proposal.MALA import MALA  # noqa F401
 from flowMC.Sampler import Sampler  # noqa F401
-from jax import random as jrd
+from jax import nn as jnn, random as jrd
 from jaxtyping import Array
 
 
@@ -62,6 +62,8 @@ def _save_data_from_sampler(
     out_dir: str,
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
+    logpdf: Optional[Callable] = None,
+    batch_size: int = 1000,
 ) -> None:
     """This functions saves the data from a sampler to disk. The data saved includes the
     samples from the flow, the chains from the training and production phases, the log
@@ -80,6 +82,8 @@ def _save_data_from_sampler(
     """
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]
+    if logpdf is None:
+        raise ValueError("logpdf must be provided")
 
     out_train = sampler.get_sampler_state(training=True)
 
@@ -98,16 +102,27 @@ def _save_data_from_sampler(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    samples = np.array(
-        sampler.sample_flow(
-            n_samples=n_samples,
-            rng_key=jrd.PRNGKey(np.random.randint(1, 2**32 - 1)),
-        )
+    header = " ".join(labels)
+    key_unweighted, key_weighted = jrd.split(
+        jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
     )
 
-    header = " ".join(labels)
+    samples = sampler.sample_flow(n_samples=n_samples + 50_000, rng_key=key_weighted)
+    weights = np.asarray(
+        jnn.softmax(
+            jax.lax.map(lambda s: logpdf(s, None), samples, batch_size=batch_size)
+            - sampler.nf_model.log_prob(samples)
+        )
+    )
+    samples = np.asarray(samples)
+    samples = samples[np.random.choice(n_samples + 50_000, size=n_samples, p=weights)]
+    np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", samples, header=header)
 
-    np.savetxt(rf"{out_dir}/nf_samples.dat", samples, header=header)
+    samples = np.asarray(
+        sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
+    )
+
+    np.savetxt(rf"{out_dir}/nf_samples_unweighted.dat", samples, header=header)
 
     n_chains = sampler.n_chains
 
@@ -273,4 +288,4 @@ class flowMChandler(object):
                 sampler.sample(self.initial_position, self.data)
         else:
             sampler.sample(self.initial_position, self.data)
-        _save_data_from_sampler(sampler, **self.data_dump_kwargs)
+        _save_data_from_sampler(sampler, logpdf=self.logpdf, **self.data_dump_kwargs)
