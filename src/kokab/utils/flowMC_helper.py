@@ -62,6 +62,8 @@ def _save_data_from_sampler(
     out_dir: str,
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
+    logpdf: Optional[Callable] = None,
+    batch_size: int = 1000,
 ) -> None:
     """This functions saves the data from a sampler to disk. The data saved includes the
     samples from the flow, the chains from the training and production phases, the log
@@ -80,6 +82,8 @@ def _save_data_from_sampler(
     """
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]
+    if logpdf is None:
+        raise ValueError("logpdf must be provided")
 
     out_train = sampler.get_sampler_state(training=True)
 
@@ -106,7 +110,7 @@ def _save_data_from_sampler(
     samples = sampler.sample_flow(n_samples=n_samples + 50_000, rng_key=key_weighted)
     weights = np.asarray(
         jnn.softmax(
-            sampler.local_sampler.logpdf_vmap(samples, None)
+            jax.lax.map(lambda s: logpdf(s, None), samples, batch_size=batch_size)
             - sampler.nf_model.log_prob(samples)
         )
     )
@@ -284,4 +288,4 @@ class flowMChandler(object):
                 sampler.sample(self.initial_position, self.data)
         else:
             sampler.sample(self.initial_position, self.data)
-        _save_data_from_sampler(sampler, **self.data_dump_kwargs)
+        _save_data_from_sampler(sampler, logpdf=self.logpdf, **self.data_dump_kwargs)
