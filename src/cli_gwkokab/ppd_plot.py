@@ -182,23 +182,22 @@ def main() -> None:
         ax.set_yscale(args.y_scale)
         ax.set_xscale(args.x_scale)
         ax.set_title(f"PPD plot of {prefix}{head}")
-        if args.x_labels is None:
+        if x_labels is None:
             ax.set_xlabel(head)
-        if args.y_labels is None:
-            ax.set_ylabel(f"ppd({head})")
-
-        if x_range is not None:
-            if i < len(x_range):
-                ax.set_xlim(x_range[i][0], x_range[i][1])
-        if y_range is not None:
-            if i < len(y_range):
-                ax.set_ylim(y_range[i][0], y_range[i][1])
-        if x_labels is not None:
+        else:
             if i < len(x_labels):
                 ax.set_xlabel(x_labels[i])
-        if y_labels is not None:
+
+        if y_labels is None:
+            ax.set_ylabel(f"ppd({head})")
+        else:
             if i < len(y_labels):
                 ax.set_ylabel(y_labels[i])
+
+        if x_range is not None and i < len(x_range):
+            ax.set_xlim(x_range[i][0], x_range[i][1])
+        if y_range is not None and i < len(y_range):
+            ax.set_ylim(y_range[i][0], y_range[i][1])
 
         plt.legend()
         plt.tight_layout()
