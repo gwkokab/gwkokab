@@ -113,6 +113,7 @@ sage_n_spls_m_sgs = "kokab.n_spls_m_sgs.sage:main"
 sage_chi_eff_q_relation = "kokab.chi_eff_q_relation.sage:main"
 sage_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.sage:main"
 ## PPD scripts
+ppd_ecc_matters = "kokab.ecc_matters.ppd:main"
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
 ppd_n_spls_m_sgs = "kokab.n_spls_m_sgs.ppd:main"
 ppd_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.ppd:main"
