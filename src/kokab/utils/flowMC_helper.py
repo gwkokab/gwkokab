@@ -62,7 +62,6 @@ def _save_data_from_sampler(
     out_dir: str,
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
-    nf_weighted_samples: bool = False,
 ) -> None:
     """This functions saves the data from a sampler to disk. The data saved includes the
     samples from the flow, the chains from the training and production phases, the log
@@ -78,8 +77,6 @@ def _save_data_from_sampler(
         list of labels for the samples, by default None
     n_samples : int, optional
         number of samples to draw from the flow, by default 5000
-    nf_weighted_samples: bool, optional
-        Whether to use the flow to weight the samples, by default False
     """
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]
@@ -101,29 +98,33 @@ def _save_data_from_sampler(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    extra_samples = 0 if nf_weighted_samples else 50_000
-
-    samples = sampler.sample_flow(
-        n_samples=n_samples + extra_samples,
-        rng_key=jrd.PRNGKey(np.random.randint(1, 2**32 - 1)),
+    header = " ".join(labels)
+    key_unweighted, key_weighted = jrd.split(
+        jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
     )
 
-    if nf_weighted_samples:
-        weights = np.asarray(
-            jnn.softmax(
-                sampler.local_sampler.logpdf_vmap(samples, None)
-                - sampler.nf_model.log_prob(samples)
-            )
+    samples = sampler.sample_flow(
+        n_samples=n_samples + 50_000,
+        rng_key=jrd.PRNGKey(key_weighted),
+    )
+    weights = np.asarray(
+        jnn.softmax(
+            sampler.local_sampler.logpdf_vmap(samples, None)
+            - sampler.nf_model.log_prob(samples)
         )
-        samples = samples[
-            np.random.choice(n_samples + 50_000, size=n_samples, p=weights)
-        ]
-    else:
-        samples = np.asarray(samples)
+    )
+    samples = np.asarray(samples)
+    samples = samples[np.random.choice(n_samples + 50_000, size=n_samples, p=weights)]
+    np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", samples, header=header)
 
-    header = " ".join(labels)
+    samples = np.asarray(
+        sampler.sample_flow(
+            n_samples=n_samples,
+            rng_key=jrd.PRNGKey(key_unweighted),
+        )
+    )
 
-    np.savetxt(rf"{out_dir}/nf_samples.dat", samples, header=header)
+    np.savetxt(rf"{out_dir}/nf_samples_unweighted.dat", samples, header=header)
 
     n_chains = sampler.n_chains
 
