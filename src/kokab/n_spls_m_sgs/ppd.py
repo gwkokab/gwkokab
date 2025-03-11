@@ -36,7 +36,7 @@ from gwkokab.parameters import (
 )
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
-from kokab.utils.common import read_json
+from kokab.utils.common import ppd_ranges, read_json
 
 
 def make_parser() -> ArgumentParser:
@@ -93,6 +93,8 @@ def main() -> None:
     if has_eccentricity:
         parameters.append(ECCENTRICITY.name)
 
+    ranges = ppd_ranges(parameters, args.range)
+
     nf_samples = pd.read_csv(
         "sampler_data/nf_samples.dat", delimiter=" ", comment="#", header=None
     ).to_numpy()
@@ -100,7 +102,7 @@ def main() -> None:
     ppd.compute_and_save_ppd(
         NSmoothedPowerlawMSmoothedGaussian,
         nf_samples,
-        args.range,
+        ranges,
         "rate_scaled_" + args.filename,
         parameters,
         constants,
@@ -113,7 +115,7 @@ def main() -> None:
     ppd.compute_and_save_ppd(
         NSmoothedPowerlawMSmoothedGaussian,
         nf_samples,
-        args.range,
+        ranges,
         args.filename,
         parameters,
         constants,

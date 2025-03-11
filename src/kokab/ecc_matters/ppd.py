@@ -21,7 +21,7 @@ from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS
 from gwkokab.utils.tools import error_if
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils import ppd, ppd_parser
-from kokab.utils.common import read_json
+from kokab.utils.common import ppd_ranges, read_json
 
 
 def make_parser() -> ArgumentParser:
@@ -48,6 +48,7 @@ def main() -> None:
         SECONDARY_MASS_SOURCE.name,
         ECCENTRICITY.name,
     ]
+    ranges = ppd_ranges(parameters, args.range)
 
     nf_samples = pd.read_csv(
         "sampler_data/nf_samples.dat", delimiter=" ", comment="#", header=None
@@ -56,7 +57,7 @@ def main() -> None:
     ppd.compute_and_save_ppd(
         EccentricityMattersModel,
         nf_samples,
-        args.range,
+        ranges,
         "rate_scaled_" + args.filename,
         parameters,
         constants,
@@ -68,7 +69,7 @@ def main() -> None:
     ppd.compute_and_save_ppd(
         EccentricityMattersModel,
         nf_samples,
-        args.range,
+        ranges,
         args.filename,
         parameters,
         constants,
