@@ -26,7 +26,6 @@ from ...parameters import (
     SIN_DECLINATION,
 )
 from ...utils.tools import error_if
-from ...utils.transformations import eta_from_q, mass_ratio
 from ._emulator import Emulator
 
 
@@ -130,7 +129,7 @@ class pdet_O3(Emulator):
 
         self.parameters = parameters
 
-        self.extra_shape = (1000,)
+        self.extra_shape = (100,)
 
         if model_weights is None:
             model_weights = os.path.join(
@@ -182,31 +181,31 @@ class pdet_O3(Emulator):
         ra_trials: Array,
         sin_dec_trials: Array,
     ) -> Array:
-        q = mass_ratio(m1=m1_trials, m2=m2_trials)
-        eta = eta_from_q(q=q)
+        q = m2_trials / m1_trials
+        eta = q / (1.0 + q) ** 2
         Mtot_det = (m1_trials + m2_trials) * (1.0 + z_trials)
-        Mc_det = (eta**0.6) * Mtot_det
+        Mc_det = eta ** (3.0 / 5.0) * Mtot_det
 
         DL = jnp.interp(z_trials, self.interp_z, self.interp_DL)
-        log_Mc_DL_ratio = (5.0 / 6.0) * jnp.log(Mc_det) - jnp.log(DL)
-        amp_factor_plus = 2.0 * (
-            log_Mc_DL_ratio + jnp.log1p(cos_inclination_trials**2) + jnp.log(0.5)
+        Mc_DL_ratio = Mc_det ** (5.0 / 6.0) / DL
+        amp_factor_plus = jnp.log(
+            (Mc_DL_ratio * ((1.0 + cos_inclination_trials**2) / 2)) ** 2
         )
-        amp_factor_cross = 2.0 * (log_Mc_DL_ratio + jnp.log(cos_inclination_trials))
+        amp_factor_cross = jnp.log((Mc_DL_ratio * cos_inclination_trials) ** 2)
 
         # Effective spins
         chi_effective = (a1_trials * cost1_trials + q * a2_trials * cost2_trials) / (
             1.0 + q
         )
-        chi_diff = (a1_trials * cost1_trials - a2_trials * cost2_trials) * 0.5
+        chi_diff = (a1_trials * cost1_trials - a2_trials * cost2_trials) / 2.0
 
         # Generalized precessing spin
         Omg = q * (3.0 + 4.0 * q) / (4.0 + 3.0 * q)
-        chi_1p = a1_trials * jnp.sqrt(1.0 - jnp.square(cost1_trials))
-        chi_2p = a2_trials * jnp.sqrt(1.0 - jnp.square(cost2_trials))
+        chi_1p = a1_trials * jnp.sqrt(1.0 - cost1_trials**2)
+        chi_2p = a2_trials * jnp.sqrt(1.0 - cost2_trials**2)
         chi_p_gen = jnp.sqrt(
-            jnp.square(chi_1p)
-            + jnp.square(Omg * chi_2p)
+            chi_1p**2
+            + (Omg * chi_2p) ** 2
             + 2.0 * Omg * chi_1p * chi_2p * jnp.cos(phi12_trials)
         )
 
@@ -288,7 +287,7 @@ class pdet_O3(Emulator):
 
             @jax.jit
             def _predict(_features: Array) -> Array:
-                prediction = self.__call__(_features)
+                prediction = jnp.squeeze(self.__call__(_features), axis=-1)
                 prediction = jnp.nan_to_num(
                     prediction, nan=0.0, posinf=jnp.inf, neginf=-jnp.inf
                 )
@@ -319,7 +318,7 @@ class pdet_O3(Emulator):
 
             @jax.jit
             def _predict(_features: Array) -> Array:
-                prediction = self.__call__(_features)
+                prediction = jnp.squeeze(self.__call__(_features), axis=-1)
                 prediction = jnp.nan_to_num(
                     prediction, nan=0.0, posinf=jnp.inf, neginf=-jnp.inf
                 )
@@ -331,9 +330,7 @@ class pdet_O3(Emulator):
             )
             features = jnp.moveaxis(features, 1, 0)
 
-        return jnp.squeeze(
-            jax.lax.map(_predict, features, batch_size=self.batch_size), axis=-1
-        )
+        return jax.lax.map(_predict, features, batch_size=self.batch_size)
 
     def get_logVT(self) -> Callable[[Array], Array]:
         raise NotImplementedError("logVT is not implemented for pdet_O3")
