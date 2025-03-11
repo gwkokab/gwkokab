@@ -13,6 +13,8 @@
 # limitations under the License.
 
 
+from typing import Optional
+
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import TruncatedNormal
@@ -31,20 +33,27 @@ def EccentricityMattersModel(
     scale: Array,
     low: Array,
     high: Array,
+    *,
+    validate_args: Optional[bool] = None,
 ) -> ScaledMixture:
     return ScaledMixture(
         log_scales=jnp.array([log_rate]),
         component_distributions=[
             JointDistribution(
                 Wysocki2019MassModel(
-                    alpha_m=alpha_m, mmin=mmin, mmax=mmax, validate_args=True
+                    alpha_m=alpha_m, mmin=mmin, mmax=mmax, validate_args=validate_args
                 ),
                 TruncatedNormal(
-                    loc=loc, scale=scale, low=low, high=high, validate_args=True
+                    loc=loc,
+                    scale=scale,
+                    low=low,
+                    high=high,
+                    validate_args=validate_args,
                 ),
             )
         ],
         support=real_vector,
+        validate_args=validate_args,
     )
 
 
