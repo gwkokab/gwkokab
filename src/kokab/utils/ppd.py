@@ -61,6 +61,7 @@ def compute_probs(
     model: DistributionLike,
     constants: Dict[str, ArrayLike],
     nf_samples_mapping: Dict[str, int],
+    batch_size: int = 1000,
 ) -> Array:
     """Compute the probability density function of a model.
 
@@ -78,6 +79,8 @@ def compute_probs(
         A dictionary of constants for the model.
     nf_samples_mapping : Dict[str, int]
         A dictionary mapping the normalizing flow samples to the model parameters.
+    batch_size : int
+        The batch size for the computation, defaults to 1000.
 
     Returns
     -------
@@ -91,13 +94,12 @@ def compute_probs(
         validate_args=True,
     ).log_prob
 
-    @jax.vmap
     def _prob(x: Array) -> Array:
         x_expanded = jnp.expand_dims(x, axis=-2)
         prob = jnp.exp(logpdf(x_expanded))
         return prob
 
-    prob_vec = _prob(xx_mesh)
+    prob_vec = jax.lax.map(_prob, xx_mesh, batch_size=batch_size)
 
     return prob_vec
 
@@ -188,12 +190,12 @@ def save_probs(
     """
     error_if(
         ppd_array.ndim != len(domains),
-        AssertionError,
+        ValueError,
         "Number of ranges must match the number of dimensions of the PPD array.",
     )
     error_if(
         ppd_array.ndim != len(headers),
-        AssertionError,
+        ValueError,
         "Number of headers must match the number of dimensions of the PPD array.",
     )
 
@@ -214,7 +216,29 @@ def compute_and_save_ppd(
     parameters: List[str],
     constants: Dict[str, ArrayLike],
     nf_samples_mapping: Dict[str, int],
+    batch_size: int = 1000,
 ) -> None:
+    """Compute the PPD and save it to a file.
+
+    Parameters
+    ----------
+    model : DistributionLike
+        The model.
+    nf_samples : Array
+        The normalizing flow samples.
+    domains : List[Tuple[float, float, int]]
+        The domains of the parameters.
+    output_file : str
+        The file to save the PPD.
+    parameters : List[str]
+        The parameters of the model.
+    constants : Dict[str, ArrayLike]
+        The constants of the model.
+    nf_samples_mapping : Dict[str, int]
+        The mapping of the normalizing flow samples to the model parameters.
+    batch_size : int, optional
+        The batch size for the computation, defaults to 1000.
+    """
     xx = [jnp.linspace(a, b, int(n)) for a, b, n in domains]
     mesh = jnp.meshgrid(*xx, indexing="ij")
     del xx
@@ -230,6 +254,7 @@ def compute_and_save_ppd(
             model=model,
             constants=constants,
             nf_samples_mapping=nf_samples_mapping,
+            batch_size=batch_size,
         ),
         nf_samples,
     )

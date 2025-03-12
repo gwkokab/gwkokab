@@ -65,10 +65,10 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     ppd_group.add_argument(
-        "--n-threads",
-        help="Number of threads to use for the computation.",
+        "--batch-size",
+        help="Batch size for the computation of log prob per sample.",
         type=int,
-        default=1,
+        default=1000,
     )
 
     return parser
