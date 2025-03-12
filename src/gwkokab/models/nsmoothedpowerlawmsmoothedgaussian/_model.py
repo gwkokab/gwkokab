@@ -17,7 +17,12 @@ from typing import Dict, List, Literal, Optional
 
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
-from numpyro.distributions import constraints, Distribution, TransformedDistribution
+from numpyro.distributions import (
+    constraints,
+    Distribution,
+    TransformedDistribution,
+    TruncatedNormal,
+)
 
 from ...cosmology import PLANCK_2015_Cosmology
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
@@ -487,6 +492,22 @@ def SmoothedPowerlawPeakAndPowerlawRedshift(
     z_max: ArrayLike,
     lamb: ArrayLike,
     log_rate: ArrayLike,
+    chi1_loc_pl: ArrayLike,
+    chi1_scale_pl: ArrayLike,
+    chi1_low_pl: ArrayLike,
+    chi1_high_pl: ArrayLike,
+    chi2_loc_pl: ArrayLike,
+    chi2_scale_pl: ArrayLike,
+    chi2_low_pl: ArrayLike,
+    chi2_high_pl: ArrayLike,
+    chi1_loc_g: ArrayLike,
+    chi1_scale_g: ArrayLike,
+    chi1_low_g: ArrayLike,
+    chi1_high_g: ArrayLike,
+    chi2_loc_g: ArrayLike,
+    chi2_scale_g: ArrayLike,
+    chi2_low_g: ArrayLike,
+    chi2_high_g: ArrayLike,
     *,
     validate_args=None,
 ) -> ScaledMixture:
@@ -528,6 +549,38 @@ def SmoothedPowerlawPeakAndPowerlawRedshift(
         validate_args=validate_args,
     )
 
+    chi1_dist_pl = TruncatedNormal(
+        loc=chi1_loc_pl,
+        scale=chi1_scale_pl,
+        low=chi1_low_pl,
+        high=chi1_high_pl,
+        validate_args=validate_args,
+    )
+
+    chi2_dist_pl = TruncatedNormal(
+        loc=chi2_loc_pl,
+        scale=chi2_scale_pl,
+        low=chi2_low_pl,
+        high=chi2_high_pl,
+        validate_args=validate_args,
+    )
+
+    chi1_dist_g = TruncatedNormal(
+        loc=chi1_loc_g,
+        scale=chi1_scale_g,
+        low=chi1_low_g,
+        high=chi1_high_g,
+        validate_args=validate_args,
+    )
+
+    chi2_dist_g = TruncatedNormal(
+        loc=chi2_loc_g,
+        scale=chi2_scale_g,
+        low=chi2_low_g,
+        high=chi2_high_g,
+        validate_args=validate_args,
+    )
+
     zgrid = jnp.linspace(0.001, z_max, 100)
     dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
     powerlaw_z = PowerlawRedshift(
@@ -547,10 +600,18 @@ def SmoothedPowerlawPeakAndPowerlawRedshift(
         ),
         component_distributions=[
             JointDistribution(
-                smoothed_powerlaw, powerlaw_z, validate_args=validate_args
+                smoothed_powerlaw,
+                chi1_dist_pl,
+                chi2_dist_pl,
+                powerlaw_z,
+                validate_args=validate_args,
             ),
             JointDistribution(
-                smoothed_gaussian, powerlaw_z, validate_args=validate_args
+                smoothed_gaussian,
+                chi1_dist_g,
+                chi2_dist_g,
+                powerlaw_z,
+                validate_args=validate_args,
             ),
         ],
         support=constraints.real_vector,
