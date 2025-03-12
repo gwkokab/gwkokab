@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import gc
 import os
 from collections.abc import Callable
 from typing import Any, Optional
@@ -85,6 +86,10 @@ def _save_data_from_sampler(
     if logpdf is None:
         raise ValueError("logpdf must be provided")
 
+    os.makedirs(out_dir, exist_ok=True)
+
+    header = " ".join(labels)
+
     out_train = sampler.get_sampler_state(training=True)
 
     train_chains = np.array(out_train["chains"])
@@ -99,30 +104,6 @@ def _save_data_from_sampler(
     prod_global_accs = np.array(out_prod["global_accs"])
     prod_local_accs = np.array(out_prod["local_accs"])
     prod_log_prob = np.array(out_prod["log_prob"])
-
-    os.makedirs(out_dir, exist_ok=True)
-
-    header = " ".join(labels)
-    key_unweighted, key_weighted = jrd.split(
-        jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
-    )
-
-    samples = sampler.sample_flow(n_samples=n_samples + 50_000, rng_key=key_weighted)
-    weights = np.asarray(
-        jnn.softmax(
-            jax.lax.map(lambda s: logpdf(s, None), samples, batch_size=batch_size)
-            - sampler.nf_model.log_prob(samples)
-        )
-    )
-    samples = np.asarray(samples)
-    samples = samples[np.random.choice(n_samples + 50_000, size=n_samples, p=weights)]
-    np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", samples, header=header)
-
-    samples = np.asarray(
-        sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
-    )
-
-    np.savetxt(rf"{out_dir}/nf_samples_unweighted.dat", samples, header=header)
 
     n_chains = sampler.n_chains
 
@@ -176,6 +157,32 @@ def _save_data_from_sampler(
             header="train prod",
             comments="#",
         )
+
+    gc.collect()
+
+    key_unweighted, key_weighted = jrd.split(
+        jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
+    )
+
+    samples = np.asarray(
+        sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
+    )
+    np.savetxt(rf"{out_dir}/nf_samples_unweighted.dat", samples, header=header)
+
+    gc.collect()
+
+    samples = sampler.sample_flow(n_samples=n_samples + 50_000, rng_key=key_weighted)
+    weights = np.asarray(
+        jnn.softmax(
+            jax.lax.map(lambda s: logpdf(s, None), samples, batch_size=batch_size)
+            - sampler.nf_model.log_prob(samples)
+        )
+    )
+    samples = np.asarray(samples)
+    samples = samples[np.random.choice(n_samples + 50_000, size=n_samples, p=weights)]
+    np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", samples, header=header)
+
+    gc.collect()
 
 
 class flowMChandler(object):
