@@ -180,10 +180,8 @@ def compute_and_save_ppd(
             **{k: params[v] for k, v in nf_samples_mapping.items()},
             validate_args=True,
         )
-        prob_value = np.exp(
-            np.asarray(
-                [_model.log_prob(np.asarray(list(k))) for k in product(*xx_mesh)]
-            )
+        prob_value = np.asarray(
+            [np.exp(_model.log_prob(np.asarray(k))) for k in product(*xx_mesh)]
         )
         del params
         del _model
