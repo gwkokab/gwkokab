@@ -25,7 +25,13 @@ from jax import random as jrd
 from gwkokab.inference import Bake, PoissonLikelihood
 from gwkokab.logger import enable_logging
 from gwkokab.models import SmoothedPowerlawPeakAndPowerlawRedshift
-from gwkokab.parameters import PRIMARY_MASS_SOURCE, REDSHIFT, SECONDARY_MASS_SOURCE
+from gwkokab.parameters import (
+    PRIMARY_MASS_SOURCE,
+    PRIMARY_SPIN_MAGNITUDE,
+    REDSHIFT,
+    SECONDARY_MASS_SOURCE,
+    SECONDARY_SPIN_MAGNITUDE,
+)
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
@@ -71,6 +77,22 @@ def main() -> None:
     model_parameters = [
         "alpha",
         "beta",
+        "chi1_high_g",
+        "chi1_high_pl",
+        "chi1_loc_g",
+        "chi1_loc_pl",
+        "chi1_low_g",
+        "chi1_low_pl",
+        "chi1_scale_g",
+        "chi1_scale_pl",
+        "chi2_high_g",
+        "chi2_high_pl",
+        "chi2_loc_g",
+        "chi2_loc_pl",
+        "chi2_low_g",
+        "chi2_low_pl",
+        "chi2_scale_g",
+        "chi2_scale_pl",
         "delta",
         "lamb",
         "lambda_peak",
@@ -82,7 +104,13 @@ def main() -> None:
         "z_max",
     ]
 
-    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE, REDSHIFT]
+    parameters = [
+        PRIMARY_MASS_SOURCE,
+        SECONDARY_MASS_SOURCE,
+        PRIMARY_SPIN_MAGNITUDE,
+        SECONDARY_SPIN_MAGNITUDE,
+        REDSHIFT,
+    ]
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
         msg="The parameters in the posterior data do not match the parameters in the model.",
