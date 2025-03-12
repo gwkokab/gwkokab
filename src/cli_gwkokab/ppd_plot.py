@@ -46,57 +46,115 @@ def make_parser() -> argparse.ArgumentParser:
         help="prefix for the output file",
         type=str,
     )
-    parser.add_argument(
+
+    pretty_group = parser.add_argument_group("Pretty Options")
+    pretty_group.add_argument(
         "--x-scale",
         help="scale of the x-axis",
         default="linear",
+        choices=["linear", "log"],
         type=str,
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--y-scale",
         help="scale of the y-axis",
         default="linear",
+        choices=["linear", "log"],
         type=str,
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--x-range",
         nargs=2,
         action="append",
         type=float,
         help="range of the x axis plot in the form of start end for each parameter",
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--y-range",
         nargs=2,
         action="append",
         type=float,
         help="range of the y axis plot in the form of start end for each parameter",
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--x-labels",
         nargs="+",
         action="append",
         type=str,
         help="labels for the x axis in order of the parameters",
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--y-labels",
         nargs="+",
         action="append",
         type=str,
         help="labels for the y axis in order of the parameters",
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--size",
         help="size of the ppd plot in inches",
         nargs=2,
         default=(10, 10),
         type=float,
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--use-latex",
         help="use LaTeX for rendering text",
         action="store_true",
+    )
+    pretty_group.add_argument(
+        "--median-color",
+        help="color of the median line",
+        type=str,
+        default=r"#7B8794",
+    )
+    pretty_group.add_argument(
+        "--ppd-color",
+        help="color of the ppd line",
+        type=str,
+        default=r"#FF6F61",
+    )
+    pretty_group.add_argument(
+        "--ninety-ci-color",
+        help="color of the 90 percentile CI",
+        type=str,
+        default=r"#76C7C0",
+    )
+    pretty_group.add_argument(
+        "--fifty-ci-color",
+        help="color of the 50 percentile CI",
+        type=str,
+        default=r"#8FD694",
+    )
+    pretty_group.add_argument(
+        "--median-alpha",
+        help="alpha of the median line",
+        type=float,
+        default=0.8,
+    )
+    pretty_group.add_argument(
+        "--ppd-alpha",
+        help="alpha of the ppd line",
+        type=float,
+        default=1.0,
+    )
+    pretty_group.add_argument(
+        "--ninety-ci-alpha",
+        help="alpha of the 90 percentile CI",
+        type=float,
+        default=0.5,
+    )
+    pretty_group.add_argument(
+        "--fifty-ci-alpha",
+        help="alpha of the 50 percentile CI",
+        type=float,
+        default=0.7,
+    )
+    pretty_group.add_argument(
+        "--median-linestyle",
+        help="linestyle of the median line",
+        type=str,
+        default="--",
     )
 
     return parser
@@ -170,14 +228,31 @@ def main() -> None:
 
         fig, ax = plt.subplots(figsize=args.size)
         ax.plot(
-            xx, quant[2], label="median", color="#7B8794", alpha=0.8, linestyle="--"
+            xx,
+            quant[2],
+            label="median",
+            color=args.median_color,
+            alpha=args.median_alpha,
+            linestyle=args.median_linestyle,
         )
-        ax.plot(xx, marginal_ppd, label="PPD", color="#FF6F61")
-        ax.fill_between(
-            xx, quant[0], quant[-1], alpha=0.5, label="90% CI", color="#76C7C0"
+        ax.plot(
+            xx, marginal_ppd, label="PPD", color=args.ppd_color, alpha=args.ppd_alpha
         )
         ax.fill_between(
-            xx, quant[1], quant[-2], alpha=0.7, label="50% CI", color="#8FD694"
+            xx,
+            quant[0],
+            quant[-1],
+            alpha=args.ninety_ci_alpha,
+            label="90% CI",
+            color=args.ninety_ci_color,
+        )
+        ax.fill_between(
+            xx,
+            quant[1],
+            quant[-2],
+            alpha=args.fifty_ci_alpha,
+            label="50% CI",
+            color=args.fifty_ci_color,
         )
         ax.set_yscale(args.y_scale)
         ax.set_xscale(args.x_scale)
