@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+from itertools import product
 from multiprocessing import pool
 from typing import Dict, List, Tuple, Union
 
@@ -170,13 +171,8 @@ def compute_and_save_ppd(
     nf_samples_mapping: Dict[str, int],
     n_threads: int = 1,
 ) -> None:
-    xx = [np.linspace(a, b, int(n)) for a, b, n in domains]
-    mesh = np.meshgrid(*xx, indexing="ij")
-    del xx
-    xx_mesh = np.stack(mesh, axis=-1)
-    del mesh
-    shape = xx_mesh.shape
-    xx_mesh = xx_mesh.reshape(-1, shape[-1])
+    xx_mesh = [np.linspace(a, b, int(n)) for a, b, n in domains]
+    shape = tuple(d[2] for d in domains)
 
     def _compute_probs(params: np.ndarray) -> np.ndarray:
         _model = model(
@@ -184,7 +180,9 @@ def compute_and_save_ppd(
             **{k: params[v] for k, v in nf_samples_mapping.items()},
             validate_args=True,
         )
-        prob_value = np.exp(_model.log_prob(xx_mesh))
+        prob_value = np.asarray(
+            [np.exp(_model.log_prob(np.asarray(k))) for k in product(*xx_mesh)]
+        )
         del params
         del _model
         return prob_value
