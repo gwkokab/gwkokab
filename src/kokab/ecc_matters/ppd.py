@@ -62,6 +62,7 @@ def main() -> None:
         parameters,
         constants,
         nf_samples_mapping,
+        args.batch_size,
     )
 
     nf_samples, constants = ppd.wipe_log_rate(nf_samples, nf_samples_mapping, constants)
@@ -74,4 +75,5 @@ def main() -> None:
         parameters,
         constants,
         nf_samples_mapping,
+        args.batch_size,
     )
