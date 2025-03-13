@@ -83,6 +83,12 @@ def make_parser() -> argparse.ArgumentParser:
         help="range of the y axis plot in the form of start end for each parameter",
     )
     pretty_group.add_argument(
+        "--font-size",
+        default=16,
+        type=int,
+        help="font size for the x,y axis labels and titles",
+    )
+    pretty_group.add_argument(
         "--x-labels",
         nargs="+",
         type=str,
@@ -98,7 +104,7 @@ def make_parser() -> argparse.ArgumentParser:
         "--size",
         help="size of the ppd plot in inches",
         nargs=2,
-        default=(10, 10),
+        default=(12, 12),
         type=float,
     )
     pretty_group.add_argument(
@@ -122,19 +128,19 @@ def make_parser() -> argparse.ArgumentParser:
         "--ppd-color",
         help="color of the ppd line",
         type=str,
-        default=r"#FF6F61",
+        default=r"#b41f78",
     )
     pretty_group.add_argument(
         "--ninety-ci-color",
         help="color of the 90 percentile CI",
         type=str,
-        default=r"#76C7C0",
+        default=r"#C5C9C7",
     )
     pretty_group.add_argument(
         "--fifty-ci-color",
         help="color of the 50 percentile CI",
         type=str,
-        default=r"#8FD694",
+        default=r"#BBF90F",
     )
     pretty_group.add_argument(
         "--median-alpha",
@@ -234,7 +240,7 @@ def main() -> None:
 
     x_range = args.x_range
     y_range = args.y_range
-
+    font_size = args.font_size
     x_labels = args.x_labels
     y_labels = args.y_labels
     titles = args.titles
@@ -266,7 +272,7 @@ def main() -> None:
         ax.plot(
             xx,
             quant[2],
-            label="median",
+            label="Median",
             color=args.median_color,
             alpha=args.median_alpha,
             linestyle=args.median_linestyle,
@@ -293,21 +299,21 @@ def main() -> None:
         ax.set_yscale(args.y_scale)
         ax.set_xscale(args.x_scale)
         if titles is None:
-            ax.set_title(f"PPD plot of {prefix}{head}")
+            ax.set_title(f"PPD plot of {prefix}{head}", fontsize=font_size)
         else:
             if i < len(titles):
-                ax.set_title(titles[i])
+                ax.set_title(titles[i], fontsize=font_size)
         if x_labels is None:
-            ax.set_xlabel(head)
+            ax.set_xlabel(head, fontsize=font_size)
         else:
             if i < len(x_labels):
-                ax.set_xlabel(x_labels[i])
+                ax.set_xlabel(x_labels[i], fontsize=font_size)
 
         if y_labels is None:
-            ax.set_ylabel(f"ppd({head})")
+            ax.set_ylabel(f"ppd({head})", fontsize=font_size)
         else:
             if i < len(y_labels):
-                ax.set_ylabel(y_labels[i])
+                ax.set_ylabel(y_labels[i], fontsize=font_size)
 
         if x_range is not None and i < len(x_range):
             ax.set_xlim(x_range[i][0], x_range[i][1])
