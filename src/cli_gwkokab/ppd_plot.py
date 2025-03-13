@@ -51,7 +51,6 @@ def make_parser() -> argparse.ArgumentParser:
     pretty_group.add_argument(
         "--titles",
         nargs="+",
-        action="append",
         type=str,
         help="titles for the plots in order of the parameters",
     )
@@ -86,14 +85,12 @@ def make_parser() -> argparse.ArgumentParser:
     pretty_group.add_argument(
         "--x-labels",
         nargs="+",
-        action="append",
         type=str,
         help="labels for the x axis in order of the parameters",
     )
     pretty_group.add_argument(
         "--y-labels",
         nargs="+",
-        action="append",
         type=str,
         help="labels for the y axis in order of the parameters",
     )
