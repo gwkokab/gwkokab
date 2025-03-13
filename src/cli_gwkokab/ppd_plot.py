@@ -162,6 +162,30 @@ def make_parser() -> argparse.ArgumentParser:
         type=str,
         default="--",
     )
+    pretty_group.add_argument(
+        "--grid",
+        help="show grid",
+        action="store_true",
+    )
+    pretty_group.add_argument(
+        "--grid-which",
+        help="which grid to show",
+        type=str,
+        default="both",
+        choices=["both", "major", "minor"],
+    )
+    pretty_group.add_argument(
+        "--grid-alpha",
+        help="alpha of the grid",
+        type=float,
+        default=0.7,
+    )
+    pretty_group.add_argument(
+        "--grid-linestyle",
+        help="linestyle of the grid",
+        type=str,
+        default="--",
+    )
 
     return parser
 
@@ -284,6 +308,12 @@ def main() -> None:
 
         plt.legend()
         plt.tight_layout()
+        plt.grid(
+            args.grid,
+            which=args.grid_which,
+            linestyle=args.grid_linestyle,
+            alpha=args.grid_alpha,
+        )
         fig.savefig(f"{args.dir}/{prefix}{head}_ppd_plot.pdf", bbox_inches="tight")
         plt.close("all")
         i += 1
