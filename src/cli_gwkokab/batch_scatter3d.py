@@ -141,6 +141,12 @@ def make_parser() -> argparse.ArgumentParser:
         help="use LaTeX for rendering text",
         action="store_true",
     )
+    parser.add_argument(
+        "--font-family",
+        help="font family to use",
+        type=str,
+        default=None,
+    )
 
     return parser
 
@@ -153,6 +159,8 @@ def main() -> None:
     file_list = glob.glob(args.data_regex)
 
     plt.rcParams.update({"text.usetex": args.use_latex})
+    if args.font_family is not None:
+        plt.rcParams.update({"font.family": args.font_family})
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
