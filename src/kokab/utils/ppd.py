@@ -52,6 +52,9 @@ def wipe_log_rate(
             index = nf_samples_mapping.pop(key)
             constants[key] = 0.0
             nf_samples = np.delete(nf_samples, index, axis=-1)
+            for key, value in nf_samples_mapping.items():
+                if value > index:
+                    nf_samples_mapping[key] -= 1
     return nf_samples, constants
 
 
