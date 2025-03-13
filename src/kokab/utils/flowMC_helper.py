@@ -80,6 +80,10 @@ def _save_data_from_sampler(
         list of labels for the samples, by default None
     n_samples : int, optional
         number of samples to draw from the flow, by default 5000
+    logpdf : Callable, optional
+        The log probability function.
+    batch_size : int, optional
+        The batch size for the log probability function, by default 1000
     """
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]
@@ -291,7 +295,7 @@ class flowMChandler(object):
                 filename = f"{file_prefix}_{filename}"
             jax.profiler.save_device_memory_profile(filename)
         elif check_leaks:
-            with jax.checking_leaks(True):
+            with jax.checking_leaks():
                 sampler.sample(self.initial_position, self.data)
         else:
             sampler.sample(self.initial_position, self.data)
