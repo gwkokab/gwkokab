@@ -279,7 +279,7 @@ def main() -> None:
             quant[0],
             quant[-1],
             alpha=args.ninety_ci_alpha,
-            label="90% CI",
+            label="90\% CI" if args.use_latex else "90% CI",
             color=args.ninety_ci_color,
         )
         ax.fill_between(
@@ -287,7 +287,7 @@ def main() -> None:
             quant[1],
             quant[-2],
             alpha=args.fifty_ci_alpha,
-            label="50% CI",
+            label="50\% CI" if args.use_latex else "50% CI",
             color=args.fifty_ci_color,
         )
         ax.set_yscale(args.y_scale)
