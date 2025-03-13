@@ -316,12 +316,13 @@ def main() -> None:
 
         plt.legend()
         plt.tight_layout()
-        plt.grid(
-            args.grid,
-            which=args.grid_which,
-            linestyle=args.grid_linestyle,
-            alpha=args.grid_alpha,
-        )
+        if args.grid:
+            plt.grid(
+                args.grid,
+                which=args.grid_which,
+                linestyle=args.grid_linestyle,
+                alpha=args.grid_alpha,
+            )
         fig.savefig(f"{args.dir}/{prefix}{head}_ppd_plot.pdf", bbox_inches="tight")
         plt.close("all")
         i += 1
