@@ -103,6 +103,12 @@ def make_parser() -> argparse.ArgumentParser:
         action="store_true",
     )
     pretty_group.add_argument(
+        "--font-family",
+        help="font family to use",
+        type=str,
+        default=None,
+    )
+    pretty_group.add_argument(
         "--median-color",
         help="color of the median line",
         type=str,
@@ -193,6 +199,8 @@ def main() -> None:
     args = parser.parse_args()
 
     plt.rcParams.update({"text.usetex": args.use_latex})
+    if args.font_family is not None:
+        plt.rcParams.update({"font.family": args.font_family})
 
     prefix = "" if args.prefix is None else args.prefix
 
