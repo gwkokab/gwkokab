@@ -49,6 +49,13 @@ def make_parser() -> argparse.ArgumentParser:
 
     pretty_group = parser.add_argument_group("Pretty Options")
     pretty_group.add_argument(
+        "--titles",
+        nargs="+",
+        action="append",
+        type=str,
+        help="titles for the plots in order of the parameters",
+    )
+    pretty_group.add_argument(
         "--x-scale",
         help="scale of the x-axis",
         default="linear",
@@ -233,7 +240,7 @@ def main() -> None:
 
     x_labels = args.x_labels
     y_labels = args.y_labels
-
+    titles = args.titles
     with h5py.File(args.data, "r") as f:
         domains = get_domain(f["domains"])
         headers = get_utf8_decoded_headers(f["headers"])
@@ -288,7 +295,11 @@ def main() -> None:
         )
         ax.set_yscale(args.y_scale)
         ax.set_xscale(args.x_scale)
-        ax.set_title(f"PPD plot of {prefix}{head}")
+        if titles is None:
+            ax.set_title(f"PPD plot of {prefix}{head}")
+        else:
+            if i < len(titles):
+                ax.set_title(titles[i])
         if x_labels is None:
             ax.set_xlabel(head)
         else:
