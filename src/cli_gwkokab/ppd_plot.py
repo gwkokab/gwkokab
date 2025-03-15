@@ -46,57 +46,155 @@ def make_parser() -> argparse.ArgumentParser:
         help="prefix for the output file",
         type=str,
     )
-    parser.add_argument(
+
+    pretty_group = parser.add_argument_group("Pretty Options")
+    pretty_group.add_argument(
+        "--titles",
+        nargs="+",
+        type=str,
+        help="titles for the plots in order of the parameters",
+    )
+    pretty_group.add_argument(
         "--x-scale",
         help="scale of the x-axis",
         default="linear",
+        choices=["linear", "log"],
         type=str,
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--y-scale",
         help="scale of the y-axis",
         default="linear",
+        choices=["linear", "log"],
         type=str,
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--x-range",
         nargs=2,
         action="append",
         type=float,
         help="range of the x axis plot in the form of start end for each parameter",
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--y-range",
         nargs=2,
         action="append",
         type=float,
         help="range of the y axis plot in the form of start end for each parameter",
     )
-    parser.add_argument(
+    pretty_group.add_argument(
+        "--font-size",
+        default=16,
+        type=int,
+        help="font size for the x,y axis labels and titles",
+    )
+    pretty_group.add_argument(
         "--x-labels",
         nargs="+",
-        action="append",
         type=str,
         help="labels for the x axis in order of the parameters",
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--y-labels",
         nargs="+",
-        action="append",
         type=str,
         help="labels for the y axis in order of the parameters",
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--size",
         help="size of the ppd plot in inches",
         nargs=2,
-        default=(10, 10),
+        default=(12, 12),
         type=float,
     )
-    parser.add_argument(
+    pretty_group.add_argument(
         "--use-latex",
         help="use LaTeX for rendering text",
         action="store_true",
+    )
+    pretty_group.add_argument(
+        "--font-family",
+        help="font family to use",
+        type=str,
+        default=None,
+    )
+    pretty_group.add_argument(
+        "--median-color",
+        help="color of the median line",
+        type=str,
+        default=r"#7B8794",
+    )
+    pretty_group.add_argument(
+        "--ppd-color",
+        help="color of the ppd line",
+        type=str,
+        default=r"#b41f78",
+    )
+    pretty_group.add_argument(
+        "--ninety-ci-color",
+        help="color of the 90 percentile CI",
+        type=str,
+        default=r"#C5C9C7",
+    )
+    pretty_group.add_argument(
+        "--fifty-ci-color",
+        help="color of the 50 percentile CI",
+        type=str,
+        default=r"#BBF90F",
+    )
+    pretty_group.add_argument(
+        "--median-alpha",
+        help="alpha of the median line",
+        type=float,
+        default=0.8,
+    )
+    pretty_group.add_argument(
+        "--ppd-alpha",
+        help="alpha of the ppd line",
+        type=float,
+        default=1.0,
+    )
+    pretty_group.add_argument(
+        "--ninety-ci-alpha",
+        help="alpha of the 90 percentile CI",
+        type=float,
+        default=0.5,
+    )
+    pretty_group.add_argument(
+        "--fifty-ci-alpha",
+        help="alpha of the 50 percentile CI",
+        type=float,
+        default=0.7,
+    )
+    pretty_group.add_argument(
+        "--median-linestyle",
+        help="linestyle of the median line",
+        type=str,
+        default="--",
+    )
+    pretty_group.add_argument(
+        "--grid",
+        help="show grid",
+        action="store_true",
+    )
+    pretty_group.add_argument(
+        "--grid-which",
+        help="which grid to show",
+        type=str,
+        default="both",
+        choices=["both", "major", "minor"],
+    )
+    pretty_group.add_argument(
+        "--grid-alpha",
+        help="alpha of the grid",
+        type=float,
+        default=0.7,
+    )
+    pretty_group.add_argument(
+        "--grid-linestyle",
+        help="linestyle of the grid",
+        type=str,
+        default="--",
     )
 
     return parser
@@ -135,15 +233,17 @@ def main() -> None:
     args = parser.parse_args()
 
     plt.rcParams.update({"text.usetex": args.use_latex})
+    if args.font_family is not None:
+        plt.rcParams.update({"font.family": args.font_family})
 
     prefix = "" if args.prefix is None else args.prefix
 
     x_range = args.x_range
     y_range = args.y_range
-
+    font_size = args.font_size
     x_labels = args.x_labels
     y_labels = args.y_labels
-
+    titles = args.titles
     with h5py.File(args.data, "r") as f:
         domains = get_domain(f["domains"])
         headers = get_utf8_decoded_headers(f["headers"])
@@ -170,38 +270,65 @@ def main() -> None:
 
         fig, ax = plt.subplots(figsize=args.size)
         ax.plot(
-            xx, quant[2], label="median", color="#7B8794", alpha=0.8, linestyle="--"
+            xx,
+            quant[2],
+            label="Median",
+            color=args.median_color,
+            alpha=args.median_alpha,
+            linestyle=args.median_linestyle,
         )
-        ax.plot(xx, marginal_ppd, label="PPD", color="#FF6F61")
-        ax.fill_between(
-            xx, quant[0], quant[-1], alpha=0.5, label="90% CI", color="#76C7C0"
+        ax.plot(
+            xx, marginal_ppd, label="PPD", color=args.ppd_color, alpha=args.ppd_alpha
         )
         ax.fill_between(
-            xx, quant[1], quant[-2], alpha=0.7, label="50% CI", color="#8FD694"
+            xx,
+            quant[0],
+            quant[-1],
+            alpha=args.ninety_ci_alpha,
+            label="90\% CI" if args.use_latex else "90% CI",
+            color=args.ninety_ci_color,
+        )
+        ax.fill_between(
+            xx,
+            quant[1],
+            quant[-2],
+            alpha=args.fifty_ci_alpha,
+            label="50\% CI" if args.use_latex else "50% CI",
+            color=args.fifty_ci_color,
         )
         ax.set_yscale(args.y_scale)
         ax.set_xscale(args.x_scale)
-        ax.set_title(f"PPD plot of {prefix}{head}")
-        if args.x_labels is None:
-            ax.set_xlabel(head)
-        if args.y_labels is None:
-            ax.set_ylabel(f"ppd({head})")
-
-        if x_range is not None:
-            if i < len(x_range):
-                ax.set_xlim(x_range[i][0], x_range[i][1])
-        if y_range is not None:
-            if i < len(y_range):
-                ax.set_ylim(y_range[i][0], y_range[i][1])
-        if x_labels is not None:
+        if titles is None:
+            ax.set_title(f"PPD plot of {prefix}{head}", fontsize=font_size)
+        else:
+            if i < len(titles):
+                ax.set_title(titles[i], fontsize=font_size)
+        if x_labels is None:
+            ax.set_xlabel(head, fontsize=font_size)
+        else:
             if i < len(x_labels):
-                ax.set_xlabel(x_labels[i])
-        if y_labels is not None:
+                ax.set_xlabel(x_labels[i], fontsize=font_size)
+
+        if y_labels is None:
+            ax.set_ylabel(f"ppd({head})", fontsize=font_size)
+        else:
             if i < len(y_labels):
-                ax.set_ylabel(y_labels[i])
+                ax.set_ylabel(y_labels[i], fontsize=font_size)
+
+        if x_range is not None and i < len(x_range):
+            ax.set_xlim(x_range[i][0], x_range[i][1])
+        if y_range is not None and i < len(y_range):
+            ax.set_ylim(y_range[i][0], y_range[i][1])
 
         plt.legend()
         plt.tight_layout()
+        if args.grid:
+            plt.grid(
+                args.grid,
+                which=args.grid_which,
+                linestyle=args.grid_linestyle,
+                alpha=args.grid_alpha,
+            )
         fig.savefig(f"{args.dir}/{prefix}{head}_ppd_plot.pdf", bbox_inches="tight")
         plt.close("all")
         i += 1

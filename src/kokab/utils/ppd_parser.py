@@ -32,6 +32,12 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     ppd_group = parser.add_argument_group("PPD Options")
 
     ppd_group.add_argument(
+        "--sample-filename",
+        help="Path of the file to save the samples.",
+        type=str,
+        required=True,
+    )
+    ppd_group.add_argument(
         "--filename",
         help="Path of the file to save the PPD.",
         type=str,
@@ -51,18 +57,18 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     ppd_group.add_argument(
         "--range",
-        help="Range of the PPD for each parameter. The format is 'min max step'. "
+        help="Range of the PPD for each parameter. The format is 'name min max step'. "
         "Repeat for each parameter.",
-        nargs=3,
+        nargs=4,
         action="append",
-        type=float,
+        type=str,
         required=True,
     )
     ppd_group.add_argument(
-        "--n-threads",
-        help="Number of threads to use for the computation.",
+        "--batch-size",
+        help="Batch size for the computation of log prob per sample.",
         type=int,
-        default=1,
+        default=1000,
     )
 
     return parser

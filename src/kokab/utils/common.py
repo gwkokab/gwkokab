@@ -16,7 +16,7 @@
 import json
 import warnings
 from collections.abc import Sequence
-from typing import Dict, List, Union
+from typing import Dict, List, Tuple, Union
 
 import jax
 import numpy as np
@@ -29,7 +29,7 @@ from kokab.utils.priors import available as available_priors
 from kokab.utils.regex import match_all
 
 
-def read_json(json_file: str) -> dict:
+def read_json(json_file: str) -> Dict:
     """Read json file and return.
 
     Parameters
@@ -201,13 +201,14 @@ def vt_json_read_and_process(
     VolumeTimeSensitivityInterface
         VT object
     """
-    with open(settings_path, "r") as f:
-        vt_settings: Dict = json.load(f)
-
+    vt_settings = read_json(settings_path)
     vt_type = vt_settings.pop("type")
-    vt_path = vt_settings.pop("filename")
     vt = available_vts[vt_type]
-    return vt(parameters=parameters, filename=vt_path, **vt_settings)
+    if vt_type == "pdet_O3":
+        return vt(parameters=parameters, **vt_settings)
+    else:
+        vt_path = vt_settings.pop("filename")
+        return vt(parameters=parameters, filename=vt_path, **vt_settings)
 
 
 def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:
@@ -235,3 +236,25 @@ def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:
     """
     dist_name = meta_dict.pop("dist")
     return getattr(dist, dist_name)(**meta_dict)
+
+
+def ppd_ranges(
+    parameters: List[str], ranges: List[Tuple[str, float, float, int]]
+) -> List[Tuple[float, float, int]]:
+    """Convert the PPD ranges to the format required by the PPD function.
+
+    :param parameters: list of parameters
+    :param ranges: list of ranges
+    :return: list of ranges
+    """
+    _ranges: List[Tuple[float, float, int]] = [None] * len(parameters)
+    for name, *_range in ranges:
+        if name in parameters:
+            _ranges[parameters.index(name)] = (
+                float(_range[0]),
+                float(_range[1]),
+                int(_range[2]),
+            )
+        else:
+            raise ValueError(f"Parameter {name} not found in {parameters}.")
+    return _ranges

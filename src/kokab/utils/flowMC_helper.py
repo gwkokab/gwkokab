@@ -13,6 +13,7 @@
 # limitations under the License.
 
 
+import gc
 import os
 from collections.abc import Callable
 from typing import Any, Optional
@@ -28,7 +29,7 @@ from flowMC.proposal.Gaussian_random_walk import GaussianRandomWalk  # noqa F401
 from flowMC.proposal.HMC import HMC  # noqa F401
 from flowMC.proposal.MALA import MALA  # noqa F401
 from flowMC.Sampler import Sampler  # noqa F401
-from jax import random as jrd
+from jax import nn as jnn, random as jrd
 from jaxtyping import Array
 
 
@@ -62,6 +63,8 @@ def _save_data_from_sampler(
     out_dir: str,
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
+    logpdf: Optional[Callable] = None,
+    batch_size: int = 1000,
 ) -> None:
     """This functions saves the data from a sampler to disk. The data saved includes the
     samples from the flow, the chains from the training and production phases, the log
@@ -77,9 +80,19 @@ def _save_data_from_sampler(
         list of labels for the samples, by default None
     n_samples : int, optional
         number of samples to draw from the flow, by default 5000
+    logpdf : Callable, optional
+        The log probability function.
+    batch_size : int, optional
+        The batch size for the log probability function, by default 1000
     """
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]
+    if logpdf is None:
+        raise ValueError("logpdf must be provided")
+
+    os.makedirs(out_dir, exist_ok=True)
+
+    header = " ".join(labels)
 
     out_train = sampler.get_sampler_state(training=True)
 
@@ -95,19 +108,6 @@ def _save_data_from_sampler(
     prod_global_accs = np.array(out_prod["global_accs"])
     prod_local_accs = np.array(out_prod["local_accs"])
     prod_log_prob = np.array(out_prod["log_prob"])
-
-    os.makedirs(out_dir, exist_ok=True)
-
-    samples = np.array(
-        sampler.sample_flow(
-            n_samples=n_samples,
-            rng_key=jrd.PRNGKey(np.random.randint(1, 2**32 - 1)),
-        )
-    )
-
-    header = " ".join(labels)
-
-    np.savetxt(rf"{out_dir}/nf_samples.dat", samples, header=header)
 
     n_chains = sampler.n_chains
 
@@ -161,6 +161,32 @@ def _save_data_from_sampler(
             header="train prod",
             comments="#",
         )
+
+    gc.collect()
+
+    key_unweighted, key_weighted = jrd.split(
+        jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
+    )
+
+    samples = np.asarray(
+        sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
+    )
+    np.savetxt(rf"{out_dir}/nf_samples_unweighted.dat", samples, header=header)
+
+    gc.collect()
+
+    samples = sampler.sample_flow(n_samples=n_samples + 50_000, rng_key=key_weighted)
+    weights = np.asarray(
+        jnn.softmax(
+            jax.lax.map(lambda s: logpdf(s, None), samples, batch_size=batch_size)
+            - sampler.nf_model.log_prob(samples)
+        )
+    )
+    samples = np.asarray(samples)
+    samples = samples[np.random.choice(n_samples + 50_000, size=n_samples, p=weights)]
+    np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", samples, header=header)
+
+    gc.collect()
 
 
 class flowMChandler(object):
@@ -240,6 +266,7 @@ class flowMChandler(object):
         self,
         debug_nans: bool = False,
         profile_memory: bool = False,
+        check_leaks: bool = False,
         file_prefix: Optional[str] = None,
     ) -> None:
         """Run the flowMC sampler and save the data.
@@ -267,6 +294,9 @@ class flowMChandler(object):
             if file_prefix:
                 filename = f"{file_prefix}_{filename}"
             jax.profiler.save_device_memory_profile(filename)
+        elif check_leaks:
+            with jax.checking_leaks():
+                sampler.sample(self.initial_position, self.data)
         else:
             sampler.sample(self.initial_position, self.data)
-        _save_data_from_sampler(sampler, **self.data_dump_kwargs)
+        _save_data_from_sampler(sampler, logpdf=self.logpdf, **self.data_dump_kwargs)

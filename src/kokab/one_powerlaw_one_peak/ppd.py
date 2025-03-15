@@ -22,7 +22,7 @@ from gwkokab.models import SmoothedPowerlawPeakAndPowerlawRedshift
 from gwkokab.parameters import PRIMARY_MASS_SOURCE, REDSHIFT, SECONDARY_MASS_SOURCE
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
-from kokab.utils.common import read_json
+from kokab.utils.common import ppd_ranges, read_json
 
 
 def make_parser() -> ArgumentParser:
@@ -69,19 +69,21 @@ def main() -> None:
 
     parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name, REDSHIFT.name]
 
+    ranges = ppd_ranges(parameters, args.range)
+
     nf_samples = pd.read_csv(
-        "sampler_data/nf_samples.dat", delimiter=" ", comment="#", header=None
+        args.sample_filename, delimiter=" ", comment="#", header=None
     ).to_numpy()
 
     ppd.compute_and_save_ppd(
         model,
         nf_samples,
-        args.range,
+        ranges,
         "rate_scaled_" + args.filename,
         parameters,
         constants,
         nf_samples_mapping,
-        args.n_threads,
+        args.batch_size,
     )
 
     nf_samples, constants = ppd.wipe_log_rate(nf_samples, nf_samples_mapping, constants)
@@ -89,10 +91,10 @@ def main() -> None:
     ppd.compute_and_save_ppd(
         model,
         nf_samples,
-        args.range,
+        ranges,
         args.filename,
         parameters,
         constants,
         nf_samples_mapping,
-        args.n_threads,
+        args.batch_size,
     )

@@ -138,5 +138,6 @@ def main() -> None:
     handler.run(
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
+        check_leaks=args.check_leaks,
         file_prefix="ecc_matters",
     )
