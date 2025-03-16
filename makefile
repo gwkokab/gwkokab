@@ -3,7 +3,6 @@ UV=uv
 PIP_FLAGS=--upgrade
 TARGET?=gwkokab
 PLATFORM?=
-JAX_URL=https://storage.googleapis.com/jax-releases/jax_releases.html
 
 ifeq ($(PLATFORM),)
 	_PLATFORM=.
@@ -27,7 +26,7 @@ help:
 	@echo "  docs		          - Generate documentation"
 
 install: uninstall
-	$(UV) $(PIP) install $(PIP_FLAGS) $(_PLATFORM) -f $(JAX_URL)
+	$(UV) $(PIP) install $(PIP_FLAGS) $(_PLATFORM)
 
 
 uninstall:
