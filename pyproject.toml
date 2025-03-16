@@ -71,12 +71,7 @@ keywords = [
 ]
 
 [project.optional-dependencies]
-dev = [
-    "pre-commit>=4.0.0",
-    "pytest>=8.3.0",
-    "ruff>=0.8.0",
-    "setuptools>=75.6.0",
-]
+dev = ["pre-commit>=4.0.0", "ruff>=0.8.0", "setuptools>=75.6.0"]
 docs = [
     "astroid<4",
     "furo",
@@ -88,7 +83,7 @@ docs = [
     "sphinx>=2.0",
     "sphinx_design",
 ]
-test = []
+test = ["coveralls>=4.0.1", "pytest>=8.3.0"]
 cuda12 = ["jax[cuda12]>=0.4.30"]
 # tpu = ["jax[tpu]>=0.4.30"]
 
@@ -156,3 +151,13 @@ recursive = true
 wrap-summaries = 88
 wrap-descriptions = 88
 syntax = "numpy"
+
+[tool.coverage.report]
+exclude_also = [
+    'def __repr__',
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "@(abc\\. )?abstractmethod",
+    "def tree_flatten",
+    "def tree_unflatten",
+]
