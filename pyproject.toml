@@ -160,4 +160,6 @@ exclude_also = [
     "@(abc\\. )?abstractmethod",
     "def tree_flatten",
     "def tree_unflatten",
+    "if DEBUG",
 ]
+omit = ["cli_gwkokab/*"]
