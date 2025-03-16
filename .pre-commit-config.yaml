@@ -64,6 +64,12 @@ repos:
       - id: docformatter
         additional_dependencies: [tomli]
         args: [--close-quotes-on-newline, --in-place, --config, ./pyproject.toml]
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.31.3
+    hooks:
+      - id: check-dependabot
+      - id: check-github-workflows
+      - id: check-readthedocs
   - repo: local
     hooks:
       - id: no-bracket-links
