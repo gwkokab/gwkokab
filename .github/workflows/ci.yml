@@ -44,14 +44,18 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install the project
         run: uv sync --all-extras --dev
-      - name: Run tests
+      - name: Run tests and coverage
         env:
           XLA_FLAGS: "--xla_force_host_platform_device_count=8"
           JAX_TRACEBACK_FILTERING: "off"
           JAX_ARRAY: 1
           PY_COLORS: 1
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: |
-          uv run pytest tests
+          uv run coverage run --source=src -m pytest tests
+          uv run coveralls --service=github-actions
+      - name: Run build
+        run: uv build
 
   documentation:
     name: Documentation
