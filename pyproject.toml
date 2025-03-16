@@ -92,6 +92,10 @@ test = []
 cuda12 = ["jax[cuda12]>=0.4.30"]
 # tpu = ["jax[tpu]>=0.4.30"]
 
+[[tool.uv.index]]
+name = "jax"
+url = "https://storage.googleapis.com/jax-releases/jax_releases.html"
+
 [project.urls]
 Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
 Discussion = "https://github.com/gwkokab/gwkokab/discussions"
