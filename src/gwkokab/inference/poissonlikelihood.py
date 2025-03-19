@@ -14,6 +14,7 @@
 
 
 import warnings
+from jax import lax
 from collections.abc import Callable, Mapping, Sequence
 from typing import Tuple
 
@@ -140,7 +141,8 @@ class PoissonLikelihood(eqx.Module):
                 The likelihood for the nth event.
             """
             event_data, log_ref_prior_y = y
-            _log_prob = model.log_prob(event_data) - log_ref_prior_y
+            
+            _log_prob = lax.map(model.log_prob, event_data, batch_size=10000) - log_ref_prior_y
 
             return jnn.logsumexp(
                 _log_prob,
