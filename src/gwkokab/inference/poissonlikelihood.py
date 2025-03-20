@@ -14,12 +14,11 @@
 
 
 import warnings
-from jax import lax
 from collections.abc import Callable, Mapping, Sequence
 from typing import Tuple
 
 import equinox as eqx
-from jax import Array, nn as jnn, numpy as jnp, tree as jtr
+from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
 from numpyro.distributions import Distribution
 
 from ..logger import logger
@@ -141,8 +140,10 @@ class PoissonLikelihood(eqx.Module):
                 The likelihood for the nth event.
             """
             event_data, log_ref_prior_y = y
-            
-            _log_prob = lax.map(model.log_prob, event_data, batch_size=10000) - log_ref_prior_y
+
+            _log_prob = (
+                lax.map(model.log_prob, event_data, batch_size=10000) - log_ref_prior_y
+            )
 
             return jnn.logsumexp(
                 _log_prob,
