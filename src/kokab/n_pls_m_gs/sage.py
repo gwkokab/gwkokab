@@ -18,14 +18,19 @@ from gwkokab.logger import enable_logging
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
+    COS_INCLINATION,
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
+    PHI_12,
+    POLARIZATION_ANGLE,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
+    RIGHT_ASCENSION,
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
+    SIN_DECLINATION,
 )
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
@@ -77,6 +82,31 @@ def make_parser() -> ArgumentParser:
         help="Do not include eccentricity in the model.",
     )
     model_group.add_argument(
+        "--no-cos-inclination",
+        action="store_true",
+        help="Do not include cos_inclination parameter in the model",
+    )
+    model_group.add_argument(
+        "--no-phi-12",
+        action="store_true",
+        help="Do not include phi_12 parameter in the model",
+    )
+    model_group.add_argument(
+        "--no-polarization-angle",
+        action="store_true",
+        help="Do not include polarization_angle parameter in the model",
+    )
+    model_group.add_argument(
+        "--no-right-ascension",
+        action="store_true",
+        help="Do not include right_ascension parameter in the model",
+    )
+    model_group.add_argument(
+        "--no-sin-declination",
+        action="store_true",
+        help="Do not include sin_declination parameter in the model",
+    )
+    model_group.add_argument(
         "--spin-truncated-normal",
         action="store_true",
         help="Use truncated normal distributions for spin parameters.",
@@ -112,6 +142,11 @@ def main() -> None:
     has_tilt = not args.no_tilt
     has_eccentricity = not args.no_eccentricity
     has_redshift = not args.no_redshift
+    has_cos_inclination = not args.no_cos_inclination
+    has_phi_12 = not args.no_phi_12
+    has_polarization_angle = not args.no_polarization_angle
+    has_right_ascension = not args.no_right_ascension
+    has_sin_declination = not args.no_sin_declination
 
     prior_dict = read_json(args.prior_json)
 
@@ -210,6 +245,86 @@ def main() -> None:
             ]
         )
 
+    if has_cos_inclination:
+        parameters.append(COS_INCLINATION)
+
+        all_params.extend(
+            [
+                (COS_INCLINATION.name + "_high_g", N_g),
+                (COS_INCLINATION.name + "_high_pl", N_pl),
+                (COS_INCLINATION.name + "_loc_g", N_g),
+                (COS_INCLINATION.name + "_loc_pl", N_pl),
+                (COS_INCLINATION.name + "_low_g", N_g),
+                (COS_INCLINATION.name + "_low_pl", N_pl),
+                (COS_INCLINATION.name + "_scale_g", N_g),
+                (COS_INCLINATION.name + "_scale_pl", N_pl),
+            ]
+        )
+
+    if has_phi_12:
+        parameters.append(PHI_12)
+
+        all_params.extend(
+            [
+                (PHI_12.name + "_high_g", N_g),
+                (PHI_12.name + "_high_pl", N_pl),
+                (PHI_12.name + "_loc_g", N_g),
+                (PHI_12.name + "_loc_pl", N_pl),
+                (PHI_12.name + "_low_g", N_g),
+                (PHI_12.name + "_low_pl", N_pl),
+                (PHI_12.name + "_scale_g", N_g),
+                (PHI_12.name + "_scale_pl", N_pl),
+            ]
+        )
+
+    if has_polarization_angle:
+        parameters.append(POLARIZATION_ANGLE)
+
+        all_params.extend(
+            [
+                (POLARIZATION_ANGLE.name + "_high_g", N_g),
+                (POLARIZATION_ANGLE.name + "_high_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_loc_g", N_g),
+                (POLARIZATION_ANGLE.name + "_loc_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_low_g", N_g),
+                (POLARIZATION_ANGLE.name + "_low_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_scale_g", N_g),
+                (POLARIZATION_ANGLE.name + "_scale_pl", N_pl),
+            ]
+        )
+
+    if has_right_ascension:
+        parameters.append(RIGHT_ASCENSION)
+
+        all_params.extend(
+            [
+                (RIGHT_ASCENSION.name + "_high_g", N_g),
+                (RIGHT_ASCENSION.name + "_high_pl", N_pl),
+                (RIGHT_ASCENSION.name + "_loc_g", N_g),
+                (RIGHT_ASCENSION.name + "_loc_pl", N_pl),
+                (RIGHT_ASCENSION.name + "_low_g", N_g),
+                (RIGHT_ASCENSION.name + "_low_pl", N_pl),
+                (RIGHT_ASCENSION.name + "_scale_g", N_g),
+                (RIGHT_ASCENSION.name + "_scale_pl", N_pl),
+            ]
+        )
+
+    if has_sin_declination:
+        parameters.append(SIN_DECLINATION)
+
+        all_params.extend(
+            [
+                (SIN_DECLINATION.name + "_high_g", N_g),
+                (SIN_DECLINATION.name + "_high_pl", N_pl),
+                (SIN_DECLINATION.name + "_loc_g", N_g),
+                (SIN_DECLINATION.name + "_loc_pl", N_pl),
+                (SIN_DECLINATION.name + "_low_g", N_g),
+                (SIN_DECLINATION.name + "_low_pl", N_pl),
+                (SIN_DECLINATION.name + "_scale_g", N_g),
+                (SIN_DECLINATION.name + "_scale_pl", N_pl),
+            ]
+        )
+
     all_params.append(("log_rate", N_pl + N_g))
 
     error_if(
@@ -230,6 +345,11 @@ def main() -> None:
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
         use_redshift=has_redshift,
+        use_cos_inclination=has_cos_inclination,
+        use_phi_12=has_phi_12,
+        use_polarization_angle=has_polarization_angle,
+        use_right_ascension=has_right_ascension,
+        use_sin_declination=has_sin_declination,
         **model_prior_param,
     )
 
