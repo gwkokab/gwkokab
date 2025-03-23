@@ -97,7 +97,18 @@ def create_beta_distributions(
 def create_truncated_normal_distributions(
     N: int,
     parameter_name: Literal[
-        "m1", "m2", "chi1", "chi2", "cos_tilt1", "cos_tilt2", "ecc"
+        "m1",
+        "m2",
+        "chi1",
+        "chi2",
+        "cos_tilt1",
+        "cos_tilt2",
+        "ecc",
+        "cos_inclination",
+        "phi_12",
+        "polarization_angle",
+        "right_ascension",
+        "sin_declination",
     ],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
