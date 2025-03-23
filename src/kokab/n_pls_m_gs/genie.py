@@ -16,14 +16,19 @@ from gwkokab.errors import banana_error_m1_m2
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
+    COS_INCLINATION,
     COS_TILT_1,
     COS_TILT_2,
     ECCENTRICITY,
+    PHI_12,
+    POLARIZATION_ANGLE,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
+    RIGHT_ASCENSION,
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
+    SIN_DECLINATION,
 )
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.population import error_magazine, PopulationFactory
@@ -41,6 +46,11 @@ cos_tilt_1_name = COS_TILT_1.name
 cos_tilt_2_name = COS_TILT_2.name
 ecc_name = ECCENTRICITY.name
 redshift_name = REDSHIFT.name
+cos_inclination_name = COS_INCLINATION.name
+phi_12_name = PHI_12.name
+polarization_angle_name = POLARIZATION_ANGLE.name
+right_ascension_name = RIGHT_ASCENSION.name
+sin_declination_name = SIN_DECLINATION.name
 
 
 def make_parser() -> ArgumentParser:
@@ -74,6 +84,31 @@ def make_parser() -> ArgumentParser:
         "--no-redshift",
         action="store_true",
         help="Do not include redshift parameters in the model.",
+    )
+    model_group.add_argument(
+        "--no-cos-inclination",
+        action="store_true",
+        help="Do not include cos_inclination parameter in the model",
+    )
+    model_group.add_argument(
+        "--no-phi-12",
+        action="store_true",
+        help="Do not include phi_12 parameter in the model",
+    )
+    model_group.add_argument(
+        "--no-polarization-angle",
+        action="store_true",
+        help="Do not include polarization_angle parameter in the model",
+    )
+    model_group.add_argument(
+        "--no-right-ascension",
+        action="store_true",
+        help="Do not include right_ascension parameter in the model",
+    )
+    model_group.add_argument(
+        "--no-sin-declination",
+        action="store_true",
+        help="Do not include sin_declination parameter in the model",
     )
     model_group.add_argument(
         "--spin-truncated-normal",
@@ -110,6 +145,11 @@ def main() -> None:
     has_tilt = not args.no_tilt
     has_eccentricity = not args.no_eccentricity
     has_redshift = not args.no_redshift
+    has_cos_inclination = not args.no_cos_inclination
+    has_phi_12 = not args.no_phi_12
+    has_polarization_angle = not args.no_polarization_angle
+    has_right_ascension = not args.no_right_ascension
+    has_sin_declination = not args.no_sin_declination
 
     err_param = match_all(
         [
@@ -133,6 +173,21 @@ def main() -> None:
             "redshift_scale",
             "scale_eta",
             "scale_Mc",
+            cos_inclination_name + "_high",
+            cos_inclination_name + "_low",
+            cos_inclination_name + "_scale",
+            phi_12_name + "_high",
+            phi_12_name + "_low",
+            phi_12_name + "_scale",
+            polarization_angle_name + "_high",
+            polarization_angle_name + "_low",
+            polarization_angle_name + "_scale",
+            right_ascension_name + "_high",
+            right_ascension_name + "_low",
+            right_ascension_name + "_scale",
+            sin_declination_name + "_high",
+            sin_declination_name + "_low",
+            sin_declination_name + "_scale",
         ],
         err_json,
     )
@@ -325,6 +380,151 @@ def main() -> None:
             err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
+    if has_cos_inclination:
+        parameters_name += (cos_inclination_name,)
+
+        all_params.extend(
+            [
+                (cos_inclination_name + "_high_g", N_g),
+                (cos_inclination_name + "_high_pl", N_pl),
+                (cos_inclination_name + "_loc_g", N_g),
+                (cos_inclination_name + "_loc_pl", N_pl),
+                (cos_inclination_name + "_low_g", N_g),
+                (cos_inclination_name + "_low_pl", N_pl),
+                (cos_inclination_name + "_scale_g", N_g),
+                (cos_inclination_name + "_scale_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(cos_inclination_name)
+        def cos_inclination_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[cos_inclination_name + "_scale"],
+                low=err_param.get(cos_inclination_name + "_low"),
+                high=err_param.get(cos_inclination_name + "_high"),
+            ).sample(key=key, sample_shape=(size,))
+            mask = err_x < -1.0
+            mask |= err_x > 1.0
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
+            return err_x
+
+    if has_phi_12:
+        parameters_name += (phi_12_name,)
+
+        all_params.extend(
+            [
+                (phi_12_name + "_high_g", N_g),
+                (phi_12_name + "_high_pl", N_pl),
+                (phi_12_name + "_loc_g", N_g),
+                (phi_12_name + "_loc_pl", N_pl),
+                (phi_12_name + "_low_g", N_g),
+                (phi_12_name + "_low_pl", N_pl),
+                (phi_12_name + "_scale_g", N_g),
+                (phi_12_name + "_scale_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(phi_12_name)
+        def phi_12_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[phi_12_name + "_scale"],
+                low=err_param.get(phi_12_name + "_low"),
+                high=err_param.get(phi_12_name + "_high"),
+            ).sample(key=key, sample_shape=(size,))
+            mask = err_x < 0.0
+            mask |= err_x > 2, 0 * jnp.pi
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
+            return err_x
+
+    if has_polarization_angle:
+        parameters_name += (polarization_angle_name,)
+
+        all_params.extend(
+            [
+                (polarization_angle_name + "_high_g", N_g),
+                (polarization_angle_name + "_high_pl", N_pl),
+                (polarization_angle_name + "_loc_g", N_g),
+                (polarization_angle_name + "_loc_pl", N_pl),
+                (polarization_angle_name + "_low_g", N_g),
+                (polarization_angle_name + "_low_pl", N_pl),
+                (polarization_angle_name + "_scale_g", N_g),
+                (polarization_angle_name + "_scale_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(polarization_angle_name)
+        def polarization_angle_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[polarization_angle_name + "_scale"],
+                low=err_param.get(polarization_angle_name + "_low"),
+                high=err_param.get(polarization_angle_name + "_high"),
+            ).sample(key=key, sample_shape=(size,))
+            mask = err_x < 0.0
+            mask |= err_x > jnp.pi
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
+            return err_x
+
+    if has_right_ascension:
+        parameters_name += (right_ascension_name,)
+
+        all_params.extend(
+            [
+                (right_ascension_name + "_high_g", N_g),
+                (right_ascension_name + "_high_pl", N_pl),
+                (right_ascension_name + "_loc_g", N_g),
+                (right_ascension_name + "_loc_pl", N_pl),
+                (right_ascension_name + "_low_g", N_g),
+                (right_ascension_name + "_low_pl", N_pl),
+                (right_ascension_name + "_scale_g", N_g),
+                (right_ascension_name + "_scale_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(right_ascension_name)
+        def right_ascension_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[right_ascension_name + "_scale"],
+                low=err_param.get(right_ascension_name + "_low"),
+                high=err_param.get(right_ascension_name + "_high"),
+            ).sample(key=key, sample_shape=(size,))
+            mask = err_x < 0.0
+            mask |= err_x > 2.0 * jnp.pi
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
+            return err_x
+
+    if has_sin_declination:
+        parameters_name += (sin_declination_name,)
+
+        all_params.extend(
+            [
+                (sin_declination_name + "_high_g", N_g),
+                (sin_declination_name + "_high_pl", N_pl),
+                (sin_declination_name + "_loc_g", N_g),
+                (sin_declination_name + "_loc_pl", N_pl),
+                (sin_declination_name + "_low_g", N_g),
+                (sin_declination_name + "_low_pl", N_pl),
+                (sin_declination_name + "_scale_g", N_g),
+                (sin_declination_name + "_scale_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(sin_declination_name)
+        def sin_declination_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[sin_declination_name + "_scale"],
+                low=err_param.get(sin_declination_name + "_low"),
+                high=err_param.get(sin_declination_name + "_high"),
+            ).sample(key=key, sample_shape=(size,))
+            mask = err_x < -1.0
+            mask |= err_x > 1.0
+            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
+            return err_x
+
     extended_params = []
     for params in all_params:
         extended_params.extend(expand_arguments(*params))
@@ -338,6 +538,11 @@ def main() -> None:
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
         use_redshift=has_redshift,
+        use_cos_inclination=has_cos_inclination,
+        use_phi_12=has_phi_12,
+        use_polarization_angle=has_polarization_angle,
+        use_right_ascension=has_right_ascension,
+        use_sin_declination=has_sin_declination,
         **model_param,
     )
     _constraint = partial(
@@ -346,6 +551,11 @@ def main() -> None:
         has_tilt=has_tilt,
         has_eccentricity=has_eccentricity,
         has_redshift=has_redshift,
+        has_cos_inclination=has_cos_inclination,
+        has_phi_12=has_phi_12,
+        has_polarization_angle=has_polarization_angle,
+        has_right_ascension=has_right_ascension,
+        has_sin_declination=has_sin_declination,
     )
 
     nvt = vt_json_read_and_process(parameters_name, args.vt_json)
