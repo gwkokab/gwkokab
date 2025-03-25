@@ -62,24 +62,24 @@ def make_parser() -> ArgumentParser:
         help="Number of Gaussian components in the mass model.",
     )
     model_group.add_argument(
-        "--no-spin",
+        "--add-spin",
         action="store_true",
-        help="Do not include spin parameters in the model.",
+        help="Include spin parameters in the model.",
     )
     model_group.add_argument(
-        "--no-tilt",
+        "--add-tilt",
         action="store_true",
-        help="Do not include tilt parameters in the model.",
+        help="Include tilt parameters in the model.",
     )
     model_group.add_argument(
-        "--no-redshift",
+        "--add-redshift",
         action="store_true",
-        help="Do not include redshift parameters in the model.",
+        help="Include redshift parameters in the model.",
     )
     model_group.add_argument(
-        "--no-eccentricity",
+        "--add-eccentricity",
         action="store_true",
-        help="Do not include eccentricity in the model.",
+        help="Include eccentricity in the model.",
     )
     model_group.add_argument(
         "--no-cos-inclination",
@@ -138,10 +138,10 @@ def main() -> None:
     N_pl = args.n_pl
     N_g = args.n_g
 
-    has_spin = not args.no_spin
-    has_tilt = not args.no_tilt
-    has_eccentricity = not args.no_eccentricity
-    has_redshift = not args.no_redshift
+    has_spin = args.add_spin
+    has_tilt = args.add_tilt
+    has_eccentricity = args.add_eccentricity
+    has_redshift = args.add_redshift
     has_cos_inclination = not args.no_cos_inclination
     has_phi_12 = not args.no_phi_12
     has_polarization_angle = not args.no_polarization_angle
