@@ -86,29 +86,29 @@ def make_parser() -> ArgumentParser:
         help="Include redshift parameters in the model.",
     )
     model_group.add_argument(
-        "--no-cos-inclination",
+        "--add-cos-inclination",
         action="store_true",
-        help="Do not include cos_inclination parameter in the model",
+        help="Include cos_inclination parameter in the model",
     )
     model_group.add_argument(
-        "--no-phi-12",
+        "--add-phi-12",
         action="store_true",
-        help="Do not include phi_12 parameter in the model",
+        help="Include phi_12 parameter in the model",
     )
     model_group.add_argument(
-        "--no-polarization-angle",
+        "--add-polarization-angle",
         action="store_true",
-        help="Do not include polarization_angle parameter in the model",
+        help="Include polarization_angle parameter in the model",
     )
     model_group.add_argument(
-        "--no-right-ascension",
+        "--add-right-ascension",
         action="store_true",
-        help="Do not include right_ascension parameter in the model",
+        help="Include right_ascension parameter in the model",
     )
     model_group.add_argument(
-        "--no-sin-declination",
+        "--add-sin-declination",
         action="store_true",
-        help="Do not include sin_declination parameter in the model",
+        help="Include sin_declination parameter in the model",
     )
     model_group.add_argument(
         "--spin-truncated-normal",
@@ -145,11 +145,11 @@ def main() -> None:
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_redshift = args.add_redshift
-    has_cos_inclination = not args.no_cos_inclination
-    has_phi_12 = not args.no_phi_12
-    has_polarization_angle = not args.no_polarization_angle
-    has_right_ascension = not args.no_right_ascension
-    has_sin_declination = not args.no_sin_declination
+    has_cos_inclination = args.no_cos_inclination
+    has_phi_12 = args.no_phi_12
+    has_polarization_angle = args.no_polarization_angle
+    has_right_ascension = args.no_right_ascension
+    has_sin_declination = args.no_sin_declination
 
     err_param = match_all(
         [
