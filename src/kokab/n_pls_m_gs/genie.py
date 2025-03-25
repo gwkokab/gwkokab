@@ -434,7 +434,7 @@ def main() -> None:
                 high=err_param.get(phi_12_name + "_high"),
             ).sample(key=key, sample_shape=(size,))
             mask = err_x < 0.0
-            mask |= err_x > 2, 0 * jnp.pi
+            mask |= err_x > 2.0 * jnp.pi
             err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
