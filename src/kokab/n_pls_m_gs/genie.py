@@ -184,6 +184,8 @@ def main() -> None:
             cos_inclination_name + "_high",
             cos_inclination_name + "_low",
             cos_inclination_name + "_scale",
+            detection_time_name + "_high",
+            detection_time_name + "_low",
             phi_12_name + "_high",
             phi_12_name + "_low",
             phi_12_name + "_scale",
@@ -548,8 +550,8 @@ def main() -> None:
         @error_magazine.register(detection_time_name)
         def sin_declination_error(x, size, key):
             err_x = dist.Uniform(
-                low=x + err_param.get(detection_time_name + "_low"),
-                high=x + err_param.get(detection_time_name + "_high"),
+                low=x + err_param[detection_time_name + "_low"],
+                high=x + err_param[detection_time_name + "_high"],
             ).sample(key=key, sample_shape=(size,))
             return err_x
 
