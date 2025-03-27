@@ -19,6 +19,7 @@ from gwkokab.parameters import (
     COS_INCLINATION,
     COS_TILT_1,
     COS_TILT_2,
+    DETECTION_TIME,
     ECCENTRICITY,
     PHI_12,
     POLARIZATION_ANGLE,
@@ -51,6 +52,7 @@ phi_12_name = PHI_12.name
 polarization_angle_name = POLARIZATION_ANGLE.name
 right_ascension_name = RIGHT_ASCENSION.name
 sin_declination_name = SIN_DECLINATION.name
+detection_time_name = DETECTION_TIME.name
 
 
 def make_parser() -> ArgumentParser:
@@ -111,6 +113,11 @@ def make_parser() -> ArgumentParser:
         help="Include sin_declination parameter in the model",
     )
     model_group.add_argument(
+        "--add-detection-time",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
         "--spin-truncated-normal",
         action="store_true",
         help="Use truncated normal distributions for spin parameters.",
@@ -145,11 +152,12 @@ def main() -> None:
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_redshift = args.add_redshift
-    has_cos_inclination = args.no_cos_inclination
-    has_phi_12 = args.no_phi_12
-    has_polarization_angle = args.no_polarization_angle
-    has_right_ascension = args.no_right_ascension
-    has_sin_declination = args.no_sin_declination
+    has_cos_inclination = args.add_cos_inclination
+    has_phi_12 = args.add_phi_12
+    has_polarization_angle = args.add_polarization_angle
+    has_right_ascension = args.add_right_ascension
+    has_sin_declination = args.add_sin_declination
+    has_detection_time = args.add_detection_time
 
     err_param = match_all(
         [
@@ -525,6 +533,26 @@ def main() -> None:
             err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
+    if has_detection_time:
+        parameters_name += (detection_time_name,)
+
+        all_params.extend(
+            [
+                (detection_time_name + "_high_g", N_g),
+                (detection_time_name + "_high_pl", N_pl),
+                (detection_time_name + "_low_g", N_g),
+                (detection_time_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(detection_time_name)
+        def sin_declination_error(x, size, key):
+            err_x = dist.Uniform(
+                low=x + err_param.get(detection_time_name + "_low"),
+                high=x + err_param.get(detection_time_name + "_high"),
+            ).sample(key=key, sample_shape=(size,))
+            return err_x
+
     extended_params = []
     for params in all_params:
         extended_params.extend(expand_arguments(*params))
@@ -543,6 +571,7 @@ def main() -> None:
         use_polarization_angle=has_polarization_angle,
         use_right_ascension=has_right_ascension,
         use_sin_declination=has_sin_declination,
+        use_detection_time=has_detection_time,
         **model_param,
     )
     _constraint = partial(

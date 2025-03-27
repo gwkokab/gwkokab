@@ -21,6 +21,7 @@ from gwkokab.parameters import (
     COS_INCLINATION,
     COS_TILT_1,
     COS_TILT_2,
+    DETECTION_TIME,
     ECCENTRICITY,
     PHI_12,
     POLARIZATION_ANGLE,
@@ -107,6 +108,11 @@ def make_parser() -> ArgumentParser:
         help="Include sin_declination parameter in the model",
     )
     model_group.add_argument(
+        "--add-detection-time",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
         "--spin-truncated-normal",
         action="store_true",
         help="Use truncated normal distributions for spin parameters.",
@@ -142,11 +148,12 @@ def main() -> None:
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_redshift = args.add_redshift
-    has_cos_inclination = args.no_cos_inclination
-    has_phi_12 = args.no_phi_12
-    has_polarization_angle = args.no_polarization_angle
-    has_right_ascension = args.no_right_ascension
-    has_sin_declination = args.no_sin_declination
+    has_cos_inclination = args.add_cos_inclination
+    has_phi_12 = args.add_phi_12
+    has_polarization_angle = args.add_polarization_angle
+    has_right_ascension = args.add_right_ascension
+    has_sin_declination = args.add_sin_declination
+    has_detection_time = args.add_detection_time
 
     prior_dict = read_json(args.prior_json)
 
@@ -325,6 +332,18 @@ def main() -> None:
             ]
         )
 
+    if has_detection_time:
+        parameters.append(DETECTION_TIME)
+
+        all_params.extend(
+            [
+                (DETECTION_TIME.name + "_high_g", N_g),
+                (DETECTION_TIME.name + "_high_pl", N_pl),
+                (DETECTION_TIME.name + "_low_g", N_g),
+                (DETECTION_TIME.name + "_low_pl", N_pl),
+            ]
+        )
+
     all_params.append(("log_rate", N_pl + N_g))
 
     error_if(
@@ -350,6 +369,7 @@ def main() -> None:
         use_polarization_angle=has_polarization_angle,
         use_right_ascension=has_right_ascension,
         use_sin_declination=has_sin_declination,
+        use_detection_time=has_detection_time,
         **model_prior_param,
     )
 
@@ -378,6 +398,12 @@ def main() -> None:
     constants["use_tilt"] = int(has_tilt)
     constants["use_eccentricity"] = int(has_eccentricity)
     constants["use_redshift"] = int(has_redshift)
+    constants["use_cos_inclination"] = int(has_cos_inclination)
+    constants["use_phi_12"] = int(has_phi_12)
+    constants["use_polarization_angle"] = int(has_polarization_angle)
+    constants["use_right_ascension"] = int(has_right_ascension)
+    constants["use_sin_declination"] = int(has_sin_declination)
+    constants["use_detection_time"] = int(has_detection_time)
 
     with open("constants.json", "w") as f:
         json.dump(constants, f)
