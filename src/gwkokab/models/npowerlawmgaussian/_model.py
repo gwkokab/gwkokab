@@ -15,6 +15,7 @@ from ..utils import (
     create_powerlaws,
     create_truncated_normal_distributions,
     create_truncated_normal_distributions_for_cos_tilt,
+    create_uniform_distributions,
     JointDistribution,
     ScaledMixture,
 )
@@ -44,6 +45,7 @@ def _build_non_mass_distributions(
     use_polarization_angle: bool,
     use_right_ascension: bool,
     use_sin_declination: bool,
+    use_detection_time: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
@@ -191,6 +193,18 @@ def _build_non_mass_distributions(
             build_distributions, sin_declination_dists
         )
 
+    if use_detection_time:
+        merger_time_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="detection_time",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(
+            build_distributions, merger_time_dists
+        )
+
     return build_distributions
 
 
@@ -205,6 +219,7 @@ def _build_pl_component_distributions(
     use_polarization_angle: bool,
     use_right_ascension: bool,
     use_sin_declination: bool,
+    use_detection_time: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
@@ -253,6 +268,7 @@ def _build_pl_component_distributions(
         use_polarization_angle=use_polarization_angle,
         use_right_ascension=use_right_ascension,
         use_sin_declination=use_sin_declination,
+        use_detection_time=use_detection_time,
         params=params,
         validate_args=validate_args,
     )
@@ -274,6 +290,7 @@ def _build_g_component_distributions(
     use_polarization_angle: bool,
     use_right_ascension: bool,
     use_sin_declination: bool,
+    use_detection_time: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
@@ -336,6 +353,7 @@ def _build_g_component_distributions(
         use_polarization_angle=use_polarization_angle,
         use_right_ascension=use_right_ascension,
         use_sin_declination=use_sin_declination,
+        use_detection_time=use_detection_time,
         params=params,
         validate_args=validate_args,
     )
@@ -358,6 +376,7 @@ def NPowerlawMGaussian(
     use_polarization_angle: bool = False,
     use_right_ascension: bool = False,
     use_sin_declination: bool = False,
+    use_detection_time: bool = False,
     *,
     validate_args=None,
     **params,
@@ -473,6 +492,7 @@ def NPowerlawMGaussian(
             use_polarization_angle=use_polarization_angle,
             use_right_ascension=use_right_ascension,
             use_sin_declination=use_sin_declination,
+            use_detection_time=use_detection_time,
             params=params,
             validate_args=validate_args,
         )
@@ -489,6 +509,7 @@ def NPowerlawMGaussian(
             use_polarization_angle=use_polarization_angle,
             use_right_ascension=use_right_ascension,
             use_sin_declination=use_sin_declination,
+            use_detection_time=use_detection_time,
             params=params,
             validate_args=validate_args,
         )

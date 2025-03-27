@@ -101,6 +101,9 @@ RIGHT_ASCENSION = Parameter(
     name="right_ascension", prior=Uniform(0.0, 2.0 * jnp.pi, validate_args=True)
 )
 SIN_DECLINATION = Parameter(name="sin_declination", prior=two_sided_uniform)
+DETECTION_TIME = Parameter(
+    name="detection_time", prior=Uniform(0.0, 1_000.0, validate_args=True)
+)
 
 
 # Copyright (c) 2024 Colm Talbot
@@ -113,6 +116,7 @@ class _Available:
         COS_INCLINATION.name: COS_INCLINATION,
         COS_TILT_1.name: COS_TILT_1,
         COS_TILT_2.name: COS_TILT_2,
+        DETECTION_TIME.name: DETECTION_TIME,
         ECCENTRICITY.name: ECCENTRICITY,
         EFFECTIVE_SPIN_MAGNITUDE.name: EFFECTIVE_SPIN_MAGNITUDE,
         MASS_RATIO.name: MASS_RATIO,
@@ -142,6 +146,7 @@ class _Available:
         "COS_INCLINATION",
         "COS_TILT_1",
         "COS_TILT_2",
+        "DETECTION_TIME",
         "ECCENTRICITY",
         "EFFECTIVE_SPIN_MAGNITUDE",
         "MASS_RATIO",
