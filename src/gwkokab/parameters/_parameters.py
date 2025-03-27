@@ -54,6 +54,7 @@ uniform_for_masses = Uniform(0.5, 300.0, validate_args=True)
 # Masses
 
 CHIRP_MASS = Parameter(name="chirp_mass", prior=uniform_for_masses)
+CHIRP_MASS_SOURCE = Parameter(name="chirp_mass_source", prior=uniform_for_masses)
 MASS_RATIO = Parameter(name="mass_ratio", prior=standard_uniform)
 PRIMARY_MASS_DETECTED = Parameter(name="mass_1", prior=uniform_for_masses)
 PRIMARY_MASS_SOURCE = Parameter(name="mass_1_source", prior=uniform_for_masses)
@@ -83,7 +84,7 @@ COS_TILT_2 = Parameter(name="cos_tilt_2", prior=two_sided_uniform)
 
 # Eccentricity
 
-ECCENTRICITY = Parameter(name="ecc", prior=standard_uniform)
+ECCENTRICITY = Parameter(name="eccentricity", prior=standard_uniform)
 
 # Redshift
 
@@ -92,15 +93,15 @@ REDSHIFT = Parameter(
 )
 
 
-COS_INCLINATION = Parameter(name="cos_inclination", prior=two_sided_uniform)
+COS_INCLINATION = Parameter(name="cos_iota", prior=two_sided_uniform)
 PHI_12 = Parameter(name="phi_12", prior=standard_uniform)
 POLARIZATION_ANGLE = Parameter(
-    name="polarization_angle", prior=Uniform(0.0, jnp.pi, validate_args=True)
+    name="psi", prior=Uniform(0.0, jnp.pi, validate_args=True)
 )
 RIGHT_ASCENSION = Parameter(
-    name="right_ascension", prior=Uniform(0.0, 2.0 * jnp.pi, validate_args=True)
+    name="ra", prior=Uniform(0.0, 2.0 * jnp.pi, validate_args=True)
 )
-SIN_DECLINATION = Parameter(name="sin_declination", prior=two_sided_uniform)
+SIN_DECLINATION = Parameter(name="dec", prior=two_sided_uniform)
 DETECTION_TIME = Parameter(
     name="detection_time", prior=Uniform(0.0, 1_000.0, validate_args=True)
 )
@@ -112,6 +113,7 @@ DETECTION_TIME = Parameter(
 
 class _Available:
     names_to_keys: Mapping[str, Parameter] = {
+        CHIRP_MASS_SOURCE.name: CHIRP_MASS_SOURCE,
         CHIRP_MASS.name: CHIRP_MASS,
         COS_INCLINATION.name: COS_INCLINATION,
         COS_TILT_1.name: COS_TILT_1,
@@ -142,6 +144,7 @@ class _Available:
     }
 
     params: Sequence[str] = [
+        "CHIRP_MASS_SOURCE",
         "CHIRP_MASS",
         "COS_INCLINATION",
         "COS_TILT_1",
