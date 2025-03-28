@@ -3,6 +3,7 @@
 
 
 import re
+import warnings
 from typing import Dict, List, TypeVar
 
 
@@ -49,6 +50,10 @@ def match_all(
                 break
         if not pattern_found:
             matches[string] = None
+            warnings.warn(
+                f"{string} does not match any pattern in the dictionary",
+                UserWarning,
+            )
     for duplicate in duplicates:
         pattern_found = False
         for pattern, value in pattern_dict_with_val.items():
