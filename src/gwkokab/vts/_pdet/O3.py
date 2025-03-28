@@ -17,10 +17,9 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrd
-import wcosmo
 from astropy import units
+from astropy.cosmology import Planck15, z_at_value
 from jaxtyping import Array, PRNGKeyArray
-from wcosmo.wcosmo import z_at_value
 
 from ...parameters import (
     COS_INCLINATION,
@@ -38,14 +37,6 @@ from ...parameters import (
 )
 from ...utils.tools import error_if
 from ._emulator import Emulator
-
-
-# Disable units for wcosmo until the resolution of
-# https://github.com/GalacticDynamics/quaxed/issues/133
-wcosmo.disable_units()
-
-
-Planck15: wcosmo.astropy.FlatLambdaCDM = getattr(wcosmo.astropy, "Planck15")
 
 
 class pdet_O3(Emulator):
@@ -163,9 +154,9 @@ class pdet_O3(Emulator):
 
         self.interp_DL = jnp.logspace(-4, jnp.log10(15.0), 500)
         self.interp_z = z_at_value(
-            lambda z: Planck15.luminosity_distance(z) * units.Gpc,
-            self.interp_DL,
-        )
+            Planck15.luminosity_distance,
+            self.interp_DL * units.Gpc,
+        ).value
 
         super().__init__(
             model_weights,

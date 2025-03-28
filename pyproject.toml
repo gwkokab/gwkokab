@@ -60,7 +60,6 @@ dependencies = [
     "RIFT>=0.0.15.11",
     "scipy==1.14.0",
     "seaborn>=0.13.0",
-    "wcosmo[jax]>=0.4.0",
 ]
 keywords = [
     "astrophysics",

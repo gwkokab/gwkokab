@@ -15,6 +15,7 @@ from ..utils import (
     create_powerlaws,
     create_truncated_normal_distributions,
     create_truncated_normal_distributions_for_cos_tilt,
+    create_uniform_distributions,
     JointDistribution,
     ScaledMixture,
 )
@@ -24,6 +25,11 @@ build_spin_distributions = create_beta_distributions
 build_tilt_distributions = create_truncated_normal_distributions_for_cos_tilt
 build_eccentricity_distributions = create_truncated_normal_distributions
 build_redshift_distributions = create_powerlaw_redshift
+build_cos_inclination_distribution = create_truncated_normal_distributions
+build_phi_12_distribution = create_truncated_normal_distributions
+build_polarization_angle_distribution = create_truncated_normal_distributions
+build_right_ascension_distribution = create_truncated_normal_distributions
+build_sin_declination_distribution = create_truncated_normal_distributions
 
 
 def _build_non_mass_distributions(
@@ -34,6 +40,16 @@ def _build_non_mass_distributions(
     use_tilt: bool,
     use_eccentricity: bool,
     use_redshift: bool,
+    use_cos_inclination: bool,
+    use_phi_12: bool,
+    use_polarization_angle: bool,
+    use_right_ascension: bool,
+    use_sin_declination: bool,
+    use_detection_time: bool,
+    use_phi_1: bool,
+    use_phi_2: bool,
+    use_phi_orb: bool,
+    use_mean_anomaly: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
@@ -112,6 +128,7 @@ def _build_non_mass_distributions(
             validate_args=validate_args,
         )
         build_distributions = combine_distributions(build_distributions, ecc_dists)
+
     if use_redshift:
         redshift_dists = build_redshift_distributions(
             N=N,
@@ -122,6 +139,118 @@ def _build_non_mass_distributions(
         )
         build_distributions = combine_distributions(build_distributions, redshift_dists)
 
+    if use_cos_inclination:
+        cos_inclination_dists = build_cos_inclination_distribution(
+            N=N,
+            parameter_name="cos_iota",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(
+            build_distributions, cos_inclination_dists
+        )
+
+    if use_phi_12:
+        phi_12_dists = build_phi_12_distribution(
+            N=N,
+            parameter_name="phi_12",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(build_distributions, phi_12_dists)
+
+    if use_polarization_angle:
+        polarization_angle_dists = build_polarization_angle_distribution(
+            N=N,
+            parameter_name="psi",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(
+            build_distributions, polarization_angle_dists
+        )
+
+    if use_right_ascension:
+        right_ascension_dists = build_right_ascension_distribution(
+            N=N,
+            parameter_name="ra",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(
+            build_distributions, right_ascension_dists
+        )
+
+    if use_sin_declination:
+        sin_declination_dists = build_sin_declination_distribution(
+            N=N,
+            parameter_name="dec",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(
+            build_distributions, sin_declination_dists
+        )
+
+    if use_detection_time:
+        merger_time_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="detection_time",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(
+            build_distributions, merger_time_dists
+        )
+
+    if use_phi_1:
+        phi_1_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="phi_1",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(build_distributions, phi_1_dists)
+
+    if use_phi_2:
+        phi_2_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="phi_2",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(build_distributions, phi_2_dists)
+
+    if use_phi_orb:
+        phi_orb_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="phi_orb",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(build_distributions, phi_orb_dists)
+
+    if use_mean_anomaly:
+        mean_anomaly_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="mean_anomaly",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(
+            build_distributions, mean_anomaly_dists
+        )
+
     return build_distributions
 
 
@@ -131,6 +260,16 @@ def _build_pl_component_distributions(
     use_tilt: bool,
     use_eccentricity: bool,
     use_redshift: bool,
+    use_cos_inclination: bool,
+    use_phi_12: bool,
+    use_polarization_angle: bool,
+    use_right_ascension: bool,
+    use_sin_declination: bool,
+    use_detection_time: bool,
+    use_phi_1: bool,
+    use_phi_2: bool,
+    use_phi_orb: bool,
+    use_mean_anomaly: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
@@ -174,6 +313,16 @@ def _build_pl_component_distributions(
         use_tilt=use_tilt,
         use_eccentricity=use_eccentricity,
         use_redshift=use_redshift,
+        use_cos_inclination=use_cos_inclination,
+        use_phi_12=use_phi_12,
+        use_polarization_angle=use_polarization_angle,
+        use_right_ascension=use_right_ascension,
+        use_sin_declination=use_sin_declination,
+        use_detection_time=use_detection_time,
+        use_phi_1=use_phi_1,
+        use_phi_2=use_phi_2,
+        use_phi_orb=use_phi_orb,
+        use_mean_anomaly=use_mean_anomaly,
         params=params,
         validate_args=validate_args,
     )
@@ -190,6 +339,16 @@ def _build_g_component_distributions(
     use_tilt: bool,
     use_eccentricity: bool,
     use_redshift: bool,
+    use_cos_inclination: bool,
+    use_phi_12: bool,
+    use_polarization_angle: bool,
+    use_right_ascension: bool,
+    use_sin_declination: bool,
+    use_detection_time: bool,
+    use_phi_1: bool,
+    use_phi_2: bool,
+    use_phi_orb: bool,
+    use_mean_anomaly: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
@@ -247,6 +406,16 @@ def _build_g_component_distributions(
         use_tilt=use_tilt,
         use_eccentricity=use_eccentricity,
         use_redshift=use_redshift,
+        use_cos_inclination=use_cos_inclination,
+        use_phi_12=use_phi_12,
+        use_polarization_angle=use_polarization_angle,
+        use_right_ascension=use_right_ascension,
+        use_sin_declination=use_sin_declination,
+        use_detection_time=use_detection_time,
+        use_phi_1=use_phi_1,
+        use_phi_2=use_phi_2,
+        use_phi_orb=use_phi_orb,
+        use_mean_anomaly=use_mean_anomaly,
         params=params,
         validate_args=validate_args,
     )
@@ -264,6 +433,16 @@ def NPowerlawMGaussian(
     use_tilt: bool = False,
     use_eccentricity: bool = False,
     use_redshift: bool = False,
+    use_cos_inclination: bool = False,
+    use_phi_12: bool = False,
+    use_polarization_angle: bool = False,
+    use_right_ascension: bool = False,
+    use_sin_declination: bool = False,
+    use_detection_time: bool = False,
+    use_phi_1: bool = False,
+    use_phi_2: bool = False,
+    use_phi_orb: bool = False,
+    use_mean_anomaly: bool = False,
     *,
     validate_args=None,
     **params,
@@ -374,6 +553,16 @@ def NPowerlawMGaussian(
             use_tilt=use_tilt,
             use_eccentricity=use_eccentricity,
             use_redshift=use_redshift,
+            use_cos_inclination=use_cos_inclination,
+            use_phi_12=use_phi_12,
+            use_polarization_angle=use_polarization_angle,
+            use_right_ascension=use_right_ascension,
+            use_sin_declination=use_sin_declination,
+            use_detection_time=use_detection_time,
+            use_phi_1=use_phi_1,
+            use_phi_2=use_phi_2,
+            use_phi_orb=use_phi_orb,
+            use_mean_anomaly=use_mean_anomaly,
             params=params,
             validate_args=validate_args,
         )
@@ -385,6 +574,16 @@ def NPowerlawMGaussian(
             use_tilt=use_tilt,
             use_eccentricity=use_eccentricity,
             use_redshift=use_redshift,
+            use_cos_inclination=use_cos_inclination,
+            use_phi_12=use_phi_12,
+            use_polarization_angle=use_polarization_angle,
+            use_right_ascension=use_right_ascension,
+            use_sin_declination=use_sin_declination,
+            use_detection_time=use_detection_time,
+            use_phi_1=use_phi_1,
+            use_phi_2=use_phi_2,
+            use_phi_orb=use_phi_orb,
+            use_mean_anomaly=use_mean_anomaly,
             params=params,
             validate_args=validate_args,
         )

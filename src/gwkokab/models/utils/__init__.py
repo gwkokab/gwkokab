@@ -19,5 +19,6 @@ from ._ncombination import (
     create_smoothed_powerlaws_raw as create_smoothed_powerlaws_raw,
     create_truncated_normal_distributions as create_truncated_normal_distributions,
     create_truncated_normal_distributions_for_cos_tilt as create_truncated_normal_distributions_for_cos_tilt,
+    create_uniform_distributions as create_uniform_distributions,
 )
 from ._scaledmixture import ScaledMixture as ScaledMixture
