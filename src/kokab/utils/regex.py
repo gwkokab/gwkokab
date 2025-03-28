@@ -50,10 +50,7 @@ def match_all(
                 break
         if not pattern_found:
             matches[string] = None
-            warnings.warn(
-                f"{string} does not match any pattern in the dictionary",
-                UserWarning,
-            )
+
     for duplicate in duplicates:
         pattern_found = False
         for pattern, value in pattern_dict_with_val.items():
@@ -67,5 +64,9 @@ def match_all(
                 matches[duplicate] = pattern_dict_with_val[duplicate]
         if not pattern_found:
             matches[duplicate] = None
+
+    for string in strings:
+        if matches.get(string) is None:
+            warnings.warn(f"'{string}' does not match any pattern.")
 
     return matches
