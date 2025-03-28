@@ -21,7 +21,11 @@ from gwkokab.parameters import (
     COS_TILT_2,
     DETECTION_TIME,
     ECCENTRICITY,
+    MEAN_ANOMALY,
+    PHI_1,
+    PHI_2,
     PHI_12,
+    PHI_ORB,
     POLARIZATION_ANGLE,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
@@ -53,6 +57,10 @@ polarization_angle_name = POLARIZATION_ANGLE.name
 right_ascension_name = RIGHT_ASCENSION.name
 sin_declination_name = SIN_DECLINATION.name
 detection_time_name = DETECTION_TIME.name
+phi_1_name = PHI_1.name
+phi_2_name = PHI_2.name
+phi_orb_name = PHI_ORB.name
+mean_anomaly_name = MEAN_ANOMALY.name
 
 
 def make_parser() -> ArgumentParser:
@@ -118,6 +126,26 @@ def make_parser() -> ArgumentParser:
         help="Include detection_time parameter in the model",
     )
     model_group.add_argument(
+        "--add-phi-1",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-2",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-orb",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-mean-anomaly",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
         "--spin-truncated-normal",
         action="store_true",
         help="Use truncated normal distributions for spin parameters.",
@@ -158,6 +186,10 @@ def main() -> None:
     has_right_ascension = args.add_right_ascension
     has_sin_declination = args.add_sin_declination
     has_detection_time = args.add_detection_time
+    has_phi_1 = args.add_phi_1
+    has_phi_2 = args.add_phi_2
+    has_phi_orb = args.add_phi_orb
+    has_mean_anomaly = args.add_mean_anomaly
 
     err_param = match_all(
         [
@@ -186,9 +218,17 @@ def main() -> None:
             cos_inclination_name + "_scale",
             detection_time_name + "_high",
             detection_time_name + "_low",
+            mean_anomaly_name + "_high",
+            mean_anomaly_name + "_low",
+            phi_1_name + "_high",
+            phi_1_name + "_low",
             phi_12_name + "_high",
             phi_12_name + "_low",
             phi_12_name + "_scale",
+            phi_2_name + "_high",
+            phi_2_name + "_low",
+            phi_orb_name + "_high",
+            phi_orb_name + "_low",
             polarization_angle_name + "_high",
             polarization_angle_name + "_low",
             polarization_angle_name + "_scale",
@@ -555,6 +595,86 @@ def main() -> None:
             ).sample(key=key, sample_shape=(size,))
             return err_x
 
+    if has_phi_1:
+        parameters_name += (phi_1_name,)
+
+        all_params.extend(
+            [
+                (phi_1_name + "_high_g", N_g),
+                (phi_1_name + "_high_pl", N_pl),
+                (phi_1_name + "_low_g", N_g),
+                (phi_1_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(phi_1_name)
+        def sin_declination_error(x, size, key):
+            err_x = dist.Uniform(
+                low=x + err_param[phi_1_name + "_low"],
+                high=x + err_param[phi_1_name + "_high"],
+            ).sample(key=key, sample_shape=(size,))
+            return err_x
+
+    if has_phi_2:
+        parameters_name += (phi_2_name,)
+
+        all_params.extend(
+            [
+                (phi_2_name + "_high_g", N_g),
+                (phi_2_name + "_high_pl", N_pl),
+                (phi_2_name + "_low_g", N_g),
+                (phi_2_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(phi_2_name)
+        def sin_declination_error(x, size, key):
+            err_x = dist.Uniform(
+                low=x + err_param[phi_2_name + "_low"],
+                high=x + err_param[phi_2_name + "_high"],
+            ).sample(key=key, sample_shape=(size,))
+            return err_x
+
+    if has_phi_orb:
+        parameters_name += (phi_orb_name,)
+
+        all_params.extend(
+            [
+                (phi_orb_name + "_high_g", N_g),
+                (phi_orb_name + "_high_pl", N_pl),
+                (phi_orb_name + "_low_g", N_g),
+                (phi_orb_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(phi_orb_name)
+        def sin_declination_error(x, size, key):
+            err_x = dist.Uniform(
+                low=x + err_param[phi_orb_name + "_low"],
+                high=x + err_param[phi_orb_name + "_high"],
+            ).sample(key=key, sample_shape=(size,))
+            return err_x
+
+    if has_mean_anomaly:
+        parameters_name += (mean_anomaly_name,)
+
+        all_params.extend(
+            [
+                (mean_anomaly_name + "_high_g", N_g),
+                (mean_anomaly_name + "_high_pl", N_pl),
+                (mean_anomaly_name + "_low_g", N_g),
+                (mean_anomaly_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(mean_anomaly_name)
+        def sin_declination_error(x, size, key):
+            err_x = dist.Uniform(
+                low=x + err_param[mean_anomaly_name + "_low"],
+                high=x + err_param[mean_anomaly_name + "_high"],
+            ).sample(key=key, sample_shape=(size,))
+            return err_x
+
     extended_params = []
     for params in all_params:
         extended_params.extend(expand_arguments(*params))
@@ -574,6 +694,10 @@ def main() -> None:
         use_right_ascension=has_right_ascension,
         use_sin_declination=has_sin_declination,
         use_detection_time=has_detection_time,
+        use_phi_1=has_phi_1,
+        use_phi_2=has_phi_2,
+        use_phi_orb=has_phi_orb,
+        use_mean_anomaly=has_mean_anomaly,
         **model_param,
     )
     _constraint = partial(

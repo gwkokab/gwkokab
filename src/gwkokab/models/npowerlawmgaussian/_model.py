@@ -46,6 +46,10 @@ def _build_non_mass_distributions(
     use_right_ascension: bool,
     use_sin_declination: bool,
     use_detection_time: bool,
+    use_phi_1: bool,
+    use_phi_2: bool,
+    use_phi_orb: bool,
+    use_mean_anomaly: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
@@ -205,6 +209,48 @@ def _build_non_mass_distributions(
             build_distributions, merger_time_dists
         )
 
+    if use_phi_1:
+        phi_1_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="phi_1",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(build_distributions, phi_1_dists)
+
+    if use_phi_2:
+        phi_2_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="phi_2",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(build_distributions, phi_2_dists)
+
+    if use_phi_orb:
+        phi_orb_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="phi_orb",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(build_distributions, phi_orb_dists)
+
+    if use_mean_anomaly:
+        mean_anomaly_dists = create_uniform_distributions(
+            N=N,
+            parameter_name="mean_anomaly",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        build_distributions = combine_distributions(
+            build_distributions, mean_anomaly_dists
+        )
+
     return build_distributions
 
 
@@ -220,6 +266,10 @@ def _build_pl_component_distributions(
     use_right_ascension: bool,
     use_sin_declination: bool,
     use_detection_time: bool,
+    use_phi_1: bool,
+    use_phi_2: bool,
+    use_phi_orb: bool,
+    use_mean_anomaly: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
@@ -269,6 +319,10 @@ def _build_pl_component_distributions(
         use_right_ascension=use_right_ascension,
         use_sin_declination=use_sin_declination,
         use_detection_time=use_detection_time,
+        use_phi_1=use_phi_1,
+        use_phi_2=use_phi_2,
+        use_phi_orb=use_phi_orb,
+        use_mean_anomaly=use_mean_anomaly,
         params=params,
         validate_args=validate_args,
     )
@@ -291,6 +345,10 @@ def _build_g_component_distributions(
     use_right_ascension: bool,
     use_sin_declination: bool,
     use_detection_time: bool,
+    use_phi_1: bool,
+    use_phi_2: bool,
+    use_phi_orb: bool,
+    use_mean_anomaly: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
@@ -354,6 +412,10 @@ def _build_g_component_distributions(
         use_right_ascension=use_right_ascension,
         use_sin_declination=use_sin_declination,
         use_detection_time=use_detection_time,
+        use_phi_1=use_phi_1,
+        use_phi_2=use_phi_2,
+        use_phi_orb=use_phi_orb,
+        use_mean_anomaly=use_mean_anomaly,
         params=params,
         validate_args=validate_args,
     )
@@ -377,6 +439,10 @@ def NPowerlawMGaussian(
     use_right_ascension: bool = False,
     use_sin_declination: bool = False,
     use_detection_time: bool = False,
+    use_phi_1: bool = False,
+    use_phi_2: bool = False,
+    use_phi_orb: bool = False,
+    use_mean_anomaly: bool = False,
     *,
     validate_args=None,
     **params,
@@ -493,6 +559,10 @@ def NPowerlawMGaussian(
             use_right_ascension=use_right_ascension,
             use_sin_declination=use_sin_declination,
             use_detection_time=use_detection_time,
+            use_phi_1=use_phi_1,
+            use_phi_2=use_phi_2,
+            use_phi_orb=use_phi_orb,
+            use_mean_anomaly=use_mean_anomaly,
             params=params,
             validate_args=validate_args,
         )
@@ -510,6 +580,10 @@ def NPowerlawMGaussian(
             use_right_ascension=use_right_ascension,
             use_sin_declination=use_sin_declination,
             use_detection_time=use_detection_time,
+            use_phi_1=use_phi_1,
+            use_phi_2=use_phi_2,
+            use_phi_orb=use_phi_orb,
+            use_mean_anomaly=use_mean_anomaly,
             params=params,
             validate_args=validate_args,
         )
