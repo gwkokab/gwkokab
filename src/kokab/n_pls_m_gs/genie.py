@@ -588,7 +588,7 @@ def main() -> None:
         )
 
         @error_magazine.register(detection_time_name)
-        def sin_declination_error(x, size, key):
+        def detection_time_error(x, size, key):
             err_x = dist.Uniform(
                 low=x + err_param[detection_time_name + "_low"],
                 high=x + err_param[detection_time_name + "_high"],
@@ -608,7 +608,7 @@ def main() -> None:
         )
 
         @error_magazine.register(phi_1_name)
-        def sin_declination_error(x, size, key):
+        def phi_1_error(x, size, key):
             err_x = dist.Uniform(
                 low=x + err_param[phi_1_name + "_low"],
                 high=x + err_param[phi_1_name + "_high"],
@@ -628,7 +628,7 @@ def main() -> None:
         )
 
         @error_magazine.register(phi_2_name)
-        def sin_declination_error(x, size, key):
+        def phi_2_error(x, size, key):
             err_x = dist.Uniform(
                 low=x + err_param[phi_2_name + "_low"],
                 high=x + err_param[phi_2_name + "_high"],
@@ -648,7 +648,7 @@ def main() -> None:
         )
 
         @error_magazine.register(phi_orb_name)
-        def sin_declination_error(x, size, key):
+        def phi_orb_error(x, size, key):
             err_x = dist.Uniform(
                 low=x + err_param[phi_orb_name + "_low"],
                 high=x + err_param[phi_orb_name + "_high"],
@@ -668,7 +668,7 @@ def main() -> None:
         )
 
         @error_magazine.register(mean_anomaly_name)
-        def sin_declination_error(x, size, key):
+        def mean_anomaly_error(x, size, key):
             err_x = dist.Uniform(
                 low=x + err_param[mean_anomaly_name + "_low"],
                 high=x + err_param[mean_anomaly_name + "_high"],
