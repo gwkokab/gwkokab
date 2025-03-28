@@ -138,7 +138,7 @@ def _build_non_mass_distributions(
     if use_cos_inclination:
         cos_inclination_dists = build_cos_inclination_distribution(
             N=N,
-            parameter_name="cos_inclination",
+            parameter_name="cos_iota",
             component_type=component_type,
             params=params,
             validate_args=validate_args,
@@ -160,7 +160,7 @@ def _build_non_mass_distributions(
     if use_polarization_angle:
         polarization_angle_dists = build_polarization_angle_distribution(
             N=N,
-            parameter_name="polarization_angle",
+            parameter_name="psi",
             component_type=component_type,
             params=params,
             validate_args=validate_args,
@@ -172,7 +172,7 @@ def _build_non_mass_distributions(
     if use_right_ascension:
         right_ascension_dists = build_right_ascension_distribution(
             N=N,
-            parameter_name="right_ascension",
+            parameter_name="ra",
             component_type=component_type,
             params=params,
             validate_args=validate_args,
@@ -184,7 +184,7 @@ def _build_non_mass_distributions(
     if use_sin_declination:
         sin_declination_dists = build_sin_declination_distribution(
             N=N,
-            parameter_name="sin_declination",
+            parameter_name="dec",
             component_type=component_type,
             params=params,
             validate_args=validate_args,
