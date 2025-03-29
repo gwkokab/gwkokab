@@ -7,6 +7,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
 from typing import List, Tuple
 
+import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
@@ -50,6 +51,7 @@ chi2_name = SECONDARY_SPIN_MAGNITUDE.name
 cos_tilt_1_name = COS_TILT_1.name
 cos_tilt_2_name = COS_TILT_2.name
 ecc_name = ECCENTRICITY.name
+mean_anomaly_name = MEAN_ANOMALY.name
 redshift_name = REDSHIFT.name
 cos_inclination_name = COS_INCLINATION.name
 phi_12_name = PHI_12.name
@@ -60,7 +62,6 @@ detection_time_name = DETECTION_TIME.name
 phi_1_name = PHI_1.name
 phi_2_name = PHI_2.name
 phi_orb_name = PHI_ORB.name
-mean_anomaly_name = MEAN_ANOMALY.name
 
 
 def make_parser() -> ArgumentParser:
@@ -91,6 +92,11 @@ def make_parser() -> ArgumentParser:
         help="Include eccentricity parameters in the model.",
     )
     model_group.add_argument(
+        "--add-mean-anomaly",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
         "--add-redshift",
         action="store_true",
         help="Include redshift parameters in the model.",
@@ -99,11 +105,6 @@ def make_parser() -> ArgumentParser:
         "--add-cos-inclination",
         action="store_true",
         help="Include cos_inclination parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-phi-12",
-        action="store_true",
-        help="Include phi_12 parameter in the model",
     )
     model_group.add_argument(
         "--add-polarization-angle",
@@ -136,12 +137,12 @@ def make_parser() -> ArgumentParser:
         help="Include detection_time parameter in the model",
     )
     model_group.add_argument(
-        "--add-phi-orb",
+        "--add-phi-12",
         action="store_true",
-        help="Include detection_time parameter in the model",
+        help="Include phi_12 parameter in the model",
     )
     model_group.add_argument(
-        "--add-mean-anomaly",
+        "--add-phi-orb",
         action="store_true",
         help="Include detection_time parameter in the model",
     )
@@ -179,17 +180,17 @@ def main() -> None:
     has_spin = args.add_spin
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
+    has_mean_anomaly = args.add_mean_anomaly
     has_redshift = args.add_redshift
     has_cos_inclination = args.add_cos_inclination
-    has_phi_12 = args.add_phi_12
     has_polarization_angle = args.add_polarization_angle
     has_right_ascension = args.add_right_ascension
     has_sin_declination = args.add_sin_declination
     has_detection_time = args.add_detection_time
     has_phi_1 = args.add_phi_1
     has_phi_2 = args.add_phi_2
+    has_phi_12 = args.add_phi_12
     has_phi_orb = args.add_phi_orb
-    has_mean_anomaly = args.add_mean_anomaly
 
     err_param = match_all(
         [
@@ -205,9 +206,9 @@ def main() -> None:
             "cos_tilt_2_high",
             "cos_tilt_2_low",
             "cos_tilt_2_scale",
-            "ecc_err_high",
-            "ecc_err_low",
-            "ecc_err_scale",
+            "ecc_high",
+            "ecc_low",
+            "ecc_scale",
             "redshift_high",
             "redshift_low",
             "redshift_scale",
@@ -216,19 +217,22 @@ def main() -> None:
             cos_inclination_name + "_high",
             cos_inclination_name + "_low",
             cos_inclination_name + "_scale",
-            detection_time_name + "_high",
-            detection_time_name + "_low",
+            detection_time_name + "_scale",
             mean_anomaly_name + "_high",
             mean_anomaly_name + "_low",
+            mean_anomaly_name + "_scale",
             phi_1_name + "_high",
             phi_1_name + "_low",
+            phi_1_name + "_scale",
+            phi_2_name + "_high",
+            phi_2_name + "_low",
+            phi_2_name + "_scale",
             phi_12_name + "_high",
             phi_12_name + "_low",
             phi_12_name + "_scale",
-            phi_2_name + "_high",
-            phi_2_name + "_low",
             phi_orb_name + "_high",
             phi_orb_name + "_low",
+            phi_orb_name + "_scale",
             polarization_angle_name + "_high",
             polarization_angle_name + "_low",
             polarization_angle_name + "_scale",
@@ -316,29 +320,59 @@ def main() -> None:
             )
 
         @error_magazine.register(chi1_name)
-        def chi1_error_fn(x, size, key):
+        def chi1_error(x, size, key):
+            # Initial sampling from the truncated normal distribution.
             err_x = dist.TruncatedNormal(
                 loc=x,
                 scale=err_param["chi1_scale"],
                 low=err_param.get("chi1_low"),
                 high=err_param.get("chi1_high"),
             ).sample(key=key, sample_shape=(size,))
-            mask = err_x < 0.0
-            mask |= err_x > 1.0
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
+
+            # Create a mask for values outside the allowed range [-1, 1]
+            mask = (err_x < -1.0) | (err_x > 1.0)
+
+            # Resample until all values are within [-1, 1]
+            while jnp.any(mask).item():
+                # Split the key for a new random seed
+                new_key, key = jax.random.split(key)
+                num_invalid = int(jnp.sum(mask))
+                new_samples = dist.TruncatedNormal(
+                    loc=x,
+                    scale=err_param["chi1_scale"],
+                    low=err_param.get("chi1_low"),
+                    high=err_param.get("chi1_high"),
+                ).sample(key=new_key, sample_shape=(num_invalid,))
+                invalid_indices = jnp.where(mask)[0]
+                err_x = err_x.at[invalid_indices].set(new_samples)
+                mask = (err_x < -1.0) | (err_x > 1.0)
+
             return err_x
 
         @error_magazine.register(chi2_name)
-        def chi2_error_fn(x, size, key):
+        def chi2_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
                 scale=err_param["chi2_scale"],
                 low=err_param.get("chi2_low"),
                 high=err_param.get("chi2_high"),
             ).sample(key=key, sample_shape=(size,))
-            mask = err_x < 0.0
-            mask |= err_x > 1.0
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
+
+            mask = (err_x < -1.0) | (err_x > 1.0)
+
+            while jnp.any(mask).item():
+                new_key, key = jax.random.split(key)
+                num_invalid = int(jnp.sum(mask))
+                new_samples = dist.TruncatedNormal(
+                    loc=x,
+                    scale=err_param["chi2_scale"],
+                    low=err_param.get("chi2_low"),
+                    high=err_param.get("chi2_high"),
+                ).sample(key=new_key, sample_shape=(num_invalid,))
+                invalid_indices = jnp.where(mask)[0]
+                err_x = err_x.at[invalid_indices].set(new_samples)
+                mask = (err_x < -1.0) | (err_x > 1.0)
+
             return err_x
 
     if has_tilt:
@@ -353,7 +387,7 @@ def main() -> None:
         )
 
         @error_magazine.register(cos_tilt_1_name)
-        def cos_tilt_1_error_fn(x, size, key):
+        def cos_tilt_1_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
                 scale=err_param["cos_tilt_1_scale"],
@@ -366,7 +400,7 @@ def main() -> None:
             return err_x
 
         @error_magazine.register(cos_tilt_2_name)
-        def cos_tilt_2_error_fn(x, size, key):
+        def cos_tilt_2_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
                 scale=err_param["cos_tilt_2_scale"],
@@ -394,12 +428,50 @@ def main() -> None:
         )
 
         @error_magazine.register(ecc_name)
-        def ecc_error_fn(x, size, key):
+        def ecc_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_param["ecc_err_scale"],
-                low=err_param.get("ecc_err_low"),
-                high=err_param.get("ecc_err_high"),
+                scale=err_param["ecc_scale"],
+                low=err_param.get("ecc_low"),
+                high=err_param.get("ecc_high"),
+            ).sample(key=key, sample_shape=(size,))
+
+            mask = (err_x < 0.0) | (err_x > 1.0)
+
+            while jnp.any(mask).item():
+                new_key, key = jax.random.split(key)
+                num_invalid = int(jnp.sum(mask))
+                new_samples = dist.TruncatedNormal(
+                    loc=x,
+                    scale=err_param["ecc_scale"],
+                    low=err_param.get("ecc_low"),
+                    high=err_param.get("ecc_high"),
+                ).sample(key=new_key, sample_shape=(num_invalid,))
+                invalid_indices = jnp.where(mask)[0]
+                err_x = err_x.at[invalid_indices].set(new_samples)
+                mask = (err_x < 0.0) | (err_x > 1.0)
+
+            return err_x
+
+    if has_mean_anomaly:
+        parameters_name += (mean_anomaly_name,)
+
+        all_params.extend(
+            [
+                (mean_anomaly_name + "_high_g", N_g),
+                (mean_anomaly_name + "_high_pl", N_pl),
+                (mean_anomaly_name + "_low_g", N_g),
+                (mean_anomaly_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(mean_anomaly_name)
+        def mean_anomaly_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param["mean_anomaly_scale"],
+                low=err_param.get("mean_anomaly_low"),
+                high=err_param.get("mean_anomaly_high"),
             ).sample(key=key, sample_shape=(size,))
             mask = err_x < 0.0
             mask |= err_x > 1.0
@@ -419,7 +491,7 @@ def main() -> None:
         )
 
         @error_magazine.register(redshift_name)
-        def redshift_error_fn(x, size, key):
+        def redshift_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
                 scale=err_param["redshift_scale"],
@@ -437,12 +509,8 @@ def main() -> None:
             [
                 (cos_inclination_name + "_high_g", N_g),
                 (cos_inclination_name + "_high_pl", N_pl),
-                (cos_inclination_name + "_loc_g", N_g),
-                (cos_inclination_name + "_loc_pl", N_pl),
                 (cos_inclination_name + "_low_g", N_g),
                 (cos_inclination_name + "_low_pl", N_pl),
-                (cos_inclination_name + "_scale_g", N_g),
-                (cos_inclination_name + "_scale_pl", N_pl),
             ]
         )
 
@@ -459,35 +527,6 @@ def main() -> None:
             err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
             return err_x
 
-    if has_phi_12:
-        parameters_name += (phi_12_name,)
-
-        all_params.extend(
-            [
-                (phi_12_name + "_high_g", N_g),
-                (phi_12_name + "_high_pl", N_pl),
-                (phi_12_name + "_loc_g", N_g),
-                (phi_12_name + "_loc_pl", N_pl),
-                (phi_12_name + "_low_g", N_g),
-                (phi_12_name + "_low_pl", N_pl),
-                (phi_12_name + "_scale_g", N_g),
-                (phi_12_name + "_scale_pl", N_pl),
-            ]
-        )
-
-        @error_magazine.register(phi_12_name)
-        def phi_12_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
-                scale=err_param[phi_12_name + "_scale"],
-                low=err_param.get(phi_12_name + "_low"),
-                high=err_param.get(phi_12_name + "_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < 0.0
-            mask |= err_x > 2.0 * jnp.pi
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
-
     if has_polarization_angle:
         parameters_name += (polarization_angle_name,)
 
@@ -495,12 +534,8 @@ def main() -> None:
             [
                 (polarization_angle_name + "_high_g", N_g),
                 (polarization_angle_name + "_high_pl", N_pl),
-                (polarization_angle_name + "_loc_g", N_g),
-                (polarization_angle_name + "_loc_pl", N_pl),
                 (polarization_angle_name + "_low_g", N_g),
                 (polarization_angle_name + "_low_pl", N_pl),
-                (polarization_angle_name + "_scale_g", N_g),
-                (polarization_angle_name + "_scale_pl", N_pl),
             ]
         )
 
@@ -524,12 +559,8 @@ def main() -> None:
             [
                 (right_ascension_name + "_high_g", N_g),
                 (right_ascension_name + "_high_pl", N_pl),
-                (right_ascension_name + "_loc_g", N_g),
-                (right_ascension_name + "_loc_pl", N_pl),
                 (right_ascension_name + "_low_g", N_g),
                 (right_ascension_name + "_low_pl", N_pl),
-                (right_ascension_name + "_scale_g", N_g),
-                (right_ascension_name + "_scale_pl", N_pl),
             ]
         )
 
@@ -553,12 +584,8 @@ def main() -> None:
             [
                 (sin_declination_name + "_high_g", N_g),
                 (sin_declination_name + "_high_pl", N_pl),
-                (sin_declination_name + "_loc_g", N_g),
-                (sin_declination_name + "_loc_pl", N_pl),
                 (sin_declination_name + "_low_g", N_g),
                 (sin_declination_name + "_low_pl", N_pl),
-                (sin_declination_name + "_scale_g", N_g),
-                (sin_declination_name + "_scale_pl", N_pl),
             ]
         )
 
@@ -589,10 +616,12 @@ def main() -> None:
 
         @error_magazine.register(detection_time_name)
         def detection_time_error(x, size, key):
-            err_x = dist.Uniform(
-                low=x + err_param[detection_time_name + "_low"],
-                high=x + err_param[detection_time_name + "_high"],
+            eps = 1e-6  # To avoid log(0) or log of negative
+            safe_x = jnp.maximum(x, eps)
+            err_x = dist.LogNormal(
+                loc=jnp.log(safe_x), scale=err_param[detection_time_name + "_scale"]
             ).sample(key=key, sample_shape=(size,))
+
             return err_x
 
     if has_phi_1:
@@ -609,10 +638,14 @@ def main() -> None:
 
         @error_magazine.register(phi_1_name)
         def phi_1_error(x, size, key):
-            err_x = dist.Uniform(
-                low=x + err_param[phi_1_name + "_low"],
-                high=x + err_param[phi_1_name + "_high"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[phi_1_name + "_scale"],
+                low=err_param.get(phi_1_name + "_low", 0.0),
+                high=err_param.get(phi_1_name + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
+
+            err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
     if has_phi_2:
@@ -629,10 +662,38 @@ def main() -> None:
 
         @error_magazine.register(phi_2_name)
         def phi_2_error(x, size, key):
-            err_x = dist.Uniform(
-                low=x + err_param[phi_2_name + "_low"],
-                high=x + err_param[phi_2_name + "_high"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[phi_2_name + "_scale"],
+                low=err_param.get(phi_2_name + "_low", 0.0),
+                high=err_param.get(phi_2_name + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
+
+            err_x = jnp.mod(err_x, 2 * jnp.pi)
+            return err_x
+
+    if has_phi_12:
+        parameters_name += (phi_12_name,)
+
+        all_params.extend(
+            [
+                (phi_12_name + "_high_g", N_g),
+                (phi_12_name + "_high_pl", N_pl),
+                (phi_12_name + "_low_g", N_g),
+                (phi_12_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(phi_12_name)
+        def phi_12_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[phi_12_name + "_scale"],
+                low=err_param.get(phi_12_name + "_low", 0.0),
+                high=err_param.get(phi_12_name + "_high", 2 * jnp.pi),
+            ).sample(key=key, sample_shape=(size,))
+
+            err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
     if has_phi_orb:
@@ -649,30 +710,14 @@ def main() -> None:
 
         @error_magazine.register(phi_orb_name)
         def phi_orb_error(x, size, key):
-            err_x = dist.Uniform(
-                low=x + err_param[phi_orb_name + "_low"],
-                high=x + err_param[phi_orb_name + "_high"],
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[phi_orb_name + "_scale"],
+                low=err_param.get(phi_orb_name + "_low", 0.0),
+                high=err_param.get(phi_orb_name + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
-            return err_x
 
-    if has_mean_anomaly:
-        parameters_name += (mean_anomaly_name,)
-
-        all_params.extend(
-            [
-                (mean_anomaly_name + "_high_g", N_g),
-                (mean_anomaly_name + "_high_pl", N_pl),
-                (mean_anomaly_name + "_low_g", N_g),
-                (mean_anomaly_name + "_low_pl", N_pl),
-            ]
-        )
-
-        @error_magazine.register(mean_anomaly_name)
-        def mean_anomaly_error(x, size, key):
-            err_x = dist.Uniform(
-                low=x + err_param[mean_anomaly_name + "_low"],
-                high=x + err_param[mean_anomaly_name + "_high"],
-            ).sample(key=key, sample_shape=(size,))
+            err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
     extended_params = []
@@ -687,6 +732,7 @@ def main() -> None:
         use_spin=has_spin,
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
+        use_mean_anomaly=has_mean_anomaly,
         use_redshift=has_redshift,
         use_cos_inclination=has_cos_inclination,
         use_phi_12=has_phi_12,
@@ -697,7 +743,6 @@ def main() -> None:
         use_phi_1=has_phi_1,
         use_phi_2=has_phi_2,
         use_phi_orb=has_phi_orb,
-        use_mean_anomaly=has_mean_anomaly,
         **model_param,
     )
     _constraint = partial(
