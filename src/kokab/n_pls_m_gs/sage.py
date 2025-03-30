@@ -217,6 +217,7 @@ def main() -> None:
                     ("chi2_variance_pl", N_pl),
                 ]
             )
+
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
         all_params.extend(
@@ -225,46 +226,6 @@ def main() -> None:
                 ("cos_tilt1_scale_pl", N_pl),
                 ("cos_tilt2_scale_g", N_g),
                 ("cos_tilt2_scale_pl", N_pl),
-            ]
-        )
-    if has_eccentricity:
-        parameters.append(ECCENTRICITY)
-        all_params.extend(
-            [
-                ("ecc_high_g", N_g),
-                ("ecc_high_pl", N_pl),
-                ("ecc_loc_g", N_g),
-                ("ecc_loc_pl", N_pl),
-                ("ecc_low_g", N_g),
-                ("ecc_low_pl", N_pl),
-                ("ecc_scale_g", N_g),
-                ("ecc_scale_pl", N_pl),
-            ]
-        )
-    if has_redshift:
-        parameters.append(REDSHIFT)
-        all_params.extend(
-            [
-                ("redshift_lamb_g", N_g),
-                ("redshift_lamb_pl", N_pl),
-                ("redshift_z_max_g", N_g),
-                ("redshift_z_max_pl", N_pl),
-            ]
-        )
-
-    if has_cos_iota:
-        parameters.append(COS_IOTA)
-
-        all_params.extend(
-            [
-                (COS_IOTA.name + "_high_g", N_g),
-                (COS_IOTA.name + "_high_pl", N_pl),
-                (COS_IOTA.name + "_loc_g", N_g),
-                (COS_IOTA.name + "_loc_pl", N_pl),
-                (COS_IOTA.name + "_low_g", N_g),
-                (COS_IOTA.name + "_low_pl", N_pl),
-                (COS_IOTA.name + "_scale_g", N_g),
-                (COS_IOTA.name + "_scale_pl", N_pl),
             ]
         )
 
@@ -284,19 +245,29 @@ def main() -> None:
             ]
         )
 
-    if has_polarization_angle:
-        parameters.append(POLARIZATION_ANGLE)
-
+    if has_eccentricity:
+        parameters.append(ECCENTRICITY)
         all_params.extend(
             [
-                (POLARIZATION_ANGLE.name + "_high_g", N_g),
-                (POLARIZATION_ANGLE.name + "_high_pl", N_pl),
-                (POLARIZATION_ANGLE.name + "_loc_g", N_g),
-                (POLARIZATION_ANGLE.name + "_loc_pl", N_pl),
-                (POLARIZATION_ANGLE.name + "_low_g", N_g),
-                (POLARIZATION_ANGLE.name + "_low_pl", N_pl),
-                (POLARIZATION_ANGLE.name + "_scale_g", N_g),
-                (POLARIZATION_ANGLE.name + "_scale_pl", N_pl),
+                ("ecc_high_g", N_g),
+                ("ecc_high_pl", N_pl),
+                ("ecc_loc_g", N_g),
+                ("ecc_loc_pl", N_pl),
+                ("ecc_low_g", N_g),
+                ("ecc_low_pl", N_pl),
+                ("ecc_scale_g", N_g),
+                ("ecc_scale_pl", N_pl),
+            ]
+        )
+
+    if has_redshift:
+        parameters.append(REDSHIFT)
+        all_params.extend(
+            [
+                ("redshift_lamb_g", N_g),
+                ("redshift_lamb_pl", N_pl),
+                ("redshift_z_max_g", N_g),
+                ("redshift_z_max_pl", N_pl),
             ]
         )
 
@@ -341,6 +312,38 @@ def main() -> None:
                 (DETECTION_TIME.name + "_high_pl", N_pl),
                 (DETECTION_TIME.name + "_low_g", N_g),
                 (DETECTION_TIME.name + "_low_pl", N_pl),
+            ]
+        )
+
+    if has_cos_iota:
+        parameters.append(COS_IOTA)
+
+        all_params.extend(
+            [
+                (COS_IOTA.name + "_high_g", N_g),
+                (COS_IOTA.name + "_high_pl", N_pl),
+                (COS_IOTA.name + "_loc_g", N_g),
+                (COS_IOTA.name + "_loc_pl", N_pl),
+                (COS_IOTA.name + "_low_g", N_g),
+                (COS_IOTA.name + "_low_pl", N_pl),
+                (COS_IOTA.name + "_scale_g", N_g),
+                (COS_IOTA.name + "_scale_pl", N_pl),
+            ]
+        )
+
+    if has_polarization_angle:
+        parameters.append(POLARIZATION_ANGLE)
+
+        all_params.extend(
+            [
+                (POLARIZATION_ANGLE.name + "_high_g", N_g),
+                (POLARIZATION_ANGLE.name + "_high_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_loc_g", N_g),
+                (POLARIZATION_ANGLE.name + "_loc_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_low_g", N_g),
+                (POLARIZATION_ANGLE.name + "_low_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_scale_g", N_g),
+                (POLARIZATION_ANGLE.name + "_scale_pl", N_pl),
             ]
         )
 
