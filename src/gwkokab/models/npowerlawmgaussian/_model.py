@@ -30,6 +30,11 @@ build_phi_12_distribution = create_uniform_distributions
 build_polarization_angle_distribution = create_uniform_distributions
 build_right_ascension_distribution = create_uniform_distributions
 build_sin_declination_distribution = create_uniform_distributions
+build_mean_anomaly_distribution = create_uniform_distributions
+build_detection_time_distribution = create_uniform_distributions
+build_phi_1_distribution = create_uniform_distributions
+build_phi_2_distribution = create_uniform_distributions
+build_phi_orb_distribution = create_uniform_distributions
 
 
 def _build_non_mass_distributions(
@@ -130,7 +135,7 @@ def _build_non_mass_distributions(
         build_distributions = combine_distributions(build_distributions, ecc_dists)
 
     if use_mean_anomaly:
-        mean_anomaly_dists = create_uniform_distributions(
+        mean_anomaly_dists = build_mean_anomaly_distribution(
             N=N,
             parameter_name="mean_anomaly",
             component_type=component_type,
@@ -210,7 +215,7 @@ def _build_non_mass_distributions(
         )
 
     if use_detection_time:
-        merger_time_dists = create_uniform_distributions(
+        detection_time_dists = build_detection_time_distribution(
             N=N,
             parameter_name="detection_time",
             component_type=component_type,
@@ -218,11 +223,11 @@ def _build_non_mass_distributions(
             validate_args=validate_args,
         )
         build_distributions = combine_distributions(
-            build_distributions, merger_time_dists
+            build_distributions, detection_time_dists
         )
 
     if use_phi_1:
-        phi_1_dists = create_uniform_distributions(
+        phi_1_dists = build_phi_1_distribution(
             N=N,
             parameter_name="phi_1",
             component_type=component_type,
@@ -232,7 +237,7 @@ def _build_non_mass_distributions(
         build_distributions = combine_distributions(build_distributions, phi_1_dists)
 
     if use_phi_2:
-        phi_2_dists = create_uniform_distributions(
+        phi_2_dists = build_phi_2_distribution(
             N=N,
             parameter_name="phi_2",
             component_type=component_type,
@@ -242,7 +247,7 @@ def _build_non_mass_distributions(
         build_distributions = combine_distributions(build_distributions, phi_2_dists)
 
     if use_phi_orb:
-        phi_orb_dists = create_uniform_distributions(
+        phi_orb_dists = build_phi_orb_distribution(
             N=N,
             parameter_name="phi_orb",
             component_type=component_type,
