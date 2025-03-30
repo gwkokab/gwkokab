@@ -376,6 +376,78 @@ def main() -> None:
             ),
         )
 
+    if has_phi_1:
+        parameters_name += (phi_1_name,)
+
+        all_params.extend(
+            [
+                (phi_1_name + "_high_g", N_g),
+                (phi_1_name + "_high_pl", N_pl),
+                (phi_1_name + "_low_g", N_g),
+                (phi_1_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(phi_1_name)
+        def phi_1_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[phi_1_name + "_scale"],
+                low=err_param.get(phi_1_name + "_low", 0.0),
+                high=err_param.get(phi_1_name + "_high", 2 * jnp.pi),
+            ).sample(key=key, sample_shape=(size,))
+
+            err_x = jnp.mod(err_x, 2 * jnp.pi)
+            return err_x
+
+    if has_phi_2:
+        parameters_name += (phi_2_name,)
+
+        all_params.extend(
+            [
+                (phi_2_name + "_high_g", N_g),
+                (phi_2_name + "_high_pl", N_pl),
+                (phi_2_name + "_low_g", N_g),
+                (phi_2_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(phi_2_name)
+        def phi_2_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[phi_2_name + "_scale"],
+                low=err_param.get(phi_2_name + "_low", 0.0),
+                high=err_param.get(phi_2_name + "_high", 2 * jnp.pi),
+            ).sample(key=key, sample_shape=(size,))
+
+            err_x = jnp.mod(err_x, 2 * jnp.pi)
+            return err_x
+
+    if has_phi_12:
+        parameters_name += (phi_12_name,)
+
+        all_params.extend(
+            [
+                (phi_12_name + "_high_g", N_g),
+                (phi_12_name + "_high_pl", N_pl),
+                (phi_12_name + "_low_g", N_g),
+                (phi_12_name + "_low_pl", N_pl),
+            ]
+        )
+
+        @error_magazine.register(phi_12_name)
+        def phi_12_error(x, size, key):
+            err_x = dist.TruncatedNormal(
+                loc=x,
+                scale=err_param[phi_12_name + "_scale"],
+                low=err_param.get(phi_12_name + "_low", 0.0),
+                high=err_param.get(phi_12_name + "_high", 2 * jnp.pi),
+            ).sample(key=key, sample_shape=(size,))
+
+            err_x = jnp.mod(err_x, 2 * jnp.pi)
+            return err_x
+
     if has_eccentricity:
         parameters_name += (ecc_name,)
         all_params.extend(
@@ -451,54 +523,6 @@ def main() -> None:
             ),
         )
 
-    if has_cos_iota:
-        parameters_name += (cos_iota_name,)
-
-        all_params.extend(
-            [
-                (cos_iota_name + "_high_g", N_g),
-                (cos_iota_name + "_high_pl", N_pl),
-                (cos_iota_name + "_low_g", N_g),
-                (cos_iota_name + "_low_pl", N_pl),
-            ]
-        )
-
-        error_magazine.register(
-            cos_iota_name,
-            partial(
-                truncated_normal_error,
-                scale=err_param[cos_iota_name + "_scale"],
-                low=err_param.get(cos_iota_name + "_low"),
-                high=err_param.get(cos_iota_name + "_high"),
-                cut_low=-1.0,
-                cut_high=1.0,
-            ),
-        )
-
-    if has_polarization_angle:
-        parameters_name += (polarization_angle_name,)
-
-        all_params.extend(
-            [
-                (polarization_angle_name + "_high_g", N_g),
-                (polarization_angle_name + "_high_pl", N_pl),
-                (polarization_angle_name + "_low_g", N_g),
-                (polarization_angle_name + "_low_pl", N_pl),
-            ]
-        )
-
-        error_magazine.register(
-            polarization_angle_name,
-            partial(
-                truncated_normal_error,
-                scale=err_param[polarization_angle_name + "_scale"],
-                low=err_param.get(polarization_angle_name + "_low"),
-                high=err_param.get(polarization_angle_name + "_high"),
-                cut_low=0.0,
-                cut_high=jnp.pi,
-            ),
-        )
-
     if has_right_ascension:
         parameters_name += (right_ascension_name,)
 
@@ -569,77 +593,53 @@ def main() -> None:
 
             return err_x
 
-    if has_phi_1:
-        parameters_name += (phi_1_name,)
+    if has_cos_iota:
+        parameters_name += (cos_iota_name,)
 
         all_params.extend(
             [
-                (phi_1_name + "_high_g", N_g),
-                (phi_1_name + "_high_pl", N_pl),
-                (phi_1_name + "_low_g", N_g),
-                (phi_1_name + "_low_pl", N_pl),
+                (cos_iota_name + "_high_g", N_g),
+                (cos_iota_name + "_high_pl", N_pl),
+                (cos_iota_name + "_low_g", N_g),
+                (cos_iota_name + "_low_pl", N_pl),
             ]
         )
 
-        @error_magazine.register(phi_1_name)
-        def phi_1_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
-                scale=err_param[phi_1_name + "_scale"],
-                low=err_param.get(phi_1_name + "_low", 0.0),
-                high=err_param.get(phi_1_name + "_high", 2 * jnp.pi),
-            ).sample(key=key, sample_shape=(size,))
+        error_magazine.register(
+            cos_iota_name,
+            partial(
+                truncated_normal_error,
+                scale=err_param[cos_iota_name + "_scale"],
+                low=err_param.get(cos_iota_name + "_low"),
+                high=err_param.get(cos_iota_name + "_high"),
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
 
-            err_x = jnp.mod(err_x, 2 * jnp.pi)
-            return err_x
-
-    if has_phi_2:
-        parameters_name += (phi_2_name,)
+    if has_polarization_angle:
+        parameters_name += (polarization_angle_name,)
 
         all_params.extend(
             [
-                (phi_2_name + "_high_g", N_g),
-                (phi_2_name + "_high_pl", N_pl),
-                (phi_2_name + "_low_g", N_g),
-                (phi_2_name + "_low_pl", N_pl),
+                (polarization_angle_name + "_high_g", N_g),
+                (polarization_angle_name + "_high_pl", N_pl),
+                (polarization_angle_name + "_low_g", N_g),
+                (polarization_angle_name + "_low_pl", N_pl),
             ]
         )
 
-        @error_magazine.register(phi_2_name)
-        def phi_2_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
-                scale=err_param[phi_2_name + "_scale"],
-                low=err_param.get(phi_2_name + "_low", 0.0),
-                high=err_param.get(phi_2_name + "_high", 2 * jnp.pi),
-            ).sample(key=key, sample_shape=(size,))
-
-            err_x = jnp.mod(err_x, 2 * jnp.pi)
-            return err_x
-
-    if has_phi_12:
-        parameters_name += (phi_12_name,)
-
-        all_params.extend(
-            [
-                (phi_12_name + "_high_g", N_g),
-                (phi_12_name + "_high_pl", N_pl),
-                (phi_12_name + "_low_g", N_g),
-                (phi_12_name + "_low_pl", N_pl),
-            ]
+        error_magazine.register(
+            polarization_angle_name,
+            partial(
+                truncated_normal_error,
+                scale=err_param[polarization_angle_name + "_scale"],
+                low=err_param.get(polarization_angle_name + "_low"),
+                high=err_param.get(polarization_angle_name + "_high"),
+                cut_low=0.0,
+                cut_high=jnp.pi,
+            ),
         )
-
-        @error_magazine.register(phi_12_name)
-        def phi_12_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
-                scale=err_param[phi_12_name + "_scale"],
-                low=err_param.get(phi_12_name + "_low", 0.0),
-                high=err_param.get(phi_12_name + "_high", 2 * jnp.pi),
-            ).sample(key=key, sample_shape=(size,))
-
-            err_x = jnp.mod(err_x, 2 * jnp.pi)
-            return err_x
 
     if has_phi_orb:
         parameters_name += (phi_orb_name,)
