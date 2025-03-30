@@ -18,7 +18,7 @@ from gwkokab.logger import enable_logging
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
-    COS_INCLINATION,
+    COS_IOTA,
     COS_TILT_1,
     COS_TILT_2,
     DETECTION_TIME,
@@ -83,9 +83,9 @@ def make_parser() -> ArgumentParser:
         help="Include eccentricity in the model.",
     )
     model_group.add_argument(
-        "--add-cos-inclination",
+        "--add-cos-iota",
         action="store_true",
-        help="Include cos_inclination parameter in the model",
+        help="Include cos_iota parameter in the model",
     )
     model_group.add_argument(
         "--add-phi-12",
@@ -148,7 +148,7 @@ def main() -> None:
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_redshift = args.add_redshift
-    has_cos_inclination = args.add_cos_inclination
+    has_cos_iota = args.add_cos_iota
     has_phi_12 = args.add_phi_12
     has_polarization_angle = args.add_polarization_angle
     has_right_ascension = args.add_right_ascension
@@ -252,19 +252,19 @@ def main() -> None:
             ]
         )
 
-    if has_cos_inclination:
-        parameters.append(COS_INCLINATION)
+    if has_cos_iota:
+        parameters.append(COS_IOTA)
 
         all_params.extend(
             [
-                (COS_INCLINATION.name + "_high_g", N_g),
-                (COS_INCLINATION.name + "_high_pl", N_pl),
-                (COS_INCLINATION.name + "_loc_g", N_g),
-                (COS_INCLINATION.name + "_loc_pl", N_pl),
-                (COS_INCLINATION.name + "_low_g", N_g),
-                (COS_INCLINATION.name + "_low_pl", N_pl),
-                (COS_INCLINATION.name + "_scale_g", N_g),
-                (COS_INCLINATION.name + "_scale_pl", N_pl),
+                (COS_IOTA.name + "_high_g", N_g),
+                (COS_IOTA.name + "_high_pl", N_pl),
+                (COS_IOTA.name + "_loc_g", N_g),
+                (COS_IOTA.name + "_loc_pl", N_pl),
+                (COS_IOTA.name + "_low_g", N_g),
+                (COS_IOTA.name + "_low_pl", N_pl),
+                (COS_IOTA.name + "_scale_g", N_g),
+                (COS_IOTA.name + "_scale_pl", N_pl),
             ]
         )
 
@@ -364,7 +364,7 @@ def main() -> None:
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
         use_redshift=has_redshift,
-        use_cos_inclination=has_cos_inclination,
+        use_cos_inclination=has_cos_iota,
         use_phi_12=has_phi_12,
         use_polarization_angle=has_polarization_angle,
         use_right_ascension=has_right_ascension,
@@ -398,7 +398,7 @@ def main() -> None:
     constants["use_tilt"] = int(has_tilt)
     constants["use_eccentricity"] = int(has_eccentricity)
     constants["use_redshift"] = int(has_redshift)
-    constants["use_cos_inclination"] = int(has_cos_inclination)
+    constants["use_cos_inclination"] = int(has_cos_iota)
     constants["use_phi_12"] = int(has_phi_12)
     constants["use_polarization_angle"] = int(has_polarization_angle)
     constants["use_right_ascension"] = int(has_right_ascension)
