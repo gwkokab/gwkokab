@@ -4,7 +4,6 @@
 
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from functools import partial
 from typing import List, Tuple
 
 import jax
@@ -38,7 +37,6 @@ from gwkokab.parameters import (
 )
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.population import error_magazine, PopulationFactory
-from kokab.n_pls_m_gs.common import constraint
 from kokab.utils import genie_parser, poisson_mean_parser
 from kokab.utils.common import expand_arguments, vt_json_read_and_process
 from kokab.utils.regex import match_all
@@ -745,18 +743,6 @@ def main() -> None:
         use_phi_orb=has_phi_orb,
         **model_param,
     )
-    _constraint = partial(
-        constraint,
-        has_spin=has_spin,
-        has_tilt=has_tilt,
-        has_eccentricity=has_eccentricity,
-        has_redshift=has_redshift,
-        has_cos_inclination=has_cos_inclination,
-        has_phi_12=has_phi_12,
-        has_polarization_angle=has_polarization_angle,
-        has_right_ascension=has_right_ascension,
-        has_sin_declination=has_sin_declination,
-    )
 
     nvt = vt_json_read_and_process(parameters_name, args.vt_json)
     logVT = nvt.get_mapped_logVT()
@@ -775,6 +761,5 @@ def main() -> None:
         ERate_fn=erate_estimator.__call__,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
-        constraint=_constraint,
     )
     popfactory.produce()
