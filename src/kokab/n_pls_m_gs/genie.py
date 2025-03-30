@@ -4,19 +4,19 @@
 
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from functools import partial
 from typing import List, Tuple
 
-import jax
 import numpy as np
 from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
 
 import gwkokab
-from gwkokab.errors import banana_error_m1_m2
+from gwkokab.errors import banana_error_m1_m2, truncated_normal_error
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
-    COS_INCLINATION,
+    COS_IOTA,
     COS_TILT_1,
     COS_TILT_2,
     DETECTION_TIME,
@@ -51,7 +51,7 @@ cos_tilt_2_name = COS_TILT_2.name
 ecc_name = ECCENTRICITY.name
 mean_anomaly_name = MEAN_ANOMALY.name
 redshift_name = REDSHIFT.name
-cos_inclination_name = COS_INCLINATION.name
+cos_iota_name = COS_IOTA.name
 phi_12_name = PHI_12.name
 polarization_angle_name = POLARIZATION_ANGLE.name
 right_ascension_name = RIGHT_ASCENSION.name
@@ -100,9 +100,9 @@ def make_parser() -> ArgumentParser:
         help="Include redshift parameters in the model.",
     )
     model_group.add_argument(
-        "--add-cos-inclination",
+        "--add-cos-iota",
         action="store_true",
-        help="Include cos_inclination parameter in the model",
+        help="Include cos_iota parameter in the model",
     )
     model_group.add_argument(
         "--add-polarization-angle",
@@ -180,7 +180,7 @@ def main() -> None:
     has_eccentricity = args.add_eccentricity
     has_mean_anomaly = args.add_mean_anomaly
     has_redshift = args.add_redshift
-    has_cos_inclination = args.add_cos_inclination
+    has_cos_iota = args.add_cos_iota
     has_polarization_angle = args.add_polarization_angle
     has_right_ascension = args.add_right_ascension
     has_sin_declination = args.add_sin_declination
@@ -212,9 +212,9 @@ def main() -> None:
             "redshift_scale",
             "scale_eta",
             "scale_Mc",
-            cos_inclination_name + "_high",
-            cos_inclination_name + "_low",
-            cos_inclination_name + "_scale",
+            cos_iota_name + "_high",
+            cos_iota_name + "_low",
+            cos_iota_name + "_scale",
             detection_time_name + "_scale",
             mean_anomaly_name + "_high",
             mean_anomaly_name + "_low",
@@ -317,61 +317,29 @@ def main() -> None:
                 ]
             )
 
-        @error_magazine.register(chi1_name)
-        def chi1_error(x, size, key):
-            # Initial sampling from the truncated normal distribution.
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            chi1_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param["chi1_scale"],
                 low=err_param.get("chi1_low"),
                 high=err_param.get("chi1_high"),
-            ).sample(key=key, sample_shape=(size,))
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
 
-            # Create a mask for values outside the allowed range [-1, 1]
-            mask = (err_x < -1.0) | (err_x > 1.0)
-
-            # Resample until all values are within [-1, 1]
-            while jnp.any(mask).item():
-                # Split the key for a new random seed
-                new_key, key = jax.random.split(key)
-                num_invalid = int(jnp.sum(mask))
-                new_samples = dist.TruncatedNormal(
-                    loc=x,
-                    scale=err_param["chi1_scale"],
-                    low=err_param.get("chi1_low"),
-                    high=err_param.get("chi1_high"),
-                ).sample(key=new_key, sample_shape=(num_invalid,))
-                invalid_indices = jnp.where(mask)[0]
-                err_x = err_x.at[invalid_indices].set(new_samples)
-                mask = (err_x < -1.0) | (err_x > 1.0)
-
-            return err_x
-
-        @error_magazine.register(chi2_name)
-        def chi2_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            chi2_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param["chi2_scale"],
                 low=err_param.get("chi2_low"),
                 high=err_param.get("chi2_high"),
-            ).sample(key=key, sample_shape=(size,))
-
-            mask = (err_x < -1.0) | (err_x > 1.0)
-
-            while jnp.any(mask).item():
-                new_key, key = jax.random.split(key)
-                num_invalid = int(jnp.sum(mask))
-                new_samples = dist.TruncatedNormal(
-                    loc=x,
-                    scale=err_param["chi2_scale"],
-                    low=err_param.get("chi2_low"),
-                    high=err_param.get("chi2_high"),
-                ).sample(key=new_key, sample_shape=(num_invalid,))
-                invalid_indices = jnp.where(mask)[0]
-                err_x = err_x.at[invalid_indices].set(new_samples)
-                mask = (err_x < -1.0) | (err_x > 1.0)
-
-            return err_x
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
 
     if has_tilt:
         parameters_name += (cos_tilt_1_name, cos_tilt_2_name)
@@ -384,31 +352,29 @@ def main() -> None:
             ]
         )
 
-        @error_magazine.register(cos_tilt_1_name)
-        def cos_tilt_1_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            cos_tilt_1_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param["cos_tilt_1_scale"],
                 low=err_param.get("cos_tilt_1_low"),
                 high=err_param.get("cos_tilt_1_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < -1.0
-            mask |= err_x > 1.0
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
 
-        @error_magazine.register(cos_tilt_2_name)
-        def cos_tilt_2_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            cos_tilt_2_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param["cos_tilt_2_scale"],
                 low=err_param.get("cos_tilt_2_low"),
                 high=err_param.get("cos_tilt_2_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < -1.0
-            mask |= err_x > 1.0
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
 
     if has_eccentricity:
         parameters_name += (ecc_name,)
@@ -425,31 +391,17 @@ def main() -> None:
             ]
         )
 
-        @error_magazine.register(ecc_name)
-        def ecc_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            ecc_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param["ecc_scale"],
                 low=err_param.get("ecc_low"),
                 high=err_param.get("ecc_high"),
-            ).sample(key=key, sample_shape=(size,))
-
-            mask = (err_x < 0.0) | (err_x > 1.0)
-
-            while jnp.any(mask).item():
-                new_key, key = jax.random.split(key)
-                num_invalid = int(jnp.sum(mask))
-                new_samples = dist.TruncatedNormal(
-                    loc=x,
-                    scale=err_param["ecc_scale"],
-                    low=err_param.get("ecc_low"),
-                    high=err_param.get("ecc_high"),
-                ).sample(key=new_key, sample_shape=(num_invalid,))
-                invalid_indices = jnp.where(mask)[0]
-                err_x = err_x.at[invalid_indices].set(new_samples)
-                mask = (err_x < 0.0) | (err_x > 1.0)
-
-            return err_x
+                cut_low=0.0,
+                cut_high=1.0,
+            ),
+        )
 
     if has_mean_anomaly:
         parameters_name += (mean_anomaly_name,)
@@ -463,18 +415,17 @@ def main() -> None:
             ]
         )
 
-        @error_magazine.register(mean_anomaly_name)
-        def mean_anomaly_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            mean_anomaly_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param["mean_anomaly_scale"],
                 low=err_param.get("mean_anomaly_low"),
                 high=err_param.get("mean_anomaly_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < 0.0
-            mask |= err_x > 1.0
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
+                cut_low=0.0,
+                cut_high=1.0,
+            ),
+        )
 
     if has_redshift:
         parameters_name += (redshift_name,)
@@ -488,42 +439,41 @@ def main() -> None:
             ]
         )
 
-        @error_magazine.register(redshift_name)
-        def redshift_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            redshift_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param["redshift_scale"],
                 low=err_param.get("redshift_low"),
                 high=err_param.get("redshift_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < 1e-3
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
+                cut_low=1e-3,
+                cut_high=None,
+            ),
+        )
 
-    if has_cos_inclination:
-        parameters_name += (cos_inclination_name,)
+    if has_cos_iota:
+        parameters_name += (cos_iota_name,)
 
         all_params.extend(
             [
-                (cos_inclination_name + "_high_g", N_g),
-                (cos_inclination_name + "_high_pl", N_pl),
-                (cos_inclination_name + "_low_g", N_g),
-                (cos_inclination_name + "_low_pl", N_pl),
+                (cos_iota_name + "_high_g", N_g),
+                (cos_iota_name + "_high_pl", N_pl),
+                (cos_iota_name + "_low_g", N_g),
+                (cos_iota_name + "_low_pl", N_pl),
             ]
         )
 
-        @error_magazine.register(cos_inclination_name)
-        def cos_inclination_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
-                scale=err_param[cos_inclination_name + "_scale"],
-                low=err_param.get(cos_inclination_name + "_low"),
-                high=err_param.get(cos_inclination_name + "_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < -1.0
-            mask |= err_x > 1.0
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
+        error_magazine.register(
+            cos_iota_name,
+            partial(
+                truncated_normal_error,
+                scale=err_param[cos_iota_name + "_scale"],
+                low=err_param.get(cos_iota_name + "_low"),
+                high=err_param.get(cos_iota_name + "_high"),
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
 
     if has_polarization_angle:
         parameters_name += (polarization_angle_name,)
@@ -537,18 +487,17 @@ def main() -> None:
             ]
         )
 
-        @error_magazine.register(polarization_angle_name)
-        def polarization_angle_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            polarization_angle_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param[polarization_angle_name + "_scale"],
                 low=err_param.get(polarization_angle_name + "_low"),
                 high=err_param.get(polarization_angle_name + "_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < 0.0
-            mask |= err_x > jnp.pi
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
+                cut_low=0.0,
+                cut_high=jnp.pi,
+            ),
+        )
 
     if has_right_ascension:
         parameters_name += (right_ascension_name,)
@@ -562,18 +511,17 @@ def main() -> None:
             ]
         )
 
-        @error_magazine.register(right_ascension_name)
-        def right_ascension_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            right_ascension_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param[right_ascension_name + "_scale"],
                 low=err_param.get(right_ascension_name + "_low"),
                 high=err_param.get(right_ascension_name + "_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < 0.0
-            mask |= err_x > 2.0 * jnp.pi
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
+                cut_low=0.0,
+                cut_high=2.0 * jnp.pi,
+            ),
+        )
 
     if has_sin_declination:
         parameters_name += (sin_declination_name,)
@@ -587,18 +535,17 @@ def main() -> None:
             ]
         )
 
-        @error_magazine.register(sin_declination_name)
-        def sin_declination_error(x, size, key):
-            err_x = dist.TruncatedNormal(
-                loc=x,
+        error_magazine.register(
+            sin_declination_name,
+            partial(
+                truncated_normal_error,
                 scale=err_param[sin_declination_name + "_scale"],
                 low=err_param.get(sin_declination_name + "_low"),
                 high=err_param.get(sin_declination_name + "_high"),
-            ).sample(key=key, sample_shape=(size,))
-            mask = err_x < -1.0
-            mask |= err_x > 1.0
-            err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
-            return err_x
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
 
     if has_detection_time:
         parameters_name += (detection_time_name,)
@@ -732,7 +679,7 @@ def main() -> None:
         use_eccentricity=has_eccentricity,
         use_mean_anomaly=has_mean_anomaly,
         use_redshift=has_redshift,
-        use_cos_inclination=has_cos_inclination,
+        use_cos_iota=has_cos_iota,
         use_phi_12=has_phi_12,
         use_polarization_angle=has_polarization_angle,
         use_right_ascension=has_right_ascension,
