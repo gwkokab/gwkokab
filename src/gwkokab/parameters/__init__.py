@@ -5,7 +5,7 @@
 from ._parameters import (
     available as available,
     CHIRP_MASS as CHIRP_MASS,
-    COS_INCLINATION as COS_INCLINATION,
+    COS_IOTA as COS_IOTA,
     COS_TILT_1 as COS_TILT_1,
     COS_TILT_2 as COS_TILT_2,
     DETECTION_TIME as DETECTION_TIME,

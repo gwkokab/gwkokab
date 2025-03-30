@@ -22,7 +22,7 @@ from astropy.cosmology import Planck15, z_at_value
 from jaxtyping import Array, PRNGKeyArray
 
 from ...parameters import (
-    COS_INCLINATION,
+    COS_IOTA,
     COS_TILT_1,
     COS_TILT_2,
     PHI_12,
@@ -97,7 +97,7 @@ class pdet_O3(Emulator):
             COS_TILT_2.name,
             PHI_12.name,
             REDSHIFT.name,
-            COS_INCLINATION.name,
+            COS_IOTA.name,
             POLARIZATION_ANGLE.name,
             RIGHT_ASCENSION.name,
             SIN_DECLINATION.name,
@@ -121,7 +121,7 @@ class pdet_O3(Emulator):
 
             proposal_dist = {
                 REDSHIFT.name: (0.0, 10.0),
-                COS_INCLINATION.name: (-1.0, 1.0),
+                COS_IOTA.name: (-1.0, 1.0),
                 POLARIZATION_ANGLE.name: (0.0, jnp.pi),
                 RIGHT_ASCENSION.name: (0.0, 2.0 * jnp.pi),
                 SIN_DECLINATION.name: (-1.0, 1.0),

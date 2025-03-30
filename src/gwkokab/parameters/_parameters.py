@@ -95,7 +95,7 @@ REDSHIFT = Parameter(
 )
 
 
-COS_INCLINATION = Parameter(name="cos_iota", prior=two_sided_uniform)
+COS_IOTA = Parameter(name="cos_iota", prior=two_sided_uniform)
 PHI_12 = Parameter(name="phi_12", prior=standard_uniform)
 PHI_1 = Parameter(name="phi_1", prior=unkown_distribution)
 PHI_2 = Parameter(name="phi_2", prior=unkown_distribution)
@@ -121,7 +121,7 @@ class _Available:
     names_to_keys: Mapping[str, Parameter] = {
         CHIRP_MASS_SOURCE.name: CHIRP_MASS_SOURCE,
         CHIRP_MASS.name: CHIRP_MASS,
-        COS_INCLINATION.name: COS_INCLINATION,
+        COS_IOTA.name: COS_IOTA,
         COS_TILT_1.name: COS_TILT_1,
         COS_TILT_2.name: COS_TILT_2,
         DETECTION_TIME.name: DETECTION_TIME,
