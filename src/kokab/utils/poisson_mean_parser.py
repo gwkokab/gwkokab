@@ -13,12 +13,13 @@ from gwkokab.utils.tools import error_if
 from .common import get_dist
 
 
+ProposalDistArgType = Dict[str, Union[Literal["self"], List[Dict[str, Any]]]]
 PoissonMeanConfig = Dict[
     str,
     Union[
         int,  # sample size
         float,  # scale
-        Dict[str, Union[Literal["self"], List[Dict[str, Any]]]],  # proposal_dists
+        ProposalDistArgType,  # proposal_dists
     ],
 ]
 
@@ -61,9 +62,7 @@ def parse_distribution(
     raise ValueError("Invalid distribution format")
 
 
-def poisson_mean_parser(
-    filepath: str,
-) -> List[Union[Literal["self"], DistributionLike]]:
+def poisson_mean_parser(filepath: str) -> PoissonMeanConfig:
     """Parse the JSON file containing the configuration of the Poisson mean.
 
     Parameters
@@ -73,13 +72,15 @@ def poisson_mean_parser(
 
     Returns
     -------
-    List[Union[Literal[ &quot;self&quot; ], DistributionLike]]
+    PoissonMeanConfig
         The configuration of the Poisson mean.
     """
     with open(filepath, "r") as file:
         pmean_json: PoissonMeanConfig = json.load(file)
     try:
-        proposal_distribution_dict = pmean_json.pop("proposal_dists")
+        proposal_distribution_dict: ProposalDistArgType = pmean_json.pop(
+            "proposal_dists"
+        )
         proposal_distribution = [
             parse_distribution(dist) for dist in proposal_distribution_dict
         ]

@@ -18,14 +18,20 @@ from gwkokab.logger import enable_logging
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
+    COS_IOTA,
     COS_TILT_1,
     COS_TILT_2,
+    DETECTION_TIME,
     ECCENTRICITY,
+    PHI_12,
+    POLARIZATION_ANGLE,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
+    RIGHT_ASCENSION,
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
+    SIN_DECLINATION,
 )
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
@@ -77,6 +83,36 @@ def make_parser() -> ArgumentParser:
         help="Include eccentricity in the model.",
     )
     model_group.add_argument(
+        "--add-cos-iota",
+        action="store_true",
+        help="Include cos_iota parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-12",
+        action="store_true",
+        help="Include phi_12 parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-polarization-angle",
+        action="store_true",
+        help="Include polarization_angle parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-right-ascension",
+        action="store_true",
+        help="Include right_ascension parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-sin-declination",
+        action="store_true",
+        help="Include sin_declination parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-detection-time",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
         "--spin-truncated-normal",
         action="store_true",
         help="Use truncated normal distributions for spin parameters.",
@@ -112,6 +148,12 @@ def main() -> None:
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_redshift = args.add_redshift
+    has_cos_iota = args.add_cos_iota
+    has_phi_12 = args.add_phi_12
+    has_polarization_angle = args.add_polarization_angle
+    has_right_ascension = args.add_right_ascension
+    has_sin_declination = args.add_sin_declination
+    has_detection_time = args.add_detection_time
 
     prior_dict = read_json(args.prior_json)
 
@@ -175,6 +217,7 @@ def main() -> None:
                     ("chi2_variance_pl", N_pl),
                 ]
             )
+
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
         all_params.extend(
@@ -185,6 +228,23 @@ def main() -> None:
                 ("cos_tilt2_scale_pl", N_pl),
             ]
         )
+
+    if has_phi_12:
+        parameters.append(PHI_12)
+
+        all_params.extend(
+            [
+                (PHI_12.name + "_high_g", N_g),
+                (PHI_12.name + "_high_pl", N_pl),
+                (PHI_12.name + "_loc_g", N_g),
+                (PHI_12.name + "_loc_pl", N_pl),
+                (PHI_12.name + "_low_g", N_g),
+                (PHI_12.name + "_low_pl", N_pl),
+                (PHI_12.name + "_scale_g", N_g),
+                (PHI_12.name + "_scale_pl", N_pl),
+            ]
+        )
+
     if has_eccentricity:
         parameters.append(ECCENTRICITY)
         all_params.extend(
@@ -199,6 +259,7 @@ def main() -> None:
                 ("ecc_scale_pl", N_pl),
             ]
         )
+
     if has_redshift:
         parameters.append(REDSHIFT)
         all_params.extend(
@@ -207,6 +268,82 @@ def main() -> None:
                 ("redshift_lamb_pl", N_pl),
                 ("redshift_z_max_g", N_g),
                 ("redshift_z_max_pl", N_pl),
+            ]
+        )
+
+    if has_right_ascension:
+        parameters.append(RIGHT_ASCENSION)
+
+        all_params.extend(
+            [
+                (RIGHT_ASCENSION.name + "_high_g", N_g),
+                (RIGHT_ASCENSION.name + "_high_pl", N_pl),
+                (RIGHT_ASCENSION.name + "_loc_g", N_g),
+                (RIGHT_ASCENSION.name + "_loc_pl", N_pl),
+                (RIGHT_ASCENSION.name + "_low_g", N_g),
+                (RIGHT_ASCENSION.name + "_low_pl", N_pl),
+                (RIGHT_ASCENSION.name + "_scale_g", N_g),
+                (RIGHT_ASCENSION.name + "_scale_pl", N_pl),
+            ]
+        )
+
+    if has_sin_declination:
+        parameters.append(SIN_DECLINATION)
+
+        all_params.extend(
+            [
+                (SIN_DECLINATION.name + "_high_g", N_g),
+                (SIN_DECLINATION.name + "_high_pl", N_pl),
+                (SIN_DECLINATION.name + "_loc_g", N_g),
+                (SIN_DECLINATION.name + "_loc_pl", N_pl),
+                (SIN_DECLINATION.name + "_low_g", N_g),
+                (SIN_DECLINATION.name + "_low_pl", N_pl),
+                (SIN_DECLINATION.name + "_scale_g", N_g),
+                (SIN_DECLINATION.name + "_scale_pl", N_pl),
+            ]
+        )
+
+    if has_detection_time:
+        parameters.append(DETECTION_TIME)
+
+        all_params.extend(
+            [
+                (DETECTION_TIME.name + "_high_g", N_g),
+                (DETECTION_TIME.name + "_high_pl", N_pl),
+                (DETECTION_TIME.name + "_low_g", N_g),
+                (DETECTION_TIME.name + "_low_pl", N_pl),
+            ]
+        )
+
+    if has_cos_iota:
+        parameters.append(COS_IOTA)
+
+        all_params.extend(
+            [
+                (COS_IOTA.name + "_high_g", N_g),
+                (COS_IOTA.name + "_high_pl", N_pl),
+                (COS_IOTA.name + "_loc_g", N_g),
+                (COS_IOTA.name + "_loc_pl", N_pl),
+                (COS_IOTA.name + "_low_g", N_g),
+                (COS_IOTA.name + "_low_pl", N_pl),
+                (COS_IOTA.name + "_scale_g", N_g),
+                (COS_IOTA.name + "_scale_pl", N_pl),
+            ]
+        )
+
+    if has_polarization_angle:
+        parameters.append(POLARIZATION_ANGLE)
+
+        all_params.extend(
+            [
+                (POLARIZATION_ANGLE.name + "_high_g", N_g),
+                (POLARIZATION_ANGLE.name + "_high_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_loc_g", N_g),
+                (POLARIZATION_ANGLE.name + "_loc_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_low_g", N_g),
+                (POLARIZATION_ANGLE.name + "_low_pl", N_pl),
+                (POLARIZATION_ANGLE.name + "_scale_g", N_g),
+                (POLARIZATION_ANGLE.name + "_scale_pl", N_pl),
             ]
         )
 
@@ -230,6 +367,12 @@ def main() -> None:
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
         use_redshift=has_redshift,
+        use_cos_iota=has_cos_iota,
+        use_phi_12=has_phi_12,
+        use_polarization_angle=has_polarization_angle,
+        use_right_ascension=has_right_ascension,
+        use_sin_declination=has_sin_declination,
+        use_detection_time=has_detection_time,
         **model_prior_param,
     )
 
@@ -258,6 +401,12 @@ def main() -> None:
     constants["use_tilt"] = int(has_tilt)
     constants["use_eccentricity"] = int(has_eccentricity)
     constants["use_redshift"] = int(has_redshift)
+    constants["use_cos_iota"] = int(has_cos_iota)
+    constants["use_phi_12"] = int(has_phi_12)
+    constants["use_polarization_angle"] = int(has_polarization_angle)
+    constants["use_right_ascension"] = int(has_right_ascension)
+    constants["use_sin_declination"] = int(has_sin_declination)
+    constants["use_detection_time"] = int(has_detection_time)
 
     with open("constants.json", "w") as f:
         json.dump(constants, f)

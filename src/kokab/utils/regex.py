@@ -3,10 +3,8 @@
 
 
 import re
-from typing import Dict, List, TypeVar
-
-
-_VT = TypeVar("_VT")
+import warnings
+from typing import Dict, List
 
 
 def matches_regex(pattern: str, string: str) -> bool:
@@ -20,8 +18,8 @@ def matches_regex(pattern: str, string: str) -> bool:
 
 
 def match_all(
-    strings: List[str], pattern_dict_with_val: Dict[str, str | _VT]
-) -> Dict[str, str | _VT | None]:
+    strings: List[str], pattern_dict_with_val: Dict[str, str | int | float | None]
+) -> Dict[str, int | float | None]:
     r"""Match all strings in a list with a dictionary of regex patterns.
 
     :param strings: list of strings to match
@@ -29,7 +27,7 @@ def match_all(
     :return: dictionary of matched patterns with values
     """
     # TODO(Qazalbash): Simplify the logic
-    matches: Dict[str, str | _VT | None] = {}
+    matches: Dict[str, int | float | None] = {}
     duplicates = []
     for string in strings:
         if pattern_dict_with_val.get(string):  # Exact match
@@ -49,6 +47,7 @@ def match_all(
                 break
         if not pattern_found:
             matches[string] = None
+
     for duplicate in duplicates:
         pattern_found = False
         for pattern, value in pattern_dict_with_val.items():
@@ -62,5 +61,9 @@ def match_all(
                 matches[duplicate] = pattern_dict_with_val[duplicate]
         if not pattern_found:
             matches[duplicate] = None
+
+    for string in strings:
+        if matches.get(string) is None:
+            warnings.warn(f"'{string}' does not match any pattern.")
 
     return matches

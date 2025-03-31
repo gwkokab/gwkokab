@@ -17,13 +17,12 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 import jax.random as jrd
-import wcosmo
 from astropy import units
+from astropy.cosmology import Planck15, z_at_value
 from jaxtyping import Array, PRNGKeyArray
-from wcosmo.wcosmo import z_at_value
 
 from ...parameters import (
-    COS_INCLINATION,
+    COS_IOTA,
     COS_TILT_1,
     COS_TILT_2,
     PHI_12,
@@ -38,14 +37,6 @@ from ...parameters import (
 )
 from ...utils.tools import error_if
 from ._emulator import Emulator
-
-
-# Disable units for wcosmo until the resolution of
-# https://github.com/GalacticDynamics/quaxed/issues/133
-wcosmo.disable_units()
-
-
-Planck15: wcosmo.astropy.FlatLambdaCDM = getattr(wcosmo.astropy, "Planck15")
 
 
 class pdet_O3(Emulator):
@@ -106,7 +97,7 @@ class pdet_O3(Emulator):
             COS_TILT_2.name,
             PHI_12.name,
             REDSHIFT.name,
-            COS_INCLINATION.name,
+            COS_IOTA.name,
             POLARIZATION_ANGLE.name,
             RIGHT_ASCENSION.name,
             SIN_DECLINATION.name,
@@ -130,7 +121,7 @@ class pdet_O3(Emulator):
 
             proposal_dist = {
                 REDSHIFT.name: (0.0, 10.0),
-                COS_INCLINATION.name: (-1.0, 1.0),
+                COS_IOTA.name: (-1.0, 1.0),
                 POLARIZATION_ANGLE.name: (0.0, jnp.pi),
                 RIGHT_ASCENSION.name: (0.0, 2.0 * jnp.pi),
                 SIN_DECLINATION.name: (-1.0, 1.0),
@@ -163,9 +154,9 @@ class pdet_O3(Emulator):
 
         self.interp_DL = jnp.logspace(-4, jnp.log10(15.0), 500)
         self.interp_z = z_at_value(
-            lambda z: Planck15.luminosity_distance(z) * units.Gpc,
-            self.interp_DL,
-        )
+            Planck15.luminosity_distance,
+            self.interp_DL * units.Gpc,
+        ).value
 
         super().__init__(
             model_weights,
@@ -189,7 +180,7 @@ class pdet_O3(Emulator):
         cost2_trials: Array,
         phi12_trials: Array,
         z_trials: Array,
-        cos_inclination_trials: Array,
+        cos_iota_trials: Array,
         pol_trials: Array,
         ra_trials: Array,
         sin_dec_trials: Array,
@@ -201,10 +192,8 @@ class pdet_O3(Emulator):
 
         DL = jnp.interp(z_trials, self.interp_z, self.interp_DL)
         Mc_DL_ratio = Mc_det ** (5.0 / 6.0) / DL
-        amp_factor_plus = jnp.log(
-            (Mc_DL_ratio * ((1.0 + cos_inclination_trials**2) / 2)) ** 2
-        )
-        amp_factor_cross = jnp.log((Mc_DL_ratio * cos_inclination_trials) ** 2)
+        amp_factor_plus = jnp.log((Mc_DL_ratio * ((1.0 + cos_iota_trials**2) / 2)) ** 2)
+        amp_factor_cross = jnp.log((Mc_DL_ratio * cos_iota_trials) ** 2)
 
         # Effective spins
         chi_effective = (a1_trials * cost1_trials + q * a2_trials * cost2_trials) / (
@@ -233,7 +222,7 @@ class pdet_O3(Emulator):
                 DL,
                 ra_trials,
                 sin_dec_trials,
-                jnp.abs(cos_inclination_trials),
+                jnp.abs(cos_iota_trials),
                 jnp.sin(pol_trials % jnp.pi),
                 jnp.cos(pol_trials % jnp.pi),
                 chi_effective,
