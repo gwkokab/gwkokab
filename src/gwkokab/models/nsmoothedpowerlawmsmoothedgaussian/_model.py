@@ -407,8 +407,8 @@ def NSmoothedPowerlawMSmoothedGaussian(
 
 
 def SmoothedPowerlawAndPeak(
-    use_spin: bool,
-    use_redshift: bool,
+    use_spin: bool = False,
+    use_redshift: bool = False,
     validate_args: Optional[bool] = None,
     **params: Dict[str, Array],
 ) -> ScaledMixture:
