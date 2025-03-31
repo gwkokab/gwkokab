@@ -72,7 +72,7 @@ def poisson_mean_parser(filepath: str) -> PoissonMeanConfig:
 
     Returns
     -------
-    List[Union[Literal[ &quot;self&quot; ], DistributionLike]]
+    PoissonMeanConfig
         The configuration of the Poisson mean.
     """
     with open(filepath, "r") as file:
