@@ -50,7 +50,7 @@ class Parameter(eqx.Module):
 standard_uniform = Uniform(0.0, 1.0, validate_args=True)
 two_sided_uniform = Uniform(-1.0, 1.0, validate_args=True)
 uniform_for_masses = Uniform(0.5, 300.0, validate_args=True)
-unkown_distribution = ImproperUniform(
+unknown_distribution = ImproperUniform(
     support=real, batch_shape=(), event_shape=(), validate_args=True
 )
 # Masses
@@ -97,10 +97,10 @@ REDSHIFT = Parameter(
 
 COS_IOTA = Parameter(name="cos_iota", prior=two_sided_uniform)
 PHI_12 = Parameter(name="phi_12", prior=standard_uniform)
-PHI_1 = Parameter(name="phi_1", prior=unkown_distribution)
-PHI_2 = Parameter(name="phi_2", prior=unkown_distribution)
-PHI_ORB = Parameter(name="phi_orb", prior=unkown_distribution)
-MEAN_ANOMALY = Parameter(name="mean_anomaly", prior=unkown_distribution)
+PHI_1 = Parameter(name="phi_1", prior=unknown_distribution)
+PHI_2 = Parameter(name="phi_2", prior=unknown_distribution)
+PHI_ORB = Parameter(name="phi_orb", prior=unknown_distribution)
+MEAN_ANOMALY = Parameter(name="mean_anomaly", prior=unknown_distribution)
 POLARIZATION_ANGLE = Parameter(
     name="psi", prior=Uniform(0.0, jnp.pi, validate_args=True)
 )
