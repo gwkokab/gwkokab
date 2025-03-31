@@ -16,6 +16,7 @@
 from typing import Optional
 
 import equinox as eqx
+import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import optax
@@ -175,8 +176,8 @@ def train_regressor(
 
     df = read_data(data_path)
 
-    data_X = jnp.asarray(df[input_keys].to_numpy())
-    data_Y = df[output_keys].to_numpy()
+    data_X = jax.device_put(df[input_keys].to_numpy())
+    data_Y = jax.device_put(df[output_keys].to_numpy())
 
     log_data_Y = jnp.log(data_Y)
     log_data_Y = jnp.where(
