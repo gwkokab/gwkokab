@@ -152,7 +152,7 @@ class _Available:
     params: Sequence[str] = [
         "CHIRP_MASS_SOURCE",
         "CHIRP_MASS",
-        "COS_INCLINATION",
+        "COS_IOTA",
         "COS_TILT_1",
         "COS_TILT_2",
         "DETECTION_TIME",
