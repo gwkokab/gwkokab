@@ -367,7 +367,7 @@ def main() -> None:
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
         use_redshift=has_redshift,
-        use_cos_inclination=has_cos_iota,
+        use_cos_iota=has_cos_iota,
         use_phi_12=has_phi_12,
         use_polarization_angle=has_polarization_angle,
         use_right_ascension=has_right_ascension,
@@ -401,7 +401,7 @@ def main() -> None:
     constants["use_tilt"] = int(has_tilt)
     constants["use_eccentricity"] = int(has_eccentricity)
     constants["use_redshift"] = int(has_redshift)
-    constants["use_cos_inclination"] = int(has_cos_iota)
+    constants["use_cos_iota"] = int(has_cos_iota)
     constants["use_phi_12"] = int(has_phi_12)
     constants["use_polarization_angle"] = int(has_polarization_angle)
     constants["use_right_ascension"] = int(has_right_ascension)

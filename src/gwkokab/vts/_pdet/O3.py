@@ -180,7 +180,7 @@ class pdet_O3(Emulator):
         cost2_trials: Array,
         phi12_trials: Array,
         z_trials: Array,
-        cos_inclination_trials: Array,
+        cos_iota_trials: Array,
         pol_trials: Array,
         ra_trials: Array,
         sin_dec_trials: Array,
@@ -192,10 +192,8 @@ class pdet_O3(Emulator):
 
         DL = jnp.interp(z_trials, self.interp_z, self.interp_DL)
         Mc_DL_ratio = Mc_det ** (5.0 / 6.0) / DL
-        amp_factor_plus = jnp.log(
-            (Mc_DL_ratio * ((1.0 + cos_inclination_trials**2) / 2)) ** 2
-        )
-        amp_factor_cross = jnp.log((Mc_DL_ratio * cos_inclination_trials) ** 2)
+        amp_factor_plus = jnp.log((Mc_DL_ratio * ((1.0 + cos_iota_trials**2) / 2)) ** 2)
+        amp_factor_cross = jnp.log((Mc_DL_ratio * cos_iota_trials) ** 2)
 
         # Effective spins
         chi_effective = (a1_trials * cost1_trials + q * a2_trials * cost2_trials) / (
@@ -224,7 +222,7 @@ class pdet_O3(Emulator):
                 DL,
                 ra_trials,
                 sin_dec_trials,
-                jnp.abs(cos_inclination_trials),
+                jnp.abs(cos_iota_trials),
                 jnp.sin(pol_trials % jnp.pi),
                 jnp.cos(pol_trials % jnp.pi),
                 chi_effective,

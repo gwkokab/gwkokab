@@ -105,7 +105,7 @@ def create_truncated_normal_distributions(
         "cos_tilt1",
         "cos_tilt2",
         "ecc",
-        "cos_inclination",
+        "cos_iota",
         "phi_12",
         "polarization_angle",
         "right_ascension",
@@ -490,7 +490,7 @@ def create_uniform_distributions(
     ----------
     N : int
         Number of components
-    parameter_name : Literal[ &quot;m1&quot;, &quot;m2&quot;, &quot;chi1&quot;, &quot;chi2&quot;, &quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;, &quot;ecc&quot;, &quot;cos_inclination&quot;, &quot;phi_12&quot;, &quot;polarization_angle&quot;, &quot;right_ascension&quot;, &quot;sin_declination&quot;, ]
+    parameter_name : Literal[ &quot;m1&quot;, &quot;m2&quot;, &quot;chi1&quot;, &quot;chi2&quot;, &quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;, &quot;ecc&quot;, &quot;cos_iota&quot;, &quot;phi_12&quot;, &quot;polarization_angle&quot;, &quot;right_ascension&quot;, &quot;sin_declination&quot;, ]
         name of the parameter to create distributions for
     component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
         type of component, either &quot;pl&quot; or &quot;g&quot;
