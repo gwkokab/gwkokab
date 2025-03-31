@@ -74,8 +74,28 @@ def _build_non_mass_distributions(
         whether to include tilt
     use_eccentricity : bool
         whether to include eccentricity
+    use_mean_anomaly : bool
+        whether to include mean_anomaly
     use_redshift : bool
         whether to include redshift
+    use_cos_iota : bool
+        whether to include cos_iota
+    use_polarization_angle : bool
+        whether to include polarization_angle
+    use_right_ascension : bool
+        whether to include right_ascension
+    use_sin_declination : bool
+        whether to include sin_declination
+    use_detection_time : bool
+        whether to include detection_time
+    use_phi_1 : bool
+        whether to include phi_1
+    use_phi_2 : bool
+        whether to include phi_2
+    use_phi_12 : bool
+        whether to include phi_12
+    use_phi_orb : bool
+        whether to include phi_orb
     params : Dict[str, Array]
         dictionary of parameters
     validate_args : Optional[bool], optional
@@ -155,8 +175,28 @@ def _build_pl_component_distributions(
         whether to include tilt
     use_eccentricity : bool
         whether to include eccentricity
+    use_mean_anomaly : bool
+        whether to include mean_anomaly
     use_redshift : bool
         whether to include redshift
+    use_cos_iota : bool
+        whether to include cos_iota
+    use_polarization_angle : bool
+        whether to include polarization_angle
+    use_right_ascension : bool
+        whether to include right_ascension
+    use_sin_declination : bool
+        whether to include sin_declination
+    use_detection_time : bool
+        whether to include detection_time
+    use_phi_1 : bool
+        whether to include phi_1
+    use_phi_2 : bool
+        whether to include phi_2
+    use_phi_12 : bool
+        whether to include phi_12
+    use_phi_orb : bool
+        whether to include phi_orb
     params : Dict[str, Array]
         dictionary of parameters
     validate_args : Optional[bool], optional
@@ -234,8 +274,28 @@ def _build_g_component_distributions(
         whether to include tilt
     use_eccentricity : bool
         whether to include eccentricity
+    use_mean_anomaly : bool
+        whether to include mean_anomaly
     use_redshift : bool
         whether to include redshift
+    use_cos_iota : bool
+        whether to include cos_iota
+    use_polarization_angle : bool
+        whether to include polarization_angle
+    use_right_ascension : bool
+        whether to include right_ascension
+    use_sin_declination : bool
+        whether to include sin_declination
+    use_detection_time : bool
+        whether to include detection_time
+    use_phi_1 : bool
+        whether to include phi_1
+    use_phi_2 : bool
+        whether to include phi_2
+    use_phi_12 : bool
+        whether to include phi_12
+    use_phi_orb : bool
+        whether to include phi_orb
     params : Dict[str, Array]
         dictionary of parameters
     validate_args : Optional[bool], optional
@@ -406,8 +466,28 @@ def NPowerlawMGaussian(
         whether to include tilt, defaults to False
     use_eccentricity : bool
         whether to include eccentricity, defaults to False
+    use_mean_anomaly : bool
+        whether to include mean_anomaly, defaults to False
     use_redshift : bool
         whether to include redshift, defaults to False
+    use_cos_iota : bool
+        whether to include cos_iota, defaults to False
+    use_polarization_angle : bool
+        whether to include polarization_angle, defaults to False
+    use_right_ascension : bool
+        whether to include right_ascension, defaults to False
+    use_sin_declination : bool
+        whether to include sin_declination, defaults to False
+    use_detection_time : bool
+        whether to include detection_time, defaults to False
+    use_phi_1 : bool
+        whether to include phi_1, defaults to False
+    use_phi_2 : bool
+        whether to include phi_2, defaults to False
+    use_phi_12 : bool
+        whether to include phi_12, defaults to False
+    use_phi_orb : bool
+        whether to include phi_orb, defaults to False
     validate_args : Optional[bool], optional
         whether to validate arguments, defaults to None
 
