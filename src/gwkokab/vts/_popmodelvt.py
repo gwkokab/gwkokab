@@ -414,6 +414,7 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         basis: str,
         scale_factor: int = 1,
         m_min: float = 0.5,
+        batch_size: Optional[int] = None,
     ) -> None:
         r"""Convenience class for loading a volume time sensitivity function generated
         by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_
@@ -440,7 +441,12 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         else:
             self.basis = _correction_bases_aligned_spin[basis]
         super(PopModelsCalibratedVolumeTimeSensitivity, self).__init__(
-            parameters, filename, zero_spin, scale_factor, m_min
+            parameters,
+            filename,
+            zero_spin,
+            scale_factor,
+            m_min,
+            batch_size=batch_size,
         )
 
     def get_logVT(self) -> Callable[[Array], Array]:
