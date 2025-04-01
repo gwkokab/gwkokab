@@ -6,7 +6,7 @@ Provide a clear, concise overview of:
 - Expected outcomes
 -->
 
-## Related Issues
+## Related To
 <!--
 Link associated items using GitHub keywords:
 - "Closes #123"
