@@ -1,21 +1,10 @@
-#  Copyright 2023 The GWKokab Authors
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Copyright 2023 The GWKokab Authors
+# SPDX-License-Identifier: Apache-2.0
 
 
 import warnings
 from collections.abc import Sequence
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import equinox as eqx
 import h5py
@@ -38,7 +27,10 @@ __all__ = [
 
 
 @eqx.filter_value_and_grad
-def mse_loss_fn(model: PyTree, x: Array, y: Array) -> Array:
+@eqx.filter_jit
+def mse_loss_fn(
+    model: PyTree, x: Array, y: Array, batch_size: Optional[int] = 256
+) -> Array:
     """Mean squared error loss function.
 
     Parameters
@@ -49,18 +41,22 @@ def mse_loss_fn(model: PyTree, x: Array, y: Array) -> Array:
         input data
     y : Array
         output data
+    batch_size : Optional[int], optional
+        batch size for training, by default 256. This is used to avoid OOM errors when
+        training large datasets. If None, the entire dataset will be trained
+        sequentially. This is not recommended for large datasets.
 
     Returns
     -------
     Array
         mean squared error
     """
-    y_pred = jax.vmap(model)(x)
+    y_pred = jax.lax.map(model, x, batch_size=batch_size)
     return jnp.mean(jnp.square(y - y_pred))  # mean squared error
 
 
 @eqx.filter_jit
-def predict(model: PyTree, x: Array) -> Array:
+def predict(model: PyTree, x: Array, batch_size: Optional[int] = 256) -> Array:
     """Predict the output of the model given the input data.
 
     Parameters
@@ -69,13 +65,17 @@ def predict(model: PyTree, x: Array) -> Array:
         Model to approximate the log of the VT function
     x : Array
         input data
+    batch_size : Optional[int], optional
+        batch size for prediction, by default 256. This is used to avoid OOM errors when
+        predicting large datasets. If None, the entire dataset will be predicted
+        sequentially. This is not recommended for large datasets.
 
     Returns
     -------
     Array
         predicted output
     """
-    return jax.vmap(model)(x)
+    return jax.lax.map(model, x, batch_size=batch_size)
 
 
 def read_data(data_path: str) -> pd.DataFrame:
@@ -102,8 +102,9 @@ def make_model(
     key: PRNGKeyArray,
     input_layer: int,
     output_layer: int,
-    hidden_layers: Optional[List[int]] = None,
-) -> eqx.nn.Sequential:
+    width_size: int,
+    depth: int,
+) -> eqx.nn.MLP:
     """Make a neural network model to approximate the log of the VT function.
 
     Parameters
@@ -114,61 +115,33 @@ def make_model(
         input layer of the model
     output_layer : int
         output layer of the model
-    hidden_layers : Optional[List[int]], optional
-        hidden layers of the model, by default None
+    width_size : int
+        width size of the model
+    depth : int
+        depth of the model
 
     Returns
     -------
-    eqx.nn.Sequential
+    eqx.nn.MLP
         neural network model
     """
     assert is_prng_key(key)
-    if hidden_layers is None:
-        keys = jrd.split(key, 2)
-        layers: List[eqx.nn.Linear | eqx.nn.Lambda] = [
-            eqx.nn.Linear(
-                in_features=input_layer,
-                out_features=output_layer,
-                key=keys[0],
-            )
-        ]
-        model = eqx.nn.Sequential(layers)
-        return model
 
-    keys = jrd.split(key, 2 + len(hidden_layers))
-
-    layers = [
-        eqx.nn.Linear(
-            in_features=input_layer,
-            out_features=hidden_layers[0],
-            key=keys[0],
-        ),
-        eqx.nn.Lambda(jnn.relu),
-    ]
-    for i in range(len(hidden_layers) - 1):
-        layers.append(
-            eqx.nn.Linear(
-                in_features=hidden_layers[i],
-                out_features=hidden_layers[i + 1],
-                key=keys[i + 1],
-            ),
-        )
-        layers.append(eqx.nn.Lambda(jnn.relu))
-    layers.append(
-        eqx.nn.Linear(
-            in_features=hidden_layers[-1], out_features=output_layer, key=keys[-1]
-        )
+    model = eqx.nn.MLP(
+        in_size=input_layer,
+        out_size=output_layer,
+        width_size=width_size,
+        depth=depth,
+        activation=jnn.relu,
+        key=key,
     )
-
-    model = eqx.nn.Sequential(layers)
-
     return model
 
 
 def save_model(
     *,
     filename: str,
-    model: eqx.nn.Sequential,
+    model: eqx._ad._CheckpointWrapper,
     names: Optional[Sequence[str]] = None,
 ) -> None:
     """Save the model to the given file.
@@ -177,7 +150,7 @@ def save_model(
     ----------
     filename : str
         Name of the file to save the model
-    model : eqx.nn.Sequential
+    model : eqx.nn.MLP
         Model to approximate the log of the VT function
     names : Optional[Sequence[str]], optional
         names of the parameters, by default None
@@ -189,20 +162,22 @@ def save_model(
             warnings.warn(
                 f"Neural VT path does not end with .hdf5: {old_filename}. Saving to {filename} instead."
             )
-    num_layers = len(model.layers)
+    model: eqx.nn.MLP = model._fun  # type: ignore
     with h5py.File(filename, "w") as f:
         if names is not None:
             f.create_dataset("names", data=np.array(names, dtype="S"))
-        for i in range(0, num_layers, 2):
-            layer_number = i >> 1
-            layer_i = f.create_group(f"layer_{layer_number}")
-            layer_i.create_dataset(
-                f"weight_{layer_number}", data=model.layers[i].weight
-            )
-            layer_i.create_dataset(f"bias_{layer_number}", data=model.layers[i].bias)
+        f.create_dataset("in_size", data=model.in_size)  # type: ignore
+        f.create_dataset("out_size", data=model.out_size)  # type: ignore
+        f.create_dataset("width_size", data=model.width_size)  # type: ignore
+        f.create_dataset("depth", data=model.depth)  # type: ignore
+        num_layers = len(model.layers)  # type: ignore
+        for i in range(num_layers):
+            layer_i = f.create_group(f"layer_{i}")
+            layer_i.create_dataset(f"weight_{i}", data=model.layers[i].weight)  # type: ignore
+            layer_i.create_dataset(f"bias_{i}", data=model.layers[i].bias)  # type: ignore
 
 
-def load_model(filename) -> Tuple[List[str], eqx.nn.Sequential]:
+def load_model(filename) -> Tuple[List[str], eqx.nn.MLP]:
     """Load the model from the given file.
 
     Parameters
@@ -212,29 +187,31 @@ def load_model(filename) -> Tuple[List[str], eqx.nn.Sequential]:
 
     Returns
     -------
-    Tuple[List[str], eqx.nn.Sequential]
+    Tuple[List[str], eqx.nn.MLP]
         names of the parameters and the model
     """
-    layers: List[Any] = []
     with h5py.File(filename, "r") as f:
         names = f["names"][:]
         names = names.astype(str).tolist()
+        in_size = int(f["in_size"][()])
+        out_size = int(f["out_size"][()])
+        width_size = int(f["width_size"][()])
+        depth = int(f["depth"][()])
+        new_model = eqx.nn.MLP(
+            in_size=in_size,
+            out_size=out_size,
+            width_size=width_size,
+            depth=depth,
+            activation=jnn.relu,
+            key=jrd.PRNGKey(0),
+        )
         i = 0
         while f.get(f"layer_{i}"):
             layer_i = f[f"layer_{i}"]
             weight_i = jax.device_put(np.asarray(layer_i[f"weight_{i}"][:]))
             bias_i = jax.device_put(np.asarray(layer_i[f"bias_{i}"][:]))
-            nn = eqx.nn.Linear(
-                in_features=weight_i.shape[1],
-                out_features=weight_i.shape[0],
-                key=jrd.PRNGKey(0),
-            )
-            nn = eqx.tree_at(lambda l: l.weight, nn, weight_i)
-            nn = eqx.tree_at(lambda l: l.bias, nn, bias_i)
-            layers.append(nn)
-            layers.append(eqx.nn.Lambda(jnn.relu))
+            new_model = eqx.tree_at(lambda m: m.layers[i].weight, new_model, weight_i)
+            new_model = eqx.tree_at(lambda m: m.layers[i].bias, new_model, bias_i)
             i += 1
-    layers.pop(-1)  # remove the last relu layer
-    new_model = eqx.nn.Sequential(layers)
 
     return names, new_model
