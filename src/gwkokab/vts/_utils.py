@@ -44,7 +44,7 @@ def mse_loss_fn(
     batch_size : Optional[int], optional
         batch size for training, by default 256. This is used to avoid OOM errors when
         training large datasets. If None, the entire dataset will be trained
-        MLPly. This is not recommended for large datasets.
+        sequentially. This is not recommended for large datasets.
 
     Returns
     -------
@@ -68,7 +68,7 @@ def predict(model: PyTree, x: Array, batch_size: Optional[int] = 256) -> Array:
     batch_size : Optional[int], optional
         batch size for prediction, by default 256. This is used to avoid OOM errors when
         predicting large datasets. If None, the entire dataset will be predicted
-        MLPly. This is not recommended for large datasets.
+        sequentially. This is not recommended for large datasets.
 
     Returns
     -------
@@ -102,8 +102,8 @@ def make_model(
     key: PRNGKeyArray,
     input_layer: int,
     output_layer: int,
-    width_size: int = 0,
-    depth: int = 0,
+    width_size: int,
+    depth: int,
 ) -> eqx.nn.MLP:
     """Make a neural network model to approximate the log of the VT function.
 
@@ -115,8 +115,10 @@ def make_model(
         input layer of the model
     output_layer : int
         output layer of the model
-    hidden_layers : Optional[List[int]], optional
-        hidden layers of the model, by default None
+    width_size : int
+        width size of the model
+    depth : int
+        depth of the model
 
     Returns
     -------

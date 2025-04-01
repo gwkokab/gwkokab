@@ -80,7 +80,7 @@ def train_regressor(
         list of input keys
     output_keys : list[str]
         list of output keys
-    width_size : list[int]
+    width_size : int
         width size of the model
     depth : int
         depth of the model
