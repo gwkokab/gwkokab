@@ -216,9 +216,8 @@ def train_regressor(
 
     loss_vals = []
     val_loss_vals = []
-
     total = int(len(train_X) // batch_size)
-    epoch_loss = jnp.zeros(())
+
     with Progress(
         SpinnerColumn(),
         TextColumn("Epoch {task.fields[epoch]}"),
@@ -229,6 +228,7 @@ def train_regressor(
         refresh_per_second=5,
     ) as progress:
         for epoch in range(epochs):
+            epoch_loss = jnp.zeros(())
             task_id = progress.add_task(
                 "",
                 total=total,
