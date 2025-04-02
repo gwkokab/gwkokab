@@ -7,6 +7,7 @@ import os
 from collections.abc import Callable
 from typing import Any, Optional
 
+import equinox as eqx
 import jax
 import numpy as np
 from flowMC.nfmodel.base import NFModel
@@ -191,7 +192,7 @@ class flowMChandler(object):
         initial_position: Array,
         data: Optional[dict] = None,
     ) -> None:
-        self.logpdf = logpdf
+        self.logpdf = eqx.filter_checkpoint(logpdf)
         self.local_sampler_kwargs = local_sampler_kwargs
         self.nf_model_kwargs = nf_model_kwargs
         self.sampler_kwargs = sampler_kwargs
