@@ -218,8 +218,6 @@ def train_regressor(
     val_loss_vals = []
     total = int(len(train_X) // batch_size)
 
-    total = int(len(train_X) // batch_size)
-    epoch_loss = jnp.zeros(())
     with Progress(
         SpinnerColumn(),
         TextColumn("Epoch {task.fields[epoch]}"),
