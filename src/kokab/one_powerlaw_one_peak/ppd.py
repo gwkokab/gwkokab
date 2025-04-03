@@ -31,7 +31,10 @@ def make_parser() -> ArgumentParser:
 
 
 def model(**params) -> DistributionLike:
-    _model = SmoothedPowerlawPeakAndPowerlawRedshift(**params)
+    validate_args = params.pop("validate_args", True)
+    _model = SmoothedPowerlawPeakAndPowerlawRedshift(
+        **params, validate_args=validate_args
+    )
     _model._component_distributions[0].marginal_distributions[0] = (
         _model._component_distributions[0].marginal_distributions[0].base_dist
     )
