@@ -1,21 +1,11 @@
-#  Copyright 2023 The GWKokab Authors
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing, software
-#  distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
+# Copyright 2023 The GWKokab Authors
+# SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Optional
+from typing import Callable, Optional
 
 import equinox as eqx
+import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import optax
@@ -75,7 +65,8 @@ def train_regressor(
     *,
     input_keys: list[str],
     output_keys: list[str],
-    hidden_layers: list[int],
+    width_size: int,
+    depth: int,
     batch_size: int,
     data_path: str,
     checkpoint_path: Optional[str] = None,
@@ -89,8 +80,10 @@ def train_regressor(
         list of input keys
     output_keys : list[str]
         list of output keys
-    hidden_layers : list[int]
-        list of hidden layers
+    width_size : int
+        width size of the model
+    depth : int
+        depth of the model
     batch_size : int
         batch size for training
     data_path : str
@@ -118,16 +111,16 @@ def train_regressor(
 
     @eqx.filter_jit
     def make_step(
-        model: eqx.nn.Sequential,
+        model: eqx.nn.MLP,
         x: Array,
         y: Array,
         opt_state: optax.OptState,
-    ) -> tuple[eqx.nn.Sequential, optax.OptState, Array]:
+    ) -> tuple[eqx.nn.MLP, optax.OptState, Array]:
         """Make a step in the optimization process.
 
         Parameters
         ----------
-        model : eqx.nn.Sequential
+        model : eqx.nn.MLP
             Model to approximate the log of the VT function
         x : Array
             input data
@@ -138,7 +131,7 @@ def train_regressor(
 
         Returns
         -------
-        tuple[eqx.nn.Sequential, optax.OptState, Array]
+        tuple[eqx.nn.MLP, optax.OptState, Array]
             optimizer state
         """
         loss, grads = mse_loss_fn(model, x, y)
@@ -147,16 +140,16 @@ def train_regressor(
         return model, opt_state, loss
 
     def train_step(
-        model: eqx.nn.Sequential,
+        model: eqx.nn.MLP,
         x: Array,
         y: Array,
         opt_state: optax.OptState,
-    ) -> tuple[eqx.nn.Sequential, optax.OptState, Array]:
+    ) -> tuple[eqx.nn.MLP, optax.OptState, Array]:
         """Train the model for one epoch.
 
         Parameters
         ----------
-        model : eqx.nn.Sequential
+        model : eqx.nn.MLP
             Model to approximate the log of the VT function
         x : Array
             input data
@@ -167,7 +160,7 @@ def train_regressor(
 
         Returns
         -------
-        tuple[eqx.nn.Sequential, optax.OptState, Array]
+        tuple[eqx.nn.MLP, optax.OptState, Array]
             optimizer state
         """
         model, opt_state, loss = make_step(model, x, y, opt_state)
@@ -175,8 +168,8 @@ def train_regressor(
 
     df = read_data(data_path)
 
-    data_X = jnp.asarray(df[input_keys].to_numpy())
-    data_Y = df[output_keys].to_numpy()
+    data_X = jax.device_put(df[input_keys].to_numpy(), may_alias=True)
+    data_Y = jax.device_put(df[output_keys].to_numpy(), may_alias=True)
 
     log_data_Y = jnp.log(data_Y)
     log_data_Y = jnp.where(
@@ -195,7 +188,8 @@ def train_regressor(
     table.add_column("Value", justify="left")
     table.add_row("Input Keys", ", ".join(input_keys))
     table.add_row("Output Keys", ", ".join(output_keys))
-    table.add_row("Hidden Layers", ", ".join(map(str, hidden_layers)))
+    table.add_row("Width Size", str(width_size))
+    table.add_row("Depth", str(depth))
     table.add_row("Data Path", data_path)
     table.add_row("Checkpoint Path", checkpoint_path)
     table.add_row("Train Size", str(len(train_X)))
@@ -212,13 +206,17 @@ def train_regressor(
         key=jrd.PRNGKey(np.random.randint(0, 2**32 - 1)),
         input_layer=len(input_keys),
         output_layer=len(output_keys),
-        hidden_layers=hidden_layers,
+        width_size=width_size,
+        depth=depth,
     )
+
+    model: Callable = eqx.filter_checkpoint(model)  # type: ignore
 
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
 
     loss_vals = []
     val_loss_vals = []
+    total = int(len(train_X) // batch_size)
 
     with Progress(
         SpinnerColumn(),
@@ -229,14 +227,13 @@ def train_regressor(
         TextColumn("[progress.description]{task.description}"),
         refresh_per_second=5,
     ) as progress:
-        total = int(len(train_X) // batch_size)
         for epoch in range(epochs):
+            epoch_loss = jnp.zeros(())
             task_id = progress.add_task(
                 "",
                 total=total,
                 epoch=epoch + 1,
             )
-            epoch_loss = jnp.zeros(())
             for i in range(0, len(train_X), batch_size):
                 x = train_X[i : i + batch_size]
                 y = train_Y[i : i + batch_size]
@@ -257,11 +254,12 @@ def train_regressor(
             progress.update(
                 task_id,
                 completed=total,
+                refresh=True,
                 description=f"loss: {loss:.4f} - val loss: {val_loss:.4f}",
             )
 
     if checkpoint_path is not None:
-        save_model(filename=checkpoint_path, model=model, names=input_keys)
+        save_model(filename=checkpoint_path, model=model, names=input_keys)  # type: ignore
         plt.plot(loss_vals, label="loss")
         plt.plot(val_loss_vals, label="val loss")
         plt.yscale("log")
