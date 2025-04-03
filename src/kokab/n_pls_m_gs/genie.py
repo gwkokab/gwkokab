@@ -190,59 +190,89 @@ def main() -> None:
     has_phi_12 = args.add_phi_12
     has_phi_orb = args.add_phi_orb
 
-    err_param = match_all(
-        [
-            "chi1_high",
-            "chi1_low",
-            "chi1_scale",
-            "chi2_high",
-            "chi2_low",
-            "chi2_scale",
-            "cos_tilt_1_high",
-            "cos_tilt_1_low",
-            "cos_tilt_1_scale",
-            "cos_tilt_2_high",
-            "cos_tilt_2_low",
-            "cos_tilt_2_scale",
-            "ecc_high",
-            "ecc_low",
-            "ecc_scale",
-            "redshift_high",
-            "redshift_low",
-            "redshift_scale",
-            "scale_eta",
-            "scale_Mc",
-            cos_iota_name + "_high",
-            cos_iota_name + "_low",
-            cos_iota_name + "_scale",
-            detection_time_name + "_scale",
-            mean_anomaly_name + "_high",
-            mean_anomaly_name + "_low",
-            mean_anomaly_name + "_scale",
-            phi_1_name + "_high",
-            phi_1_name + "_low",
-            phi_1_name + "_scale",
-            phi_2_name + "_high",
-            phi_2_name + "_low",
-            phi_2_name + "_scale",
-            phi_12_name + "_high",
-            phi_12_name + "_low",
-            phi_12_name + "_scale",
-            phi_orb_name + "_high",
-            phi_orb_name + "_low",
-            phi_orb_name + "_scale",
-            polarization_angle_name + "_high",
-            polarization_angle_name + "_low",
-            polarization_angle_name + "_scale",
-            right_ascension_name + "_high",
-            right_ascension_name + "_low",
-            right_ascension_name + "_scale",
-            sin_declination_name + "_high",
-            sin_declination_name + "_low",
-            sin_declination_name + "_scale",
-        ],
-        err_json,
-    )
+    err_params_name = ["scale_eta", "scale_Mc"]
+    if has_spin:
+        err_params_name.extend(
+            [
+                "chi1_high",
+                "chi1_low",
+                "chi1_scale",
+                "chi2_high",
+                "chi2_low",
+                "chi2_scale",
+            ]
+        )
+    if has_tilt:
+        err_params_name.extend(
+            [
+                "cos_tilt_1_high",
+                "cos_tilt_1_low",
+                "cos_tilt_1_scale",
+                "cos_tilt_2_high",
+                "cos_tilt_2_low",
+                "cos_tilt_2_scale",
+            ]
+        )
+    if has_eccentricity:
+        err_params_name.extend(["ecc_high", "ecc_low", "ecc_scale"])
+    if has_mean_anomaly:
+        err_params_name.extend(
+            [
+                mean_anomaly_name + "_high",
+                mean_anomaly_name + "_low",
+                mean_anomaly_name + "_scale",
+            ]
+        )
+    if has_redshift:
+        err_params_name.extend(["redshift_high", "redshift_low", "redshift_scale"])
+    if has_cos_iota:
+        err_params_name.extend(
+            [cos_iota_name + "_high", cos_iota_name + "_low", cos_iota_name + "_scale"]
+        )
+    if has_polarization_angle:
+        err_params_name.extend(
+            [
+                polarization_angle_name + "_high",
+                polarization_angle_name + "_low",
+                polarization_angle_name + "_scale",
+            ]
+        )
+    if has_right_ascension:
+        err_params_name.extend(
+            [
+                right_ascension_name + "_high",
+                right_ascension_name + "_low",
+                right_ascension_name + "_scale",
+            ]
+        )
+    if has_sin_declination:
+        err_params_name.extend(
+            [
+                sin_declination_name + "_high",
+                sin_declination_name + "_low",
+                sin_declination_name + "_scale",
+            ]
+        )
+    if has_detection_time:
+        err_params_name.append(detection_time_name + "_scale")
+    if has_phi_1:
+        err_params_name.extend(
+            [phi_1_name + "_high", phi_1_name + "_low", phi_1_name + "_scale"]
+        )
+    if has_phi_2:
+        err_params_name.extend(
+            [phi_2_name + "_high", phi_2_name + "_low", phi_2_name + "_scale"]
+        )
+    if has_phi_12:
+        err_params_name.extend(
+            [phi_12_name + "_high", phi_12_name + "_low", phi_12_name + "_scale"]
+        )
+    if has_phi_orb:
+        err_params_name.extend(
+            [phi_orb_name + "_high", phi_orb_name + "_low", phi_orb_name + "_scale"]
+        )
+
+    err_params_value = match_all(err_params_name, err_json)
 
     all_params: List[Tuple[str, int]] = [
         ("alpha_pl", N_pl),
@@ -268,8 +298,8 @@ def main() -> None:
             x,
             size,
             key,
-            scale_Mc=err_param["scale_Mc"],
-            scale_eta=err_param["scale_eta"],
+            scale_Mc=err_params_value["scale_Mc"],
+            scale_eta=err_params_value["scale_eta"],
         ),
     )
 
@@ -321,9 +351,9 @@ def main() -> None:
             chi1_name,
             partial(
                 truncated_normal_error,
-                scale=err_param["chi1_scale"],
-                low=err_param.get("chi1_low"),
-                high=err_param.get("chi1_high"),
+                scale=err_params_value["chi1_scale"],
+                low=err_params_value.get("chi1_low"),
+                high=err_params_value.get("chi1_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
@@ -333,9 +363,9 @@ def main() -> None:
             chi2_name,
             partial(
                 truncated_normal_error,
-                scale=err_param["chi2_scale"],
-                low=err_param.get("chi2_low"),
-                high=err_param.get("chi2_high"),
+                scale=err_params_value["chi2_scale"],
+                low=err_params_value.get("chi2_low"),
+                high=err_params_value.get("chi2_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
@@ -356,9 +386,9 @@ def main() -> None:
             cos_tilt_1_name,
             partial(
                 truncated_normal_error,
-                scale=err_param["cos_tilt_1_scale"],
-                low=err_param.get("cos_tilt_1_low"),
-                high=err_param.get("cos_tilt_1_high"),
+                scale=err_params_value["cos_tilt_1_scale"],
+                low=err_params_value.get("cos_tilt_1_low"),
+                high=err_params_value.get("cos_tilt_1_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
@@ -368,9 +398,9 @@ def main() -> None:
             cos_tilt_2_name,
             partial(
                 truncated_normal_error,
-                scale=err_param["cos_tilt_2_scale"],
-                low=err_param.get("cos_tilt_2_low"),
-                high=err_param.get("cos_tilt_2_high"),
+                scale=err_params_value["cos_tilt_2_scale"],
+                low=err_params_value.get("cos_tilt_2_low"),
+                high=err_params_value.get("cos_tilt_2_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
@@ -392,9 +422,9 @@ def main() -> None:
         def phi_1_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_param[phi_1_name + "_scale"],
-                low=err_param.get(phi_1_name + "_low", 0.0),
-                high=err_param.get(phi_1_name + "_high", 2 * jnp.pi),
+                scale=err_params_value[phi_1_name + "_scale"],
+                low=err_params_value.get(phi_1_name + "_low", 0.0),
+                high=err_params_value.get(phi_1_name + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
@@ -416,9 +446,9 @@ def main() -> None:
         def phi_2_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_param[phi_2_name + "_scale"],
-                low=err_param.get(phi_2_name + "_low", 0.0),
-                high=err_param.get(phi_2_name + "_high", 2 * jnp.pi),
+                scale=err_params_value[phi_2_name + "_scale"],
+                low=err_params_value.get(phi_2_name + "_low", 0.0),
+                high=err_params_value.get(phi_2_name + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
@@ -440,9 +470,9 @@ def main() -> None:
         def phi_12_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_param[phi_12_name + "_scale"],
-                low=err_param.get(phi_12_name + "_low", 0.0),
-                high=err_param.get(phi_12_name + "_high", 2 * jnp.pi),
+                scale=err_params_value[phi_12_name + "_scale"],
+                low=err_params_value.get(phi_12_name + "_low", 0.0),
+                high=err_params_value.get(phi_12_name + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
@@ -467,9 +497,9 @@ def main() -> None:
             ecc_name,
             partial(
                 truncated_normal_error,
-                scale=err_param["ecc_scale"],
-                low=err_param.get("ecc_low"),
-                high=err_param.get("ecc_high"),
+                scale=err_params_value["ecc_scale"],
+                low=err_params_value.get("ecc_low"),
+                high=err_params_value.get("ecc_high"),
                 cut_low=0.0,
                 cut_high=1.0,
             ),
@@ -491,9 +521,9 @@ def main() -> None:
             mean_anomaly_name,
             partial(
                 truncated_normal_error,
-                scale=err_param["mean_anomaly_scale"],
-                low=err_param.get("mean_anomaly_low"),
-                high=err_param.get("mean_anomaly_high"),
+                scale=err_params_value["mean_anomaly_scale"],
+                low=err_params_value.get("mean_anomaly_low"),
+                high=err_params_value.get("mean_anomaly_high"),
                 cut_low=0.0,
                 cut_high=1.0,
             ),
@@ -515,9 +545,9 @@ def main() -> None:
             redshift_name,
             partial(
                 truncated_normal_error,
-                scale=err_param["redshift_scale"],
-                low=err_param.get("redshift_low"),
-                high=err_param.get("redshift_high"),
+                scale=err_params_value["redshift_scale"],
+                low=err_params_value.get("redshift_low"),
+                high=err_params_value.get("redshift_high"),
                 cut_low=1e-3,
                 cut_high=None,
             ),
@@ -539,9 +569,9 @@ def main() -> None:
             right_ascension_name,
             partial(
                 truncated_normal_error,
-                scale=err_param[right_ascension_name + "_scale"],
-                low=err_param.get(right_ascension_name + "_low"),
-                high=err_param.get(right_ascension_name + "_high"),
+                scale=err_params_value[right_ascension_name + "_scale"],
+                low=err_params_value.get(right_ascension_name + "_low"),
+                high=err_params_value.get(right_ascension_name + "_high"),
                 cut_low=0.0,
                 cut_high=2.0 * jnp.pi,
             ),
@@ -563,9 +593,9 @@ def main() -> None:
             sin_declination_name,
             partial(
                 truncated_normal_error,
-                scale=err_param[sin_declination_name + "_scale"],
-                low=err_param.get(sin_declination_name + "_low"),
-                high=err_param.get(sin_declination_name + "_high"),
+                scale=err_params_value[sin_declination_name + "_scale"],
+                low=err_params_value.get(sin_declination_name + "_low"),
+                high=err_params_value.get(sin_declination_name + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
@@ -588,7 +618,8 @@ def main() -> None:
             eps = 1e-6  # To avoid log(0) or log of negative
             safe_x = jnp.maximum(x, eps)
             err_x = dist.LogNormal(
-                loc=jnp.log(safe_x), scale=err_param[detection_time_name + "_scale"]
+                loc=jnp.log(safe_x),
+                scale=err_params_value[detection_time_name + "_scale"],
             ).sample(key=key, sample_shape=(size,))
 
             return err_x
@@ -609,9 +640,9 @@ def main() -> None:
             cos_iota_name,
             partial(
                 truncated_normal_error,
-                scale=err_param[cos_iota_name + "_scale"],
-                low=err_param.get(cos_iota_name + "_low"),
-                high=err_param.get(cos_iota_name + "_high"),
+                scale=err_params_value[cos_iota_name + "_scale"],
+                low=err_params_value.get(cos_iota_name + "_low"),
+                high=err_params_value.get(cos_iota_name + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
@@ -633,9 +664,9 @@ def main() -> None:
             polarization_angle_name,
             partial(
                 truncated_normal_error,
-                scale=err_param[polarization_angle_name + "_scale"],
-                low=err_param.get(polarization_angle_name + "_low"),
-                high=err_param.get(polarization_angle_name + "_high"),
+                scale=err_params_value[polarization_angle_name + "_scale"],
+                low=err_params_value.get(polarization_angle_name + "_low"),
+                high=err_params_value.get(polarization_angle_name + "_high"),
                 cut_low=0.0,
                 cut_high=jnp.pi,
             ),
@@ -657,9 +688,9 @@ def main() -> None:
         def phi_orb_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_param[phi_orb_name + "_scale"],
-                low=err_param.get(phi_orb_name + "_low", 0.0),
-                high=err_param.get(phi_orb_name + "_high", 2 * jnp.pi),
+                scale=err_params_value[phi_orb_name + "_scale"],
+                low=err_params_value.get(phi_orb_name + "_low", 0.0),
+                high=err_params_value.get(phi_orb_name + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
