@@ -7,8 +7,14 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 import pandas as pd
 from numpyro.distributions.distribution import DistributionLike
 
-from gwkokab.models import SmoothedPowerlawPeakAndPowerlawRedshift
-from gwkokab.parameters import PRIMARY_MASS_SOURCE, REDSHIFT, SECONDARY_MASS_SOURCE
+from gwkokab.models import SmoothedPowerlawAndPeak
+from gwkokab.parameters import (
+    PRIMARY_MASS_SOURCE,
+    PRIMARY_SPIN_MAGNITUDE,
+    REDSHIFT,
+    SECONDARY_MASS_SOURCE,
+    SECONDARY_SPIN_MAGNITUDE,
+)
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
 from kokab.utils.common import ppd_ranges, read_json
@@ -32,9 +38,7 @@ def make_parser() -> ArgumentParser:
 
 def model(**params) -> DistributionLike:
     validate_args = params.pop("validate_args", True)
-    _model = SmoothedPowerlawPeakAndPowerlawRedshift(
-        **params, validate_args=validate_args
-    )
+    _model = SmoothedPowerlawAndPeak(**params, validate_args=validate_args)
     _model._component_distributions[0].marginal_distributions[0] = (
         _model._component_distributions[0].marginal_distributions[0].base_dist
     )
@@ -56,7 +60,15 @@ def main() -> None:
     constants = read_json(args.constants)
     nf_samples_mapping = read_json(args.nf_samples_mapping)
 
-    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name, REDSHIFT.name]
+    use_spin = constants.get("use_redshift", False)
+    use_redshift = constants.get("use_redshift", False)
+
+    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+
+    if use_spin:
+        parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
+    if use_redshift:
+        parameters.append(REDSHIFT.name)
 
     ranges = ppd_ranges(parameters, args.range)
 
