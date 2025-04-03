@@ -28,7 +28,6 @@ from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
 from .nsmoothedpowerlawmsmoothedgaussian import (
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
     SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,
-    SmoothedPowerlawPeakAndPowerlawRedshift as SmoothedPowerlawPeakAndPowerlawRedshift,
 )
 from .redshift import PowerlawRedshift as PowerlawRedshift
 from .spin import (
