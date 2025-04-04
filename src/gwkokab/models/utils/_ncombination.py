@@ -13,6 +13,7 @@ from numpyro.distributions import (
     TransformedDistribution,
     TruncatedNormal,
     TwoSidedTruncatedDistribution,
+    Uniform,
 )
 
 from ...cosmology import PLANCK_2015_Cosmology
@@ -97,7 +98,18 @@ def create_beta_distributions(
 def create_truncated_normal_distributions(
     N: int,
     parameter_name: Literal[
-        "m1", "m2", "chi1", "chi2", "cos_tilt1", "cos_tilt2", "ecc"
+        "m1",
+        "m2",
+        "chi1",
+        "chi2",
+        "cos_tilt1",
+        "cos_tilt2",
+        "ecc",
+        "cos_iota",
+        "phi_12",
+        "polarization_angle",
+        "right_ascension",
+        "sin_declination",
     ],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
@@ -227,10 +239,6 @@ def create_powerlaws(
     return powerlaws_collection
 
 
-zgrid = jnp.linspace(0.001, 10, 1000)
-dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
-
-
 def create_powerlaw_redshift(
     N: int,
     parameter_name: Literal["redshift"],
@@ -260,6 +268,9 @@ def create_powerlaw_redshift(
         z_max = fetch_first_matching_value(params, f"{z_max_name}_{i}", z_max_name)
         if z_max is None:
             raise ValueError(f"Missing parameter {z_max_name}_{i}")
+
+        zgrid = jnp.linspace(0.001, z_max, 1000)
+        dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
 
         powerlaw_redshift_collection.append(
             PowerlawRedshift(
@@ -444,3 +455,68 @@ def create_smoothed_gaussians(
         is_leaf=lambda x: isinstance(x, SmoothedGaussianPrimaryMassRatio),
     )
     return smoothed_gaussians_collection
+
+
+def create_uniform_distributions(
+    N: int,
+    parameter_name: Literal[
+        "chi1",
+        "chi2",
+        "cos_iota",
+        "cos_tilt1",
+        "cos_tilt2",
+        "dec",
+        "detection_time",
+        "ecc",
+        "m1",
+        "m2",
+        "mean_anomaly",
+        "phi_1",
+        "phi_12",
+        "phi_2",
+        "phi_orb",
+        "psi",
+        "ra",
+        "redshift",
+    ],
+    component_type: Literal["pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of Uniform distributions.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[ &quot;chi1&quot;, &quot;chi2&quot;, &quot;cos_iota&quot;, &quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;, &quot;dec&quot;, &quot;detection_time&quot;, &quot;ecc&quot;, &quot;m1&quot;, &quot;m2&quot;, &quot;mean_anomaly&quot;, &quot;phi_1&quot;, &quot;phi_12&quot;, &quot;phi_2&quot;, &quot;phi_orb&quot;, &quot;psi&quot;, &quot;ra&quot;, &quot;redshift&quot;, ]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either &quot;pl&quot; or &quot;g&quot;
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of Uniform distributions
+    """
+    uniform_collection = []
+    low_name = f"{parameter_name}_low_{component_type}"
+    high_name = f"{parameter_name}_high_{component_type}"
+    for i in range(N):
+        low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
+        if low is None:
+            raise ValueError(f"Missing parameter {low_name}_{i}")
+
+        high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
+        if high is None:
+            raise ValueError(f"Missing parameter {high_name}_{i}")
+
+        uniform_collection.append(
+            Uniform(low=low, high=high, validate_args=validate_args)
+        )
+
+    return uniform_collection
