@@ -70,6 +70,26 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "keys: local_sampler_kwargs, nf_model_kwargs, sampler_kwargs, data_dump_kwargs,"
         " and their respective values.",
     )
+    flowMC_group.add_argument(
+        "--gradient-checkpoint-policy",
+        choices=[
+            "everything_saveable",
+            "nothing_saveable",
+            "dots_saveable",
+            "checkpoint_dots",
+            "dots_with_no_batch_dims_saveable",
+            "checkpoint_dots_with_no_batch_dims",
+            "offload_dot_with_no_batch_dims",
+            "save_anything_except_these_names",
+            "save_any_names_but_these",
+            "save_only_these_names",
+            "save_from_both_policies",
+            "save_and_offload_only_these_names",
+        ],
+        default="everything_saveable",
+        type=str,
+        help="Gradient checkpoint policy for the log likelihood function",
+    )
 
     adam_group = parser.add_argument_group("Adam Options")
     adam_group.add_argument(

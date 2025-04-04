@@ -5,7 +5,7 @@
 import gc
 import os
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import equinox as eqx
 import jax
@@ -191,8 +191,25 @@ class flowMChandler(object):
         data_dump_kwargs: dict[str, Any],
         initial_position: Array,
         data: Optional[dict] = None,
+        gradient_checkpoint_policy_name: Literal[
+            "everything_saveable",
+            "nothing_saveable",
+            "dots_saveable",
+            "checkpoint_dots",
+            "dots_with_no_batch_dims_saveable",
+            "checkpoint_dots_with_no_batch_dims",
+            "offload_dot_with_no_batch_dims",
+            "save_anything_except_these_names",
+            "save_any_names_but_these",
+            "save_only_these_names",
+            "save_from_both_policies",
+            "save_and_offload_only_these_names",
+        ] = "everything_saveable",
     ) -> None:
-        self.logpdf = eqx.filter_checkpoint(logpdf)
+        gradient_checkpoint_policy = getattr(
+            jax.checkpoint_policies, gradient_checkpoint_policy_name
+        )
+        self.logpdf = eqx.filter_checkpoint(logpdf, policy=gradient_checkpoint_policy)
         self.local_sampler_kwargs = local_sampler_kwargs
         self.nf_model_kwargs = nf_model_kwargs
         self.sampler_kwargs = sampler_kwargs
