@@ -191,8 +191,14 @@ class flowMChandler(object):
         data_dump_kwargs: dict[str, Any],
         initial_position: Array,
         data: Optional[dict] = None,
+        gradient_checkpoint_policy: Optional[Callable[..., bool]] = None,
     ) -> None:
-        self.logpdf = eqx.filter_checkpoint(logpdf)
+        if gradient_checkpoint_policy is None:
+            self.logpdf = logpdf
+        else:
+            self.logpdf = eqx.filter_checkpoint(
+                logpdf, policy=gradient_checkpoint_policy
+            )
         self.local_sampler_kwargs = local_sampler_kwargs
         self.nf_model_kwargs = nf_model_kwargs
         self.sampler_kwargs = sampler_kwargs

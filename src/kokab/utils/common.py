@@ -59,7 +59,7 @@ def expand_arguments(arg: str, n: int) -> List[str]:
     return [f"{arg}_{i}" for i in range(n)]
 
 
-def flowMC_default_parameters(**kwargs: dict) -> dict:
+def flowMC_default_parameters(**kwargs) -> dict:
     """Convert a json file to a dictionary."""
 
     key_key_value = [
@@ -92,6 +92,17 @@ def flowMC_default_parameters(**kwargs: dict) -> dict:
         kwargs["local_sampler_kwargs"]["condition_matrix"] = np.asarray(
             condition_matrix
         )
+    gradient_checkpoint_policy_name: str = kwargs.pop("gradient_checkpoint_policy")
+    if gradient_checkpoint_policy_name is not None:
+        try:
+            gradient_checkpoint_policy = getattr(
+                jax.checkpoint_policies, gradient_checkpoint_policy_name
+            )
+            kwargs["gradient_checkpoint_policy"] = gradient_checkpoint_policy
+        except AttributeError:
+            raise ValueError(
+                f"Invalid gradient checkpoint policy: {gradient_checkpoint_policy_name}"
+            )
 
     return kwargs
 
