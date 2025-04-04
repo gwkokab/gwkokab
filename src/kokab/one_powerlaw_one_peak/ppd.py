@@ -60,7 +60,7 @@ def main() -> None:
     constants = read_json(args.constants)
     nf_samples_mapping = read_json(args.nf_samples_mapping)
 
-    use_spin = constants.get("use_redshift", False)
+    use_spin = constants.get("use_spin", False)
     use_redshift = constants.get("use_redshift", False)
 
     parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
