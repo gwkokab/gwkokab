@@ -5,7 +5,7 @@
 import json
 import warnings
 from collections.abc import Sequence
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import jax
 import numpy as np
@@ -59,7 +59,7 @@ def expand_arguments(arg: str, n: int) -> List[str]:
     return [f"{arg}_{i}" for i in range(n)]
 
 
-def flowMC_default_parameters(**kwargs: dict) -> dict:
+def flowMC_default_parameters(**kwargs) -> dict:
     """Convert a json file to a dictionary."""
 
     key_key_value = [
@@ -92,6 +92,20 @@ def flowMC_default_parameters(**kwargs: dict) -> dict:
         kwargs["local_sampler_kwargs"]["condition_matrix"] = np.asarray(
             condition_matrix
         )
+    gradient_checkpoint_policy_name: Optional[str] = kwargs.get(
+        "gradient_checkpoint_policy"
+    )
+    if gradient_checkpoint_policy_name is not None:
+        try:
+            kwargs["gradient_checkpoint_policy"] = getattr(
+                jax.checkpoint_policies, gradient_checkpoint_policy_name
+            )
+        except AttributeError:
+            raise ValueError(
+                f"Invalid gradient checkpoint policy: {gradient_checkpoint_policy_name}\n"
+                "Please choose from `jax.checkpoint_policies` available at "
+                "https://docs.jax.dev/en/latest/gradient-checkpointing.html#list-of-policies"
+            )
 
     return kwargs
 
