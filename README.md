@@ -14,10 +14,13 @@ A JAX-based gravitational-wave population inference toolkit for parametric model
 [**FAQs**](https://gwkokab.readthedocs.io/en/latest/FAQs.html) |
 [**Citing GWKokab**](#citing-gwkokab)
 
-![GitHub License](https://img.shields.io/github/license/gwkokab/gwkokab)
-[![Documentation Status](https://readthedocs.org/projects/gwkokab/badge/?version=latest)](https://gwkokab.readthedocs.io/en/latest/?badge=latest)
+![GitHub License](https://img.shields.io/github/license/gwkokab/gwkokab?logo=open-source-initiative&logoColor=white&color=blue)
+![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/gwkokab/gwkokab)
+![PyPI - Version](https://img.shields.io/pypi/v/gwkokab)
+
+[![Documentation Status](https://img.shields.io/readthedocs/gwkokab?logo=Read-the-Docs)](https://gwkokab.readthedocs.io/en/latest/?badge=latest)
 [![CI](https://github.com/gwkokab/gwkokab/actions/workflows/ci.yml/badge.svg)](https://github.com/gwkokab/gwkokab/actions/workflows/ci.yml)
-[![Coverage Status](https://coveralls.io/repos/github/gwkokab/gwkokab/badge.svg?branch=main)](https://coveralls.io/github/gwkokab/gwkokab?branch=main)
+[![Coverage Status](https://img.shields.io/coverallsCoverage/github/gwkokab/gwkokab)](https://coveralls.io/github/gwkokab/gwkokab?branch=main)
 
 GWKokab is a JAX-based gravitational-wave population inference toolkit. It is designed to be a high-performance, flexible, easy-to-use library for sampling from a wide range of gravitational-wave population models. It is built on top of JAX, a high-performance numerical computing library, and is designed to be easily integrated into existing JAX workflows.
 
