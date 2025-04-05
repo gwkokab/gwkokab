@@ -7,6 +7,7 @@ import os
 from collections.abc import Callable
 from typing import Any, Optional
 
+import equinox as eqx
 import jax
 import numpy as np
 from flowMC.nfmodel.base import NFModel
@@ -22,7 +23,7 @@ from jax import nn as jnn, random as jrd
 from jaxtyping import Array
 
 
-def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray]:
+def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray, ...]:
     """This function pads the arrays with None to make them the same length.
 
     Parameters
@@ -34,7 +35,7 @@ def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray]:
 
     Returns
     -------
-    tuple[np.ndarray]
+    tuple[np.ndarray, ...]
         The padded arrays.
     """
     padded_arrays = []
@@ -190,8 +191,15 @@ class flowMChandler(object):
         data_dump_kwargs: dict[str, Any],
         initial_position: Array,
         data: Optional[dict] = None,
+        apply_gradient_checkpoint: bool = False,
+        gradient_checkpoint_policy: Optional[Callable[..., bool]] = None,
     ) -> None:
-        self.logpdf = logpdf
+        if apply_gradient_checkpoint:
+            self.logpdf = eqx.filter_checkpoint(
+                logpdf, policy=gradient_checkpoint_policy
+            )
+        else:
+            self.logpdf = logpdf
         self.local_sampler_kwargs = local_sampler_kwargs
         self.nf_model_kwargs = nf_model_kwargs
         self.sampler_kwargs = sampler_kwargs
