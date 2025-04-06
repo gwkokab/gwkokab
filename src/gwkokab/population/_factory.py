@@ -98,8 +98,8 @@ class PopulationFactory:
     ) -> Tuple[Array, Array]:
         r"""Generate population for a realization."""
 
+        old_size = size
         if self.logVT_fn is not None:
-            old_size = size
             size += int(1e5)
 
         population, [indices] = self.model.sample_with_intermediates(key, (size,))
@@ -198,19 +198,18 @@ class PopulationFactory:
         keys = jrd.split(key, data_inj.shape[0] * len(heads))
 
         for index in range(data_inj.shape[0]):
-            noisey_data = np.empty((self.error_size, len(self.parameters)))
+            noisy_data = np.empty((self.error_size, len(self.parameters)))
             data = data_inj[index]
             i = 0
             for head, err_fn in zip(heads, error_fns):
-                noisey_data_i: Array = err_fn(
-                    data[head], self.error_size, keys[index + i]
-                )
-                if noisey_data_i.ndim == 1:
-                    noisey_data_i = noisey_data_i.reshape(self.error_size, -1)
-                noisey_data[:, head] = noisey_data_i
+                key_idx = index * len(heads) + i
+                noisy_data_i: Array = err_fn(data[head], self.error_size, keys[key_idx])
+                if noisy_data_i.ndim == 1:
+                    noisy_data_i = noisy_data_i.reshape(self.error_size, -1)
+                noisy_data[:, head] = noisy_data_i
                 i += 1
-            nan_mask = np.isnan(noisey_data).any(axis=1)
-            masked_noisey_data = noisey_data[~nan_mask]
+            nan_mask = np.isnan(noisy_data).any(axis=1)
+            masked_noisey_data = noisy_data[~nan_mask]
             count = np.count_nonzero(masked_noisey_data)
             if count < 2:
                 warnings.warn(
