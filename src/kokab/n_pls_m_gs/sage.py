@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import functools as ft
 import json
 import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
@@ -360,21 +361,23 @@ def main() -> None:
 
     model_prior_param = get_processed_priors(extended_params, prior_dict)
 
-    model = Bake(NPowerlawMGaussian)(
-        N_pl=N_pl,
-        N_g=N_g,
-        use_spin=has_spin,
-        use_tilt=has_tilt,
-        use_eccentricity=has_eccentricity,
-        use_redshift=has_redshift,
-        use_cos_iota=has_cos_iota,
-        use_phi_12=has_phi_12,
-        use_polarization_angle=has_polarization_angle,
-        use_right_ascension=has_right_ascension,
-        use_sin_declination=has_sin_declination,
-        use_detection_time=has_detection_time,
-        **model_prior_param,
-    )
+    model = Bake(
+        ft.partial(
+            NPowerlawMGaussian,
+            N_pl=N_pl,
+            N_g=N_g,
+            use_spin=has_spin,
+            use_tilt=has_tilt,
+            use_eccentricity=has_eccentricity,
+            use_redshift=has_redshift,
+            use_cos_iota=has_cos_iota,
+            use_phi_12=has_phi_12,
+            use_polarization_angle=has_polarization_angle,
+            use_right_ascension=has_right_ascension,
+            use_sin_declination=has_sin_declination,
+            use_detection_time=has_detection_time,
+        )
+    )(**model_prior_param)
 
     nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
 
