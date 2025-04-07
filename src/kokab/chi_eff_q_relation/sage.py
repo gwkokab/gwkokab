@@ -23,15 +23,13 @@ from gwkokab.parameters import (
 )
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
-from kokab.utils import poisson_mean_parser, sage_parser
+from kokab.utils import flowmc_driver, poisson_mean_parser, sage_parser
 from kokab.utils.common import (
-    flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
     read_json,
     vt_json_read_and_process,
 )
-from kokab.utils.flowMC_helper import flowMChandler
 
 
 class RedshiftReferencePrior(Uniform):
@@ -68,9 +66,7 @@ def main() -> None:
     if args.verbose:
         enable_logging()
 
-    SEED = args.seed
-    KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
+    rng_key, pmean_key = jrd.split(jrd.PRNGKey(args.seed))
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
 
@@ -91,10 +87,7 @@ def main() -> None:
         "scale_m",
     ]
 
-    model_prior_param = get_processed_priors(
-        model_parameters,
-        prior_dict,
-    )
+    model_prior_param = get_processed_priors(model_parameters, prior_dict)
 
     model = Bake(ChiEffMassRatioCorrelated)(**model_prior_param)
 
@@ -113,7 +106,7 @@ def main() -> None:
     nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(nvt, key=pmean_key, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     log_ref_priors = jax.device_put(
@@ -135,30 +128,14 @@ def main() -> None:
     with open("nf_samples_mapping.json", "w") as f:
         json.dump(poisson_likelihood.variables_index, f)
 
-    FLOWMC_HANDLER_KWARGS = read_json(args.flowMC_json)
-
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
-
-    N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
-    initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))
-
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
-
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
-
-    FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
-
-    handler = flowMChandler(
-        logpdf=poisson_likelihood.log_posterior,
-        initial_position=initial_position,
-        **FLOWMC_HANDLER_KWARGS,
-    )
-
-    handler.run(
+    flowmc_driver.run_flowMC(
+        rng_key=rng_key,
+        flowMC_config_path=args.flowMC_json,
+        likelihood=poisson_likelihood,
+        labels=list(model.variables.keys()),
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
         file_prefix="chi_eff_q_relation",
+        verbose=args.verbose,
     )
