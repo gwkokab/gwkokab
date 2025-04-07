@@ -210,6 +210,7 @@ class _flowMCResourceBundle(ResourceStrategyBundle):
         n_epochs: int,
         n_flow_sample: int = 1000,
         learning_rate: float = 1e-3,
+        momentum: float = 0.9,
         batch_size: int = 10000,
         n_max_examples: int = 10000,
         verbose: bool = False,
@@ -247,11 +248,13 @@ class _flowMCResourceBundle(ResourceStrategyBundle):
             "global_accs_production", (n_chains, n_production_steps), 1
         )
 
-        local_sampler = self._get_local_sampler(ndims=n_dims, **local_sampler_kwargs)
+        local_sampler = self._get_local_sampler(n_dims=n_dims, **local_sampler_kwargs)
         rng_key, subkey = jax.random.split(rng_key)
         model = self._get_nf_model(key=subkey, n_features=n_dims, **nf_model_kwargs)
         global_sampler = NFProposal(model, n_flow_sample=n_flow_sample)
-        optimizer = Optimizer(model=model, learning_rate=learning_rate)
+        optimizer = Optimizer(
+            model=model, learning_rate=learning_rate, momentum=momentum
+        )
         logpdf = LogPDF(logpdf, n_dims=n_dims)
 
         self.resources = {
@@ -488,7 +491,7 @@ class _flowMCResourceBundle(ResourceStrategyBundle):
 
             del kwargs["num_bins"]
             del kwargs["n_layers"]
-            del kwargs["hidden_units"]
+            del kwargs["hidden_size"]
             del kwargs["n_features"]
 
             return MaskedCouplingRQSpline(
