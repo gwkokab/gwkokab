@@ -71,18 +71,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         " and their respective values.",
     )
 
-    adam_group = parser.add_argument_group("Adam Options")
-    adam_group.add_argument(
-        "--adam-optimizer",
-        help="Use Adam optimizer before running flowMC.",
-        action="store_true",
-    )
-    adam_group.add_argument(
-        "--adam-json",
-        help="Path to a JSON file containing the Adam optimizer options.",
-        type=str,
-    )
-
     prior_group = parser.add_argument_group("Prior Options")
     prior_group.add_argument(
         "--prior-json",
