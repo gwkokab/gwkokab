@@ -4,6 +4,7 @@
 
 import gc
 import os
+import warnings
 from collections.abc import Callable
 from typing import Any, Dict, Optional
 
@@ -26,6 +27,9 @@ from flowMC.Sampler import Sampler
 from flowMC.strategy.global_tuning import LocalGlobalNFSample
 from jax import nn as jnn, random as jrd
 from jaxtyping import Array, Float, PRNGKeyArray
+
+from gwkokab.inference import PoissonLikelihood
+from kokab.utils.common import read_json
 
 
 __all__ = ["run_flowMC"]
@@ -243,7 +247,7 @@ class _flowMCResourceBundle(ResourceStrategyBundle):
             "global_accs_production", (n_chains, n_production_steps), 1
         )
 
-        local_sampler = self._get_local_sampler(**local_sampler_kwargs)
+        local_sampler = self._get_local_sampler(ndims=n_dims, **local_sampler_kwargs)
         rng_key, subkey = jax.random.split(rng_key)
         model = self._get_nf_model(key=subkey, n_features=n_dims, **nf_model_kwargs)
         global_sampler = NFProposal(model, n_flow_sample=n_flow_sample)
@@ -313,11 +317,15 @@ class _flowMCResourceBundle(ResourceStrategyBundle):
         self.strategy_order = ["training_sampler", "production_sampler"]
 
     @staticmethod
-    def _get_local_sampler(sampler: str = "MALA", **kwargs) -> ProposalBase:
+    def _get_local_sampler(
+        n_dims: int, sampler: str = "MALA", **kwargs
+    ) -> ProposalBase:
         """Make a local sampler based on the given arguments.
 
         Parameters
         ----------
+        n_dims : int
+            The number of dimensions of the sampler.
         sampler : str, optional
             The name of the local sampler, by default "MALA"
 
@@ -346,9 +354,30 @@ class _flowMCResourceBundle(ResourceStrategyBundle):
             step_size = kwargs.get("step_size")
             n_leapfrog = kwargs.get("n_leapfrog")
 
-            assert condition_matrix is not None, (
-                "condition_matrix must be provided for HMC"
-            )
+            if condition_matrix is None:
+                warnings.warn(
+                    "HMC Sampler: `condition_matrix` is not provided. Using identity matrix."
+                )
+                condition_matrix = np.eye(n_dims)
+            else:
+                condition_matrix = np.asarray(condition_matrix)
+                assert condition_matrix.shape == (
+                    n_dims,
+                    n_dims,
+                ), f"condition_matrix must be of shape ({n_dims}, {n_dims})"
+                assert np.all(np.isfinite(condition_matrix)), (
+                    "condition_matrix must be finite"
+                )
+                assert np.all(np.isreal(condition_matrix)), (
+                    "condition_matrix must be real"
+                )
+                assert np.all(np.linalg.eigvals(condition_matrix) > 0), (
+                    "condition_matrix must be positive definite"
+                )
+                assert np.all(np.isclose(condition_matrix, condition_matrix.T)), (
+                    "condition_matrix must be symmetric"
+                )
+
             assert step_size is not None, "step_size must be provided for HMC"
             assert n_leapfrog is not None, "n_leapfrog must be provided for HMC"
 
@@ -474,15 +503,10 @@ class _flowMCResourceBundle(ResourceStrategyBundle):
 
 def run_flowMC(
     rng_key: PRNGKeyArray,
-    logpdf: Callable,
-    local_sampler_kwargs: dict[str, Any],
-    nf_model_kwargs: dict[str, Any],
-    sampler_kwargs: dict[str, Any],
-    data_dump_kwargs: dict[str, Any],
-    initial_position: Array,
+    flowMC_config_path: str,
+    likelihood: PoissonLikelihood,
+    labels: list[str],
     data: Optional[dict] = None,
-    apply_gradient_checkpoint: bool = False,
-    gradient_checkpoint_policy: Optional[Callable[..., bool]] = None,
     debug_nans: bool = False,
     profile_memory: bool = False,
     check_leaks: bool = False,
@@ -498,24 +522,8 @@ def run_flowMC(
     ----------
     rng_key : PRNGKeyArray
         Pseudo-random number generator key.
-    logpdf : Callable
-        The log probability function.
-    local_sampler_kwargs : dict[str, Any]
-        Keyword arguments for the local sampler.
-    nf_model_kwargs : dict[str, Any]
-        Keyword arguments for the normalizing flow model.
-    sampler_kwargs : dict[str, Any]
-        Keyword arguments for the sampler.
-    data_dump_kwargs : dict[str, Any]
-        Keyword arguments for the data dump.
-    initial_position : Array
-        The initial position for the sampler.
     data : Optional[dict], optional
         Additional data to pass to the log probability function, by default None
-    apply_gradient_checkpoint : bool, optional
-        Whether to apply gradient checkpointing, by default False
-    gradient_checkpoint_policy : Optional[Callable[..., bool]], optional
-        The policy for gradient checkpointing, by default None
     debug_nans : bool, optional
         Whether to enable JAX debug mode for NaNs, by default False
     profile_memory : bool, optional
@@ -527,11 +535,49 @@ def run_flowMC(
     verbose : bool, optional
         Whether to enable verbose output, by default False
     """
-    if apply_gradient_checkpoint:
-        logpdf = eqx.filter_checkpoint(logpdf, policy=gradient_checkpoint_policy)  # type: ignore
+    flowMC_config: Dict = read_json(flowMC_config_path)
 
-    n_dim = initial_position.shape[1]
+    local_sampler_kwargs = flowMC_config.get("local_sampler_kwargs")
+    nf_model_kwargs = flowMC_config.get("nf_model_kwargs")
+    sampler_kwargs = flowMC_config.get("sampler_kwargs")
+    data_dump_kwargs = flowMC_config.get("data_dump_kwargs")
+
+    assert local_sampler_kwargs is not None, "local_sampler_kwargs must be provided"
+    assert nf_model_kwargs is not None, "nf_model_kwargs must be provided"
+    assert sampler_kwargs is not None, "sampler_kwargs must be provided"
+    assert data_dump_kwargs is not None, "data_dump_kwargs must be provided"
+
+    assert isinstance(local_sampler_kwargs, dict), "local_sampler_kwargs must be a dict"
+    assert isinstance(nf_model_kwargs, dict), "nf_model_kwargs must be a dict"
+    assert isinstance(sampler_kwargs, dict), "sampler_kwargs must be a dict"
+    assert isinstance(data_dump_kwargs, dict), "data_dump_kwargs must be a dict"
+
     n_chains = sampler_kwargs.pop("n_chains")
+
+    rng_key, subkey = jax.random.split(rng_key)
+    initial_position = likelihood.priors.sample(subkey, (n_chains,))
+    n_dim = initial_position.shape[1]
+
+    apply_gradient_checkpoint = flowMC_config.get("apply_gradient_checkpoint", False)
+
+    logpdf = likelihood.log_posterior
+    if apply_gradient_checkpoint:
+        gradient_checkpoint_policy = None
+        if gradient_checkpoint_policy_name := flowMC_config.get(
+            "gradient_checkpoint_policy"
+        ):
+            try:
+                gradient_checkpoint_policy = getattr(
+                    jax.checkpoint_policies, gradient_checkpoint_policy_name
+                )
+            except AttributeError:
+                raise ValueError(
+                    f"Invalid gradient checkpoint policy: {gradient_checkpoint_policy_name}\n"
+                    "Please choose from `jax.checkpoint_policies` available at "
+                    "https://docs.jax.dev/en/latest/gradient-checkpointing.html#list-of-policies"
+                )
+
+        logpdf = eqx.filter_checkpoint(logpdf, policy=gradient_checkpoint_policy)  # type: ignore
 
     resource_bundle = _flowMCResourceBundle(
         rng_key=rng_key,
@@ -571,4 +617,5 @@ def run_flowMC(
             sampler.sample(initial_position, data)
     else:
         sampler.sample(initial_position, data)
-    _save_data_from_sampler(sampler, logpdf=logpdf, **data_dump_kwargs)
+
+    _save_data_from_sampler(sampler, logpdf=logpdf, labels=labels, **data_dump_kwargs)
