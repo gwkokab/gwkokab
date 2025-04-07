@@ -28,6 +28,9 @@ from jax import nn as jnn, random as jrd
 from jaxtyping import Array, Float, PRNGKeyArray
 
 
+__all__ = ["run_flowMC"]
+
+
 def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray, ...]:
     """This function pads the arrays with None to make them the same length.
 
@@ -184,7 +187,7 @@ def _save_data_from_sampler(
     gc.collect()
 
 
-class flowMCResourceBundle(ResourceStrategyBundle):
+class _flowMCResourceBundle(ResourceStrategyBundle):
     def __repr__(self):
         return "Local Global NF Sampling"
 
@@ -530,7 +533,7 @@ def run_flowMC(
     n_dim = initial_position.shape[1]
     n_chains = sampler_kwargs.pop("n_chains")
 
-    resource_bundle = flowMCResourceBundle(
+    resource_bundle = _flowMCResourceBundle(
         rng_key=rng_key,
         n_dims=n_dim,
         n_chains=n_chains,
