@@ -63,7 +63,7 @@ def main() -> None:
     args = parser.parse_args()
 
     rng_key, pmean_key = jrd.split(jrd.PRNGKey(args.seed))
-    
+
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
 
