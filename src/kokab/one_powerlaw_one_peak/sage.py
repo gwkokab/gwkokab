@@ -12,7 +12,6 @@ import numpy as np
 from jax import random as jrd
 
 from gwkokab.inference import Bake, PoissonLikelihood
-from gwkokab.logger import enable_logging
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
@@ -63,10 +62,8 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    if args.verbose:
-        enable_logging()
-
     rng_key, pmean_key = jrd.split(jrd.PRNGKey(args.seed))
+
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
 

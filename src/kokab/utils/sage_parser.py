@@ -38,11 +38,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         default=37,
         type=int,
     )
-    sage_group.add_argument(
-        "--verbose",
-        help="Verbose output.",
-        action="store_true",
-    )
 
     vt_group = parser.add_argument_group("VT Options")
 

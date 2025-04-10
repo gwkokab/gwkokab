@@ -10,7 +10,6 @@ import equinox as eqx
 from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
 from numpyro.distributions import Distribution
 
-from ..logger import logger
 from ..models.utils import JointDistribution, ScaledMixture
 from .bake import Bake
 
@@ -149,16 +148,6 @@ class PoissonLikelihood(eqx.Module):
 
         expected_rates = self.ERate_fn(model)
 
-        logger.debug(
-            "PoissionLikelihood: \n"
-            "\tmapped_params = {mp}\n"
-            "\tmodel_log_likelihood = {mll}\n"
-            "\texpected_rate = {expr}",
-            mp=mapped_params,
-            mll=log_likelihood,
-            expr=expected_rates,
-        )
-
         return log_likelihood - expected_rates
 
     def log_posterior(self, x: Array, _: dict) -> Array:
@@ -178,11 +167,7 @@ class PoissonLikelihood(eqx.Module):
         """
         log_prior = self.priors.log_prob(x)
         log_likelihood = self.log_likelihood(x)
-        logger.debug(
-            "PoissionLikelihood:\n\tlog_prior + log_likelihood = {lp} + {ll}",
-            lp=log_prior,
-            ll=log_likelihood,
-        )
+
         log_posterior = log_prior + log_likelihood
         log_posterior = jnp.nan_to_num(
             log_posterior,

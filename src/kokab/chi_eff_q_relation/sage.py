@@ -12,7 +12,6 @@ from jax import numpy as jnp, random as jrd
 from numpyro.distributions import Uniform
 
 from gwkokab.inference import Bake, PoissonLikelihood
-from gwkokab.logger import enable_logging
 from gwkokab.models import ChiEffMassRatioCorrelated
 from gwkokab.parameters import (
     Parameter,
@@ -63,10 +62,8 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    if args.verbose:
-        enable_logging()
-
     rng_key, pmean_key = jrd.split(jrd.PRNGKey(args.seed))
+    
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS = args.posterior_columns
 
