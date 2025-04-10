@@ -9,7 +9,6 @@ from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions.distribution import Distribution, DistributionLike
 
-from .logger import logger
 from .models.utils import ScaledMixture
 from .utils.tools import error_if
 from .vts import RealInjectionVolumeTimeSensitivity, VolumeTimeSensitivityInterface
@@ -289,8 +288,5 @@ class PoissonMean(eqx.Module):
             per_component_log_estimated_rates, axis=-1
         )
         per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)
-        logger.debug(
-            "per_component_estimated_rates: {per_component_estimated_rates}",
-            per_component_estimated_rates=per_component_estimated_rates,
-        )
+
         return self.scale * jnp.sum(per_component_estimated_rates, axis=-1)
