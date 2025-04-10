@@ -22,7 +22,6 @@ from numpyro.distributions import (
 )
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ..logger import logger
 from ..utils.kernel import log_planck_taper_window
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
@@ -116,13 +115,7 @@ class PowerlawPrimaryMassRatio(Distribution):
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
-        logger.debug(
-            "PowerlawPrimaryMassRatio: log_prob_m1({m1}) + log_prob_q({q}) = {lpm1} + {lpq}",
-            m1=m1,
-            q=q,
-            lpm1=log_prob_m1,
-            lpq=log_prob_q,
-        )
+
         return log_prob_m1 + log_prob_q
 
     def sample(self, key, sample_shape=()):
@@ -199,14 +192,7 @@ class Wysocki2019MassModel(Distribution):
         log_prob_m2_given_m1 = uniform.logpdf(
             m2, loc=self.mmin, scale=jnp.subtract(m1, self.mmin)
         )
-        logger.debug(
-            "Wysocki2019MassModel: log_prob_m1({m1}) + log_prob_m2_given_m1({m2})"
-            " = {lpm1} + {lpm2}",
-            m1=m1,
-            m2=m2,
-            lpm1=log_prob_m1,
-            lpm2=log_prob_m2_given_m1,
-        )
+
         return jnp.add(log_prob_m1, log_prob_m2_given_m1)
 
     def sample(self, key, sample_shape=()) -> Array:

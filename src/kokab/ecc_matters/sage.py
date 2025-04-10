@@ -12,7 +12,6 @@ import numpy as np
 from jax import random as jrd
 
 from gwkokab.inference import Bake, PoissonLikelihood
-from gwkokab.logger import enable_logging
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
@@ -45,9 +44,6 @@ def main() -> None:
 
     parser = make_parser()
     args = parser.parse_args()
-
-    if args.verbose:
-        enable_logging()
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)

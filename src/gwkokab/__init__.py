@@ -3,6 +3,9 @@
 
 
 import importlib.metadata
+import os
+
+from loguru import logger
 
 
 __version__ = importlib.metadata.version("gwkokab")
@@ -13,7 +16,6 @@ from . import (
     cosmology as cosmology,
     errors as errors,
     inference as inference,
-    logger as logger,
     models as models,
     parameters as parameters,
     poisson_mean as poisson_mean,
@@ -21,3 +23,11 @@ from . import (
     utils as utils,
     vts as vts,
 )
+from .utils.logger import set_log_level as _set_log_level
+
+
+_set_log_level(os.environ.get("GWKOKAB_LOG_LEVEL", "TRACE"))
+del _set_log_level
+
+
+logger.info("Initializing GWKokab version {version}", version=__version__)

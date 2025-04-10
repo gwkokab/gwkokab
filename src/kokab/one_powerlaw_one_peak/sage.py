@@ -12,7 +12,6 @@ import numpy as np
 from jax import random as jrd
 
 from gwkokab.inference import Bake, PoissonLikelihood
-from gwkokab.logger import enable_logging
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
     PRIMARY_MASS_SOURCE,
@@ -64,9 +63,6 @@ def main() -> None:
 
     parser = make_parser()
     args = parser.parse_args()
-
-    if args.verbose:
-        enable_logging()
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)

@@ -25,8 +25,6 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
 
-from ...logger import logger
-
 
 class PowerlawRedshift(Distribution):
     r"""A power-law redshift distribution. The probability density function is given by.
@@ -122,7 +120,6 @@ class PowerlawRedshift(Distribution):
     def log_prob(self, value, dVdc=None):
         if dVdc is None:
             dVdc = jnp.interp(value, self.zgrid, self.dVcdz)
-        logger.debug(f"PowerlawRedshift: dVdc={dVdc}")
         return jnp.where(
             jnp.less_equal(value, self.z_max),
             jnp.log(dVdc) + (self.lamb - 1.0) * jnp.log1p(value) - jnp.log(self.norm),
