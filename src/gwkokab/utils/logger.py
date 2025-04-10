@@ -33,8 +33,11 @@ def device_info() -> None:
     """Prints the device information."""
     import jax
     import jaxlib
+    from jax.lib import xla_bridge
 
-    logger.info("==== JAX System Info Start ====")
+    logger.info("=" * 60)
+    logger.info("JAX CUDA ENVIRONMENT INFO")
+    logger.info("=" * 60)
 
     logger.info("Devices count: {n_devices}", n_devices=jax.device_count())
     logger.info("Devices: {devices}", devices=jax.devices())
@@ -42,4 +45,28 @@ def device_info() -> None:
     logger.info("jax version: {jax_version}", jax_version=jax.__version__)
     logger.info("jaxlib version: {jaxlib_version}", jaxlib_version=jaxlib.__version__)
 
-    logger.info("==== JAX System Info End ====")
+    try:
+        backend = xla_bridge.get_backend()
+        logger.info("JAX platform: {}", backend.platform)
+        logger.info("JAX backend: {}", type(backend).__name__)
+
+        platform_version = getattr(backend, "platform_version", None)
+        if platform_version:
+            logger.info("JAX platform version: {}", platform_version)
+        else:
+            logger.warning("No platform version info found on backend.")
+    except Exception as e:
+        logger.warning("Could not retrieve CUDA info from XLA backend: {}", e)
+
+    for device in jax.devices():
+        logger.info(
+            "Device: {}, process_index: {}, id: {}, platform: {}",
+            device.device_kind,
+            device.process_index,
+            device.id,
+            device.platform,
+        )
+
+    logger.info("=" * 60)
+    logger.info("Done logging CUDA/JAX info.")
+    logger.info("=" * 60)
