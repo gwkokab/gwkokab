@@ -12,7 +12,6 @@ from jax import numpy as jnp, random as jrd
 from numpyro.distributions import Uniform
 
 from gwkokab.inference import Bake, PoissonLikelihood
-from gwkokab.logger import enable_logging
 from gwkokab.models import ChiEffMassRatioCorrelated
 from gwkokab.parameters import (
     Parameter,
@@ -64,9 +63,6 @@ def main() -> None:
 
     parser = make_parser()
     args = parser.parse_args()
-
-    if args.verbose:
-        enable_logging()
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
