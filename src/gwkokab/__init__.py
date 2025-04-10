@@ -23,13 +23,22 @@ from . import (
     utils as utils,
     vts as vts,
 )
-from .utils.logger import device_info as _device_info, set_log_level as _set_log_level
+from .utils.logger import (
+    log_device_info as _device_info,
+    log_gwkokab_info as _log_gwkokab_info,
+    set_log_level as _set_log_level,
+)
 
 
 _set_log_level(os.environ.get("GWKOKAB_LOG_LEVEL", "TRACE"))
 del _set_log_level
 
 
-logger.info("Initializing GWKokab version {version}", version=__version__)
+_log_gwkokab_info()
 _device_info()
 del _device_info
+del _log_gwkokab_info
+
+logger.info("=" * 60)
+logger.info("GWKokab LOGS")
+logger.info("=" * 60)

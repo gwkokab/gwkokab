@@ -29,7 +29,22 @@ def set_log_level(log_level: str) -> None:
     logger.debug(f"Setting LogLevel to {log_level}")
 
 
-def device_info() -> None:
+def log_gwkokab_info() -> None:
+    """Prints the GWKokab version and the Python version."""
+
+    import gwkokab as gwk
+
+    logger.info("=" * 60)
+    logger.info("GWKokab INFO")
+    logger.info("=" * 60)
+
+    logger.info("GWKokab version: {gwk_version}", gwk_version=gwk.__version__)
+    logger.info("Python version: {python_version}", python_version=sys.version)
+    logger.info("Python platform: {python_platform}", python_platform=sys.platform)
+    logger.info("Python build: {python_build}", python_build=sys.version_info)
+
+
+def log_device_info() -> None:
     """Prints the device information."""
     import jax
     import jaxlib
@@ -66,7 +81,3 @@ def device_info() -> None:
             device.id,
             device.platform,
         )
-
-    logger.info("=" * 60)
-    logger.info("Done logging CUDA/JAX info.")
-    logger.info("=" * 60)
