@@ -81,3 +81,10 @@ def log_device_info() -> None:
             device.id,
             device.platform,
         )
+
+
+def log_start_msg() -> None:
+    """Prints the start message."""
+    logger.info("=" * 60)
+    logger.info("GWKokab STARTING")
+    logger.info("=" * 60)
