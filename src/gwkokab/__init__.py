@@ -23,7 +23,7 @@ from . import (
     utils as utils,
     vts as vts,
 )
-from .utils.logger import set_log_level as _set_log_level
+from .utils.logger import device_info as _device_info, set_log_level as _set_log_level
 
 
 _set_log_level(os.environ.get("GWKOKAB_LOG_LEVEL", "TRACE"))
@@ -31,3 +31,5 @@ del _set_log_level
 
 
 logger.info("Initializing GWKokab version {version}", version=__version__)
+_device_info()
+del _device_info

@@ -27,3 +27,19 @@ def set_log_level(log_level: str) -> None:
         "<level>{message}</level>",
     )
     logger.debug(f"Setting LogLevel to {log_level}")
+
+
+def device_info() -> None:
+    """Prints the device information."""
+    import jax
+    import jaxlib
+
+    logger.info("==== JAX System Info Start ====")
+
+    logger.info("Devices count: {n_devices}", n_devices=jax.device_count())
+    logger.info("Devices: {devices}", devices=jax.devices())
+
+    logger.info("jax version: {jax_version}", jax_version=jax.__version__)
+    logger.info("jaxlib version: {jaxlib_version}", jaxlib_version=jaxlib.__version__)
+
+    logger.info("==== JAX System Info End ====")
