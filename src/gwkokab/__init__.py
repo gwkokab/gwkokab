@@ -21,22 +21,11 @@ from . import (
     utils as utils,
     vts as vts,
 )
-from .utils.logger import (
-    log_device_info as _device_info,
-    log_gwkokab_info as _log_gwkokab_info,
-    log_start_msg as _log_start_msg,
-    set_log_level as _set_log_level,
-)
+from .utils.logger import log_info as _log_info, set_log_level as _set_log_level
 
 
 _set_log_level(os.environ.get("GWKOKAB_LOG_LEVEL", "TRACE"))
 del _set_log_level
 
-_log_gwkokab_info()
-del _log_gwkokab_info
-
-_device_info()
-del _device_info
-
-_log_start_msg()
-del _log_start_msg
+_log_info(start=True)
+del _log_info

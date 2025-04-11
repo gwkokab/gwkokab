@@ -83,8 +83,17 @@ def log_device_info() -> None:
         )
 
 
-def log_start_msg() -> None:
-    """Prints the start message."""
-    logger.info("=" * 60)
-    logger.info("GWKokab STARTING")
-    logger.info("=" * 60)
+def log_info(start: bool = False) -> None:
+    """Log the information about the package and the device information.
+
+    Parameters
+    ----------
+    start : bool, optional
+        If True, log the start message, by default False
+    """
+    log_gwkokab_info()
+    log_device_info()
+    if start:
+        logger.info("=" * 60)
+        logger.info("GWKokab STARTING")
+        logger.info("=" * 60)
