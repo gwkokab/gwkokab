@@ -68,7 +68,7 @@ class PoissonMean(eqx.Module):
     proposal_log_weights_and_samples: Tuple[Optional[Tuple[Array, Array]], ...] = (
         eqx.field(init=False)
     )
-    scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
+    time_scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
 
     def __init__(
         self,
@@ -78,7 +78,7 @@ class PoissonMean(eqx.Module):
         num_samples: int = 10_000,
         self_num_samples: Optional[int] = None,
         num_samples_per_component: Optional[List[int]] = None,
-        scale: Union[int, float, Array] = 1.0,
+        time_scale: Union[int, float, Array] = 1.0,
     ) -> None:
         """
         Parameters
@@ -96,8 +96,8 @@ class PoissonMean(eqx.Module):
             Number of samples for distribution using Inverse Transform Sampling, by default None
         num_samples_per_component : Optional[List[int]], optional
             Number of samples for each component, by default None
-        scale : Union[int, float, Array]
-            scale factor, by default 1.0
+        time_scale : Union[int, float, Array]
+            scale factor for time, by default 1.0
 
         Raises
         ------
@@ -119,7 +119,7 @@ class PoissonMean(eqx.Module):
                 num_samples=num_samples,
                 self_num_samples=self_num_samples,
                 num_samples_per_component=num_samples_per_component,
-                scale=scale,
+                time_scale=time_scale,
             )
 
     def __init_for_per_component_rate__(
@@ -129,7 +129,7 @@ class PoissonMean(eqx.Module):
         num_samples: int = 10_000,
         self_num_samples: Optional[int] = None,
         num_samples_per_component: Optional[List[int]] = None,
-        scale: Union[int, float, Array] = 1.0,
+        time_scale: Union[int, float, Array] = 1.0,
     ) -> None:
         """
         Parameters
@@ -145,8 +145,8 @@ class PoissonMean(eqx.Module):
             Number of samples for distribution using Inverse Transform Sampling, by default None
         num_samples_per_component : Optional[List[int]], optional
             Number of samples for each component, by default None
-        scale : Union[int, float, Array]
-            scale factor, by default 1.0
+        time_scale : Union[int, float, Array]
+            scale factor for time, by default 1.0
 
         Raises
         ------
@@ -168,7 +168,7 @@ class PoissonMean(eqx.Module):
             self.num_samples_per_component = [
                 num_samples for _ in range(len(proposal_dists))
             ]
-        self.scale = scale
+        self.time_scale = time_scale
         logVT_fn = self.logVT_estimator.get_mapped_logVT()
 
         proposal_log_weights_and_samples = []
@@ -232,7 +232,7 @@ class PoissonMean(eqx.Module):
             log_weights, samples = self.proposal_log_weights_and_samples[0]
             num_samples = log_weights.shape[0]
             model_log_prob = model.log_prob(samples).reshape(num_samples)
-            return (self.scale / num_samples) * jnp.exp(
+            return (self.time_scale / num_samples) * jnp.exp(
                 jnn.logsumexp(model_log_prob - log_weights, axis=-1)
             )
         else:  # per component rate estimation
@@ -289,4 +289,4 @@ class PoissonMean(eqx.Module):
         )
         per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)
 
-        return self.scale * jnp.sum(per_component_estimated_rates, axis=-1)
+        return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)

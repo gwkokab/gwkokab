@@ -3,7 +3,6 @@
 
 
 import json
-import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import List, Tuple
@@ -11,6 +10,7 @@ from typing import List, Tuple
 import jax
 import numpy as np
 from jax import random as jrd
+from loguru import logger
 
 import gwkokab
 from gwkokab.inference import Bake, PoissonLikelihood
@@ -97,10 +97,9 @@ def make_parser() -> ArgumentParser:
 
 def main() -> None:
     r"""Main function of the script."""
-    warnings.warn(
+    logger.warning(
         "If you have made any changes to any parameters, please make sure"
         " that the changes are reflected in scripts that generate plots.",
-        Warning,
     )
 
     parser = make_parser()

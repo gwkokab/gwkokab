@@ -176,7 +176,7 @@ class TestVariants(parameterized.TestCase):
             proposal_dists=["self" for _ in range(dist.mixture_size)],
             key=key,
             self_num_samples=50_000,
-            scale=1.0,
+            time_scale=1.0,
         )
 
         @self.variant  # pyright: ignore
@@ -214,7 +214,7 @@ class TestVariants(parameterized.TestCase):
             ],
             key=key,
             num_samples_per_component=[50_000 for _ in range(dist.mixture_size)],
-            scale=1.0,
+            time_scale=1.0,
         )
 
         @self.variant  # pyright: ignore
@@ -254,7 +254,7 @@ class TestVariants(parameterized.TestCase):
             key=key,
             num_samples=50_000,
             self_num_samples=10_000,
-            scale=1.0,
+            time_scale=1.0,
         )
 
         @self.variant  # pyright: ignore
