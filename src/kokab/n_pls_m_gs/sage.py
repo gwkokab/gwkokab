@@ -420,7 +420,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
     FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["data"] = data
+    FLOWMC_HANDLER_KWARGS["data"] = data
 
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
 

@@ -223,13 +223,12 @@ def poisson_likelihood(
             event_data, log_ref_prior_y = y
 
             _log_prob = (
-                lax.map(model_instance.log_prob, event_data, batch_size=10000)
+                lax.map(model_instance.log_prob, event_data, batch_size=1000)
                 - log_ref_prior_y
             )
 
             return jnn.logsumexp(
                 _log_prob,
-                axis=-1,
                 where=~jnp.isneginf(_log_prob),  # to avoid nans
             ) - jnp.log(event_data.shape[0])
 
@@ -240,7 +239,7 @@ def poisson_likelihood(
             is_leaf=lambda x: isinstance(x, tuple),
         )
 
-        expected_rates = ERate_fn(model)
+        expected_rates = ERate_fn(model_instance)
 
         log_prior = priors.log_prob(x)
         log_likelihood = log_likelihood - expected_rates
