@@ -7,7 +7,9 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Tuple
 
 import equinox as eqx
+import jax
 from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
+from jaxtyping import PyTree
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
@@ -176,3 +178,79 @@ class PoissonLikelihood(eqx.Module):
             neginf=-jnp.inf,
         )
         return log_posterior
+
+
+def poisson_likelihood(
+    model: Bake,
+    log_ref_priors: Array,
+    ERate_fn: Callable[[Distribution], Array],
+) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, PyTree], Array]]:
+    dummy_model = model.get_dummy()
+    if not isinstance(dummy_model, ScaledMixture):
+        warnings.warn(
+            "The model provided is not a ScaledMixture. This means rate estimation "
+            "will not be possible."
+        )
+    variables, duplicates, model = model.get_dist()  # type: ignore
+    variables_index = {key: i for i, key in enumerate(variables.keys())}
+
+    for key, value in duplicates.items():
+        variables_index[key] = variables_index[value]
+
+    priors = JointDistribution(*variables.values(), validate_args=True)
+
+    def likelihood_fn(x: Array, data: PyTree) -> Array:
+        mapped_params = {
+            name: jax.lax.dynamic_index_in_dim(x, i)
+            for name, i in variables_index.items()
+        }
+
+        model_instance: Distribution = model(**mapped_params)
+
+        def _nth_prob(y: Tuple[Array, Array]) -> Array:
+            """Calculate the likelihood for the nth event.
+
+            Parameters
+            ----------
+            y : Array
+                The data for the nth event.
+
+            Returns
+            -------
+            Array
+                The likelihood for the nth event.
+            """
+            event_data, log_ref_prior_y = y
+
+            _log_prob = (
+                lax.map(model_instance.log_prob, event_data, batch_size=10000)
+                - log_ref_prior_y
+            )
+
+            return jnn.logsumexp(
+                _log_prob,
+                axis=-1,
+                where=~jnp.isneginf(_log_prob),  # to avoid nans
+            ) - jnp.log(event_data.shape[0])
+
+        log_likelihood = jtr.reduce(
+            lambda x, y: x + _nth_prob(y),
+            list(zip(data, log_ref_priors)),
+            jnp.zeros(()),
+            is_leaf=lambda x: isinstance(x, tuple),
+        )
+
+        expected_rates = ERate_fn(model)
+
+        log_prior = priors.log_prob(x)
+        log_likelihood = log_likelihood - expected_rates
+        log_posterior = log_prior + log_likelihood
+        log_posterior = jnp.nan_to_num(
+            log_posterior,
+            nan=-jnp.inf,
+            posinf=-jnp.inf,
+            neginf=-jnp.inf,
+        )
+        return log_posterior
+
+    return variables_index, priors, likelihood_fn
