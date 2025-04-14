@@ -227,10 +227,12 @@ def poisson_likelihood(
                 - log_ref_prior_y
             )
 
-            return jnn.logsumexp(
+            _log_prob = jnn.logsumexp(
                 _log_prob,
                 where=~jnp.isneginf(_log_prob),  # to avoid nans
             ) - jnp.log(event_data.shape[0])
+
+            return jax.block_until_ready(_log_prob)
 
         log_likelihood = jtr.reduce(
             lambda x, y: x + _nth_prob(y),
