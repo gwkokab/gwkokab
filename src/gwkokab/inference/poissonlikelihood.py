@@ -207,39 +207,17 @@ def poisson_likelihood(
 
         model_instance: Distribution = model(**mapped_params)
 
-        def _nth_prob(y: Tuple[Array, Array]) -> Array:
-            """Calculate the likelihood for the nth event.
-
-            Parameters
-            ----------
-            y : Array
-                The data for the nth event.
-
-            Returns
-            -------
-            Array
-                The likelihood for the nth event.
-            """
-            event_data, log_ref_prior_y = y
-
-            _log_prob = (
-                lax.map(model_instance.log_prob, event_data, batch_size=1000)
-                - log_ref_prior_y
+        def _single_event(event_data: Array, log_ref: Array) -> Array:
+            log_probs = lax.map(model_instance.log_prob, event_data)
+            log_probs -= log_ref
+            logsum = jnn.logsumexp(log_probs, where=~jnp.isneginf(log_probs)) - jnp.log(
+                event_data.shape[0]
             )
+            return logsum
 
-            _log_prob = jnn.logsumexp(
-                _log_prob,
-                where=~jnp.isneginf(_log_prob),  # to avoid nans
-            ) - jnp.log(event_data.shape[0])
-
-            return _log_prob
-
-        log_likelihood = jtr.reduce(
-            lambda x, y: x + _nth_prob(y),
-            list(zip(data, log_ref_priors)),
-            jnp.zeros(()),
-            is_leaf=lambda x: isinstance(x, tuple),
-        )
+        log_likelihood = jnp.zeros(())
+        for d_i, lrp_i in zip(data, log_ref_priors):
+            log_likelihood += _single_event(d_i, lrp_i)
 
         expected_rates = ERate_fn(model_instance)
 
