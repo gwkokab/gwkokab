@@ -9,6 +9,8 @@ from typing import Tuple
 import equinox as eqx
 import jax
 from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
+from jax._src.numpy.util import promote_args_inexact
+from jaxtyping import ArrayLike
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
@@ -179,6 +181,39 @@ class PoissonLikelihood(eqx.Module):
         return log_posterior
 
 
+def segment_logsumexp(
+    data: ArrayLike,
+    segment_ids: ArrayLike,
+    num_segments: int | None = None,
+    indices_are_sorted: bool = False,
+    unique_indices: bool = False,
+    bucket_size: int | None = None,
+    mode: lax.GatherScatterMode | None = None,
+) -> Array:
+    (data,) = promote_args_inexact("segment_logsumexp", data)
+
+    amax = jnp.max(data.real, initial=-jnp.inf)
+    amax = lax.stop_gradient(
+        lax.select(jnp.isfinite(amax), amax, lax.full_like(amax, 0))
+    )
+
+    exp_a = lax.exp(lax.sub(data, amax))
+
+    sumexp = jax.ops.segment_sum(
+        exp_a,
+        segment_ids,
+        num_segments=num_segments,
+        indices_are_sorted=indices_are_sorted,
+        unique_indices=unique_indices,
+        bucket_size=bucket_size,
+        mode=mode,
+    )
+
+    out = lax.add(lax.log(sumexp), amax.astype(sumexp.dtype))
+
+    return out
+
+
 def poisson_likelihood(
     model: Bake,
     stacked_data: Array,
@@ -200,13 +235,11 @@ def poisson_likelihood(
 
     priors = JointDistribution(*variables.values(), validate_args=True)
 
-    # Compute start/stop indices for each event from data_shapes
-    data_shapes = list(data_shapes)
-    start_indices = [0] + list(jnp.cumsum(jnp.array(data_shapes[:-1])).tolist())
-    stop_indices = [start + size for start, size in zip(start_indices, data_shapes)]
-    start_stops = list(zip(start_indices, stop_indices))
+    segment_ids = jnp.concatenate(
+        [jnp.full(shape, i) for i, shape in enumerate(data_shapes)]
+    )
+    num_segments = len(data_shapes)
 
-    @jax.jit
     def likelihood_fn(x: Array, _: Array) -> Array:
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
@@ -215,19 +248,18 @@ def poisson_likelihood(
 
         model_instance: Distribution = model(**mapped_params)
 
-        log_probs = jax.lax.map(
-            model_instance.log_prob, stacked_data, batch_size=10_000
+        log_probs: Array = jax.block_until_ready(
+            jax.lax.map(model_instance.log_prob, stacked_data, batch_size=10_000)
         )
         log_probs -= stacked_log_ref_priors
 
-        total_log_likelihood = jnp.zeros(())
-        for start, stop in start_stops:
-            log_probs_slice = jax.lax.dynamic_slice_in_dim(
-                log_probs, start, stop - start, axis=-1
-            )
-            total_log_likelihood += jnn.logsumexp(
-                log_probs_slice, axis=-1, where=~jnp.isneginf(log_probs_slice)
-            ) - jnp.log(stop - start)
+        log_probs_per_event = segment_logsumexp(
+            data=log_probs,
+            segment_ids=segment_ids,
+            num_segments=num_segments,
+            indices_are_sorted=True,
+        )
+        total_log_likelihood = jnp.sum(log_probs_per_event, axis=-1)
 
         expected_rates = ERate_fn(model_instance)
         log_prior = priors.log_prob(x)
