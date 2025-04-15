@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import functools as ft
 import warnings
 from collections.abc import Callable, Mapping, Sequence
 from typing import Tuple
@@ -10,7 +9,6 @@ from typing import Tuple
 import equinox as eqx
 import jax
 from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
-from jaxtyping import PyTree
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
@@ -183,25 +181,31 @@ class PoissonLikelihood(eqx.Module):
 
 def poisson_likelihood(
     model: Bake,
-    log_ref_priors: Array,
+    stacked_log_ref_priors: Array,
     ERate_fn: Callable[[Distribution], Array],
-) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, PyTree], Array]]:
+    data_shapes: list[int],
+) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     dummy_model = model.get_dummy()
     if not isinstance(dummy_model, ScaledMixture):
         warnings.warn(
             "The model provided is not a ScaledMixture. This means rate estimation "
             "will not be possible."
         )
+
     variables, duplicates, model = model.get_dist()  # type: ignore
     variables_index = {key: i for i, key in enumerate(variables.keys())}
-
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
 
     priors = JointDistribution(*variables.values(), validate_args=True)
 
-    @ft.partial(jax.jit, static_argnames=["data"])
-    def likelihood_fn(x: Array, data: PyTree) -> Array:
+    # Compute start/stop indices for each event from data_shapes
+    start_indices = jnp.array([0] + data_shapes[:-1]).cumsum()
+    stop_indices = start_indices + jnp.array(data_shapes)
+    start_stops = jnp.stack([start_indices, stop_indices], axis=-1)
+
+    @jax.jit
+    def likelihood_fn(x: Array, stacked_data: Array) -> Array:
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
@@ -209,29 +213,32 @@ def poisson_likelihood(
 
         model_instance: Distribution = model(**mapped_params)
 
-        def _single_event(event_data: Array, log_ref: Array) -> Array:
-            log_probs = lax.map(model_instance.log_prob, event_data)
-            log_probs -= log_ref
+        def _single_event(start_stop: Array) -> Array:
+            start, stop = start_stop
+            data_i = jax.lax.dynamic_slice_in_dim(
+                stacked_data, start, stop - start, axis=0
+            )
+            log_ref_i = jax.lax.dynamic_slice_in_dim(
+                stacked_log_ref_priors, start, stop - start, axis=0
+            )
+
+            log_probs = jax.lax.map(model_instance.log_prob, data_i)
+            log_probs -= log_ref_i
             logsum = jnn.logsumexp(log_probs, where=~jnp.isneginf(log_probs)) - jnp.log(
-                event_data.shape[0]
+                stop - start
             )
             return logsum
 
-        log_likelihood = jnp.zeros(())
-        for d_i, lrp_i in zip(data, log_ref_priors):
-            log_likelihood += _single_event(d_i, lrp_i)
+        log_likelihoods = lax.map(_single_event, start_stops)
+        total_log_likelihood = jnp.sum(log_likelihoods)
 
         expected_rates = ERate_fn(model_instance)
-
         log_prior = priors.log_prob(x)
-        log_likelihood = log_likelihood - expected_rates
+        log_likelihood = total_log_likelihood - expected_rates
         log_posterior = log_prior + log_likelihood
-        log_posterior = jnp.nan_to_num(
-            log_posterior,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
+
+        return jnp.nan_to_num(
+            log_posterior, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
         )
-        return jax.block_until_ready(log_posterior)
 
     return variables_index, priors, likelihood_fn
