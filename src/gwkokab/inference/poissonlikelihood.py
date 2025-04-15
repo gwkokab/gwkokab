@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import functools as ft
 import warnings
 from collections.abc import Callable, Mapping, Sequence
 from typing import Tuple
@@ -199,6 +200,7 @@ def poisson_likelihood(
 
     priors = JointDistribution(*variables.values(), validate_args=True)
 
+    @ft.partial(jax.jit, static_argnames=["data"])
     def likelihood_fn(x: Array, data: PyTree) -> Array:
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
