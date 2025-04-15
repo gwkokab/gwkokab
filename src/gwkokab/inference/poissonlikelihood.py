@@ -201,7 +201,7 @@ def poisson_likelihood(
 
     def likelihood_fn(x: Array, data: PyTree) -> Array:
         mapped_params = {
-            name: jax.lax.dynamic_index_in_dim(x, i)
+            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
         }
 
@@ -232,7 +232,7 @@ def poisson_likelihood(
                 where=~jnp.isneginf(_log_prob),  # to avoid nans
             ) - jnp.log(event_data.shape[0])
 
-            return jax.block_until_ready(_log_prob)
+            return _log_prob
 
         log_likelihood = jtr.reduce(
             lambda x, y: x + _nth_prob(y),
@@ -252,6 +252,6 @@ def poisson_likelihood(
             posinf=-jnp.inf,
             neginf=-jnp.inf,
         )
-        return log_posterior
+        return jax.block_until_ready(log_posterior)
 
     return variables_index, priors, likelihood_fn
