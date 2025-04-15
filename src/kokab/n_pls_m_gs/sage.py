@@ -386,6 +386,7 @@ def main() -> None:
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
         model=model,
+        stacked_data=data,
         stacked_log_ref_priors=log_ref_priors,
         ERate_fn=erate_estimator.__call__,
         data_shapes=data_shapes,
@@ -424,7 +425,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
     FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
-    FLOWMC_HANDLER_KWARGS["data"] = data
+    # FLOWMC_HANDLER_KWARGS["data"] = data
 
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
 

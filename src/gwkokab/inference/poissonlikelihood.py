@@ -181,6 +181,7 @@ class PoissonLikelihood(eqx.Module):
 
 def poisson_likelihood(
     model: Bake,
+    stacked_data: Array,
     stacked_log_ref_priors: Array,
     ERate_fn: Callable[[Distribution], Array],
     data_shapes: list[int],
@@ -206,7 +207,7 @@ def poisson_likelihood(
     start_stops = list(zip(start_indices, stop_indices))
 
     @jax.jit
-    def likelihood_fn(x: Array, stacked_data: Array) -> Array:
+    def likelihood_fn(x: Array, _: Array) -> Array:
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
@@ -214,7 +215,9 @@ def poisson_likelihood(
 
         model_instance: Distribution = model(**mapped_params)
 
-        log_probs = jax.lax.map(model_instance.log_prob, stacked_data, batch_size=10000)
+        log_probs = jax.lax.map(
+            model_instance.log_prob, stacked_data, batch_size=10_000
+        )
         log_probs -= stacked_log_ref_priors
 
         total_log_likelihood = jnp.zeros(())
