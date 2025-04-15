@@ -200,9 +200,10 @@ def poisson_likelihood(
     priors = JointDistribution(*variables.values(), validate_args=True)
 
     # Compute start/stop indices for each event from data_shapes
-    start_indices = jnp.array([0] + data_shapes[:-1]).cumsum()
-    stop_indices = start_indices + jnp.array(data_shapes)
-    start_stops = jnp.stack([start_indices, stop_indices], axis=-1)
+    data_shapes = list(data_shapes)
+    start_indices = [0] + list(jnp.cumsum(jnp.array(data_shapes[:-1])).tolist())
+    stop_indices = [start + size for start, size in zip(start_indices, data_shapes)]
+    start_stops = list(zip(start_indices, stop_indices))
 
     @jax.jit
     def likelihood_fn(x: Array, stacked_data: Array) -> Array:
@@ -213,24 +214,17 @@ def poisson_likelihood(
 
         model_instance: Distribution = model(**mapped_params)
 
-        def _single_event(start_stop: Array) -> Array:
-            start, stop = start_stop
-            data_i = jax.lax.dynamic_slice_in_dim(
-                stacked_data, start, stop - start, axis=0
-            )
-            log_ref_i = jax.lax.dynamic_slice_in_dim(
-                stacked_log_ref_priors, start, stop - start, axis=0
-            )
+        log_probs = jax.lax.map(model_instance.log_prob, stacked_data, batch_size=10000)
+        log_probs -= stacked_log_ref_priors
 
-            log_probs = jax.lax.map(model_instance.log_prob, data_i)
-            log_probs -= log_ref_i
-            logsum = jnn.logsumexp(log_probs, where=~jnp.isneginf(log_probs)) - jnp.log(
-                stop - start
+        total_log_likelihood = jnp.zeros(())
+        for start, stop in start_stops:
+            log_probs_slice = jax.lax.dynamic_slice_in_dim(
+                log_probs, start, stop - start, axis=-1
             )
-            return logsum
-
-        log_likelihoods = lax.map(_single_event, start_stops)
-        total_log_likelihood = jnp.sum(log_likelihoods)
+            total_log_likelihood += jnn.logsumexp(
+                log_probs_slice, axis=-1, where=~jnp.isneginf(log_probs_slice)
+            ) - jnp.log(stop - start)
 
         expected_rates = ERate_fn(model_instance)
         log_prior = priors.log_prob(x)
