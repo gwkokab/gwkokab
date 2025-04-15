@@ -234,8 +234,10 @@ def poisson_likelihood(
         log_likelihood = total_log_likelihood - expected_rates
         log_posterior = log_prior + log_likelihood
 
-        return jnp.nan_to_num(
+        log_posterior = jnp.nan_to_num(
             log_posterior, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
         )
+
+        return jax.block_until_ready(log_posterior)
 
     return variables_index, priors, likelihood_fn
