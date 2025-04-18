@@ -380,9 +380,6 @@ def main() -> None:
     data_shapes = [d.shape[0] for d in data]
     data = jax.device_put(np.concatenate(data, axis=0), may_alias=True)
     log_ref_priors = jax.device_put(np.zeros(data.shape[0]), may_alias=True)
-    # log_ref_priors = jax.device_put(
-    #     [np.zeros(d.shape[:-1]) for d in data], may_alias=True
-    # )
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
         model=model,
@@ -425,7 +422,6 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
     FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
-    # FLOWMC_HANDLER_KWARGS["data"] = data
 
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
 
