@@ -248,16 +248,20 @@ def poisson_likelihood(
 
         model_instance: Distribution = model(**mapped_params)
 
-        log_probs: Array = jax.block_until_ready(
-            jax.lax.map(model_instance.log_prob, stacked_data, batch_size=10_000)
+        log_probs: Array = jax.lax.map(
+            model_instance.log_prob, stacked_data, batch_size=10_000
         )
+
         log_probs -= stacked_log_ref_priors
 
+        # TODO(Qazalbash): Either break up the computation into multiple steps or padded arrays
         log_probs_per_event = segment_logsumexp(
             data=log_probs,
             segment_ids=segment_ids,
             num_segments=num_segments,
             indices_are_sorted=True,
+            bucket_size=1024,
+            mode=lax.GatherScatterMode.PROMISE_IN_BOUNDS,
         )
         total_log_likelihood = jnp.sum(log_probs_per_event, axis=-1)
 
