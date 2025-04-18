@@ -51,7 +51,7 @@ class PowerlawPrimaryMassRatio(Distribution):
     .. math::
         \begin{align*}
             p(m_1\mid\alpha)&
-            \propto m_1^{\alpha},\qquad m_{\text{min}}\leq m_1\leq m_{\max}\\
+            \propto m_1^{-\alpha},\qquad m_{\text{min}}\leq m_1\leq m_{\max}\\
             p(q\mid m_1,\beta)&
             \propto q^{\beta},\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
         \end{align*}
@@ -106,7 +106,7 @@ class PowerlawPrimaryMassRatio(Distribution):
     def log_prob(self, value):
         m1, q = jnp.unstack(value, axis=-1)
         log_prob_m1 = doubly_truncated_power_law_log_prob(
-            x=m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+            x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
         )
         log_prob_q = jnp.where(
             jnp.less_equal(m1, self.mmin),
@@ -123,7 +123,7 @@ class PowerlawPrimaryMassRatio(Distribution):
         u_m1 = jrd.uniform(key_m1, shape=sample_shape)
         u_q = jrd.uniform(key_q, shape=sample_shape)
         m1 = doubly_truncated_power_law_icdf(
-            q=u_m1, alpha=self.alpha, low=self.mmin, high=self.mmax
+            q=u_m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
         )
         q = doubly_truncated_power_law_icdf(
             q=u_q, alpha=self.beta, low=jnp.divide(self.mmin, m1), high=1.0
@@ -603,7 +603,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
     .. math::
         \begin{align*}
             p(m_1\mid\alpha,m_{\text{min}},m_{\text{max}},\delta)&
-            \propto m_1^{\alpha}S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right),\qquad m_{\text{min}}\leq m_1\leq m_{\max} \\
+            \propto m_1^{-\alpha}S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right),\qquad m_{\text{min}}\leq m_1\leq m_{\max} \\
             p(q \mid m_1,\beta,m_{\text{min}},\delta)&
             \propto q^{\beta}S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
         \end{align*}
@@ -678,7 +678,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         _Z = lax.stop_gradient(
             jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0)
         ) + self._powerlaw_norm_constant(
-            alpha=self.alpha, low=self.mmin + self.delta, high=self.mmax
+            alpha=-self.alpha, low=self.mmin + self.delta, high=self.mmax
         )
         self._logZ = jnp.where(
             jnp.isnan(_Z) | jnp.isinf(_Z) | jnp.less(_Z, 0.0), 0.0, jnp.log(_Z)
@@ -712,7 +712,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
 
     def _log_prob_m1(self, m1: Array, logZ: ArrayLike = 0.0) -> Array:
         log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
-        log_prob_powerlaw = self.alpha * jnp.log(m1)
+        log_prob_powerlaw = -self.alpha * jnp.log(m1)
         log_prob_m1 = log_prob_powerlaw + log_smoothing_m1 - logZ
         return jnp.nan_to_num(
             log_prob_m1,
