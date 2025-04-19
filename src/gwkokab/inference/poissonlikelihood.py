@@ -8,7 +8,7 @@ from typing import List, Tuple
 
 import jax
 import numpy as np
-from jax import Array, nn as jnn, numpy as jnp
+from jax import Array, numpy as jnp
 from loguru import logger
 from numpyro.distributions import Distribution
 
@@ -135,7 +135,7 @@ def poisson_likelihood(
             log_prob = model_instance.log_prob(safe_data) - safe_log_ref_prior
             log_prob = jnp.where(mask, log_prob, jnp.full_like(mask, -jnp.inf))
 
-            log_prob_sum = jnn.logsumexp(
+            log_prob_sum = jax.nn.logsumexp(
                 log_prob,
                 axis=-1,
                 where=~jnp.isneginf(log_prob),
