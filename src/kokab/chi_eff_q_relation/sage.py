@@ -113,7 +113,7 @@ def main() -> None:
     log_ref_priors = [REDSHIFT.prior.log_prob(d[..., 4]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
-        model=model,
+        dist_builder=model,
         data=data,
         log_ref_priors=log_ref_priors,
         ERate_fn=erate_estimator.__call__,
