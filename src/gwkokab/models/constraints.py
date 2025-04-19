@@ -226,9 +226,9 @@ class _AllConstraint(Constraint):
         return mask
 
     def tree_flatten(self):
-        return (self.constraints, self.event_slices), (
-            ("constraints", "event_slices"),
-            dict(),
+        return (self.constraints,), (
+            ("constraints",),
+            {"event_slices": self.event_slices},
         )
 
     def __eq__(self, other: object) -> bool:
