@@ -131,7 +131,6 @@ def get_posterior_data(
             )
         data = df[posterior_columns].to_numpy()
         data_list.append(data)
-    data_list = jax.device_put(data_list, may_alias=True)
     return data_list
 
 

@@ -7,6 +7,7 @@ from collections.abc import Callable
 from typing import List, Tuple
 
 import jax
+import numpy as np
 from jax import Array, nn as jnn, numpy as jnp
 from loguru import logger
 from numpyro.distributions import Distribution
@@ -20,8 +21,8 @@ __all__ = ["poisson_likelihood"]
 
 def poisson_likelihood(
     model: Bake,
-    data: List[Array],
-    log_ref_priors: List[Array],
+    data: List[np.ndarray],
+    log_ref_priors: List[np.ndarray],
     ERate_fn: Callable[[Distribution], Array],
 ) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson

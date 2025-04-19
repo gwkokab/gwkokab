@@ -6,7 +6,6 @@ import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-import jax
 from jax import numpy as jnp, random as jrd
 from loguru import logger
 from numpyro.distributions import Uniform
@@ -108,12 +107,10 @@ def main() -> None:
     nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = jax.device_put(
-        [REDSHIFT.prior.log_prob(d[..., 4]) for d in data], may_alias=True
-    )
+    log_ref_priors = [REDSHIFT.prior.log_prob(d[..., 4]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
         model=model,
