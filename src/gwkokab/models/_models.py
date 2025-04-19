@@ -113,7 +113,7 @@ class PowerlawPrimaryMassRatio(Distribution):
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
                 x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
-            ),
+            )
         )
 
         return log_prob_m1 + log_prob_q
