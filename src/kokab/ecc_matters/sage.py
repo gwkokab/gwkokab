@@ -6,12 +6,11 @@ import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
-import jax
 import numpy as np
 from jax import random as jrd
 from loguru import logger
 
-from gwkokab.inference import Bake, PoissonLikelihood
+from gwkokab.inference import Bake, poisson_likelihood
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
@@ -68,17 +67,15 @@ def main() -> None:
     nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = jax.device_put(
-        [np.zeros(d.shape[:-1]) for d in data], may_alias=True
-    )
+    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
-    poisson_likelihood = PoissonLikelihood(
-        model=model,
-        log_ref_priors=log_ref_priors,
+    variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
+        dist_builder=model,
         data=data,
+        log_ref_priors=log_ref_priors,
         ERate_fn=erate_estimator.__call__,
     )
 
@@ -88,7 +85,7 @@ def main() -> None:
         json.dump(constants, f)
 
     with open("nf_samples_mapping.json", "w") as f:
-        json.dump(poisson_likelihood.variables_index, f)
+        json.dump(variables_index, f)
 
     FLOWMC_HANDLER_KWARGS = read_json(args.flowMC_json)
 
@@ -96,7 +93,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
-    initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))
+    initial_position = priors.sample(KEY3, (N_CHAINS,))
 
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
@@ -114,7 +111,7 @@ def main() -> None:
         FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
 
     handler = flowMChandler(
-        logpdf=poisson_likelihood.log_posterior,
+        logpdf=poisson_likelihood_fn,
         initial_position=initial_position,
         **FLOWMC_HANDLER_KWARGS,
     )
