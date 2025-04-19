@@ -4,7 +4,7 @@
 
 import warnings
 from collections.abc import Callable, Mapping, Sequence
-from typing import Tuple
+from typing import List, Tuple
 
 import equinox as eqx
 import jax
@@ -216,10 +216,9 @@ def segment_logsumexp(
 
 def poisson_likelihood(
     model: Bake,
-    stacked_data: Array,
-    stacked_log_ref_priors: Array,
+    data: List[Array],
+    log_ref_priors: List[Array],
     ERate_fn: Callable[[Distribution], Array],
-    data_shapes: list[int],
 ) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     dummy_model = model.get_dummy()
     if not isinstance(dummy_model, ScaledMixture):
@@ -228,17 +227,37 @@ def poisson_likelihood(
             "will not be possible."
         )
 
+    max_size = max([d.shape[0] for d in data])
+
+    data_padded = [
+        jnp.pad(d, ((0, max_size - d.shape[0]),) + ((0, 0),) * (d.ndim - 1))
+        for d in data
+    ]
+    mask = [
+        jnp.pad(jnp.ones(d.shape[0], dtype=jnp.bool), (0, max_size - d.shape[0]))
+        for d in data
+    ]
+    log_ref_priors_padded = [
+        jnp.pad(l, ((0, max_size - l.shape[0]),) + ((0, 0),) * (l.ndim - 1))
+        for l in log_ref_priors
+    ]
+
+    stacked_data = jax.block_until_ready(
+        jax.device_put(jnp.stack(data_padded, axis=0), may_alias=True)
+    )
+    stacked_log_ref_priors = jax.block_until_ready(
+        jax.device_put(jnp.stack(log_ref_priors_padded, axis=0), may_alias=True)
+    )
+    stacked_mask = jax.block_until_ready(
+        jax.device_put(jnp.stack(mask, axis=0), may_alias=True)
+    )
+
     variables, duplicates, model = model.get_dist()  # type: ignore
     variables_index = {key: i for i, key in enumerate(variables.keys())}
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
 
     priors = JointDistribution(*variables.values(), validate_args=True)
-
-    segment_ids = jnp.concatenate(
-        [jnp.full(shape, i) for i, shape in enumerate(data_shapes)]
-    )
-    num_segments = len(data_shapes)
 
     def likelihood_fn(x: Array, _: Array) -> Array:
         mapped_params = {
@@ -248,22 +267,23 @@ def poisson_likelihood(
 
         model_instance: Distribution = model(**mapped_params)
 
-        log_probs: Array = jax.lax.map(
-            model_instance.log_prob, stacked_data, batch_size=10_000
-        )
+        def single_event_fn(
+            carry: Array, input: Tuple[Array, Array, Array]
+        ) -> Tuple[Array, None]:
+            data, log_ref_prior, mask = input
+            log_prob = model_instance.log_prob(data) - log_ref_prior
+            log_prob_sum = jnn.logsumexp(
+                log_prob,
+                axis=-1,
+                where=~jnp.isneginf(log_prob) & mask,
+            )
+            return carry + log_prob_sum, None
 
-        log_probs -= stacked_log_ref_priors
-
-        # TODO(Qazalbash): Either break up the computation into multiple steps or padded arrays
-        log_probs_per_event = segment_logsumexp(
-            data=log_probs,
-            segment_ids=segment_ids,
-            num_segments=num_segments,
-            indices_are_sorted=True,
-            bucket_size=1024,
-            mode=lax.GatherScatterMode.PROMISE_IN_BOUNDS,
+        total_log_likelihood, _ = jax.lax.scan(
+            single_event_fn,  # type: ignore
+            jnp.zeros(()),
+            (stacked_data, stacked_log_ref_priors, stacked_mask),
         )
-        total_log_likelihood = jnp.sum(log_probs_per_event, axis=-1)
 
         expected_rates = ERate_fn(model_instance)
         log_prior = priors.log_prob(x)
@@ -274,6 +294,6 @@ def poisson_likelihood(
             log_posterior, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
         )
 
-        return jax.block_until_ready(log_posterior)
+        return log_posterior
 
     return variables_index, priors, likelihood_fn
