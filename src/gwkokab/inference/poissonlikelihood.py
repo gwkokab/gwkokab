@@ -276,11 +276,7 @@ def poisson_likelihood(
                 model_instance.log_prob(data) - log_ref_prior,
                 jnp.full_like(mask, -jnp.inf),
             )
-            log_prob_sum = jnn.logsumexp(
-                log_prob,
-                axis=-1,
-                where=~jnp.isneginf(log_prob),
-            )
+            log_prob_sum = jnn.logsumexp(log_prob, axis=-1)
             return carry + log_prob_sum, None
 
         total_log_likelihood, _ = jax.lax.scan(
