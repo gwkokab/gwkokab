@@ -4,13 +4,10 @@
 
 import warnings
 from collections.abc import Callable, Mapping, Sequence
-from typing import List, Tuple
+from typing import Tuple
 
 import equinox as eqx
-import jax
 from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
-from jax._src.numpy.util import promote_args_inexact
-from jaxtyping import ArrayLike
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
@@ -179,127 +176,3 @@ class PoissonLikelihood(eqx.Module):
             neginf=-jnp.inf,
         )
         return log_posterior
-
-
-def segment_logsumexp(
-    data: ArrayLike,
-    segment_ids: ArrayLike,
-    num_segments: int | None = None,
-    indices_are_sorted: bool = False,
-    unique_indices: bool = False,
-    bucket_size: int | None = None,
-    mode: lax.GatherScatterMode | None = None,
-) -> Array:
-    (data,) = promote_args_inexact("segment_logsumexp", data)
-
-    amax = jnp.max(data.real, initial=-jnp.inf)
-    amax = lax.stop_gradient(
-        lax.select(jnp.isfinite(amax), amax, lax.full_like(amax, 0))
-    )
-
-    exp_a = lax.exp(lax.sub(data, amax))
-
-    sumexp = jax.ops.segment_sum(
-        exp_a,
-        segment_ids,
-        num_segments=num_segments,
-        indices_are_sorted=indices_are_sorted,
-        unique_indices=unique_indices,
-        bucket_size=bucket_size,
-        mode=mode,
-    )
-
-    out = lax.add(lax.log(sumexp), amax.astype(sumexp.dtype))
-
-    return out
-
-
-def poisson_likelihood(
-    model: Bake,
-    data: List[Array],
-    log_ref_priors: List[Array],
-    ERate_fn: Callable[[Distribution], Array],
-) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
-    dummy_model = model.get_dummy()
-    if not isinstance(dummy_model, ScaledMixture):
-        warnings.warn(
-            "The model provided is not a ScaledMixture. This means rate estimation "
-            "will not be possible."
-        )
-
-    max_size = max([d.shape[0] for d in data])
-
-    data_padded = [
-        jnp.pad(d, ((0, max_size - d.shape[0]),) + ((0, 0),) * (d.ndim - 1))
-        for d in data
-    ]
-    mask = [
-        jnp.pad(jnp.ones(d.shape[0], dtype=jnp.bool), (0, max_size - d.shape[0]))
-        for d in data
-    ]
-    log_ref_priors_padded = [
-        jnp.pad(l, ((0, max_size - l.shape[0]),) + ((0, 0),) * (l.ndim - 1))
-        for l in log_ref_priors
-    ]
-
-    stacked_data = jax.block_until_ready(
-        jax.device_put(jnp.stack(data_padded, axis=0), may_alias=True)
-    )
-    stacked_log_ref_priors = jax.block_until_ready(
-        jax.device_put(jnp.stack(log_ref_priors_padded, axis=0), may_alias=True)
-    )
-    stacked_mask = jax.block_until_ready(
-        jax.device_put(jnp.stack(mask, axis=0), may_alias=True)
-    )
-
-    variables, duplicates, model = model.get_dist()  # type: ignore
-    variables_index = {key: i for i, key in enumerate(variables.keys())}
-    for key, value in duplicates.items():
-        variables_index[key] = variables_index[value]
-
-    priors = JointDistribution(*variables.values(), validate_args=True)
-
-    def likelihood_fn(x: Array, _: Array) -> Array:
-        mapped_params = {
-            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
-            for name, i in variables_index.items()
-        }
-
-        model_instance: Distribution = model(**mapped_params)
-
-        def single_event_fn(
-            carry: Array, input: Tuple[Array, Array, Array]
-        ) -> Tuple[Array, None]:
-            data, log_ref_prior, mask = input
-
-            safe_data = jnp.where(mask[:, None], data, jnp.ones_like(data))
-            safe_log_ref_prior = jnp.where(mask, log_ref_prior, jnp.zeros_like(mask))
-
-            log_prob = model_instance.log_prob(safe_data) - safe_log_ref_prior
-            log_prob = jnp.where(mask, log_prob, jnp.full_like(mask, -jnp.inf))
-
-            log_prob_sum = jnn.logsumexp(
-                log_prob,
-                axis=-1,
-                where=~jnp.isneginf(log_prob),
-            )
-            return carry + log_prob_sum, None
-
-        total_log_likelihood, _ = jax.lax.scan(
-            single_event_fn,  # type: ignore
-            jnp.zeros(()),
-            (stacked_data, stacked_log_ref_priors, stacked_mask),
-        )
-
-        expected_rates = ERate_fn(model_instance)
-        log_prior = priors.log_prob(x)
-        log_likelihood = total_log_likelihood - expected_rates
-        log_posterior = log_prior + log_likelihood
-
-        log_posterior = jnp.nan_to_num(
-            log_posterior, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
-        )
-
-        return log_posterior
-
-    return variables_index, priors, likelihood_fn
