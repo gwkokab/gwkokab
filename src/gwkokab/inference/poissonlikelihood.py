@@ -272,10 +272,11 @@ def poisson_likelihood(
         ) -> Tuple[Array, None]:
             data, log_ref_prior, mask = input
             log_prob = model_instance.log_prob(data) - log_ref_prior
+            log_prob = jnp.where(mask, log_prob, -jnp.inf)
             log_prob_sum = jnn.logsumexp(
                 log_prob,
                 axis=-1,
-                where=~jnp.isneginf(log_prob) & mask,
+                where=~jnp.isneginf(log_prob),
             )
             return carry + log_prob_sum, None
 
