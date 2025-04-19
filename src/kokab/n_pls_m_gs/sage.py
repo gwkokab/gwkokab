@@ -377,19 +377,15 @@ def main() -> None:
     erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    data_shapes = [d.shape[0] for d in data]
-    data = jax.device_put(np.concatenate(data, axis=0), may_alias=True)
-    log_ref_priors = jax.device_put(np.zeros(data.shape[0]), may_alias=True)
-    # log_ref_priors = jax.device_put(
-    #     [np.zeros(d.shape[:-1]) for d in data], may_alias=True
-    # )
+    log_ref_priors = jax.device_put(
+        [np.zeros(d.shape[:-1]) for d in data], may_alias=True
+    )
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
         model=model,
-        stacked_data=data,
-        stacked_log_ref_priors=log_ref_priors,
+        data=data,
+        log_ref_priors=log_ref_priors,
         ERate_fn=erate_estimator.__call__,
-        data_shapes=data_shapes,
     )
 
     constants = model.constants
