@@ -132,8 +132,10 @@ def poisson_likelihood(
             safe_data = jnp.where(mask[:, None], data, jnp.ones_like(data))
             safe_log_ref_prior = jnp.where(mask, log_ref_prior, jnp.zeros_like(mask))
 
-            log_prob = model_instance.log_prob(safe_data) - safe_log_ref_prior
-            log_prob = jnp.where(mask, log_prob, jnp.full_like(mask, -jnp.inf))
+            log_prob: Array = model_instance.log_prob(safe_data) - safe_log_ref_prior
+            log_prob = jnp.where(
+                mask, log_prob, jnp.full_like(mask, -jnp.inf, dtype=log_prob.dtype)
+            )
 
             log_prob_sum = jax.nn.logsumexp(
                 log_prob,
