@@ -271,12 +271,18 @@ def poisson_likelihood(
             carry: Array, input: Tuple[Array, Array, Array]
         ) -> Tuple[Array, None]:
             data, log_ref_prior, mask = input
-            log_prob = jnp.where(
-                mask,
-                model_instance.log_prob(data) - log_ref_prior,
-                jnp.full_like(mask, -jnp.inf),
+
+            safe_data = jnp.where(mask[:, None], data, jnp.ones_like(data))
+            safe_log_ref_prior = jnp.where(mask, log_ref_prior, jnp.zeros_like(mask))
+
+            log_prob = model_instance.log_prob(safe_data) - safe_log_ref_prior
+            log_prob = jnp.where(mask, log_prob, jnp.full_like(mask, -jnp.inf))
+
+            log_prob_sum = jnn.logsumexp(
+                log_prob,
+                axis=-1,
+                where=~jnp.isneginf(log_prob),
             )
-            log_prob_sum = jnn.logsumexp(log_prob, axis=-1)
             return carry + log_prob_sum, None
 
         total_log_likelihood, _ = jax.lax.scan(
