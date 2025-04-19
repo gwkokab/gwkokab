@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping, Sequence
 from typing import Tuple
 
 import equinox as eqx
+import jax
 from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
 from numpyro.distributions import Distribution
 
@@ -176,3 +177,67 @@ class PoissonLikelihood(eqx.Module):
             neginf=-jnp.inf,
         )
         return log_posterior
+
+
+def poisson_likelihood(
+    model: Bake,
+    stacked_data: Array,
+    stacked_log_ref_priors: Array,
+    ERate_fn: Callable[[Distribution], Array],
+    data_shapes: list[int],
+) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
+    dummy_model = model.get_dummy()
+    if not isinstance(dummy_model, ScaledMixture):
+        warnings.warn(
+            "The model provided is not a ScaledMixture. This means rate estimation "
+            "will not be possible."
+        )
+
+    variables, duplicates, model = model.get_dist()  # type: ignore
+    variables_index = {key: i for i, key in enumerate(variables.keys())}
+    for key, value in duplicates.items():
+        variables_index[key] = variables_index[value]
+
+    priors = JointDistribution(*variables.values(), validate_args=True)
+
+    # Compute start/stop indices for each event from data_shapes
+    data_shapes = list(data_shapes)
+    start_indices = [0] + list(jnp.cumsum(jnp.array(data_shapes[:-1])).tolist())
+    stop_indices = [start + size for start, size in zip(start_indices, data_shapes)]
+    start_stops = list(zip(start_indices, stop_indices))
+
+    @jax.jit
+    def likelihood_fn(x: Array, _: Array) -> Array:
+        mapped_params = {
+            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
+            for name, i in variables_index.items()
+        }
+
+        model_instance: Distribution = model(**mapped_params)
+
+        log_probs = jax.lax.map(
+            model_instance.log_prob, stacked_data, batch_size=10_000
+        )
+        log_probs -= stacked_log_ref_priors
+
+        total_log_likelihood = jnp.zeros(())
+        for start, stop in start_stops:
+            log_probs_slice = jax.lax.dynamic_slice_in_dim(
+                log_probs, start, stop - start, axis=-1
+            )
+            total_log_likelihood += jnn.logsumexp(
+                log_probs_slice, axis=-1, where=~jnp.isneginf(log_probs_slice)
+            ) - jnp.log(stop - start)
+
+        expected_rates = ERate_fn(model_instance)
+        log_prior = priors.log_prob(x)
+        log_likelihood = total_log_likelihood - expected_rates
+        log_posterior = log_prior + log_likelihood
+
+        log_posterior = jnp.nan_to_num(
+            log_posterior, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
+        )
+
+        return jax.block_until_ready(log_posterior)
+
+    return variables_index, priors, likelihood_fn
