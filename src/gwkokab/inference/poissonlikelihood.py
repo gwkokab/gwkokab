@@ -20,7 +20,7 @@ __all__ = ["poisson_likelihood"]
 
 
 def poisson_likelihood(
-    model: Bake,
+    dist_builder: Bake,
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
     ERate_fn: Callable[[Distribution], Array],
@@ -57,7 +57,7 @@ def poisson_likelihood(
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
-    dummy_model = model.get_dummy()
+    dummy_model = dist_builder.get_dummy()
     if not isinstance(dummy_model, ScaledMixture):
         warnings.warn(
             "The model provided is not a ScaledMixture. This means rate estimation "
@@ -105,7 +105,7 @@ def poisson_likelihood(
         batched_mask_shape=batched_mask.shape,
     )
 
-    variables, duplicates, model = model.get_dist()  # type: ignore
+    variables, duplicates, dist_builder = dist_builder.get_dist()  # type: ignore
     variables_index = {key: i for i, key in enumerate(variables.keys())}
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
@@ -122,7 +122,7 @@ def poisson_likelihood(
             for name, i in variables_index.items()
         }
 
-        model_instance: Distribution = model(**mapped_params)
+        model_instance: Distribution = dist_builder(**mapped_params)
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
