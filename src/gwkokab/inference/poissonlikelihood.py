@@ -3,24 +3,26 @@
 
 
 import warnings
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable
 from typing import List, Tuple
 
-import equinox as eqx
 import jax
-from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
-from jax._src.numpy.util import promote_args_inexact
-from jaxtyping import ArrayLike
+from jax import Array, nn as jnn, numpy as jnp
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
 from .bake import Bake
 
 
-__all__ = ["PoissonLikelihood"]
+__all__ = ["poisson_likelihood"]
 
 
-class PoissonLikelihood(eqx.Module):
+def poisson_likelihood(
+    model: Bake,
+    data: List[Array],
+    log_ref_priors: List[Array],
+    ERate_fn: Callable[[Distribution], Array],
+) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
 
@@ -53,173 +55,6 @@ class PoissonLikelihood(eqx.Module):
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
-
-    data: Sequence[Array] = eqx.field(static=False)
-    model: Callable[..., Distribution] = eqx.field(static=False)
-    log_ref_priors: Sequence[Array] = eqx.field(static=False)
-    priors: JointDistribution = eqx.field(static=False)
-    variables_index: Mapping[str, int] = eqx.field(static=True)
-    ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=False)
-
-    def __init__(
-        self,
-        model: Bake,
-        log_ref_priors: Sequence[Array],
-        data: Sequence[Array],
-        ERate_fn: Callable[[Distribution | ScaledMixture], Array],
-    ) -> None:
-        """
-        Parameters
-        ----------
-        model : Bake
-            model to be used for the likelihood calculation.
-        log_ref_priors : Sequence[Array]
-            Log reference priors to be used for the likelihood calculation.
-        data : Sequence[Array]
-            Data to be used for the likelihood calculation.
-        ERate_fn : Callable[[Distribution | ScaledMixture], Array]
-            Expected rate function to be used for the likelihood calculation.
-        """
-        self.data = data
-        self.model = model
-        self.log_ref_priors = log_ref_priors
-        self.ERate_fn = ERate_fn
-
-        dummy_model = model.get_dummy()
-        if not isinstance(dummy_model, ScaledMixture):
-            warnings.warn(
-                "The model provided is not a ScaledMixture. This means rate estimation "
-                "will not be possible."
-            )
-
-        variables, duplicates, self.model = model.get_dist()
-        self.variables_index = {key: i for i, key in enumerate(variables.keys())}
-
-        for key, value in duplicates.items():
-            self.variables_index[key] = self.variables_index[value]
-
-        self.priors = JointDistribution(*variables.values(), validate_args=True)
-
-    def log_likelihood(self, x: Array) -> Array:
-        """The log likelihood function for the inhomogeneous Poisson process.
-
-        Parameters
-        ----------
-        x : Array
-            Recovered parameters.
-
-        Returns
-        -------
-        Array
-            Log likelihood value for the given parameters.
-        """
-        mapped_params = {name: x[..., i] for name, i in self.variables_index.items()}
-
-        model: Distribution = self.model(**mapped_params)
-
-        def _nth_prob(y: Tuple[Array, Array]) -> Array:
-            """Calculate the likelihood for the nth event.
-
-            Parameters
-            ----------
-            y : Array
-                The data for the nth event.
-
-            Returns
-            -------
-            Array
-                The likelihood for the nth event.
-            """
-            event_data, log_ref_prior_y = y
-
-            _log_prob = (
-                lax.map(model.log_prob, event_data, batch_size=10000) - log_ref_prior_y
-            )
-
-            return jnn.logsumexp(
-                _log_prob,
-                axis=-1,
-                where=~jnp.isneginf(_log_prob),  # to avoid nans
-            ) - jnp.log(event_data.shape[0])
-
-        log_likelihood = jtr.reduce(
-            lambda x, y: x + _nth_prob(y),
-            list(zip(self.data, self.log_ref_priors)),
-            jnp.zeros(()),
-            is_leaf=lambda x: isinstance(x, tuple),
-        )
-
-        expected_rates = self.ERate_fn(model)
-
-        return log_likelihood - expected_rates
-
-    def log_posterior(self, x: Array, _: dict) -> Array:
-        """The likelihood function for the inhomogeneous Poisson process.
-
-        Parameters
-        ----------
-        x : Array
-            Recovered parameters.
-        _ : dict
-            Dictionary of additional arguments. (Unused)
-
-        Returns
-        -------
-        Array
-            Log likelihood value for the given parameters.
-        """
-        log_prior = self.priors.log_prob(x)
-        log_likelihood = self.log_likelihood(x)
-
-        log_posterior = log_prior + log_likelihood
-        log_posterior = jnp.nan_to_num(
-            log_posterior,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
-        )
-        return log_posterior
-
-
-def segment_logsumexp(
-    data: ArrayLike,
-    segment_ids: ArrayLike,
-    num_segments: int | None = None,
-    indices_are_sorted: bool = False,
-    unique_indices: bool = False,
-    bucket_size: int | None = None,
-    mode: lax.GatherScatterMode | None = None,
-) -> Array:
-    (data,) = promote_args_inexact("segment_logsumexp", data)
-
-    amax = jnp.max(data.real, initial=-jnp.inf)
-    amax = lax.stop_gradient(
-        lax.select(jnp.isfinite(amax), amax, lax.full_like(amax, 0))
-    )
-
-    exp_a = lax.exp(lax.sub(data, amax))
-
-    sumexp = jax.ops.segment_sum(
-        exp_a,
-        segment_ids,
-        num_segments=num_segments,
-        indices_are_sorted=indices_are_sorted,
-        unique_indices=unique_indices,
-        bucket_size=bucket_size,
-        mode=mode,
-    )
-
-    out = lax.add(lax.log(sumexp), amax.astype(sumexp.dtype))
-
-    return out
-
-
-def poisson_likelihood(
-    model: Bake,
-    data: List[Array],
-    log_ref_priors: List[Array],
-    ERate_fn: Callable[[Distribution], Array],
-) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     dummy_model = model.get_dummy()
     if not isinstance(dummy_model, ScaledMixture):
         warnings.warn(
