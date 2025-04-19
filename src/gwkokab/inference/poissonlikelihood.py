@@ -8,6 +8,7 @@ from typing import List, Tuple
 
 import jax
 from jax import Array, nn as jnn, numpy as jnp
+from loguru import logger
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
@@ -62,8 +63,11 @@ def poisson_likelihood(
             "will not be possible."
         )
 
+    # maximum size of the data
     max_size = max([d.shape[0] for d in data])
 
+    # pad the data and log_ref_priors to the maximum size and create a mask for the data
+    # to indicate which elements are valid and which are padded.
     data_padded = [
         jnp.pad(d, ((0, max_size - d.shape[0]),) + ((0, 0),) * (d.ndim - 1))
         for d in data
@@ -77,20 +81,37 @@ def poisson_likelihood(
         for l in log_ref_priors
     ]
 
-    stacked_data = jax.block_until_ready(
+    batched_data: Array = jax.block_until_ready(
         jax.device_put(jnp.stack(data_padded, axis=0), may_alias=True)
     )
-    stacked_log_ref_priors = jax.block_until_ready(
+    batched_log_ref_priors: Array = jax.block_until_ready(
         jax.device_put(jnp.stack(log_ref_priors_padded, axis=0), may_alias=True)
     )
-    stacked_mask = jax.block_until_ready(
+    batched_mask: Array = jax.block_until_ready(
         jax.device_put(jnp.stack(mask, axis=0), may_alias=True)
+    )
+
+    logger.debug(
+        "batched_data.shape: {batched_data_shape}",
+        batched_data_shape=batched_data.shape,
+    )
+    logger.debug(
+        "batched_log_ref_priors.shape: {batched_log_ref_priors_shape}",
+        batched_log_ref_priors_shape=batched_log_ref_priors.shape,
+    )
+    logger.debug(
+        "batched_mask.shape: {batched_mask_shape}",
+        batched_mask_shape=batched_mask.shape,
     )
 
     variables, duplicates, model = model.get_dist()  # type: ignore
     variables_index = {key: i for i, key in enumerate(variables.keys())}
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
+
+    logger.debug(
+        "Recovering variables: {variables}", variables=list(variables_index.keys())
+    )
 
     priors = JointDistribution(*variables.values(), validate_args=True)
 
@@ -123,7 +144,7 @@ def poisson_likelihood(
         total_log_likelihood, _ = jax.lax.scan(
             single_event_fn,  # type: ignore
             jnp.zeros(()),
-            (stacked_data, stacked_log_ref_priors, stacked_mask),
+            (batched_data, batched_log_ref_priors, batched_mask),
         )
 
         expected_rates = ERate_fn(model_instance)
