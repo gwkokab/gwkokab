@@ -11,16 +11,17 @@ def doubly_truncated_power_law_log_prob(x, alpha, low, high):
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
     neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
 
+    log_x = jnp.log(x)
+
     def neq_neg1_fn():
         one_more_alpha = 1.0 + neq_neg1_alpha
-        return jnp.log(
-            jnp.power(x, neq_neg1_alpha)
-            * (one_more_alpha)
+        return neq_neg1_alpha * log_x + jnp.log(
+            one_more_alpha
             / (jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha))
         )
 
     def eq_neg1_fn():
-        return -jnp.log(x) - jnp.log(jnp.log(high) - jnp.log(low))
+        return -log_x - jnp.log(jnp.log(high) - jnp.log(low))
 
     return jnp.where(neq_neg1_mask, neq_neg1_fn(), eq_neg1_fn())
 
