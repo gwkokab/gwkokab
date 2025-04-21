@@ -174,11 +174,7 @@ def _save_data_from_sampler(
                 samples,
                 batch_size=batch_size,
             )
-            - jax.lax.map(
-                sampler.nf_model.log_prob,
-                samples,
-                batch_size=batch_size,
-            )
+            - sampler.nf_model.log_prob(samples)
         )
     )
     samples = np.asarray(samples)
