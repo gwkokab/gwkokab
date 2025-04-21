@@ -21,6 +21,7 @@ from flowMC.proposal.MALA import MALA  # noqa F401
 from flowMC.Sampler import Sampler  # noqa F401
 from jax import nn as jnn, random as jrd
 from jaxtyping import Array
+from loguru import logger
 
 
 def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray, ...]:
@@ -169,7 +170,12 @@ def _save_data_from_sampler(
     weights = np.asarray(
         jnn.softmax(
             jax.lax.map(
-                lambda s: logpdf(s, None) - sampler.nf_model.log_prob(s),
+                lambda s: logpdf(s, None),
+                samples,
+                batch_size=batch_size,
+            )
+            - jax.lax.map(
+                sampler.nf_model.log_prob,
                 samples,
                 batch_size=batch_size,
             )
@@ -281,10 +287,13 @@ class flowMChandler(object):
             Prefix for the file name, by default None
         """
         sampler = self.make_sampler()
+        logger.info("Running flowMC sampler")
         if debug_nans:
+            logger.info("Debugging NaNs")
             with jax.debug_nans(True):
                 sampler.sample(self.initial_position, self.data)
         elif profile_memory:
+            logger.info("Profiling memory")
             sampler.sample(self.initial_position, self.data)
 
             import datetime
@@ -295,8 +304,11 @@ class flowMChandler(object):
                 filename = f"{file_prefix}_{filename}"
             jax.profiler.save_device_memory_profile(filename)
         elif check_leaks:
+            logger.info("Checking for memory leaks")
             with jax.checking_leaks():
                 sampler.sample(self.initial_position, self.data)
         else:
             sampler.sample(self.initial_position, self.data)
+        logger.info("Saving data from sampler")
         _save_data_from_sampler(sampler, logpdf=self.logpdf, **self.data_dump_kwargs)
+        logger.info("Done")
