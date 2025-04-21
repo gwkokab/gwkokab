@@ -6,7 +6,7 @@ import jax
 from jax import numpy as jnp
 
 
-@jax.custom_jvp
+# @jax.custom_jvp
 def doubly_truncated_power_law_log_prob(x, alpha, low, high):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L427-L444
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
@@ -27,7 +27,7 @@ def doubly_truncated_power_law_log_prob(x, alpha, low, high):
     return jnp.where(neq_neg1_mask, neq_neg1_fn(), eq_neg1_fn())
 
 
-@doubly_truncated_power_law_log_prob.defjvp
+# @doubly_truncated_power_law_log_prob.defjvp
 def doubly_truncated_power_law_log_prob_jvp(primals, tangents):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L446-L524
     x, alpha, low, high = primals
