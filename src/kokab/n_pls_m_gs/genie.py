@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import functools as ft
 import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
@@ -60,6 +61,93 @@ detection_time_name = DETECTION_TIME.name
 phi_1_name = PHI_1.name
 phi_2_name = PHI_2.name
 phi_orb_name = PHI_ORB.name
+
+
+def constraint_fn(
+    x: jnp.ndarray,
+    has_spin: bool,
+    has_tilt: bool,
+    has_eccentricity: bool,
+    has_mean_anomaly: bool,
+    has_redshift: bool,
+    has_cos_iota: bool,
+    has_polarization_angle: bool,
+    has_right_ascension: bool,
+    has_sin_declination: bool,
+    has_detection_time: bool,
+    has_phi_1: bool,
+    has_phi_2: bool,
+    has_phi_12: bool,
+    has_phi_orb: bool,
+) -> jnp.ndarray:
+    m1 = x[:, 0]
+    m2 = x[:, 1]
+    mask = m2 <= m1
+    i = 2
+    if has_spin:
+        chi1 = x[:, i]
+        chi2 = x[:, i + 1]
+        mask &= (chi1 >= -1.0) & (chi1 <= 1.0) & (chi2 >= -1.0) & (chi2 <= 1.0)
+        i += 2
+    if has_tilt:
+        cos_tilt_1 = x[:, i]
+        cos_tilt_2 = x[:, i + 1]
+        mask &= (
+            (cos_tilt_1 >= -1.0)
+            & (cos_tilt_1 <= 1.0)
+            & (cos_tilt_2 >= -1.0)
+            & (cos_tilt_2 <= 1.0)
+        )
+        i += 2
+    if has_eccentricity:
+        ecc = x[:, i]
+        mask &= (ecc >= 0.0) & (ecc <= 1.0)
+        i += 1
+    if has_mean_anomaly:
+        mean_anomaly = x[:, i]
+        mask &= (mean_anomaly >= 0.0) & (mean_anomaly <= 1.0)
+        i += 1
+    if has_redshift:
+        redshift = x[:, i]
+        mask &= (redshift >= 1e-3) & (redshift <= 1.0)
+        i += 1
+    if has_cos_iota:
+        cos_iota = x[:, i]
+        mask &= (cos_iota >= -1.0) & (cos_iota <= 1.0)
+        i += 1
+    if has_polarization_angle:
+        polarization_angle = x[:, i]
+        mask &= (polarization_angle >= 0.0) & (polarization_angle <= jnp.pi)
+        i += 1
+    if has_right_ascension:
+        right_ascension = x[:, i]
+        mask &= (right_ascension >= 0.0) & (right_ascension <= 2 * jnp.pi)
+        i += 1
+    if has_sin_declination:
+        sin_declination = x[:, i]
+        mask &= (sin_declination >= -1.0) & (sin_declination <= 1.0)
+        i += 1
+    if has_detection_time:
+        detection_time = x[:, i]
+        mask &= (detection_time >= 0.0) & (detection_time <= 1.0)
+        i += 1
+    if has_phi_1:
+        phi_1 = x[:, i]
+        mask &= (phi_1 >= 0.0) & (phi_1 <= 2 * jnp.pi)
+        i += 1
+    if has_phi_2:
+        phi_2 = x[:, i]
+        mask &= (phi_2 >= 0.0) & (phi_2 <= 2 * jnp.pi)
+        i += 1
+    if has_phi_12:
+        phi_12 = x[:, i]
+        mask &= (phi_12 >= 0.0) & (phi_12 <= 2 * jnp.pi)
+        i += 1
+    if has_phi_orb:
+        phi_orb = x[:, i]
+        mask &= (phi_orb >= 0.0) & (phi_orb <= 2 * jnp.pi)
+        i += 1
+    return mask
 
 
 def make_parser() -> ArgumentParser:
@@ -739,5 +827,22 @@ def main() -> None:
         ERate_fn=erate_estimator.__call__,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
+        constraint=ft.partial(
+            constraint_fn,
+            has_spin=has_spin,
+            has_tilt=has_tilt,
+            has_eccentricity=has_eccentricity,
+            has_mean_anomaly=has_mean_anomaly,
+            has_redshift=has_redshift,
+            has_cos_iota=has_cos_iota,
+            has_polarization_angle=has_polarization_angle,
+            has_right_ascension=has_right_ascension,
+            has_sin_declination=has_sin_declination,
+            has_detection_time=has_detection_time,
+            has_phi_1=has_phi_1,
+            has_phi_2=has_phi_2,
+            has_phi_12=has_phi_12,
+            has_phi_orb=has_phi_orb,
+        ),
     )
     popfactory.produce()
