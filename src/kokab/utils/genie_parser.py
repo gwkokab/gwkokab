@@ -39,7 +39,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--vt-json",
         help="Path to the JSON file containing the VT options.",
         type=str,
-        required=True,
+        default="vt.json",
     )
 
     pmean_group = parser.add_argument_group("Poisson Mean Options")
@@ -48,7 +48,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--pmean-json",
         help="Path to the JSON file containing the Poisson mean options.",
         type=str,
-        required=True,
+        default="pmean.json",
     )
 
     return parser
