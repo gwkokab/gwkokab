@@ -169,12 +169,15 @@ def _save_data_from_sampler(
     samples = sampler.sample_flow(n_samples=n_samples + 50_000, rng_key=key_weighted)
     weights = np.asarray(
         jnn.softmax(
-            jax.lax.map(
-                lambda s: logpdf(s, None),
-                samples,
-                batch_size=batch_size,
+            jax.numpy.nan_to_num(
+                jax.lax.map(
+                    lambda s: logpdf(s, None),
+                    samples,
+                    batch_size=batch_size,
+                )
+                - sampler.nf_model.log_prob(samples),
+                nan=-jax.numpy.inf,
             )
-            - sampler.nf_model.log_prob(samples)
         )
     )
     samples = np.asarray(samples)
