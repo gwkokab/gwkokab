@@ -102,17 +102,19 @@ class PowerlawPrimaryMassRatio(Distribution):
     def support(self) -> constraints.Constraint:
         return self._support
 
-    @validate_sample
+    # @validate_sample
     def log_prob(self, value):
         m1, q = jnp.unstack(value, axis=-1)
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
         )
+        mask = jnp.less_equal(m1, self.mmin)
+        qmin = jnp.where(mask, 0.0, self.mmin / m1)
         log_prob_q = jnp.where(
-            jnp.less_equal(m1, self.mmin),
+            mask,
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+                x=q, alpha=self.beta, low=qmin, high=1.0
             ),
         )
 
