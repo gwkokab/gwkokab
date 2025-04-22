@@ -16,9 +16,14 @@ def doubly_truncated_power_law_log_prob(x, alpha, low, high):
 
     def neq_neg1_fn():
         one_more_alpha = 1.0 + neq_neg1_alpha
-        return neq_neg1_alpha * log_x + jnp.log(
-            one_more_alpha
-            / (jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha))
+        return (
+            neq_neg1_alpha * log_x
+            + jnp.log(jnp.abs(one_more_alpha))
+            - jnp.log(
+                jnp.abs(
+                    jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha)
+                )
+            )
         )
 
     def eq_neg1_fn():
@@ -218,7 +223,7 @@ def doubly_truncated_power_law_cdf_jvp(primals, tangents):
     return primal_out, tangent_out
 
 
-@jax.custom_jvp
+# @jax.custom_jvp
 def doubly_truncated_power_law_icdf(q, alpha, low, high):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L680-L703
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
@@ -245,7 +250,7 @@ def doubly_truncated_power_law_icdf(q, alpha, low, high):
     return icdf_val
 
 
-@doubly_truncated_power_law_icdf.defjvp
+# @doubly_truncated_power_law_icdf.defjvp
 def doubly_truncated_power_law_icdf_jvp(primals, tangents):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L705-L815
     x, alpha, low, high = primals
