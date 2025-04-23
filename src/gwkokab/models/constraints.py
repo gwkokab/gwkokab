@@ -8,6 +8,7 @@
 
 from collections.abc import Sequence
 
+import jax
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions.constraints import (
@@ -90,12 +91,15 @@ class _MassRatioMassSandwichConstraint(Constraint):
         self.mmax = mmax
 
     def __call__(self, x: Array) -> Array:
-        m1, q = jnp.unstack(x, axis=-1)
-        m2 = jnp.multiply(m1, q)
-        mask = jnp.logical_and(jnp.less(0.0, self.mmin), jnp.less_equal(self.mmin, m2))
-        mask = jnp.logical_and(mask, jnp.less_equal(m2, m1))
-        mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
-        return jnp.asarray(mask, dtype=bool)
+        # https://docs.jax.dev/en/latest/faq.html#why-are-gradients-zero-for-functions-based-on-sort-order
+        m1, q = jnp.unstack(x, axis=self.event_dim)
+        m2 = m1 * q
+        mask = (
+            jax.nn.sigmoid(m2 - self.mmin)
+            * jax.nn.sigmoid(m1 - m2)
+            * jax.nn.sigmoid(self.mmax - m1)
+        )
+        return mask
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())

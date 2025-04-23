@@ -60,8 +60,8 @@ class PowerlawPrimaryMassRatio(Distribution):
     arg_constraints = {
         "alpha": constraints.real,
         "beta": constraints.real,
-        "mmin": constraints.positive,
-        "mmax": constraints.positive,
+        "mmin": constraints.dependent,
+        "mmax": constraints.dependent,
     }
     reparametrized_params = ["alpha", "beta", "mmin", "mmax"]
     pytree_data_fields = ("_support", "alpha", "beta", "mmax", "mmin")
@@ -93,7 +93,7 @@ class PowerlawPrimaryMassRatio(Distribution):
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax)
         )
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
         super(PowerlawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
@@ -102,23 +102,17 @@ class PowerlawPrimaryMassRatio(Distribution):
     def support(self) -> constraints.Constraint:
         return self._support
 
-    # @validate_sample
+    @validate_sample
     def log_prob(self, value):
         m1, q = jnp.unstack(value, axis=-1)
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
         )
-        mask = jnp.less_equal(m1, self.mmin)
-        qmin = jnp.where(mask, 0.0, self.mmin / m1)
-        log_prob_q = jnp.where(
-            mask,
-            -jnp.inf,
-            doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=qmin, high=1.0
-            ),
+        log_prob_q = doubly_truncated_power_law_log_prob(
+            x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
         )
-
-        return log_prob_m1 + log_prob_q
+        log_prob = log_prob_m1 + log_prob_q
+        return log_prob
 
     def sample(self, key, sample_shape=()):
         key_m1, key_q = jrd.split(key)
