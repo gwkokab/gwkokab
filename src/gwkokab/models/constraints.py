@@ -92,7 +92,7 @@ class _MassRatioMassSandwichConstraint(Constraint):
 
     def __call__(self, x: Array) -> Array:
         # https://docs.jax.dev/en/latest/faq.html#why-are-gradients-zero-for-functions-based-on-sort-order
-        m1, q = jnp.unstack(x, axis=self.event_dim)
+        m1, q = jnp.unstack(x, axis=-1)
         m2 = m1 * q
         mask = (
             jax.nn.sigmoid(m2 - self.mmin)
