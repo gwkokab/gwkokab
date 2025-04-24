@@ -9,7 +9,7 @@ import interpax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy import special
-from jax.scipy.special import expit, logsumexp
+from jax.scipy.special import expit, logsumexp, xlogy
 from jax.scipy.stats import norm, truncnorm, uniform
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import (
@@ -26,7 +26,7 @@ from ..utils.kernel import log_planck_taper_window
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
     doubly_truncated_power_law_icdf,
-    doubly_truncated_power_law_log_prob,
+    doubly_truncated_power_law_normalization_constant,
     JointDistribution,
 )
 
@@ -105,11 +105,17 @@ class PowerlawPrimaryMassRatio(Distribution):
     @validate_sample
     def log_prob(self, value):
         m1, q = jnp.unstack(value, axis=-1)
-        log_prob_m1 = doubly_truncated_power_law_log_prob(
-            x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
+        log_prob_m1 = -xlogy(
+            self.alpha, m1
+        ) + doubly_truncated_power_law_normalization_constant(
+            alpha=-self.alpha, low=self.mmin, high=self.mmax
         )
-        log_prob_q = doubly_truncated_power_law_log_prob(
-            x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+        log_prob_q = xlogy(
+            self.beta, q
+        ) + doubly_truncated_power_law_normalization_constant(
+            alpha=self.beta,
+            low=self.mmin / m1,
+            high=lax.stop_gradient(1.0),
         )
         log_prob = log_prob_m1 + log_prob_q
         return log_prob
@@ -122,7 +128,10 @@ class PowerlawPrimaryMassRatio(Distribution):
             q=u_m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
         )
         q = doubly_truncated_power_law_icdf(
-            q=u_q, alpha=self.beta, low=jnp.divide(self.mmin, m1), high=1.0
+            q=u_q,
+            alpha=self.beta,
+            low=jnp.divide(self.mmin, m1),
+            high=lax.stop_gradient(1.0),
         )
         return jnp.stack((m1, q), axis=-1)
 
@@ -182,8 +191,10 @@ class Wysocki2019MassModel(Distribution):
     def log_prob(self, value):
         m1 = value[..., 0]
         m2 = value[..., 1]
-        log_prob_m1 = doubly_truncated_power_law_log_prob(
-            x=m1, alpha=jnp.negative(self.alpha_m), low=self.mmin, high=self.mmax
+        log_prob_m1 = -xlogy(
+            self.alpha_m, m1
+        ) + doubly_truncated_power_law_normalization_constant(
+            alpha=jnp.negative(self.alpha_m), low=self.mmin, high=self.mmax
         )
         log_prob_m2_given_m1 = uniform.logpdf(
             m2, loc=self.mmin, scale=jnp.subtract(m1, self.mmin)
@@ -416,8 +427,9 @@ class MassGapModel(Distribution):
     def log_prob_three_component_single(self, m_i):
         component_probs = jnp.stack(
             [
-                doubly_truncated_power_law_log_prob(
-                    x=m_i, alpha=-self.alpha, low=self.mmin, high=self.mmax
+                -xlogy(self.alpha, m_i)
+                + doubly_truncated_power_law_normalization_constant(
+                    alpha=-self.alpha, low=self.mmin, high=self.mmax
                 ),
                 truncnorm.logpdf(
                     m_i,
@@ -472,8 +484,9 @@ class MassGapModel(Distribution):
         m2 = value[..., 1]
         log_prob_val = self.log_prob_mi(m1)
         log_prob_val += self.log_prob_mi(m2)
-        log_prob_val += doubly_truncated_power_law_log_prob(
-            x=jnp.divide(m2, m1),
+        log_prob_val += xlogy(
+            self.beta_q, jnp.divide(m2, m1)
+        ) + doubly_truncated_power_law_normalization_constant(
             alpha=self.beta_q,
             low=jnp.divide(self.mmin, self.mmax),
             high=1.0,

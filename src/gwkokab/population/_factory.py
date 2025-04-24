@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple
 import numpy as np
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
+from loguru import logger
 from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
@@ -107,17 +108,19 @@ class PopulationFactory:
         population = population[constraints]
         indices = indices[constraints]
 
-        _, key = jrd.split(key)
+        if self.logVT_fn is not None:
+            _, key = jrd.split(key)
 
-        vt = jnn.softmax(self.logVT_fn(population))
-        vt = jnp.nan_to_num(vt, nan=0.0)
-        _, key = jrd.split(key)
-        index = jrd.choice(
-            key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
-        )
+            vt = jnn.softmax(jnp.nan_to_num(self.logVT_fn(population), nan=-jnp.inf))
 
-        population = population[index]
-        indices = indices[index]
+            _, key = jrd.split(key)
+
+            index = jrd.choice(
+                key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
+            )
+
+            population = population[index]
+            indices = indices[index]
 
         return population, indices
 
@@ -212,10 +215,11 @@ class PopulationFactory:
             masked_noisey_data = noisy_data[~nan_mask]
             count = np.count_nonzero(masked_noisey_data)
             if count < 2:
-                warnings.warn(
-                    f"Skipping file {index} due to all NaN values or insufficient data.",
-                    category=UserWarning,
+                msg = (
+                    f"Skipping file {index} due to all NaN values or insufficient data."
                 )
+                warnings.warn(msg, category=UserWarning)
+                logger.warning(msg)
                 continue
             np.savetxt(
                 output_dir.format(index),
