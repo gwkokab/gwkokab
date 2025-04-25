@@ -14,14 +14,14 @@ def doubly_truncated_power_law_normalization_constant(alpha, low, high):
 
     def neq_neg1_fn():
         one_more_alpha = 1.0 + neq_neg1_alpha
-        return (
-            jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha)
-        ) / one_more_alpha
+        return jnp.log(jnp.abs(one_more_alpha)) - jnp.log(
+            jnp.abs(jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha))
+        )
 
     def eq_neg1_fn():
-        return jnp.log(high) - jnp.log(low)
+        return -jnp.log(jnp.log(high) - jnp.log(low))
 
-    return -jnp.log(jnp.where(neq_neg1_mask, neq_neg1_fn(), eq_neg1_fn()))
+    return jnp.where(neq_neg1_mask, neq_neg1_fn(), eq_neg1_fn())
 
 
 # @doubly_truncated_power_law_log_prob.defjvp

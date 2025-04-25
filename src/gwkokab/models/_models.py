@@ -93,7 +93,7 @@ class PowerlawPrimaryMassRatio(Distribution):
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha), jnp.shape(beta), jnp.shape(mmin), jnp.shape(mmax)
         )
-        self._support = mass_ratio_mass_sandwich(self.mmin, self.mmax)
+        self._support = mass_sandwich(self.mmin, self.mmax)
         super(PowerlawPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
@@ -104,36 +104,39 @@ class PowerlawPrimaryMassRatio(Distribution):
 
     @validate_sample
     def log_prob(self, value):
-        m1, q = jnp.unstack(value, axis=-1)
+        m1, m2 = jnp.unstack(value, axis=-1)
         log_prob_m1 = -xlogy(
             self.alpha, m1
         ) + doubly_truncated_power_law_normalization_constant(
             alpha=-self.alpha, low=self.mmin, high=self.mmax
         )
         log_prob_q = xlogy(
-            self.beta, q
+            self.beta, m2
         ) + doubly_truncated_power_law_normalization_constant(
             alpha=self.beta,
-            low=self.mmin / m1,
-            high=lax.stop_gradient(1.0),
+            low=self.mmin,
+            high=m1,
         )
         log_prob = log_prob_m1 + log_prob_q
         return log_prob
 
     def sample(self, key, sample_shape=()):
-        key_m1, key_q = jrd.split(key)
+        key_m1, key_m2 = jrd.split(key)
         u_m1 = jrd.uniform(key_m1, shape=sample_shape)
-        u_q = jrd.uniform(key_q, shape=sample_shape)
+        u_m2 = jrd.uniform(key_m2, shape=sample_shape)
         m1 = doubly_truncated_power_law_icdf(
-            q=u_m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
+            q=u_m1,
+            alpha=-self.alpha,
+            low=self.mmin,
+            high=self.mmax,
         )
-        q = doubly_truncated_power_law_icdf(
-            q=u_q,
+        m2 = doubly_truncated_power_law_icdf(
+            q=u_m2,
             alpha=self.beta,
-            low=jnp.divide(self.mmin, m1),
-            high=lax.stop_gradient(1.0),
+            low=self.mmin,
+            high=m1,
         )
-        return jnp.stack((m1, q), axis=-1)
+        return jnp.stack((m1, m2), axis=-1)
 
 
 class Wysocki2019MassModel(Distribution):

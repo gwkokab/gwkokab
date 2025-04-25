@@ -230,11 +230,7 @@ def create_powerlaws(
         powerlaw = PowerlawPrimaryMassRatio(
             alpha=alpha, beta=beta, mmin=mmin, mmax=mmax, validate_args=validate_args
         )
-        transformed_powerlaw = TransformedDistribution(
-            base_distribution=powerlaw,
-            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-            validate_args=validate_args,
-        )
+        transformed_powerlaw = powerlaw
         powerlaws_collection.append(transformed_powerlaw)
     return powerlaws_collection
 
