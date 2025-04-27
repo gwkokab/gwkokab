@@ -36,13 +36,13 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--constants",
         help="Path to the JSON file containing the constant parameters.",
         type=str,
-        required=True,
+        default="constants.json",
     )
     ppd_group.add_argument(
         "--nf-samples-mapping",
         help="Path to the JSON file containing the mapping of the number of samples.",
         type=str,
-        required=True,
+        default="nf_samples_mapping.json",
     )
     ppd_group.add_argument(
         "--range",

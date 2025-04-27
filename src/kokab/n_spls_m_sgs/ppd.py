@@ -46,6 +46,14 @@ def make_parser() -> ArgumentParser:
         "to primary and secondary mass. This flag will use the raw parameters i.e."
         "primary mass and mass ratio.",
     )
+
+    msm_group = parser.add_argument_group("Multi Source Model Options")
+    msm_group.add_argument(
+        "--per-component",
+        action="store_true",
+        help="Compute the PPD for each component of the multi source model.",
+    )
+
     return parser
 
 
@@ -64,6 +72,8 @@ def main() -> None:
     constants = read_json(args.constants)
     nf_samples_mapping = read_json(args.nf_samples_mapping)
 
+    N_pl = constants["N_pl"]
+    N_g = constants["N_g"]
     has_spin = constants.get("use_spin", False)
     has_tilt = constants.get("use_tilt", False)
     has_eccentricity = constants.get("use_eccentricity", False)
@@ -99,6 +109,37 @@ def main() -> None:
         args.batch_size,
     )
 
+    if args.per_component:
+        for n_pl in range(1, N_pl + 1):
+            constants_copy = constants.copy()
+            constants_copy["N_pl"] = n_pl
+            constants_copy["N_g"] = 0
+            ppd.compute_and_save_ppd(
+                NSmoothedPowerlawMSmoothedGaussian,
+                nf_samples,
+                ranges,
+                f"rate_scaled_powerlaw_{n_pl}_" + args.filename,
+                parameters,
+                constants_copy,
+                nf_samples_mapping,
+                args.batch_size,
+            )
+
+        for n_g in range(1, N_g + 1):
+            constants_copy = constants.copy()
+            constants_copy["N_pl"] = 0
+            constants_copy["N_g"] = n_g
+            ppd.compute_and_save_ppd(
+                NSmoothedPowerlawMSmoothedGaussian,
+                nf_samples,
+                ranges,
+                f"rate_scaled_gaussian_{n_g}_" + args.filename,
+                parameters,
+                constants_copy,
+                nf_samples_mapping,
+                args.batch_size,
+            )
+
     nf_samples, constants = ppd.wipe_log_rate(nf_samples, nf_samples_mapping, constants)
 
     ppd.compute_and_save_ppd(
@@ -111,3 +152,34 @@ def main() -> None:
         nf_samples_mapping,
         args.batch_size,
     )
+
+    if args.per_component:
+        for n_pl in range(1, N_pl + 1):
+            constants_copy = constants.copy()
+            constants_copy["N_pl"] = n_pl
+            constants_copy["N_g"] = 0
+            ppd.compute_and_save_ppd(
+                NSmoothedPowerlawMSmoothedGaussian,
+                nf_samples,
+                ranges,
+                f"powerlaw_{n_pl}_" + args.filename,
+                parameters,
+                constants_copy,
+                nf_samples_mapping,
+                args.batch_size,
+            )
+
+        for n_g in range(1, N_g + 1):
+            constants_copy = constants.copy()
+            constants_copy["N_pl"] = 0
+            constants_copy["N_g"] = n_g
+            ppd.compute_and_save_ppd(
+                NSmoothedPowerlawMSmoothedGaussian,
+                nf_samples,
+                ranges,
+                f"gaussian_{n_g}_" + args.filename,
+                parameters,
+                constants_copy,
+                nf_samples_mapping,
+                args.batch_size,
+            )

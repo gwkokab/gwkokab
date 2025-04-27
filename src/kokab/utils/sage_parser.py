@@ -45,7 +45,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--vt-json",
         help="Path to the JSON file containing the VT options.",
         type=str,
-        required=True,
+        default="vt.json",
     )
 
     pmean_group = parser.add_argument_group("Poisson Mean Options")
@@ -54,7 +54,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--pmean-json",
         help="Path to the JSON file containing the Poisson mean options.",
         type=str,
-        required=True,
+        default="pmean.json",
     )
 
     flowMC_group = parser.add_argument_group("flowMC Options")
@@ -64,6 +64,8 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Path to a JSON file containing the flowMC options. It should contains"
         "keys: local_sampler_kwargs, nf_model_kwargs, sampler_kwargs, data_dump_kwargs,"
         " and their respective values.",
+        default="flowMC.json",
+        type=str,
     )
 
     adam_group = parser.add_argument_group("Adam Options")
@@ -83,7 +85,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--prior-json",
         type=str,
         help="Path to a JSON file containing the prior distributions.",
-        required=True,
+        default="prior.json",
     )
 
     debug_group = parser.add_argument_group("Debug Options")
