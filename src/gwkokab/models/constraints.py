@@ -53,10 +53,15 @@ class _MassSandwichConstraint(Constraint):
     def __call__(self, x: Array) -> Array:
         # https://docs.jax.dev/en/latest/faq.html#why-are-gradients-zero-for-functions-based-on-sort-order
         m1, m2 = jnp.unstack(x, axis=-1)
-        return jax.nn.sigmoid(m2 - self.mmin) * jax.nn.sigmoid(self.mmax - m1)
+        return jax.nn.sigmoid((m2 - self.mmin)) * jax.nn.sigmoid((self.mmax - m1))
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
+
+    def feasible_like(self, prototype):
+        return jnp.full_like(
+            prototype, (self.mmin + self.mmax) / 2.0, dtype=prototype.dtype
+        )
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _MassSandwichConstraint):

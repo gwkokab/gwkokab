@@ -9,7 +9,7 @@ from jaxtyping import Array
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from gwkokab.models.utils import doubly_truncated_power_law_normalization_constant
+from gwkokab.models.utils import doubly_truncated_power_law_log_prob
 from gwkokab.utils.transformations import chieff, mass_ratio
 
 
@@ -250,7 +250,7 @@ class ChiEffMassRatioCorrelated(Distribution):
         )
         # log_prob(m1)
         prob_m1 = (1 - self.lambda_peak) * jnp.exp(
-            doubly_truncated_power_law_normalization_constant(
+            doubly_truncated_power_law_log_prob(
                 x=m1, alpha=self.lamb, low=self.mmin, high=self.mmax
             )
         )
@@ -271,7 +271,7 @@ class ChiEffMassRatioCorrelated(Distribution):
         log_prob_m2 = jnp.where(
             invalid_mass_mask,
             -jnp.inf,
-            doubly_truncated_power_law_normalization_constant(
+            doubly_truncated_power_law_log_prob(
                 x=safe_m2, alpha=self.gamma, low=self.mmin, high=safe_m1
             ),
         )

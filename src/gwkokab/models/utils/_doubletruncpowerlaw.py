@@ -4,10 +4,11 @@
 
 import jax
 from jax import numpy as jnp
+from jax.scipy.special import xlogy
 
 
-# @jax.custom_jvp
-def doubly_truncated_power_law_normalization_constant(alpha, low, high):
+@jax.custom_jvp
+def doubly_truncated_power_law_log_prob(x, alpha, low, high):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L427-L444
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
     neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
@@ -21,11 +22,11 @@ def doubly_truncated_power_law_normalization_constant(alpha, low, high):
     def eq_neg1_fn():
         return -jnp.log(jnp.log(high) - jnp.log(low))
 
-    return jnp.where(neq_neg1_mask, neq_neg1_fn(), eq_neg1_fn())
+    return xlogy(alpha, x) + jnp.where(neq_neg1_mask, neq_neg1_fn(), eq_neg1_fn())
 
 
-# @doubly_truncated_power_law_log_prob.defjvp
-def doubly_truncated_power_law_normalization_constant_jvp(primals, tangents):
+@doubly_truncated_power_law_log_prob.defjvp
+def doubly_truncated_power_law_log_prob_jvp(primals, tangents):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L446-L524
     x, alpha, low, high = primals
     x_t, alpha_t, low_t, high_t = tangents
@@ -40,7 +41,7 @@ def doubly_truncated_power_law_normalization_constant_jvp(primals, tangents):
     neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
     # eq_neg1_alpha = jnp.where(neq_neg1_mask, 0.0, -1.0)
 
-    primal_out = doubly_truncated_power_law_normalization_constant(*primals)
+    primal_out = doubly_truncated_power_law_log_prob(*primals)
 
     # Alpha tangent with approximation
     # Variable part for all values alpha unequal -1
@@ -195,7 +196,7 @@ def doubly_truncated_power_law_cdf_jvp(primals, tangents):
 def doubly_truncated_power_law_icdf(q, alpha, low, high):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L680-L703
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
-    neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 10.0)
+    neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
 
     def icdf_alpha_neq_neg1():
         one_more_alpha = 1.0 + neq_neg1_alpha
