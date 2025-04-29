@@ -61,9 +61,14 @@ def make_parser() -> ArgumentParser:
         help="Number of Gaussian components in the mass model.",
     )
     model_group.add_argument(
-        "--add-spin",
+        "--add-beta-spin",
         action="store_true",
-        help="Include spin parameters in the model.",
+        help="Include beta spin parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin",
+        action="store_true",
+        help="Include truncated normal spin parameters in the model.",
     )
     model_group.add_argument(
         "--add-tilt",
@@ -110,11 +115,6 @@ def make_parser() -> ArgumentParser:
         action="store_true",
         help="Include detection_time parameter in the model",
     )
-    model_group.add_argument(
-        "--spin-truncated-normal",
-        action="store_true",
-        help="Use truncated normal distributions for spin parameters.",
-    )
 
     return parser
 
@@ -138,7 +138,13 @@ def main() -> None:
     N_pl = args.n_pl
     N_g = args.n_g
 
-    has_spin = args.add_spin
+    has_spin = args.add_beta_spin ^ args.add_truncated_normal_spin
+    if args.add_beta_spin and args.add_truncated_normal_spin:
+        msg = (
+            "You can only use one of the spin models: beta spin or truncated normal spin.",
+        )
+        logger.error(msg)
+        raise ValueError(msg)
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_redshift = args.add_redshift
@@ -170,7 +176,7 @@ def main() -> None:
 
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
-        if args.spin_truncated_normal:
+        if args.add_truncated_normal_spin:
             gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
                 create_truncated_normal_distributions
             )
@@ -194,7 +200,7 @@ def main() -> None:
                     ("chi2_scale_pl", N_pl),
                 ]
             )
-        else:
+        if args.add_beta_spin:
             all_params.extend(
                 [
                     ("chi1_mean_g", N_g),

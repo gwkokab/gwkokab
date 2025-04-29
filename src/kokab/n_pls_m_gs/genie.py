@@ -9,6 +9,7 @@ from typing import List, Tuple
 
 import numpy as np
 from jax import numpy as jnp, random as jrd
+from loguru import logger
 from numpyro import distributions as dist
 
 import gwkokab
@@ -75,9 +76,14 @@ def make_parser() -> ArgumentParser:
         required=True,
     )
     model_group.add_argument(
-        "--add-spin",
+        "--add-beta-spin",
         action="store_true",
-        help="Include spin parameters in the model.",
+        help="Include beta spin parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin",
+        action="store_true",
+        help="Include truncated normal spin parameters in the model.",
     )
     model_group.add_argument(
         "--add-tilt",
@@ -144,11 +150,6 @@ def make_parser() -> ArgumentParser:
         action="store_true",
         help="Include phi_orb parameter in the model",
     )
-    model_group.add_argument(
-        "--spin-truncated-normal",
-        action="store_true",
-        help="Use truncated normal distributions for spin parameters.",
-    )
 
     err_group = parser.add_argument_group("Error Options")
     err_group.add_argument(
@@ -175,7 +176,13 @@ def main() -> None:
     N_pl = model_json["N_pl"]
     N_g = model_json["N_g"]
 
-    has_spin = args.add_spin
+    has_spin = args.add_beta_spin ^ args.add_truncated_normal_spin
+    if args.add_beta_spin and args.add_truncated_normal_spin:
+        msg = (
+            "You can only use one of the spin models: beta spin or truncated normal spin.",
+        )
+        logger.error(msg)
+        raise ValueError(msg)
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_mean_anomaly = args.add_mean_anomaly
@@ -305,7 +312,7 @@ def main() -> None:
 
     if has_spin:
         parameters_name += (chi1_name, chi2_name)
-        if args.spin_truncated_normal:
+        if args.add_truncated_normal_spin:
             gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
                 create_truncated_normal_distributions
             )
@@ -329,7 +336,7 @@ def main() -> None:
                     ("chi2_scale_pl", N_pl),
                 ]
             )
-        else:
+        if args.add_beta_spin:
             all_params.extend(
                 [
                     ("chi1_mean_g", N_g),
