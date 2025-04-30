@@ -3,11 +3,13 @@
 
 
 import argparse
-from typing import Any, List, Optional, Tuple
+from typing import Any, List, Tuple
 
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from kokab.utils.ppd import get_all_marginals
 
@@ -243,7 +245,7 @@ def main() -> None:
         0.95,  # 90% CI
     ]
 
-    axes: Optional[List[Optional[Any]]] = None
+    axes: List[Tuple[Figure, Axes]] = []
 
     for j in range(len(args.data)):
         with h5py.File(args.data[j], "r") as f:
@@ -254,7 +256,7 @@ def main() -> None:
 
         marginal_ppds = get_all_marginals(ppd, domains)
 
-        if axes is None:
+        if not axes:
             axes = [plt.subplots(figsize=args.size) for _ in range(len(headers))]
 
         for i in range(len(headers)):
