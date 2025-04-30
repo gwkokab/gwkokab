@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import warnings
 from collections.abc import Callable
 from typing import List, Tuple
 
@@ -13,6 +12,7 @@ from loguru import logger
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
+from ..utils.tools import warn_if
 from .bake import Bake
 
 
@@ -58,11 +58,11 @@ def poisson_likelihood(
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
     dummy_model = dist_builder.get_dummy()
-    if not isinstance(dummy_model, ScaledMixture):
-        warnings.warn(
-            "The model provided is not a ScaledMixture. This means rate estimation "
-            "will not be possible."
-        )
+    warn_if(
+        not isinstance(dummy_model, ScaledMixture),
+        msg="The model provided is not a ScaledMixture. "
+        "Rate estimation will therefore be skipped.",
+    )
 
     # maximum size of the data
     max_size = max([d.shape[0] for d in data])
