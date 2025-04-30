@@ -57,6 +57,48 @@ def make_parser() -> ArgumentParser:
     return parser
 
 
+def compute_per_component_ppd(
+    nf_samples,
+    ranges,
+    constants,
+    component_prefix,
+    parameters,
+    args,
+    nf_samples_mapping,
+    N_pl,
+    N_g,
+):
+    for n_pl in range(1, N_pl + 1):
+        constants_copy = constants.copy()
+        constants_copy["N_pl"] = n_pl
+        constants_copy["N_g"] = 0
+        ppd.compute_and_save_ppd(
+            NSmoothedPowerlawMSmoothedGaussian,
+            nf_samples,
+            ranges,
+            f"{component_prefix}powerlaw_{n_pl}_" + args.filename,
+            parameters,
+            constants_copy,
+            nf_samples_mapping,
+            args.batch_size,
+        )
+
+    for n_g in range(1, N_g + 1):
+        constants_copy = constants.copy()
+        constants_copy["N_pl"] = 0
+        constants_copy["N_g"] = n_g
+        ppd.compute_and_save_ppd(
+            NSmoothedPowerlawMSmoothedGaussian,
+            nf_samples,
+            ranges,
+            f"{component_prefix}gaussian_{n_g}_" + args.filename,
+            parameters,
+            constants_copy,
+            nf_samples_mapping,
+            args.batch_size,
+        )
+
+
 def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
@@ -110,35 +152,17 @@ def main() -> None:
     )
 
     if args.per_component:
-        for n_pl in range(1, N_pl + 1):
-            constants_copy = constants.copy()
-            constants_copy["N_pl"] = n_pl
-            constants_copy["N_g"] = 0
-            ppd.compute_and_save_ppd(
-                NSmoothedPowerlawMSmoothedGaussian,
-                nf_samples,
-                ranges,
-                f"rate_scaled_powerlaw_{n_pl}_" + args.filename,
-                parameters,
-                constants_copy,
-                nf_samples_mapping,
-                args.batch_size,
-            )
-
-        for n_g in range(1, N_g + 1):
-            constants_copy = constants.copy()
-            constants_copy["N_pl"] = 0
-            constants_copy["N_g"] = n_g
-            ppd.compute_and_save_ppd(
-                NSmoothedPowerlawMSmoothedGaussian,
-                nf_samples,
-                ranges,
-                f"rate_scaled_gaussian_{n_g}_" + args.filename,
-                parameters,
-                constants_copy,
-                nf_samples_mapping,
-                args.batch_size,
-            )
+        compute_per_component_ppd(
+            nf_samples,
+            ranges,
+            constants,
+            "rate_scaled_",
+            parameters,
+            args,
+            nf_samples_mapping,
+            N_pl,
+            N_g,
+        )
 
     nf_samples, constants = ppd.wipe_log_rate(nf_samples, nf_samples_mapping, constants)
 
@@ -154,32 +178,14 @@ def main() -> None:
     )
 
     if args.per_component:
-        for n_pl in range(1, N_pl + 1):
-            constants_copy = constants.copy()
-            constants_copy["N_pl"] = n_pl
-            constants_copy["N_g"] = 0
-            ppd.compute_and_save_ppd(
-                NSmoothedPowerlawMSmoothedGaussian,
-                nf_samples,
-                ranges,
-                f"powerlaw_{n_pl}_" + args.filename,
-                parameters,
-                constants_copy,
-                nf_samples_mapping,
-                args.batch_size,
-            )
-
-        for n_g in range(1, N_g + 1):
-            constants_copy = constants.copy()
-            constants_copy["N_pl"] = 0
-            constants_copy["N_g"] = n_g
-            ppd.compute_and_save_ppd(
-                NSmoothedPowerlawMSmoothedGaussian,
-                nf_samples,
-                ranges,
-                f"gaussian_{n_g}_" + args.filename,
-                parameters,
-                constants_copy,
-                nf_samples_mapping,
-                args.batch_size,
-            )
+        compute_per_component_ppd(
+            nf_samples,
+            ranges,
+            constants,
+            "",
+            parameters,
+            args,
+            nf_samples_mapping,
+            N_pl,
+            N_g,
+        )
