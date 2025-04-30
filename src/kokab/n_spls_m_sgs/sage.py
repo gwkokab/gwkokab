@@ -59,16 +59,19 @@ def make_parser() -> ArgumentParser:
         type=int,
         help="Number of Gaussian components in the mass model.",
     )
-    model_group.add_argument(
+
+    spin_group = model_group.add_mutually_exclusive_group()
+    spin_group.add_argument(
         "--add-beta-spin",
         action="store_true",
         help="Include beta spin parameters in the model.",
     )
-    model_group.add_argument(
+    spin_group.add_argument(
         "--add-truncated-normal-spin",
         action="store_true",
         help="Include truncated normal spin parameters in the model.",
     )
+
     model_group.add_argument(
         "--add-tilt",
         action="store_true",
@@ -115,13 +118,7 @@ def main() -> None:
     N_pl = args.n_pl
     N_g = args.n_g
 
-    has_spin = args.add_beta_spin ^ args.add_truncated_normal_spin
-    if args.add_beta_spin and args.add_truncated_normal_spin:
-        msg = (
-            "You can only use one of the spin models: beta spin or truncated normal spin.",
-        )
-        logger.error(msg)
-        raise ValueError(msg)
+    has_spin = args.add_beta_spin or args.add_truncated_normal_spin
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_redshift = args.add_redshift

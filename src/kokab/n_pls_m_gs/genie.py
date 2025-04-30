@@ -9,7 +9,6 @@ from typing import List, Tuple
 
 import numpy as np
 from jax import numpy as jnp, random as jrd
-from loguru import logger
 from numpyro import distributions as dist
 
 import gwkokab
@@ -75,16 +74,19 @@ def make_parser() -> ArgumentParser:
         type=str,
         required=True,
     )
-    model_group.add_argument(
+
+    spin_group = model_group.add_mutually_exclusive_group()
+    spin_group.add_argument(
         "--add-beta-spin",
         action="store_true",
         help="Include beta spin parameters in the model.",
     )
-    model_group.add_argument(
+    spin_group.add_argument(
         "--add-truncated-normal-spin",
         action="store_true",
         help="Include truncated normal spin parameters in the model.",
     )
+
     model_group.add_argument(
         "--add-tilt",
         action="store_true",
@@ -176,13 +178,7 @@ def main() -> None:
     N_pl = model_json["N_pl"]
     N_g = model_json["N_g"]
 
-    has_spin = args.add_beta_spin ^ args.add_truncated_normal_spin
-    if args.add_beta_spin and args.add_truncated_normal_spin:
-        msg = (
-            "You can only use one of the spin models: beta spin or truncated normal spin.",
-        )
-        logger.error(msg)
-        raise ValueError(msg)
+    has_spin = args.add_beta_spin or args.add_truncated_normal_spin
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_mean_anomaly = args.add_mean_anomaly
