@@ -21,7 +21,7 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--data",
         nargs="+",
-        help="data file path. Only .hdf5 files are supported.",
+        help="data files paths (one or more). Only .hdf5 files are supported.",
         type=str,
         required=True,
     )
