@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import functools as ft
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import pandas as pd
@@ -9,6 +10,7 @@ from numpyro.distributions.distribution import DistributionLike
 
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
+    MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
@@ -36,15 +38,16 @@ def make_parser() -> ArgumentParser:
     return parser
 
 
-def model(**params) -> DistributionLike:
+def model(raw: bool, **params) -> DistributionLike:
     validate_args = params.pop("validate_args", True)
     _model = SmoothedPowerlawAndPeak(**params, validate_args=validate_args)
-    _model._component_distributions[0].marginal_distributions[0] = (
-        _model._component_distributions[0].marginal_distributions[0].base_dist
-    )
-    _model._component_distributions[1].marginal_distributions[0] = (
-        _model._component_distributions[1].marginal_distributions[0].base_dist
-    )
+    if raw:
+        _model._component_distributions[0].marginal_distributions[0] = (
+            _model._component_distributions[0].marginal_distributions[0].base_dist
+        )
+        _model._component_distributions[1].marginal_distributions[0] = (
+            _model._component_distributions[1].marginal_distributions[0].base_dist
+        )
     return _model
 
 
@@ -63,7 +66,11 @@ def main() -> None:
     use_spin = constants.get("use_spin", False)
     use_redshift = constants.get("use_redshift", False)
 
-    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+    parameters = [PRIMARY_MASS_SOURCE.name]
+    if args.raw:
+        parameters.append(MASS_RATIO.name)
+    else:
+        parameters.append(SECONDARY_MASS_SOURCE.name)
 
     if use_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
@@ -77,7 +84,7 @@ def main() -> None:
     ).to_numpy()
 
     ppd.compute_and_save_ppd(
-        model,
+        ft.partial(model, raw=args.raw),
         nf_samples,
         ranges,
         "rate_scaled_" + args.filename,
@@ -90,7 +97,7 @@ def main() -> None:
     nf_samples, constants = ppd.wipe_log_rate(nf_samples, nf_samples_mapping, constants)
 
     ppd.compute_and_save_ppd(
-        model,
+        ft.partial(model, raw=args.raw),
         nf_samples,
         ranges,
         args.filename,

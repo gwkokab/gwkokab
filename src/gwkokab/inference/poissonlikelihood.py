@@ -2,23 +2,29 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import warnings
-from collections.abc import Callable, Mapping, Sequence
-from typing import Tuple
+from collections.abc import Callable
+from typing import List, Tuple
 
-import equinox as eqx
-from jax import Array, lax, nn as jnn, numpy as jnp, tree as jtr
+import jax
+import numpy as np
+from jax import Array, numpy as jnp
+from loguru import logger
 from numpyro.distributions import Distribution
 
-from ..logger import logger
 from ..models.utils import JointDistribution, ScaledMixture
+from ..utils.tools import warn_if
 from .bake import Bake
 
 
-__all__ = ["PoissonLikelihood"]
+__all__ = ["poisson_likelihood"]
 
 
-class PoissonLikelihood(eqx.Module):
+def poisson_likelihood(
+    dist_builder: Bake,
+    data: List[np.ndarray],
+    log_ref_priors: List[np.ndarray],
+    ERate_fn: Callable[[Distribution], Array],
+) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
 
@@ -51,143 +57,116 @@ class PoissonLikelihood(eqx.Module):
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
+    dummy_model = dist_builder.get_dummy()
+    warn_if(
+        not isinstance(dummy_model, ScaledMixture),
+        msg="The model provided is not a ScaledMixture. "
+        "Rate estimation will therefore be skipped.",
+    )
 
-    data: Sequence[Array] = eqx.field(static=False)
-    model: Callable[..., Distribution] = eqx.field(static=False)
-    log_ref_priors: Sequence[Array] = eqx.field(static=False)
-    priors: JointDistribution = eqx.field(static=False)
-    variables_index: Mapping[str, int] = eqx.field(static=True)
-    ERate_fn: Callable[[Distribution | ScaledMixture], Array] = eqx.field(static=False)
+    # maximum size of the data
+    max_size = max([d.shape[0] for d in data])
 
-    def __init__(
-        self,
-        model: Bake,
-        log_ref_priors: Sequence[Array],
-        data: Sequence[Array],
-        ERate_fn: Callable[[Distribution | ScaledMixture], Array],
-    ) -> None:
-        """
-        Parameters
-        ----------
-        model : Bake
-            model to be used for the likelihood calculation.
-        log_ref_priors : Sequence[Array]
-            Log reference priors to be used for the likelihood calculation.
-        data : Sequence[Array]
-            Data to be used for the likelihood calculation.
-        ERate_fn : Callable[[Distribution | ScaledMixture], Array]
-            Expected rate function to be used for the likelihood calculation.
-        """
-        self.data = data
-        self.model = model
-        self.log_ref_priors = log_ref_priors
-        self.ERate_fn = ERate_fn
+    # pad the data and log_ref_priors to the maximum size and create a mask for the data
+    # to indicate which elements are valid and which are padded.
+    data_padded = [
+        jnp.pad(d, ((0, max_size - d.shape[0]),) + ((0, 0),) * (d.ndim - 1))
+        for d in data
+    ]
+    mask = [
+        jnp.pad(
+            jnp.ones(d.shape[0], dtype=bool),
+            (0, max_size - d.shape[0]),
+            constant_values=jnp.zeros((), dtype=bool),
+        )
+        for d in data
+    ]
+    log_ref_priors_padded = [
+        jnp.pad(
+            l,
+            ((0, max_size - l.shape[0]),) + ((0, 0),) * (l.ndim - 1),
+            constant_values=0.0,
+        )
+        for l in log_ref_priors
+    ]
 
-        dummy_model = model.get_dummy()
-        if not isinstance(dummy_model, ScaledMixture):
-            warnings.warn(
-                "The model provided is not a ScaledMixture. This means rate estimation "
-                "will not be possible."
+    batched_data: Array = jax.block_until_ready(
+        jax.device_put(jnp.stack(data_padded, axis=0), may_alias=True)
+    )
+    batched_log_ref_priors: Array = jax.block_until_ready(
+        jax.device_put(jnp.stack(log_ref_priors_padded, axis=0), may_alias=True)
+    )
+    batched_mask: Array = jax.block_until_ready(
+        jax.device_put(jnp.stack(mask, axis=0), may_alias=True)
+    )
+
+    logger.debug(
+        "batched_data.shape: {batched_data_shape}",
+        batched_data_shape=batched_data.shape,
+    )
+    logger.debug(
+        "batched_log_ref_priors.shape: {batched_log_ref_priors_shape}",
+        batched_log_ref_priors_shape=batched_log_ref_priors.shape,
+    )
+    logger.debug(
+        "batched_mask.shape: {batched_mask_shape}",
+        batched_mask_shape=batched_mask.shape,
+    )
+
+    variables, duplicates, dist_builder = dist_builder.get_dist()  # type: ignore
+    variables_index = {key: i for i, key in enumerate(variables.keys())}
+    for key, value in duplicates.items():
+        variables_index[key] = variables_index[value]
+
+    logger.debug(
+        "Recovering variables: {variables}", variables=list(variables_index.keys())
+    )
+
+    priors = JointDistribution(*variables.values(), validate_args=True)
+
+    def likelihood_fn(x: Array, _: Array) -> Array:
+        mapped_params = {
+            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
+            for name, i in variables_index.items()
+        }
+
+        model_instance: Distribution = dist_builder(**mapped_params)
+
+        def single_event_fn(
+            carry: Array, input: Tuple[Array, Array, Array]
+        ) -> Tuple[Array, None]:
+            data, log_ref_prior, mask = input
+
+            safe_data = jnp.where(mask[:, None], data, jnp.ones_like(data))
+            safe_log_ref_prior = jnp.where(mask, log_ref_prior, jnp.zeros_like(mask))
+
+            log_prob: Array = model_instance.log_prob(safe_data) - safe_log_ref_prior
+            log_prob = jnp.where(
+                mask, log_prob, jnp.full_like(mask, -jnp.inf, dtype=log_prob.dtype)
             )
 
-        variables, duplicates, self.model = model.get_dist()
-        self.variables_index = {key: i for i, key in enumerate(variables.keys())}
-
-        for key, value in duplicates.items():
-            self.variables_index[key] = self.variables_index[value]
-
-        self.priors = JointDistribution(*variables.values(), validate_args=True)
-
-    def log_likelihood(self, x: Array) -> Array:
-        """The log likelihood function for the inhomogeneous Poisson process.
-
-        Parameters
-        ----------
-        x : Array
-            Recovered parameters.
-
-        Returns
-        -------
-        Array
-            Log likelihood value for the given parameters.
-        """
-        mapped_params = {name: x[..., i] for name, i in self.variables_index.items()}
-
-        model: Distribution = self.model(**mapped_params)
-
-        def _nth_prob(y: Tuple[Array, Array]) -> Array:
-            """Calculate the likelihood for the nth event.
-
-            Parameters
-            ----------
-            y : Array
-                The data for the nth event.
-
-            Returns
-            -------
-            Array
-                The likelihood for the nth event.
-            """
-            event_data, log_ref_prior_y = y
-
-            _log_prob = (
-                lax.map(model.log_prob, event_data, batch_size=10000) - log_ref_prior_y
-            )
-
-            return jnn.logsumexp(
-                _log_prob,
+            log_prob_sum = jax.nn.logsumexp(
+                log_prob,
                 axis=-1,
-                where=~jnp.isneginf(_log_prob),  # to avoid nans
-            ) - jnp.log(event_data.shape[0])
+                where=~jnp.isneginf(log_prob),
+            )
+            return carry + log_prob_sum, None
 
-        log_likelihood = jtr.reduce(
-            lambda x, y: x + _nth_prob(y),
-            list(zip(self.data, self.log_ref_priors)),
+        total_log_likelihood, _ = jax.lax.scan(
+            single_event_fn,  # type: ignore
             jnp.zeros(()),
-            is_leaf=lambda x: isinstance(x, tuple),
+            (batched_data, batched_log_ref_priors, batched_mask),
         )
 
-        expected_rates = self.ERate_fn(model)
-
-        logger.debug(
-            "PoissionLikelihood: \n"
-            "\tmapped_params = {mp}\n"
-            "\tmodel_log_likelihood = {mll}\n"
-            "\texpected_rate = {expr}",
-            mp=mapped_params,
-            mll=log_likelihood,
-            expr=expected_rates,
-        )
-
-        return log_likelihood - expected_rates
-
-    def log_posterior(self, x: Array, _: dict) -> Array:
-        """The likelihood function for the inhomogeneous Poisson process.
-
-        Parameters
-        ----------
-        x : Array
-            Recovered parameters.
-        _ : dict
-            Dictionary of additional arguments. (Unused)
-
-        Returns
-        -------
-        Array
-            Log likelihood value for the given parameters.
-        """
-        log_prior = self.priors.log_prob(x)
-        log_likelihood = self.log_likelihood(x)
-        logger.debug(
-            "PoissionLikelihood:\n\tlog_prior + log_likelihood = {lp} + {ll}",
-            lp=log_prior,
-            ll=log_likelihood,
-        )
+        expected_rates = ERate_fn(model_instance)
+        log_prior = priors.log_prob(x)
+        log_likelihood = total_log_likelihood - expected_rates
         log_posterior = log_prior + log_likelihood
+
         log_posterior = jnp.nan_to_num(
-            log_posterior,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
+            log_posterior, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
         )
+
         return log_posterior
+
+    return variables_index, priors, likelihood_fn

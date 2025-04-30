@@ -8,6 +8,8 @@ from typing import Any, List, Tuple
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from kokab.utils.ppd import get_all_marginals
 
@@ -20,9 +22,10 @@ def make_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--data",
-        help="data file path. Only .hdf5 files are supported.",
-        required=True,
+        nargs="+",
+        help="data files paths (one or more). Only .hdf5 files are supported.",
         type=str,
+        required=True,
     )
     parser.add_argument(
         "--dir",
@@ -233,13 +236,6 @@ def main() -> None:
     x_labels = args.x_labels
     y_labels = args.y_labels
     titles = args.titles
-    with h5py.File(args.data, "r") as f:
-        domains = get_domain(f["domains"])
-        headers = get_utf8_decoded_headers(f["headers"])
-        marginals = [f["marginals"][head][:] for head in headers]
-        ppd = f["ppd"][()]
-
-    marginal_ppds = get_all_marginals(ppd, domains)
 
     quantiles = [
         0.05,  # 90% CI
@@ -249,75 +245,99 @@ def main() -> None:
         0.95,  # 90% CI
     ]
 
-    i = 0
-    for head, marginal, marginal_ppd, domain in zip(
-        headers, marginals, marginal_ppds, domains
-    ):
-        start, end, num_points = domain
-        quant = get_quantiles(marginal, quantiles)
-        xx = np.linspace(start, end, num_points)
+    axes: List[Tuple[Figure, Axes]] = []
 
-        fig, ax = plt.subplots(figsize=args.size)
-        ax.plot(
-            xx,
-            quant[2],
-            label="Median",
-            color=args.median_color,
-            alpha=args.median_alpha,
-            linestyle=args.median_linestyle,
-        )
-        ax.plot(
-            xx, marginal_ppd, label="PPD", color=args.ppd_color, alpha=args.ppd_alpha
-        )
-        ax.fill_between(
-            xx,
-            quant[0],
-            quant[-1],
-            alpha=args.ninety_ci_alpha,
-            label="90\% CI" if args.use_latex else "90% CI",
-            color=args.ninety_ci_color,
-        )
-        ax.fill_between(
-            xx,
-            quant[1],
-            quant[-2],
-            alpha=args.fifty_ci_alpha,
-            label="50\% CI" if args.use_latex else "50% CI",
-            color=args.fifty_ci_color,
-        )
-        ax.set_yscale(args.y_scale)
-        ax.set_xscale(args.x_scale)
-        if titles is None:
-            ax.set_title(f"PPD plot of {prefix}{head}", fontsize=font_size)
+    for j in range(len(args.data)):
+        with h5py.File(args.data[j], "r") as f:
+            domains = get_domain(f["domains"])
+            headers = get_utf8_decoded_headers(f["headers"])
+            marginals = [f["marginals"][head][:] for head in headers]
+            ppd = f["ppd"][()]
+
+        marginal_ppds = get_all_marginals(ppd, domains)
+
+        if not axes:
+            axes = [plt.subplots(figsize=args.size) for _ in range(len(headers))]
+
+        for i in range(len(headers)):
+            _, ax = axes[i]
+            head = headers[i]
+            marginal = marginals[i]
+            marginal_ppd = marginal_ppds[i]
+            domain = domains[i]
+
+            start, end, num_points = domain
+            quant = get_quantiles(marginal, quantiles)
+            xx = np.linspace(start, end, num_points)
+
+            ax.plot(
+                xx,
+                quant[2],
+                # label="Median",
+                color=args.median_color,
+                alpha=args.median_alpha,
+                linestyle=args.median_linestyle,
+            )
+            ax.plot(
+                xx,
+                marginal_ppd,
+                # label="PPD",
+                color=args.ppd_color,
+                alpha=args.ppd_alpha,
+            )
+            ax.fill_between(
+                xx,
+                quant[0],
+                quant[-1],
+                alpha=args.ninety_ci_alpha,
+                # label="90\% CI" if args.use_latex else "90% CI",
+                color=args.ninety_ci_color,
+            )
+            ax.fill_between(
+                xx,
+                quant[1],
+                quant[-2],
+                alpha=args.fifty_ci_alpha,
+                # label="50\% CI" if args.use_latex else "50% CI",
+                color=args.fifty_ci_color,
+            )
+            ax.set_yscale(args.y_scale)
+            ax.set_xscale(args.x_scale)
+            if titles is not None:
+                if i < len(titles):
+                    ax.set_title(titles[i], fontsize=font_size)
+            if x_labels is None:
+                ax.set_xlabel(head, fontsize=font_size)
+            else:
+                if i < len(x_labels):
+                    ax.set_xlabel(x_labels[i], fontsize=font_size)
+
+            if y_labels is None:
+                ax.set_ylabel(f"ppd({head})", fontsize=font_size)
+            else:
+                if i < len(y_labels):
+                    ax.set_ylabel(y_labels[i], fontsize=font_size)
+
+            if x_range is not None and i < len(x_range):
+                ax.set_xlim(x_range[i][0], x_range[i][1])
+            if y_range is not None and i < len(y_range):
+                ax.set_ylim(y_range[i][0], y_range[i][1])
+
+    for i in range(len(axes)):
+        fig, ax = axes[i]
+        filename = f"{args.dir}/{prefix}{headers[i]}_ppd_plot"
+        if len(axes) > 1:
+            filename += f"_{i}.pdf"
         else:
-            if i < len(titles):
-                ax.set_title(titles[i], fontsize=font_size)
-        if x_labels is None:
-            ax.set_xlabel(head, fontsize=font_size)
-        else:
-            if i < len(x_labels):
-                ax.set_xlabel(x_labels[i], fontsize=font_size)
+            filename += ".pdf"
 
-        if y_labels is None:
-            ax.set_ylabel(f"ppd({head})", fontsize=font_size)
-        else:
-            if i < len(y_labels):
-                ax.set_ylabel(y_labels[i], fontsize=font_size)
-
-        if x_range is not None and i < len(x_range):
-            ax.set_xlim(x_range[i][0], x_range[i][1])
-        if y_range is not None and i < len(y_range):
-            ax.set_ylim(y_range[i][0], y_range[i][1])
-
-        plt.legend()
-        plt.tight_layout()
         if args.grid:
-            plt.grid(
+            ax.grid(
                 args.grid,
                 which=args.grid_which,
                 linestyle=args.grid_linestyle,
                 alpha=args.grid_alpha,
             )
-        fig.savefig(f"{args.dir}/{prefix}{head}_ppd_plot.pdf", bbox_inches="tight")
+        ax.legend()
+        fig.savefig(filename, bbox_inches="tight", dpi=300)
         plt.close("all")
-        i += 1

@@ -5,6 +5,8 @@
 import warnings
 from typing import Dict, Optional, TypeVar
 
+from loguru import logger
+
 
 _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
@@ -52,6 +54,7 @@ def error_if(cond: bool, err: Exception = ValueError, msg: str = "") -> None:
         The error raised if the condition is met.
     """
     if cond:
+        logger.error(msg)
         raise err(msg)
 
 
@@ -70,4 +73,5 @@ def warn_if(cond: bool, err: Warning = UserWarning, msg: str = "") -> None:
         The message to include with the warning, by default ""
     """
     if cond:
+        logger.warning(msg)
         warnings.warn(msg, err)

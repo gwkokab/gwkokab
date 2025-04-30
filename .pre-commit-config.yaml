@@ -8,7 +8,7 @@ default_install_hook_types: [pre-commit, commit-msg]
 files: src||scripts||tests||examples
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.11.3"
+    rev: "v0.11.7"
     hooks:
       - id: ruff
         args: [--fix]
@@ -30,7 +30,7 @@ repos:
         stages: [pre-commit, commit-msg]
         args: [--ignore-words-list, "statics,socio-economic,precessing,astroid", --check-filenames, --skip, "*.ipynb"]
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.24.2
+    rev: v8.25.0
     hooks:
       - id: gitleaks
   - repo: https://github.com/google/yamlfmt
@@ -70,7 +70,7 @@ repos:
         additional_dependencies: [tomli]
         args: [--close-quotes-on-newline, --in-place, --config, ./pyproject.toml]
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.32.1
+    rev: 0.33.0
     hooks:
       - id: check-dependabot
       - id: check-github-workflows

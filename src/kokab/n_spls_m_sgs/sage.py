@@ -3,18 +3,16 @@
 
 
 import json
-import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import List, Tuple
 
-import jax
 import numpy as np
 from jax import random as jrd
+from loguru import logger
 
 import gwkokab
-from gwkokab.inference import Bake, PoissonLikelihood
-from gwkokab.logger import enable_logging
+from gwkokab.inference import Bake, poisson_likelihood
 from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
 from gwkokab.models.utils import (
     create_smoothed_gaussians_raw,
@@ -61,11 +59,19 @@ def make_parser() -> ArgumentParser:
         type=int,
         help="Number of Gaussian components in the mass model.",
     )
-    model_group.add_argument(
-        "--add-spin",
+
+    spin_group = model_group.add_mutually_exclusive_group()
+    spin_group.add_argument(
+        "--add-beta-spin",
         action="store_true",
-        help="Include spin parameters in the model.",
+        help="Include beta spin parameters in the model.",
     )
+    spin_group.add_argument(
+        "--add-truncated-normal-spin",
+        action="store_true",
+        help="Include truncated normal spin parameters in the model.",
+    )
+
     model_group.add_argument(
         "--add-tilt",
         action="store_true",
@@ -82,11 +88,6 @@ def make_parser() -> ArgumentParser:
         help="Include eccentricity in the model.",
     )
     model_group.add_argument(
-        "--spin-truncated-normal",
-        action="store_true",
-        help="Use truncated normal distributions for spin parameters.",
-    )
-    model_group.add_argument(
         "--raw",
         action="store_true",
         help="The raw parameters for this model are primary mass and mass ratio. To"
@@ -100,17 +101,13 @@ def make_parser() -> ArgumentParser:
 
 def main() -> None:
     r"""Main function of the script."""
-    warnings.warn(
+    logger.warning(
         "If you have made any changes to any parameters, please make sure"
         " that the changes are reflected in scripts that generate plots.",
-        Warning,
     )
 
     parser = make_parser()
     args = parser.parse_args()
-
-    if args.verbose:
-        enable_logging()
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
@@ -121,7 +118,7 @@ def main() -> None:
     N_pl = args.n_pl
     N_g = args.n_g
 
-    has_spin = args.add_spin
+    has_spin = args.add_beta_spin or args.add_truncated_normal_spin
     has_tilt = args.add_tilt
     has_eccentricity = args.add_eccentricity
     has_redshift = args.add_redshift
@@ -156,7 +153,7 @@ def main() -> None:
 
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
-        if args.spin_truncated_normal:
+        if args.add_truncated_normal_spin:
             gwkokab.models.nsmoothedpowerlawmsmoothedgaussian._model.build_spin_distributions = create_truncated_normal_distributions
             all_params.extend(
                 [
@@ -178,7 +175,7 @@ def main() -> None:
                     ("chi2_scale_pl", N_pl),
                 ]
             )
-        else:
+        if args.add_beta_spin:
             all_params.extend(
                 [
                     ("chi1_mean_g", N_g),
@@ -254,17 +251,15 @@ def main() -> None:
     nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)
+    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = jax.device_put(
-        [np.zeros(d.shape[:-1]) for d in data], may_alias=True
-    )
+    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
-    poisson_likelihood = PoissonLikelihood(
-        model=model,
-        log_ref_priors=log_ref_priors,
+    variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
+        dist_builder=model,
         data=data,
+        log_ref_priors=log_ref_priors,
         ERate_fn=erate_estimator.__call__,
     )
 
@@ -281,7 +276,7 @@ def main() -> None:
         json.dump(constants, f)
 
     with open("nf_samples_mapping.json", "w") as f:
-        json.dump(poisson_likelihood.variables_index, f)
+        json.dump(variables_index, f)
 
     FLOWMC_HANDLER_KWARGS = read_json(args.flowMC_json)
 
@@ -289,7 +284,7 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
 
     N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
-    initial_position = poisson_likelihood.priors.sample(KEY3, (N_CHAINS,))
+    initial_position = priors.sample(KEY3, (N_CHAINS,))
 
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
@@ -307,7 +302,7 @@ def main() -> None:
         FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
 
     handler = flowMChandler(
-        logpdf=poisson_likelihood.log_posterior,
+        logpdf=poisson_likelihood_fn,
         initial_position=initial_position,
         **FLOWMC_HANDLER_KWARGS,
     )
