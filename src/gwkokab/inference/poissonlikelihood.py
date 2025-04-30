@@ -74,11 +74,19 @@ def poisson_likelihood(
         for d in data
     ]
     mask = [
-        jnp.pad(jnp.ones(d.shape[0], dtype=bool), (0, max_size - d.shape[0]))
+        jnp.pad(
+            jnp.ones(d.shape[0], dtype=bool),
+            (0, max_size - d.shape[0]),
+            constant_values=jnp.zeros((), dtype=bool),
+        )
         for d in data
     ]
     log_ref_priors_padded = [
-        jnp.pad(l, ((0, max_size - l.shape[0]),) + ((0, 0),) * (l.ndim - 1))
+        jnp.pad(
+            l,
+            ((0, max_size - l.shape[0]),) + ((0, 0),) * (l.ndim - 1),
+            constant_values=0.0,
+        )
         for l in log_ref_priors
     ]
 
