@@ -95,7 +95,7 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
             \ln\left(|\mathrm{det}(J_f)|\right) = \ln(|m_1|)
         """
         m1 = x[..., 0]
-        return jnp.log(jnp.abs(m1))
+        return -jnp.log(jnp.abs(m1))
 
     def tree_flatten(self):
         return (), ((), dict())
