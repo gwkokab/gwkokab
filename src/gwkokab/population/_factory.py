@@ -95,7 +95,7 @@ class PopulationFactory:
 
     def _generate_population(
         self, size: int, *, key: PRNGKeyArray
-    ) -> Tuple[Array, Array]:
+    ) -> Tuple[Array, Array, Array, Array]:
         r"""Generate population for a realization."""
 
         old_size = size
@@ -107,10 +107,12 @@ class PopulationFactory:
         population = population[constraints]
         indices = indices[constraints]
 
+        raw_population = population
+        raw_indices = indices
+
         _, key = jrd.split(key)
 
         vt = jnn.softmax(self.logVT_fn(population))
-        vt = jnp.nan_to_num(vt, nan=0.0)
         _, key = jrd.split(key)
         index = jrd.choice(
             key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
@@ -119,7 +121,7 @@ class PopulationFactory:
         population = population[index]
         indices = indices[index]
 
-        return population, indices
+        return raw_population, raw_indices, population, indices
 
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
@@ -143,15 +145,18 @@ class PopulationFactory:
                 "Generating realizations", total=self.num_realizations
             )
             for i in range(self.num_realizations):
-                population, indices = self._generate_population(size, key=pop_keys[i])
-
-                if population.shape == ():
-                    continue
-
                 realizations_path = os.path.join(
                     self.root_dir, self.realizations_dir.format(i)
                 )
                 os.makedirs(realizations_path, exist_ok=True)
+
+                raw_population, raw_indices, population, indices = (
+                    self._generate_population(size, key=pop_keys[i])
+                )
+
+                if population.shape == ():
+                    continue
+
                 injections_file_path = os.path.join(
                     realizations_path, self.injection_filename
                 )
@@ -165,6 +170,24 @@ class PopulationFactory:
                 np.savetxt(
                     color_indices_file_path,
                     indices,
+                    comments="",  # To remove the default comment character '#'
+                    fmt="%d",
+                )
+                raw_injections_file_path = os.path.join(
+                    realizations_path, "raw_" + self.injection_filename
+                )
+                raw_color_indices_file_path = os.path.join(
+                    realizations_path, "raw_color.dat"
+                )
+                np.savetxt(
+                    raw_injections_file_path,
+                    raw_population,
+                    header=" ".join(self.parameters),
+                    comments="",  # To remove the default comment character '#'
+                )
+                np.savetxt(
+                    raw_color_indices_file_path,
+                    raw_indices,
                     comments="",  # To remove the default comment character '#'
                     fmt="%d",
                 )
