@@ -382,7 +382,7 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
 
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         m1 = x[..., 0]
-        return -jnp.log(m1)
+        return -jnp.log(jnp.abs(m1))
 
     def tree_flatten(self):
         return (), ((), dict())

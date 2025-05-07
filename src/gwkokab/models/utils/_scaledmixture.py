@@ -240,4 +240,8 @@ class ScaledMixture(Distribution):
         safe_sum_log_probs = jnp.where(
             jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
         )
-        return jax.nn.logsumexp(safe_sum_log_probs, axis=-1)
+        return jax.nn.logsumexp(
+            safe_sum_log_probs,
+            where=~jnp.isneginf(sum_log_probs),
+            axis=-1,
+        )
