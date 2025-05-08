@@ -125,7 +125,7 @@ class PoissonMean(eqx.Module):
     def __init_for_per_component_rate__(
         self,
         key: PRNGKeyArray,
-        proposal_dists: Optional[List[Union[Literal["self"], DistributionLike]]] = None,
+        proposal_dists: List[Union[Literal["self"], DistributionLike]],
         num_samples: int = 10_000,
         self_num_samples: Optional[int] = None,
         num_samples_per_component: Optional[List[int]] = None,
@@ -169,7 +169,7 @@ class PoissonMean(eqx.Module):
                 num_samples for _ in range(len(proposal_dists))
             ]
         self.time_scale = time_scale
-        logVT_fn = self.logVT_estimator.get_mapped_logVT()
+        logVT_fn = self.logVT_estimator.get_mapped_logVT()  # type: ignore
 
         proposal_log_weights_and_samples = []
         for index, dist in enumerate(proposal_dists):
@@ -229,11 +229,12 @@ class PoissonMean(eqx.Module):
             Estimated rate/s.
         """
         if self.num_samples_per_component is None:  # injection based sampling method
-            log_weights, samples = self.proposal_log_weights_and_samples[0]
+            log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
             num_samples = log_weights.shape[0]
             model_log_prob = model.log_prob(samples).reshape(num_samples)
+            log_prob = model_log_prob - log_weights
             return (self.time_scale / num_samples) * jnp.exp(
-                jnn.logsumexp(model_log_prob - log_weights, axis=-1)
+                jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
             )
         else:  # per component rate estimation
             return self.calculate_per_component_rate(model)
@@ -263,12 +264,12 @@ class PoissonMean(eqx.Module):
 
         per_component_log_estimated_rates = []
 
-        logVT_fn = self.logVT_estimator.get_mapped_logVT()
+        logVT_fn = self.logVT_estimator.get_mapped_logVT()  # type: ignore
 
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
-            component_dist: DistributionLike = model._component_distributions[i]
-            num_samples = self.num_samples_per_component[i]
+            component_dist: DistributionLike = model.component_distributions[i]
+            num_samples = self.num_samples_per_component[i]  # type: ignore
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
@@ -280,13 +281,14 @@ class PoissonMean(eqx.Module):
                     num_samples
                 )
                 per_sample_log_estimated_rates = log_weights + component_log_prob
-            per_component_log_estimated_rates.append(
-                jnn.logsumexp(per_sample_log_estimated_rates) - jnp.log(num_samples)
-            )
+            per_component_log_estimated_rate = jnn.logsumexp(
+                per_sample_log_estimated_rates,
+                where=~jnp.isneginf(per_sample_log_estimated_rates),
+            ) - jnp.log(num_samples)
+            per_component_log_estimated_rates.append(per_component_log_estimated_rate)
 
         per_component_log_estimated_rates = model.log_scales + jnp.stack(
             per_component_log_estimated_rates, axis=-1
-        )
-        per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)
-
+        )  # type: ignore
+        per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
         return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
