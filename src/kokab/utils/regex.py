@@ -8,11 +8,19 @@ from typing import Dict, List
 
 
 def matches_regex(pattern: str, string: str) -> bool:
-    r"""Check if a string matches a regex pattern.
+    """Check if a string matches a regex pattern.
 
-    :param pattern: regex pattern to match
-    :param string: string to match
-    :return: :code:`True` if the string matches the pattern, `code`:False: otherwise
+    Parameters
+    ----------
+    pattern : str
+        regex pattern to match
+    string : str
+        string to match
+
+    Returns
+    -------
+    bool
+        :code:`True` if the string matches the pattern, `code`:False: otherwise
     """
     return bool(re.fullmatch(pattern, string))
 
@@ -20,11 +28,19 @@ def matches_regex(pattern: str, string: str) -> bool:
 def match_all(
     strings: List[str], pattern_dict_with_val: Dict[str, str | int | float | None]
 ) -> Dict[str, int | float | None]:
-    r"""Match all strings in a list with a dictionary of regex patterns.
+    """Match all strings in a list with a dictionary of regex patterns.
 
-    :param strings: list of strings to match
-    :param pattern_dict_with_val: dictionary of regex patterns with values
-    :return: dictionary of matched patterns with values
+    Parameters
+    ----------
+    strings : List[str]
+        list of strings to match
+    pattern_dict_with_val : Dict[str, str  |  int  |  float  |  None]
+        dictionary of regex patterns with values
+
+    Returns
+    -------
+    Dict[str, int | float | None]
+        dictionary of matched patterns with values
     """
     # TODO(Qazalbash): Simplify the logic
     matches: Dict[str, int | float | None] = {}

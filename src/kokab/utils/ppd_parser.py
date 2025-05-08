@@ -11,8 +11,15 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     """Populate the command line argument parser with the arguments for the Genie
     script.
 
-    :param parser: Parser to add the arguments to
-    :return: the command line argument parser
+    Parameters
+    ----------
+    parser : ArgumentParser
+        Parser to add the arguments to
+
+    Returns
+    -------
+    ArgumentParser
+        the command line argument parser
     """
 
     # Global enable validation for all distributions

@@ -45,16 +45,24 @@ def read_json(json_file: str) -> Dict:
 
 
 def expand_arguments(arg: str, n: int) -> List[str]:
-    r"""Extend the argument with a number of strings.
+    """Extend the argument with a number of strings.
 
     .. code:: python
 
         >>> expand_arguments("physics", 3)
         ["physics_0", "physics_1", "physics_2"]
 
-    :param arg: argument to extend
-    :param n: number of strings to extend
-    :return: list of extended arguments
+    Parameters
+    ----------
+    arg : str
+        argument to extend
+    n : int
+        number of strings to extend
+
+    Returns
+    -------
+    List[str]
+        list of extended arguments
     """
     return [f"{arg}_{i}" for i in range(n)]
 
@@ -113,11 +121,26 @@ def flowMC_default_parameters(**kwargs) -> dict:
 def get_posterior_data(
     filenames: List[str], posterior_columns: List[str]
 ) -> List[np.ndarray]:
-    r"""Get the posterior data from a list of files.
+    """Get the posterior data from a list of files.
 
-    :param filenames: list of filenames
-    :param posterior_columns: list of posterior columns
-    :return: dictionary of posterior data
+    Parameters
+    ----------
+    filenames : List[str]
+        list of filenames
+    posterior_columns : List[str]
+        list of posterior columns
+
+    Returns
+    -------
+    List[np.ndarray]
+        dictionary of posterior data
+
+    Raises
+    ------
+    ValueError
+        If no files are found to read posterior data
+    KeyError
+        If the file is missing required columns
     """
     if len(filenames) == 0:
         raise ValueError("No files found to read posterior data")
@@ -135,11 +158,24 @@ def get_posterior_data(
 
 
 def get_vt_samples(filename: str, columns: List[str]) -> np.ndarray:
-    r"""Get the VT samples from a list of files.
+    """Get the VT samples from a list of files.
 
-    :param filenames: list of filenames
-    :param columns: list of columns
-    :return: dictionary of VT samples
+    Parameters
+    ----------
+    filename : str
+        list of filenames
+    columns : List[str]
+        list of columns
+
+    Returns
+    -------
+    np.ndarray
+        dictionary of VT samples
+
+    Raises
+    ------
+    KeyError
+        If the file is missing required columns
     """
     df = pd.read_csv(filename, delimiter=" ")
     missing_columns = set(columns) - set(df.columns)
@@ -152,12 +188,24 @@ def get_vt_samples(filename: str, columns: List[str]) -> np.ndarray:
 
 
 def get_processed_priors(params: List[str], priors: dict) -> dict:
-    r"""Get the processed priors from a list of parameters.
+    """Get the processed priors from a list of parameters.
 
-    :param params: list of parameters
-    :param priors: dictionary of priors
-    :raises ValueError: if the prior value is invalid
-    :return: dictionary of processed priors
+    Parameters
+    ----------
+    params : List[str]
+        list of parameters
+    priors : dict
+        dictionary of priors
+
+    Returns
+    -------
+    dict
+        dictionary of processed priors
+
+    Raises
+    ------
+    ValueError
+        if the prior value is invalid
     """
     matched_prior_params = match_all(params, priors)
     for key, value in matched_prior_params.items():
@@ -172,12 +220,19 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
 
 
 def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
-    r"""Check if all the parameters in the VT are in the model.
+    """Check if all the parameters in the VT are in the model.
 
-    :param vt_params: list of VT parameters
-    :param parameters: list of model parameters
-    :raises ValueError: if the parameters in the VT do not match the parameters in the
-        model
+    Parameters
+    ----------
+    vt_params : List[str]
+        list of VT parameters
+    parameters : List[str]
+        list of model parameters
+
+    Raises
+    ------
+    ValueError
+        if the parameters in the VT do not match the parameters in the model
     """
     if set(vt_params) - set(parameters):
         raise ValueError(
@@ -245,18 +300,30 @@ def ppd_ranges(
 ) -> List[Tuple[float, float, int]]:
     """Convert the PPD ranges to the format required by the PPD function.
 
-    :param parameters: list of parameters
-    :param ranges: list of ranges
-    :return: list of ranges
+    Parameters
+    ----------
+    parameters : List[str]
+        list of parameters
+    ranges : List[Tuple[str, float, float, int]]
+        list of ranges
+
+    Returns
+    -------
+    List[Tuple[float, float, int]]
+        list of ranges
+
+    Raises
+    ------
+    ValueError
+        If the parameter is not found in the list of parameters
     """
     _ranges: List[Tuple[float, float, int]] = [None] * len(parameters)
     for name, *_range in ranges:
-        if name in parameters:
-            _ranges[parameters.index(name)] = (
-                float(_range[0]),
-                float(_range[1]),
-                int(_range[2]),
-            )
-        else:
+        if name not in parameters:
             raise ValueError(f"Parameter {name} not found in {parameters}.")
+        _ranges[parameters.index(name)] = (
+            float(_range[0]),
+            float(_range[1]),
+            int(_range[2]),
+        )
     return _ranges

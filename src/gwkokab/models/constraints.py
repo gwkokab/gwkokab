@@ -43,8 +43,12 @@ class _MassSandwichConstraint(Constraint):
 
     def __init__(self, mmin: float, mmax: float):
         """
-        :param mmin: Minimum mass.
-        :param mmax: Maximum mass.
+        Parameters
+        ----------
+        mmin : float
+            Minimum mass.
+        mmax : float
+            Maximum mass.
         """
         self.mmin = mmin
         self.mmax = mmax
@@ -82,9 +86,13 @@ class _MassRatioMassSandwichConstraint(Constraint):
     event_dim = 1
 
     def __init__(self, mmin: float, mmax: float):
-        r"""
-        :param mmin: Minimum mass.
-        :param mmax: Maximum mass.
+        """
+        Parameters
+        ----------
+        mmin : float
+            Minimum mass.
+        mmax : float
+            Maximum mass.
         """
         self.mmin = mmin
         self.mmax = mmax

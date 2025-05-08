@@ -15,7 +15,10 @@ def make_parser() -> argparse.ArgumentParser:
 
     This function creates the command line argument parser and returns it.
 
-    :return: the command line argument parser
+    Returns
+    -------
+    argparse.ArgumentParser
+        the command line argument parser
     """
     parser = argparse.ArgumentParser(
         description="Scatter batch 3D plotter.",

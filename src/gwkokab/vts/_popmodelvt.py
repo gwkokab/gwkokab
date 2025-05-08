@@ -199,7 +199,11 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             Logarithm of the total mass
         q_tilde : Array
             Reduced mass ratio
-        :return: Primary and secondary masses
+
+        Returns
+        -------
+        Tuple[Array, Array]
+            Primary and secondary masses
         """
         M = jnp.exp(logM)
         denominator = M * (1 + q_tilde) - 2 * self.m_min * q_tilde
@@ -410,6 +414,8 @@ class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
         by `PopModels <https://gitlab.com/dwysocki/bayesian-parametric-population-models>`_
         with calibrated corrections.
 
+        Parameters
+        ----------
         parameters : Sequence[str]
             The names of the parameters that the model expects.
         filename : str

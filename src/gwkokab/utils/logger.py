@@ -43,25 +43,27 @@ def log_gwkokab_info() -> None:
     logger.info("Python platform: {python_platform}", python_platform=sys.platform)
     logger.info("Python build: {python_build}", python_build=sys.version_info)
 
+    del gwk
+
 
 def log_device_info() -> None:
     """Prints the device information."""
-    import jax
-    import jaxlib
-    from jax.lib import xla_bridge
+    import jax as _jax
+    import jaxlib as _jaxlib
+    from jax.lib import xla_bridge as _xla_bridge
 
     logger.info("=" * 60)
     logger.info("JAX CUDA ENVIRONMENT INFO")
     logger.info("=" * 60)
 
-    logger.info("Devices count: {n_devices}", n_devices=jax.device_count())
-    logger.info("Devices: {devices}", devices=jax.devices())
+    logger.info("Devices count: {n_devices}", n_devices=_jax.device_count())
+    logger.info("Devices: {devices}", devices=_jax.devices())
 
-    logger.info("jax version: {jax_version}", jax_version=jax.__version__)
-    logger.info("jaxlib version: {jaxlib_version}", jaxlib_version=jaxlib.__version__)
+    logger.info("jax version: {jax_version}", jax_version=_jax.__version__)
+    logger.info("jaxlib version: {jaxlib_version}", jaxlib_version=_jaxlib.__version__)
 
     try:
-        backend = xla_bridge.get_backend()
+        backend = _xla_bridge.get_backend()
         logger.info("JAX platform: {}", backend.platform)
         logger.info("JAX backend: {}", type(backend).__name__)
 
@@ -73,7 +75,7 @@ def log_device_info() -> None:
     except Exception as e:
         logger.warning("Could not retrieve CUDA info from XLA backend: {}", e)
 
-    for device in jax.devices():
+    for device in _jax.devices():
         logger.info(
             "Device: {}, process_index: {}, id: {}, platform: {}",
             device.device_kind,
@@ -81,6 +83,10 @@ def log_device_info() -> None:
             device.id,
             device.platform,
         )
+
+    del _jax
+    del _jaxlib
+    del _xla_bridge
 
 
 def log_info(start: bool = False) -> None:

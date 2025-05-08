@@ -197,7 +197,15 @@ def get_domain(
 ) -> List[Tuple[float, float, int]]:
     """Get the domain of the model per axis.
 
-    :return: The domain of the model per axis.
+    Parameters
+    ----------
+    domain_as_read : Any
+        The domain of the model per axis.
+
+    Returns
+    -------
+    List[Tuple[float, float, int]]
+        The domain of the model per axis.
     """
     return [(float(s), float(e), int(n)) for s, e, n in domain_as_read]
 
@@ -205,16 +213,33 @@ def get_domain(
 def get_utf8_decoded_headers(headers_as_read: Any) -> List[str]:
     """Get utf-8 decoded headers.
 
-    :param headers_as_read: The headers as read from the file.
-    :return: The utf-8 decoded headers.
+    Parameters
+    ----------
+    headers_as_read : Any
+        The headers as read from the file.
+
+    Returns
+    -------
+    List[str]
+        The utf-8 decoded headers.
     """
     return [h.decode("utf-8") for h in headers_as_read]
 
 
 def get_quantiles(data: np.ndarray, quantiles: np.ndarray) -> np.ndarray:
-    r"""Get the quantiles of the data.
+    """Get the quantiles of the data.
 
-    :return: The quantiles of the data.
+    Parameters
+    ----------
+    data : np.ndarray
+        The data to get the quantiles of.
+    quantiles : np.ndarray
+        The quantiles to get. The quantiles should be between 0 and 1.
+
+    Returns
+    -------
+    np.ndarray
+        The quantiles of the data.
     """
     return np.quantile(data, quantiles, axis=1)
 
