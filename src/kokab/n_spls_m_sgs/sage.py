@@ -83,9 +83,9 @@ def make_parser() -> ArgumentParser:
         help="Include redshift parameters in the model.",
     )
     model_group.add_argument(
-        "--add-eccentricity",
+        "--add-truncated-normal-eccentricity",
         action="store_true",
-        help="Include eccentricity in the model.",
+        help="Include truncated normal eccentricity in the model.",
     )
     model_group.add_argument(
         "--raw",
@@ -120,7 +120,7 @@ def main() -> None:
 
     has_spin = args.add_beta_spin or args.add_truncated_normal_spin
     has_tilt = args.add_tilt
-    has_eccentricity = args.add_eccentricity
+    has_eccentricity = args.add_truncated_normal_eccentricity
     has_redshift = args.add_redshift
 
     prior_dict = read_json(args.prior_json)

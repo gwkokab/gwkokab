@@ -93,9 +93,9 @@ def make_parser() -> ArgumentParser:
         help="Include tilt parameters in the model.",
     )
     model_group.add_argument(
-        "--add-eccentricity",
+        "--add-truncated-normal-eccentricity",
         action="store_true",
-        help="Include eccentricity parameters in the model.",
+        help="Include truncated normal eccentricity parameters in the model.",
     )
     model_group.add_argument(
         "--add-mean-anomaly",
@@ -180,7 +180,7 @@ def main() -> None:
 
     has_spin = args.add_beta_spin or args.add_truncated_normal_spin
     has_tilt = args.add_tilt
-    has_eccentricity = args.add_eccentricity
+    has_eccentricity = args.add_truncated_normal_eccentricity
     has_mean_anomaly = args.add_mean_anomaly
     has_redshift = args.add_redshift
     has_cos_iota = args.add_cos_iota
