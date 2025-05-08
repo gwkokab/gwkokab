@@ -30,7 +30,10 @@ def make_parser() -> ArgumentParser:
 
     This function creates the command line argument parser and returns it.
 
-    :return: the command line argument parser
+    Returns
+    -------
+    ArgumentParser
+        the command line argument parser
     """
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = genie_parser.get_parser(parser)

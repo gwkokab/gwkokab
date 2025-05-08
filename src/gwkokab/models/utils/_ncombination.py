@@ -56,16 +56,32 @@ def create_beta_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Beta]:
-    r"""Create a list of Beta distributions.
+    """Create a list of Beta distributions.
 
-    :param N: Number of components
-    :param parameter_name: name of the parameter to create distributions for
-    :param component_type: type of component, either "pl" or "g"
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if mean or variance is missing
-    :return: list of Beta distributions
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[&quot;chi1&quot;, &quot;chi2&quot;]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Beta]
+        list of Beta distributions
+
+    Raises
+    ------
+    ValueError
+        if mean or variance is missing
     """
+
     beta_collection = []
     mean_name = f"{parameter_name}_mean_{component_type}"
     variance_name = f"{parameter_name}_variance_{component_type}"
@@ -115,15 +131,30 @@ def create_truncated_normal_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    r"""Create a list of TruncatedNormal distributions.
+    """Create a list of TruncatedNormal distributions.
 
-    :param N: Number of components
-    :param parameter_name: name of the parameter to create distributions for
-    :param component_type: type of component, either "pl" or "g"
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if loc, scale, low, or high is missing
-    :return: list of TruncatedNormal distributions
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[ &quot;m1&quot;, &quot;m2&quot;, &quot;chi1&quot;, &quot;chi2&quot;, &quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;, &quot;ecc&quot;, &quot;cos_iota&quot;, &quot;phi_12&quot;, &quot;polarization_angle&quot;, &quot;right_ascension&quot;, &quot;sin_declination&quot;, ]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of TruncatedNormal distributions
+
+    Raises
+    ------
+    ValueError
+        if loc, scale, low, or high is missing
     """
     truncated_normal_collection = []
     loc_name = f"{parameter_name}_loc_{component_type}"
@@ -163,15 +194,30 @@ def create_truncated_normal_distributions_for_cos_tilt(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TwoSidedTruncatedDistribution]:
-    r"""Create a list of TwoSidedTruncatedDistribution distributions for tilt.
+    """Create a list of TwoSidedTruncatedDistribution distributions for tilt.
 
-    :param N: Number of components
-    :param parameter_name: name of the parameter to create distributions for
-    :param component_type: type of component, either "pl" or "g"
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if scale is missing
-    :return: list of TwoSidedTruncatedDistribution distributions
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[&quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[TwoSidedTruncatedDistribution]
+        list of TwoSidedTruncatedDistribution distributions
+
+    Raises
+    ------
+    ValueError
+        if scale is missing
     """
     truncated_normal_for_tilt_collection = []
     scale_name = f"{parameter_name}_scale_{component_type}"
@@ -197,13 +243,26 @@ def create_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of TransformedDistribution for powerlaws.
+    """Create a list of TransformedDistribution for powerlaws.
 
-    :param N: Number of components
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if alpha, beta, mmin, or mmax is missing
-    :return: list of TransformedDistribution for powerlaws
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[TransformedDistribution]
+        list of TransformedDistribution for powerlaws
+
+    Raises
+    ------
+    ValueError
+        if alpha, beta, mmin, or mmax is missing
     """
     powerlaws_collection = []
     alpha_name = "alpha_pl"
@@ -246,15 +305,30 @@ def create_powerlaw_redshift(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    r"""Create a list of PowerlawRedshift distributions.
+    """Create a list of PowerlawRedshift distributions.
 
-    :param N: Number of components
-    :param parameter_name: name of the parameter to create distributions for
-    :param component_type: type of component, either "pl" or "g"
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if lamb or z_max parameters are missing
-    :return: list of PowerlawRedshift distributions
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[&quot;redshift&quot;]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of PowerlawRedshift distributions
+
+    Raises
+    ------
+    ValueError
+        if lamb or z_max parameters are missing
     """
     powerlaw_redshift_collection = []
     lamb_name = f"{parameter_name}_lamb_{component_type}"
@@ -290,15 +364,28 @@ def create_smoothed_powerlaws_raw(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
+    """Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
     and mass ratio. We call it the raw version because it does not include the
     transformation to component masses.
 
-    :param N: Number of components
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if alpha, beta, mmin, mmax or delta is missing
-    :return: list of SmoothedPowerlawPrimaryMassRatio for powerlaws
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[TransformedDistribution]
+        list of SmoothedPowerlawPrimaryMassRatio for powerlaws
+
+    Raises
+    ------
+    ValueError
+        if alpha, beta, mmin, mmax or delta is missing
     """
     smoothed_powerlaws_collection = []
     alpha_name = "alpha_pl"
@@ -344,15 +431,28 @@ def create_smoothed_gaussians_raw(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
+    """Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
     and mass ratio. We call it the raw version because it does not include the
     transformation to component masses.
 
-    :param N: Number of components
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if loc, scale, beta, mmin, delta, low, or high is missing
-    :return: list of SmoothedGaussianPrimaryMassRatio distributions
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[TransformedDistribution]
+        list of SmoothedGaussianPrimaryMassRatio distributions
+
+    Raises
+    ------
+    ValueError
+        if loc, scale, beta, mmin, delta, low, or high is missing
     """
     smoothed_gaussians_collection = []
     loc_name = "loc_g"
@@ -404,14 +504,22 @@ def create_smoothed_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
+    """Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
     and secondary mass. It includes the transformation to component masses.
 
-    :param N: Number of components
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if alpha, beta, mmin, mmax or delta is missing
-    :return: list of SmoothedPowerlawPrimaryMassRatio for powerlaws
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[TransformedDistribution]
+        list of SmoothedPowerlawPrimaryMassRatio for powerlaws
     """
     smoothed_powerlaws_collection = create_smoothed_powerlaws_raw(
         N, params, validate_args
@@ -433,14 +541,22 @@ def create_smoothed_gaussians(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[TransformedDistribution]:
-    r"""Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
+    """Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
     and secondary mass. It includes the transformation to component masses.
 
-    :param N: Number of components
-    :param params: dictionary of parameters
-    :param validate_args: whether to validate arguments, defaults to None
-    :raises ValueError: if loc, scale, beta, mmin, delta, low, or high is missing
-    :return: list of SmoothedGaussianPrimaryMassRatio distributions
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[TransformedDistribution]
+        list of SmoothedGaussianPrimaryMassRatio distributions
     """
     smoothed_gaussians_collection = create_smoothed_gaussians_raw(
         N, params, validate_args
