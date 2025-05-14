@@ -91,8 +91,9 @@ class PowerlawRedshift(Distribution):
         self.zgrid = zgrid
         self.dVcdz = dVcdz
         pdfs = dVcdz * jnp.power(1.0 + self.zgrid, self.lamb - 1.0)
-        self.norm = trapezoid(pdfs, self.zgrid)
-        pdfs /= self.norm
+        norm = trapezoid(pdfs, self.zgrid)
+        pdfs /= norm
+        self.log_norm = jnp.log(norm)
         self.cdfgrid: Array = quadax.cumulative_trapezoid(
             pdfs, x=self.zgrid, initial=0.0
         )
@@ -120,11 +121,7 @@ class PowerlawRedshift(Distribution):
     def log_prob(self, value, dVdc=None):
         if dVdc is None:
             dVdc = jnp.interp(value, self.zgrid, self.dVcdz)
-        return jnp.where(
-            jnp.less_equal(value, self.z_max),
-            jnp.log(dVdc) + (self.lamb - 1.0) * jnp.log1p(value) - jnp.log(self.norm),
-            jnp.nan_to_num(-jnp.inf),
-        )
+        return jnp.log(dVdc) + (self.lamb - 1.0) * jnp.log1p(value) - self.log_norm
 
     def cdf(self, value):
         return jnp.interp(value, self.zgrid, self.cdfgrid)
