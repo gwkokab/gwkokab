@@ -33,12 +33,14 @@ _PARAM_MAPPING = {
 
 
 class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
-    total_injections: Array = eqx.field(init=False)
+    injections: Array = eqx.field(init=False)
     """Array of real injections of shape (n_injections, n_features)."""
     sampling_prob: Array = eqx.field(init=False)
     """Array of sampling probabilities of shape (n_injections,)."""
     analysis_time_days: float = eqx.field(init=False)
     """Analysis time in days."""
+    total_injections = eqx.field(init=False)
+    """Total number of injections. This is the sum of accepted and rejected injections."""
 
     def __init__(
         self,
