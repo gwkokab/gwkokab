@@ -13,7 +13,7 @@ from jaxtyping import Array
 
 from gwkokab import parameters as gwk_parameters
 
-from ..utils.tools import error_if, warn_if
+from ..utils.tools import error_if
 from ._abc import VolumeTimeSensitivityInterface
 
 
@@ -37,6 +37,8 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     """Array of real injections of shape (n_injections, n_features)."""
     sampling_prob: Array = eqx.field(init=False)
     """Array of sampling probabilities of shape (n_injections,)."""
+    analysis_time_days: float = eqx.field(init=False)
+    """Analysis time in days."""
 
     def __init__(
         self,
@@ -71,14 +73,20 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             not all(isinstance(p, str) for p in parameters),
             msg="all parameters must be strings",
         )
-        warn_if(
-            batch_size is not None,
-            msg="batch_size is not used for injection based VTs",
-        )
         error_if(
             spin_case not in ["aligned_spin", "full_spin"],
             msg=f"spin_case must be one of 'aligned_spin' or 'full_spin', got {spin_case}",
         )
+        if batch_size is not None:
+            if not isinstance(batch_size, int):
+                raise TypeError(
+                    f"batch_size must be an integer, got {type(batch_size)}"
+                )
+            if batch_size < 1:
+                raise ValueError(
+                    f"batch_size must be a positive integer, got {batch_size}"
+                )
+        self.batch_size = batch_size
 
         if spin_case == "aligned_spin":
             spin_converter = lambda sx, sy, sz: np.abs(sz)
@@ -88,6 +96,10 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             )
 
         with h5py.File(filename, "r") as f:
+            self.analysis_time_days = f.attrs["analysis_time_s"] / (
+                60 * 60 * 24
+            )  # converting to days
+            self.total_injections = f.attrs["n_accepted"] + f.attrs["n_rejected"]
             injs = []
             for p in parameters:
                 if p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:

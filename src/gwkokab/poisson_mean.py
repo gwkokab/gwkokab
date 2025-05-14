@@ -5,8 +5,10 @@
 from typing import List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
+import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
+from loguru import logger
 from numpyro.distributions.distribution import Distribution, DistributionLike
 
 from .models.utils import ScaledMixture
@@ -58,6 +60,8 @@ class PoissonMean(eqx.Module):
     improve the performance of the importance sampling.
     """
 
+    is_injection_based: bool = eqx.field(init=False, default=False)
+    """Flag to check if the class is injection based or not."""
     key: PRNGKeyArray = eqx.field(init=False)
     logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(
         init=False, default=None
@@ -107,10 +111,21 @@ class PoissonMean(eqx.Module):
             If the proposal distribution is not a distribution.
         """
         if isinstance(logVT_estimator, RealInjectionVolumeTimeSensitivity):
+            self.is_injection_based = True
             self.key = key
             self.proposal_log_weights_and_samples = (
                 (jnp.log(logVT_estimator.sampling_prob), logVT_estimator.injections),
             )
+            logger.warning(
+                "The time scale is not used for injection based VTs. "
+                "We parse the injection files to get the time scales."
+            )
+            self.time_scale = logVT_estimator.analysis_time_days
+            self.num_samples_per_component = [
+                logVT_estimator.total_injections,
+                logVT_estimator.batch_size,
+            ]
+
         else:
             self.logVT_estimator = logVT_estimator
             self.__init_for_per_component_rate__(
@@ -228,10 +243,12 @@ class PoissonMean(eqx.Module):
         Array
             Estimated rate/s.
         """
-        if self.num_samples_per_component is None:  # injection based sampling method
+        if self.is_injection_based:  # injection based sampling method
             log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
-            num_samples = log_weights.shape[0]
-            model_log_prob = model.log_prob(samples).reshape(num_samples)
+            num_samples, batch_size = self.num_samples_per_component  # type: ignore
+            model_log_prob = jax.lax.map(
+                model.log_prob, samples, batch_size=batch_size
+            ).reshape(log_weights.shape[0])
             log_prob = model_log_prob - log_weights
             return (self.time_scale / num_samples) * jnp.exp(
                 jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
