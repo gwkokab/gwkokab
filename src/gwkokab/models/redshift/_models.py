@@ -99,12 +99,7 @@ class PowerlawRedshift(Distribution):
         )
         self.cdfgrid = self.cdfgrid.at[-1].set(1)
         self._support = constraints.interval(0.0, z_max)
-        batch_shape = broadcast_shapes(
-            jnp.shape(z_max),
-            jnp.shape(lamb),
-            jnp.shape(zgrid)[:-1],
-            jnp.shape(dVcdz)[:-1],
-        )
+        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(lamb))
         super(PowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
