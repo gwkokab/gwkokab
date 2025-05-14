@@ -39,7 +39,7 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     """Array of sampling probabilities of shape (n_injections,)."""
     analysis_time_days: float = eqx.field(init=False)
     """Analysis time in days."""
-    total_injections = eqx.field(init=False)
+    total_injections: float = eqx.field(init=False, converter=float)
     """Total number of injections. This is the sum of accepted and rejected injections."""
 
     def __init__(
