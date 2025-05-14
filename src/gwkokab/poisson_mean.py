@@ -5,7 +5,6 @@
 from typing import List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
-import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
@@ -121,10 +120,7 @@ class PoissonMean(eqx.Module):
                 "We parse the injection files to get the time scales."
             )
             self.time_scale = logVT_estimator.analysis_time_days
-            self.num_samples_per_component = [
-                logVT_estimator.total_injections,
-                logVT_estimator.batch_size,
-            ]
+            self.num_samples_per_component = [logVT_estimator.total_injections]
 
         else:
             self.logVT_estimator = logVT_estimator
@@ -245,10 +241,8 @@ class PoissonMean(eqx.Module):
         """
         if self.is_injection_based:  # injection based sampling method
             log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
-            num_samples, batch_size = self.num_samples_per_component  # type: ignore
-            model_log_prob = jax.lax.map(
-                model.log_prob, samples, batch_size=batch_size
-            ).reshape(log_weights.shape[0])
+            num_samples = self.num_samples_per_component[0]  # type: ignore
+            model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
             log_prob = model_log_prob - log_weights
             return (self.time_scale / num_samples) * jnp.exp(
                 jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
