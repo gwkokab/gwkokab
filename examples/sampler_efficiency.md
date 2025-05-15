@@ -108,7 +108,6 @@ For the global sampler the following condition is required.
 | Parameter         | Condition                                            |
 | ----------------- | ---------------------------------------------------- |
 | `precompile`      | Use `true` to avoid JIT overhead                     |
-| `torch.no_grad()` | Must be used during sampling to avoid memory blow-up |
 | `batch_size`      | ≤ 5000 or GPU-capacity dependent |
 
 * **Warning**: Check for memory leaks with `torch.cuda.memory_allocated()`.
