@@ -6,14 +6,14 @@ For the inference using FlowMC sampler, you will have two main steps training us
 
 So, for the effective training using local sampler, the following condition must be fulfilled to avoid the model collapse.
 
-$\frac{\text{n\_chains} \times \text{n\_local\_steps}}{\text{train\_thinning}} \ll \text{n\_max\_examples}$
+`((n_chains * n_local_steps) / train_thinning) << n_max_examples`
 
 or
 
-Effective sample size (ESS) = $\frac{\text{max\_samples} \times \text{train\_thinning}}{\text{n\_chains}} > \text{n\_local\_steps}$
+Effective sample size (ESS) = `((max_samples * train_thinning) / n_chains) > n_local_steps`.
 
 
-and for the global sampler the following condition is required.
+For the global sampler the following condition is required.
 
 `n_flow_samples ≥ n_global_steps × n_chains`
 
@@ -26,8 +26,8 @@ and for the global sampler the following condition is required.
 | `n_flow_samples`| Number of samples NF draws per loop,  `n_flow_samples ≥ n_global_steps × n_chains` , start with `n_flow_samples = 100*m` and increase as needed |
 | `n_global_steps` | How many times you attempt a global proposal per training loop `n_flow_samples/n_chains` |
 | `n_local_steps` | Number of steps local sampler take to generate points to train NFs. |
-| `number of samples in each loop` | $\frac{\text{n\_chains} \times \text{n\_local\_steps}}{\text{train\_thinning}}$ = points generated in each loop for training and keep adding in next loop until reaches the `n_max_samples` |
-| `n_max_samples`    | maximum number of samples allowed to use for training, when this number reaches, sampler starts losing previous information |
+| `number of samples in first training loop` | `(n_chains * n_local_steps) / train_thinning` = points generated in each loop for training and keep adding in next loop until reaches the `n_max_samples` |
+| `n_max_samples`    | maximum number of samples allowed to use for training, when this number reaches, sampler starts losing previous information, atleast use the previous data for half of the given loops for training |
 | Flow loss behavior     | Should converge (decreasing + stable)          |
 | MCMC acceptance rate   | Between 50%--80%                               |
 | Mode jumping           | Flow-based proposals must connect all modes    |
@@ -112,7 +112,5 @@ and for the global sampler the following condition is required.
 | `batch_size`      | ≤ 5000 or GPU-capacity dependent |
 
 * **Warning**: Check for memory leaks with `torch.cuda.memory_allocated()`.
-
-We are going to explain the each parameter in the following table based on the order you need to start adjusting them.
 
 
