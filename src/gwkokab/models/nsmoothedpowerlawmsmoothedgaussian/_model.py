@@ -479,7 +479,7 @@ def SmoothedPowerlawAndPeak(
 
     if use_redshift:
         zgrid = jnp.linspace(0.001, params["z_max"], 100)
-        dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
+        dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz_Gpc3(zgrid)
         powerlaw_z = PowerlawRedshift(
             z_max=params["z_max"],
             lamb=params["lamb"],

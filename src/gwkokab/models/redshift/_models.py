@@ -90,6 +90,7 @@ class PowerlawRedshift(Distribution):
         self.z_max, self.lamb = promote_shapes(z_max, lamb)
         self.zgrid = zgrid
         self.dVcdz = dVcdz
+        self._zgrid = jnp.clip(zgrid, 1e-10, z_max)
         pdfs = dVcdz * jnp.power(1.0 + self.zgrid, self.lamb - 1.0)
         norm = trapezoid(pdfs, self.zgrid)
         pdfs /= norm
