@@ -119,7 +119,10 @@ class PoissonMean(eqx.Module):
                 "The time scale is not used for injection based VTs. "
                 "We parse the injection files to get the time scales."
             )
-            self.time_scale = logVT_estimator.analysis_time_years
+            self.time_scale = (
+                logVT_estimator.analysis_time_years
+                * logVT_estimator.n_expected_rate_at_z0
+            )
             self.num_samples_per_component = [logVT_estimator.total_injections]
 
         else:
@@ -244,9 +247,9 @@ class PoissonMean(eqx.Module):
             num_samples = self.num_samples_per_component[0]  # type: ignore
             model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
             log_prob = model_log_prob - log_weights
-            return 524.1837931943585 * (self.time_scale / num_samples) * jnp.exp(
+            return (self.time_scale / num_samples) * jnp.exp(
                 jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
-            ) # read R0 from the hdf5 file
+            )
         else:  # per component rate estimation
             return self.calculate_per_component_rate(model)
 

@@ -163,7 +163,12 @@ def poisson_likelihood(
         log_likelihood = total_log_likelihood - expected_rates
         log_posterior = log_prior + log_likelihood
 
-        log_posterior = jnp.nan_to_num(log_posterior, nan=-jnp.inf)
+        log_posterior = jnp.nan_to_num(
+            log_posterior,
+            nan=-jnp.inf,
+            posinf=-jnp.inf,
+            neginf=-jnp.inf,
+        )
 
         return log_posterior
 

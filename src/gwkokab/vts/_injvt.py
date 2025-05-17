@@ -12,10 +12,10 @@ import numpy as np
 from jaxtyping import Array
 
 from gwkokab import parameters as gwk_parameters
+from gwkokab.constants import SECONDS_PER_YEAR
 
 from ..utils.tools import error_if, warn_if
 from ._abc import VolumeTimeSensitivityInterface
-from gwkokab.constants import SECONDS_PER_YEAR
 
 
 _PARAM_MAPPING = {
@@ -44,6 +44,12 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     """Total number of injections.
 
     This includes both accepted and rejected injections.
+    """
+    n_expected_rate_at_z0: float = eqx.field(init=False)
+    """Expected rate at z=0 in Gpc^-3 yr^-1.
+
+    This is the rate at z=0, not the rate at the redshift of the injection. This is not
+    used yet.
     """
 
     def __init__(
@@ -96,8 +102,10 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             )
 
         with h5py.File(filename, "r") as f:
-            #self.n_expected_rate_at_z0 = float(f.attrs["N_exp/R(z=0)"]) # unused yet, fix it
-            self.analysis_time_years = float(f.attrs["analysis_time_s"]) / SECONDS_PER_YEAR
+            self.n_expected_rate_at_z0 = float(f.attrs["N_exp/R(z=0)"])
+            self.analysis_time_years = (
+                float(f.attrs["analysis_time_s"]) / SECONDS_PER_YEAR
+            )
             self.total_injections = int(f.attrs["n_accepted"] + f.attrs["n_rejected"])
             injs = []
             for p in parameters:

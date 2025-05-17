@@ -15,17 +15,20 @@
 # adapted from code written by Reed Essick included in the gw-distributions package at:
 # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/utils/cosmology.py
 
-from typing import Optional, Callable
+from typing import Optional
+
 import equinox as eqx
 import jax.numpy as jnp
 import quadax
 from jaxtyping import ArrayLike
-from gwkokab.constants import C_SI, M_PER_GPC, SEC_PER_GYR, DEFAULT_DZ
+
+from gwkokab.constants import C_SI, DEFAULT_DZ, M_PER_GPC
 
 
 class Cosmology(eqx.Module):
-    """Cosmology class for flat ΛCDM universe in SI units (internally),
-    with Gpc/Gpc³ output utilities for population inference."""
+    """Cosmology class for flat ΛCDM universe in SI units (internally), with Gpc/Gpc³
+    output utilities for population inference.
+    """
 
     _c_over_Ho: ArrayLike = eqx.field(init=False)
     _Dc: ArrayLike = eqx.field(init=False)
@@ -47,7 +50,7 @@ class Cosmology(eqx.Module):
         dz: float = DEFAULT_DZ,
     ):
         self._Ho = Ho  # SI units: s^-1
-        self._c_over_Ho = C_SI / self._Ho 
+        self._c_over_Ho = C_SI / self._Ho
         self._OmegaMatter = omega_matter
         self._OmegaRadiation = omega_radiation
         self._OmegaLambda = omega_lambda
