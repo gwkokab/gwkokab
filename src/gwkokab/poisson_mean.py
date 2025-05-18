@@ -119,9 +119,7 @@ class PoissonMean(eqx.Module):
                 "The time scale is not used for injection based VTs. "
                 "We parse the injection files to get the time scales."
             )
-            self.time_scale = (
-                logVT_estimator.analysis_time_years
-            )
+            self.time_scale = logVT_estimator.analysis_time_years
             self.num_samples_per_component = [logVT_estimator.total_injections]
 
         else:

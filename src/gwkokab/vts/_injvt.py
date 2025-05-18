@@ -45,12 +45,6 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
     This includes both accepted and rejected injections.
     """
-    n_expected_rate_at_z0: float = eqx.field(init=False)
-    """Expected rate at z=0 in Gpc^-3 yr^-1.
-
-    This is the rate at z=0, not the rate at the redshift of the injection. This is not
-    used yet.
-    """
 
     def __init__(
         self,
@@ -102,7 +96,6 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             )
 
         with h5py.File(filename, "r") as f:
-            self.n_expected_rate_at_z0 = float(f.attrs["N_exp/R(z=0)"])
             self.analysis_time_years = (
                 float(f.attrs["analysis_time_s"]) / SECONDS_PER_YEAR
             )
