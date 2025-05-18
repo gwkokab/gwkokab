@@ -19,7 +19,7 @@ For the global sampler the following condition is required.
 
 ## Overall convergence checks and associated parameters to tune
 
-| Parameter     | Condition                                     | 
+| Parameter     | Condition                                     |
 | ------------- | --------------------------------------------- |
 | `m` | Number of parameters you want to recover |
 | `n_chains` | should be ≥ $m^2$ |
@@ -39,7 +39,7 @@ For the global sampler the following condition is required.
 
 ### 1. Flow Expressivity
 
-| Parameter     | Condition                                     | 
+| Parameter     | Condition                                     |
 | ------------- | --------------------------------------------- |
 | `hidden_size` | ≥ \[64, 64] for expressive flow               |
 | `n_layers`    | ≥ 5 for multimodal or complex targets         |
@@ -111,5 +111,3 @@ For the global sampler the following condition is required.
 | `batch_size`      | ≤ 5000 or GPU-capacity dependent |
 
 * **Warning**: Check for memory leaks with `torch.cuda.memory_allocated()`.
-
-
