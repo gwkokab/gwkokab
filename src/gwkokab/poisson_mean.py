@@ -121,7 +121,6 @@ class PoissonMean(eqx.Module):
             )
             self.time_scale = (
                 logVT_estimator.analysis_time_years
-                * logVT_estimator.n_expected_rate_at_z0
             )
             self.num_samples_per_component = [logVT_estimator.total_injections]
 
