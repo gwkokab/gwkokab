@@ -398,7 +398,7 @@ CONTINUOUS = [
             "lamb": 0.0,
             "z_max": 1.0,
             "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2015_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
+            "dVcdz": PLANCK_2015_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 1, 1000))
             * 4.0
             * jnp.pi,
         },
@@ -409,7 +409,7 @@ CONTINUOUS = [
             "lamb": 0.0,
             "z_max": 2.3,
             "zgrid": jnp.linspace(0.001, 2.3, 1000),
-            "dVcdz": PLANCK_2015_Cosmology.dVcdz(jnp.linspace(0.001, 2.3, 1000))
+            "dVcdz": PLANCK_2015_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 2.3, 1000))
             * 4.0
             * jnp.pi,
         },
@@ -420,7 +420,7 @@ CONTINUOUS = [
             "lamb": 0.0,
             "z_max": 1.0,
             "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2018_Cosmology.dVcdz(jnp.linspace(0.001, 1, 1000))
+            "dVcdz": PLANCK_2018_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 1, 1000))
             * 4.0
             * jnp.pi,
         },
@@ -431,7 +431,7 @@ CONTINUOUS = [
             "lamb": 0.0,
             "z_max": 2.3,
             "zgrid": jnp.linspace(0.001, 2.3, 1000),
-            "dVcdz": PLANCK_2018_Cosmology.dVcdz(jnp.linspace(0.001, 2.3, 1000))
+            "dVcdz": PLANCK_2018_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 2.3, 1000))
             * 4.0
             * jnp.pi,
         },

@@ -15,7 +15,6 @@
 # adapted from code written by Reed Essick included in the gw-distributions package at:
 # https://git.ligo.org/reed.essick/gw-distributions/-/blob/master/gwdistributions/utils/cosmology.py
 
-
 from typing import Optional
 
 import equinox as eqx
@@ -23,21 +22,12 @@ import jax.numpy as jnp
 import quadax
 from jaxtyping import ArrayLike
 
-from gwkokab.constants import C_SI
-
-
-DEFAULT_DZ = 1e-3  # should be good enough for most numeric integrations we want to do
+from gwkokab.constants import C_SI, DEFAULT_DZ, M_PER_GPC
 
 
 class Cosmology(eqx.Module):
-    """A class for basic cosmology calculations using jax.
-
-    See https://arxiv.org/pdf/astro-ph/9905116 for description of parameters and functions.
-
-    .. note::
-
-        We work in SI units throughout, though distances are specified in Mpc.
-    ```
+    """Cosmology class for flat ΛCDM universe in SI units (internally), with Gpc/Gpc³
+    output utilities for population inference.
     """
 
     _c_over_Ho: ArrayLike = eqx.field(init=False)
@@ -59,27 +49,7 @@ class Cosmology(eqx.Module):
         max_z: float = 10.0,
         dz: float = DEFAULT_DZ,
     ):
-        r"""Initialize the cosmology object.
-
-        .. math::
-            \Omega_{\Lambda}+\Omega_{\kappa}+\Omega_{m}+\Omega_{r}=1
-
-        Parameters
-        ----------
-        Ho : ArrayLike
-            Hubble constant
-        omega_matter : ArrayLike
-            Matter density :math:`\Omega_m`
-        omega_radiation : ArrayLike
-            Radiation density :math:`\Omega_r`
-        omega_lambda : ArrayLike
-            Dark energy density :math:`\Omega_{\Lambda}`
-        max_z : float, optional
-            Maximum redshift to integrate to, by default 10.0
-        dz : float, optional
-            Step size for integration, by default 1e-3
-        """
-        self._Ho = Ho
+        self._Ho = Ho  # SI units: s^-1
         self._c_over_Ho = C_SI / self._Ho
         self._OmegaMatter = omega_matter
         self._OmegaRadiation = omega_radiation
@@ -87,116 +57,66 @@ class Cosmology(eqx.Module):
         self._OmegaKappa = 1.0 - (
             self._OmegaMatter + self._OmegaRadiation + self._OmegaLambda
         )
-        assert self._OmegaKappa == 0, (
-            "we only implement flat cosmologies! OmegaKappa must be 0"
+        assert jnp.isclose(self._OmegaKappa, 0.0, atol=1e-10), (
+            "Only flat cosmologies are supported (Ω_k ≈ 0)."
         )
 
-        self._z = jnp.arange(0, max_z, dz)
+        self._z = jnp.arange(0.0, max_z, dz)
         self._Dc = quadax.cumulative_trapezoid(
-            self.dDcdz(self._z), x=self._z, initial=0, axis=0
+            self.dDcdz(self._z), x=self._z, initial=0.0, axis=0
         )
         self.Vc = quadax.cumulative_trapezoid(
-            self.dVcdz(self._z, self._Dc), x=self._z, initial=0, axis=0
+            self.dVcdz(self._z, self._Dc), x=self._z, initial=0.0, axis=0
         )
 
-    @property
-    def DL(self):
-        return self._Dc * (1.0 + self._z)
-
+    # --------- E(z), distance derivatives ---------
     def z_to_E(self, z: ArrayLike) -> ArrayLike:
-        r"""Dimensionless Hubble parameter.
-
-        .. math::
-            \mathrm{E}(z)=\frac{\mathrm{H}(z)}{H_o}=\sqrt{\Omega_{\Lambda}+\Omega_{\kappa}(1+z)^2+\Omega_{m}(1+z)^3+\Omega_{r}(1+z)^4}
-
-        Parameters
-        ----------
-        z : ArrayLike
-            Redshift
-
-        Returns
-        -------
-        ArrayLike
-            Dimensionless Hubble parameter
-        """
         zp1 = 1.0 + z
-        zp1_sq = jnp.square(zp1)
-        zp1_cu = zp1 * zp1_sq
-        zp1_q = zp1_sq * zp1_sq
         return jnp.sqrt(
             self._OmegaLambda
-            + self._OmegaKappa * zp1_sq
-            + self._OmegaMatter * zp1_cu
-            + self._OmegaRadiation * zp1_q
+            + self._OmegaKappa * zp1**2
+            + self._OmegaMatter * zp1**3
+            + self._OmegaRadiation * zp1**4
         )
 
     def dDcdz(self, z: ArrayLike) -> ArrayLike:
-        r"""
-
-        .. math::
-            \frac{\mathrm{d}D_c}{\mathrm{d}z}=\frac{c}{H_o\mathrm{E}(z)}
-
-
-        Parameters
-        ----------
-        z : ArrayLike
-            Redshifts
-
-        Returns
-        -------
-        ArrayLike
-        """
-        dDc = self._c_over_Ho / self.z_to_E(z)
-        return dDc
+        return self._c_over_Ho / self.z_to_E(z)
 
     def dVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
-        r"""Calculate the comoving volume element per unit redshift.
-
-        .. math::
-            \frac{dV_c}{dz}=4\pi D_c^2\frac{dD_c}{dz}
-
-        Parameters
-        ----------
-        z : ArrayLike
-            Redshifts
-        Dc : Optional[ArrayLike], optional
-            Distance to the source, by default None
-
-        Returns
-        -------
-        ArrayLike
-            Comoving volume element per unit redshift
-        """
         return jnp.exp(self.logdVcdz(z, Dc=Dc))
 
     def logdVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
-        r"""Return :math:`\ln(\frac{dV_c}{dz})`. Useful when constructing probability
-        distributions without overflow errors.
-
-        Parameters
-        ----------
-        z : ArrayLike
-            Redshifts
-        Dc : Optional[ArrayLike], optional
-            Distance to the source, by default None
-
-        Returns
-        -------
-        ArrayLike
-            :math:`\ln(\frac{dV_c}{dz})`
-        """
         if Dc is None:
             Dc = self.z_to_Dc(z)
         return jnp.log(4 * jnp.pi) + 2 * jnp.log(Dc) + jnp.log(self.dDcdz(z))
 
+    # --------- Interpolators ---------
     def z_to_Dc(self, z):
-        """Return Dc for each z specified."""
         return jnp.interp(z, self._z, self._Dc)
 
+    def z_to_DL(self, z):
+        return jnp.interp(z, self._z, self.DL)
+
     def DL_to_z(self, DL):
-        """Returns redshifts for each DL specified."""
         return jnp.interp(DL, self.DL, self._z)
 
-    def z_to_DL(self, z):
-        """Returns luminosity distance at the specified redshifts."""
-        return jnp.interp(z, self._z, self.DL)
+    # --------- Core property ---------
+    @property
+    def DL(self):
+        return self._Dc * (1.0 + self._z)
+
+    # --------- Gpc-compatible versions ---------
+    def z_to_Dc_Gpc(self, z):
+        return self.z_to_Dc(z) / M_PER_GPC
+
+    def z_to_DL_Gpc(self, z):
+        return self.z_to_DL(z) / M_PER_GPC
+
+    def DL_Gpc_to_z(self, DL_Gpc):
+        return jnp.interp(DL_Gpc * M_PER_GPC, self.DL, self._z)
+
+    def dVcdz_Gpc3(self, z):
+        return self.dVcdz(z) / M_PER_GPC**3
+
+    def logdVcdz_Gpc3(self, z):
+        return self.logdVcdz(z) - 3 * jnp.log(M_PER_GPC)

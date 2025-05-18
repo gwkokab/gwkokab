@@ -12,6 +12,7 @@ import numpy as np
 from jaxtyping import Array
 
 from gwkokab import parameters as gwk_parameters
+from gwkokab.constants import SECONDS_PER_YEAR
 
 from ..utils.tools import error_if, warn_if
 from ._abc import VolumeTimeSensitivityInterface
@@ -37,6 +38,13 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
     """Array of real injections of shape (n_injections, n_features)."""
     sampling_prob: Array = eqx.field(init=False)
     """Array of sampling probabilities of shape (n_injections,)."""
+    analysis_time_years: float = eqx.field(init=False)
+    """Analysis time in years."""
+    total_injections: int = eqx.field(init=False)
+    """Total number of injections.
+
+    This includes both accepted and rejected injections.
+    """
 
     def __init__(
         self,
@@ -88,19 +96,23 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             )
 
         with h5py.File(filename, "r") as f:
+            self.analysis_time_years = (
+                float(f.attrs["analysis_time_s"]) / SECONDS_PER_YEAR
+            )
+            self.total_injections = int(f.attrs["n_accepted"] + f.attrs["n_rejected"])
             injs = []
             for p in parameters:
                 if p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
-                        f["injections"]["spin1x"][:],
-                        f["injections"]["spin1y"][:],
-                        f["injections"]["spin1z"][:],
+                        f["injections"]["spin1x"][:],  # χ_1x
+                        f["injections"]["spin1y"][:],  # χ_1y
+                        f["injections"]["spin1z"][:],  # χ_1z
                     )
                 elif p == gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
-                        f["injections"]["spin2x"][:],
-                        f["injections"]["spin2y"][:],
-                        f["injections"]["spin2z"][:],
+                        f["injections"]["spin2x"][:],  # χ_2x
+                        f["injections"]["spin2y"][:],  # χ_2y
+                        f["injections"]["spin2z"][:],  # χ_2z
                     )
                 else:
                     _inj = f["injections"][_PARAM_MAPPING[p]][:]

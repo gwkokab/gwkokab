@@ -344,7 +344,7 @@ def create_powerlaw_redshift(
             raise ValueError(f"Missing parameter {z_max_name}_{i}")
 
         zgrid = jnp.linspace(0.001, z_max, 1000)
-        dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz(zgrid)
+        dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz_Gpc3(zgrid)
 
         powerlaw_redshift_collection.append(
             PowerlawRedshift(

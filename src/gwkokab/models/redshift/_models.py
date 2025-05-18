@@ -59,7 +59,7 @@ class PowerlawRedshift(Distribution):
         "cdfgrid",
         "dVcdz",
         "lamb",
-        "norm",
+        "log_norm",
         "z_max",
         "zgrid",
     )
@@ -90,20 +90,17 @@ class PowerlawRedshift(Distribution):
         self.z_max, self.lamb = promote_shapes(z_max, lamb)
         self.zgrid = zgrid
         self.dVcdz = dVcdz
+        self._zgrid = jnp.clip(zgrid, 1e-10, z_max)
         pdfs = dVcdz * jnp.power(1.0 + self.zgrid, self.lamb - 1.0)
-        self.norm = trapezoid(pdfs, self.zgrid)
-        pdfs /= self.norm
+        norm = trapezoid(pdfs, self.zgrid)
+        pdfs /= norm
+        self.log_norm = jnp.log(norm)
         self.cdfgrid: Array = quadax.cumulative_trapezoid(
             pdfs, x=self.zgrid, initial=0.0
         )
         self.cdfgrid = self.cdfgrid.at[-1].set(1)
         self._support = constraints.interval(0.0, z_max)
-        batch_shape = broadcast_shapes(
-            jnp.shape(z_max),
-            jnp.shape(lamb),
-            jnp.shape(zgrid)[:-1],
-            jnp.shape(dVcdz)[:-1],
-        )
+        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(lamb))
         super(PowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
@@ -120,11 +117,7 @@ class PowerlawRedshift(Distribution):
     def log_prob(self, value, dVdc=None):
         if dVdc is None:
             dVdc = jnp.interp(value, self.zgrid, self.dVcdz)
-        return jnp.where(
-            jnp.less_equal(value, self.z_max),
-            jnp.log(dVdc) + (self.lamb - 1.0) * jnp.log1p(value) - jnp.log(self.norm),
-            jnp.nan_to_num(-jnp.inf),
-        )
+        return jnp.log(dVdc) + (self.lamb - 1.0) * jnp.log1p(value) - self.log_norm
 
     def cdf(self, value):
         return jnp.interp(value, self.zgrid, self.cdfgrid)

@@ -67,6 +67,8 @@ def poisson_likelihood(
     # maximum size of the data
     max_size = max([d.shape[0] for d in data])
     sum_log_size = sum([jnp.log(d.shape[0]) for d in data])
+    log_constants = -sum_log_size  # -Σ log(M_i)
+    log_constants += len(data) * jnp.log(524.1837931943585)
 
     # pad the data and log_ref_priors to the maximum size and create a mask for the data
     # to indicate which elements are valid and which are padded.
@@ -141,9 +143,11 @@ def poisson_likelihood(
             safe_data = jnp.where(mask[:, jnp.newaxis], data, 1.0)
             safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
+            # log p(ω|data_n) - log π_n
             log_prob: Array = model_instance.log_prob(safe_data) - safe_log_ref_prior
             log_prob = jnp.where(mask, log_prob, -jnp.inf)
 
+            # log Σ exp (log p(ω|data_n) - log π_n)
             log_prob_sum = jax.nn.logsumexp(
                 log_prob,
                 axis=-1,
@@ -151,19 +155,27 @@ def poisson_likelihood(
             )
             return carry + log_prob_sum, None
 
+        # Σ log Σ exp (log p(ω|data_n) - log π_n)
         total_log_likelihood, _ = jax.lax.scan(
             single_event_fn,  # type: ignore
             jnp.zeros(()),
             (batched_data, batched_log_ref_priors, batched_mask),
         )
-        total_log_likelihood -= sum_log_size
 
+        # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = ERate_fn(model_instance)
         log_prior = priors.log_prob(x)
-        log_likelihood = total_log_likelihood - expected_rates
+        # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
+        log_likelihood = total_log_likelihood - expected_rates + log_constants
+        # log p(ω|data) = log π(ω) + log L(ω)
         log_posterior = log_prior + log_likelihood
 
-        log_posterior = jnp.nan_to_num(log_posterior, nan=-jnp.inf)
+        log_posterior = jnp.nan_to_num(
+            log_posterior,
+            nan=-jnp.inf,
+            posinf=-jnp.inf,
+            neginf=-jnp.inf,
+        )
 
         return log_posterior
 

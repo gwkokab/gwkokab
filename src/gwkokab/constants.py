@@ -15,7 +15,16 @@ G_SI = 6.6743e-11
 r"""Gravitational constant in :math:`\text{m}^{3}\text{kg}^{-1}\text{s}^{-2}`"""
 MSUN_SI = 1.9884099021470415e30
 """Solar mass in kg."""
-
+H0_SI = 1.0e3 / MPC_SI
+r"""Hubble constant conversion in :math:`\text{s}^{-1}`"""
+DEFAULT_DZ = 1e-3
+"""Default redshift step size for cosmology calculations."""
+M_PER_GPC = 3.085677581491367e25
+"""Meters in 1 Gpc."""
+SEC_PER_GYR = 3.15576e16
+"""Seconds in 1 Gyr."""
+SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60
+"""Seconds in 1 year."""
 
 ### define units in CGS
 G_CGS = G_SI * 1e3
