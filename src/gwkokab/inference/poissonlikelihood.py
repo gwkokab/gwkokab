@@ -143,11 +143,11 @@ def poisson_likelihood(
             safe_data = jnp.where(mask[:, jnp.newaxis], data, 1.0)
             safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
-            # log p(λ|data_n) - log π_n
+            # log p(ω|data_n) - log π_n
             log_prob: Array = model_instance.log_prob(safe_data) - safe_log_ref_prior
             log_prob = jnp.where(mask, log_prob, -jnp.inf)
 
-            # log Σ exp (log p(λ|data_n) - log π_n)
+            # log Σ exp (log p(ω|data_n) - log π_n)
             log_prob_sum = jax.nn.logsumexp(
                 log_prob,
                 axis=-1,
@@ -155,7 +155,7 @@ def poisson_likelihood(
             )
             return carry + log_prob_sum, None
 
-        # Σ log Σ exp (log p(λ|data_n) - log π_n)
+        # Σ log Σ exp (log p(ω|data_n) - log π_n)
         total_log_likelihood, _ = jax.lax.scan(
             single_event_fn,  # type: ignore
             jnp.zeros(()),
@@ -165,9 +165,9 @@ def poisson_likelihood(
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = ERate_fn(model_instance)
         log_prior = priors.log_prob(x)
-        # log L(λ) = -μ + Σ log Σ exp (log p(λ|data_n) - log π_n) - Σ log(M_i)
+        # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
         log_likelihood = total_log_likelihood - expected_rates + log_constants
-        # log p(λ|data) = log π(λ) + log L(λ)
+        # log p(ω|data) = log π(ω) + log L(ω)
         log_posterior = log_prior + log_likelihood
 
         log_posterior = jnp.nan_to_num(

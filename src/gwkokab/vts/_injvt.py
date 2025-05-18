@@ -104,15 +104,15 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             for p in parameters:
                 if p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
-                        f["injections"]["spin1x"][:],
-                        f["injections"]["spin1y"][:],
-                        f["injections"]["spin1z"][:],
+                        f["injections"]["spin1x"][:],  # χ_1x
+                        f["injections"]["spin1y"][:],  # χ_1y
+                        f["injections"]["spin1z"][:],  # χ_1z
                     )
                 elif p == gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
-                        f["injections"]["spin2x"][:],
-                        f["injections"]["spin2y"][:],
-                        f["injections"]["spin2z"][:],
+                        f["injections"]["spin2x"][:],  # χ_2x
+                        f["injections"]["spin2y"][:],  # χ_2y
+                        f["injections"]["spin2z"][:],  # χ_2z
                     )
                 else:
                     _inj = f["injections"][_PARAM_MAPPING[p]][:]
