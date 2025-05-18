@@ -59,7 +59,7 @@ class PowerlawRedshift(Distribution):
         "cdfgrid",
         "dVcdz",
         "lamb",
-        "norm",
+        "log_norm",
         "z_max",
         "zgrid",
     )
