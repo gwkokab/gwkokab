@@ -16,7 +16,7 @@ r"""Gravitational constant in :math:`\text{m}^{3}\text{kg}^{-1}\text{s}^{-2}`"""
 MSUN_SI = 1.9884099021470415e30
 """Solar mass in kg."""
 H0_SI = 1.0e3 / MPC_SI
-"""Hubble constant conversion in :math:`\text{s}^{-1}`"""
+r"""Hubble constant conversion in :math:`\text{s}^{-1}`"""
 DEFAULT_DZ = 1e-3
 """Default redshift step size for cosmology calculations."""
 M_PER_GPC = 3.085677581491367e25

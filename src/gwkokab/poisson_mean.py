@@ -240,10 +240,15 @@ class PoissonMean(eqx.Module):
             Estimated rate/s.
         """
         if self.is_injection_based:  # injection based sampling method
+            # log w_i, ω_i
             log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
+            # n_total = n_accepted + n_rejected
             num_samples = self.num_samples_per_component[0]  # type: ignore
+            # log p(ω_i|λ)
             model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
+            # log p(ω_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
+            # (T / n_total) * exp(log Σ exp(log p(ω_i|λ) - log w_i))
             return (self.time_scale / num_samples) * jnp.exp(
                 jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
             )
