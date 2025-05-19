@@ -232,8 +232,9 @@ class PopulationFactory:
                     noisy_data_i = noisy_data_i.reshape(self.error_size, -1)
                 noisy_data[:, head] = noisy_data_i
                 i += 1
+            truncation_mask = self.constraint(noisy_data)
             nan_mask = np.isnan(noisy_data).any(axis=1)
-            masked_noisey_data = noisy_data[~nan_mask]
+            masked_noisey_data = noisy_data[~(nan_mask) & truncation_mask]
             count = np.count_nonzero(masked_noisey_data)
             if count < 2:
                 warnings.warn(
