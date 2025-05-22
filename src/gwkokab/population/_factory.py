@@ -100,7 +100,7 @@ class PopulationFactory:
 
         old_size = size
         if self.logVT_fn is not None:
-            size += int(1e5)
+            size += int(1e4)
 
         population, [indices] = self.model.sample_with_intermediates(key, (size,))
         constraints = self.constraint(population)
