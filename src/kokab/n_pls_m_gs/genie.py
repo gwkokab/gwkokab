@@ -193,7 +193,7 @@ def main() -> None:
     has_phi_12 = args.add_phi_12
     has_phi_orb = args.add_phi_orb
 
-    err_params_name = ["scale_eta", "scale_Mc"]
+    err_params_name = ["scale_eta", "scale_Mc", "maximum_mass", "minimum_mass"]
     if has_spin:
         err_params_name.extend(
             [
@@ -303,6 +303,8 @@ def main() -> None:
             key,
             scale_Mc=err_params_value["scale_Mc"],
             scale_eta=err_params_value["scale_eta"],
+            maximum_mass=err_params_value.get("maximum_mass"),
+            minimum_mass=err_params_value.get("minimum_mass"),
         ),
     )
 

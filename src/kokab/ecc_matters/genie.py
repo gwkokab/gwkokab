@@ -80,6 +80,8 @@ def main() -> None:
         "mmax",
         "mmin",
         "scale",
+        "maximum_mass",
+        "minimum_mass",
     ]
 
     model_param = match_all(model_params_name, model_json)
@@ -97,6 +99,8 @@ def main() -> None:
             key,
             scale_Mc=err_param["scale_Mc"],
             scale_eta=err_param["scale_eta"],
+            maximum_mass=err_param.get("maximum_mass"),
+            minimum_mass=err_param.get("minimum_mass"),
         ),
     )
 
