@@ -4,6 +4,7 @@
 
 import argparse
 import glob
+import os
 
 import mplcursors
 import pandas as pd
@@ -139,6 +140,12 @@ def make_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
     )
+    parser.add_argument(
+        "--dpi",
+        help="dots per inch to save file",
+        type=int,
+        default=100,
+    )
 
     return parser
 
@@ -185,5 +192,11 @@ def main() -> None:
     plt.ylabel(args.ylabel)
     plt.title(args.title)
     plt.tight_layout()
-    plt.savefig(args.output.name, bbox_inches="tight")
+    # Determine output file type and save accordingly
+    output_ext = os.path.splitext(args.output.name)[1].lower()
+    if output_ext == ".png":
+        plt.savefig(args.output.name, dpi=args.dpi, bbox_inches="tight")
+    else:
+        plt.savefig(args.output.name, bbox_inches="tight")
+
     plt.close("all")

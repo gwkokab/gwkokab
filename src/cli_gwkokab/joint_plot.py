@@ -3,6 +3,7 @@
 
 
 import argparse
+import os
 
 import pandas as pd
 import seaborn as sns
@@ -94,6 +95,12 @@ def make_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
     )
+    parser.add_argument(
+        "--dpi",
+        help="dots per inch to save file",
+        type=int,
+        default=100,
+    )
 
     return parser
 
@@ -119,4 +126,10 @@ def main() -> None:
     g.plot_joint(sns.kdeplot, fill=True, thresh=0, cmap=args.cmap)
     g.set_axis_labels(args.xlabel, args.ylabel)
     g.fig.suptitle(args.title)
-    g.savefig(args.output.name, bbox_inches="tight")
+    # Determine output file type and save accordingly
+    output_ext = os.path.splitext(args.output.name)[1].lower()
+    if output_ext == ".png":
+        g.savefig(args.output.name, dpi=args.dpi, bbox_inches="tight")
+    else:
+        g.savefig(args.output.name, bbox_inches="tight")
+    g.close("all")

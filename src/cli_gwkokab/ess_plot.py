@@ -3,6 +3,7 @@
 
 import argparse
 import glob
+import os
 
 import arviz as az
 import numpy as np
@@ -62,6 +63,12 @@ def make_parser() -> argparse.ArgumentParser:
         help="font family to use",
         type=str,
         default=None,
+    )
+    parser.add_argument(
+        "--dpi",
+        help="dots per inch to save file",
+        type=int,
+        default=100,
     )
 
     return parser
@@ -140,4 +147,10 @@ def main() -> None:
         sub_plot.bar_label(c, labels=labels, label_type="edge")
 
     plt.tight_layout()
-    plt.savefig(args.output, dpi=300, bbox_inches="tight")
+    # Determine output file type and save accordingly
+    output_ext = os.path.splitext(args.output.name)[1].lower()
+    if output_ext == ".png":
+        plt.savefig(args.output.name, dpi=args.dpi, bbox_inches="tight")
+    else:
+        plt.savefig(args.output.name, bbox_inches="tight")
+    plt.close("all")
