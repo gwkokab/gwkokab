@@ -111,15 +111,12 @@ gwk_scatter2d = "cli_gwkokab.scatter2d:main"
 gwk_scatter3d = "cli_gwkokab.scatter3d:main"
 # Kokab scripts
 ## Genie scripts
-genie_ecc_matters = "kokab.ecc_matters.genie:main"
 genie_n_pls_m_gs = "kokab.n_pls_m_gs.genie:main"
 ## Sage scripts
-sage_ecc_matters = "kokab.ecc_matters.sage:main"
 sage_n_pls_m_gs = "kokab.n_pls_m_gs.sage:main"
 sage_n_spls_m_sgs = "kokab.n_spls_m_sgs.sage:main"
 sage_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.sage:main"
 ## PPD scripts
-ppd_ecc_matters = "kokab.ecc_matters.ppd:main"
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
 ppd_n_spls_m_sgs = "kokab.n_spls_m_sgs.ppd:main"
 ppd_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.ppd:main"
