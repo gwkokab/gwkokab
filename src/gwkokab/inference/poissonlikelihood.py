@@ -68,7 +68,6 @@ def poisson_likelihood(
     max_size = max([d.shape[0] for d in data])
     sum_log_size = sum([jnp.log(d.shape[0]) for d in data])
     log_constants = -sum_log_size  # -Σ log(M_i)
-    log_constants += len(data) * jnp.log(524.1837931943585)
 
     # pad the data and log_ref_priors to the maximum size and create a mask for the data
     # to indicate which elements are valid and which are padded.

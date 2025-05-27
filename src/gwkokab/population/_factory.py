@@ -100,7 +100,7 @@ class PopulationFactory:
 
         old_size = size
         if self.logVT_fn is not None:
-            size += int(1e5)
+            size += int(1e4)
 
         population, [indices] = self.model.sample_with_intermediates(key, (size,))
         constraints = self.constraint(population)
@@ -219,23 +219,34 @@ class PopulationFactory:
 
         injections_file_path = os.path.join(realizations_path, self.injection_filename)
         data_inj = np.loadtxt(injections_file_path, skiprows=1)
-        keys = jrd.split(key, data_inj.shape[0] * len(heads))
+        keys = jrd.split(key, data_inj.shape[0] * (len(heads) + 1))
+
+        error_size_before_selection = int(1e4) + self.error_size
 
         for index in range(data_inj.shape[0]):
-            noisy_data = np.empty((self.error_size, len(self.parameters)))
+            noisy_data = np.empty((error_size_before_selection, len(self.parameters)))
             data = data_inj[index]
             i = 0
             for head, err_fn in zip(heads, error_fns):
                 key_idx = index * len(heads) + i
-                noisy_data_i: Array = err_fn(data[head], self.error_size, keys[key_idx])
+                noisy_data_i: Array = err_fn(
+                    data[head], error_size_before_selection, keys[key_idx]
+                )
                 if noisy_data_i.ndim == 1:
-                    noisy_data_i = noisy_data_i.reshape(self.error_size, -1)
+                    noisy_data_i = noisy_data_i.reshape(error_size_before_selection, -1)
                 noisy_data[:, head] = noisy_data_i
                 i += 1
             nan_mask = np.isnan(noisy_data).any(axis=1)
-            masked_noisey_data = noisy_data[~nan_mask]
-            count = np.count_nonzero(masked_noisey_data)
-            if count < 2:
+            noisy_data = noisy_data[~nan_mask]  # type: ignore
+            weights = np.array(jnn.softmax(self.model.log_prob(noisy_data)))
+            noisy_data = jrd.choice(  # type: ignore
+                key=keys[(data_inj.shape[0]) * len(heads) + index],
+                a=noisy_data,
+                shape=(self.error_size,),
+                p=weights,
+            )
+            count = np.count_nonzero(noisy_data)
+            if count < 1:
                 warnings.warn(
                     f"Skipping file {index} due to all NaN values or insufficient data.",
                     category=UserWarning,
@@ -243,7 +254,7 @@ class PopulationFactory:
                 continue
             np.savetxt(
                 output_dir.format(index),
-                masked_noisey_data,
+                noisy_data,
                 header=" ".join(self.parameters),
                 comments="",  # To remove the default comment character '#'
             )
