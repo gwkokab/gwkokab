@@ -25,8 +25,6 @@ def banana_error_m1_m2(
     *,
     scale_Mc: float = 1.0,
     scale_eta: float = 1.0,
-    maximum_mass: Optional[float] = None,
-    minimum_mass: Optional[float] = None,
 ) -> Array:
     r"""Add banana error to the given values. Section 3 of the `Model-independent
     inference on compact-binary observations <https://doi.org/10.1093/mnras/stw2883>`_
@@ -51,10 +49,6 @@ def banana_error_m1_m2(
         scale of the chirp mass error, defaults to 1.0
     scale_eta : float
         scale of the symmetric mass ratio error, defaults to 1.0
-    maximum_mass : Optional[float], optional
-        maximum mass for the final values, by default None
-    minimum_mass : Optional[float], optional
-        minimum mass for the final values, by default None
 
     Returns
     -------
@@ -97,14 +91,6 @@ def banana_error_m1_m2(
     factor = 0.5 * Mc * jnp.power(eta, -0.6)
     m1_final = factor * (1.0 + etaV_sqrt)
     m2_final = factor * (1.0 - etaV_sqrt)
-
-    if maximum_mass is not None:
-        m1_final = jnp.where(m1_final > maximum_mass, jnp.nan, m1_final)
-        m2_final = jnp.where(m2_final > maximum_mass, jnp.nan, m2_final)
-
-    if minimum_mass is not None:
-        m1_final = jnp.where(m1_final < minimum_mass, jnp.nan, m1_final)
-        m2_final = jnp.where(m2_final < minimum_mass, jnp.nan, m2_final)
 
     return jnp.column_stack([m1_final, m2_final])
 
