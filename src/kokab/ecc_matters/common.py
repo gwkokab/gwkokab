@@ -44,15 +44,3 @@ def EccentricityMattersModel(
         support=real_vector,
         validate_args=validate_args,
     )
-
-
-def constraint(x: Array) -> Array:
-    m1 = x[..., 0]
-    m2 = x[..., 1]
-    ecc = x[..., 2]
-    mask = m2 <= m1
-    mask &= m2 > 0.0
-    mask &= m1 > 0.0
-    mask &= ecc >= 0.0
-    mask &= ecc <= 1.0
-    return mask
