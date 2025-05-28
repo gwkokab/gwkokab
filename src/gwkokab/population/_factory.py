@@ -229,13 +229,6 @@ class PopulationFactory:
                 i += 1
             nan_mask = np.isnan(noisy_data).any(axis=1)
             noisy_data = noisy_data[~nan_mask]  # type: ignore
-            weights = np.array(jnn.softmax(self.model.log_prob(noisy_data)))
-            noisy_data = jrd.choice(  # type: ignore
-                key=keys[(data_inj.shape[0]) * len(heads) + index],
-                a=noisy_data,
-                shape=(self.error_size,),
-                p=weights,
-            )
             count = np.count_nonzero(noisy_data)
             if count < 1:
                 warnings.warn(
