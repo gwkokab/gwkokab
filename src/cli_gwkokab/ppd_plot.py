@@ -3,7 +3,6 @@
 
 
 import argparse
-import os
 from typing import Any, List, Tuple
 
 import h5py
@@ -371,10 +370,5 @@ def main() -> None:
                 alpha=args.grid_alpha,
             )
         ax.legend()
-        # Determine output file type and save accordingly
-        output_ext = os.path.splitext(args.output.name)[1].lower()
-        if output_ext == ".png":
-            plt.savefig(args.output.name, dpi=args.dpi, bbox_inches="tight")
-        else:
-            plt.savefig(args.output.name, bbox_inches="tight")
+        plt.savefig(filename, dpi=args.dpi, bbox_inches="tight")
         plt.close("all")

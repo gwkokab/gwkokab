@@ -128,8 +128,8 @@ def main() -> None:
     g.fig.suptitle(args.title)
     # Determine output file type and save accordingly
     output_ext = os.path.splitext(args.output.name)[1].lower()
+    plt_savefig_kwargs = dict()
     if output_ext == ".png":
-        g.savefig(args.output.name, dpi=args.dpi, bbox_inches="tight")
-    else:
-        g.savefig(args.output.name, bbox_inches="tight")
+        plt_savefig_kwargs["dpi"] = args.dpi
+    g.savefig(args.output.name, bbox_inches="tight", **plt_savefig_kwargs)
     g.close("all")
