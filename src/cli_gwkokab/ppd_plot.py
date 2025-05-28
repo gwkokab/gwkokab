@@ -188,6 +188,12 @@ def make_parser() -> argparse.ArgumentParser:
         type=str,
         default="--",
     )
+    parser.add_argument(
+        "--dpi",
+        help="dots per inch to save file",
+        type=int,
+        default=100,
+    )
 
     return parser
 
@@ -364,5 +370,5 @@ def main() -> None:
                 alpha=args.grid_alpha,
             )
         ax.legend()
-        fig.savefig(filename, bbox_inches="tight", dpi=300)
+        plt.savefig(filename, dpi=args.dpi, bbox_inches="tight")
         plt.close("all")

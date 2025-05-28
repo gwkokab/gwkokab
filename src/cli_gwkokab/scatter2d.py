@@ -3,6 +3,7 @@
 
 
 import argparse
+import os
 
 import matplotlib.colors as mcolors
 import numpy as np
@@ -57,6 +58,7 @@ def make_parser() -> argparse.ArgumentParser:
         "-t",
         "--title",
         help="title of the plot",
+        default=None,
         type=str,
     )
     parser.add_argument(
@@ -118,6 +120,12 @@ def make_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
     )
+    parser.add_argument(
+        "--dpi",
+        help="dots per inch to save file",
+        type=int,
+        default=100,
+    )
 
     return parser
 
@@ -167,6 +175,11 @@ def main() -> None:
     plt.yscale(args.y_scale)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(args.output.name, bbox_inches="tight")
-
+    # Determine output file type and save accordingly
+    output_ext = os.path.splitext(args.output.name)[1].lower()
+    plt_savefig_kwargs = dict()
+    if output_ext == ".png":
+        plt_savefig_kwargs["dpi"] = args.dpi
+    plt.savefig(args.output.name, bbox_inches="tight", **plt_savefig_kwargs)
+    plt.close("all")
     args.data.close()
