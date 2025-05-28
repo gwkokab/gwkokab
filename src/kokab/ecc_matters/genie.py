@@ -14,7 +14,7 @@ from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.population import error_magazine, PopulationFactory
-from kokab.ecc_matters.common import constraint, EccentricityMattersModel
+from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils import genie_parser, poisson_mean_parser
 from kokab.utils.common import vt_json_read_and_process
 from kokab.utils.regex import match_all
@@ -132,7 +132,6 @@ def main() -> None:
         ERate_fn=erate_estimator.__call__,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
-        constraint=constraint,
     )
 
     popfactory.produce()

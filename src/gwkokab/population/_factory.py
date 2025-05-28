@@ -38,9 +38,6 @@ class PopulationFactory:
         ERate_fn: Callable[[ScaledMixture], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
-        constraint: Callable[[Array], Array] = lambda x: jnp.ones(
-            x.shape[0], dtype=bool
-        ),
     ) -> None:
         """Class with methods equipped to generate population for each realizations and
         adding errors in it.
@@ -59,8 +56,6 @@ class PopulationFactory:
             Number of realizations to generate, by default 5
         error_size : int, optional
             Size of the error to add in the population, by default 2_000
-        constraint : _type_, optional
-            Constraint for the population, by default :code:`lambda x: jnp.ones(x.shape[0], dtype=bool)`
 
         Raises
         ------
@@ -77,7 +72,6 @@ class PopulationFactory:
         self.ERate_fn = ERate_fn
         self.num_realizations = num_realizations
         self.error_size = error_size
-        self.constraint = constraint
 
         self.event_filename = ensure_dat_extension(self.event_filename)
         self.injection_filename = ensure_dat_extension(self.injection_filename)
@@ -103,9 +97,6 @@ class PopulationFactory:
             size += int(1e4)
 
         population, [indices] = self.model.sample_with_intermediates(key, (size,))
-        constraints = self.constraint(population)
-        population = population[constraints]
-        indices = indices[constraints]
 
         raw_population = population
         raw_indices = indices
