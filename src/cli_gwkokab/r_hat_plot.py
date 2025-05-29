@@ -35,10 +35,11 @@ def make_parser() -> argparse.ArgumentParser:
         type=str,
     )
     parser.add_argument(
+        "-o",
         "--output",
         help="output file path",
         required=True,
-        type=str,
+        type=argparse.FileType("w"),
     )
     parser.add_argument(
         "--n-split",
