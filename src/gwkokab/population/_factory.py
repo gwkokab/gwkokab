@@ -5,7 +5,7 @@
 import os
 import warnings
 from collections.abc import Callable
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import numpy as np
 from jax import nn as jnn, numpy as jnp, random as jrd
@@ -23,12 +23,21 @@ error_magazine = ModelRegistry()
 
 
 class PopulationFactory:
-    error_dir: str = "posteriors"
+    error_dir: str = "{}_posteriors"
     event_filename: str = "event_{}"
-    injection_filename: str = "injections"
+    injection_filename: str = "{}_injections"
     realizations_dir: str = "realization_{}"
     root_dir: str = "data"
     verbose: bool = True
+
+    heads: List[List[int]] = []
+    error_fns: List[Callable[[Array, int, PRNGKeyArray], Array]] = []
+
+    save_raw_injections: bool = False
+    save_raw_PEs: bool = False
+    save_weighted_injections: bool = False
+    save_weighted_PEs: bool = False
+    save_ref_probs: bool = False
 
     def __init__(
         self,
@@ -38,6 +47,11 @@ class PopulationFactory:
         ERate_fn: Callable[[ScaledMixture], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
+        save_raw_injections: bool = False,
+        save_raw_PEs: bool = False,
+        save_weighted_injections: bool = False,
+        save_weighted_PEs: bool = False,
+        save_ref_probs: bool = False,
     ) -> None:
         """Class with methods equipped to generate population for each realizations and
         adding errors in it.
@@ -73,6 +87,28 @@ class PopulationFactory:
         self.num_realizations = num_realizations
         self.error_size = error_size
 
+        self.save_raw_injections = save_raw_injections
+        self.save_raw_PEs = save_raw_PEs
+        self.save_ref_probs = save_ref_probs
+        self.save_weighted_injections = save_weighted_injections
+        self.save_weighted_PEs = save_weighted_PEs
+
+        if not any(
+            [
+                save_raw_injections,
+                save_raw_PEs,
+                save_weighted_injections,
+                save_weighted_PEs,
+            ]
+        ):
+            raise ValueError(
+                "At least one of the following should be true.\n"
+                " - save_raw_injections\n"
+                " - save_raw_PEs\n"
+                " - save_weighted_injections\n"
+                " - save_weighted_PEs"
+            )
+
         self.event_filename = ensure_dat_extension(self.event_filename)
         self.injection_filename = ensure_dat_extension(self.injection_filename)
 
@@ -86,34 +122,6 @@ class PopulationFactory:
 
         if self.parameters == []:
             raise ValueError("Parameters are not provided.")
-
-    def _generate_population(
-        self, size: int, *, key: PRNGKeyArray
-    ) -> Tuple[Array, Array, Array, Array]:
-        r"""Generate population for a realization."""
-
-        old_size = size
-        if self.logVT_fn is not None:
-            size += int(1e4)
-
-        population, [indices] = self.model.sample_with_intermediates(key, (size,))
-
-        raw_population = population
-        raw_indices = indices
-
-        if self.logVT_fn is not None:
-            _, key = jrd.split(key)
-
-            vt = jnn.softmax(self.logVT_fn(population))
-            _, key = jrd.split(key)
-            index = jrd.choice(
-                key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
-            )
-
-            population = population[index]
-            indices = indices[index]
-
-        return raw_population, raw_indices, population, indices
 
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
@@ -130,11 +138,15 @@ class PopulationFactory:
                 "\t4. VT file is not provided or is not valid.\n"
                 "\t5. Or some other reason."
             )
+
         pop_keys = jrd.split(key, self.num_realizations)
+
         os.makedirs(self.root_dir, exist_ok=True)
+        scale = int(self.save_raw_injections) + int(self.save_weighted_injections)
+
         with get_progress_bar("Injections", self.verbose) as progress:
             realization_task = progress.add_task(
-                "Generating realizations", total=self.num_realizations
+                "Generating realizations", total=self.num_realizations * scale
             )
             for i in range(self.num_realizations):
                 realizations_path = os.path.join(
@@ -142,147 +154,214 @@ class PopulationFactory:
                 )
                 os.makedirs(realizations_path, exist_ok=True)
 
-                raw_population, raw_indices, population, indices = (
-                    self._generate_population(size, key=pop_keys[i])
-                )
-
-                if population.shape == ():
-                    continue
-
-                injections_file_path = os.path.join(
-                    realizations_path, self.injection_filename
-                )
-                color_indices_file_path = os.path.join(realizations_path, "color.dat")
-                np.savetxt(
-                    injections_file_path,
-                    population,
-                    header=" ".join(self.parameters),
-                    comments="",  # To remove the default comment character '#'
-                )
-                np.savetxt(
-                    color_indices_file_path,
-                    indices,
-                    comments="",  # To remove the default comment character '#'
-                    fmt="%d",
-                )
-                raw_injections_file_path = os.path.join(
-                    realizations_path, "raw_" + self.injection_filename
-                )
-                raw_color_indices_file_path = os.path.join(
-                    realizations_path, "raw_color.dat"
-                )
-                np.savetxt(
-                    raw_injections_file_path,
-                    raw_population,
-                    header=" ".join(self.parameters),
-                    comments="",  # To remove the default comment character '#'
-                )
-                np.savetxt(
-                    raw_color_indices_file_path,
-                    raw_indices,
-                    comments="",  # To remove the default comment character '#'
-                    fmt="%d",
-                )
-                progress.advance(realization_task, 1)
-
-    def _add_error(self, realization_number, *, key: PRNGKeyArray) -> None:
-        r"""Adds error to the realizations' population."""
-        realizations_path = os.path.join(
-            self.root_dir, self.realizations_dir.format(realization_number)
-        )
-
-        heads: List[List[int]] = []
-        error_fns: List[Callable[[Array, int, PRNGKeyArray], Array]] = []
-
-        for head, err_fn in error_magazine.registry.items():
-            _head = []
-            for h in head:
-                i = self.parameters.index(h)
-                _head.append(i)
-            heads.append(_head)
-            error_fns.append(err_fn)
-
-        output_dir = os.path.join(
-            realizations_path, self.error_dir, self.event_filename
-        )
-
-        os.makedirs(os.path.join(realizations_path, self.error_dir), exist_ok=True)
-
-        injections_file_path = os.path.join(realizations_path, self.injection_filename)
-        data_inj = np.loadtxt(injections_file_path, skiprows=1)
-        keys = jrd.split(key, data_inj.shape[0] * (len(heads) + 1))
-
-        error_size_before_selection = int(1e4) + self.error_size
-
-        for index in range(data_inj.shape[0]):
-            noisy_data = np.empty((error_size_before_selection, len(self.parameters)))
-            data = data_inj[index]
-            i = 0
-            for head, err_fn in zip(heads, error_fns):
-                key_idx = index * len(heads) + i
-                noisy_data_i: Array = err_fn(
-                    data[head], error_size_before_selection, keys[key_idx]
-                )
-                if noisy_data_i.ndim == 1:
-                    noisy_data_i = noisy_data_i.reshape(error_size_before_selection, -1)
-                noisy_data[:, head] = noisy_data_i
-                i += 1
-            nan_mask = np.isnan(noisy_data).any(axis=1)
-            noisy_data = noisy_data[~nan_mask]  # type: ignore
-            count = np.count_nonzero(noisy_data)
-            if count < 1:
-                warnings.warn(
-                    f"Skipping file {index} due to all NaN values or insufficient data.",
-                    category=UserWarning,
-                )
-                continue
-            np.savetxt(
-                output_dir.format(index),
-                noisy_data,
-                header=" ".join(self.parameters),
-                comments="",  # To remove the default comment character '#'
-            )
-
-        if self.logVT_fn is None:
-            raw_output_dir = os.path.join(
-                realizations_path, self.error_dir, self.event_filename
-            )
-
-            os.makedirs(
-                os.path.join(realizations_path, "raw_" + self.error_dir), exist_ok=True
-            )
-
-            injections_file_path = os.path.join(
-                realizations_path, "raw_" + self.injection_filename
-            )
-            raw_data_inj = np.loadtxt(injections_file_path, skiprows=1)
-            keys = jrd.split(key, raw_data_inj.shape[0] * len(heads))
-
-            for index in range(raw_data_inj.shape[0]):
-                noisy_data = np.empty((self.error_size, len(self.parameters)))
-                data = raw_data_inj[index]
-                i = 0
-                for head, err_fn in zip(heads, error_fns):
-                    key_idx = index * len(heads) + i
-                    noisy_data_i: Array = err_fn(
-                        data[head], self.error_size, keys[key_idx]
+                if self.save_raw_injections:
+                    raw_population, [raw_indices] = (
+                        self.model.sample_with_intermediates(pop_keys[i], (size,))
                     )
-                    if noisy_data_i.ndim == 1:
-                        noisy_data_i = noisy_data_i.reshape(self.error_size, -1)
-                    noisy_data[:, head] = noisy_data_i
-                    i += 1
-                nan_mask = np.isnan(noisy_data).any(axis=1)
-                masked_noisey_data = noisy_data[~nan_mask]
-                count = np.count_nonzero(masked_noisey_data)
-                if count < 2:
+                    raw_injections_file_path = os.path.join(
+                        realizations_path, self.injection_filename.format("raw")
+                    )
+                    raw_color_indices_file_path = os.path.join(
+                        realizations_path, "raw_color.dat"
+                    )
+                    np.savetxt(
+                        raw_injections_file_path,
+                        raw_population,
+                        header=" ".join(self.parameters),
+                        comments="",  # To remove the default comment character '#'
+                    )
+                    np.savetxt(
+                        raw_color_indices_file_path,
+                        raw_indices,
+                        comments="",  # To remove the default comment character '#'
+                        fmt="%d",
+                    )
+                    progress.advance(realization_task, 1)
+
+                if self.save_weighted_injections:
+                    old_size = size
+                    if self.logVT_fn is not None:
+                        size += int(1e4)
+
+                    population, [indices] = self.model.sample_with_intermediates(
+                        pop_keys[i], (size,)
+                    )
+
+                    raw_population = population
+                    raw_indices = indices
+
+                    if self.logVT_fn is not None:
+                        _, key = jrd.split(key)
+
+                        vt = jnn.softmax(self.logVT_fn(population))
+                        _, key = jrd.split(key)
+                        index = jrd.choice(
+                            key,
+                            jnp.arange(population.shape[0]),
+                            p=vt,
+                            shape=(old_size,),
+                        )
+
+                        population = population[index]
+                        indices = indices[index]
+
+                    if population.shape == ():
+                        warnings.warn(
+                            f"Population size is zero for realization {i}. Skipping this realization.",
+                            category=UserWarning,
+                        )
+                    else:
+                        injections_file_path = os.path.join(
+                            realizations_path,
+                            self.injection_filename.format("weighted"),
+                        )
+                        color_indices_file_path = os.path.join(
+                            realizations_path, "color.dat"
+                        )
+                        np.savetxt(
+                            injections_file_path,
+                            population,
+                            header=" ".join(self.parameters),
+                            comments="",  # To remove the default comment character '#'
+                        )
+                        np.savetxt(
+                            color_indices_file_path,
+                            indices,
+                            comments="",  # To remove the default comment character '#'
+                            fmt="%d",
+                        )
+                    progress.advance(realization_task, 1)
+
+    def _add_error_to_an_injection(
+        self, *, key: PRNGKeyArray, data: Array, size: int
+    ) -> Array:
+        """Add error to an injection.
+
+        Parameters
+        ----------
+        key : PRNGKeyArray
+            Pseudo-random number generator key for reproducibility.
+        data : Array
+            Data (injection) to which error will be added.
+        size : int
+            Size of the error to add.
+
+        Returns
+        -------
+        Array
+            Noisy data with added error.
+        """
+        keys = jrd.split(key, len(self.heads))
+        noisy_data_collection = []
+
+        for i, (head, err_fn) in enumerate(zip(self.heads, self.error_fns)):
+            noisy_data_i: Array = err_fn(data[head], size, keys[i])
+            if noisy_data_i.ndim == 1:
+                noisy_data_i = noisy_data_i.reshape(size, -1)
+            noisy_data_collection.append(noisy_data_i)
+
+        noisy_data = jnp.column_stack(noisy_data_collection)
+        nan_mask = np.isnan(noisy_data).any(axis=1)
+        noisy_data = noisy_data[~nan_mask]
+        return noisy_data
+
+    def _add_error(
+        self,
+        *,
+        n_realizations: int,
+        extra_size: int,
+        key: PRNGKeyArray,
+    ) -> None:
+        r"""Adds error to the realizations' population."""
+
+        N_heads = len(self.heads)
+        assert N_heads > 0
+
+        realizations_path = os.path.join(
+            self.root_dir, self.realizations_dir.format(n_realizations)
+        )
+
+        if self.save_raw_PEs:
+            error_dir = self.error_dir.format("raw")
+            posterior_path = os.path.join(
+                realizations_path,
+                error_dir,
+                self.event_filename,
+            )
+
+            os.makedirs(os.path.join(realizations_path, error_dir), exist_ok=True)
+
+            injection_path = os.path.join(
+                realizations_path, self.injection_filename.format("raw")
+            )
+            data_inj = np.loadtxt(injection_path, skiprows=1)
+
+            keys = jrd.split(key, data_inj.shape[0] * 2)
+
+            for index in range(data_inj.shape[0]):
+                data = data_inj[index]
+                noisy_data = self._add_error_to_an_injection(
+                    key=keys[index], data=data, size=self.error_size
+                )
+                count = np.count_nonzero(noisy_data)
+                if count < 1:
                     warnings.warn(
                         f"Skipping file {index} due to all NaN values or insufficient data.",
                         category=UserWarning,
                     )
                     continue
                 np.savetxt(
-                    raw_output_dir.format(index),
-                    masked_noisey_data,
+                    posterior_path.format(index),
+                    noisy_data,
+                    header=" ".join(self.parameters),
+                    comments="",  # To remove the default comment character '#'
+                )
+
+        if self.save_weighted_PEs:
+            error_dir = self.error_dir.format("weighted")
+            posterior_path = os.path.join(
+                realizations_path,
+                error_dir,
+                self.event_filename,
+            )
+
+            os.makedirs(os.path.join(realizations_path, error_dir), exist_ok=True)
+
+            injection_path = os.path.join(
+                realizations_path, self.injection_filename.format("weighted")
+            )
+            data_inj = np.loadtxt(injection_path, skiprows=1)
+
+            error_size_before_selection = self.error_size + extra_size
+            for index in range(data_inj.shape[0]):
+                data = data_inj[index]
+                noisy_data = self._add_error_to_an_injection(
+                    key=keys[index],
+                    data=data,
+                    size=error_size_before_selection,
+                )
+                weights = np.array(jnn.softmax(self.model.log_prob(noisy_data)))
+                noisy_data = jrd.choice(  # type: ignore
+                    key=keys[data_inj.shape[0] + index],
+                    a=noisy_data,
+                    shape=(self.error_size,),
+                    p=weights,
+                )
+                if noisy_data.shape[0] < self.error_size:
+                    warnings.warn(
+                        f"Insufficient data for file {index}. Expected {self.error_size}, got {noisy_data.shape[0]}.",
+                        category=UserWarning,
+                    )
+                count = np.count_nonzero(noisy_data)
+                if count < 1:
+                    warnings.warn(
+                        f"Skipping file {index} due to all NaN values or insufficient data.",
+                        category=UserWarning,
+                    )
+                    continue
+                np.savetxt(
+                    posterior_path.format(index),
+                    noisy_data,
                     header=" ".join(self.parameters),
                     comments="",  # To remove the default comment character '#'
                 )
@@ -299,10 +378,37 @@ class PopulationFactory:
             key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
         else:
             assert is_prng_key(key)
+
         self._generate_realizations(key)
+
+        heads = []
+        error_fns = []
+
+        for head, err_fn in error_magazine.registry.items():
+            _head = []
+            for h in head:
+                i = self.parameters.index(h)
+                _head.append(i)
+            heads.append(_head)
+            error_fns.append(err_fn)
+
+        self.heads = heads
+        self.error_fns = error_fns
+
+        del heads  # deleting heads, use self.heads instead
+        del error_fns  # deleting error_fns, use self.error_fns instead
+
         keys = jrd.split(key, self.num_realizations)
+
         with get_progress_bar("Errors", self.verbose) as progress:
-            adding_error_task = progress.add_task("Errors", total=self.num_realizations)
-            for i in range(self.num_realizations):
-                self._add_error(i, key=keys[i])
-                progress.advance(adding_error_task, 1)
+            scale = int(self.save_raw_PEs) + int(self.save_weighted_PEs)
+            adding_error_task = progress.add_task(
+                "Errors", total=self.num_realizations * scale
+            )
+            for n_realizations in range(self.num_realizations):
+                self._add_error(
+                    n_realizations=n_realizations,
+                    extra_size=10_000,
+                    key=keys[i],
+                )
+                progress.advance(adding_error_task, scale)
