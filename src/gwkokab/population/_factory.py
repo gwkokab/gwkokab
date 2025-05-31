@@ -7,6 +7,7 @@ import warnings
 from collections.abc import Callable
 from typing import List, Optional
 
+import jax
 import numpy as np
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
@@ -26,6 +27,7 @@ class PopulationFactory:
     error_dir: str = "{}_posteriors"
     event_filename: str = "event_{}"
     injection_filename: str = "{}_injections"
+    color_filename: str = "{}_color.dat"
     realizations_dir: str = "realization_{}"
     root_dir: str = "data"
     verbose: bool = True
@@ -47,10 +49,10 @@ class PopulationFactory:
         ERate_fn: Callable[[ScaledMixture], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
-        save_raw_injections: bool = False,
-        save_raw_PEs: bool = False,
-        save_weighted_injections: bool = False,
-        save_weighted_PEs: bool = False,
+        save_raw_injections: bool = True,
+        save_raw_PEs: bool = True,
+        save_weighted_injections: bool = True,
+        save_weighted_PEs: bool = True,
         save_ref_probs: bool = False,
     ) -> None:
         """Class with methods equipped to generate population for each realizations and
@@ -94,12 +96,12 @@ class PopulationFactory:
         self.save_weighted_PEs = save_weighted_PEs
 
         if not any(
-            [
+            (
                 save_raw_injections,
                 save_raw_PEs,
                 save_weighted_injections,
                 save_weighted_PEs,
-            ]
+            )
         ):
             raise ValueError(
                 "At least one of the following should be true.\n"
@@ -162,7 +164,7 @@ class PopulationFactory:
                         realizations_path, self.injection_filename.format("raw")
                     )
                     raw_color_indices_file_path = os.path.join(
-                        realizations_path, "raw_color.dat"
+                        realizations_path, self.color_filename.format("raw")
                     )
                     np.savetxt(
                         raw_injections_file_path,
@@ -216,7 +218,7 @@ class PopulationFactory:
                             self.injection_filename.format("weighted"),
                         )
                         color_indices_file_path = os.path.join(
-                            realizations_path, "color.dat"
+                            realizations_path, self.color_filename.format("weighted")
                         )
                         np.savetxt(
                             injections_file_path,
@@ -281,44 +283,14 @@ class PopulationFactory:
             self.root_dir, self.realizations_dir.format(n_realizations)
         )
 
+        prefixes: list[str] = []
         if self.save_raw_PEs:
-            error_dir = self.error_dir.format("raw")
-            posterior_path = os.path.join(
-                realizations_path,
-                error_dir,
-                self.event_filename,
-            )
-
-            os.makedirs(os.path.join(realizations_path, error_dir), exist_ok=True)
-
-            injection_path = os.path.join(
-                realizations_path, self.injection_filename.format("raw")
-            )
-            data_inj = np.loadtxt(injection_path, skiprows=1)
-
-            keys = jrd.split(key, data_inj.shape[0] * 2)
-
-            for index in range(data_inj.shape[0]):
-                data = data_inj[index]
-                noisy_data = self._add_error_to_an_injection(
-                    key=keys[index], data=data, size=self.error_size
-                )
-                count = np.count_nonzero(noisy_data)
-                if count < 1:
-                    warnings.warn(
-                        f"Skipping file {index} due to all NaN values or insufficient data.",
-                        category=UserWarning,
-                    )
-                    continue
-                np.savetxt(
-                    posterior_path.format(index),
-                    noisy_data,
-                    header=" ".join(self.parameters),
-                    comments="",  # To remove the default comment character '#'
-                )
-
+            prefixes.append("raw")
         if self.save_weighted_PEs:
-            error_dir = self.error_dir.format("weighted")
+            prefixes.append("weighted")
+
+        for prefix in prefixes:
+            error_dir = self.error_dir.format(prefix)
             posterior_path = os.path.join(
                 realizations_path,
                 error_dir,
@@ -328,9 +300,11 @@ class PopulationFactory:
             os.makedirs(os.path.join(realizations_path, error_dir), exist_ok=True)
 
             injection_path = os.path.join(
-                realizations_path, self.injection_filename.format("weighted")
+                realizations_path, self.injection_filename.format(prefix)
             )
             data_inj = np.loadtxt(injection_path, skiprows=1)
+
+            keys = jrd.split(key, data_inj.shape[0])
 
             error_size_before_selection = self.error_size + extra_size
             for index in range(data_inj.shape[0]):
@@ -340,18 +314,25 @@ class PopulationFactory:
                     data=data,
                     size=error_size_before_selection,
                 )
-                weights = np.array(jnn.softmax(self.model.log_prob(noisy_data)))
-                noisy_data = jrd.choice(  # type: ignore
-                    key=keys[data_inj.shape[0] + index],
-                    a=noisy_data,
-                    shape=(self.error_size,),
-                    p=weights,
-                )
-                if noisy_data.shape[0] < self.error_size:
-                    warnings.warn(
-                        f"Insufficient data for file {index}. Expected {self.error_size}, got {noisy_data.shape[0]}.",
-                        category=UserWarning,
+                if self.save_weighted_PEs:
+                    weights = np.array(
+                        jnn.softmax(
+                            jax.lax.map(
+                                self.model.log_prob, noisy_data, batch_size=10_000
+                            )
+                        )
                     )
+                    noisy_data = jrd.choice(  # type: ignore
+                        key=keys[data_inj.shape[0]],
+                        a=noisy_data,
+                        shape=(self.error_size,),
+                        p=weights,
+                    )
+                    if noisy_data.shape[0] < self.error_size:
+                        warnings.warn(
+                            f"Insufficient data for file {index}. Expected {self.error_size}, got {noisy_data.shape[0]}.",
+                            category=UserWarning,
+                        )
                 count = np.count_nonzero(noisy_data)
                 if count < 1:
                     warnings.warn(
@@ -365,6 +346,7 @@ class PopulationFactory:
                     header=" ".join(self.parameters),
                     comments="",  # To remove the default comment character '#'
                 )
+            key, _ = jrd.split(key)
 
     def produce(self, key: Optional[PRNGKeyArray] = None) -> None:
         """Generate realizations and add errors to the populations.
