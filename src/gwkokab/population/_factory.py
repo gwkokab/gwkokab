@@ -53,7 +53,7 @@ class PopulationFactory:
         save_raw_PEs: bool = True,
         save_weighted_injections: bool = True,
         save_weighted_PEs: bool = True,
-        save_ref_probs: bool = False,
+        save_ref_probs: bool = True,
     ) -> None:
         """Class with methods equipped to generate population for each realizations and
         adding errors in it.
@@ -125,6 +125,23 @@ class PopulationFactory:
         if self.parameters == []:
             raise ValueError("Parameters are not provided.")
 
+    def model_log_prob(self, data: Array, batch_size: int = 10_000) -> Array:
+        """Calculate the log probability of the data using the model.
+
+        Parameters
+        ----------
+        data : Array
+            Data to calculate the log probability for.
+        batch_size : int, optional
+            Batch size for processing, by default 10_000
+
+        Returns
+        -------
+        Array
+            Log probabilities of the data.
+        """
+        return jax.lax.map(self.model.log_prob, data, batch_size=batch_size)
+
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
@@ -166,6 +183,11 @@ class PopulationFactory:
                     raw_color_indices_file_path = os.path.join(
                         realizations_path, self.color_filename.format("raw")
                     )
+                    if self.save_ref_probs:
+                        log_ref_raw_population = self.model_log_prob(raw_population)
+                        raw_population = jnp.column_stack(
+                            [raw_population, log_ref_raw_population]
+                        )
                     np.savetxt(
                         raw_injections_file_path,
                         raw_population,
@@ -220,6 +242,11 @@ class PopulationFactory:
                         color_indices_file_path = os.path.join(
                             realizations_path, self.color_filename.format("weighted")
                         )
+                        if self.save_ref_probs:
+                            log_ref_population = self.model_log_prob(population)
+                            population = jnp.column_stack(
+                                [population, log_ref_population]
+                            )
                         np.savetxt(
                             injections_file_path,
                             population,
@@ -315,13 +342,7 @@ class PopulationFactory:
                     size=error_size_before_selection,
                 )
                 if self.save_weighted_PEs:
-                    weights = np.array(
-                        jnn.softmax(
-                            jax.lax.map(
-                                self.model.log_prob, noisy_data, batch_size=10_000
-                            )
-                        )
-                    )
+                    weights = np.array(jnn.softmax(self.model.log_prob(noisy_data)))
                     noisy_data = jrd.choice(  # type: ignore
                         key=keys[data_inj.shape[0]],
                         a=noisy_data,
@@ -340,6 +361,9 @@ class PopulationFactory:
                         category=UserWarning,
                     )
                     continue
+                if self.save_ref_probs:
+                    log_ref_noisy_data = self.model_log_prob(noisy_data)
+                    noisy_data = jnp.column_stack([noisy_data, log_ref_noisy_data])
                 np.savetxt(
                     posterior_path.format(index),
                     noisy_data,
@@ -360,6 +384,9 @@ class PopulationFactory:
             key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
         else:
             assert is_prng_key(key)
+
+        if self.save_ref_probs:
+            self.parameters += ("log_ref_prob",)
 
         self._generate_realizations(key)
 
