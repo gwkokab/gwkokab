@@ -49,11 +49,11 @@ class PopulationFactory:
         ERate_fn: Callable[[ScaledMixture], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
-        save_raw_injections: bool = True,
-        save_raw_PEs: bool = True,
-        save_weighted_injections: bool = True,
-        save_weighted_PEs: bool = True,
-        save_ref_probs: bool = True,
+        save_raw_injections: bool = False,
+        save_raw_PEs: bool = False,
+        save_weighted_injections: bool = False,
+        save_weighted_PEs: bool = False,
+        save_ref_probs: bool = False,
     ) -> None:
         """Class with methods equipped to generate population for each realizations and
         adding errors in it.

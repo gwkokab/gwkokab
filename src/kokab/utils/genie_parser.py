@@ -39,6 +39,31 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         default=5,
         type=int,
     )
+    genie_group.add_argument(
+        "--raw-injections",
+        action="store_true",
+        help="Save raw injections to file.",
+    )
+    genie_group.add_argument(
+        "--raw-PEs",
+        action="store_true",
+        help="Save raw posterior estimates to file.",
+    )
+    genie_group.add_argument(
+        "--weighted-injections",
+        action="store_true",
+        help="Save weighted injections to file.",
+    )
+    genie_group.add_argument(
+        "--weighted-PEs",
+        action="store_true",
+        help="Save weighted posterior estimates to file.",
+    )
+    genie_group.add_argument(
+        "--ref-probs",
+        action="store_true",
+        help="Save reference probabilities to file.",
+    )
 
     vt_group = parser.add_argument_group("VT Options")
 

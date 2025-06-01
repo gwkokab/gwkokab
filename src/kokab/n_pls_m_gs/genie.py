@@ -742,5 +742,10 @@ def main() -> None:
         ERate_fn=erate_estimator.__call__,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
+        save_raw_injections=args.raw_injections,
+        save_raw_PEs=args.raw_PEs,
+        save_weighted_injections=args.weighted_injections,
+        save_weighted_PEs=args.weighted_PEs,
+        save_ref_probs=args.ref_probs,
     )
     popfactory.produce()
