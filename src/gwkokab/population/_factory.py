@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import glob
 import os
 import warnings
 from collections.abc import Callable
@@ -423,3 +424,64 @@ class PopulationFactory:
                     key=keys[i],
                 )
                 progress.advance(adding_error_task, scale)
+
+        with get_progress_bar("Mean/Cov", self.verbose) as progress:
+            scale = int(self.save_raw_PEs) + int(self.save_weighted_PEs)
+            mean_cov_task = progress.add_task(
+                "Mean/Cov", total=self.num_realizations * scale
+            )
+
+            prefixes: list[str] = []
+            if self.save_raw_PEs:
+                prefixes.append("raw")
+            if self.save_weighted_PEs:
+                prefixes.append("weighted")
+
+            for n_realizations in range(self.num_realizations):
+                realizations_path = os.path.join(
+                    self.root_dir, self.realizations_dir.format(n_realizations)
+                )
+                for prefix in prefixes:
+                    error_dir = self.error_dir.format(prefix)
+                    posterior_path = os.path.join(
+                        realizations_path,
+                        error_dir,
+                        self.event_filename,
+                    )
+
+                    files = glob.glob(posterior_path.format("*"))
+                    if len(files) == 0:
+                        warnings.warn(
+                            f"No files found in {posterior_path}. Skipping mean/cov calculation.",
+                            category=UserWarning,
+                        )
+                        continue
+                    indexes = [
+                        int(os.path.basename(file).split("_")[-1].split(".")[0])
+                        for file in files
+                    ]
+
+                    means = []
+                    covs = []
+                    for file in files:
+                        data = np.loadtxt(file, skiprows=1)
+                        means.append(np.nanmean(data, axis=0))
+                        covs.append(np.cov(data.T))
+
+                    mean = np.asarray(means)[indexes]
+
+                    os.makedirs(realizations_path + "/mean_cov", exist_ok=True)
+
+                    mean_file_path = os.path.join(
+                        realizations_path, "mean_cov/" + prefix + "_mean.dat"
+                    )
+                    np.savetxt(mean_file_path, mean, header=" ".join(self.parameters))
+
+                    cov_file_path_fmt = os.path.join(
+                        realizations_path, "mean_cov/" + prefix + "_cov_{}.dat"
+                    )
+                    for index, cov in zip(indexes, covs):
+                        cov_file_path = cov_file_path_fmt.format(index)
+                        np.savetxt(cov_file_path, cov, header=" ".join(self.parameters))
+
+                    progress.advance(mean_cov_task, 1)
