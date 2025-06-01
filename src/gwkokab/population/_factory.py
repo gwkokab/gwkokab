@@ -125,7 +125,7 @@ class PopulationFactory:
         if self.parameters == []:
             raise ValueError("Parameters are not provided.")
 
-    def model_log_prob(self, data: Array, batch_size: int = 10_000) -> Array:
+    def model_log_prob(self, data: Array, batch_size: int = 1_000) -> Array:
         """Calculate the log probability of the data using the model.
 
         Parameters
@@ -140,6 +140,8 @@ class PopulationFactory:
         Array
             Log probabilities of the data.
         """
+        if data.shape[0] < batch_size:
+            return self.model.log_prob(data)
         return jax.lax.map(self.model.log_prob, data, batch_size=batch_size)
 
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
