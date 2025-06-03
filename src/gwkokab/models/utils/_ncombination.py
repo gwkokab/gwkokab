@@ -9,6 +9,7 @@ from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
     Distribution,
+    MixtureGeneral,
     Normal,
     TransformedDistribution,
     TruncatedNormal,
@@ -23,7 +24,7 @@ from ...models._models import (
     SmoothedPowerlawPrimaryMassRatio,
 )
 from ...models.redshift import PowerlawRedshift
-from ...models.spin import BetaFromMeanVar
+from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ...utils.tools import fetch_first_matching_value
 
@@ -236,6 +237,69 @@ def create_truncated_normal_distributions_for_cos_tilt(
         )
 
     return truncated_normal_for_tilt_collection
+
+
+def create_independent_spin_orientation_gaussian_isotropic(
+    N: int,
+    parameter_name: Literal["cos_tilt1", "cos_tilt2"],
+    component_type: Literal["pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[MixtureGeneral]:
+    """Create a list of :func:`IndependentSpinOrientationGaussianIsotropic`
+    distributions for tilt.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[&quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        list of :func:`IndependentSpinOrientationGaussianIsotropic` distributions
+
+    Raises
+    ------
+    ValueError
+        if scale is missing
+    """
+    dist_collection = []
+    zeta_name = f"cos_tilt_zeta_{component_type}"
+    scale1_name = f"cos_tilt1_scale_{component_type}"
+    scale2_name = f"cos_tilt2_scale_{component_type}"
+
+    for i in range(N):
+        zeta = fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
+        if zeta is None:
+            raise ValueError(f"Missing parameter {zeta_name}_{i}")
+
+        scale1 = fetch_first_matching_value(params, f"{scale1_name}_{i}", scale1_name)
+        if scale1 is None:
+            raise ValueError(f"Missing parameter {scale1_name}_{i}")
+
+        scale2 = fetch_first_matching_value(params, f"{scale2_name}_{i}", scale2_name)
+        if scale2 is None:
+            raise ValueError(f"Missing parameter {scale2_name}_{i}")
+
+        dist_collection.append(
+            IndependentSpinOrientationGaussianIsotropic(
+                zeta=zeta,
+                scale1=scale1,
+                scale2=scale2,
+                validate_args=validate_args,
+            )
+        )
+
+    return dist_collection
 
 
 def create_powerlaws(

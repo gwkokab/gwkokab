@@ -84,8 +84,8 @@ def GaussianSpinModel(
 
 def IndependentSpinOrientationGaussianIsotropic(
     zeta: ArrayLike,
-    sigma1: ArrayLike,
-    sigma2: ArrayLike,
+    scale1: ArrayLike,
+    scale2: ArrayLike,
     *,
     validate_args: Optional[bool] = None,
 ) -> MixtureGeneral:
@@ -105,9 +105,9 @@ def IndependentSpinOrientationGaussianIsotropic(
 
     zeta : ArrayLike
         The mixing probability of the second component.
-    sigma1 : ArrayLike
+    scale1 : ArrayLike
         The standard deviation of the first component.
-    sigma2 : ArrayLike
+    scale2 : ArrayLike
         The standard deviation of the second component.
 
     Returns
@@ -115,11 +115,11 @@ def IndependentSpinOrientationGaussianIsotropic(
     MixtureGeneral
         Mixture model of spin orientations.
     """
-    mixing_probs = jnp.array([1 - zeta, zeta])
-    component_0_dist = Uniform(low=-1, high=1, validate_args=validate_args)
-    component_1_dist = TruncatedNormal(
+    mixing_probs = jnp.array([1.0 - zeta, zeta])
+    isotropic_component = Uniform(low=-1, high=1, validate_args=validate_args)
+    gaussian_component = TruncatedNormal(
         loc=1.0,
-        scale=jnp.array([sigma1, sigma2]),
+        scale=jnp.array([scale1, scale2]),
         low=-1,
         high=1,
         validate_args=validate_args,
@@ -128,8 +128,8 @@ def IndependentSpinOrientationGaussianIsotropic(
         mixing_distribution=CategoricalProbs(
             probs=mixing_probs, validate_args=validate_args
         ),
-        component_distributions=[component_0_dist, component_1_dist],
-        support=constraints.real,
+        component_distributions=[isotropic_component, gaussian_component],
+        support=constraints.interval(-1.0, 1.0),
         validate_args=validate_args,
     )
 
