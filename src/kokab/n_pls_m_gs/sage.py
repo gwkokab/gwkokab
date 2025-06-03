@@ -219,6 +219,8 @@ def main() -> None:
         parameters.extend([COS_TILT_1, COS_TILT_2])
         all_params.extend(
             [
+                ("cos_tilt_zeta_g", N_g),
+                ("cos_tilt_zeta_pl", N_pl),
                 ("cos_tilt1_scale_g", N_g),
                 ("cos_tilt1_scale_pl", N_pl),
                 ("cos_tilt2_scale_g", N_g),
