@@ -8,7 +8,8 @@ from glob import glob
 from typing import List, Tuple
 
 import numpy as np
-from jax import random as jrd
+from jax import numpy as jnp, random as jrd
+from jaxtyping import Array
 from loguru import logger
 
 import gwkokab
@@ -171,6 +172,8 @@ def main() -> None:
 
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
 
+    where_fns = []
+
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
         if args.add_truncated_normal_spin:
@@ -214,6 +217,29 @@ def main() -> None:
                     ("chi2_variance_pl", N_pl),
                 ]
             )
+
+            def mean_variance_check(**kwargs) -> Array:
+                check = lambda m, v: jnp.less_equal(m * (1 - m), v)
+                mask = jnp.ones((), dtype=bool)
+                for i in range(N_pl):
+                    chi1_mean = kwargs[f"chi1_mean_pl_{i}"]
+                    chi1_variance = kwargs[f"chi1_variance_pl_{i}"]
+                    chi2_mean = kwargs[f"chi2_mean_pl_{i}"]
+                    chi2_variance = kwargs[f"chi2_variance_pl_{i}"]
+                    mask = jnp.logical_and(mask, check(chi1_mean, chi1_variance))
+                    mask = jnp.logical_and(mask, check(chi2_mean, chi2_variance))
+
+                for i in range(N_g):
+                    chi1_mean = kwargs[f"chi1_mean_g_{i}"]
+                    chi1_variance = kwargs[f"chi1_variance_g_{i}"]
+                    chi2_mean = kwargs[f"chi2_mean_g_{i}"]
+                    chi2_variance = kwargs[f"chi2_variance_g_{i}"]
+                    mask = jnp.logical_and(mask, check(chi1_mean, chi1_variance))
+                    mask = jnp.logical_and(mask, check(chi2_mean, chi2_variance))
+
+                return mask
+
+            where_fns.append(mean_variance_check)
 
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
@@ -388,6 +414,7 @@ def main() -> None:
         data=data,
         log_ref_priors=log_ref_priors,
         ERate_fn=erate_estimator.__call__,
+        where_fns=None if len(where_fns) == 0 else where_fns,
     )
 
     constants = model.constants

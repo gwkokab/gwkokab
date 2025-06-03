@@ -15,7 +15,6 @@ from numpyro.distributions import (
     TransformedDistribution,
     TruncatedNormal,
     Uniform,
-    Unit,
 )
 from numpyro.distributions.transforms import AffineTransform
 
@@ -164,9 +163,8 @@ def BetaFromMeanVar(
     TransformedDistribution
         Transformed distribution of the beta distribution.
     """
-    if mean * (1 - mean) < variance:
-        return Unit(-jnp.inf, validate_args=validate_args)
     alpha, beta = beta_dist_mean_variance_to_concentrations(mean, variance, loc, scale)
+
     return TransformedDistribution(
         Beta(alpha, beta, validate_args=validate_args),
         transforms=AffineTransform(

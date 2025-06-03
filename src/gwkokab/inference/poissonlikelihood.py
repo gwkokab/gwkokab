@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import jax
 import numpy as np
@@ -24,6 +24,7 @@ def poisson_likelihood(
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
     ERate_fn: Callable[[Distribution], Array],
+    where_fns: Optional[List[Callable[..., Array]]] = None,
 ) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
@@ -115,7 +116,7 @@ def poisson_likelihood(
         batched_mask_shape=batched_mask.shape,
     )
 
-    variables, duplicates, dist_builder = dist_builder.get_dist()  # type: ignore
+    constants, variables, duplicates, dist_builder = dist_builder.get_dist()  # type: ignore
     variables_index = {key: i for i, key in enumerate(variables.keys())}
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
@@ -154,16 +155,22 @@ def poisson_likelihood(
             )
             return carry + log_prob_sum, None
 
+        x_mask = jnp.ones((), dtype=bool)
+        if where_fns is not None:
+            for where_fn in where_fns:
+                x_mask = jnp.logical_and(x_mask, where_fn(**constants, **mapped_params))
+
         # Σ log Σ exp (log p(ω|data_n) - log π_n)
         total_log_likelihood, _ = jax.lax.scan(
             single_event_fn,  # type: ignore
             jnp.zeros(()),
             (batched_data, batched_log_ref_priors, batched_mask),
         )
+        total_log_likelihood = jnp.where(x_mask, total_log_likelihood, -jnp.inf)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = ERate_fn(model_instance)
-        log_prior = priors.log_prob(x)
+        expected_rates = jnp.where(x_mask, ERate_fn(model_instance), -jnp.inf)
+        log_prior = jnp.where(x_mask, priors.log_prob(x), -jnp.inf)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
         log_likelihood = total_log_likelihood - expected_rates + log_constants
         # log p(ω|data) = log π(ω) + log L(ω)
