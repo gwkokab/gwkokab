@@ -17,7 +17,6 @@ from numpyro.distributions import (
     TruncatedNormal,
     Uniform,
 )
-from numpyro.distributions.transforms import AffineTransform
 
 from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 
@@ -168,11 +167,4 @@ def BetaFromMeanVar(
         Transformed distribution of the beta distribution.
     """
     alpha, beta = beta_dist_mean_variance_to_concentrations(mean, variance, loc, scale)
-
-    return TransformedDistribution(
-        Beta(alpha, beta, validate_args=validate_args),
-        transforms=AffineTransform(
-            loc=loc, scale=scale, domain=constraints.interval(loc, loc + scale)
-        ),
-        validate_args=validate_args,
-    )
+    return Beta(alpha, beta, validate_args=validate_args)

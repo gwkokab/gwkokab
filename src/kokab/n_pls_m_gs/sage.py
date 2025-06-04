@@ -33,6 +33,7 @@ from gwkokab.parameters import (
     SIN_DECLINATION,
 )
 from gwkokab.poisson_mean import PoissonMean
+from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
@@ -228,6 +229,16 @@ def main() -> None:
                     chi2_variance = kwargs[f"chi2_variance_pl_{i}"]
                     mask = jnp.logical_and(mask, check(chi1_mean, chi1_variance))
                     mask = jnp.logical_and(mask, check(chi2_mean, chi2_variance))
+                    α1, β1 = beta_dist_mean_variance_to_concentrations(
+                        chi1_mean, chi1_variance
+                    )
+                    α2, β2 = beta_dist_mean_variance_to_concentrations(
+                        chi2_mean, chi2_variance
+                    )
+                    mask = jnp.logical_and(mask, jnp.greater(α1, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(β1, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(α2, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(β2, 1.0))
 
                 for i in range(N_g):
                     chi1_mean = kwargs[f"chi1_mean_g_{i}"]
@@ -236,6 +247,16 @@ def main() -> None:
                     chi2_variance = kwargs[f"chi2_variance_g_{i}"]
                     mask = jnp.logical_and(mask, check(chi1_mean, chi1_variance))
                     mask = jnp.logical_and(mask, check(chi2_mean, chi2_variance))
+                    α1, β1 = beta_dist_mean_variance_to_concentrations(
+                        chi1_mean, chi1_variance
+                    )
+                    α2, β2 = beta_dist_mean_variance_to_concentrations(
+                        chi2_mean, chi2_variance
+                    )
+                    mask = jnp.logical_and(mask, jnp.greater(α1, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(β1, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(α2, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(β2, 1.0))
 
                 return mask
 
