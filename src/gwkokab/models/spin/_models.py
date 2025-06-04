@@ -10,6 +10,7 @@ from numpyro.distributions import (
     Beta,
     CategoricalProbs,
     constraints,
+    Independent,
     MixtureGeneral,
     MultivariateNormal,
     TransformedDistribution,
@@ -116,15 +117,18 @@ def IndependentSpinOrientationGaussianIsotropic(
         Mixture model of spin orientations.
     """
     mixing_probs = jnp.array([1.0 - zeta, zeta])
-    isotropic_component = Uniform(low=-1, high=1, validate_args=validate_args).expand(
-        (2,)
+    isotropic_component = Independent(
+        Uniform(low=-1, high=1, validate_args=validate_args).expand((2,)), 1
     )
-    gaussian_component = TruncatedNormal(
-        loc=1.0,
-        scale=jnp.array([scale1, scale2]),
-        low=-1,
-        high=1,
-        validate_args=validate_args,
+    gaussian_component = Independent(
+        TruncatedNormal(
+            loc=1.0,
+            scale=jnp.array([scale1, scale2]),
+            low=-1,
+            high=1,
+            validate_args=validate_args,
+        ),
+        1,
     )
     return MixtureGeneral(
         mixing_distribution=CategoricalProbs(
