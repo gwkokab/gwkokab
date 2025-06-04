@@ -219,7 +219,7 @@ def main() -> None:
             )
 
             def mean_variance_check(**kwargs) -> Array:
-                check = lambda m, v: jnp.less_equal(m * (1 - m), v)
+                check = lambda m, v: jnp.less_equal(v, m * (1 - m))
                 mask = jnp.ones((), dtype=bool)
                 for i in range(N_pl):
                     chi1_mean = kwargs[f"chi1_mean_pl_{i}"]
