@@ -212,19 +212,15 @@ class PopulationFactory:
         data_inj = np.loadtxt(injections_file_path, skiprows=1)
         keys = jrd.split(key, data_inj.shape[0] * (len(heads) + 1))
 
-        error_size_before_selection = int(1e4) + self.error_size
-
         for index in range(data_inj.shape[0]):
-            noisy_data = np.empty((error_size_before_selection, len(self.parameters)))
+            noisy_data = np.empty((self.error_size, len(self.parameters)))
             data = data_inj[index]
             i = 0
             for head, err_fn in zip(heads, error_fns):
                 key_idx = index * len(heads) + i
-                noisy_data_i: Array = err_fn(
-                    data[head], error_size_before_selection, keys[key_idx]
-                )
+                noisy_data_i: Array = err_fn(data[head], self.error_size, keys[key_idx])
                 if noisy_data_i.ndim == 1:
-                    noisy_data_i = noisy_data_i.reshape(error_size_before_selection, -1)
+                    noisy_data_i = noisy_data_i.reshape(self.error_size, -1)
                 noisy_data[:, head] = noisy_data_i
                 i += 1
             nan_mask = np.isnan(noisy_data).any(axis=1)
