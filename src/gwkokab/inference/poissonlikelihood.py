@@ -64,7 +64,6 @@ def poisson_likelihood(
         msg="The model provided is not a ScaledMixture. "
         "Rate estimation will therefore be skipped.",
     )
-
     # maximum size of the data
     max_size = max([d.shape[0] for d in data])
     sum_log_size = sum([jnp.log(d.shape[0]) for d in data])
@@ -133,66 +132,65 @@ def poisson_likelihood(
             for name, i in variables_index.items()
         }
 
-        def f():
-            model_instance: Distribution = dist_builder(**mapped_params)
+        model_instance: Distribution = dist_builder(**mapped_params)
 
-            def single_event_fn(
-                carry: Array, input: Tuple[Array, Array, Array]
-            ) -> Tuple[Array, None]:
-                data, log_ref_prior, mask = input
+        def single_event_fn(
+            carry: Array, input: Tuple[Array, Array, Array]
+        ) -> Tuple[Array, None]:
+            data, log_ref_prior, mask = input
 
-                safe_data = jnp.where(mask[:, jnp.newaxis], data, 1.0)
-                safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
+            safe_data = jnp.where(mask[:, jnp.newaxis], data, 1.0)
+            safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
-                # log p(ω|data_n) - log π_n
-                log_prob: Array = (
-                    model_instance.log_prob(safe_data) - safe_log_ref_prior
-                )
-                log_prob = jnp.where(mask, log_prob, -jnp.inf)
+            # log p(ω|data_n) - log π_n
+            log_prob: Array = model_instance.log_prob(safe_data) - safe_log_ref_prior
+            log_prob = jnp.where(mask, log_prob, -jnp.inf)
 
-                # log Σ exp (log p(ω|data_n) - log π_n)
-                log_prob_sum = jax.nn.logsumexp(
-                    log_prob,
-                    axis=-1,
-                    where=(~jnp.isneginf(log_prob)) & mask,
-                )
-                return carry + log_prob_sum, None
-
-            # Σ log Σ exp (log p(ω|data_n) - log π_n)
-            total_log_likelihood, _ = jax.lax.scan(
-                single_event_fn,  # type: ignore
-                jnp.zeros(()),
-                (batched_data, batched_log_ref_priors, batched_mask),
+            # log Σ exp (log p(ω|data_n) - log π_n)
+            log_prob_sum = jax.nn.logsumexp(
+                log_prob,
+                axis=-1,
+                where=(~jnp.isneginf(log_prob)) & mask,
             )
+            return carry + log_prob_sum, None
 
-            # μ = E_{Ω|Λ}[VT(ω)]
-            expected_rates = ERate_fn(model_instance)
+        # Σ log Σ exp (log p(ω|data_n) - log π_n)
+        total_log_likelihood, _ = jax.lax.scan(
+            single_event_fn,  # type: ignore
+            jnp.zeros(()),
+            (batched_data, batched_log_ref_priors, batched_mask),
+        )
 
-            log_prior = priors.log_prob(x)
-            # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
-            log_likelihood = total_log_likelihood - expected_rates + log_constants
-            # log p(ω|data) = log π(ω) + log L(ω)
-            log_posterior = log_prior + log_likelihood
+        # μ = E_{Ω|Λ}[VT(ω)]
+        expected_rates = ERate_fn(model_instance)
 
-            log_posterior = jnp.nan_to_num(
-                log_posterior,
-                nan=-jnp.inf,
-                posinf=-jnp.inf,
-                neginf=-jnp.inf,
-            )
+        log_prior = priors.log_prob(x)
+        # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
+        log_likelihood = total_log_likelihood - expected_rates + log_constants
+        # log p(ω|data) = log π(ω) + log L(ω)
+        log_posterior = log_prior + log_likelihood
 
-            return log_posterior
+        log_posterior = jnp.nan_to_num(
+            log_posterior,
+            nan=-jnp.inf,
+            posinf=-jnp.inf,
+            neginf=-jnp.inf,
+        )
 
+        return log_posterior
+
+    def likelihood_fn_with_checks(x: Array, _: Array) -> Array:
+        mapped_params = {
+            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
+            for name, i in variables_index.items()
+        }
         x_mask = jnp.ones((), dtype=bool)
-        if where_fns is not None:
-            for where_fn in where_fns:
-                x_mask = jnp.logical_and(x_mask, where_fn(**constants, **mapped_params))
-            return jax.lax.cond(
-                x_mask,
-                f,
-                lambda: -jnp.inf,
-            )
-        else:
-            return f()
+        if where_fns is None:
+            return likelihood_fn(x, _)
+        for where_fn in where_fns:
+            x_mask = jnp.logical_and(x_mask, where_fn(**constants, **mapped_params))
+        return jax.lax.select(x_mask & jnp.all(x), likelihood_fn(x, _), -jnp.inf)
 
-    return variables_index, priors, likelihood_fn
+    if where_fns is None:
+        return variables_index, priors, likelihood_fn
+    return variables_index, priors, likelihood_fn_with_checks
