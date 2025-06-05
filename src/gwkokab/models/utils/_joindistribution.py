@@ -10,13 +10,14 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
 
+from ..constraints import all_constraint
+
 
 class JointDistribution(Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
     pytree_aux_fields = ("marginal_distributions", "shaped_values")
-    # pytree_data_fields = ("_support",)
-    support = constraints.real_vector
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
@@ -49,11 +50,20 @@ class JointDistribution(Distribution):
             else:
                 self.shaped_values += ((k, None),)
                 k += 1
+        self._support = all_constraint(
+            [d.support for d in self.marginal_distributions],
+            [sh[0] if sh[1] is None else sh for sh in self.shaped_values],
+        )
         super(JointDistribution, self).__init__(
             batch_shape=batch_shape,
             event_shape=(k,),
             validate_args=validate_args,
         )
+
+    @constraints.dependent_property(is_discrete=False)
+    def support(self):
+        """The support of the joint distribution."""
+        return self._support
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:

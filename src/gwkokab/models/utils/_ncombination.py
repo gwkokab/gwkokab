@@ -105,7 +105,7 @@ def create_beta_distributions(
             BetaFromMeanVar(
                 mean=mean,
                 variance=variance,
-                loc=0.0,
+                loc=jax.lax.stop_gradient(0.0),
                 scale=scale,
                 validate_args=validate_args,
             )
