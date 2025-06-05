@@ -7,7 +7,7 @@ from typing import Optional
 from jax import numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.distributions import (
-    Beta,
+    BetaProportion,
     CategoricalProbs,
     constraints,
     Independent,
@@ -17,8 +17,6 @@ from numpyro.distributions import (
     TruncatedNormal,
     Uniform,
 )
-
-from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 
 
 def GaussianSpinModel(
@@ -166,5 +164,6 @@ def BetaFromMeanVar(
     TransformedDistribution
         Transformed distribution of the beta distribution.
     """
-    alpha, beta = beta_dist_mean_variance_to_concentrations(mean, variance, loc, scale)
-    return Beta(alpha, beta, validate_args=validate_args)
+    return BetaProportion(
+        mean, mean * (1 - mean) / variance, validate_args=validate_args
+    )
