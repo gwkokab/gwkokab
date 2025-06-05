@@ -25,6 +25,7 @@ from scipy.sparse import csr_matrix
 
 from gwkokab.cosmology import PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
 from gwkokab.models import (
+    BetaFromMeanVar,
     ChiEffMassRatioCorrelated,
     NPowerlawMGaussian,
     NSmoothedPowerlawMSmoothedGaussian,
@@ -597,6 +598,8 @@ CONTINUOUS = [
             "log_rate": 2.0,
         },
     ),
+    (BetaFromMeanVar, {"mean": 0.4, "variance": 0.02}),
+    (BetaFromMeanVar, {"mean": 0.5, "variance": 0.05}),
 ]
 
 
@@ -933,7 +936,7 @@ def test_entropy_samples(jax_dist, params):
     except NotImplementedError:
         pytest.skip(reason=f"distribution {jax_dist} does not implement `entropy`")
 
-    samples = jax_dist.sample(jax.jrd.key(8), (1000,))
+    samples = jax_dist.sample(jrd.PRNGKey(8), (1000,))
     neg_log_probs = -jax_dist.log_prob(samples)
     mean = neg_log_probs.mean(axis=0)
     stderr = neg_log_probs.std(axis=0) / jnp.sqrt(neg_log_probs.shape[-1] - 1)
