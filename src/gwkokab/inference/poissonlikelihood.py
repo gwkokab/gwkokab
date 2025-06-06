@@ -189,7 +189,9 @@ def poisson_likelihood(
             return likelihood_fn(x, _)
         for where_fn in where_fns:
             x_mask = jnp.logical_and(x_mask, where_fn(**constants, **mapped_params))
-        return jax.lax.select(x_mask & jnp.all(x), likelihood_fn(x, _), -jnp.inf)
+        mask = jnp.logical_and(jnp.all(x), x_mask)
+        mask = jnp.logical_and(priors.support(x), x_mask)
+        return jax.lax.select(mask, likelihood_fn(x, _), -jnp.inf)
 
     if where_fns is None:
         return variables_index, priors, likelihood_fn
