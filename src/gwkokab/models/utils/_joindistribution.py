@@ -15,7 +15,6 @@ class JointDistribution(Distribution):
     r"""Joint distribution of multiple marginal distributions."""
 
     pytree_aux_fields = ("marginal_distributions", "shaped_values")
-    # pytree_data_fields = ("_support",)
     support = constraints.real_vector
 
     def __init__(

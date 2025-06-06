@@ -8,7 +8,8 @@ from glob import glob
 from typing import List, Tuple
 
 import numpy as np
-from jax import random as jrd
+from jax import numpy as jnp, random as jrd
+from jaxtyping import Array
 from loguru import logger
 
 import gwkokab
@@ -32,6 +33,7 @@ from gwkokab.parameters import (
     SIN_DECLINATION,
 )
 from gwkokab.poisson_mean import PoissonMean
+from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
@@ -171,6 +173,8 @@ def main() -> None:
 
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
 
+    where_fns = []
+
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
         if args.add_truncated_normal_spin:
@@ -202,23 +206,64 @@ def main() -> None:
                 [
                     ("chi1_mean_g", N_g),
                     ("chi1_mean_pl", N_pl),
-                    ("chi1_scale_g", N_g),
-                    ("chi1_scale_pl", N_pl),
                     ("chi1_variance_g", N_g),
                     ("chi1_variance_pl", N_pl),
                     ("chi2_mean_g", N_g),
                     ("chi2_mean_pl", N_pl),
-                    ("chi2_scale_g", N_g),
-                    ("chi2_scale_pl", N_pl),
                     ("chi2_variance_g", N_g),
                     ("chi2_variance_pl", N_pl),
                 ]
             )
 
+            def mean_variance_check(**kwargs) -> Array:
+                check = lambda m, v: jnp.less_equal(v, m * (1 - m))
+                mask = jnp.ones((), dtype=bool)
+                for i in range(N_pl):
+                    chi1_mean = kwargs[f"chi1_mean_pl_{i}"]
+                    chi1_variance = kwargs[f"chi1_variance_pl_{i}"]
+                    chi2_mean = kwargs[f"chi2_mean_pl_{i}"]
+                    chi2_variance = kwargs[f"chi2_variance_pl_{i}"]
+                    mask = jnp.logical_and(mask, check(chi1_mean, chi1_variance))
+                    mask = jnp.logical_and(mask, check(chi2_mean, chi2_variance))
+                    α1, β1 = beta_dist_mean_variance_to_concentrations(
+                        chi1_mean, chi1_variance
+                    )
+                    α2, β2 = beta_dist_mean_variance_to_concentrations(
+                        chi2_mean, chi2_variance
+                    )
+                    mask = jnp.logical_and(mask, jnp.greater(α1, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(β1, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(α2, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(β2, 1.0))
+
+                for i in range(N_g):
+                    chi1_mean = kwargs[f"chi1_mean_g_{i}"]
+                    chi1_variance = kwargs[f"chi1_variance_g_{i}"]
+                    chi2_mean = kwargs[f"chi2_mean_g_{i}"]
+                    chi2_variance = kwargs[f"chi2_variance_g_{i}"]
+                    mask = jnp.logical_and(mask, check(chi1_mean, chi1_variance))
+                    mask = jnp.logical_and(mask, check(chi2_mean, chi2_variance))
+                    α1, β1 = beta_dist_mean_variance_to_concentrations(
+                        chi1_mean, chi1_variance
+                    )
+                    α2, β2 = beta_dist_mean_variance_to_concentrations(
+                        chi2_mean, chi2_variance
+                    )
+                    mask = jnp.logical_and(mask, jnp.greater(α1, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(β1, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(α2, 1.0))
+                    mask = jnp.logical_and(mask, jnp.greater(β2, 1.0))
+
+                return mask
+
+            where_fns.append(mean_variance_check)
+
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
         all_params.extend(
             [
+                ("cos_tilt_zeta_g", N_g),
+                ("cos_tilt_zeta_pl", N_pl),
                 ("cos_tilt1_scale_g", N_g),
                 ("cos_tilt1_scale_pl", N_pl),
                 ("cos_tilt2_scale_g", N_g),
@@ -386,6 +431,7 @@ def main() -> None:
         data=data,
         log_ref_priors=log_ref_priors,
         ERate_fn=erate_estimator.__call__,
+        where_fns=None if len(where_fns) == 0 else where_fns,
     )
 
     constants = model.constants

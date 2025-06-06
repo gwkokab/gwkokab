@@ -337,14 +337,10 @@ def main() -> None:
                 [
                     ("chi1_mean_g", N_g),
                     ("chi1_mean_pl", N_pl),
-                    ("chi1_scale_g", N_g),
-                    ("chi1_scale_pl", N_pl),
                     ("chi1_variance_g", N_g),
                     ("chi1_variance_pl", N_pl),
                     ("chi2_mean_g", N_g),
                     ("chi2_mean_pl", N_pl),
-                    ("chi2_scale_g", N_g),
-                    ("chi2_scale_pl", N_pl),
                     ("chi2_variance_g", N_g),
                     ("chi2_variance_pl", N_pl),
                 ]
@@ -378,6 +374,8 @@ def main() -> None:
         parameters_name += (cos_tilt_1_name, cos_tilt_2_name)
         all_params.extend(
             [
+                ("cos_tilt_zeta_g", N_g),
+                ("cos_tilt_zeta_pl", N_pl),
                 ("cos_tilt1_scale_g", N_g),
                 ("cos_tilt1_scale_pl", N_pl),
                 ("cos_tilt2_scale_g", N_g),

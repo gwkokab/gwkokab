@@ -20,11 +20,11 @@ from ..redshift import PowerlawRedshift
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
+    create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift,
     create_smoothed_gaussians,
     create_smoothed_powerlaws,
     create_truncated_normal_distributions,
-    create_truncated_normal_distributions_for_cos_tilt,
     JointDistribution,
     ScaledMixture,
 )
@@ -33,7 +33,7 @@ from ..utils import (
 build_powerlaw_distributions = create_smoothed_powerlaws
 build_gaussian_distributions = create_smoothed_gaussians
 build_spin_distributions = create_beta_distributions
-build_tilt_distributions = create_truncated_normal_distributions_for_cos_tilt
+build_tilt_distributions = create_independent_spin_orientation_gaussian_isotropic
 build_eccentricity_distributions = create_truncated_normal_distributions
 build_redshift_distributions = create_powerlaw_redshift
 
@@ -98,22 +98,14 @@ def _build_non_mass_distributions(
         build_distributions = combine_distributions(build_distributions, chi2_dists)
 
     if use_tilt:
-        tilt1_dists = build_tilt_distributions(
+        tilt_dists = build_tilt_distributions(
             N=N,
             parameter_name="cos_tilt1",
             component_type=component_type,
             params=params,
             validate_args=validate_args,
         )
-        tilt2_dists = build_tilt_distributions(
-            N=N,
-            parameter_name="cos_tilt2",
-            component_type=component_type,
-            params=params,
-            validate_args=validate_args,
-        )
-        build_distributions = combine_distributions(build_distributions, tilt1_dists)
-        build_distributions = combine_distributions(build_distributions, tilt2_dists)
+        build_distributions = combine_distributions(build_distributions, tilt_dists)
 
     if use_eccentricity:
         ecc_dists = build_eccentricity_distributions(

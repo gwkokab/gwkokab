@@ -11,6 +11,7 @@ from ._joindistribution import JointDistribution as JointDistribution
 from ._ncombination import (
     combine_distributions as combine_distributions,
     create_beta_distributions as create_beta_distributions,
+    create_independent_spin_orientation_gaussian_isotropic as create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift as create_powerlaw_redshift,
     create_powerlaws as create_powerlaws,
     create_smoothed_gaussians as create_smoothed_gaussians,

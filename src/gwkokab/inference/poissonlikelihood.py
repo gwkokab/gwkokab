@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import jax
 import numpy as np
@@ -24,6 +24,7 @@ def poisson_likelihood(
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
     ERate_fn: Callable[[Distribution], Array],
+    where_fns: Optional[List[Callable[..., Array]]] = None,
 ) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
@@ -63,7 +64,6 @@ def poisson_likelihood(
         msg="The model provided is not a ScaledMixture. "
         "Rate estimation will therefore be skipped.",
     )
-
     # maximum size of the data
     max_size = max([d.shape[0] for d in data])
     sum_log_size = sum([jnp.log(d.shape[0]) for d in data])
@@ -115,7 +115,7 @@ def poisson_likelihood(
         batched_mask_shape=batched_mask.shape,
     )
 
-    variables, duplicates, dist_builder = dist_builder.get_dist()  # type: ignore
+    constants, variables, duplicates, dist_builder = dist_builder.get_dist()  # type: ignore
     variables_index = {key: i for i, key in enumerate(variables.keys())}
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
@@ -163,6 +163,7 @@ def poisson_likelihood(
 
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = ERate_fn(model_instance)
+
         log_prior = priors.log_prob(x)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
         log_likelihood = total_log_likelihood - expected_rates + log_constants
@@ -178,4 +179,20 @@ def poisson_likelihood(
 
         return log_posterior
 
-    return variables_index, priors, likelihood_fn
+    def likelihood_fn_with_checks(x: Array, _: Array) -> Array:
+        mapped_params = {
+            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
+            for name, i in variables_index.items()
+        }
+        x_mask = jnp.ones((), dtype=bool)
+        if where_fns is None:
+            return likelihood_fn(x, _)
+        for where_fn in where_fns:
+            x_mask = jnp.logical_and(x_mask, where_fn(**constants, **mapped_params))
+        mask = jnp.logical_and(jnp.all(x), x_mask)
+        mask = jnp.logical_and(priors.support(x), x_mask)
+        return jax.lax.select(mask, likelihood_fn(x, _), -jnp.inf)
+
+    if where_fns is None:
+        return variables_index, priors, likelihood_fn
+    return variables_index, priors, likelihood_fn_with_checks

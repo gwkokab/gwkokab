@@ -6,15 +6,16 @@ from typing import Callable, Dict, List, Literal, Optional, Tuple
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
-from numpyro.distributions import constraints, Distribution, TransformedDistribution
+from numpyro.distributions import Distribution, TransformedDistribution
 
+from ..constraints import any_constraint
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
+    create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift,
     create_powerlaws,
     create_truncated_normal_distributions,
-    create_truncated_normal_distributions_for_cos_tilt,
     create_uniform_distributions,
     JointDistribution,
     ScaledMixture,
@@ -22,7 +23,7 @@ from ..utils import (
 
 
 build_spin_distributions = create_beta_distributions
-build_tilt_distributions = create_truncated_normal_distributions_for_cos_tilt
+build_tilt_distributions = create_independent_spin_orientation_gaussian_isotropic
 build_eccentricity_distributions = create_truncated_normal_distributions
 build_redshift_distributions = create_powerlaw_redshift
 build_cos_iota_distribution = create_uniform_distributions
@@ -111,8 +112,8 @@ def _build_non_mass_distributions(
     _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
         (use_spin, "chi1", build_spin_distributions),
         (use_spin, "chi2", build_spin_distributions),
-        (use_tilt, "cos_tilt1", build_tilt_distributions),
-        (use_tilt, "cos_tilt2", build_tilt_distributions),
+        # combined tilt distribution
+        (use_tilt, "cos_tilt1_cos_tilt2", build_tilt_distributions),
         (use_phi_1, "phi_1", build_phi_1_distribution),
         (use_phi_2, "phi_2", build_phi_2_distribution),
         (use_phi_12, "phi_12", build_phi_12_distribution),
@@ -551,6 +552,8 @@ def NPowerlawMGaussian(
     return ScaledMixture(
         log_rates,
         component_dists,
-        support=constraints.real_vector,
+        support=any_constraint(
+            [component_dists.support for component_dists in component_dists]
+        ),
         validate_args=validate_args,
     )
