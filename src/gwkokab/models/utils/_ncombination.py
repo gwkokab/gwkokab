@@ -4,7 +4,6 @@
 
 from typing import Dict, List, Literal, Optional
 
-import jax
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
 from numpyro.distributions import (
@@ -87,7 +86,6 @@ def create_beta_distributions(
     beta_collection = []
     mean_name = f"{parameter_name}_mean_{component_type}"
     variance_name = f"{parameter_name}_variance_{component_type}"
-    scale_name = f"{parameter_name}_scale_{component_type}"
     for i in range(N):
         mean = fetch_first_matching_value(params, f"{mean_name}_{i}", mean_name)
         if mean is None:
@@ -97,16 +95,11 @@ def create_beta_distributions(
         )
         if variance is None:
             raise ValueError(f"Missing parameter {variance_name}_{i}")
-        scale = fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
-        if scale is None:
-            scale = jax.lax.stop_gradient(1.0)
 
         beta_collection.append(
             BetaFromMeanVar(
                 mean=mean,
                 variance=variance,
-                loc=jax.lax.stop_gradient(0.0),
-                scale=scale,
                 validate_args=validate_args,
             )
         )

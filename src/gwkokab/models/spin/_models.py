@@ -140,8 +140,6 @@ def IndependentSpinOrientationGaussianIsotropic(
 def BetaFromMeanVar(
     mean: ArrayLike,
     variance: ArrayLike,
-    loc: ArrayLike = 0.0,
-    scale: ArrayLike = 1.0,
     *,
     validate_args: Optional[bool] = None,
 ) -> TransformedDistribution:
