@@ -60,6 +60,9 @@ class _MassSandwichConstraint(Constraint):
         mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
         return jnp.asarray(mask, dtype=bool)
 
+    def feasible_like(self, prototype: Array) -> Array:
+        return jnp.full(prototype.shape[:-1], (self.mmin + self.mmax) * 0.5)
+
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
@@ -105,6 +108,14 @@ class _MassRatioMassSandwichConstraint(Constraint):
         mask = jnp.logical_and(mask, jnp.less_equal(m1, self.mmax))
         return jnp.asarray(mask, dtype=bool)
 
+    def feasible_like(self, prototype: Array) -> Array:
+        shape = prototype.shape[:-1]
+        m1 = (self.mmin + self.mmax) * 0.5
+        q = jnp.clip(self.mmin / m1, 0.0, 1.0)
+        m1 = jnp.broadcast_to(m1, shape)
+        q = jnp.broadcast_to(q, shape)
+        return jnp.stack((m1, q), axis=-1)
+
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
@@ -124,6 +135,9 @@ class _IncreasingVector(_SingletonConstraint):
     def __call__(self, x):
         return jnp.all(x[..., 1:] >= x[..., :-1], axis=-1)
 
+    def feasible_like(self, prototype):
+        return jnp.ones(prototype.shape, dtype=prototype.dtype)
+
     def tree_flatten(self):
         return (), ((), dict())
 
@@ -138,6 +152,9 @@ class _DecreasingVector(_SingletonConstraint):
 
     def __call__(self, x):
         return jnp.all(x[..., 1:] <= x[..., :-1], axis=-1)
+
+    def feasible_like(self, prototype):
+        return jnp.ones(prototype.shape, dtype=prototype.dtype)
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -156,6 +173,11 @@ class _StrictlyIncreasingVector(_SingletonConstraint):
     def __call__(self, x):
         return jnp.all(x[..., 1:] > x[..., :-1], axis=-1)
 
+    def feasible_like(self, prototype):
+        return jnp.ones(prototype.shape, dtype=prototype.dtype) * jnp.arange(
+            1, prototype.shape[-1] + 1, dtype=prototype.dtype
+        )
+
     def tree_flatten(self):
         return (), ((), dict())
 
@@ -172,6 +194,11 @@ class _StrictlyDecreasingVector(_SingletonConstraint):
 
     def __call__(self, x):
         return jnp.all(x[..., 1:] < x[..., :-1], axis=-1)
+
+    def feasible_like(self, prototype):
+        return jnp.ones(prototype.shape, dtype=prototype.dtype) * jnp.arange(
+            prototype.shape[-1], 0, -1, dtype=prototype.dtype
+        )
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -190,6 +217,9 @@ class _PositiveIncreasingVector(_SingletonConstraint):
     def __call__(self, x):
         return increasing_vector.check(x) & independent(positive, 1).check(x)
 
+    def feasible_like(self, prototype):
+        return jnp.ones(prototype.shape, dtype=prototype.dtype)
+
     def tree_flatten(self):
         return (), ((), dict())
 
@@ -206,6 +236,9 @@ class _PositiveDecreasingVector(_SingletonConstraint):
 
     def __call__(self, x):
         return decreasing_vector.check(x) & independent(positive, 1).check(x)
+
+    def feasible_like(self, prototype):
+        return jnp.ones(prototype.shape, dtype=prototype.dtype)
 
     def tree_flatten(self):
         return (), ((), dict())
@@ -233,6 +266,24 @@ class _AllConstraint(Constraint):
             mask &= constraint.check(x[..., event_slice])
         return mask
 
+    def feasible_like(self, prototype: Array) -> Array:
+        feasible_values = []
+        for constraint, event_slice in zip(self.constraints, self.event_slices):
+            feasible_values.append(
+                constraint.feasible_like(prototype[..., event_slice])
+            )
+        max_ndim = max([feasible_value.ndim for feasible_value in feasible_values])
+        feasible_values = [
+            jnp.expand_dims(
+                feasible_value, axis=tuple(range(feasible_value.ndim, max_ndim))
+            )
+            if feasible_value.ndim < max_ndim
+            else feasible_value
+            for feasible_value in feasible_values
+        ]
+        feasible_value = jnp.concatenate(feasible_values, axis=-1)
+        return feasible_value
+
     def tree_flatten(self):
         return (self.constraints, self.event_slices), (
             ("constraints", "event_slices"),
@@ -259,6 +310,9 @@ class _AnyConstraint(Constraint):
         for constraint in self.constraints[1:]:
             mask |= constraint.check(x)
         return mask
+
+    def feasible_like(self, prototype: Array) -> Array:
+        return self.constraints[0].feasible_like(prototype)
 
     def tree_flatten(self):
         return (self.constraints,), (("constraints",), dict())
