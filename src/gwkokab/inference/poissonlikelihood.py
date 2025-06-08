@@ -115,7 +115,7 @@ def poisson_likelihood(
         batched_mask_shape=batched_mask.shape,
     )
 
-    constants, variables, duplicates, dist_builder = dist_builder.get_dist()  # type: ignore
+    constants, variables, duplicates, dist_fn = dist_builder.get_dist()  # type: ignore
     variables_index = {key: i for i, key in enumerate(variables.keys())}
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
@@ -132,7 +132,7 @@ def poisson_likelihood(
             for name, i in variables_index.items()
         }
 
-        model_instance: Distribution = dist_builder(**mapped_params)
+        model_instance: Distribution = dist_fn(**mapped_params)
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
