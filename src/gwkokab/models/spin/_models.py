@@ -142,7 +142,7 @@ def BetaFromMeanVar(
     variance: ArrayLike,
     *,
     validate_args: Optional[bool] = None,
-) -> TransformedDistribution:
+) -> BetaProportion:
     r"""Beta distribution parameterized by the expected value and variance.
 
     Parameters
@@ -159,8 +159,8 @@ def BetaFromMeanVar(
 
     Returns
     -------
-    TransformedDistribution
-        Transformed distribution of the beta distribution.
+    BetaProportion
+        Beta distribution with the specified mean and variance.
     """
     return BetaProportion(
         mean, (mean * (1 - mean)) / variance, validate_args=validate_args
