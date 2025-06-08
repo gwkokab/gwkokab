@@ -163,5 +163,5 @@ def BetaFromMeanVar(
         Transformed distribution of the beta distribution.
     """
     return BetaProportion(
-        mean, mean * (1 - mean) / variance, validate_args=validate_args
+        mean, (mean * (1 - mean)) / variance, validate_args=validate_args
     )
