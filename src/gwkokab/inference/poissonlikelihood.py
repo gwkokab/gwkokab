@@ -186,14 +186,16 @@ def poisson_likelihood(
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
         }
-        x_mask = jnp.ones((), dtype=bool)
         if where_fns is None:
             return likelihood_fn(x, _)
+        predicate = jnp.ones((), dtype=bool)
         for where_fn in where_fns:
-            x_mask = jnp.logical_and(x_mask, where_fn(**constants, **mapped_params))
-        mask = jnp.logical_and(jnp.all(x), x_mask)
-        mask = jnp.logical_and(priors.support(x), x_mask)
-        return jax.lax.select(mask, likelihood_fn(x, _), -jnp.inf)
+            predicate = jnp.logical_and(
+                predicate, where_fn(**constants, **mapped_params)
+            )
+        predicate = jnp.logical_and(jnp.all(x), predicate)
+        predicate = jnp.logical_and(priors.support(x), predicate)
+        return jax.lax.select(predicate, likelihood_fn(x, _), -jnp.inf)
 
     if where_fns is None:
         return variables_index, priors, likelihood_fn
