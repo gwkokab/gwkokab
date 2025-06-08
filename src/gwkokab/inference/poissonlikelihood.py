@@ -139,7 +139,9 @@ def poisson_likelihood(
         ) -> Tuple[Array, None]:
             data, log_ref_prior, mask = input
 
-            safe_data = jnp.where(mask[:, jnp.newaxis], data, 1.0)
+            safe_data = jnp.where(
+                mask[:, jnp.newaxis], data, model_instance.support.feasible_like(data)
+            )
             safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
             # log p(ω|data_n) - log π_n
