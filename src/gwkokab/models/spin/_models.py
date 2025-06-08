@@ -13,7 +13,6 @@ from numpyro.distributions import (
     Independent,
     MixtureGeneral,
     MultivariateNormal,
-    TransformedDistribution,
     TruncatedNormal,
     Uniform,
 )
