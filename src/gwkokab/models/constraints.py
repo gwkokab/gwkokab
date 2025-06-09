@@ -61,7 +61,7 @@ class _MassSandwichConstraint(Constraint):
         return jnp.asarray(mask, dtype=bool)
 
     def feasible_like(self, prototype: Array) -> Array:
-        return jnp.full(prototype.shape[:-1], (self.mmin + self.mmax) * 0.5)
+        return jnp.full(prototype.shape, (self.mmin + self.mmax) * 0.5)
 
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
