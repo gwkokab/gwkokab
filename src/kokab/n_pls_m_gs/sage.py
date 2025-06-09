@@ -216,45 +216,51 @@ def main() -> None:
             )
 
             def mean_variance_check(**kwargs) -> Array:
-                check = lambda m, v: jnp.less_equal(v, m * (1 - m))
-                mask = jnp.ones((), dtype=bool)
-                for i in range(N_pl):
-                    chi1_mean = kwargs[f"chi1_mean_pl_{i}"]
-                    chi1_variance = kwargs[f"chi1_variance_pl_{i}"]
-                    chi2_mean = kwargs[f"chi2_mean_pl_{i}"]
-                    chi2_variance = kwargs[f"chi2_variance_pl_{i}"]
-                    mask = jnp.logical_and(mask, check(chi1_mean, chi1_variance))
-                    mask = jnp.logical_and(mask, check(chi2_mean, chi2_variance))
-                    α1, β1 = beta_dist_mean_variance_to_concentrations(
-                        chi1_mean, chi1_variance
+                if N_pl > 0:
+                    means_pl = jnp.stack(
+                        [
+                            kwargs[f"chi{i}_mean_pl_{j}"]
+                            for j in range(N_pl)
+                            for i in (1, 2)
+                        ]
                     )
-                    α2, β2 = beta_dist_mean_variance_to_concentrations(
-                        chi2_mean, chi2_variance
+                    vars_pl = jnp.stack(
+                        [
+                            kwargs[f"chi{i}_variance_pl_{j}"]
+                            for j in range(N_pl)
+                            for i in (1, 2)
+                        ]
                     )
-                    mask = jnp.logical_and(mask, jnp.greater(α1, 1.0))
-                    mask = jnp.logical_and(mask, jnp.greater(β1, 1.0))
-                    mask = jnp.logical_and(mask, jnp.greater(α2, 1.0))
-                    mask = jnp.logical_and(mask, jnp.greater(β2, 1.0))
+                if N_g > 0:
+                    means_g = jnp.stack(
+                        [
+                            kwargs[f"chi{i}_mean_g_{j}"]
+                            for j in range(N_g)
+                            for i in (1, 2)
+                        ]
+                    )
+                    vars_g = jnp.stack(
+                        [
+                            kwargs[f"chi{i}_variance_g_{j}"]
+                            for j in range(N_g)
+                            for i in (1, 2)
+                        ]
+                    )
 
-                for i in range(N_g):
-                    chi1_mean = kwargs[f"chi1_mean_g_{i}"]
-                    chi1_variance = kwargs[f"chi1_variance_g_{i}"]
-                    chi2_mean = kwargs[f"chi2_mean_g_{i}"]
-                    chi2_variance = kwargs[f"chi2_variance_g_{i}"]
-                    mask = jnp.logical_and(mask, check(chi1_mean, chi1_variance))
-                    mask = jnp.logical_and(mask, check(chi2_mean, chi2_variance))
-                    α1, β1 = beta_dist_mean_variance_to_concentrations(
-                        chi1_mean, chi1_variance
-                    )
-                    α2, β2 = beta_dist_mean_variance_to_concentrations(
-                        chi2_mean, chi2_variance
-                    )
-                    mask = jnp.logical_and(mask, jnp.greater(α1, 1.0))
-                    mask = jnp.logical_and(mask, jnp.greater(β1, 1.0))
-                    mask = jnp.logical_and(mask, jnp.greater(α2, 1.0))
-                    mask = jnp.logical_and(mask, jnp.greater(β2, 1.0))
+                if N_pl > 0 and N_g > 0:
+                    means = jnp.concatenate([means_pl, means_g])
+                    variances = jnp.concatenate([vars_pl, vars_g])
+                elif N_pl > 0:
+                    means = means_pl
+                    variances = vars_pl
+                else:
+                    means = means_g
+                    variances = vars_g
 
-                return mask
+                valid_var = variances <= means * (1 - means)
+                α, β = beta_dist_mean_variance_to_concentrations(means, variances)
+                valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
+                return jnp.all(jnp.logical_and(valid_var, valid_ab))
 
             where_fns.append(mean_variance_check)
 
