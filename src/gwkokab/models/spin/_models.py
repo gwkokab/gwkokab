@@ -7,18 +7,15 @@ from typing import Optional
 from jax import numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.distributions import (
-    Beta,
+    BetaProportion,
     CategoricalProbs,
     constraints,
+    Independent,
     MixtureGeneral,
     MultivariateNormal,
-    TransformedDistribution,
     TruncatedNormal,
     Uniform,
 )
-from numpyro.distributions.transforms import AffineTransform
-
-from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 
 
 def GaussianSpinModel(
@@ -84,8 +81,8 @@ def GaussianSpinModel(
 
 def IndependentSpinOrientationGaussianIsotropic(
     zeta: ArrayLike,
-    sigma1: ArrayLike,
-    sigma2: ArrayLike,
+    scale1: ArrayLike,
+    scale2: ArrayLike,
     *,
     validate_args: Optional[bool] = None,
 ) -> MixtureGeneral:
@@ -105,9 +102,9 @@ def IndependentSpinOrientationGaussianIsotropic(
 
     zeta : ArrayLike
         The mixing probability of the second component.
-    sigma1 : ArrayLike
+    scale1 : ArrayLike
         The standard deviation of the first component.
-    sigma2 : ArrayLike
+    scale2 : ArrayLike
         The standard deviation of the second component.
 
     Returns
@@ -115,21 +112,26 @@ def IndependentSpinOrientationGaussianIsotropic(
     MixtureGeneral
         Mixture model of spin orientations.
     """
-    mixing_probs = jnp.array([1 - zeta, zeta])
-    component_0_dist = Uniform(low=-1, high=1, validate_args=validate_args)
-    component_1_dist = TruncatedNormal(
-        loc=1.0,
-        scale=jnp.array([sigma1, sigma2]),
-        low=-1,
-        high=1,
-        validate_args=validate_args,
+    mixing_probs = jnp.array([1.0 - zeta, zeta])
+    isotropic_component = Independent(
+        Uniform(low=-1, high=1, validate_args=validate_args).expand((2,)), 1
+    )
+    gaussian_component = Independent(
+        TruncatedNormal(
+            loc=1.0,
+            scale=jnp.array([scale1, scale2]),
+            low=-1,
+            high=1,
+            validate_args=validate_args,
+        ),
+        1,
     )
     return MixtureGeneral(
         mixing_distribution=CategoricalProbs(
             probs=mixing_probs, validate_args=validate_args
         ),
-        component_distributions=[component_0_dist, component_1_dist],
-        support=constraints.real,
+        component_distributions=[isotropic_component, gaussian_component],
+        support=constraints.interval(-1.0, 1.0),
         validate_args=validate_args,
     )
 
@@ -137,11 +139,9 @@ def IndependentSpinOrientationGaussianIsotropic(
 def BetaFromMeanVar(
     mean: ArrayLike,
     variance: ArrayLike,
-    loc: ArrayLike = 0.0,
-    scale: ArrayLike = 1.0,
     *,
     validate_args: Optional[bool] = None,
-) -> TransformedDistribution:
+) -> BetaProportion:
     r"""Beta distribution parameterized by the expected value and variance.
 
     Parameters
@@ -158,14 +158,9 @@ def BetaFromMeanVar(
 
     Returns
     -------
-    TransformedDistribution
-        Transformed distribution of the beta distribution.
+    BetaProportion
+        Beta distribution with the specified mean and variance.
     """
-    alpha, beta = beta_dist_mean_variance_to_concentrations(mean, variance, loc, scale)
-    return TransformedDistribution(
-        Beta(alpha, beta, validate_args=validate_args),
-        transforms=AffineTransform(
-            loc=loc, scale=scale, domain=constraints.interval(loc, loc + scale)
-        ),
-        validate_args=validate_args,
+    return BetaProportion(
+        mean, (mean * (1 - mean)) / variance, validate_args=validate_args
     )

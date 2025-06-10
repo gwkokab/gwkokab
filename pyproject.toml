@@ -82,7 +82,7 @@ docs = [
     "sphinx>=2.0",
     "sphinx_design",
 ]
-test = ["coveralls>=4.0.1", "pytest>=8.3.0"]
+test = ["coveralls>=4.0.1", "pytest>=8.3.0", "tensorflow_probability>=0.18"]
 cuda12 = ["jax[cuda12]>=0.4.30"]
 # tpu = ["jax[tpu]>=0.4.30"]
 

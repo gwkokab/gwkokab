@@ -6,7 +6,7 @@ import functools as ft
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import pandas as pd
-from numpyro.distributions.distribution import DistributionLike
+from numpyro.distributions.distribution import DistributionLike, TransformedDistribution
 
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
@@ -42,12 +42,22 @@ def model(raw: bool, **params) -> DistributionLike:
     validate_args = params.pop("validate_args", True)
     _model = SmoothedPowerlawAndPeak(**params, validate_args=validate_args)
     if raw:
-        _model._component_distributions[0].marginal_distributions[0] = (
-            _model._component_distributions[0].marginal_distributions[0].base_dist
-        )
-        _model._component_distributions[1].marginal_distributions[0] = (
-            _model._component_distributions[1].marginal_distributions[0].base_dist
-        )
+        if isinstance(_model._component_distributions[0], TransformedDistribution):
+            _model._component_distributions[0] = (
+                _model._component_distributions[0].marginal_distributions[0].base_dist
+            )
+        else:
+            _model._component_distributions[0].marginal_distributions[0] = (
+                _model._component_distributions[0].marginal_distributions[0].base_dist
+            )
+        if isinstance(_model._component_distributions[1], TransformedDistribution):
+            _model._component_distributions[1] = (
+                _model._component_distributions[1].marginal_distributions[0].base_dist
+            )
+        else:
+            _model._component_distributions[1].marginal_distributions[0] = (
+                _model._component_distributions[1].marginal_distributions[0].base_dist
+            )
     return _model
 
 

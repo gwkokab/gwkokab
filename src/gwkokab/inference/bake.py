@@ -65,17 +65,27 @@ class Bake(object):
 
     def get_dist(
         self,
-    ) -> Tuple[Dict[str, Distribution], Dict[str, str], Callable[..., Distribution]]:
+    ) -> Tuple[
+        Dict[str, int | float | None],
+        Dict[str, Distribution],
+        Dict[str, str],
+        Callable[..., Distribution],
+    ]:
         """Return the distribution with the fixed parameters set.
 
         Returns
         -------
-        Tuple[Dict[str, Distribution], Dict[str, str], Callable[..., Distribution]]
+        Tuple[Dict[str, int | float | None], Dict[str, Distribution], Dict[str, str], Callable[..., Distribution]]
             A tuple containing the distribution with the fixed parameters set
             and a function that returns the distribution with the fixed parameters
             set.
         """
-        return self.variables, self.duplicates, partial(self._dist, **self.constants)
+        return (
+            self.constants,
+            self.variables,
+            self.duplicates,
+            partial(self._dist, **self.constants),
+        )
 
     def get_dummy(self) -> Distribution:
         """Return a dummy distribution for debug and testing purposes.

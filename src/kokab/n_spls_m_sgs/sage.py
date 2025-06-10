@@ -8,7 +8,8 @@ from glob import glob
 from typing import List, Tuple
 
 import numpy as np
-from jax import random as jrd
+from jax import numpy as jnp, random as jrd
+from jaxtyping import Array
 from loguru import logger
 
 import gwkokab
@@ -31,6 +32,7 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import PoissonMean
+from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
@@ -142,6 +144,8 @@ def main() -> None:
         ("delta_g", N_g),
     ]
 
+    where_fns = []
+
     parameters = [PRIMARY_MASS_SOURCE]
 
     if args.raw:
@@ -180,22 +184,70 @@ def main() -> None:
                 [
                     ("chi1_mean_g", N_g),
                     ("chi1_mean_pl", N_pl),
-                    ("chi1_scale_g", N_g),
-                    ("chi1_scale_pl", N_pl),
                     ("chi1_variance_g", N_g),
                     ("chi1_variance_pl", N_pl),
                     ("chi2_mean_g", N_g),
                     ("chi2_mean_pl", N_pl),
-                    ("chi2_scale_g", N_g),
-                    ("chi2_scale_pl", N_pl),
                     ("chi2_variance_g", N_g),
                     ("chi2_variance_pl", N_pl),
                 ]
             )
+
+            def mean_variance_check(**kwargs) -> Array:
+                if N_pl > 0:
+                    means_pl = jnp.stack(
+                        [
+                            kwargs[f"chi{i}_mean_pl_{j}"]
+                            for j in range(N_pl)
+                            for i in (1, 2)
+                        ]
+                    )
+                    vars_pl = jnp.stack(
+                        [
+                            kwargs[f"chi{i}_variance_pl_{j}"]
+                            for j in range(N_pl)
+                            for i in (1, 2)
+                        ]
+                    )
+                if N_g > 0:
+                    means_g = jnp.stack(
+                        [
+                            kwargs[f"chi{i}_mean_g_{j}"]
+                            for j in range(N_g)
+                            for i in (1, 2)
+                        ]
+                    )
+                    vars_g = jnp.stack(
+                        [
+                            kwargs[f"chi{i}_variance_g_{j}"]
+                            for j in range(N_g)
+                            for i in (1, 2)
+                        ]
+                    )
+
+                if N_pl > 0 and N_g > 0:
+                    means = jnp.concatenate([means_pl, means_g])
+                    variances = jnp.concatenate([vars_pl, vars_g])
+                elif N_pl > 0:
+                    means = means_pl
+                    variances = vars_pl
+                else:
+                    means = means_g
+                    variances = vars_g
+
+                valid_var = variances <= means * (1 - means)
+                α, β = beta_dist_mean_variance_to_concentrations(means, variances)
+                valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
+                return jnp.all(jnp.logical_and(valid_var, valid_ab))
+
+            where_fns.append(mean_variance_check)
+
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
         all_params.extend(
             [
+                ("cos_tilt_zeta_g", N_g),
+                ("cos_tilt_zeta_pl", N_pl),
                 ("cos_tilt1_scale_g", N_g),
                 ("cos_tilt1_scale_pl", N_pl),
                 ("cos_tilt2_scale_g", N_g),
