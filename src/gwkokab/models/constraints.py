@@ -7,8 +7,9 @@
 """
 
 from collections.abc import Sequence
+from typing import Tuple
 
-from jax import numpy as jnp
+from jax import lax, numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions.constraints import (
     _SingletonConstraint,
@@ -109,6 +110,10 @@ class _MassRatioMassSandwichConstraint(Constraint):
         return jnp.asarray(mask, dtype=bool)
 
     def feasible_like(self, prototype: Array) -> Array:
+        assert prototype.ndim >= 1, "Prototype must have at least one dimension."
+        assert prototype.shape[-1] == 2, (
+            "Prototype must have last dimension of size 2 for mass and mass ratio."
+        )
         shape = prototype.shape[:-1]
         m1 = (self.mmin + self.mmax) * 0.5
         q = jnp.clip(self.mmin / m1, 0.0, 1.0)
@@ -250,8 +255,12 @@ class _PositiveDecreasingVector(_SingletonConstraint):
 class _AllConstraint(Constraint):
     r"""Constrain values to satisfy multiple constraints."""
 
+    event_dim = -1
+
     def __init__(
-        self, constraints: Sequence[Constraint], event_slices: Sequence[int | slice]
+        self,
+        constraints: Sequence[Constraint],
+        event_slices: Sequence[int | Tuple[int, int]],
     ):
         assert len(constraints) == len(event_slices), (
             f"Number of constraints ({len(constraints)}) must match the number of "
@@ -261,17 +270,40 @@ class _AllConstraint(Constraint):
         self.event_slices = event_slices
 
     def __call__(self, x):
-        mask = self.constraints[0].check(x[..., self.event_slices[0]])
-        for constraint, event_slice in zip(self.constraints[1:], self.event_slices[1:]):
-            mask &= constraint.check(x[..., event_slice])
+        mask = None
+        for constraint, event_slice in zip(self.constraints, self.event_slices):
+            if isinstance(event_slice, int):
+                x_slice = lax.dynamic_index_in_dim(
+                    x, event_slice, axis=self.event_dim, keepdims=False
+                )
+            else:
+                x_slice = lax.dynamic_slice_in_dim(
+                    x,
+                    event_slice[0],
+                    event_slice[1] - event_slice[0],
+                    axis=self.event_dim,
+                )
+            if mask is None:
+                mask = constraint.check(x_slice)
+            else:
+                mask = jnp.logical_and(mask, constraint.check(x_slice))
         return mask
 
     def feasible_like(self, prototype: Array) -> Array:
         feasible_values = []
         for constraint, event_slice in zip(self.constraints, self.event_slices):
-            feasible_values.append(
-                constraint.feasible_like(prototype[..., event_slice])
-            )
+            if isinstance(event_slice, int):
+                prototype_slice = lax.dynamic_index_in_dim(
+                    prototype, event_slice, axis=self.event_dim, keepdims=False
+                )
+            else:
+                prototype_slice = lax.dynamic_slice_in_dim(
+                    prototype,
+                    event_slice[0],
+                    event_slice[1] - event_slice[0],
+                    axis=self.event_dim,
+                )
+            feasible_values.append(constraint.feasible_like(prototype_slice))
         max_ndim = max([feasible_value.ndim for feasible_value in feasible_values])
         feasible_values = [
             jnp.expand_dims(
