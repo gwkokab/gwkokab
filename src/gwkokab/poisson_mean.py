@@ -12,7 +12,11 @@ from numpyro.distributions.distribution import Distribution, DistributionLike
 
 from .models.utils import ScaledMixture
 from .utils.tools import error_if
-from .vts import RealInjectionVolumeTimeSensitivity, VolumeTimeSensitivityInterface
+from .vts import (
+    RealInjectionVolumeTimeSensitivity,
+    SyntheticInjectionVolumeTimeSensitivity,
+    VolumeTimeSensitivityInterface,
+)
 
 
 class PoissonMean(eqx.Module):
@@ -109,7 +113,13 @@ class PoissonMean(eqx.Module):
         ValueError
             If the proposal distribution is not a distribution.
         """
-        if isinstance(logVT_estimator, RealInjectionVolumeTimeSensitivity):
+        if isinstance(
+            logVT_estimator,
+            (
+                RealInjectionVolumeTimeSensitivity,
+                SyntheticInjectionVolumeTimeSensitivity,
+            ),
+        ):
             self.is_injection_based = True
             self.key = key
             self.proposal_log_weights_and_samples = (

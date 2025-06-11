@@ -19,6 +19,9 @@ from ._popmodelvt import (
 from ._realinjvt import (
     RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
 )
+from ._syninjvt import (
+    SyntheticInjectionVolumeTimeSensitivity as SyntheticInjectionVolumeTimeSensitivity,
+)
 from ._train import train_regressor as train_regressor
 from ._utils import (
     load_model as load_model,
