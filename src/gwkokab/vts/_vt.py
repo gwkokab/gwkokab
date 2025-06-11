@@ -6,14 +6,14 @@ import sys
 from typing import List
 
 from ._abc import VolumeTimeSensitivityInterface
-from ._injvt import (
-    RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
-)
 from ._neuralvt import NeuralNetVolumeTimeSensitivity
 from ._pdet import pdet_O3
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity,
     PopModelsVolumeTimeSensitivity,
+)
+from ._realinjvt import (
+    RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
 )
 
 
