@@ -48,7 +48,7 @@ class PowerlawRedshift(Distribution):
         "dVcdz": constraints.real_vector,
     }
     reparametrized_params = ["z_max", "kappa", "zgrid", "dVcdz"]
-    pytree_data_fields = ("_support", "dVcdz", "kappa", "z_max", "zgrid", "norm")
+    pytree_data_fields = ("_support", "dVcdz", "kappa", "z_max", "zgrid")
 
     def __init__(
         self,
@@ -68,8 +68,8 @@ class PowerlawRedshift(Distribution):
 
         pdfs = dVcdz_cut * jnp.power(1.0 + self.zgrid, self.kappa - 1.0)
 
-        self.norm = trapezoid(pdfs, self.zgrid)
-        pdfs /= self.norm
+        norm = trapezoid(pdfs, self.zgrid)
+        pdfs /= norm
 
         self.cdfgrid: Array = quadax.cumulative_trapezoid(
             pdfs, x=self.zgrid, initial=0.0
@@ -103,8 +103,9 @@ class PowerlawRedshift(Distribution):
         if dVdc is None:
             dVdc_val = jnp.interp(value, self.zgrid, self.dVcdz)
         logpdf_unnorm = jnp.log(dVdc_val) + (self.kappa - 1.0) * jnp.log1p(value)
-
-        return logpdf_unnorm - jnp.log(self.norm)
+        pdfs = self.dVcdz * jnp.power(1.0 + self.zgrid, self.kappa - 1.0)
+        norm = trapezoid(pdfs, self.zgrid)
+        return logpdf_unnorm - jnp.log(norm)
 
     def sample(self, key, sample_shape=()):
         """Draw samples from the distribution using inverse transform sampling.
