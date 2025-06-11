@@ -389,13 +389,13 @@ def create_powerlaw_redshift(
         if lamb or z_max parameters are missing
     """
     powerlaw_redshift_collection = []
-    lamb_name = f"{parameter_name}_lamb_{component_type}"
+    kappa_name = f"{parameter_name}_kappa_{component_type}"
     z_max_name = f"{parameter_name}_z_max_{component_type}"
 
     for i in range(N):
-        lamb = fetch_first_matching_value(params, f"{lamb_name}_{i}", lamb_name)
-        if lamb is None:
-            raise ValueError(f"Missing parameter {lamb_name}_{i}")
+        kappa = fetch_first_matching_value(params, f"{kappa_name}_{i}", kappa_name)
+        if kappa is None:
+            raise ValueError(f"Missing parameter {kappa_name}_{i}")
 
         z_max = fetch_first_matching_value(params, f"{z_max_name}_{i}", z_max_name)
         if z_max is None:
@@ -406,7 +406,7 @@ def create_powerlaw_redshift(
 
         powerlaw_redshift_collection.append(
             PowerlawRedshift(
-                lamb=lamb,
+                kappa=kappa,
                 z_max=z_max,
                 zgrid=zgrid,
                 dVcdz=dVcdz,
