@@ -12,6 +12,7 @@ import optax
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array
 from loguru import logger
+from rich.console import Console
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -223,6 +224,7 @@ def train_regressor(
         TimeRemainingColumn(elapsed_when_finished=True),
         TextColumn("[progress.description]{task.description}"),
         refresh_per_second=5,
+        console=Console(force_terminal=True),
     ) as progress:
         for epoch in range(epochs):
             epoch_loss = jnp.zeros(())

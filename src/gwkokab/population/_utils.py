@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+from rich.console import Console
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -78,4 +79,5 @@ def get_progress_bar(
         "•",
         MofNCompleteColumn(separator=" realizations out of "),
         disable=not verbose,
+        console=Console(force_terminal=True),
     )
