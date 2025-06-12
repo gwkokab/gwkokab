@@ -6,6 +6,7 @@ import sys
 from typing import List
 
 from ._abc import VolumeTimeSensitivityInterface
+from ._neuralpdet import NeuralNetProbabilityOfDetection
 from ._neuralvt import NeuralNetVolumeTimeSensitivity
 from ._pdet import pdet_O3
 from ._popmodelvt import (
@@ -32,6 +33,8 @@ def __getattr__(name):
             return RealInjectionVolumeTimeSensitivity
         case "SyntheticInjectionVolumeTimeSensitivity":
             return SyntheticInjectionVolumeTimeSensitivity
+        case "NeuralNetProbabilityOfDetection":
+            return NeuralNetProbabilityOfDetection
         case "pdet_O3":
             return pdet_O3
         case _:
@@ -49,6 +52,7 @@ class _Available:
         "PopModelsVolumeTimeSensitivity",
         "SyntheticInjectionVolumeTimeSensitivity",
         "RealInjectionVolumeTimeSensitivity",
+        "NeuralNetProbabilityOfDetection",
         "pdet_O3",
     ]
 

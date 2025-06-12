@@ -307,6 +307,9 @@ class PoissonMean(eqx.Module):
                     num_samples
                 )
                 per_sample_log_estimated_rates = log_weights + component_log_prob
+            per_sample_log_estimated_rates = jnp.nan_to_num(
+                per_sample_log_estimated_rates, nan=-jnp.inf
+            )
             per_component_log_estimated_rate = jnn.logsumexp(
                 per_sample_log_estimated_rates,
                 where=~jnp.isneginf(per_sample_log_estimated_rates),

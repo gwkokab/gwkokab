@@ -103,8 +103,14 @@ class PopulationFactory:
 
         if self.logVT_fn is not None:
             _, key = jrd.split(key)
-
-            vt = jnn.softmax(self.logVT_fn(population))
+            logVT = self.logVT_fn(population)
+            logVT = jnp.nan_to_num(
+                logVT,
+                nan=-jnp.inf,
+                posinf=-jnp.inf,
+                neginf=-jnp.inf,
+            )
+            vt = jnn.softmax(logVT)
             _, key = jrd.split(key)
             index = jrd.choice(
                 key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
@@ -121,9 +127,9 @@ class PopulationFactory:
         exp_rate = self.ERate_fn(self.model)
         size = int(jrd.poisson(poisson_key, exp_rate))
         key = rate_key
-        if size == 0:
+        if size <= 0:
             raise ValueError(
-                "Population size is zero. This can be a result of following:\n"
+                f"Population size is {size}. This can be a result of following:\n"
                 "\t1. The rate is zero.\n"
                 "\t2. The volume is zero.\n"
                 "\t3. The models are not selected for rate calculation.\n"

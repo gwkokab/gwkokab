@@ -10,6 +10,9 @@ The primary ingredient in these analyses is the population-averaged sensitive vo
 """
 
 from ._abc import VolumeTimeSensitivityInterface as VolumeTimeSensitivityInterface
+from ._neuralpdet import (
+    NeuralNetProbabilityOfDetection as NeuralNetProbabilityOfDetection,
+)
 from ._neuralvt import NeuralNetVolumeTimeSensitivity as NeuralNetVolumeTimeSensitivity
 from ._pdet import pdet_O3 as pdet_O3
 from ._popmodelvt import (
