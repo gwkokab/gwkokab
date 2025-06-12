@@ -112,7 +112,7 @@ def main() -> None:
 
     if has_redshift:
         parameters.append(REDSHIFT)
-        model_parameters.extend(["lamb", "z_max"])
+        model_parameters.extend(["kappa", "z_max"])
 
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
