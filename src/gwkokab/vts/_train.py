@@ -11,7 +11,7 @@ import numpy as np
 import optax
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array
-from rich.console import Console
+from loguru import logger
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -20,7 +20,6 @@ from rich.progress import (
     TextColumn,
     TimeRemainingColumn,
 )
-from rich.table import Table
 
 from ._utils import make_model, mse_loss_fn, read_data, save_model
 
@@ -73,6 +72,7 @@ def train_regressor(
     epochs: int = 50,
     validation_split: float = 0.2,
     learning_rate: float = 1e-3,
+    train_in_log: bool = False,
 ) -> None:
     """Train the model to approximate the log of the VT function.
 
@@ -96,6 +96,8 @@ def train_regressor(
         fraction of the data to use for validation, by default 0.2
     learning_rate : float
         learning rate for the optimizer, by default 1e-3
+    train_in_log : bool
+        whether to train the model in log space, by default False
 
     Raises
     ------
@@ -166,41 +168,36 @@ def train_regressor(
         model, opt_state, loss = make_step(model, x, y, opt_state)
         return model, opt_state, loss
 
-    df = read_data(data_path)
+    df = read_data(data_path, keys=input_keys + output_keys)
 
     data_X = jax.device_put(df[input_keys].to_numpy(), may_alias=True)
     data_Y = jax.device_put(df[output_keys].to_numpy(), may_alias=True)
 
-    log_data_Y = jnp.log(data_Y)
-    log_data_Y = jnp.where(
-        jnp.isneginf(log_data_Y), jnp.finfo(jnp.result_type(float)).tiny, log_data_Y
-    )
+    if train_in_log:
+        data_Y = jnp.log(data_Y)
+        data_Y = jnp.where(
+            jnp.isneginf(data_Y), jnp.finfo(jnp.result_type(float)).tiny, data_Y
+        )
 
     train_X, test_X, train_Y, test_Y = _train_test_data_split(
         data_X,
-        log_data_Y,
+        data_Y,
         batch_size,
         test_size=validation_split,
     )
 
-    table = Table(title="Summary of the Neural Network Model", highlight=True)
-    table.add_column("Parameter", justify="left")
-    table.add_column("Value", justify="left")
-    table.add_row("Input Keys", ", ".join(input_keys))
-    table.add_row("Output Keys", ", ".join(output_keys))
-    table.add_row("Width Size", str(width_size))
-    table.add_row("Depth", str(depth))
-    table.add_row("Data Path", data_path)
-    table.add_row("Checkpoint Path", checkpoint_path)
-    table.add_row("Train Size", str(len(train_X)))
-    table.add_row("Test Size", str(len(test_X)))
-    table.add_row("Validation Split", str(validation_split))
-    table.add_row("Batch Size", str(batch_size))
-    table.add_row("Epochs", str(epochs))
-    table.add_row("Learning Rate", str(learning_rate))
-
-    console = Console()
-    console.print(table)
+    logger.info("Input Keys: " + ", ".join(input_keys))
+    logger.info("Output Keys: " + ", ".join(output_keys))
+    logger.info("Width Size: " + str(width_size))
+    logger.info("Depth: " + str(depth))
+    logger.info("Data Path: " + data_path)
+    logger.info("Checkpoint Path: " + checkpoint_path)
+    logger.info("Train Size: " + str(len(train_X)))
+    logger.info("Test Size: " + str(len(test_X)))
+    logger.info("Validation Split: " + str(validation_split))
+    logger.info("Batch Size: " + str(batch_size))
+    logger.info("Epochs: " + str(epochs))
+    logger.info("Learning Rate: " + str(learning_rate))
 
     model = make_model(
         key=jrd.PRNGKey(np.random.randint(0, 2**32 - 1)),
@@ -243,7 +240,7 @@ def train_regressor(
                 progress.update(
                     task_id,
                     advance=1,
-                    description=f"loss: {loss:.4f}",
+                    description=f"loss: {loss}",
                 )
 
             loss = epoch_loss / (len(train_X) // batch_size)
@@ -255,11 +252,13 @@ def train_regressor(
                 task_id,
                 completed=total,
                 refresh=True,
-                description=f"loss: {loss:.4f} - val loss: {val_loss:.4f}",
+                description=f"loss: {loss} - val loss: {val_loss}",
             )
 
     if checkpoint_path is not None:
-        save_model(filename=checkpoint_path, model=model, names=input_keys)  # type: ignore
+        save_model(
+            filename=checkpoint_path, model=model, names=input_keys, is_log=train_in_log
+        )  # type: ignore
         plt.plot(loss_vals, label="loss")
         plt.plot(val_loss_vals, label="val loss")
         plt.yscale("log")

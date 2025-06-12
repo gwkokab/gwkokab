@@ -78,7 +78,7 @@ def predict(model: PyTree, x: Array, batch_size: Optional[int] = 256) -> Array:
     return jax.lax.map(model, x, batch_size=batch_size)
 
 
-def read_data(data_path: str) -> pd.DataFrame:
+def read_data(data_path: str, keys: list[str]) -> pd.DataFrame:
     """Read the data from the given path.
 
     Parameters
@@ -92,7 +92,6 @@ def read_data(data_path: str) -> pd.DataFrame:
         data in a DataFrame
     """
     with h5py.File(data_path, "r") as vt_file:
-        keys = list(vt_file.keys())
         df = pd.DataFrame(data={key: np.array(vt_file[key]).flatten() for key in keys})
     return df
 
@@ -143,6 +142,7 @@ def save_model(
     filename: str,
     model: eqx._ad._CheckpointWrapper,
     names: Optional[Sequence[str]] = None,
+    is_log: bool = False,
 ) -> None:
     """Save the model to the given file.
 
@@ -170,6 +170,7 @@ def save_model(
         f.create_dataset("out_size", data=model.out_size)  # type: ignore
         f.create_dataset("width_size", data=model.width_size)  # type: ignore
         f.create_dataset("depth", data=model.depth)  # type: ignore
+        f.attrs["is_log"] = is_log
         num_layers = len(model.layers)  # type: ignore
         for i in range(num_layers):
             layer_i = f.create_group(f"layer_{i}")
