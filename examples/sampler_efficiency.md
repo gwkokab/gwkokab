@@ -6,7 +6,7 @@ For the inference using FlowMC sampler, you will have two main steps training us
 
 So, for the effective training using local sampler, the following condition must be fulfilled to avoid the model collapse.
 
-`((n_chains * n_local_steps) / train_thinning) << n_max_examples`
+`(((n_chains * n_local_steps) / train_thinning))*N_training_loop << n_max_examples`
 
 or
 
