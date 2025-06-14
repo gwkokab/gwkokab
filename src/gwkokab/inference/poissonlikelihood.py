@@ -69,6 +69,18 @@ def poisson_likelihood(
     sum_log_size = sum([jnp.log(d.shape[0]) for d in data])
     log_constants = -sum_log_size  # -Σ log(M_i)
 
+    N_devices = jax.local_device_count()
+    logger.debug("Using {num_devices} devices for sharding", num_devices=N_devices)
+
+    mesh = jax.make_mesh((N_devices,), axis_names=("devices",))
+    logger.debug("Mesh: {mesh}", mesh=mesh)
+
+    sharding = jax.sharding.NamedSharding(
+        mesh,
+        jax.sharding.PartitionSpec(mesh.axis_names),
+    )
+    logger.debug("Sharding: {sharding}", sharding=sharding)
+
     # pad the data and log_ref_priors to the maximum size and create a mask for the data
     # to indicate which elements are valid and which are padded.
     data_padded = [
@@ -93,14 +105,20 @@ def poisson_likelihood(
     ]
 
     batched_data: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(data_padded, axis=0), may_alias=True)
+        jax.device_put(jnp.stack(data_padded, axis=0), sharding, may_alias=True)
     )
     batched_log_ref_priors: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(log_ref_priors_padded, axis=0), may_alias=True)
+        jax.device_put(
+            jnp.stack(log_ref_priors_padded, axis=0), sharding, may_alias=True
+        )
     )
     batched_mask: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(mask, axis=0), may_alias=True)
+        jax.device_put(jnp.stack(mask, axis=0), sharding, may_alias=True)
     )
+
+    # jax.debug.visualize_array_sharding(batched_data)
+    jax.debug.visualize_array_sharding(batched_log_ref_priors)
+    jax.debug.visualize_array_sharding(batched_mask)
 
     logger.debug(
         "batched_data.shape: {batched_data_shape}",
