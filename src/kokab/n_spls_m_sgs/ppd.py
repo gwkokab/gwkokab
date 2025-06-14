@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import gc
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import pandas as pd
@@ -25,7 +26,7 @@ from gwkokab.parameters import (
 )
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
-from kokab.utils.common import ppd_ranges, read_json
+from kokab.utils.common import ppd_ranges, read_json, reduce_samples
 
 
 def make_parser() -> ArgumentParser:
@@ -68,35 +69,73 @@ def compute_per_component_ppd(
     N_pl,
     N_g,
 ):
-    for n_pl in range(1, N_pl + 1):
-        constants_copy = constants.copy()
-        constants_copy["N_pl"] = n_pl
+    for n_pl in range(0, N_pl):
+        constants_copy = {}
+        constants_copy["N_pl"] = 1
         constants_copy["N_g"] = 0
+        nf_samples_mapping_copy = {}
+        if f"log_rate_{n_pl}" in nf_samples_mapping:
+            nf_samples_mapping_copy["log_rate_0"] = nf_samples_mapping[
+                f"log_rate_{n_pl}"
+            ]
+
+        for key, value in nf_samples_mapping.items():
+            if key.endswith(f"_pl_{n_pl}"):
+                key_new = key.replace(f"_pl_{n_pl}", "_pl_0")
+                nf_samples_mapping_copy[key_new] = value
+
+        for key, value in constants.items():
+            if key.endswith(f"_pl_{n_pl}"):
+                key_new = key.replace(f"_pl_{n_pl}", "_pl_0")
+                constants_copy[key_new] = value
+
+        nf_samples_copy = reduce_samples(nf_samples, nf_samples_mapping_copy)
+
         ppd.compute_and_save_ppd(
             NSmoothedPowerlawMSmoothedGaussian,
-            nf_samples,
+            nf_samples_copy,
             ranges,
             f"{component_prefix}powerlaw_{n_pl}_" + args.filename,
             parameters,
             constants_copy,
-            nf_samples_mapping,
+            nf_samples_mapping_copy,
             args.batch_size,
         )
+        gc.collect()
 
-    for n_g in range(1, N_g + 1):
-        constants_copy = constants.copy()
+    for n_g in range(0, N_g):
+        constants_copy = {}
         constants_copy["N_pl"] = 0
-        constants_copy["N_g"] = n_g
+        constants_copy["N_g"] = 1
+        nf_samples_mapping_copy = {}
+        if f"log_rate_{N_pl + n_g}" in nf_samples_mapping:
+            nf_samples_mapping_copy["log_rate_0"] = nf_samples_mapping[
+                f"log_rate_{N_pl + n_g}"
+            ]
+
+        for key, value in nf_samples_mapping.items():
+            if key.endswith(f"_g_{n_g}"):
+                key_new = key.replace(f"_g_{n_g}", "_g_0")
+                nf_samples_mapping_copy[key_new] = value
+
+        for key, value in constants.items():
+            if key.endswith(f"_g_{n_g}"):
+                key_new = key.replace(f"_g_{n_g}", "_g_0")
+                constants_copy[key_new] = value
+
+        nf_samples_copy = reduce_samples(nf_samples, nf_samples_mapping_copy)
+
         ppd.compute_and_save_ppd(
             NSmoothedPowerlawMSmoothedGaussian,
-            nf_samples,
+            nf_samples_copy,
             ranges,
             f"{component_prefix}gaussian_{n_g}_" + args.filename,
             parameters,
             constants_copy,
-            nf_samples_mapping,
+            nf_samples_mapping_copy,
             args.batch_size,
         )
+        gc.collect()
 
 
 def main() -> None:

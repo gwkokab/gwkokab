@@ -10,6 +10,8 @@ from typing import Dict, List, Optional, Tuple, Union
 import jax
 import numpy as np
 import pandas as pd
+from jax import numpy as jnp
+from jaxtyping import Array
 from numpyro import distributions as dist
 from numpyro.distributions.distribution import DistributionLike
 
@@ -327,3 +329,29 @@ def ppd_ranges(
             int(_range[2]),
         )
     return _ranges
+
+
+def reduce_samples(samples: Array, samples_mapping: dict) -> Array:
+    """Reduce the number of samples in the samples array based on the samples_mapping.
+
+    Parameters
+    ----------
+    samples : Array
+        Array of samples to be reduced.
+    samples_mapping : dict
+        Dictionary mapping the original sample keys to their new indices.
+
+    Returns
+    -------
+    Array
+        Reduced samples array.
+    """
+    nf_samples_copy_collection = []
+    for i, (key, value) in enumerate(samples_mapping.items()):
+        samples_mapping[key] = i
+        nf_samples_copy_collection.append(
+            jax.lax.dynamic_index_in_dim(samples, value, axis=-1, keepdims=False)
+        )
+
+    nf_samples_copy = jnp.stack(nf_samples_copy_collection, axis=-1)
+    return nf_samples_copy
