@@ -83,6 +83,7 @@ def poisson_likelihood(
 
     # pad the data and log_ref_priors to the maximum size and create a mask for the data
     # to indicate which elements are valid and which are padded.
+    logger.info("Padding data and log_ref_priors to the maximum size")
     data_padded = [
         jnp.pad(d, ((0, max_size - d.shape[0]),) + ((0, 0),) * (d.ndim - 1))
         for d in data
@@ -103,20 +104,39 @@ def poisson_likelihood(
         )
         for l in log_ref_priors
     ]
+    extra_events = len(data) % N_devices
 
-    batched_data: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(data_padded, axis=0), sharding, may_alias=True)
-    )
-    batched_log_ref_priors: Array = jax.block_until_ready(
-        jax.device_put(
-            jnp.stack(log_ref_priors_padded, axis=0), sharding, may_alias=True
+    if extra_events > 0:
+        extra_events = N_devices - extra_events
+        logger.warning(
+            "The number of events ({num_events}) is not divisible by the number of devices ({num_devices}). "
+            "The last {extra_events} events will be padded with zeros.",
+            num_events=len(data),
+            num_devices=N_devices,
+            extra_events=extra_events,
         )
+        # Pad the last few events to make the total number of events divisible by N_devices
+        for i in range(extra_events):
+            data_padded.append(jnp.zeros_like(data_padded[0]))
+            log_ref_priors_padded.append(jnp.zeros_like(log_ref_priors_padded[0]))
+            mask.append(jnp.zeros_like(mask[0], dtype=bool))
+
+    logger.info("Batching data and log_ref_priors")
+    batched_data: Array = jnp.stack(data_padded, axis=0)
+    batched_log_ref_priors: Array = jnp.stack(log_ref_priors_padded, axis=0)
+    batched_mask: Array = jnp.stack(mask, axis=0)
+
+    logger.info("Sharding data and log_ref_priors to the devices")
+    sharded_data: Array = jax.block_until_ready(
+        jax.device_put(batched_data, sharding, may_alias=True)
     )
-    batched_mask: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(mask, axis=0), sharding, may_alias=True)
+    sharded_log_ref_priors: Array = jax.block_until_ready(
+        jax.device_put(batched_log_ref_priors, sharding, may_alias=True)
+    )
+    sharded_mask: Array = jax.block_until_ready(
+        jax.device_put(batched_mask, sharding, may_alias=True)
     )
 
-    # jax.debug.visualize_array_sharding(batched_data)
     jax.debug.visualize_array_sharding(batched_log_ref_priors)
     jax.debug.visualize_array_sharding(batched_mask)
 
@@ -139,17 +159,17 @@ def poisson_likelihood(
         variables_index[key] = variables_index[value]
 
     group_variables: dict[int, list[str]] = {}
-    for key, value in variables_index.items():
-        group_variables[value] = group_variables.get(value, []) + [key]
+    for key, value in variables_index.items():  # type: ignore
+        group_variables[value] = group_variables.get(value, []) + [key]  # type: ignore
 
     logger.debug(
         "Number of recovering variables: {num_vars}", num_vars=len(group_variables)
     )
 
-    for key, value in constants.items():
+    for key, value in constants.items():  # type: ignore
         logger.debug("Constant variable: {name} = {variable}", name=key, variable=value)
 
-    for value in group_variables.values():
+    for value in group_variables.values():  # type: ignore
         logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
     priors = JointDistribution(*variables.values(), validate_args=True)
@@ -162,33 +182,54 @@ def poisson_likelihood(
 
         model_instance: Distribution = dist_fn(**mapped_params)
 
-        def single_event_fn(
-            carry: Array, input: Tuple[Array, Array, Array]
-        ) -> Tuple[Array, None]:
-            data, log_ref_prior, mask = input
-
-            safe_data = jnp.where(
-                mask[:, jnp.newaxis], data, model_instance.support.feasible_like(data)
+        def log_prob_fn(data: Array, log_ref_prior: Array, mask: Array) -> Array:
+            jax.debug.print("Data shape: {data_shape}", data_shape=data.shape)
+            jax.debug.print(
+                "Log ref prior shape: {log_ref_prior_shape}",
+                log_ref_prior_shape=log_ref_prior.shape,
             )
-            safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
+            jax.debug.print("Mask shape: {mask_shape}", mask_shape=mask.shape)
 
-            # log p(ω|data_n) - log π_n
-            log_prob: Array = model_instance.log_prob(safe_data) - safe_log_ref_prior
-            log_prob = jnp.where(mask, log_prob, -jnp.inf)
+            def single_event_fn(
+                carry: Array, input: Tuple[Array, Array, Array]
+            ) -> Tuple[Array, None]:
+                data, log_ref_prior, mask = input
 
-            # log Σ exp (log p(ω|data_n) - log π_n)
-            log_prob_sum = jax.nn.logsumexp(
-                log_prob,
-                axis=-1,
-                where=(~jnp.isneginf(log_prob)) & mask,
+                safe_data = jnp.where(
+                    mask[:, jnp.newaxis],
+                    data,
+                    model_instance.support.feasible_like(data),
+                )
+                safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
+
+                # log p(ω|data_n) - log π_n
+                log_prob: Array = (
+                    model_instance.log_prob(safe_data) - safe_log_ref_prior
+                )
+                log_prob = jnp.where(mask, log_prob, -jnp.inf)
+
+                # log Σ exp (log p(ω|data_n) - log π_n)
+                log_prob_sum = jax.nn.logsumexp(
+                    log_prob,
+                    axis=-1,
+                    where=(~jnp.isneginf(log_prob)) & mask,
+                )
+                return carry + log_prob_sum, None
+
+            # Σ log Σ exp (log p(ω|data_n) - log π_n)
+            total_log_likelihood, _ = jax.lax.scan(
+                single_event_fn,  # type: ignore
+                jnp.zeros(()),
+                (data, log_ref_prior, mask),
             )
-            return carry + log_prob_sum, None
+            return total_log_likelihood
 
-        # Σ log Σ exp (log p(ω|data_n) - log π_n)
-        total_log_likelihood, _ = jax.lax.scan(
-            single_event_fn,  # type: ignore
-            jnp.zeros(()),
-            (batched_data, batched_log_ref_priors, batched_mask),
+        total_log_likelihood = jax.pmap(
+            log_prob_fn, mesh.axis_names, in_axes=(0, 0, 0)
+        )(sharded_data, sharded_log_ref_priors, sharded_mask)
+        total_log_likelihood = jax.block_until_ready(total_log_likelihood)
+        total_log_likelihood = jax.lax.psum(
+            total_log_likelihood, axis_name=mesh.axis_names
         )
 
         # μ = E_{Ω|Λ}[VT(ω)]
