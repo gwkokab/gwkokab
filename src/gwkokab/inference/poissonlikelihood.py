@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple
 import jax
 import numpy as np
 from jax import Array, numpy as jnp
+from jax.experimental.shard_map import shard_map
 from loguru import logger
 from numpyro.distributions import Distribution
 
@@ -72,13 +73,14 @@ def poisson_likelihood(
     N_devices = jax.local_device_count()
     logger.debug("Using {num_devices} devices for sharding", num_devices=N_devices)
 
-    mesh = jax.make_mesh((N_devices,), axis_names=("devices",))
-    logger.debug("Mesh: {mesh}", mesh=mesh)
-
-    sharding = jax.sharding.NamedSharding(
-        mesh,
-        jax.sharding.PartitionSpec(mesh.axis_names),
+    mesh = jax.make_mesh(
+        (N_devices,),
+        axis_names=("devices",),
+        axis_types=(jax.sharding.AxisType.Manual,),
     )
+    logger.debug("Mesh: {mesh}", mesh=mesh)
+    device_partitioning = jax.sharding.PartitionSpec(*mesh.axis_names)
+    sharding = jax.sharding.NamedSharding(mesh, device_partitioning)
     logger.debug("Sharding: {sharding}", sharding=sharding)
 
     # pad the data and log_ref_priors to the maximum size and create a mask for the data
@@ -116,7 +118,7 @@ def poisson_likelihood(
             extra_events=extra_events,
         )
         # Pad the last few events to make the total number of events divisible by N_devices
-        for i in range(extra_events):
+        for _ in range(extra_events):
             data_padded.append(jnp.zeros_like(data_padded[0]))
             log_ref_priors_padded.append(jnp.zeros_like(log_ref_priors_padded[0]))
             mask.append(jnp.zeros_like(mask[0], dtype=bool))
@@ -125,6 +127,22 @@ def poisson_likelihood(
     batched_data: Array = jnp.stack(data_padded, axis=0)
     batched_log_ref_priors: Array = jnp.stack(log_ref_priors_padded, axis=0)
     batched_mask: Array = jnp.stack(mask, axis=0)
+
+    # batched_data = batched_data.reshape(
+    #     N_devices,
+    #     int(batched_data.shape[0] / N_devices),
+    #     *batched_data.shape[1:],
+    # )
+    # batched_log_ref_priors = batched_log_ref_priors.reshape(
+    #     N_devices,
+    #     int(batched_log_ref_priors.shape[0] / N_devices),
+    #     *batched_log_ref_priors.shape[1:],
+    # )
+    # batched_mask = batched_mask.reshape(
+    #     N_devices,
+    #     int(batched_mask.shape[0] / N_devices),
+    #     *batched_mask.shape[1:],
+    # )
 
     logger.info("Sharding data and log_ref_priors to the devices")
     sharded_data: Array = jax.block_until_ready(
@@ -136,9 +154,6 @@ def poisson_likelihood(
     sharded_mask: Array = jax.block_until_ready(
         jax.device_put(batched_mask, sharding, may_alias=True)
     )
-
-    jax.debug.visualize_array_sharding(batched_log_ref_priors)
-    jax.debug.visualize_array_sharding(batched_mask)
 
     logger.debug(
         "batched_data.shape: {batched_data_shape}",
@@ -191,8 +206,8 @@ def poisson_likelihood(
             jax.debug.print("Mask shape: {mask_shape}", mask_shape=mask.shape)
 
             def single_event_fn(
-                carry: Array, input: Tuple[Array, Array, Array]
-            ) -> Tuple[Array, None]:
+                _: Array, input: Tuple[Array, Array, Array]
+            ) -> Tuple[None, Array]:
                 data, log_ref_prior, mask = input
 
                 safe_data = jnp.where(
@@ -214,23 +229,37 @@ def poisson_likelihood(
                     axis=-1,
                     where=(~jnp.isneginf(log_prob)) & mask,
                 )
-                return carry + log_prob_sum, None
+                return None, log_prob_sum
 
             # Σ log Σ exp (log p(ω|data_n) - log π_n)
-            total_log_likelihood, _ = jax.lax.scan(
+            _, total_log_likelihood_collection = jax.lax.scan(
                 single_event_fn,  # type: ignore
-                jnp.zeros(()),
+                None,
                 (data, log_ref_prior, mask),
             )
-            return total_log_likelihood
 
-        total_log_likelihood = jax.pmap(
-            log_prob_fn, mesh.axis_names, in_axes=(0, 0, 0)
-        )(sharded_data, sharded_log_ref_priors, sharded_mask)
-        total_log_likelihood = jax.block_until_ready(total_log_likelihood)
-        total_log_likelihood = jax.lax.psum(
-            total_log_likelihood, axis_name=mesh.axis_names
+            jax.debug.print(
+                "total_log_likelihood_collection: {total_log_likelihood_collection_shape}",
+                total_log_likelihood_collection_shape=total_log_likelihood_collection.shape,
+            )
+
+            return total_log_likelihood_collection
+
+        # TODO(Qazalbash): check https://github.com/jax-ml/jax/discussions/29479 and solve
+        partial_log_likelihood: jax.Array = jax.block_until_ready(
+            shard_map(
+                log_prob_fn,
+                mesh=mesh,
+                in_specs=(
+                    device_partitioning,
+                    device_partitioning,
+                    device_partitioning,
+                ),
+                out_specs=device_partitioning,
+            )(sharded_data, sharded_log_ref_priors, sharded_mask)
         )
+
+        total_log_likelihood = jnp.sum(partial_log_likelihood)
 
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = ERate_fn(model_instance)
