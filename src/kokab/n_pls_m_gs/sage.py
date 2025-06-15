@@ -277,6 +277,35 @@ def main() -> None:
             ]
         )
 
+        def tilt_scale_should_be_positive(**kwargs) -> Array:
+            if N_pl > 0:
+                scale_pl = jnp.stack(
+                    [
+                        kwargs[f"cos_tilt{i}_scale_pl_{j}"]
+                        for j in range(N_pl)
+                        for i in (1, 2)
+                    ]
+                )
+            if N_g > 0:
+                scale_g = jnp.stack(
+                    [
+                        kwargs[f"cos_tilt{i}_scale_g_{j}"]
+                        for j in range(N_g)
+                        for i in (1, 2)
+                    ]
+                )
+
+            if N_pl > 0 and N_g > 0:
+                scales = jnp.concatenate([scale_pl, scale_g])
+            elif N_pl > 0:
+                scales = scale_pl
+            else:
+                scales = scale_g
+
+            return jnp.all(scales > 0.0)
+
+        where_fns.append(tilt_scale_should_be_positive)
+
     if has_phi_12:
         parameters.append(PHI_12)
 
