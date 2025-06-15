@@ -73,11 +73,7 @@ def poisson_likelihood(
     N_devices = jax.local_device_count()
     logger.debug("Using {num_devices} devices for sharding", num_devices=N_devices)
 
-    mesh = jax.make_mesh(
-        (N_devices,),
-        axis_names=("devices",),
-        axis_types=(jax.sharding.AxisType.Manual,),
-    )
+    mesh = jax.make_mesh((N_devices,), axis_names=("devices",))
     logger.debug("Mesh: {mesh}", mesh=mesh)
     device_partitioning = jax.sharding.PartitionSpec(*mesh.axis_names)
     sharding = jax.sharding.NamedSharding(mesh, device_partitioning)
