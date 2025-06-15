@@ -194,13 +194,6 @@ def poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         def log_prob_fn(data: Array, log_ref_prior: Array, mask: Array) -> Array:
-            jax.debug.print("Data shape: {data_shape}", data_shape=data.shape)
-            jax.debug.print(
-                "Log ref prior shape: {log_ref_prior_shape}",
-                log_ref_prior_shape=log_ref_prior.shape,
-            )
-            jax.debug.print("Mask shape: {mask_shape}", mask_shape=mask.shape)
-
             def single_event_fn(
                 _: Array, input: Tuple[Array, Array, Array]
             ) -> Tuple[None, Array]:
@@ -232,11 +225,6 @@ def poisson_likelihood(
                 single_event_fn,  # type: ignore
                 None,
                 (data, log_ref_prior, mask),
-            )
-
-            jax.debug.print(
-                "total_log_likelihood_collection: {total_log_likelihood_collection_shape}",
-                total_log_likelihood_collection_shape=total_log_likelihood_collection.shape,
             )
 
             return total_log_likelihood_collection
