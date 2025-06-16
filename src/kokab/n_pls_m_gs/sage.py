@@ -258,6 +258,7 @@ def main() -> None:
                     variances = vars_g
 
                 valid_var = variances <= means * (1 - means)
+                valid_var = jnp.logical_and(valid_var, variances > 0.0)
                 α, β = beta_dist_mean_variance_to_concentrations(means, variances)
                 valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
                 return jnp.all(jnp.logical_and(valid_var, valid_ab))
