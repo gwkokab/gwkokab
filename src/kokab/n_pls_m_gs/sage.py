@@ -33,7 +33,6 @@ from gwkokab.parameters import (
     SIN_DECLINATION,
 )
 from gwkokab.poisson_mean import PoissonMean
-from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
@@ -257,11 +256,9 @@ def main() -> None:
                     means = means_g
                     variances = vars_g
 
-                valid_var = variances <= means * (1 - means)
+                valid_var = variances < means * (1.0 - means)
                 valid_var = jnp.logical_and(valid_var, variances > 0.0)
-                α, β = beta_dist_mean_variance_to_concentrations(means, variances)
-                valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
-                return jnp.all(jnp.logical_and(valid_var, valid_ab))
+                return jnp.all(valid_var)
 
             where_fns.append(mean_variance_check)
 
@@ -305,7 +302,7 @@ def main() -> None:
 
             return jnp.all(scales > 0.0)
 
-        where_fns.append(tilt_scale_should_be_positive)
+        # where_fns.append(tilt_scale_should_be_positive)
 
     if has_phi_12:
         parameters.append(PHI_12)
