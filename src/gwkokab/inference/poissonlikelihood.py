@@ -116,13 +116,23 @@ def poisson_likelihood(
     )
 
     constants, variables, duplicates, dist_fn = dist_builder.get_dist()  # type: ignore
-    variables_index = {key: i for i, key in enumerate(variables.keys())}
+    variables_index: dict[str, int] = {key: i for i, key in enumerate(variables.keys())}
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
 
+    group_variables: dict[int, list[str]] = {}
+    for key, value in variables_index.items():
+        group_variables[value] = group_variables.get(value, []) + [key]
+
     logger.debug(
-        "Recovering variables: {variables}", variables=list(variables_index.keys())
+        "Number of recovering variables: {num_vars}", num_vars=len(group_variables)
     )
+
+    for key, value in constants.items():
+        logger.debug("Constant variable: {name} = {variable}", name=key, variable=value)
+
+    for value in group_variables.values():
+        logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
     priors = JointDistribution(*variables.values(), validate_args=True)
 

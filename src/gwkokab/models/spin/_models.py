@@ -131,7 +131,7 @@ def IndependentSpinOrientationGaussianIsotropic(
             probs=mixing_probs, validate_args=validate_args
         ),
         component_distributions=[isotropic_component, gaussian_component],
-        support=constraints.interval(-1.0, 1.0),
+        support=constraints.independent(constraints.interval(-1.0, 1.0), 1),
         validate_args=validate_args,
     )
 

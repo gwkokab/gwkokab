@@ -21,6 +21,7 @@ from flowMC.proposal.MALA import MALA  # noqa F401
 from flowMC.Sampler import Sampler  # noqa F401
 from jax import nn as jnn, random as jrd
 from jaxtyping import Array
+from loguru import logger
 
 
 def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray, ...]:
@@ -158,23 +159,29 @@ def _save_data_from_sampler(
         jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
     )
 
-    samples = np.asarray(
+    unweighted_samples = np.asarray(
         sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
     )
-    np.savetxt(rf"{out_dir}/nf_samples_unweighted.dat", samples, header=header)
+    np.savetxt(
+        rf"{out_dir}/nf_samples_unweighted.dat", unweighted_samples, header=header
+    )
 
     gc.collect()
 
-    samples = sampler.sample_flow(n_samples=n_samples + 50_000, rng_key=key_weighted)
-    weights = np.asarray(
-        jnn.softmax(
-            jax.lax.map(lambda s: logpdf(s, None), samples, batch_size=batch_size)
-            - sampler.nf_model.log_prob(samples)
-        )
+    logpdf_val = jax.lax.map(
+        lambda s: logpdf(s, None), unweighted_samples, batch_size=batch_size
     )
-    samples = np.asarray(samples)
-    samples = samples[np.random.choice(n_samples + 50_000, size=n_samples, p=weights)]
-    np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", samples, header=header)
+    nf_model_log_prob_val = sampler.nf_model.log_prob(unweighted_samples)
+
+    weights = np.asarray(jnn.softmax(logpdf_val - nf_model_log_prob_val))
+    ess = int(1.0 / np.sum(np.square(weights)))
+    logger.debug("Effective sample size is {} out of {}".format(ess, n_samples))
+    if ess == 0:
+        raise ValueError("Effective sample size is zero, cannot proceed with sampling.")
+    weighted_samples = unweighted_samples[
+        np.random.choice(n_samples, size=ess, p=weights)
+    ]
+    np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", weighted_samples, header=header)
 
     gc.collect()
 

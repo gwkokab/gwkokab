@@ -304,7 +304,7 @@ class _AllConstraint(Constraint):
                     axis=self.event_dim,
                 )
             feasible_values.append(constraint.feasible_like(prototype_slice))
-        max_ndim = max([feasible_value.ndim for feasible_value in feasible_values])
+        max_ndim = prototype.ndim
         feasible_values = [
             jnp.expand_dims(
                 feasible_value, axis=tuple(range(feasible_value.ndim, max_ndim))
