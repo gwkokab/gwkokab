@@ -169,6 +169,5 @@ def BetaFromMeanVar(
     BetaProportion
         Beta distribution with the specified mean and variance.
     """
-    return BetaProportion(
-        mean, (mean * (1 - mean)) / variance, validate_args=validate_args
-    )
+    concentration = ((mean * (1.0 - mean)) / variance) - 1.0
+    return BetaProportion(mean, concentration, validate_args=validate_args)
