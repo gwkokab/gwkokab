@@ -160,10 +160,9 @@ def truncated_normal_error(
     if cut_low is None and cut_high is None:
         return err_x
 
-    mask = jnp.zeros_like(err_x, dtype=bool)
-
     # Resample until all values are within the allowed range
     while True:
+        mask = jnp.zeros_like(err_x, dtype=bool)
         if cut_low is not None:
             mask = mask | (err_x < cut_low)
         if cut_high is not None:
