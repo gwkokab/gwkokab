@@ -176,7 +176,7 @@ def poisson_likelihood(
         mapped_params_kappa_zero = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             if "kappa" not in name
-            else 0.0
+            else jax.lax.stop_gradient(0.0)
             for name, i in variables_index.items()
         }
 
