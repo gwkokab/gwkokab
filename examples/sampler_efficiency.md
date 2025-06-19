@@ -27,12 +27,13 @@ For the global sampler the following condition is required.
 | `n_local_steps` | Number of steps local sampler take to generate points to train NFs. |
 | `number of samples in first training loop` | `(n_chains * n_local_steps) / train_thinning` = points generated in each loop for training and keep adding in next loop until reaches the `n_max_samples` |
 | `n_max_samples`    | maximum number of samples allowed to use for training, when this number reaches, sampler starts losing previous information, at least use the previous data for half of the given loops for training |
-| Flow loss behavior     | Should converge (decreasing + stable)          |
-| MCMC acceptance rate   | Between 50%--80%                               |
-| Mode jumping           | Flow-based proposals must connect all modes    |
+| Flow loss behavior     | Should converge (decreasing + stable), No sudden peaks       |
+| Global acceptance rate   | Between 30%--60% (Ideally 40% - 60%)                       |
+| Local acceptance rate    |  should be ≥ 60%   |
 | Chain independence     | Fast ACF decay, visible across multiple chains |
-| Effective Sample Size  | High ESS, low autocorrelation                  |
+| Effective Sample Size  | ≥ 0.2,  High ESS, low autocorrelation                  |
 | Gelman-Rubin statistic | R̂ < 1.1 across chains for training and production |
+| Better Mixed chains | Use HMC (Bit slower) instead of MALA (Fast) |
 
 ## I. Normalizing Flow (NF) Model Convergence
 
@@ -42,7 +43,7 @@ For the global sampler the following condition is required.
 | ------------- | --------------------------------------------- |
 | `hidden_size` | ≥ \[64, 64] for expressive flow               |
 | `n_layers`    | ≥ 5 for multimodal or complex targets         |
-| `num_bins`    | ≥ 8 (smooth), ≥ 10 (sharp features or ridges) |
+| `num_bins`    | ≥ 7 (smooth), ≥ 10 (sharp features or ridges) |
 
 * **Rule**: Flow loss (e.g., NLL) should decrease consistently and not saturate early. We can see this in plots.
 
@@ -52,8 +53,8 @@ For the global sampler the following condition is required.
 | ---------------- | ------------------------------------------ |
 | `learning_rate`  | [0.0003 to 0.001] for stable convergence |
 | `batch_size`     | ≥ 256 for stable gradients                 |
-| `n_epochs`       | ≥ 7 Sufficient to avoid under fitting      |
-| `train_thinning` | Frequent training updates (≤ 2)            |
+| `n_epochs`       | ≥ 5 Sufficient to avoid under fitting      |
+| `train_thinning` | ≥ 5            |
 
 * Monitor flow loss variance to diagnose convergence.
 
@@ -65,11 +66,11 @@ For the global sampler the following condition is required.
 
 | Parameter        | Condition                                 |
 | ---------------- | ----------------------------------------- |
-| `step_size`      | Should give 50%-80% acceptance (MALA/HMC) |
-| `local_autotune` | Must be `true` to enable adaptive tuning  |
-| `n_local_steps`  | ≥ 50 for useful exploration               |
+| `local_acceptance_rate` | Should give >60% acceptance (MALA/HMC) |
+| `local_autotune` | should be `true` to enable adaptive tuning  |
+| `n_local_steps`  | ≥ 40 for useful exploration               |
 
-* **Rule**: Adjust `step_size` if acceptance is too low/high.
+* **Rule**: Adjust `step_size` or `n_local_steps` if acceptance is too low/high.
 
 ---
 
@@ -79,7 +80,7 @@ For the global sampler the following condition is required.
 
 | Parameter        | Condition                                     |
 | ---------------- | --------------------------------------------- |
-| `n_global_steps` | ≥ 50 for effective cross-mode proposals       |
+| `global_acceptance_rate` | Between 30%--60% (Ideally 40% - 60%)  for effective cross-mode proposals       |
 | `use_global`     | Must be `true` for complex/multimodal targets |
 | `n_flow_sample`  | ≥ `n_global_steps × n_chains`                 |
 
@@ -94,7 +95,7 @@ For the global sampler the following condition is required.
 | Parameter           | Condition                              |
 | ------------------- | -------------------------------------- |
 | `output_thinning`   | Use if chains are auto-correlated      |
-| `n_loop_production` | ≥ 10 for meaningful production samples |
+| `n_loop_production` | ≥ 8 for meaningful production samples |
 
 * Use trace plots and ACF to verify mixing quality.
 
@@ -107,6 +108,14 @@ For the global sampler the following condition is required.
 | Parameter         | Condition                                            |
 | ----------------- | ---------------------------------------------------- |
 | `precompile`      | Use `true` to avoid JIT overhead                     |
-| `batch_size`      | ≤ 5000 or GPU-capacity dependent |
+| `batch_size`      | GPU-capacity dependent |
 
 * **Warning**: Check for memory leaks with `torch.cuda.memory_allocated()`.
+
+The following are the some of the plots to see the convergence of the sampler based on minimal run.
+
+![local_accs](https://github.com/user-attachments/assets/12a606c2-d472-4238-944c-1c8ce7ee8d96)
+![global_accs-2](https://github.com/user-attachments/assets/90b043b6-9261-43ab-8d55-e2c837fda58a)
+![r_hat_prod.pdf](https://github.com/user-attachments/files/20819292/r_hat_prod.pdf)
+![Chain.pdf](https://github.com/user-attachments/assets/2f414748-a9ae-42c0-b4bb-d88d395a2c2c)
+![ess.pdf](https://github.com/user-attachments/files/20819315/ess.pdf)
