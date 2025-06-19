@@ -111,7 +111,7 @@ For the global sampler the following condition is required.
 | `batch_size`      | GPU-capacity dependent |
 
 * **Warning**: Check for memory leaks with `torch.cuda.memory_allocated()`.
-  
+
 The following are the some of the plots to see the convergence of the sampler based on minimal run.
 
 ![local_accs](https://github.com/user-attachments/assets/12a606c2-d472-4238-944c-1c8ce7ee8d96)
@@ -119,6 +119,3 @@ The following are the some of the plots to see the convergence of the sampler ba
 ![r_hat_prod.pdf](https://github.com/user-attachments/files/20819292/r_hat_prod.pdf)
 ![Chain.pdf](https://github.com/user-attachments/assets/2f414748-a9ae-42c0-b4bb-d88d395a2c2c)
 ![ess.pdf](https://github.com/user-attachments/files/20819315/ess.pdf)
-
-
-
