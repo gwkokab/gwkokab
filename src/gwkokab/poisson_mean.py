@@ -5,11 +5,13 @@
 from typing import List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
+import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
 from numpyro.distributions.distribution import Distribution, DistributionLike
 
+from .cosmology import PLANCK_2015_Cosmology
 from .models.utils import ScaledMixture
 from .utils.tools import error_if
 from .vts import (
@@ -236,13 +238,15 @@ class PoissonMean(eqx.Module):
         self.proposal_log_weights_and_samples = tuple(proposal_log_weights_and_samples)
         self.key = key
 
-    def __call__(self, model: ScaledMixture) -> Array:
+    def __call__(self, model: ScaledMixture, redshift_index: int) -> Array:
         r"""Estimate the rate/s by using the given model.
 
         Parameters
         ----------
         model : ScaledMixture
             Model instance.
+        redshift_index : int
+            Redshift index for the model.
 
         Returns
         -------
@@ -258,14 +262,19 @@ class PoissonMean(eqx.Module):
             model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
             # log p(ω_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
+            z = jax.lax.dynamic_index_in_dim(samples, redshift_index, keepdims=False)
+            log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
             # (T / n_total) * exp(log Σ exp(log p(ω_i|λ) - log w_i))
             return (self.time_scale / num_samples) * jnp.exp(
                 jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
+                + log_factor_redshift
             )
         else:  # per component rate estimation
-            return self.calculate_per_component_rate(model)
+            return self.calculate_per_component_rate(model, redshift_index)
 
-    def calculate_per_component_rate(self, model: ScaledMixture) -> Array:
+    def calculate_per_component_rate(
+        self, model: ScaledMixture, redshift_index: int
+    ) -> Array:
         r"""Estimate the per component rate/s by using the given model.
 
         Parameters
@@ -316,8 +325,10 @@ class PoissonMean(eqx.Module):
             ) - jnp.log(num_samples)
             per_component_log_estimated_rates.append(per_component_log_estimated_rate)
 
-        per_component_log_estimated_rates = model.log_scales + jnp.stack(
-            per_component_log_estimated_rates, axis=-1
-        )  # type: ignore
+        z = jax.lax.dynamic_index_in_dim(samples, redshift_index, keepdims=False)
+        log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
+        per_component_log_estimated_rates = (
+            log_factor_redshift + model.log_scales
+        ) + jnp.stack(per_component_log_estimated_rates, axis=-1)  # type: ignore
         per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
         return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
