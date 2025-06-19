@@ -173,17 +173,8 @@ def poisson_likelihood(
             (batched_data, batched_log_ref_priors, batched_mask),
         )
 
-        mapped_params_kappa_zero = {
-            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
-            if "kappa" not in name
-            else jax.lax.stop_gradient(0.0)
-            for name, i in variables_index.items()
-        }
-
-        model_instance_kappa_zero: Distribution = dist_fn(**mapped_params_kappa_zero)
-
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = ERate_fn(model_instance_kappa_zero)
+        expected_rates = ERate_fn(model_instance)
 
         log_prior = priors.log_prob(x)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
