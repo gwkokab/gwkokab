@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from jax import numpy as jnp
+from jax import lax, numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.distributions import (
     BetaProportion,
@@ -112,19 +112,27 @@ def IndependentSpinOrientationGaussianIsotropic(
     MixtureGeneral
         Mixture model of spin orientations.
     """
-    mixing_probs = jnp.array([1.0 - zeta, zeta])
+    mixing_probs = jnp.stack([1.0 - zeta, zeta], axis=-1)
+    low = lax.stop_gradient(-1.0)
+    high = lax.stop_gradient(1.0)
+    batch_dim = 1
     isotropic_component = Independent(
-        Uniform(low=-1, high=1, validate_args=validate_args).expand((2,)), 1
+        Uniform(
+            low=low,
+            high=high,
+            validate_args=validate_args,
+        ).expand((2,)),
+        batch_dim,
     )
     gaussian_component = Independent(
         TruncatedNormal(
-            loc=1.0,
-            scale=jnp.array([scale1, scale2]),
-            low=-1,
-            high=1,
+            loc=lax.stop_gradient(1.0),
+            scale=jnp.stack([scale1, scale2], axis=-1),
+            low=low,
+            high=high,
             validate_args=validate_args,
         ),
-        1,
+        batch_dim,
     )
     return MixtureGeneral(
         mixing_distribution=CategoricalProbs(
@@ -161,6 +169,5 @@ def BetaFromMeanVar(
     BetaProportion
         Beta distribution with the specified mean and variance.
     """
-    return BetaProportion(
-        mean, (mean * (1 - mean)) / variance, validate_args=validate_args
-    )
+    concentration = ((mean * (1.0 - mean)) / variance) - 1.0
+    return BetaProportion(mean, concentration, validate_args=validate_args)
