@@ -85,6 +85,8 @@ def read_data(data_path: str, keys: Sequence[str]) -> pd.DataFrame:
     ----------
     data_path : str
         path to the data
+    keys : Sequence[str]
+        keys to read from the data file
 
     Returns
     -------
