@@ -9,18 +9,10 @@ import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import optax
+import tqdm
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array
-from rich.console import Console
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeRemainingColumn,
-)
-from rich.table import Table
+from loguru import logger
 
 from ._utils import make_model, mse_loss_fn, read_data, save_model
 
@@ -166,14 +158,14 @@ def train_regressor(
         model, opt_state, loss = make_step(model, x, y, opt_state)
         return model, opt_state, loss
 
-    df = read_data(data_path)
+    df = read_data(data_path, keys=input_keys + output_keys)
 
     data_X = jax.device_put(df[input_keys].to_numpy(), may_alias=True)
     data_Y = jax.device_put(df[output_keys].to_numpy(), may_alias=True)
 
     log_data_Y = jnp.log(data_Y)
     log_data_Y = jnp.where(
-        jnp.isneginf(log_data_Y), jnp.finfo(jnp.result_type(float)).tiny, log_data_Y
+        jnp.isneginf(log_data_Y), -jnp.finfo(jnp.result_type(float)).tiny, log_data_Y
     )
 
     train_X, test_X, train_Y, test_Y = _train_test_data_split(
@@ -183,24 +175,18 @@ def train_regressor(
         test_size=validation_split,
     )
 
-    table = Table(title="Summary of the Neural Network Model", highlight=True)
-    table.add_column("Parameter", justify="left")
-    table.add_column("Value", justify="left")
-    table.add_row("Input Keys", ", ".join(input_keys))
-    table.add_row("Output Keys", ", ".join(output_keys))
-    table.add_row("Width Size", str(width_size))
-    table.add_row("Depth", str(depth))
-    table.add_row("Data Path", data_path)
-    table.add_row("Checkpoint Path", checkpoint_path)
-    table.add_row("Train Size", str(len(train_X)))
-    table.add_row("Test Size", str(len(test_X)))
-    table.add_row("Validation Split", str(validation_split))
-    table.add_row("Batch Size", str(batch_size))
-    table.add_row("Epochs", str(epochs))
-    table.add_row("Learning Rate", str(learning_rate))
-
-    console = Console()
-    console.print(table)
+    logger.info("Input Keys: " + ", ".join(input_keys))
+    logger.info("Output Keys: " + ", ".join(output_keys))
+    logger.info("Width Size: " + str(width_size))
+    logger.info("Depth: " + str(depth))
+    logger.info("Data Path: " + data_path)
+    logger.info("Checkpoint Path: " + checkpoint_path)
+    logger.info("Train Size: " + str(len(train_X)))
+    logger.info("Test Size: " + str(len(test_X)))
+    logger.info("Validation Split: " + str(validation_split))
+    logger.info("Batch Size: " + str(batch_size))
+    logger.info("Epochs: " + str(epochs))
+    logger.info("Learning Rate: " + str(learning_rate))
 
     model = make_model(
         key=jrd.PRNGKey(np.random.randint(0, 2**32 - 1)),
@@ -216,47 +202,30 @@ def train_regressor(
 
     loss_vals = []
     val_loss_vals = []
-    total = int(len(train_X) // batch_size)
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("Epoch {task.fields[epoch]}"),
-        BarColumn(),
-        MofNCompleteColumn(),
-        TimeRemainingColumn(elapsed_when_finished=True),
-        TextColumn("[progress.description]{task.description}"),
-        refresh_per_second=5,
-    ) as progress:
-        for epoch in range(epochs):
+    with tqdm.tqdm(range(epochs), unit="epochs") as pbar:
+        for epoch in pbar:
             epoch_loss = jnp.zeros(())
-            task_id = progress.add_task(
-                "",
-                total=total,
-                epoch=epoch + 1,
-            )
             for i in range(0, len(train_X), batch_size):
                 x = train_X[i : i + batch_size]
                 y = train_Y[i : i + batch_size]
 
                 model, opt_state, loss = train_step(model, x, y, opt_state)
                 epoch_loss += loss
-                progress.update(
-                    task_id,
-                    advance=1,
-                    description=f"loss: {loss:.4f}",
-                )
+                pbar.set_postfix({"epoch": epoch + 1, "loss": f"{loss:.12E}"})
 
             loss = epoch_loss / (len(train_X) // batch_size)
             loss_vals.append(loss)
 
             val_loss, _ = mse_loss_fn(model, test_X, test_Y)
             val_loss_vals.append(val_loss)
-            progress.update(
-                task_id,
-                completed=total,
-                refresh=True,
-                description=f"loss: {loss:.4f} - val loss: {val_loss:.4f}",
+            pbar.set_description(
+                f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.12E}, Val Loss: {val_loss:.12E}"
             )
+            if epoch % 10 == 0 or epoch == epochs - 1:
+                logger.info(
+                    f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.12E}, Val Loss: {val_loss:.12E}"
+                )
 
     if checkpoint_path is not None:
         save_model(filename=checkpoint_path, model=model, names=input_keys)  # type: ignore
