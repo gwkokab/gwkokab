@@ -47,8 +47,8 @@ class PowerlawRedshift(Distribution):
         "zgrid": constraints.real_vector,
         "dVcdz": constraints.real_vector,
     }
-    reparametrized_params = ["z_max", "kappa", "zgrid", "dVcdz"]
-    pytree_data_fields = ("_support", "dVcdz", "kappa", "z_max", "zgrid")
+    reparametrized_params = ["z_max", "kappa", "zgrid", "dVcdz", "cdfgrid"]
+    pytree_data_fields = ("_support", "dVcdz", "kappa", "z_max", "zgrid", "cdfgrid")
 
     def __init__(
         self,
