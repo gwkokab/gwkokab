@@ -1,128 +1,138 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
-
-# Copyright (c) 2023 Farr Out Lab
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-
-
 from typing import Optional
 
 import quadax
-from jax import Array, numpy as jnp, random
+from jax import Array, numpy as jnp, random as jrd
 from jax.lax import broadcast_shapes
 from jax.scipy.integrate import trapezoid
 from jaxtyping import ArrayLike
 from numpyro import distributions as dist
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
-from numpyro.util import is_prng_key
 
 
 class PowerlawRedshift(Distribution):
-    r"""A power-law redshift distribution. The probability density function is given by.
+    r"""Redshift distribution for compact binary mergers modeled as a power law modulated
+    by the cosmological volume element.
+
+    The probability density function is defined as:
 
     .. math::
+        p(z) \propto \frac{dV_c/dz(z) \cdot (1 + z)^{\kappa - 1}}}, \qquad 0 \leq z \leq z_{max}
 
-        p(z) \propto \frac{dV_c}{dz} (1 + z)^{\lambda - 1}
+    where:
+      - dV_c/dz is the differential comoving volume element,
+      -  is the redshift evolution power-law index,
+      - z_max is the upper redshift cutoff.
 
-    .. code:: python
+    This distribution is normalized numerically on a fixed redshift grid.
 
-        >>> import jax.numpy as jnp
-        >>> from astropy.cosmology import Planck15
-        >>> z_grid = jnp.linspace(0.001, 1, 1000)
-        >>> dVcdz_grid = (
-        ...     Planck15.differential_comoving_volume(z_grid).value * 4.0 * jnp.pi
-        ... )
-        >>> d = PowerlawRedshift(lamb=0.0, z_max=1.0, zgrid=z_grid, dVcdz=dVcdz_grid)
-        >>> lpdfs = d.log_prob(self.grid)
-        >>> lpdfs.shape
-        (1000,)
+    Parameters
+    ----------
+    kappa : float
+        The power-law exponent :math:`\kappa`.
+    z_max : float
+        The maximum redshift (upper limit of the support).
+    zgrid : Array
+        A 1D array of redshift values for numerical integration and interpolation.
+    dVcdz : Array
+        The differential comoving volume evaluated on :code:`zgrid`.
     """
 
     arg_constraints = {
         "z_max": constraints.positive,
-        "lamb": constraints.real,
+        "kappa": constraints.real,
         "zgrid": constraints.real_vector,
         "dVcdz": constraints.real_vector,
     }
-    reparametrized_params = ["z_max", "lamb", "zgrid", "dVcdz"]
-    pytree_data_fields = (
-        "_support",
-        "cdfgrid",
-        "dVcdz",
-        "lamb",
-        "log_norm",
-        "z_max",
-        "zgrid",
-    )
+    reparametrized_params = ["z_max", "kappa", "zgrid", "dVcdz", "cdfgrid"]
+    pytree_data_fields = ("_support", "dVcdz", "kappa", "z_max", "zgrid", "cdfgrid")
 
     def __init__(
         self,
-        lamb: ArrayLike,
+        kappa: ArrayLike,
         z_max: ArrayLike,
         zgrid: Array,
         dVcdz: Array,
         *,
         validate_args: Optional[bool] = None,
     ) -> None:
-        """
-        Parameters
-        ----------
-        lamb : ArrayLike
-            power-law index
-        z_max : ArrayLike
-            maximum redshift
-        zgrid : Array
-            grid of redshifts
-        dVcdz : Array
-            differential comoving volume upon the :code:`zgrid` grid
-        validate_args : Optional[bool], optional
-            whether to validate input, by default None
-        """
-        self.z_max, self.lamb = promote_shapes(z_max, lamb)
+        self.z_max, self.kappa = promote_shapes(z_max, kappa)
         self.zgrid = zgrid
         self.dVcdz = dVcdz
-        self._zgrid = jnp.clip(zgrid, 1e-10, z_max)
-        pdfs = dVcdz * jnp.power(1.0 + self.zgrid, self.lamb - 1.0)
+
+        mask = self.zgrid <= self.z_max
+        dVcdz_cut = jnp.where(mask, self.dVcdz, 0.0)
+
+        pdfs = dVcdz_cut * jnp.power(1.0 + self.zgrid, self.kappa - 1.0)
+
         norm = trapezoid(pdfs, self.zgrid)
         pdfs /= norm
-        self.log_norm = jnp.log(norm)
+
         self.cdfgrid: Array = quadax.cumulative_trapezoid(
             pdfs, x=self.zgrid, initial=0.0
         )
-        self.cdfgrid = self.cdfgrid.at[-1].set(1)
+        self.cdfgrid = self.cdfgrid.at[-1].set(1.0)  # ensure total probability = 1
+
         self._support = constraints.interval(0.0, z_max)
-        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(lamb))
-        super(PowerlawRedshift, self).__init__(
-            batch_shape=batch_shape, validate_args=validate_args
-        )
+        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
+        super().__init__(batch_shape=batch_shape, validate_args=validate_args)
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
         return self._support
 
-    def sample(self, key, sample_shape=()):
-        assert is_prng_key(key)
-        return self.icdf(random.uniform(key, shape=sample_shape + self.batch_shape))
-
     @validate_sample
-    def log_prob(self, value, dVdc=None):
+    def log_prob(self, value: Array, dVdc: Optional[Array] = None) -> Array:
+        """Evaluate the log probability density function at a given redshift.
+
+        Parameters
+        ----------
+        value : Array
+            Redshift(s) to evaluate.
+        dVdc : Array, optional
+            Precomputed dV/dz values at `value`. If None, it will be interpolated.
+
+        Returns
+        -------
+        Array
+            Log-probability values.
+        """
         if dVdc is None:
-            dVdc = jnp.interp(value, self.zgrid, self.dVcdz)
-        return jnp.log(dVdc) + (self.lamb - 1.0) * jnp.log1p(value) - self.log_norm
+            dVdc_val = jnp.interp(value, self.zgrid, self.dVcdz)
+        logpdf_unnorm = jnp.log(dVdc_val) + (self.kappa - 1.0) * jnp.log1p(value)
+        pdfs = self.dVcdz * jnp.power(1.0 + self.zgrid, self.kappa - 1.0)
+        norm = trapezoid(pdfs, self.zgrid)
+        return logpdf_unnorm - jnp.log(norm)
+
+    def sample(self, key, sample_shape=()):
+        """Draw samples from the distribution using inverse transform sampling.
+
+        Note: Sampling is only supported when lamb and z_max are static scalars.
+
+        Parameters
+        ----------
+        key : jax.random.PRNGKey
+            A PRNG key for sampling.
+        sample_shape : tuple
+            Shape of the desired sample batch.
+
+        Returns
+        -------
+        samples : Array
+            Redshift samples.
+        """
+        u = jrd.uniform(key, shape=sample_shape)
+        return jnp.interp(u, self.cdfgrid, self.zgrid)
 
     def cdf(self, value):
+        """Evaluate the cumulative distribution function (CDF) at a given redshift."""
         return jnp.interp(value, self.zgrid, self.cdfgrid)
 
     def icdf(self, q):
+        """Evaluate the inverse CDF (quantile function)."""
         return jnp.interp(q, self.cdfgrid, self.zgrid)
 
 

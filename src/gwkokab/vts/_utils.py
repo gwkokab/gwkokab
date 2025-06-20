@@ -144,6 +144,7 @@ def save_model(
     filename: str,
     model: eqx.nn.MLP,
     names: Optional[Sequence[str]] = None,
+    is_log: bool = False,
 ) -> None:
     """Save the model to the given file.
 
@@ -171,6 +172,7 @@ def save_model(
         f.create_dataset("out_size", data=model.out_size)  # type: ignore
         f.create_dataset("width_size", data=model.width_size)  # type: ignore
         f.create_dataset("depth", data=model.depth)  # type: ignore
+        f.attrs["is_log"] = is_log
         num_layers = len(model.layers)  # type: ignore
         for i in range(num_layers):
             layer_i = f.create_group(f"layer_{i}")

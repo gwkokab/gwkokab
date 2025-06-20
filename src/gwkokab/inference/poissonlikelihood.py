@@ -20,10 +20,11 @@ __all__ = ["poisson_likelihood"]
 
 
 def poisson_likelihood(
+    parameters_name: List[str],
     dist_builder: Bake,
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
-    ERate_fn: Callable[[Distribution], Array],
+    ERate_fn: Callable[[Distribution, int], Array],
     where_fns: Optional[List[Callable[..., Array]]] = None,
 ) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
@@ -58,6 +59,7 @@ def poisson_likelihood(
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
+    redshift_index = parameters_name.index("redshift")
     dummy_model = dist_builder.get_dummy()
     warn_if(
         not isinstance(dummy_model, ScaledMixture),
@@ -174,7 +176,7 @@ def poisson_likelihood(
         )
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = ERate_fn(model_instance)
+        expected_rates = ERate_fn(model_instance, redshift_index)
 
         log_prior = priors.log_prob(x)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)

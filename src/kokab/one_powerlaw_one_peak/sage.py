@@ -112,7 +112,7 @@ def main() -> None:
 
     if has_redshift:
         parameters.append(REDSHIFT)
-        model_parameters.extend(["lamb", "z_max"])
+        model_parameters.extend(["kappa", "z_max"])
 
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
@@ -127,7 +127,8 @@ def main() -> None:
         **model_prior_param,
     )
 
-    nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
+    parameters_name = [param.name for param in parameters]
+    nvt = vt_json_read_and_process(parameters_name, args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
@@ -137,6 +138,7 @@ def main() -> None:
     log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
+        parameters_name=parameters_name,
         dist_builder=model,
         data=data,
         log_ref_priors=log_ref_priors,

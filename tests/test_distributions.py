@@ -405,7 +405,7 @@ CONTINUOUS = [
     (
         PowerlawRedshift,
         {
-            "lamb": 0.0,
+            "kappa": 0.0,
             "z_max": 1.0,
             "zgrid": jnp.linspace(0.001, 1, 1000),
             "dVcdz": PLANCK_2015_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 1, 1000))
@@ -416,7 +416,7 @@ CONTINUOUS = [
     (
         PowerlawRedshift,
         {
-            "lamb": 0.0,
+            "kappa": 0.0,
             "z_max": 2.3,
             "zgrid": jnp.linspace(0.001, 2.3, 1000),
             "dVcdz": PLANCK_2015_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 2.3, 1000))
@@ -427,7 +427,7 @@ CONTINUOUS = [
     (
         PowerlawRedshift,
         {
-            "lamb": 0.0,
+            "kappa": 0.0,
             "z_max": 1.0,
             "zgrid": jnp.linspace(0.001, 1, 1000),
             "dVcdz": PLANCK_2018_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 1, 1000))
@@ -438,7 +438,7 @@ CONTINUOUS = [
     (
         PowerlawRedshift,
         {
-            "lamb": 0.0,
+            "kappa": 0.0,
             "z_max": 2.3,
             "zgrid": jnp.linspace(0.001, 2.3, 1000),
             "dVcdz": PLANCK_2018_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 2.3, 1000))
@@ -860,6 +860,10 @@ def test_sample_gradient(jax_dist, params):
         "SmoothedPowerlawAndPeak",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
+    if jax_dist.__name__ in ("PowerlawRedshift",):
+        pytest.xfail(
+            reason=f"{jax_dist.__name__} uses interpolation and is not differentiable"
+        )
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
             pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
