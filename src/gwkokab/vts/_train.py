@@ -9,18 +9,10 @@ import jax
 import matplotlib.pyplot as plt
 import numpy as np
 import optax
+import tqdm
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array
 from loguru import logger
-from rich.console import Console
-from rich.progress import (
-    BarColumn,
-    MofNCompleteColumn,
-    Progress,
-    SpinnerColumn,
-    TextColumn,
-    TimeRemainingColumn,
-)
 
 from ._utils import make_model, mse_loss_fn, read_data, save_model
 
@@ -177,7 +169,7 @@ def train_regressor(
     if train_in_log:
         data_Y = jnp.log(data_Y)
         data_Y = jnp.where(
-            jnp.isneginf(data_Y), jnp.finfo(jnp.result_type(float)).tiny, data_Y
+            jnp.isneginf(data_Y), -jnp.finfo(jnp.result_type(float)).tiny, data_Y
         )
 
     train_X, test_X, train_Y, test_Y = _train_test_data_split(
@@ -214,48 +206,30 @@ def train_regressor(
 
     loss_vals = []
     val_loss_vals = []
-    total = int(len(train_X) // batch_size)
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("Epoch {task.fields[epoch]}"),
-        BarColumn(),
-        MofNCompleteColumn(),
-        TimeRemainingColumn(elapsed_when_finished=True),
-        TextColumn("[progress.description]{task.description}"),
-        refresh_per_second=5,
-        console=Console(force_terminal=True),
-    ) as progress:
-        for epoch in range(epochs):
+    with tqdm.tqdm(range(epochs), unit="epochs") as pbar:
+        for epoch in pbar:
             epoch_loss = jnp.zeros(())
-            task_id = progress.add_task(
-                "",
-                total=total,
-                epoch=epoch + 1,
-            )
             for i in range(0, len(train_X), batch_size):
                 x = train_X[i : i + batch_size]
                 y = train_Y[i : i + batch_size]
 
                 model, opt_state, loss = train_step(model, x, y, opt_state)
                 epoch_loss += loss
-                progress.update(
-                    task_id,
-                    advance=1,
-                    description=f"loss: {loss}",
-                )
+                pbar.set_postfix({"epoch": epoch + 1, "loss": f"{loss:.12E}"})
 
             loss = epoch_loss / (len(train_X) // batch_size)
             loss_vals.append(loss)
 
             val_loss, _ = mse_loss_fn(model, test_X, test_Y)
             val_loss_vals.append(val_loss)
-            progress.update(
-                task_id,
-                completed=total,
-                refresh=True,
-                description=f"loss: {loss} - val loss: {val_loss}",
+            pbar.set_description(
+                f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.12E}, Val Loss: {val_loss:.12E}"
             )
+            if epoch % 10 == 0 or epoch == epochs - 1:
+                logger.info(
+                    f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.12E}, Val Loss: {val_loss:.12E}"
+                )
 
     if checkpoint_path is not None:
         save_model(

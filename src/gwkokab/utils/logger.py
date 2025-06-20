@@ -50,7 +50,7 @@ def log_device_info() -> None:
     """Prints the device information."""
     import jax as _jax
     import jaxlib as _jaxlib
-    from jax.lib import xla_bridge as _xla_bridge
+    from jax.extend.backend import get_backend
 
     logger.info("=" * 60)
     logger.info("JAX CUDA ENVIRONMENT INFO")
@@ -63,7 +63,7 @@ def log_device_info() -> None:
     logger.info("jaxlib version: {jaxlib_version}", jaxlib_version=_jaxlib.__version__)
 
     try:
-        backend = _xla_bridge.get_backend()
+        backend = get_backend()
         logger.info("JAX platform: {}", backend.platform)
         logger.info("JAX backend: {}", type(backend).__name__)
 
@@ -86,7 +86,7 @@ def log_device_info() -> None:
 
     del _jax
     del _jaxlib
-    del _xla_bridge
+    del get_backend
 
 
 def log_info(start: bool = False) -> None:
