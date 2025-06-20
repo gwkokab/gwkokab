@@ -132,7 +132,7 @@ def SimpleRedshiftPowerlaw(
     r"""Simple redshift distribution defined as,
 
     .. math::
-        p(z) \propto (1 + z)^{\kappa - 1}, \qquad 0 \leq z \leq z_{max}
+        p(z) \propto (1 + z)^{\kappa}, \qquad 0 \leq z \leq z_{max}
 
     Parameters
     ----------
