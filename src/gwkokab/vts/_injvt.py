@@ -10,6 +10,7 @@ import h5py
 import jax
 import numpy as np
 from jaxtyping import Array
+from loguru import logger
 
 from gwkokab import parameters as gwk_parameters
 from gwkokab.constants import SECONDS_PER_YEAR
@@ -94,6 +95,8 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             spin_converter = lambda sx, sy, sz: np.sqrt(
                 np.square(sx) + np.square(sy) + np.square(sz)
             )
+
+        logger.debug("Loading injection from {}", filename)
 
         with h5py.File(filename, "r") as f:
             self.analysis_time_years = (

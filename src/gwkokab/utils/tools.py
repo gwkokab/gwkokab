@@ -34,7 +34,7 @@ def fetch_first_matching_value(dictionary: Dict[_KT, _VT], *keys: _KT) -> Option
     return None
 
 
-def error_if(cond: bool, err: Exception = ValueError, msg: str = "") -> None:
+def error_if(cond: bool, err: type[Exception] = ValueError, msg: str = "") -> None:
     """Raise an error if condition is met.
 
     Reference: utils of `interpax <https://github.com/f0uriest/interpax>`_.
@@ -58,7 +58,7 @@ def error_if(cond: bool, err: Exception = ValueError, msg: str = "") -> None:
         raise err(msg)
 
 
-def warn_if(cond: bool, err: Warning = UserWarning, msg: str = "") -> None:
+def warn_if(cond: bool, err: type[Warning] = UserWarning, msg: str = "") -> None:
     """Raise a warning if condition is met.
 
     Reference: utils of `interpax <https://github.com/f0uriest/interpax>`_.
