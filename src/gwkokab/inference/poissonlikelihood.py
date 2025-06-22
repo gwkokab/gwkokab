@@ -123,17 +123,17 @@ def poisson_likelihood(
         variables_index[key] = variables_index[value]
 
     group_variables: dict[int, list[str]] = {}
-    for key, value in variables_index.items():
-        group_variables[value] = group_variables.get(value, []) + [key]
+    for key, value in variables_index.items():  # type: ignore
+        group_variables[value] = group_variables.get(value, []) + [key]  # type: ignore
 
     logger.debug(
         "Number of recovering variables: {num_vars}", num_vars=len(group_variables)
     )
 
-    for key, value in constants.items():
+    for key, value in constants.items():  # type: ignore
         logger.debug("Constant variable: {name} = {variable}", name=key, variable=value)
 
-    for value in group_variables.values():
+    for value in group_variables.values():  # type: ignore
         logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
     priors = JointDistribution(*variables.values(), validate_args=True)

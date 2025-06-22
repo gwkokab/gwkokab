@@ -7,42 +7,37 @@ from jax import numpy as jnp
 
 
 @jax.custom_jvp
-def doubly_truncated_power_law_log_prob(x, alpha, low, high):
-    # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L427-L444
+def doubly_truncated_power_law_log_norm_constant(alpha, low, high):
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
     neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
 
     def neq_neg1_fn():
         one_more_alpha = 1.0 + neq_neg1_alpha
         return jnp.log(
-            jnp.power(x, neq_neg1_alpha)
-            * (one_more_alpha)
-            / (jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha))
+            (jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha))
+            / (one_more_alpha)
         )
 
     def eq_neg1_fn():
-        return -jnp.log(x) - jnp.log(jnp.log(high) - jnp.log(low))
+        return jnp.log(jnp.log(high) - jnp.log(low))
 
     return jnp.where(neq_neg1_mask, neq_neg1_fn(), eq_neg1_fn())
 
 
-@doubly_truncated_power_law_log_prob.defjvp
-def doubly_truncated_power_law_log_prob_jvp(primals, tangents):
-    # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L446-L524
-    x, alpha, low, high = primals
-    x_t, alpha_t, low_t, high_t = tangents
+@doubly_truncated_power_law_log_norm_constant.defjvp
+def doubly_truncated_power_law_log_norm_constant_jvp(primals, tangents):
+    alpha, low, high = primals
+    alpha_t, low_t, high_t = tangents
+
+    primal_out = doubly_truncated_power_law_log_norm_constant(*primals)
 
     log_low = jnp.log(low)
     log_high = jnp.log(high)
-    log_x = jnp.log(x)
 
     # Mask and alpha values
-    delta_eq_neg1 = 10e-4
+    delta_eq_neg1 = 1e-5
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
     neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
-    eq_neg1_alpha = jnp.where(jnp.not_equal(alpha, 0.0), alpha, -1.0)
-
-    primal_out = doubly_truncated_power_law_log_prob(*primals)
 
     # Alpha tangent with approximation
     # Variable part for all values alpha unequal -1
@@ -50,17 +45,16 @@ def doubly_truncated_power_law_log_prob_jvp(primals, tangents):
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
-        return jnp.reciprocal(one_more_alpha) + (
-            low_pow_one_more_alpha * log_low - high_pow_one_more_alpha * log_high
+        return -jnp.reciprocal(one_more_alpha) + (
+            high_pow_one_more_alpha * log_high - low_pow_one_more_alpha * log_low
         ) / (high_pow_one_more_alpha - low_pow_one_more_alpha)
 
     # Alpha tangent
     alpha_tangent = jnp.where(
         neq_neg1_mask,
-        log_x + alpha_tangent_variable(neq_neg1_alpha),
+        alpha_tangent_variable(neq_neg1_alpha),
         # Approximate derivate with right an lefthand approximation
-        log_x
-        + (
+        (
             alpha_tangent_variable(alpha - delta_eq_neg1)
             + alpha_tangent_variable(alpha + delta_eq_neg1)
         )
@@ -71,34 +65,32 @@ def doubly_truncated_power_law_log_prob_jvp(primals, tangents):
     one_more_alpha = 1.0 + neq_neg1_alpha
     low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
     high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
-    change_sq = jnp.square(high_pow_one_more_alpha - low_pow_one_more_alpha)
-    low_tangent_neq_neg1_common = (
-        jnp.square(one_more_alpha) * jnp.power(x, neq_neg1_alpha) / change_sq
+    change_neq_neg1_alpha = high_pow_one_more_alpha - low_pow_one_more_alpha
+    low_tangent_neq_neg1 = (
+        -one_more_alpha * jnp.power(low, neq_neg1_alpha) / change_neq_neg1_alpha
     )
-    low_tangent_neq_neg1 = low_tangent_neq_neg1_common * jnp.power(low, neq_neg1_alpha)
-    high_tangent_neq_neg1 = low_tangent_neq_neg1_common * jnp.power(
-        high, neq_neg1_alpha
+    high_tangent_neq_neg1 = (
+        one_more_alpha * jnp.power(high, neq_neg1_alpha) / change_neq_neg1_alpha
     )
 
     # High and low tangents for alpha equal -1
-    low_tangent_eq_neg1_common = jnp.power(x, eq_neg1_alpha) / jnp.square(
-        log_high - log_low
-    )
-    low_tangent_eq_neg1 = low_tangent_eq_neg1_common / low
-    high_tangent_eq_neg1 = -low_tangent_eq_neg1_common / high
+    change_eq_neg1_alpha = log_high - log_low
+    low_tangent_eq_neg1 = -jnp.reciprocal(low * change_eq_neg1_alpha)
+    high_tangent_eq_neg1 = jnp.reciprocal(high * change_eq_neg1_alpha)
 
     # High and low tangents
     low_tangent = jnp.where(neq_neg1_mask, low_tangent_neq_neg1, low_tangent_eq_neg1)
     high_tangent = jnp.where(neq_neg1_mask, high_tangent_neq_neg1, high_tangent_eq_neg1)
 
     # Final tangents
-    tangent_out = (
-        alpha / x * x_t
-        + alpha_tangent * alpha_t
-        + low_tangent * low_t
-        + high_tangent * high_t
-    )
+    tangent_out = alpha_tangent * alpha_t + low_tangent * low_t + high_tangent * high_t
     return primal_out, tangent_out
+
+
+def doubly_truncated_power_law_log_prob(x, alpha, low, high):
+    return alpha * jnp.log(x) - doubly_truncated_power_law_log_norm_constant(
+        alpha, low, high
+    )
 
 
 @jax.custom_jvp

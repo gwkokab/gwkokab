@@ -11,6 +11,7 @@ import numpy as np
 import tqdm
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
+from loguru import logger
 from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
@@ -127,7 +128,9 @@ class PopulationFactory:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
         exp_rate = self.ERate_fn(self.model, self.redshift_index)
+        logger.debug(f"Expected rate for the population is {exp_rate}")
         size = int(jrd.poisson(poisson_key, exp_rate))
+        logger.debug(f"Population size is {size}")
         key = rate_key
         if size <= 0:
             raise ValueError(
