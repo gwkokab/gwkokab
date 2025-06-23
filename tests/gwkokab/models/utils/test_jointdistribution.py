@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import chex
+import jax.random as jrd
 import pytest
 from absl.testing import parameterized
 from numpyro.distributions import Exponential, LogNormal, Normal, Uniform
@@ -129,3 +131,28 @@ class TestJointDistribution(parameterized.TestCase):
         assert len(flattened) == expected_len, (
             "Flattened length mismatch for method: " + str(flatten_method)
         )
+
+    @chex.variants(  # pyright: ignore
+        with_jit=True,  # test case failing
+        without_jit=True,
+        with_device=True,
+        without_device=True,
+        with_pmap=True,
+    )
+    @parameterized.product(
+        marginal_distributions=marginal_distributions_collection,
+        flatten_method=[None, "shallow", "deep"],
+    )
+    def test_creation_under_jax_transforms(
+        self, marginal_distributions, flatten_method
+    ):
+        @self.variant
+        def create_joint_distribution():
+            jd = JointDistribution(
+                *marginal_distributions,
+                flatten_method=flatten_method,
+                validate_args=True,
+            )
+            return jd.sample(jrd.PRNGKey(0))
+
+        create_joint_distribution()
