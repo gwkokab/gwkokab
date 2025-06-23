@@ -137,7 +137,7 @@ class TestJointDistribution(parameterized.TestCase):
         without_jit=True,
         with_device=True,
         without_device=True,
-        with_pmap=True,
+        with_pmap=False,  # pmap not supported in this test
     )
     @parameterized.product(
         marginal_distributions=marginal_distributions_collection,
