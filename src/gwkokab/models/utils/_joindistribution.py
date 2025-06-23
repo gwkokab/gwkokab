@@ -37,16 +37,13 @@ class JointDistribution(Distribution):
         marginal_distributions : *Distribution
             One or more `Distribution` objects (or nested :class:`JointDistribution`s) that form
             the components of the joint distribution.
-
         flatten_method : Optional[Literal[&quot;deep&quot;, &quot;shallow&quot;]], optional
             If "shallow", one level of nested :class:`JointDistributions` will be flattened.
             If "deep", all levels of nested :class:`JointDistributions` will be recursively flattened.
             If None (default), the nesting is preserved as-is.
-
         support : Optional[constraints.Constraint], optional
             The constraint object representing the support of the joint distribution.
             If not provided, it is computed from the support of the marginals.
-
         validate_args : Optional[bool], optional
             Whether to validate distribution parameters and inputs. Default is None.
 
