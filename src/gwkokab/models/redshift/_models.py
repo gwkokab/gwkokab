@@ -8,9 +8,10 @@ from jax import Array, numpy as jnp, random as jrd
 from jax.lax import broadcast_shapes
 from jax.scipy.integrate import trapezoid
 from jaxtyping import ArrayLike
-from numpyro import distributions as dist
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
+
+from ..utils import doubly_truncated_power_law_log_norm_constant
 
 
 class PowerlawRedshift(Distribution):
@@ -136,9 +137,7 @@ class PowerlawRedshift(Distribution):
         return jnp.interp(q, self.cdfgrid, self.zgrid)
 
 
-def SimpleRedshiftPowerlaw(
-    kappa: ArrayLike, z_max: ArrayLike, *, validate_args: Optional[bool] = None
-) -> dist.TransformedDistribution:
+class SimpleRedshiftPowerlaw(Distribution):
     r"""Simple redshift distribution defined as,
 
     .. math::
@@ -158,23 +157,73 @@ def SimpleRedshiftPowerlaw(
     dist.TransformedDistribution
         A transformed distribution representing the redshift law.
     """
-    # We have defined this distribution in such a way that we use the available
-    # numpyro distributions and transforms. This model is similar to a powerlaw but its
-    # argument is shifted by 1.0. Therefore our support for powerlaw also shifts by 1.0.
-    low = 1.0
-    high = 1.0 + z_max
-    redshift_powerlaw = dist.DoublyTruncatedPowerLaw(
-        alpha=kappa, low=low, high=high, validate_args=validate_args
-    )
-    # Now we need to apply a shift transform to get the 1+z argument. This can be done by
-    # using an AffineTransform that shifts z by -1.0, which effectively transforms z to
-    # 1 + z.
-    shift_transform = dist.transforms.AffineTransform(
-        loc=-1.0, scale=1.0, domain=dist.constraints.interval(low, high)
-    )
-    transformed_redshift_powerlaw = dist.TransformedDistribution(
-        redshift_powerlaw,
-        transforms=[shift_transform],
-        validate_args=validate_args,
-    )
-    return transformed_redshift_powerlaw
+
+    arg_constraints = {
+        "kappa": constraints.real,
+        "z_max": constraints.positive,
+    }
+    reparametrized_params = ["kappa", "z_max"]
+    pytree_data_fields = ("_support", "kappa", "z_max")
+
+    def __init__(
+        self,
+        kappa: ArrayLike,
+        z_max: ArrayLike,
+        *,
+        validate_args: Optional[bool] = None,
+    ) -> None:
+        self.kappa, self.z_max = promote_shapes(kappa, z_max)
+        self._support = constraints.interval(0.0, z_max)
+        batch_shape = broadcast_shapes(jnp.shape(kappa), jnp.shape(z_max))
+        super(SimpleRedshiftPowerlaw, self).__init__(
+            batch_shape=batch_shape, validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value: ArrayLike) -> ArrayLike:
+        """Evaluate the log probability density function at a given redshift.
+
+        Parameters
+        ----------
+        value : ArrayLike
+            Redshift(s) to evaluate.
+
+        Returns
+        -------
+        ArrayLike
+            Log-probability values.
+        """
+        logpdf_unnorm = self.kappa * jnp.log1p(value)
+        log_norm = doubly_truncated_power_law_log_norm_constant(
+            alpha=self.kappa, low=1.0, high=1.0 + self.z_max
+        )
+        # return logpdf_unnorm - jax.lax.stop_gradient(log_norm)
+        return logpdf_unnorm - log_norm
+
+    def sample(self, key, sample_shape=()):
+        u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
+        kappa_eq_neg_one = jnp.equal(self.kappa, -1.0)
+        safe_kappa = jnp.where(kappa_eq_neg_one, 1.0, self.kappa)
+        norm = jnp.exp(
+            doubly_truncated_power_law_log_norm_constant(
+                alpha=self.kappa,
+                low=1.0,
+                high=1.0 + self.z_max,
+            )
+        )
+        samples_kappa_neq_neg_one = (
+            jnp.power(
+                u * norm * (safe_kappa + 1.0) + 1.0, jnp.reciprocal(safe_kappa + 1.0)
+            )
+            - 1.0
+        )
+        samples_kappa_eq_neg_one = jnp.expm1(u * norm)
+        return jnp.where(
+            kappa_eq_neg_one,
+            samples_kappa_eq_neg_one,
+            samples_kappa_neq_neg_one,
+        )

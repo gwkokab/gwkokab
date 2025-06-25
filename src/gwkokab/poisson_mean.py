@@ -316,19 +316,26 @@ class PoissonMean(eqx.Module):
                     num_samples
                 )
                 per_sample_log_estimated_rates = log_weights + component_log_prob
+
+            z = jax.lax.dynamic_index_in_dim(
+                samples, redshift_index, axis=-1, keepdims=False
+            )
+            per_component_log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(
+                z
+            ) - jnp.log1p(z)
+
             per_sample_log_estimated_rates = jnp.nan_to_num(
                 per_sample_log_estimated_rates, nan=-jnp.inf
             )
             per_component_log_estimated_rate = jnn.logsumexp(
-                per_sample_log_estimated_rates,
-                where=~jnp.isneginf(per_sample_log_estimated_rates),
+                per_component_log_factor_redshift + per_sample_log_estimated_rates,
+                where=~jnp.isneginf(per_sample_log_estimated_rates)
+                | ~jnp.isneginf(per_component_log_factor_redshift),
             ) - jnp.log(num_samples)
             per_component_log_estimated_rates.append(per_component_log_estimated_rate)
 
-        z = jax.lax.dynamic_index_in_dim(samples, redshift_index, keepdims=False)
-        log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
-        per_component_log_estimated_rates = (
-            log_factor_redshift + model.log_scales
-        ) + jnp.stack(per_component_log_estimated_rates, axis=-1)  # type: ignore
+        per_component_log_estimated_rates = model.log_scales + jnp.stack(
+            per_component_log_estimated_rates, axis=-1
+        )  # type: ignore
         per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
         return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
