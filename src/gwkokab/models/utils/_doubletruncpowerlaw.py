@@ -58,7 +58,7 @@ def doubly_truncated_power_law_log_norm_constant_jvp(primals, tangents):
             alpha_tangent_variable(alpha - delta_eq_neg1)
             + alpha_tangent_variable(alpha + delta_eq_neg1)
         )
-        * 0.5,
+        / (2.0 * delta_eq_neg1),
     )
 
     # High and low tangents for alpha unequal -1
