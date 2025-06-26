@@ -262,12 +262,17 @@ class PoissonMean(eqx.Module):
             model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
             # log p(ω_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
-            z = jax.lax.dynamic_index_in_dim(samples, redshift_index, keepdims=False)
+            z = jax.lax.dynamic_index_in_dim(
+                samples, redshift_index, axis=-1, keepdims=False
+            )
             log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
             # (T / n_total) * exp(log Σ exp(log p(ω_i|λ) - log w_i))
             return (self.time_scale / num_samples) * jnp.exp(
-                jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
-                + log_factor_redshift
+                jnn.logsumexp(
+                    log_factor_redshift + log_prob,
+                    where=~jnp.isneginf(log_prob) | ~jnp.isneginf(log_factor_redshift),
+                    axis=-1,
+                )
             )
         else:  # per component rate estimation
             return self.calculate_per_component_rate(model, redshift_index)
