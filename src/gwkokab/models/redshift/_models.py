@@ -158,10 +158,7 @@ class SimpleRedshiftPowerlaw(Distribution):
         A transformed distribution representing the redshift law.
     """
 
-    arg_constraints = {
-        "kappa": constraints.real,
-        "z_max": constraints.positive,
-    }
+    arg_constraints = {"kappa": constraints.real, "z_max": constraints.positive}
     reparametrized_params = ["kappa", "z_max"]
     pytree_data_fields = ("_support", "kappa", "z_max")
 
@@ -201,7 +198,6 @@ class SimpleRedshiftPowerlaw(Distribution):
         log_norm = doubly_truncated_power_law_log_norm_constant(
             alpha=self.kappa, low=1.0, high=1.0 + self.z_max
         )
-        # return logpdf_unnorm - jax.lax.stop_gradient(log_norm)
         return logpdf_unnorm - log_norm
 
     def sample(self, key, sample_shape=()):
