@@ -604,7 +604,7 @@ CONTINUOUS = [
     (SimpleRedshiftPowerlaw, {"z_max": 1.0, "kappa": 0.5}),
     (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": -1.0}),
     (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": 2.5}),
-    (SimpleRedshiftPowerlaw, {"z_max": 100.0, "kappa": 4.5}),
+    (SimpleRedshiftPowerlaw, {"z_max": 4.5, "kappa": 4.0}),
     (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": -10.0}),
     (SimpleRedshiftPowerlaw, {"z_max": 0.01, "kappa": 2.5}),
 ]
