@@ -3,17 +3,18 @@
 
 
 from collections.abc import Sequence
-from typing import Optional, TypeVar
+from typing import Optional, TypeVar, Union
 
 import jenkspy
 import numpy as np
+from jax import numpy as jnp
 from jaxtyping import Array
 from loguru import logger
 
 from ..utils.tools import error_if
 
 
-__all__ = ["partition_data", "get_subsets"]
+__all__ = ["pad_and_stack"]
 
 T = TypeVar("T", bound=Array | np.ndarray | int)
 
@@ -122,7 +123,7 @@ def _jenks_natural_breaks(
     return indexes
 
 
-def get_subsets(data: Sequence[T], indexes: Sequence[int]) -> Sequence[Sequence[T]]:
+def _get_subsets(data: Sequence[T], indexes: Sequence[int]) -> Sequence[Sequence[T]]:
     """Get the subset of data based on the provided indexes.
 
     Parameters
@@ -138,7 +139,7 @@ def get_subsets(data: Sequence[T], indexes: Sequence[int]) -> Sequence[Sequence[
         A sequence of subsets of the data, where each subset corresponds to the
         indices defined in `indexes`.
     """
-    return [data[indexes[i] : indexes[i + 1]] for i in range(len(indexes) - 1)] + [
+    return [data[indexes[i] : indexes[i + 1]] for i in range(len(indexes) - 2)] + [
         data[indexes[-2] : indexes[-1] + 1]
     ]
 
@@ -155,7 +156,7 @@ def _partition_data_for_bucket(
     n_buckets : int
         The number of buckets to create from the data.
     verbose : bool, optional
-        If True, logs the total loss and losses for each bucketby,  default True
+        If True, logs the total loss and losses for each bucket, by default True
 
     Returns
     -------
@@ -165,8 +166,8 @@ def _partition_data_for_bucket(
           value in the sorted data.
         - The total loss percentage for the partitioned data.
     """
-    indexes = _jenks_natural_breaks(data, n_buckets)
-    subsets = get_subsets(data, indexes)
+    indexes = _jenks_natural_breaks(data, n_buckets, verbose=verbose)
+    subsets = _get_subsets(data, indexes)
     total_loss = _total_loss(subsets)
     if verbose:
         logger.info("Total loss: {:.4f}%", _total_loss(subsets))
@@ -179,7 +180,7 @@ def _partition_data_for_bucket(
     return indexes, total_loss
 
 
-def partition_data(
+def _partition_data(
     data: Sequence[int], n_buckets: Optional[int] = None, threshold: float = 3.0
 ) -> Sequence[int]:
     if n_buckets is not None:
@@ -216,4 +217,101 @@ def partition_data(
         f"recommended number of buckets is {n_buckets}."
     )
 
-    return list_of_indexes[n_buckets]
+    return list_of_indexes[n_buckets - 1]
+
+
+def _pad_and_stack_bucket(bucket: Sequence[Union[Array, np.ndarray]]) -> Array:
+    """Pad a bucket of arrays to the size of the largest array in the bucket and stack them.
+
+    Parameters
+    ----------
+    bucket : Sequence[Union[Array, np.ndarray]]
+        A sequence of arrays to pad and stack.
+
+    Returns
+    -------
+    Array
+        A stacked array where each array in the bucket is padded to the size of the
+        largest array in the bucket. The shape of the returned array is (n_buckets, max_size,
+        ...), where n_buckets is the number of arrays in the bucket and max_size is the size
+        of the largest array in the bucket.
+    """
+    max_size = max(arr.shape[0] for arr in bucket)
+    bucket_padded = [
+        jnp.pad(b, ((0, max_size - b.shape[0]),) + ((0, 0),) * (b.ndim - 1))
+        for b in bucket
+    ]
+    return jnp.stack(bucket_padded, axis=0)
+
+
+def _bucket_mask(bucket: Sequence[Union[Array, np.ndarray]]) -> Array:
+    """Create a mask for a bucket of arrays.
+
+    Parameters
+    ----------
+    bucket : Sequence[Union[Array, np.ndarray]]
+        A sequence of arrays to create a mask for.
+
+    Returns
+    -------
+    Array
+        A boolean array where True indicates a valid element and False indicates a padded
+        element. The shape of the returned array is (n_buckets, max_size), where
+        n_buckets is the number of arrays in the bucket and max_size is the size of the
+        largest array in the bucket.
+    """
+    max_size = max(arr.shape[0] for arr in bucket)
+    masks = [
+        jnp.pad(
+            jnp.ones(arr.shape[0], dtype=bool),
+            (0, max_size - arr.shape[0]),
+            constant_values=False,
+        )
+        for arr in bucket
+    ]
+    return jnp.stack(masks, axis=0)
+
+
+def pad_and_stack(
+    *arrays: Sequence[Union[Array, np.ndarray]],
+    n_buckets: Optional[int],
+    threshold: float,
+) -> Sequence[Sequence[Array]]:
+    """Pad and stack multiple arrays into buckets.
+
+    Parameters
+    ----------
+    n_buckets : Optional[int]
+        The number of buckets to create from the data. If None, the function will
+        partition the data into buckets based on the sizes of the arrays.
+    threshold : float
+        if :code:`n_buckets` is None, this value is used to determine the maximum size of
+        the buckets.
+
+    Returns
+    -------
+    Sequence[Sequence[Array]]
+        A sequence of padded arrays, where each array corresponds to a bucket.
+        The last element of the sequence is a mask indicating which elements are valid
+        and which are padded.
+    """
+    error_if(
+        not all(len(arrays[0]) == len(arr) for arr in arrays),
+        msg="All arrays must have the same length.",
+    )
+    index_and_size = [(i, arr.size) for i, arr in enumerate(arrays[0])]
+    index_and_size = sorted(index_and_size, key=lambda x: x[1])
+    sizes = [size for _, size in index_and_size]
+    shuffle_indices = [i for i, _ in index_and_size]
+    shuffled_arrays = [[arrays_j[i] for i in shuffle_indices] for arrays_j in arrays]
+
+    subset_indices = _partition_data(sizes, n_buckets, threshold)
+
+    subsets_arrays = [_get_subsets(sa, subset_indices) for sa in shuffled_arrays]
+
+    padded_subsets = [
+        [_pad_and_stack_bucket(s) for s in subset] for subset in subsets_arrays
+    ]
+    masks = [_bucket_mask(s) for s in subsets_arrays[0]]
+
+    return padded_subsets + [masks]
