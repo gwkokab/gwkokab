@@ -141,6 +141,8 @@ def main() -> None:
         data=data,
         log_ref_priors=log_ref_priors,
         ERate_fn=erate_estimator.__call__,
+        n_buckets=args.n_buckets,
+        threshold=args.threshold,
     )
 
     constants = model.constants
