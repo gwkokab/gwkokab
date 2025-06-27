@@ -290,17 +290,6 @@ def pad_and_stack(
         The number of buckets to create from the data. If None, the function will
         partition the data into buckets based on the sizes of the arrays.
     threshold : float
-        If ``n_buckets`` is None, this value is used to determine the maximum size of
-        the buckets.
-    """
-    # …rest of implementation…
-
-    Parameters
-    ----------
-    n_buckets : Optional[int]
-        The number of buckets to create from the data. If None, the function will
-        partition the data into buckets based on the sizes of the arrays.
-    threshold : float
         if :code:`n_buckets` is None, this value is used to determine the maximum size of
         the buckets.
 
