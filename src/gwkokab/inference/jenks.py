@@ -2,6 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+#
+"""Bucketing and padding utilities using Jenks' Natural Breaks algorithm.
+
+This module provides functionality to partition sequences of arrays into buckets
+based on their sizes using Jenks' Natural Breaks algorithm, then pad and stack
+these arrays within each bucket for uniform shape. This is useful for managing
+memory usage when processing large datasets.
+"""
+
 from collections.abc import Sequence
 from typing import Optional, TypeVar, Union
 
