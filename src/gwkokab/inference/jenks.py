@@ -52,10 +52,10 @@ def _loss(bucket: Sequence[int]) -> float:
 def _total_loss(subsets: Sequence[Sequence[int]]) -> float:
     total_loss = (
         (
-            sum([len(subset) * max(subset) for subset in subsets])
-            - sum([sum(subset) for subset in subsets])
+            sum(len(subset) * max(subset) for subset in subsets)
+            - sum(sum(subset) for subset in subsets)
         )
-        / sum([len(subset) * max(subset) for subset in subsets])
+        / sum(len(subset) * max(subset) for subset in subsets)
         * 100.0
     )
     return total_loss
