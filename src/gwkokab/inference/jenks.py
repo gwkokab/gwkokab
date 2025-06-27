@@ -114,11 +114,12 @@ def _jenks_natural_breaks(
     breaks = jenkspy.jenks_breaks(data, n_classes=n_buckets)
     n_unique_breaks = len(set(breaks))
     if n_unique_breaks != n_buckets + 1:
-        msg = f"{n_buckets} buckets requested, but less than {n_buckets + 1} unique breaks found. "
-        ("Consider halving the number of buckets or using a different method.",)
-        if verbose:
-            logger.error(msg)
-        raise ValueError(msg)
+        if n_unique_breaks != n_buckets + 1:
+            msg = f"{n_buckets} buckets requested, but less than {n_buckets + 1} unique breaks found. "
+            msg += "Consider halving the number of buckets or using a different method."
+            if verbose:
+                logger.error(msg)
+            raise ValueError(msg)
     indexes = [_right_most_index(data, break_value) for break_value in breaks]
     return indexes
 
