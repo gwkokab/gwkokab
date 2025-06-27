@@ -221,7 +221,8 @@ def _partition_data(
 
 
 def _pad_and_stack_bucket(bucket: Sequence[Union[Array, np.ndarray]]) -> Array:
-    """Pad a bucket of arrays to the size of the largest array in the bucket and stack them.
+    """Pad a bucket of arrays to the size of the largest array in the bucket and stack
+    them.
 
     Parameters
     ----------
