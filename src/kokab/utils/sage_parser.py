@@ -96,7 +96,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     optm_group.add_argument(
         "--threshold",
-        help="Threshold to determine best number of buckets,if the number of buckets "
+        help="Threshold to determine best number of buckets, if the number of buckets "
         "is not specified. It should be between 0 and 100.",
         type=float,
         default=3.0,
