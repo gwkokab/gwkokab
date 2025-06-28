@@ -233,7 +233,11 @@ def train_regressor(
 
     if checkpoint_path is not None:
         save_model(
-            filename=checkpoint_path, model=model, names=input_keys, is_log=train_in_log
+            filepath=checkpoint_path,
+            datafilepath=data_path,
+            model=model,
+            names=input_keys,
+            is_log=train_in_log,
         )  # type: ignore
         plt.plot(loss_vals, label="loss")
         plt.plot(val_loss_vals, label="val loss")

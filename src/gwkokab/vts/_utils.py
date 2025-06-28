@@ -141,7 +141,8 @@ def make_model(
 
 def save_model(
     *,
-    filename: str,
+    filepath: str,
+    datafilepath: str,
     model: eqx.nn.MLP,
     names: Optional[Sequence[str]] = None,
     is_log: bool = False,
@@ -152,20 +153,28 @@ def save_model(
     ----------
     filename : str
         Name of the file to save the model
+    datafilepath : str
+        Path to the data file, used to save the names of the parameters
     model : eqx.nn.MLP
         Model to approximate the log of the VT function
     names : Optional[Sequence[str]], optional
         names of the parameters, by default None
     """
-    if not filename.endswith(".hdf5"):
-        if "." in filename:
-            old_filename = filename
-            filename = filename.split(".")[0] + ".hdf5"
+    if not filepath.endswith(".hdf5"):
+        if "." in filepath:
+            old_filename = filepath
+            filepath = filepath.split(".")[0] + ".hdf5"
             warnings.warn(
-                f"Neural VT path does not end with .hdf5: {old_filename}. Saving to {filename} instead."
+                f"Neural VT path does not end with .hdf5: {old_filename}. Saving to {filepath} instead."
             )
+
+    with h5py.File(datafilepath, "r") as f:
+        # read all attributes from the data file
+        attr = dict(f.attrs)
     model: eqx.nn.MLP = model._fun  # type: ignore
-    with h5py.File(filename, "w") as f:
+    with h5py.File(filepath, "w") as f:
+        for key, value in attr.items():
+            f.attrs[key] = value  # copy attributes from the data file
         if names is not None:
             f.create_dataset("names", data=np.array(names, dtype="S"))
         f.create_dataset("in_size", data=model.in_size)  # type: ignore
@@ -180,12 +189,12 @@ def save_model(
             layer_i.create_dataset(f"bias_{i}", data=model.layers[i].bias)  # type: ignore
 
 
-def load_model(filename) -> Tuple[List[str], eqx.nn.MLP]:
+def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:
     """Load the model from the given file.
 
     Parameters
     ----------
-    filename : _type_
+    filename : str
         Name of the file to load the model
 
     Returns
