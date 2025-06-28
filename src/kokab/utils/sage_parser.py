@@ -75,16 +75,31 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         type=str,
     )
 
-    adam_group = parser.add_argument_group("Adam Options")
-    adam_group.add_argument(
+    optm_group = parser.add_argument_group("Optimization Options")
+    optm_group.add_argument(
         "--adam-optimizer",
         help="Use Adam optimizer before running flowMC.",
         action="store_true",
     )
-    adam_group.add_argument(
+    optm_group.add_argument(
         "--adam-json",
         help="Path to a JSON file containing the Adam optimizer options.",
         type=str,
+    )
+    optm_group.add_argument(
+        "--n-buckets",
+        help="Number of buckets for the data arrays to be split into. "
+        "This is useful for large datasets to avoid memory issues. "
+        "See https://github.com/gwkokab/gwkokab/issues/568 for more details.",
+        type=int,
+        default=None,
+    )
+    optm_group.add_argument(
+        "--threshold",
+        help="Threshold to determine best number of buckets, if the number of buckets "
+        "is not specified. It should be between 0 and 100.",
+        type=float,
+        default=3.0,
     )
 
     prior_group = parser.add_argument_group("Prior Options")

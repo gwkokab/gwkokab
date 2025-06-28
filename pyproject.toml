@@ -49,6 +49,7 @@ dependencies = [
     "jax>=0.4.30,<=0.5.3",
     "jaxlib>=0.4.30,<=0.5.3",
     "jaxtyping>=0.2.36",
+    "jenkspy==0.4.1",
     "loguru>=0.7.0",
     "matplotlib>=3.9.0",
     "mplcursors>=0.6",
