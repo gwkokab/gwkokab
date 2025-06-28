@@ -216,7 +216,7 @@ def train_regressor(
 
                 model, opt_state, loss = train_step(model, x, y, opt_state)
                 epoch_loss += loss
-                pbar.set_postfix({"epoch": epoch + 1, "loss": f"{loss:.12E}"})
+                pbar.set_postfix({"epoch": epoch + 1, "loss": f"{loss:.5E}"})
 
             loss = epoch_loss / (len(train_X) // batch_size)
             loss_vals.append(loss)
@@ -224,11 +224,11 @@ def train_regressor(
             val_loss, _ = mse_loss_fn(model, test_X, test_Y)
             val_loss_vals.append(val_loss)
             pbar.set_description(
-                f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.12E}, Val Loss: {val_loss:.12E}"
+                f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.5E}, Val Loss: {val_loss:.5E}"
             )
             if epoch % 10 == 0 or epoch == epochs - 1:
                 logger.info(
-                    f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.12E}, Val Loss: {val_loss:.12E}"
+                    f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.5E}, Val Loss: {val_loss:.5E}"
                 )
 
     if checkpoint_path is not None:
