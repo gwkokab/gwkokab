@@ -3,9 +3,10 @@
 
 
 from collections.abc import Callable, Sequence
-from typing import Optional
+from typing import Dict, Optional, Union
 
 import equinox as eqx
+import h5py
 import jax
 from jax import lax, numpy as jnp
 from jaxtyping import Array
@@ -22,6 +23,8 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
     """The batch size used by :func:`jax.lax.map` in mapped functions."""
     neural_vt_model: eqx.nn.MLP = eqx.field(init=False)
     """The neural volume-time sensitivity model."""
+    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(init=False, static=True)
+    """Ranges of the parameters expected by the model."""
 
     def __init__(
         self,
@@ -64,6 +67,12 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
                 f"{parameters}. Missing: {set(names) - set(parameters)}"
             )
         self.shuffle_indices = [parameters.index(name) for name in names]
+        parameter_ranges = {}
+        with h5py.File(filename, "r") as f:
+            for k, v in f.attrs.items():
+                if k.endswith("_min") or k.endswith("_max"):
+                    parameter_ranges[k] = lax.stop_gradient(v)
+        self.parameter_ranges = parameter_ranges
 
     def get_logVT(self) -> Callable[[Array], Array]:  # TODO: rename to get_pdet
         """Gets the logVT function."""
@@ -71,7 +80,9 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
         @jax.jit
         def _pdet(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
-            return jnp.log(self.neural_vt_model(x_new))
+            y_new = self.neural_vt_model(x_new)
+            safe_y_new = jnp.where(jnp.equal(y_new, 0.0), 1.0, y_new)
+            return jnp.where(jnp.equal(y_new, 0.0), -jnp.inf, jnp.log(safe_y_new))
 
         return _pdet
 
@@ -84,11 +95,11 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
         @jax.jit
         def _pdet(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
-            return jnp.log(
-                jnp.squeeze(
-                    lax.map(self.neural_vt_model, x_new, batch_size=_batch_size),
-                    axis=-1,
-                )
+            y_new = jnp.squeeze(
+                lax.map(self.neural_vt_model, x_new, batch_size=_batch_size),
+                axis=-1,
             )
+            safe_y_new = jnp.where(jnp.equal(y_new, 0.0), 1.0, y_new)
+            return jnp.where(jnp.equal(y_new, 0.0), -jnp.inf, jnp.log(safe_y_new))
 
         return _pdet
