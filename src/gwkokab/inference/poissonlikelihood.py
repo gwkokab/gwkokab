@@ -25,7 +25,7 @@ def poisson_likelihood(
     dist_builder: Bake,
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
-    ERate_fn: Callable[[Distribution, int], Array],
+    ERate_fn: Callable[[Distribution, Optional[int]], Array],
     where_fns: Optional[List[Callable[..., Array]]] = None,
     n_buckets: Optional[int] = None,
     threshold: float = 3.0,
@@ -62,7 +62,10 @@ def poisson_likelihood(
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
-    redshift_index = parameters_name.index("redshift")
+    if "redshift" in parameters_name:
+        redshift_index = parameters_name.index("redshift")
+    else:
+        redshift_index = None
     dummy_model = dist_builder.get_dummy()
     warn_if(
         not isinstance(dummy_model, ScaledMixture),
