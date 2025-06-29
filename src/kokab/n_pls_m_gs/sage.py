@@ -302,7 +302,7 @@ def main() -> None:
 
             return jnp.all(scales > 0.0)
 
-        # where_fns.append(tilt_scale_should_be_positive)
+        where_fns.append(tilt_scale_should_be_positive)
 
     if has_phi_12:
         parameters.append(PHI_12)
