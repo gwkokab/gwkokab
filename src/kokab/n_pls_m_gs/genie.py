@@ -535,8 +535,8 @@ def main() -> None:
 
         all_params.extend(
             [
-                ("redshift_lamb_g", N_g),
-                ("redshift_lamb_pl", N_pl),
+                ("redshift_kappa_g", N_g),
+                ("redshift_kappa_pl", N_pl),
                 ("redshift_z_max_g", N_g),
                 ("redshift_z_max_pl", N_pl),
             ]

@@ -5,6 +5,7 @@
 from ._doubletruncpowerlaw import (
     doubly_truncated_power_law_cdf as doubly_truncated_power_law_cdf,
     doubly_truncated_power_law_icdf as doubly_truncated_power_law_icdf,
+    doubly_truncated_power_law_log_norm_constant as doubly_truncated_power_law_log_norm_constant,
     doubly_truncated_power_law_log_prob as doubly_truncated_power_law_log_prob,
 )
 from ._joindistribution import JointDistribution as JointDistribution
@@ -14,6 +15,7 @@ from ._ncombination import (
     create_independent_spin_orientation_gaussian_isotropic as create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift as create_powerlaw_redshift,
     create_powerlaws as create_powerlaws,
+    create_simple_redshift_powerlaw as create_simple_redshift_powerlaw,
     create_smoothed_gaussians as create_smoothed_gaussians,
     create_smoothed_gaussians_raw as create_smoothed_gaussians_raw,
     create_smoothed_powerlaws as create_smoothed_powerlaws,

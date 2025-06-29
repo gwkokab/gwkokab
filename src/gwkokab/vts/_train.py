@@ -65,6 +65,7 @@ def train_regressor(
     epochs: int = 50,
     validation_split: float = 0.2,
     learning_rate: float = 1e-3,
+    train_in_log: bool = False,
 ) -> None:
     """Train the model to approximate the log of the VT function.
 
@@ -88,6 +89,8 @@ def train_regressor(
         fraction of the data to use for validation, by default 0.2
     learning_rate : float
         learning rate for the optimizer, by default 1e-3
+    train_in_log : bool
+        whether to train the model in log space, by default False
 
     Raises
     ------
@@ -163,14 +166,15 @@ def train_regressor(
     data_X = jax.device_put(df[input_keys].to_numpy(), may_alias=True)
     data_Y = jax.device_put(df[output_keys].to_numpy(), may_alias=True)
 
-    log_data_Y = jnp.log(data_Y)
-    log_data_Y = jnp.where(
-        jnp.isneginf(log_data_Y), -jnp.finfo(jnp.result_type(float)).tiny, log_data_Y
-    )
+    if train_in_log:
+        data_Y = jnp.log(data_Y)
+        data_Y = jnp.where(
+            jnp.isneginf(data_Y), -jnp.finfo(jnp.result_type(float)).tiny, data_Y
+        )
 
     train_X, test_X, train_Y, test_Y = _train_test_data_split(
         data_X,
-        log_data_Y,
+        data_Y,
         batch_size,
         test_size=validation_split,
     )
@@ -212,7 +216,7 @@ def train_regressor(
 
                 model, opt_state, loss = train_step(model, x, y, opt_state)
                 epoch_loss += loss
-                pbar.set_postfix({"epoch": epoch + 1, "loss": f"{loss:.12E}"})
+                pbar.set_postfix({"epoch": epoch + 1, "loss": f"{loss:.5E}"})
 
             loss = epoch_loss / (len(train_X) // batch_size)
             loss_vals.append(loss)
@@ -220,15 +224,21 @@ def train_regressor(
             val_loss, _ = mse_loss_fn(model, test_X, test_Y)
             val_loss_vals.append(val_loss)
             pbar.set_description(
-                f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.12E}, Val Loss: {val_loss:.12E}"
+                f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.5E}, Val Loss: {val_loss:.5E}"
             )
             if epoch % 10 == 0 or epoch == epochs - 1:
                 logger.info(
-                    f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.12E}, Val Loss: {val_loss:.12E}"
+                    f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.5E}, Val Loss: {val_loss:.5E}"
                 )
 
     if checkpoint_path is not None:
-        save_model(filename=checkpoint_path, model=model, names=input_keys)  # type: ignore
+        save_model(
+            filepath=checkpoint_path,
+            datafilepath=data_path,
+            model=model,
+            names=input_keys,
+            is_log=train_in_log,
+        )  # type: ignore
         plt.plot(loss_vals, label="loss")
         plt.plot(val_loss_vals, label="val loss")
         plt.yscale("log")

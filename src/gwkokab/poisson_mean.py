@@ -2,17 +2,24 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
+import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
 from numpyro.distributions.distribution import Distribution, DistributionLike
 
+from .cosmology import PLANCK_2015_Cosmology
 from .models.utils import ScaledMixture
 from .utils.tools import error_if
-from .vts import RealInjectionVolumeTimeSensitivity, VolumeTimeSensitivityInterface
+from .vts import (
+    NeuralNetProbabilityOfDetection,
+    RealInjectionVolumeTimeSensitivity,
+    SyntheticInjectionVolumeTimeSensitivity,
+    VolumeTimeSensitivityInterface,
+)
 
 
 class PoissonMean(eqx.Module):
@@ -61,6 +68,8 @@ class PoissonMean(eqx.Module):
 
     is_injection_based: bool = eqx.field(init=False, default=False)
     """Flag to check if the class is injection based or not."""
+    is_pdet: bool = eqx.field(init=False, default=False)
+    """Flag to check if the class is a neural pdet or not."""
     key: PRNGKeyArray = eqx.field(init=False)
     logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(
         init=False, default=None
@@ -72,6 +81,9 @@ class PoissonMean(eqx.Module):
         eqx.field(init=False)
     )
     time_scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
+    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(
+        init=False, static=True, default=None
+    )
 
     def __init__(
         self,
@@ -109,7 +121,16 @@ class PoissonMean(eqx.Module):
         ValueError
             If the proposal distribution is not a distribution.
         """
-        if isinstance(logVT_estimator, RealInjectionVolumeTimeSensitivity):
+        if isinstance(logVT_estimator, NeuralNetProbabilityOfDetection):
+            self.is_pdet = True
+            self.parameter_ranges = logVT_estimator.parameter_ranges
+        if isinstance(
+            logVT_estimator,
+            (
+                RealInjectionVolumeTimeSensitivity,
+                SyntheticInjectionVolumeTimeSensitivity,
+            ),
+        ):
             self.is_injection_based = True
             self.key = key
             self.proposal_log_weights_and_samples = (
@@ -226,13 +247,15 @@ class PoissonMean(eqx.Module):
         self.proposal_log_weights_and_samples = tuple(proposal_log_weights_and_samples)
         self.key = key
 
-    def __call__(self, model: ScaledMixture) -> Array:
+    def __call__(self, model: ScaledMixture, redshift_index: Optional[int]) -> Array:
         r"""Estimate the rate/s by using the given model.
 
         Parameters
         ----------
         model : ScaledMixture
             Model instance.
+        redshift_index : int
+            Redshift index for the model.
 
         Returns
         -------
@@ -248,14 +271,25 @@ class PoissonMean(eqx.Module):
             model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
             # log p(ω_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
+            # TODO(Qazalbash): handle the case for reading redshift from injections here for redshift independent models.
+            z = jax.lax.dynamic_index_in_dim(
+                samples, redshift_index, axis=-1, keepdims=False
+            )
+            log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
             # (T / n_total) * exp(log Σ exp(log p(ω_i|λ) - log w_i))
             return (self.time_scale / num_samples) * jnp.exp(
-                jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
+                jnn.logsumexp(
+                    log_factor_redshift + log_prob,
+                    where=~jnp.isneginf(log_prob) | ~jnp.isneginf(log_factor_redshift),
+                    axis=-1,
+                )
             )
         else:  # per component rate estimation
-            return self.calculate_per_component_rate(model)
+            return self.calculate_per_component_rate(model, redshift_index)
 
-    def calculate_per_component_rate(self, model: ScaledMixture) -> Array:
+    def calculate_per_component_rate(
+        self, model: ScaledMixture, redshift_index: Optional[int]
+    ) -> Array:
         r"""Estimate the per component rate/s by using the given model.
 
         Parameters
@@ -297,9 +331,31 @@ class PoissonMean(eqx.Module):
                     num_samples
                 )
                 per_sample_log_estimated_rates = log_weights + component_log_prob
+
+            if self.is_pdet:
+                if redshift_index is None:
+                    zmin = self.parameter_ranges.get("redshift_min", 0.0)
+                    zmax = self.parameter_ranges.get("redshift_max", 10.0)
+                    z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
+                else:
+                    z = jax.lax.dynamic_index_in_dim(
+                        samples, redshift_index, axis=-1, keepdims=False
+                    )
+                per_component_log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(
+                    z
+                ) - jnp.log1p(z)
+            else:
+                per_component_log_factor_redshift = jnp.zeros(
+                    (), dtype=per_sample_log_estimated_rates.dtype
+                )
+
+            per_sample_log_estimated_rates = jnp.nan_to_num(
+                per_sample_log_estimated_rates, nan=-jnp.inf
+            )
             per_component_log_estimated_rate = jnn.logsumexp(
-                per_sample_log_estimated_rates,
-                where=~jnp.isneginf(per_sample_log_estimated_rates),
+                per_component_log_factor_redshift + per_sample_log_estimated_rates,
+                where=~jnp.isneginf(per_sample_log_estimated_rates)
+                | ~jnp.isneginf(per_component_log_factor_redshift),
             ) - jnp.log(num_samples)
             per_component_log_estimated_rates.append(per_component_log_estimated_rate)
 

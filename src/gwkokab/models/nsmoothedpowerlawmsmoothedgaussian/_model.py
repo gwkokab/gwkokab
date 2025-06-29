@@ -13,10 +13,9 @@ from numpyro.distributions import (
     TruncatedNormal,
 )
 
-from ...cosmology import PLANCK_2015_Cosmology
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
-from ..redshift import PowerlawRedshift
+from ..redshift import SimpleRedshiftPowerlaw
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
@@ -25,6 +24,7 @@ from ..utils import (
     create_smoothed_gaussians,
     create_smoothed_powerlaws,
     create_truncated_normal_distributions,
+    doubly_truncated_power_law_log_norm_constant,
     JointDistribution,
     ScaledMixture,
 )
@@ -470,18 +470,19 @@ def SmoothedPowerlawAndPeak(
         component_distribution_g.extend([chi1_dist_g, chi2_dist_g])
 
     if use_redshift:
-        zgrid = jnp.linspace(0.001, params["z_max"], 100)
-        dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz_Gpc3(zgrid)
-        powerlaw_z = PowerlawRedshift(
-            z_max=params["z_max"],
-            lamb=params["lamb"],
-            zgrid=zgrid,
-            dVcdz=dVcdz,
-            validate_args=validate_args,
+        z_max = params["z_max"]
+        kappa = params["kappa"]
+        powerlaw_z = SimpleRedshiftPowerlaw(
+            z_max=z_max, kappa=kappa, validate_args=validate_args
+        )
+        redshift_log_norm = doubly_truncated_power_law_log_norm_constant(
+            alpha=kappa, low=1.0, high=1.0 + z_max
         )
 
         component_distribution_pl.append(powerlaw_z)
         component_distribution_g.append(powerlaw_z)
+    else:
+        redshift_log_norm = 0.0
 
     if len(component_distribution_pl) == 1:
         component_distribution_pl = component_distribution_pl[0]
@@ -498,12 +499,13 @@ def SmoothedPowerlawAndPeak(
         )
 
     return ScaledMixture(
-        log_scales=jnp.stack(
-            [
-                jnp.log1p(-params["lambda_peak"]) + params["log_rate"],
-                jnp.log(params["lambda_peak"]) + params["log_rate"],
-            ],
-            axis=-1,
+        log_scales=(
+            jnp.stack(
+                [jnp.log1p(-params["lambda_peak"]), jnp.log(params["lambda_peak"])],
+                axis=-1,
+            )
+            + params["log_rate"]
+            + redshift_log_norm
         ),
         component_distributions=[component_distribution_pl, component_distribution_g],
         support=constraints.real_vector,

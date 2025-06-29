@@ -37,7 +37,7 @@ class PopulationFactory:
         model: ScaledMixture,
         parameters: List[str],
         logVT_fn: Optional[Callable[[Array], Array]],
-        ERate_fn: Callable[[ScaledMixture], Array],
+        ERate_fn: Callable[[ScaledMixture, int], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
     ) -> None:
@@ -74,6 +74,7 @@ class PopulationFactory:
         self.ERate_fn = ERate_fn
         self.num_realizations = num_realizations
         self.error_size = error_size
+        self.redshift_index = parameters.index("redshift")
 
         self.event_filename = ensure_dat_extension(self.event_filename)
         self.injection_filename = ensure_dat_extension(self.injection_filename)
@@ -105,8 +106,14 @@ class PopulationFactory:
 
         if self.logVT_fn is not None:
             _, key = jrd.split(key)
-
-            vt = jnn.softmax(self.logVT_fn(population))
+            logVT = self.logVT_fn(population)
+            logVT = jnp.nan_to_num(
+                logVT,
+                nan=-jnp.inf,
+                posinf=-jnp.inf,
+                neginf=-jnp.inf,
+            )
+            vt = jnn.softmax(logVT)
             _, key = jrd.split(key)
             index = jrd.choice(
                 key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
@@ -120,14 +127,14 @@ class PopulationFactory:
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
-        exp_rate = self.ERate_fn(self.model)
+        exp_rate = self.ERate_fn(self.model, self.redshift_index)
         logger.debug(f"Expected rate for the population is {exp_rate}")
         size = int(jrd.poisson(poisson_key, exp_rate))
         logger.debug(f"Population size is {size}")
         key = rate_key
         if size <= 0:
             raise ValueError(
-                "Population size is zero. This can be a result of following:\n"
+                f"Population size is {size}. This can be a result of following:\n"
                 "\t1. The rate is zero.\n"
                 "\t2. The volume is zero.\n"
                 "\t3. The models are not selected for rate calculation.\n"
