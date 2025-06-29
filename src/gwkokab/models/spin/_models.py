@@ -7,7 +7,7 @@ from typing import Optional
 from jax import lax, numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.distributions import (
-    BetaProportion,
+    Beta,
     CategoricalProbs,
     constraints,
     Independent,
@@ -149,7 +149,7 @@ def BetaFromMeanVar(
     variance: ArrayLike,
     *,
     validate_args: Optional[bool] = None,
-) -> BetaProportion:
+) -> Beta:
     r"""Beta distribution parameterized by the expected value and variance.
 
     Parameters
@@ -166,8 +166,10 @@ def BetaFromMeanVar(
 
     Returns
     -------
-    BetaProportion
+    Beta
         Beta distribution with the specified mean and variance.
     """
     concentration = ((mean * (1.0 - mean)) / variance) - 1.0
-    return BetaProportion(mean, concentration, validate_args=validate_args)
+    alpha = mean * concentration
+    beta = (1.0 - mean) * concentration
+    return Beta(alpha, beta, validate_args=validate_args)
