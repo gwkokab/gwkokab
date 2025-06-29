@@ -8,13 +8,15 @@ from collections.abc import Callable
 from typing import List, Optional, Tuple
 
 import numpy as np
+import tqdm
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
+from loguru import logger
 from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
 from ..models.wrappers import ModelRegistry
-from ._utils import ensure_dat_extension, get_progress_bar
+from ._utils import ensure_dat_extension
 
 
 PROGRESS_BAR_TEXT_WITDH = 25
@@ -119,9 +121,11 @@ class PopulationFactory:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
         exp_rate = self.ERate_fn(self.model)
+        logger.debug(f"Expected rate for the population is {exp_rate}")
         size = int(jrd.poisson(poisson_key, exp_rate))
+        logger.debug(f"Population size is {size}")
         key = rate_key
-        if size == 0:
+        if size <= 0:
             raise ValueError(
                 "Population size is zero. This can be a result of following:\n"
                 "\t1. The rate is zero.\n"
@@ -132,11 +136,15 @@ class PopulationFactory:
             )
         pop_keys = jrd.split(key, self.num_realizations)
         os.makedirs(self.root_dir, exist_ok=True)
-        with get_progress_bar("Injections", self.verbose) as progress:
-            realization_task = progress.add_task(
-                "Generating realizations", total=self.num_realizations
+        with tqdm.tqdm(
+            range(self.num_realizations),
+            unit="realization",
+            total=self.num_realizations,
+        ) as pbar:
+            pbar.set_description(
+                "Generating population".ljust(PROGRESS_BAR_TEXT_WITDH, " ")
             )
-            for i in range(self.num_realizations):
+            for i in pbar:
                 realizations_path = os.path.join(
                     self.root_dir, self.realizations_dir.format(i)
                 )
@@ -183,7 +191,6 @@ class PopulationFactory:
                     comments="",  # To remove the default comment character '#'
                     fmt="%d",
                 )
-                progress.advance(realization_task, 1)
 
     def _add_error(self, realization_number, *, key: PRNGKeyArray) -> None:
         r"""Adds error to the realizations' population."""
@@ -297,8 +304,11 @@ class PopulationFactory:
             assert is_prng_key(key)
         self._generate_realizations(key)
         keys = jrd.split(key, self.num_realizations)
-        with get_progress_bar("Errors", self.verbose) as progress:
-            adding_error_task = progress.add_task("Errors", total=self.num_realizations)
-            for i in range(self.num_realizations):
+        with tqdm.tqdm(
+            range(self.num_realizations),
+            unit="realization",
+            total=self.num_realizations,
+        ) as pbar:
+            pbar.set_description("Adding errors".ljust(PROGRESS_BAR_TEXT_WITDH, " "))
+            for i in pbar:
                 self._add_error(i, key=keys[i])
-                progress.advance(adding_error_task, 1)

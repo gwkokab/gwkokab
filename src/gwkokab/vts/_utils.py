@@ -78,13 +78,15 @@ def predict(model: PyTree, x: Array, batch_size: Optional[int] = 256) -> Array:
     return jax.lax.map(model, x, batch_size=batch_size)
 
 
-def read_data(data_path: str) -> pd.DataFrame:
+def read_data(data_path: str, keys: Sequence[str]) -> pd.DataFrame:
     """Read the data from the given path.
 
     Parameters
     ----------
     data_path : str
         path to the data
+    keys : Sequence[str]
+        keys to read from the data file
 
     Returns
     -------
@@ -92,7 +94,6 @@ def read_data(data_path: str) -> pd.DataFrame:
         data in a DataFrame
     """
     with h5py.File(data_path, "r") as vt_file:
-        keys = list(vt_file.keys())
         df = pd.DataFrame(data={key: np.array(vt_file[key]).flatten() for key in keys})
     return df
 
@@ -141,7 +142,7 @@ def make_model(
 def save_model(
     *,
     filename: str,
-    model: eqx._ad._CheckpointWrapper,
+    model: eqx.nn.MLP,
     names: Optional[Sequence[str]] = None,
 ) -> None:
     """Save the model to the given file.

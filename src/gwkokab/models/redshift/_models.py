@@ -15,12 +15,12 @@
 
 from typing import Optional
 
-import jax.numpy as jnp
 import quadax
-from jax import Array, random
+from jax import Array, numpy as jnp, random
 from jax.lax import broadcast_shapes
 from jax.scipy.integrate import trapezoid
-from jax.typing import ArrayLike
+from jaxtyping import ArrayLike
+from numpyro import distributions as dist
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.util import is_prng_key
@@ -124,3 +124,47 @@ class PowerlawRedshift(Distribution):
 
     def icdf(self, q):
         return jnp.interp(q, self.cdfgrid, self.zgrid)
+
+
+def SimpleRedshiftPowerlaw(
+    kappa: ArrayLike, z_max: ArrayLike, *, validate_args: Optional[bool] = None
+) -> dist.TransformedDistribution:
+    r"""Simple redshift distribution defined as,
+
+    .. math::
+        p(z) \propto (1 + z)^{\kappa}, \qquad 0 \leq z \leq z_{max}
+
+    Parameters
+    ----------
+    kappa : ArrayLike
+        Power-law exponent :math:`\kappa`.
+    z_max : ArrayLike
+        Maximum redshift (upper limit of the support).
+    validate_args : Optional[bool], optional
+        Whether to validate arguments, by default None
+
+    Returns
+    -------
+    dist.TransformedDistribution
+        A transformed distribution representing the redshift law.
+    """
+    # We have defined this distribution in such a way that we use the available
+    # numpyro distributions and transforms. This model is similar to a powerlaw but its
+    # argument is shifted by 1.0. Therefore our support for powerlaw also shifts by 1.0.
+    low = 1.0
+    high = 1.0 + z_max
+    redshift_powerlaw = dist.DoublyTruncatedPowerLaw(
+        alpha=kappa, low=low, high=high, validate_args=validate_args
+    )
+    # Now we need to apply a shift transform to get the 1+z argument. This can be done by
+    # using an AffineTransform that shifts z by -1.0, which effectively transforms z to
+    # 1 + z.
+    shift_transform = dist.transforms.AffineTransform(
+        loc=-1.0, scale=1.0, domain=dist.constraints.interval(low, high)
+    )
+    transformed_redshift_powerlaw = dist.TransformedDistribution(
+        redshift_powerlaw,
+        transforms=[shift_transform],
+        validate_args=validate_args,
+    )
+    return transformed_redshift_powerlaw

@@ -31,6 +31,7 @@ from gwkokab.models import (
     NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
     PowerlawRedshift,
+    SimpleRedshiftPowerlaw,
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio,
@@ -600,6 +601,12 @@ CONTINUOUS = [
     ),
     (BetaFromMeanVar, {"mean": 0.4, "variance": 0.02}),
     (BetaFromMeanVar, {"mean": 0.5, "variance": 0.05}),
+    (SimpleRedshiftPowerlaw, {"z_max": 1.0, "kappa": 0.5}),
+    (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": -1.0}),
+    (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": 2.5}),
+    (SimpleRedshiftPowerlaw, {"z_max": 100.0, "kappa": 4.5}),
+    (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": -10.0}),
+    (SimpleRedshiftPowerlaw, {"z_max": 0.01, "kappa": 2.5}),
 ]
 
 
@@ -1046,6 +1053,8 @@ def test_log_prob_gradient(jax_dist, params):
 
     eps = 1e-3
     for i, k in enumerate(params.keys()):
+        if jax_dist is SimpleRedshiftPowerlaw and k == "z_max":
+            continue
         if jax_dist is PowerlawPrimaryMassRatio and i > 1:
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:

@@ -29,7 +29,10 @@ from .nsmoothedpowerlawmsmoothedgaussian import (
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
     SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,
 )
-from .redshift import PowerlawRedshift as PowerlawRedshift
+from .redshift import (
+    PowerlawRedshift as PowerlawRedshift,
+    SimpleRedshiftPowerlaw as SimpleRedshiftPowerlaw,
+)
 from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,

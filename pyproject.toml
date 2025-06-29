@@ -49,6 +49,7 @@ dependencies = [
     "jax>=0.4.30,<=0.5.3",
     "jaxlib>=0.4.30,<=0.5.3",
     "jaxtyping>=0.2.36",
+    "jenkspy==0.4.1",
     "loguru>=0.7.0",
     "matplotlib>=3.9.0",
     "mplcursors>=0.6",
@@ -56,10 +57,10 @@ dependencies = [
     "numpyro>=0.16.0",
     "pandas>=2.2.0",
     "quadax>=0.2.5",
-    "rich>=13.9.4",
     "RIFT>=0.0.15.11",
     "scipy>=1.12",
     "seaborn>=0.13.0",
+    "tqdm>=4.60.0",
 ]
 keywords = [
     "astrophysics",
