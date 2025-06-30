@@ -183,7 +183,7 @@ def poisson_likelihood(
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
         }
-        predicate = priors.support(x)
+        predicate = priors.support.check(x)
         for where_fn in where_fns:  # type: ignore
             predicate = jnp.logical_and(
                 predicate, where_fn(**constants, **mapped_params)
