@@ -236,6 +236,7 @@ def main() -> None:
                     variances = vars_g
 
                 valid_var = variances <= means * (1 - means)
+                valid_var = jnp.logical_and(valid_var, variances > 0.0)
                 α, β = beta_dist_mean_variance_to_concentrations(means, variances)
                 valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
                 return jnp.all(jnp.logical_and(valid_var, valid_ab))
@@ -254,6 +255,36 @@ def main() -> None:
                 ("cos_tilt2_scale_pl", N_pl),
             ]
         )
+
+        def tilt_scale_should_be_positive(**kwargs) -> Array:
+            if N_pl > 0:
+                scale_pl = jnp.stack(
+                    [
+                        kwargs[f"cos_tilt{i}_scale_pl_{j}"]
+                        for j in range(N_pl)
+                        for i in (1, 2)
+                    ]
+                )
+            if N_g > 0:
+                scale_g = jnp.stack(
+                    [
+                        kwargs[f"cos_tilt{i}_scale_g_{j}"]
+                        for j in range(N_g)
+                        for i in (1, 2)
+                    ]
+                )
+
+            if N_pl > 0 and N_g > 0:
+                scales = jnp.concatenate([scale_pl, scale_g])
+            elif N_pl > 0:
+                scales = scale_pl
+            else:
+                scales = scale_g
+
+            return jnp.all(scales > 0.0)
+
+        where_fns.append(tilt_scale_should_be_positive)
+
     if has_eccentricity:
         parameters.append(ECCENTRICITY)
         all_params.extend(

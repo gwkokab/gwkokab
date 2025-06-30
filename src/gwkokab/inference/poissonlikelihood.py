@@ -138,7 +138,7 @@ def poisson_likelihood(
 
             # log p(ω|data_n) - log π_n
             log_prob: Array = model_instance.log_prob(safe_data) - safe_log_ref_prior
-            log_prob = jnp.where(mask, log_prob, -jnp.inf)
+            log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
 
             # log Σ exp (log p(ω|data_n) - log π_n)
             log_prob_sum = jax.nn.logsumexp(
@@ -183,16 +183,13 @@ def poisson_likelihood(
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
         }
-        if where_fns is None:
-            return likelihood_fn(x, _)
-        predicate = jnp.ones((), dtype=bool)
-        for where_fn in where_fns:
+        predicate = priors.support.check(x)
+        for where_fn in where_fns:  # type: ignore
             predicate = jnp.logical_and(
                 predicate, where_fn(**constants, **mapped_params)
             )
         predicate = jnp.logical_and(jnp.all(x), predicate)
-        predicate = jnp.logical_and(priors.support(x), predicate)
-        return jax.lax.select(predicate, likelihood_fn(x, _), -jnp.inf)
+        return jnp.where(predicate, likelihood_fn(x, _), -jnp.inf)
 
     if where_fns is None:
         return variables_index, priors, likelihood_fn
