@@ -103,6 +103,8 @@ class PowerlawRedshift(Distribution):
         """
         if dVdc is None:
             dVdc_val = jnp.interp(value, self.zgrid, self.dVcdz)
+        else:
+            dVdc_val = jnp.asarray(dVdc)
         logpdf_unnorm = jnp.log(dVdc_val) + (self.kappa - 1.0) * jnp.log1p(value)
         pdfs = self.dVcdz * jnp.power(1.0 + self.zgrid, self.kappa - 1.0)
         norm = trapezoid(pdfs, self.zgrid)
