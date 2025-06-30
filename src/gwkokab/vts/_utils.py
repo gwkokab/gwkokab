@@ -151,7 +151,7 @@ def save_model(
 
     Parameters
     ----------
-    filename : str
+    filepath : str
         Name of the file to save the model
     datafilepath : str
         Path to the data file, used to save the names of the parameters
@@ -159,6 +159,8 @@ def save_model(
         Model to approximate the log of the VT function
     names : Optional[Sequence[str]], optional
         names of the parameters, by default None
+    is_log : bool, optional
+        Whether the model was trained on log-transformed data, by default False
     """
     if not filepath.endswith(".hdf5"):
         if "." in filepath:
