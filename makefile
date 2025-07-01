@@ -1,6 +1,6 @@
 PIP=pip
 UV=uv
-PIP_FLAGS=--upgrade
+PIP_FLAGS=
 TARGET?=gwkokab
 PLATFORM?=
 
