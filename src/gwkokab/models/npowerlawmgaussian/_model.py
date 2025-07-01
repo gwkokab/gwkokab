@@ -13,10 +13,11 @@ from ..utils import (
     combine_distributions,
     create_beta_distributions,
     create_independent_spin_orientation_gaussian_isotropic,
-    create_powerlaw_redshift,
     create_powerlaws,
+    create_simple_redshift_powerlaw,
     create_truncated_normal_distributions,
     create_uniform_distributions,
+    doubly_truncated_power_law_log_norm_constant,
     JointDistribution,
     ScaledMixture,
 )
@@ -25,7 +26,7 @@ from ..utils import (
 build_spin_distributions = create_beta_distributions
 build_tilt_distributions = create_independent_spin_orientation_gaussian_isotropic
 build_eccentricity_distributions = create_truncated_normal_distributions
-build_redshift_distributions = create_powerlaw_redshift
+build_redshift_distributions = create_simple_redshift_powerlaw
 build_cos_iota_distribution = create_uniform_distributions
 build_phi_12_distribution = create_uniform_distributions
 build_polarization_angle_distribution = create_uniform_distributions
@@ -108,7 +109,6 @@ def _build_non_mass_distributions(
         list of distributions
     """
     build_distributions = mass_distributions
-
     _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
         (use_spin, "chi1", build_spin_distributions),
         (use_spin, "chi2", build_spin_distributions),
@@ -548,6 +548,33 @@ def NPowerlawMGaussian(
 
     N = N_pl + N_g
     log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
+
+    if use_redshift:
+        _redshift_model_index = (
+            1
+            + 2 * int(use_spin)
+            + int(use_tilt)
+            + int(use_eccentricity)
+            + int(use_phi_1)
+            + int(use_phi_2)
+            + int(use_phi_12)
+            + int(use_eccentricity)
+            + int(use_mean_anomaly)
+        )
+
+        log_correction_terms_list = []
+        for i, component_dist in enumerate(component_dists):
+            redshift_model_index = _redshift_model_index + int(i >= N_pl) - 1
+            redshift_model = component_dist.marginal_distributions[redshift_model_index]
+            alpha = redshift_model.kappa
+            low = 1.0
+            high = 1.0 + redshift_model.z_max
+            log_norm_constant = doubly_truncated_power_law_log_norm_constant(
+                alpha=alpha, low=low, high=high
+            )
+            log_correction_terms_list.append(log_norm_constant)
+        log_correction_terms = jnp.stack(log_correction_terms_list, axis=-1)
+        log_rates += log_correction_terms
 
     return ScaledMixture(
         log_rates,
