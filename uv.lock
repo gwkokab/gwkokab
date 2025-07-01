@@ -198,11 +198,11 @@ wheels = [
 
 [[package]]
 name = "astropy-iers-data"
-version = "0.2025.6.23.0.39.50"
+version = "0.2025.6.30.0.39.40"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/33/3a/cf170b5a55cd849d0543b929588b4cec326a5e6dde42e41ee7e43c2cff7f/astropy_iers_data-0.2025.6.23.0.39.50.tar.gz", hash = "sha256:3dd7cbf82408837ad21fb15db0c35d0bff19b1552f6b13de48542a246215a754", size = 1900117, upload-time = "2025-06-23T00:40:29.864Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7e/90/52b0ef79e60942b6d241f4fd7bda1203612a21904175a0842797ccac218b/astropy_iers_data-0.2025.6.30.0.39.40.tar.gz", hash = "sha256:511a1bb0185b5eef28dc05d8aecd7d5a7201156370d7bb9bbf439e76ffc33b00", size = 1900718, upload-time = "2025-06-30T00:40:12.067Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/07/3e936628ee19d2eb3e453f30df2f4f038dfff76423c8361001fb075d570d/astropy_iers_data-0.2025.6.23.0.39.50-py3-none-any.whl", hash = "sha256:52f7ed57cdbfcdfe410c78e766caaae84ce75aeabc86df9ed7785b0a52dd274b", size = 1955596, upload-time = "2025-06-23T00:40:28.407Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/00/5837d03a5c03c0a3a57b0b37fde73363fe42e7a6d0eca663ec3ab59b8d2c/astropy_iers_data-0.2025.6.30.0.39.40-py3-none-any.whl", hash = "sha256:dea5e1a1d4125246efcb7a58322569f9174371f0ad4d48963a5c3d8ded0dcc3e", size = 1956086, upload-time = "2025-06-30T00:40:10.425Z" },
 ]
 
 [[package]]
@@ -1310,15 +1310,15 @@ wheels = [
 
 [[package]]
 name = "h5netcdf"
-version = "1.6.2"
+version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "h5py" },
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/53/5b/61849172b62c3deecf4f196edc027eaf97035177d17a3415e838582e29df/h5netcdf-1.6.2.tar.gz", hash = "sha256:1592aa093ce1f8d0448bbb97d287b1e9995da0fd428e029c85e09e8af377aeb5", size = 65502, upload-time = "2025-06-26T10:04:36.316Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/46/9b/16f61d006227059451ad7388235a547a2dcf6f36503545d06df36bb4da97/h5netcdf-1.6.3.tar.gz", hash = "sha256:a8fededcc30f933389168ece94963bee54545546772d9e4dccadbb990dd5651e", size = 65622, upload-time = "2025-06-30T07:15:17.212Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/cf/5a5d9ecee3269dfe724fc1874c1e87d2bdd4de26ee74baea34c673551c0e/h5netcdf-1.6.2-py3-none-any.whl", hash = "sha256:a2505bd171e3cf2e95ab935feaa02c69588877a7ce32ae604746d136de3155c0", size = 50471, upload-time = "2025-06-26T10:04:35.05Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/27/ca28b77f4cf613282e4ea9bac360cdfa8db8b4d2154e2f0bd82fd26baeb3/h5netcdf-1.6.3-py3-none-any.whl", hash = "sha256:b79bc24d1f8b1cdc1f16b213753209411e08af04e35b0bcf5ce5cf7fb4023572", size = 50531, upload-time = "2025-06-30T07:15:15.953Z" },
 ]
 
 [[package]]
@@ -2038,7 +2038,7 @@ name = "ligo-segments"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "six" },
+    { name = "six", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/81/60/8de5c89e4e5fc760649cee0c773418ecc920c3dae21ac5656fd3e5e21a9d/ligo-segments-1.4.0.tar.gz", hash = "sha256:e072a844713c5b02efdcaf5bfe4c3a8cd9ef225b08cfd3202a4e185e0f71f5dc", size = 51015, upload-time = "2021-10-18T14:47:39.224Z" }
 wheels = [
@@ -2902,7 +2902,7 @@ wheels = [
 
 [[package]]
 name = "orbax-checkpoint"
-version = "0.11.16"
+version = "0.11.17"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -2918,9 +2918,9 @@ dependencies = [
     { name = "tensorstore" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/85/6d/e50d0b00c6b10628cdcc10ca6b5322a227ae9cbb5adeef47b9f6182c1d6c/orbax_checkpoint-0.11.16.tar.gz", hash = "sha256:f02d80059530c74a220201e19eac275ddb7394de8d939e69fac0283a37fcc265", size = 338088, upload-time = "2025-06-18T19:28:45.076Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/a8/4e598da5ff95f9d2bc84a9b55dd3fc43ea6125796ca003a0297b17feff75/orbax_checkpoint-0.11.17.tar.gz", hash = "sha256:a5e080cd308cf92d10c3684fa86dffea932d099a834a21babb79b66c3d275176", size = 340300, upload-time = "2025-06-30T23:06:29.221Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/7f/cc728c462fc4d8894dafca17afa2357df827dc695ecd0b1bb382ffde0224/orbax_checkpoint-0.11.16-py3-none-any.whl", hash = "sha256:5891409943a856d22ce9ec2a418202c3789c46282601dd86d3e4859af91b1db3", size = 477559, upload-time = "2025-06-18T19:28:43.866Z" },
+    { url = "https://files.pythonhosted.org/packages/8f/8c/bc2fc6e60a89b4b191e9f748b3b446d32eef18fa520667ff6125478fb78d/orbax_checkpoint-0.11.17-py3-none-any.whl", hash = "sha256:c16260124ac80c0e89ba7252ab2731981e785bd953ea50ff33b23bea4e8b900d", size = 479593, upload-time = "2025-06-30T23:06:27.768Z" },
 ]
 
 [[package]]
@@ -3293,18 +3293,9 @@ wheels = [
 
 [[package]]
 name = "python-ligo-lw"
-version = "1.8.3"
+version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "ligo-segments" },
-    { name = "lscsoft-glue" },
-    { name = "numpy" },
-    { name = "python-dateutil" },
-    { name = "pyyaml" },
-    { name = "six" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/9f/86/4053f82fb9bbc048321fa6f210d301411257c3170b96ab6b51f773263eec/python-ligo-lw-1.8.3.tar.gz", hash = "sha256:424912428a99fa121c071ddb90087b183514878229d4a651c144c649f3780aef", size = 2323534, upload-time = "2022-08-02T14:45:00.586Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c3/f7/69613a67a2ec5d9b32c9d1b9a44bc80a7594e45b0fb9cfaeb0941fc62117/python_ligo_lw-2.2.0.tar.gz", hash = "sha256:42f9c2a42bd823b2a010988fe8e855856dea06c3b68b2caa94e12bc780f148db", size = 2447398, upload-time = "2025-06-30T14:40:24.137Z" }
 
 [[package]]
 name = "pytz"
