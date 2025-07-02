@@ -180,7 +180,7 @@ def _partition_data_for_bucket(
     subsets = _get_subsets(data, indexes)
     total_loss = _total_loss(subsets)
     if verbose:
-        logger.info("Total loss: {:.4f}%", _total_loss(subsets))
+        logger.info("Total loss of all buckets: {:.4f}%", _total_loss(subsets))
 
         losses = [_loss(subset) for subset in subsets]
         logger.info(
