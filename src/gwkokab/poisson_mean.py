@@ -12,6 +12,7 @@ from loguru import logger
 from numpyro.distributions.distribution import Distribution, DistributionLike
 
 from .cosmology import PLANCK_2015_Cosmology
+from .models.redshift._models import PowerlawRedshift, SimpleRedshiftPowerlaw
 from .models.utils import ScaledMixture
 from .utils.tools import error_if
 from .vts import (
@@ -316,6 +317,8 @@ class PoissonMean(eqx.Module):
 
         logVT_fn = self.logVT_estimator.get_mapped_logVT()  # type: ignore
 
+        volume = None
+
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
             component_dist: DistributionLike = model.component_distributions[i]
@@ -335,15 +338,28 @@ class PoissonMean(eqx.Module):
             if self.is_pdet:
                 if redshift_index is None:
                     zmin = self.parameter_ranges.get("redshift_min", 0.0)
-                    zmax = self.parameter_ranges.get("redshift_max", 10.0)
+                    zmax = self.parameter_ranges.get("redshift_max", 5.0)
+                    if volume is None:
+                        volume = zmax - zmin
                     z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
-                else:
-                    z = jax.lax.dynamic_index_in_dim(
-                        samples, redshift_index, axis=-1, keepdims=False
+                    per_component_log_factor_redshift = (
+                        PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
                     )
-                per_component_log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(
-                    z
-                ) - jnp.log1p(z)
+                else:
+                    for m_dist in component_dist.marginal_distributions:
+                        if isinstance(m_dist, SimpleRedshiftPowerlaw):
+                            z = jax.lax.dynamic_index_in_dim(
+                                samples, redshift_index, axis=-1, keepdims=False
+                            )
+                            per_component_log_factor_redshift = (
+                                m_dist.log_norm()
+                                + PLANCK_2015_Cosmology.logdVcdz_Gpc3(z)
+                                - jnp.log1p(z)
+                            )
+                            break
+                        if isinstance(m_dist, PowerlawRedshift):
+                            per_component_log_factor_redshift = m_dist.log_norm()
+                            break
             else:
                 per_component_log_factor_redshift = jnp.zeros(
                     (), dtype=per_sample_log_estimated_rates.dtype
@@ -363,4 +379,8 @@ class PoissonMean(eqx.Module):
             per_component_log_estimated_rates, axis=-1
         )  # type: ignore
         per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
-        return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
+        if volume is None:
+            volume = 1.0
+        return (
+            volume * self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
+        )
