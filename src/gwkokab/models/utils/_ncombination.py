@@ -4,7 +4,7 @@
 
 from typing import Dict, List, Literal, Optional
 
-from jax import numpy as jnp, tree as jtr
+from jax import tree as jtr
 from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
@@ -17,7 +17,6 @@ from numpyro.distributions import (
     Uniform,
 )
 
-from ...cosmology import PLANCK_2015_Cosmology
 from ...models._models import (
     PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio,
@@ -401,17 +400,8 @@ def create_powerlaw_redshift(
         if z_max is None:
             raise ValueError(f"Missing parameter {z_max_name}_{i}")
 
-        zgrid = jnp.linspace(0.001, z_max, 1000)
-        dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz_Gpc3(zgrid)
-
         powerlaw_redshift_collection.append(
-            PowerlawRedshift(
-                kappa=kappa,
-                z_max=z_max,
-                zgrid=zgrid,
-                dVcdz=dVcdz,
-                validate_args=validate_args,
-            )
+            PowerlawRedshift(kappa=kappa, z_max=z_max, validate_args=validate_args)
         )
 
     return powerlaw_redshift_collection
