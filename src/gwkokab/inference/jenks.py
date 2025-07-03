@@ -198,17 +198,15 @@ def _partition_data(
         return indexes
 
     total_losses = []
-    list_of_indexes = []
     n_buckets_count = 1
     while True:
         try:
-            indexes, total_loss = _partition_data_for_bucket(
+            _, total_loss = _partition_data_for_bucket(
                 data, n_buckets_count, verbose=False
             )
         except ValueError:
             break
         total_losses.append(total_loss)
-        list_of_indexes.append(indexes)
         n_buckets_count += 1
 
     d1 = np.diff(total_losses)
@@ -226,8 +224,9 @@ def _partition_data(
         f"By first derivative of total loss with {threshold}% threshold, "
         f"recommended number of buckets is {n_buckets}."
     )
+    indexes, _ = _partition_data_for_bucket(data, n_buckets, verbose=True)
 
-    return list_of_indexes[n_buckets - 1]
+    return indexes
 
 
 def _pad_and_stack_bucket(bucket: Sequence[Union[Array, np.ndarray]]) -> Array:
