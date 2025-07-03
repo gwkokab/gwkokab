@@ -17,7 +17,6 @@ from ..utils import (
     create_simple_redshift_powerlaw,
     create_truncated_normal_distributions,
     create_uniform_distributions,
-    doubly_truncated_power_law_log_norm_constant,
     JointDistribution,
     ScaledMixture,
 )
@@ -548,33 +547,6 @@ def NPowerlawMGaussian(
 
     N = N_pl + N_g
     log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
-
-    if use_redshift:
-        _redshift_model_index = (
-            1
-            + 2 * int(use_spin)
-            + int(use_tilt)
-            + int(use_eccentricity)
-            + int(use_phi_1)
-            + int(use_phi_2)
-            + int(use_phi_12)
-            + int(use_eccentricity)
-            + int(use_mean_anomaly)
-        )
-
-        log_correction_terms_list = []
-        for i, component_dist in enumerate(component_dists):
-            redshift_model_index = _redshift_model_index + int(i >= N_pl) - 1
-            redshift_model = component_dist.marginal_distributions[redshift_model_index]
-            alpha = redshift_model.kappa
-            low = 1.0
-            high = 1.0 + redshift_model.z_max
-            log_norm_constant = doubly_truncated_power_law_log_norm_constant(
-                alpha=alpha, low=low, high=high
-            )
-            log_correction_terms_list.append(log_norm_constant)
-        log_correction_terms = jnp.stack(log_correction_terms_list, axis=-1)
-        log_rates += log_correction_terms
 
     return ScaledMixture(
         log_rates,
