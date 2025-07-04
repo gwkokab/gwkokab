@@ -16,89 +16,7 @@ from ...cosmology import PLANCK_2015_Cosmology
 from ..utils import doubly_truncated_power_law_log_norm_constant
 
 
-class _RedshiftBaseModel(Distribution):
-    def __init__(self, z_max: Array, *, validate_args: Optional[bool] = None, **kwargs):
-        self.z_max = jnp.asarray(z_max)
-        self.kwargs = kwargs
-        self.z_grid = jnp.linspace(1e-6, self.z_max, 100)
-        self._support = constraints.interval(0.0, z_max)
-        self.cdfgrid: Array = quadax.cumulative_trapezoid(
-            jnp.exp(self.log_prob(self.z_grid)), x=self.z_grid, initial=0.0
-        )
-        super(_RedshiftBaseModel, self).__init__(
-            batch_shape=jnp.shape(z_max), validate_args=validate_args
-        )
-
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):
-        """The support of the distribution, which is the interval [0, z_max]."""
-        return self._support
-
-    def log_psi_of_z(self, z: Array, **kwargs) -> Array:
-        """Placeholder method for computing the psi function of redshift."""
-        raise NotImplementedError(
-            "`log_psi_of_z` method must be implemented in subclasses."
-        )
-
-    def log_differential_spacetime_volume(self, z: Array) -> Array:
-        """Placeholder method for computing the differential spacetime volume."""
-        log_differential_spacetime_volume_val = (
-            PLANCK_2015_Cosmology.logdVcdz_Gpc3(z)
-            - jnp.log1p(z)
-            + self.log_psi_of_z(z, **self.kwargs)
-        )
-        return log_differential_spacetime_volume_val
-
-    def log_norm(self) -> Array:
-        """Placeholder method for computing the log normalization constant."""
-        log_differential_spacetime_volume = self.log_differential_spacetime_volume(
-            self.z_grid
-        )
-        pdfs = jnp.exp(log_differential_spacetime_volume)
-        norm = trapezoid(pdfs, self.z_grid)
-        return jnp.log(norm)
-
-    @validate_sample
-    def log_prob(self, value: Array) -> Array:
-        """Evaluate the log probability density function at a given redshift.
-
-        Parameters
-        ----------
-        value : ArrayLike
-            Redshift(s) to evaluate.
-
-        Returns
-        -------
-        ArrayLike
-            Log-probability values.
-        """
-        log_differential_spacetime_volume = self.log_differential_spacetime_volume(
-            value
-        )
-        return log_differential_spacetime_volume - self.log_norm()
-
-    def sample(self, key, sample_shape=()):
-        """Draw samples from the distribution using inverse transform sampling.
-
-        Note: Sampling is only supported when z_max is a static scalar.
-
-        Parameters
-        ----------
-        key : jax.random.PRNGKey
-            A PRNG key for sampling.
-        sample_shape : tuple
-            Shape of the desired sample batch.
-
-        Returns
-        -------
-        samples : Array
-            Redshift samples.
-        """
-        u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
-        return jnp.interp(u, self.cdfgrid, self.z_grid)
-
-
-class PowerlawRedshift(_RedshiftBaseModel):
+class PowerlawRedshift(Distribution):
     r"""Redshift distribution for compact binary mergers modeled as a power law modulated
     by the cosmological volume element.
 
@@ -135,13 +53,80 @@ class PowerlawRedshift(_RedshiftBaseModel):
         kappa: Array,
         *,
         validate_args: Optional[bool] = None,
-    ) -> None:
-        self.kappa = jnp.asarray(kappa)
-        super().__init__(z_max, validate_args=validate_args, kappa=kappa)
+        **kwargs,
+    ):
+        self.z_max, self.kappa = promote_shapes(z_max, kappa)
+        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
+        self.kwargs = kwargs
+        self.z_grid = jnp.linspace(0.0, self.z_max, 2500)
+        self._support = constraints.interval(0.0, z_max)
+        self.cdfgrid: Array = quadax.cumulative_trapezoid(
+            jnp.exp(
+                self.log_differential_spacetime_volume(self.z_grid) - self.log_norm()
+            ),
+            x=self.z_grid,
+            initial=0.0,
+        )
+        super(PowerlawRedshift, self).__init__(
+            batch_shape=batch_shape, validate_args=validate_args
+        )
 
-    def log_psi_of_z(self, z: Array, **kwargs) -> Array:
-        kappa: Array = kwargs["kappa"]
-        return kappa * jnp.log1p(z)
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        """The support of the distribution, which is the interval [0, z_max]."""
+        return self._support
+
+    def log_differential_spacetime_volume(self, z: Array) -> Array:
+        """Placeholder method for computing the differential spacetime volume."""
+        log_differential_spacetime_volume_val = (
+            PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z) + self.log_prob(z)
+        )
+        return log_differential_spacetime_volume_val
+
+    def log_norm(self) -> Array:
+        """Placeholder method for computing the log normalization constant."""
+        log_differential_spacetime_volume = self.log_differential_spacetime_volume(
+            self.z_grid
+        )
+        pdfs = jnp.exp(log_differential_spacetime_volume)
+        norm = trapezoid(pdfs, self.z_grid)
+        return jnp.log(norm)
+
+    def sample(self, key, sample_shape=()):
+        """Draw samples from the distribution using inverse transform sampling.
+
+        Note: Sampling is only supported when z_max is a static scalar.
+
+        Parameters
+        ----------
+        key : jax.random.PRNGKey
+            A PRNG key for sampling.
+        sample_shape : tuple
+            Shape of the desired sample batch.
+
+        Returns
+        -------
+        samples : Array
+            Redshift samples.
+        """
+        u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
+        return jnp.interp(u, self.cdfgrid, self.z_grid)
+
+    @validate_sample
+    def log_prob(self, value: Array) -> Array:
+        """Evaluate the log probability density function at a given redshift.
+
+        Parameters
+        ----------
+        value : ArrayLike
+            Redshift(s) to evaluate.
+
+        Returns
+        -------
+        ArrayLike
+            Log-probability values.
+        """
+        return self.kappa * jnp.log1p(value)
 
 
 class SimpleRedshiftPowerlaw(Distribution):
