@@ -317,7 +317,7 @@ class PoissonMean(eqx.Module):
 
         logVT_fn = self.logVT_estimator.get_mapped_logVT()  # type: ignore
 
-        volume = None
+        redshift_dist_log_norm_list = []
 
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
@@ -339,11 +339,12 @@ class PoissonMean(eqx.Module):
                 if redshift_index is None:
                     zmin = self.parameter_ranges.get("redshift_min", 0.0)
                     zmax = self.parameter_ranges.get("redshift_max", 5.0)
-                    if volume is None:
-                        volume = zmax - zmin
                     z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
-                    per_component_log_factor_redshift = (
+                    per_sample_log_estimated_rates += (
                         PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
+                    )
+                    redshift_dist_log_norm_list.append(
+                        jnp.log(zmax - zmin)  # Uniform distribution log norm
                     )
                 else:
                     for m_dist in component_dist.marginal_distributions:
@@ -351,36 +352,34 @@ class PoissonMean(eqx.Module):
                             z = jax.lax.dynamic_index_in_dim(
                                 samples, redshift_index, axis=-1, keepdims=False
                             )
-                            per_component_log_factor_redshift = (
-                                m_dist.log_norm()
-                                + PLANCK_2015_Cosmology.logdVcdz_Gpc3(z)
-                                - jnp.log1p(z)
+                            redshift_dist_log_norm_list.append(m_dist.log_norm())
+                            per_sample_log_estimated_rates += (
+                                PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
                             )
                             break
-                        if isinstance(m_dist, PowerlawRedshift):
-                            per_component_log_factor_redshift = m_dist.log_norm()
+                        elif isinstance(m_dist, PowerlawRedshift):
+                            redshift_dist_log_norm_list.append(m_dist.log_norm())
                             break
+
+            if len(redshift_dist_log_norm_list) == 0:
+                redshift_dist_log_norm: Array = jnp.zeros(())
             else:
-                per_component_log_factor_redshift = jnp.zeros(
-                    (), dtype=per_sample_log_estimated_rates.dtype
-                )
+                redshift_dist_log_norm = jnp.stack(redshift_dist_log_norm_list, axis=-1)
 
             per_sample_log_estimated_rates = jnp.nan_to_num(
                 per_sample_log_estimated_rates, nan=-jnp.inf
             )
             per_component_log_estimated_rate = jnn.logsumexp(
-                per_component_log_factor_redshift + per_sample_log_estimated_rates,
-                where=~jnp.isneginf(per_sample_log_estimated_rates)
-                | ~jnp.isneginf(per_component_log_factor_redshift),
+                per_sample_log_estimated_rates,
+                where=~jnp.isneginf(per_sample_log_estimated_rates),
             ) - jnp.log(num_samples)
             per_component_log_estimated_rates.append(per_component_log_estimated_rate)
 
-        per_component_log_estimated_rates = model.log_scales + jnp.stack(
-            per_component_log_estimated_rates, axis=-1
-        )  # type: ignore
-        per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
-        if volume is None:
-            volume = 1.0
-        return (
-            volume * self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
+        per_component_log_estimated_rates = (
+            redshift_dist_log_norm  # type: ignore
+            + model.log_scales  # type: ignore
+            + jnp.stack(per_component_log_estimated_rates, axis=-1)  # type: ignore
         )
+        per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
+
+        return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
