@@ -23,7 +23,6 @@ from numpyro.distributions.transforms import biject_to
 from numpyro.distributions.util import multinomial, signed_stick_breaking_tril
 from scipy.sparse import csr_matrix
 
-from gwkokab.cosmology import PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
 from gwkokab.models import (
     BetaFromMeanVar,
     ChiEffMassRatioCorrelated,
@@ -402,50 +401,10 @@ CONTINUOUS = [
             **generic_npmg,
         },
     ),
-    (
-        PowerlawRedshift,
-        {
-            "kappa": 0.0,
-            "z_max": 1.0,
-            "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2015_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 1, 1000))
-            * 4.0
-            * jnp.pi,
-        },
-    ),
-    (
-        PowerlawRedshift,
-        {
-            "kappa": 0.0,
-            "z_max": 2.3,
-            "zgrid": jnp.linspace(0.001, 2.3, 1000),
-            "dVcdz": PLANCK_2015_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 2.3, 1000))
-            * 4.0
-            * jnp.pi,
-        },
-    ),
-    (
-        PowerlawRedshift,
-        {
-            "kappa": 0.0,
-            "z_max": 1.0,
-            "zgrid": jnp.linspace(0.001, 1, 1000),
-            "dVcdz": PLANCK_2018_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 1, 1000))
-            * 4.0
-            * jnp.pi,
-        },
-    ),
-    (
-        PowerlawRedshift,
-        {
-            "kappa": 0.0,
-            "z_max": 2.3,
-            "zgrid": jnp.linspace(0.001, 2.3, 1000),
-            "dVcdz": PLANCK_2018_Cosmology.dVcdz_Gpc3(jnp.linspace(0.001, 2.3, 1000))
-            * 4.0
-            * jnp.pi,
-        },
-    ),
+    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
+    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
+    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
+    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
     ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2) #########
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 0, **generic_nspmsg}),
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 0, "N_g": 1, **generic_nspmsg}),
@@ -853,6 +812,8 @@ def test_has_rsample(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_sample_gradient(jax_dist, params):
+    if jax_dist.__name__ in ("SimpleRedshiftPowerlaw",):
+        pytest.skip("SimpleRedshiftPowerlaw is not a valid probability distribution")
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
