@@ -47,11 +47,6 @@ class _RedshiftBaseModel(Distribution):
             - jnp.log1p(z)
             + self.log_psi_of_z(z, **self.kwargs)
         )
-        # return jnp.where(
-        #     self.support.check(z),
-        #     log_differential_spacetime_volume_val,
-        #     -jnp.inf,
-        # )
         return log_differential_spacetime_volume_val
 
     def log_norm(self) -> Array:
@@ -63,6 +58,7 @@ class _RedshiftBaseModel(Distribution):
         norm = trapezoid(pdfs, self.z_grid)
         return jnp.log(norm)
 
+    @validate_sample
     def log_prob(self, value: Array) -> Array:
         """Evaluate the log probability density function at a given redshift.
 
