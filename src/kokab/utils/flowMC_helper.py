@@ -19,7 +19,7 @@ from flowMC.proposal.Gaussian_random_walk import GaussianRandomWalk  # noqa F401
 from flowMC.proposal.HMC import HMC  # noqa F401
 from flowMC.proposal.MALA import MALA  # noqa F401
 from flowMC.Sampler import Sampler  # noqa F401
-from jax import nn as jnn, random as jrd
+from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array
 from loguru import logger
 
@@ -171,7 +171,14 @@ def _save_data_from_sampler(
     logpdf_val = jax.lax.map(
         lambda s: logpdf(s, None), unweighted_samples, batch_size=batch_size
     )
+    logger.debug(
+        "Nan count in logpdf values: {nan_count}", nan_count=jnp.isnan(logpdf_val).sum()
+    )
     nf_model_log_prob_val = sampler.nf_model.log_prob(unweighted_samples)
+    logger.debug(
+        "Nan count in nf_model_log_prob values: {nan_count}",
+        nan_count=jnp.isnan(nf_model_log_prob_val).sum(),
+    )
 
     weights = np.asarray(jnn.softmax(logpdf_val - nf_model_log_prob_val))
     ess = int(1.0 / np.sum(np.square(weights)))
