@@ -81,8 +81,9 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
         def _pdet(x: Array) -> Array:
             x_new = x[..., self.shuffle_indices]
             y_new = self.neural_vt_model(x_new)
-            safe_y_new = jnp.where(jnp.equal(y_new, 0.0), 1.0, y_new)
-            return jnp.where(jnp.equal(y_new, 0.0), -jnp.inf, jnp.log(safe_y_new))
+            mask = jnp.less_equal(y_new, 0.0)
+            safe_y_new = jnp.where(mask, 1.0, y_new)
+            return jnp.where(mask, -jnp.inf, jnp.log(safe_y_new))
 
         return _pdet
 
@@ -99,7 +100,8 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
                 lax.map(self.neural_vt_model, x_new, batch_size=_batch_size),
                 axis=-1,
             )
-            safe_y_new = jnp.where(jnp.equal(y_new, 0.0), 1.0, y_new)
-            return jnp.where(jnp.equal(y_new, 0.0), -jnp.inf, jnp.log(safe_y_new))
+            mask = jnp.less_equal(y_new, 0.0)
+            safe_y_new = jnp.where(mask, 1.0, y_new)
+            return jnp.where(mask, -jnp.inf, jnp.log(safe_y_new))
 
         return _pdet
