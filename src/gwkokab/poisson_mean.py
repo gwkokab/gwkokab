@@ -334,6 +334,13 @@ class PoissonMean(eqx.Module):
                     num_samples
                 )
                 per_sample_log_estimated_rates = log_weights + component_log_prob
+                if redshift_index is not None:
+                    z = jax.lax.dynamic_index_in_dim(
+                        samples, redshift_index, axis=-1, keepdims=False
+                    )
+                    per_sample_log_estimated_rates += (
+                        PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
+                    )
 
             if self.is_pdet:
                 if redshift_index is None:
@@ -358,7 +365,8 @@ class PoissonMean(eqx.Module):
                             )
                             break
                         elif isinstance(m_dist, PowerlawRedshift):
-                            redshift_dist_log_norm_list.append(m_dist.log_norm())
+                            if log_weights_and_samples is None:
+                                redshift_dist_log_norm_list.append(m_dist.log_norm())
                             break
 
             if len(redshift_dist_log_norm_list) == 0:
