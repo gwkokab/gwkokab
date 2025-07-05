@@ -369,11 +369,6 @@ class PoissonMean(eqx.Module):
                                 redshift_dist_log_norm_list.append(m_dist.log_norm())
                             break
 
-            if len(redshift_dist_log_norm_list) == 0:
-                redshift_dist_log_norm: Array = jnp.zeros(())
-            else:
-                redshift_dist_log_norm = jnp.stack(redshift_dist_log_norm_list, axis=-1)
-
             per_sample_log_estimated_rates = jnp.nan_to_num(
                 per_sample_log_estimated_rates, nan=-jnp.inf
             )
@@ -382,6 +377,11 @@ class PoissonMean(eqx.Module):
                 where=~jnp.isneginf(per_sample_log_estimated_rates),
             ) - jnp.log(num_samples)
             per_component_log_estimated_rates.append(per_component_log_estimated_rate)
+
+        if len(redshift_dist_log_norm_list) == 0:
+            redshift_dist_log_norm: Array = jnp.zeros(())
+        else:
+            redshift_dist_log_norm = jnp.stack(redshift_dist_log_norm_list, axis=-1)
 
         per_component_log_estimated_rates = (
             redshift_dist_log_norm  # type: ignore
