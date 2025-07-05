@@ -174,13 +174,43 @@ def _save_data_from_sampler(
     logger.debug(
         "Nan count in logpdf values: {nan_count}", nan_count=jnp.isnan(logpdf_val).sum()
     )
+    logger.debug(
+        "Neginf count in logpdf values: {inf_count}",
+        inf_count=jnp.isneginf(logpdf_val).sum(),
+    )
+    logger.debug(
+        "Posinf count in logpdf values: {inf_count}",
+        inf_count=jnp.isposinf(logpdf_val).sum(),
+    )
+
     nf_model_log_prob_val = sampler.nf_model.log_prob(unweighted_samples)
     logger.debug(
         "Nan count in nf_model_log_prob values: {nan_count}",
         nan_count=jnp.isnan(nf_model_log_prob_val).sum(),
     )
+    logger.debug(
+        "Neginf count in nf_model_log_prob values: {inf_count}",
+        inf_count=jnp.isneginf(nf_model_log_prob_val).sum(),
+    )
+    logger.debug(
+        "Posinf count in nf_model_log_prob values: {inf_count}",
+        inf_count=jnp.isposinf(nf_model_log_prob_val).sum(),
+    )
 
-    weights = np.asarray(jnn.softmax(logpdf_val - nf_model_log_prob_val))
+    weights = jnn.softmax(logpdf_val - nf_model_log_prob_val)
+    logger.debug(
+        "Nan count in weights values: {nan_count}", nan_count=jnp.isnan(weights).sum()
+    )
+    logger.debug(
+        "Neginf count in weights values: {inf_count}",
+        inf_count=jnp.isneginf(weights).sum(),
+    )
+    logger.debug(
+        "Posinf count in weights values: {inf_count}",
+        inf_count=jnp.isposinf(weights).sum(),
+    )
+
+    weights = np.asarray(weights)  # type: ignore
     ess = int(1.0 / np.sum(np.square(weights)))
     logger.debug("Effective sample size is {} out of {}".format(ess, n_samples))
     if ess == 0:
