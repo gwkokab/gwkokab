@@ -45,28 +45,23 @@ class PowerlawRedshift(Distribution):
         "kappa": constraints.real,
     }
     reparametrized_params = ["z_max", "kappa"]
-    pytree_data_fields = ("_support", "z_grid", "cdfgrid", "kappa", "z_max", "kwargs")
+    pytree_data_fields = ("_support", "z_grid", "cdfgrid", "kappa", "z_max")
 
     def __init__(
-        self,
-        z_max: Array,
-        kappa: Array,
-        *,
-        validate_args: Optional[bool] = None,
-        **kwargs,
+        self, z_max: Array, kappa: Array, *, validate_args: Optional[bool] = None
     ):
         self.z_max, self.kappa = promote_shapes(z_max, kappa)
         batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
-        self.kwargs = kwargs
         self.z_grid = jnp.linspace(0.0, self.z_max, 2500)
         self._support = constraints.interval(0.0, z_max)
-        self.cdfgrid: Array = quadax.cumulative_trapezoid(
+        cdfgrid: Array = quadax.cumulative_trapezoid(
             jnp.exp(
                 self.log_differential_spacetime_volume(self.z_grid) - self.log_norm()
             ),
             x=self.z_grid,
             initial=0.0,
         )
+        self.cdfgrid = cdfgrid / cdfgrid[-1]
         super(PowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
