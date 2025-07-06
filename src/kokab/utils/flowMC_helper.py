@@ -55,7 +55,6 @@ def _save_data_from_sampler(
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
     logpdf: Optional[Callable] = None,
-    batch_size: int = 1000,
 ) -> None:
     """This functions saves the data from a sampler to disk. The data saved includes the
     samples from the flow, the chains from the training and production phases, the log
@@ -73,9 +72,8 @@ def _save_data_from_sampler(
         number of samples to draw from the flow, by default 5000
     logpdf : Callable, optional
         The log probability function.
-    batch_size : int, optional
-        The batch size for the log probability function, by default 1000
     """
+    logger.info("Saving data from sampler to directory: {out_dir}", out_dir=out_dir)
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]
     if logpdf is None:
@@ -114,6 +112,10 @@ def _save_data_from_sampler(
         header="train prod",
         comments="#",
     )
+    logger.info(
+        "Global acceptance rates saved to {out_dir}/global_accs.dat", out_dir=out_dir
+    )
+
     np.savetxt(
         rf"{out_dir}/local_accs.dat",
         np.column_stack(
@@ -126,10 +128,18 @@ def _save_data_from_sampler(
         header="train prod",
         comments="#",
     )
+    logger.info(
+        "Local acceptance rates saved to {out_dir}/local_accs.dat", out_dir=out_dir
+    )
 
     np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
 
     for i in range(n_chains):
+        logger.info(
+            "Saving chain {i} data to {out_dir}/train_chains_{i}.dat and {out_dir}/prod_chains_{i}.dat",
+            i=i,
+            out_dir=out_dir,
+        )
         np.savetxt(
             rf"{out_dir}/train_chains_{i}.dat",
             train_chains[i, :, :],
@@ -155,22 +165,21 @@ def _save_data_from_sampler(
 
     gc.collect()
 
-    key_unweighted, key_weighted = jrd.split(
-        jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
-    )
-
+    key_unweighted = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
     unweighted_samples = np.asarray(
         sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
     )
     np.savetxt(
         rf"{out_dir}/nf_samples_unweighted.dat", unweighted_samples, header=header
     )
+    logger.info(
+        "Unweighted samples saved to {out_dir}/nf_samples_unweighted.dat",
+        out_dir=out_dir,
+    )
 
     gc.collect()
 
-    logpdf_val = jax.lax.map(
-        lambda s: logpdf(s, None), unweighted_samples, batch_size=batch_size
-    )
+    logpdf_val = jax.lax.map(lambda s: logpdf(s, None), unweighted_samples)
     logger.debug(
         "Nan count in logpdf values: {nan_count}", nan_count=jnp.isnan(logpdf_val).sum()
     )
@@ -219,6 +228,9 @@ def _save_data_from_sampler(
         np.random.choice(n_samples, size=ess, p=weights)
     ]
     np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", weighted_samples, header=header)
+    logger.info(
+        "Weighted samples saved to {out_dir}/nf_samples_weighted.dat", out_dir=out_dir
+    )
 
     gc.collect()
 
