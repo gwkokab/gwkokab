@@ -12,7 +12,7 @@ from numpyro.distributions import (
     TransformedDistribution,
 )
 
-from ...models import BetaFromMeanVar
+from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
@@ -400,6 +400,7 @@ def NSmoothedPowerlawMSmoothedGaussian(
 def SmoothedPowerlawAndPeak(
     use_spin: bool = False,
     use_redshift: bool = False,
+    use_tilt: bool = False,
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
@@ -459,6 +460,23 @@ def SmoothedPowerlawAndPeak(
 
         component_distribution_pl.extend([chi1_dist_pl, chi2_dist_pl])
         component_distribution_g.extend([chi1_dist_g, chi2_dist_g])
+
+    if use_tilt:
+        tilt1_dist_pl = IndependentSpinOrientationGaussianIsotropic(
+            zeta=params["cos_tilt_zeta_pl"],
+            scale1=params["cos_tilt1_scale_pl"],
+            scale2=params["cos_tilt2_scale_pl"],
+            validate_args=validate_args,
+        )
+        tilt1_dist_g = IndependentSpinOrientationGaussianIsotropic(
+            zeta=params["cos_tilt_zeta_g"],
+            scale1=params["cos_tilt1_scale_g"],
+            scale2=params["cos_tilt2_scale_g"],
+            validate_args=validate_args,
+        )
+
+        component_distribution_pl.append(tilt1_dist_pl)
+        component_distribution_g.append(tilt1_dist_g)
 
     if use_redshift:
         z_max = params["z_max"]

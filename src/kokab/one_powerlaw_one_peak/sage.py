@@ -13,6 +13,8 @@ from loguru import logger
 from gwkokab.inference import Bake, poisson_likelihood
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
+    COS_TILT_1,
+    COS_TILT_2,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
@@ -43,6 +45,11 @@ def make_parser() -> ArgumentParser:
         "--add-spin",
         action="store_true",
         help="Include spin parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-tilt",
+        action="store_true",
+        help="Include tilt parameters in the model.",
     )
     model_group.add_argument(
         "--add-redshift",
@@ -77,6 +84,7 @@ def main() -> None:
 
     has_spin = args.add_spin
     has_redshift = args.add_redshift
+    has_tilt = args.add_tilt
 
     model_parameters = [
         "alpha",
@@ -104,6 +112,19 @@ def main() -> None:
                 "chi2_mean_pl",
                 "chi2_variance_g",
                 "chi2_variance_pl",
+            ]
+        )
+
+    if has_tilt:
+        parameters.extend([COS_TILT_1, COS_TILT_2])
+        model_parameters.extend(
+            [
+                "cos_tilt_zeta_g",
+                "cos_tilt_zeta_pl",
+                "cos_tilt1_scale_g",
+                "cos_tilt1_scale_pl",
+                "cos_tilt2_scale_g",
+                "cos_tilt2_scale_pl",
             ]
         )
 
@@ -152,6 +173,7 @@ def main() -> None:
 
     constants = model.constants
     constants["use_spin"] = int(has_spin)
+    constants["use_tilt"] = int(has_tilt)
     constants["use_redshift"] = int(has_redshift)
 
     with open("constants.json", "w") as f:
