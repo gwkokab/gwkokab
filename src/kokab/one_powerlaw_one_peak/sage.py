@@ -96,22 +96,14 @@ def main() -> None:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
         model_parameters.extend(
             [
-                "chi1_high_g",
-                "chi1_high_pl",
-                "chi1_loc_g",
-                "chi1_loc_pl",
-                "chi1_low_g",
-                "chi1_low_pl",
-                "chi1_scale_g",
-                "chi1_scale_pl",
-                "chi2_high_g",
-                "chi2_high_pl",
-                "chi2_loc_g",
-                "chi2_loc_pl",
-                "chi2_low_g",
-                "chi2_low_pl",
-                "chi2_scale_g",
-                "chi2_scale_pl",
+                "chi1_mean_g",
+                "chi1_mean_pl",
+                "chi1_variance_g",
+                "chi1_variance_pl",
+                "chi2_mean_g",
+                "chi2_mean_pl",
+                "chi2_variance_g",
+                "chi2_variance_pl",
             ]
         )
 

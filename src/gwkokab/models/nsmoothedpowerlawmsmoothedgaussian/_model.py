@@ -10,9 +10,9 @@ from numpyro.distributions import (
     constraints,
     Distribution,
     TransformedDistribution,
-    TruncatedNormal,
 )
 
+from ...models import BetaFromMeanVar
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
@@ -401,15 +401,15 @@ def SmoothedPowerlawAndPeak(
     use_spin: bool = False,
     use_redshift: bool = False,
     validate_args: Optional[bool] = None,
-    **params: Dict[str, Array],
+    **params: Array,
 ) -> ScaledMixture:
     smoothed_powerlaw = TransformedDistribution(
         SmoothedPowerlawPrimaryMassRatio(
-            alpha=params["alpha"],  # type: ignore[arg-type]
-            beta=params["beta"],  # type: ignore[arg-type]
-            mmin=params["mmin"],  # type: ignore[arg-type]
-            mmax=params["mmax"],  # type: ignore[arg-type]
-            delta=params["delta"],  # type: ignore[arg-type]
+            alpha=params["alpha"],
+            beta=params["beta"],
+            mmin=params["mmin"],
+            mmax=params["mmax"],
+            delta=params["delta"],
             validate_args=validate_args,
         ),
         transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
@@ -433,35 +433,27 @@ def SmoothedPowerlawAndPeak(
     component_distribution_g = [smoothed_gaussian]
 
     if use_spin:
-        chi1_dist_pl = TruncatedNormal(
-            loc=params["chi1_loc_pl"],
-            scale=params["chi1_scale_pl"],
-            low=params["chi1_low_pl"],
-            high=params["chi1_high_pl"],
+        chi1_dist_pl = BetaFromMeanVar(
+            mean=params["chi1_mean_pl"],
+            variance=params["chi1_variance_pl"],
             validate_args=validate_args,
         )
 
-        chi2_dist_pl = TruncatedNormal(
-            loc=params["chi2_loc_pl"],
-            scale=params["chi2_scale_pl"],
-            low=params["chi2_low_pl"],
-            high=params["chi2_high_pl"],
+        chi2_dist_pl = BetaFromMeanVar(
+            mean=params["chi2_mean_pl"],
+            variance=params["chi2_variance_pl"],
             validate_args=validate_args,
         )
 
-        chi1_dist_g = TruncatedNormal(
-            loc=params["chi1_loc_g"],
-            scale=params["chi1_scale_g"],
-            low=params["chi1_low_g"],
-            high=params["chi1_high_g"],
+        chi1_dist_g = BetaFromMeanVar(
+            mean=params["chi1_mean_g"],
+            variance=params["chi1_variance_g"],
             validate_args=validate_args,
         )
 
-        chi2_dist_g = TruncatedNormal(
-            loc=params["chi2_loc_g"],
-            scale=params["chi2_scale_g"],
-            low=params["chi2_low_g"],
-            high=params["chi2_high_g"],
+        chi2_dist_g = BetaFromMeanVar(
+            mean=params["chi2_mean_g"],
+            variance=params["chi2_variance_g"],
             validate_args=validate_args,
         )
 
