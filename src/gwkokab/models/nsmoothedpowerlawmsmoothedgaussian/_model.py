@@ -405,11 +405,11 @@ def SmoothedPowerlawAndPeak(
 ) -> ScaledMixture:
     smoothed_powerlaw = TransformedDistribution(
         SmoothedPowerlawPrimaryMassRatio(
-            alpha=params["alpha"],
-            beta=params["beta"],
-            mmin=params["mmin"],
-            mmax=params["mmax"],
-            delta=params["delta"],
+            alpha=params["alpha"],  # type: ignore[arg-type]
+            beta=params["beta"],  # type: ignore[arg-type]
+            mmin=params["mmin"],  # type: ignore[arg-type]
+            mmax=params["mmax"],  # type: ignore[arg-type]
+            delta=params["delta"],  # type: ignore[arg-type]
             validate_args=validate_args,
         ),
         transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
@@ -495,12 +495,15 @@ def SmoothedPowerlawAndPeak(
     return ScaledMixture(
         log_scales=(
             jnp.stack(
-                [jnp.log1p(-params["lambda_peak"]), jnp.log(params["lambda_peak"])],
+                [
+                    jnp.log1p(-params["lambda_peak"]),  # type: ignore[arg-type, operator]
+                    jnp.log(params["lambda_peak"]),  # type: ignore[arg-type]
+                ],
                 axis=-1,
             )
             + params["log_rate"]
         ),
         component_distributions=[component_distribution_pl, component_distribution_g],
-        support=constraints.real_vector,
+        support=component_distribution_g.support,  # type: ignore[attr-defined]
         validate_args=validate_args,
     )
