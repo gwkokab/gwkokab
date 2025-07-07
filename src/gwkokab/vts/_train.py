@@ -242,6 +242,8 @@ def train_regressor(
         plt.plot(loss_vals, label="loss")
         plt.plot(val_loss_vals, label="val loss")
         plt.yscale("log")
+        plt.xlabel("Epoch")
+        plt.ylabel("Average loss per epoch")
         plt.legend()
         plt.tight_layout()
         plt.savefig(checkpoint_path + "_loss.png")
@@ -254,11 +256,13 @@ def train_regressor(
         total_loss = total_loss.tolist()  # type: ignore
         total_loss = sorted(total_loss)  # type: ignore
 
-        plt.plot(total_loss, label="total loss")
+        plt.plot(total_loss, label="loss per data instance")
         plt.axhline(quantiles[0], color="red", linestyle="--", label="5% quantile")
         plt.axhline(quantiles[1], color="green", linestyle="--", label="50% quantile")
         plt.axhline(quantiles[2], color="blue", linestyle="--", label="95% quantile")
         plt.yscale("log")
+        plt.xlabel("data instance")
+        plt.ylabel("Loss per data instance")
         plt.legend()
         plt.tight_layout()
         plt.savefig(checkpoint_path + "_total_loss.png")
