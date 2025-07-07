@@ -14,7 +14,7 @@ from jax import numpy as jnp, random as jrd
 from jaxtyping import Array
 from loguru import logger
 
-from ._utils import make_model, mse_loss_fn, read_data, save_model
+from ._utils import make_model, mse_loss_fn, predict, read_data, save_model
 
 
 def _train_test_data_split(
@@ -245,4 +245,21 @@ def train_regressor(
         plt.legend()
         plt.tight_layout()
         plt.savefig(checkpoint_path + "_loss.png")
+        plt.close("all")
+
+        Y_hat = predict(model, data_X)
+        total_loss = jnp.square(data_Y - Y_hat)
+        total_loss = np.asarray(total_loss)  # type: ignore
+        quantiles = np.quantile(total_loss, [0.05, 0.5, 0.95])
+        total_loss = total_loss.tolist()  # type: ignore
+        total_loss = sorted(total_loss)  # type: ignore
+
+        plt.plot(total_loss, label="total loss")
+        plt.axhline(quantiles[0], color="red", linestyle="--", label="5% quantile")
+        plt.axhline(quantiles[1], color="green", linestyle="--", label="50% quantile")
+        plt.axhline(quantiles[2], color="blue", linestyle="--", label="95% quantile")
+        plt.yscale("log")
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(checkpoint_path + "_total_loss.png")
         plt.close("all")
