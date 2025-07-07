@@ -40,6 +40,7 @@ from kokab.utils.common import (
     flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
+    LOG_REF_PRIOR_NAME,
     read_json,
     vt_json_read_and_process,
 )
@@ -137,7 +138,11 @@ def main() -> None:
     KEY = jrd.PRNGKey(SEED)
     KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
-    POSTERIOR_COLUMNS = args.posterior_columns
+    POSTERIOR_COLUMNS: list[str] = args.posterior_columns
+
+    has_log_ref_prior = LOG_REF_PRIOR_NAME in POSTERIOR_COLUMNS
+    if has_log_ref_prior:
+        POSTERIOR_COLUMNS.remove(LOG_REF_PRIOR_NAME)
 
     N_pl = args.n_pl
     N_g = args.n_g
@@ -458,8 +463,14 @@ def main() -> None:
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
 
+    if has_log_ref_prior:
+        POSTERIOR_COLUMNS.append(LOG_REF_PRIOR_NAME)
+
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
+    if has_log_ref_prior:
+        log_ref_priors = [d[..., -1] for d in data]
+    else:
+        log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
         parameters_name=parameters_name,
