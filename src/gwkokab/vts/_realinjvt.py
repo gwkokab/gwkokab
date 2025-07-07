@@ -121,10 +121,23 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                     _inj = f["injections"][_PARAM_MAPPING[p]][:]
                 injs.append(_inj)
             self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
-            self.sampling_prob = jax.device_put(
-                f["injections"]["sampling_pdf"][:],
-                may_alias=True,
-            )
+            sampling_prob = f["injections"]["sampling_pdf"][:]
+
+            if (
+                gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name not in parameters
+                and gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name not in parameters
+            ):
+                logger.debug(
+                    "Removing spin magnitude from sampling probability, "
+                    "as it is not in the parameters."
+                )
+                # If max_spin1 is not available, use 1.0 as default.
+                # If max_spin2 is not available, use 1.0 as default.
+                max_spin1 = f.attrs.get("max_spin1", 1.0)
+                max_spin2 = f.attrs.get("max_spin2", 1.0)
+                sampling_prob = 4.0 * max_spin1 * max_spin2 * sampling_prob
+
+            self.sampling_prob = jax.device_put(sampling_prob, may_alias=True)
 
     def get_logVT(self):
         raise NotImplementedError("Injection based VTs do not have a logVT method.")
