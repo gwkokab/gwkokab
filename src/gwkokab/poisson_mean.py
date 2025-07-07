@@ -264,26 +264,25 @@ class PoissonMean(eqx.Module):
             Estimated rate/s.
         """
         if self.is_injection_based:  # injection based sampling method
-            # log w_i, ω_i
+            assert redshift_index is not None, (
+                "Redshift index must be provided for injection based sampling method."
+            )
+            # log w_i, θ_i
             log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
             # n_total = n_accepted + n_rejected
             num_samples = self.num_samples_per_component[0]  # type: ignore
-            # log p(ω_i|λ)
+            # log p(θ_i|λ)
             model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
-            # log p(ω_i|λ) - log w_i
+            # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
-            # TODO(Qazalbash): handle the case for reading redshift from injections here for redshift independent models.
+
             z = jax.lax.dynamic_index_in_dim(
                 samples, redshift_index, axis=-1, keepdims=False
             )
-            log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
-            # (T / n_total) * exp(log Σ exp(log p(ω_i|λ) - log w_i))
+            log_prob += PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
+            # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
             return (self.time_scale / num_samples) * jnp.exp(
-                jnn.logsumexp(
-                    log_factor_redshift + log_prob,
-                    where=~jnp.isneginf(log_prob) | ~jnp.isneginf(log_factor_redshift),
-                    axis=-1,
-                )
+                jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
             )
         else:  # per component rate estimation
             return self.calculate_per_component_rate(model, redshift_index)
@@ -327,7 +326,10 @@ class PoissonMean(eqx.Module):
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
                 samples = component_dist.sample(self.key, (num_samples,))
-                per_sample_log_estimated_rates = logVT_fn(samples)
+                log_rate_i = jax.lax.dynamic_index_in_dim(
+                    model.log_scales, index=i, axis=-1, keepdims=False
+                )
+                per_sample_log_estimated_rates = log_rate_i + logVT_fn(samples)
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
                 component_log_prob = component_dist.log_prob(samples).reshape(
@@ -353,11 +355,10 @@ class PoissonMean(eqx.Module):
                     redshift_dist_log_norm_list.append(
                         jnp.log(zmax - zmin)  # Uniform distribution log norm
                     )
-                else:
+                elif log_weights_and_samples is None:
                     for m_dist in component_dist.marginal_distributions:
                         if isinstance(m_dist, PowerlawRedshift):
-                            if log_weights_and_samples is None:
-                                redshift_dist_log_norm_list.append(m_dist.log_norm())
+                            redshift_dist_log_norm_list.append(m_dist.log_norm())
                             break
 
             per_sample_log_estimated_rates = jnp.nan_to_num(
@@ -376,7 +377,6 @@ class PoissonMean(eqx.Module):
 
         per_component_log_estimated_rates = (
             redshift_dist_log_norm  # type: ignore
-            + model.log_scales  # type: ignore
             + jnp.stack(per_component_log_estimated_rates, axis=-1)  # type: ignore
         )
         per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
