@@ -30,7 +30,6 @@ from gwkokab.models import (
     NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
     PowerlawRedshift,
-    SimpleRedshiftPowerlaw,
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio,
@@ -560,12 +559,6 @@ CONTINUOUS = [
     ),
     (BetaFromMeanVar, {"mean": 0.4, "variance": 0.02}),
     (BetaFromMeanVar, {"mean": 0.5, "variance": 0.05}),
-    (SimpleRedshiftPowerlaw, {"z_max": 1.0, "kappa": 0.5}),
-    (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": -1.0}),
-    (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": 2.5}),
-    (SimpleRedshiftPowerlaw, {"z_max": 4.5, "kappa": 4.0}),
-    (SimpleRedshiftPowerlaw, {"z_max": 2.7, "kappa": -10.0}),
-    (SimpleRedshiftPowerlaw, {"z_max": 0.01, "kappa": 2.5}),
 ]
 
 
@@ -812,8 +805,6 @@ def test_has_rsample(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_sample_gradient(jax_dist, params):
-    if jax_dist.__name__ in ("SimpleRedshiftPowerlaw",):
-        pytest.skip("SimpleRedshiftPowerlaw is not a valid probability distribution")
     if jax_dist.__name__ in (
         "SmoothedGaussianPrimaryMassRatio",
         "SmoothedPowerlawPrimaryMassRatio",
@@ -967,7 +958,7 @@ def test_gof(jax_dist, params):
         pytest.skip("Failure rate is lower than expected.")
     if isinstance(jax_dist, ScaledMixture):
         pytest.skip("skip testing for ScaledMixture")
-    if jax_dist.__name__ in ("SimpleRedshiftPowerlaw", "PowerlawRedshift"):
+    if jax_dist.__name__ in ("PowerlawRedshift",):
         pytest.skip(f"{jax_dist.__name__} is not a valid probability distribution")
     num_samples = 10000
     rng_key = jrd.PRNGKey(0)
@@ -1020,8 +1011,6 @@ def test_log_prob_gradient(jax_dist, params):
 
     eps = 1e-3
     for i, k in enumerate(params.keys()):
-        if jax_dist is SimpleRedshiftPowerlaw and k == "z_max":
-            continue
         if jax_dist is PowerlawPrimaryMassRatio and i > 1:
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:

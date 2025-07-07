@@ -12,7 +12,7 @@ from loguru import logger
 from numpyro.distributions.distribution import Distribution, DistributionLike
 
 from .cosmology import PLANCK_2015_Cosmology
-from .models.redshift._models import PowerlawRedshift, SimpleRedshiftPowerlaw
+from .models.redshift._models import PowerlawRedshift
 from .models.utils import ScaledMixture
 from .utils.tools import error_if
 from .vts import (
@@ -355,16 +355,7 @@ class PoissonMean(eqx.Module):
                     )
                 else:
                     for m_dist in component_dist.marginal_distributions:
-                        if isinstance(m_dist, SimpleRedshiftPowerlaw):
-                            z = jax.lax.dynamic_index_in_dim(
-                                samples, redshift_index, axis=-1, keepdims=False
-                            )
-                            redshift_dist_log_norm_list.append(m_dist.log_norm())
-                            per_sample_log_estimated_rates += (
-                                PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
-                            )
-                            break
-                        elif isinstance(m_dist, PowerlawRedshift):
+                        if isinstance(m_dist, PowerlawRedshift):
                             if log_weights_and_samples is None:
                                 redshift_dist_log_norm_list.append(m_dist.log_norm())
                             break
