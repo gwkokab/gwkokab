@@ -15,10 +15,7 @@ from loguru import logger
 import gwkokab
 from gwkokab.inference import Bake, poisson_likelihood
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.utils import (
-    create_powerlaw_redshift,
-    create_truncated_normal_distributions,
-)
+from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
     COS_IOTA,
     COS_TILT_1,
@@ -82,19 +79,11 @@ def make_parser() -> ArgumentParser:
         action="store_true",
         help="Include tilt parameters in the model.",
     )
-
-    redshift_group = model_group.add_mutually_exclusive_group()
-    redshift_group.add_argument(
-        "--add-powerlaw-redshift",
+    model_group.add_argument(
+        "--add-redshift",
         action="store_true",
-        help="Include simple powerlaw redshift in the model.",
+        help="Include redshift parameter in the model",
     )
-    redshift_group.add_argument(
-        "--add-evolving-redshift",
-        action="store_true",
-        help="Include evolving powerlaw redshift with comoving volume in the model.",
-    )
-
     model_group.add_argument(
         "--add-truncated-normal-eccentricity",
         action="store_true",
@@ -156,7 +145,7 @@ def main() -> None:
     has_spin = args.add_beta_spin or args.add_truncated_normal_spin
     has_tilt = args.add_tilt
     has_eccentricity = args.add_truncated_normal_eccentricity
-    has_redshift = args.add_powerlaw_redshift or args.add_evolving_redshift
+    has_redshift = args.add_redshift
     has_cos_iota = args.add_cos_iota
     has_phi_12 = args.add_phi_12
     has_polarization_angle = args.add_polarization_angle
@@ -348,10 +337,7 @@ def main() -> None:
 
     if has_redshift:
         parameters.append(REDSHIFT)
-        if args.add_evolving_redshift:
-            gwkokab.models.npowerlawmgaussian._model.build_redshift_distributions = (
-                create_powerlaw_redshift
-            )
+
         all_params.extend(
             [
                 ("redshift_kappa_g", N_g),

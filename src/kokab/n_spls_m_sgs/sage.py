@@ -32,7 +32,6 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import PoissonMean
-from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
@@ -237,9 +236,7 @@ def main() -> None:
 
                 valid_var = variances <= means * (1 - means)
                 valid_var = jnp.logical_and(valid_var, variances > 0.0)
-                α, β = beta_dist_mean_variance_to_concentrations(means, variances)
-                valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
-                return jnp.all(jnp.logical_and(valid_var, valid_ab))
+                return jnp.all(valid_var)
 
             where_fns.append(mean_variance_check)
 
