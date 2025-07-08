@@ -345,6 +345,7 @@ def main() -> None:
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     if has_log_ref_prior:
         log_ref_priors = [d[..., -1] for d in data]
+        data = [d[..., :-1] for d in data]
     else:
         log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
