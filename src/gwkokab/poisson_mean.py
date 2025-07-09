@@ -266,65 +266,64 @@ class PoissonMean(eqx.Module):
         Array
             Estimated rate/s.
         """
-        if self.is_injection_based:  # injection based sampling method
-            assert redshift_index is not None, (
-                "Redshift index must be provided for injection based sampling method."
-            )
-
-            def _f(_: None, data: Tuple[Array, Array]) -> Tuple[None, Array]:
-                log_weights, samples = data
-                # log p(θ_i|λ)
-                model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
-                # log p(θ_i|λ) - log w_i
-                log_prob = model_log_prob - log_weights
-
-                z = jax.lax.dynamic_index_in_dim(
-                    samples, redshift_index, axis=-1, keepdims=False
-                )
-                log_prob += PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
-                partial_logsumexp = jnn.logsumexp(
-                    log_prob, where=~jnp.isneginf(log_prob), axis=-1
-                )
-
-                return None, partial_logsumexp
-
-            # n_total = n_accepted + n_rejected, batch size
-            num_samples, batch_size = self.num_samples_per_component  # type: ignore
-
-            # log w_i, θ_i
-            log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
-
-            n_accepted = log_weights.shape[0]
-            if n_accepted <= batch_size:
-                # If the number of accepted injections is less than or equal to the batch size,
-                # we can process them all at once.
-                _, log_prob = _f(None, (log_weights, samples))
-            else:
-                batched_log_weights, remainder_log_weights = batch_and_remainder(
-                    log_weights, batch_size
-                )
-                batched_samples, remainder_samples = batch_and_remainder(
-                    samples, batch_size
-                )
-                _, batched_logsumexp = jax.lax.scan(
-                    _f,
-                    None,
-                    (batched_log_weights, batched_samples),
-                )
-                _, remainder_logsumexp = _f(
-                    None, (remainder_log_weights, remainder_samples)
-                )
-                log_prob = jnp.concat(
-                    [batched_logsumexp, jnp.expand_dims(remainder_logsumexp, axis=0)],
-                    axis=0,
-                )
-
-            # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-            return (self.time_scale / num_samples) * jnp.exp(
-                jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
-            )
-        else:  # per component rate estimation
+        if not self.is_injection_based:  # per component rate estimation
             return self.calculate_per_component_rate(model, redshift_index)
+
+        # injection based sampling method
+        assert redshift_index is not None, (
+            "Redshift index must be provided for injection based sampling method."
+        )
+
+        def _f(_: None, data: Tuple[Array, Array]) -> Tuple[None, Array]:
+            log_weights, samples = data
+            # log p(θ_i|λ)
+            model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
+            # log p(θ_i|λ) - log w_i
+            log_prob = model_log_prob - log_weights
+
+            z = jax.lax.dynamic_index_in_dim(
+                samples, redshift_index, axis=-1, keepdims=False
+            )
+            log_prob += PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
+            partial_logsumexp = jnn.logsumexp(
+                log_prob, where=~jnp.isneginf(log_prob), axis=-1
+            )
+
+            return None, partial_logsumexp
+
+        # n_total = n_accepted + n_rejected, batch size
+        num_samples, batch_size = self.num_samples_per_component  # type: ignore
+
+        # log w_i, θ_i
+        log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
+
+        n_accepted = log_weights.shape[0]
+        if n_accepted <= batch_size:
+            # If the number of accepted injections is less than or equal to the batch size,
+            # we can process them all at once.
+            _, log_prob = _f(None, (log_weights, samples))
+        else:
+            batched_log_weights, remainder_log_weights = batch_and_remainder(
+                log_weights, batch_size
+            )
+            batched_samples, remainder_samples = batch_and_remainder(
+                samples, batch_size
+            )
+            _, batched_logprob = jax.lax.scan(
+                _f,
+                None,
+                (batched_log_weights, batched_samples),
+            )
+            _, remainder_logprob = _f(None, (remainder_log_weights, remainder_samples))
+            log_prob = jnp.concatenate(
+                [batched_logprob, jnp.expand_dims(remainder_logprob, axis=0)],
+                axis=0,
+            )
+
+        # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
+        return (self.time_scale / num_samples) * jnp.exp(
+            jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
+        )
 
     def calculate_per_component_rate(
         self, model: ScaledMixture, redshift_index: Optional[int]
