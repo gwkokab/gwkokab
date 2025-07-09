@@ -15,7 +15,7 @@ from loguru import logger
 from gwkokab import parameters as gwk_parameters
 from gwkokab.constants import SECONDS_PER_YEAR
 
-from ..utils.tools import error_if, warn_if
+from ..utils.tools import error_if
 from ._abc import VolumeTimeSensitivityInterface
 
 
@@ -80,15 +80,11 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             not all(isinstance(p, str) for p in parameters),
             msg="all parameters must be strings",
         )
-        warn_if(
-            batch_size is not None,
-            msg="batch_size is not used for injection based VTs",
-        )
         error_if(
             spin_case not in ["aligned_spin", "full_spin"],
             msg=f"spin_case must be one of 'aligned_spin' or 'full_spin', got {spin_case}",
         )
-
+        self.batch_size = batch_size
         if spin_case == "aligned_spin":
             spin_converter = lambda sx, sy, sz: np.abs(sz)
         else:
