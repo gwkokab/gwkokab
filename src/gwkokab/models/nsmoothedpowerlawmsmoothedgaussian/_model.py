@@ -15,6 +15,7 @@ from numpyro.distributions import (
 from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
+from ..constraints import any_constraint
 from ..redshift import PowerlawRedshift
 from ..utils import (
     combine_distributions,
@@ -511,6 +512,11 @@ def SmoothedPowerlawAndPeak(
             axis=-1,
         ),
         component_distributions=[component_distribution_pl, component_distribution_g],
-        support=component_distribution_g.support,  # type: ignore[attr-defined]
+        support=any_constraint(
+            [
+                component_distribution_pl.support,  # type: ignore[attr-defined]
+                component_distribution_g.support,  # type: ignore[attr-defined]
+            ]
+        ),
         validate_args=validate_args,
     )
