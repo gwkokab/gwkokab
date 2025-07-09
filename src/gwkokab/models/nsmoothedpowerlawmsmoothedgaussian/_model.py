@@ -502,12 +502,11 @@ def SmoothedPowerlawAndPeak(
         component_distribution_g = JointDistribution(
             *component_distribution_g, validate_args=validate_args
         )
-    log_rate = params["log_rate"]
     return ScaledMixture(
         log_scales=jnp.stack(
             [
-                log_rate + jnp.log1p(-params["lambda_peak"]),  # type: ignore[arg-type, operator]
-                log_rate + jnp.log(params["lambda_peak"]),  # type: ignore[arg-type]
+                params["log_rate"] + jnp.log1p(-params["lambda_peak"]),  # type: ignore[arg-type, operator]
+                params["log_rate"] + jnp.log(params["lambda_peak"]),  # type: ignore[arg-type]
             ],
             axis=-1,
         ),
