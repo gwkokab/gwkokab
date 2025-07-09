@@ -120,6 +120,8 @@ def _jenks_natural_breaks(
         n_buckets < 1 or n_buckets > len(data),
         msg=f"Number of buckets {n_buckets} must be between 1 and {len(data)}",
     )
+    if n_buckets == 1:
+        return [0, len(data) - 1]
     breaks = jenkspy.jenks_breaks(data, n_classes=n_buckets)
     n_unique_breaks = len(set(breaks))
     if n_unique_breaks != n_buckets + 1:
