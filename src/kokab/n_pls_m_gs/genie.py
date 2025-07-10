@@ -7,7 +7,6 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
 from typing import List, Tuple
 
-import numpy as np
 from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
 
@@ -726,12 +725,10 @@ def main() -> None:
     nvt = vt_json_read_and_process(parameters_name, args.vt_json)
     logVT = nvt.get_mapped_logVT()
 
+    pmean_key, factory_key = jrd.split(jrd.PRNGKey(args.seed), 2)
+
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(
-        nvt,
-        key=jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
-        **pmean_kwargs,
-    )
+    erate_estimator = PoissonMean(nvt, key=pmean_key, **pmean_kwargs)
 
     popfactory = PopulationFactory(
         model=model,
@@ -741,4 +738,4 @@ def main() -> None:
         num_realizations=args.num_realizations,
         error_size=args.error_size,
     )
-    popfactory.produce(jrd.PRNGKey(args.seed))
+    popfactory.produce(factory_key)
