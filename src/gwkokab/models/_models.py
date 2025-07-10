@@ -675,8 +675,8 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
 
         _m1s_delta = jnp.linspace(mmin, mmin + delta, 30, dtype=jnp.result_type(float))
 
-        _Z = lax.stop_gradient(
-            jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0)
+        _Z = jnp.trapezoid(
+            jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0
         ) + self._powerlaw_norm_constant(
             alpha=-self.alpha, low=self.mmin + self.delta, high=self.mmax
         )
@@ -740,12 +740,10 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
         _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
-        log_Z_q = lax.stop_gradient(
-            jnp.where(
-                jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
-                0.0,
-                jnp.log(_Z_q),
-            )
+        log_Z_q = jnp.where(
+            jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
+            0.0,
+            jnp.log(_Z_q),
         )
         log_prob_q = self._log_prob_q(value, log_Z_q)
         return log_prob_m1 + log_prob_q
@@ -834,11 +832,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         _m1s_delta = jnp.linspace(mmin, mmin + delta, 30, dtype=jnp.result_type(float))
 
         _Z = (
-            lax.stop_gradient(
-                jnp.trapezoid(
-                    jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0
-                )
-            )
+            jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0)
             + special.ndtr((self.mmax - self.loc) / self.scale)
             - special.ndtr((self.mmin + self.delta - self.loc) / self.scale)
         )
@@ -892,12 +886,10 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
         _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
-        log_Z_q = lax.stop_gradient(
-            jnp.where(
-                jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
-                0.0,
-                jnp.log(_Z_q),
-            )
+        log_Z_q = jnp.where(
+            jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
+            0.0,
+            jnp.log(_Z_q),
         )
         log_prob_q = self._log_prob_q(value, log_Z_q)
         return log_prob_m1 + log_prob_q
