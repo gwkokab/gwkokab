@@ -116,6 +116,15 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             runs = injections["name"][:].astype(str)
 
             found = np.where(runs == "o3", ifar > 1 / far_cut, snr > snr_cut)
+            n_total = found.shape[0]
+            n_found = np.sum(found)
+            logger.debug(
+                "Found {} out of {} injections with FAR < {} and SNR > {}",
+                n_found,
+                n_total,
+                far_cut,
+                snr_cut,
+            )
 
             sampling_prob = (
                 injections["sampling_pdf"][found][:]
