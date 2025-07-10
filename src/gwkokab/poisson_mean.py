@@ -350,24 +350,23 @@ class PoissonMean(eqx.Module):
             f"but got {len(self.proposal_log_weights_and_samples)}",
         )
 
-        per_component_log_estimated_rates = []
+        per_component_log_estimated_rates_list = []
 
         logVT_fn = self.logVT_estimator.get_mapped_logVT()  # type: ignore
-
-        redshift_dist_log_norm_list = []
 
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
             component_dist: DistributionLike = model.component_distributions[i]
             num_samples = self.num_samples_per_component[i]  # type: ignore
+            log_constant = -jnp.log(num_samples)
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
                 samples = component_dist.sample(self.key, (num_samples,))
-                log_rate_i = jax.lax.dynamic_index_in_dim(
+                log_constant += jax.lax.dynamic_index_in_dim(
                     model.log_scales, index=i, axis=-1, keepdims=False
                 )
-                per_sample_log_estimated_rates = log_rate_i + logVT_fn(samples)
+                per_sample_log_estimated_rates = logVT_fn(samples)
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
                 component_log_prob = component_dist.log_prob(samples).reshape(
@@ -386,37 +385,30 @@ class PoissonMean(eqx.Module):
                 if redshift_index is None:
                     zmin = self.parameter_ranges.get("redshift_min", 0.0)
                     zmax = self.parameter_ranges.get("redshift_max", 5.0)
+                    log_constant += jnp.log(zmax - zmin)  # uniform log norm
                     z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
                     per_sample_log_estimated_rates += (
                         PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
                     )
-                    redshift_dist_log_norm_list.append(
-                        jnp.log(zmax - zmin)  # Uniform distribution log norm
-                    )
                 elif log_weights_and_samples is None:
                     for m_dist in component_dist.marginal_distributions:
                         if isinstance(m_dist, PowerlawRedshift):
-                            redshift_dist_log_norm_list.append(m_dist.log_norm())
+                            log_constant += m_dist.log_norm()
                             break
 
-            per_sample_log_estimated_rates = jnp.nan_to_num(
-                per_sample_log_estimated_rates, nan=-jnp.inf
-            )
-            per_component_log_estimated_rate = jnn.logsumexp(
+            per_component_log_estimated_rate = log_constant + jnn.logsumexp(
                 per_sample_log_estimated_rates,
                 where=~jnp.isneginf(per_sample_log_estimated_rates),
-            ) - jnp.log(num_samples)
-            per_component_log_estimated_rates.append(per_component_log_estimated_rate)
+                axis=-1,
+            )
+            per_component_log_estimated_rates_list.append(
+                per_component_log_estimated_rate
+            )
 
-        if len(redshift_dist_log_norm_list) == 0:
-            redshift_dist_log_norm: Array = jnp.zeros(())
-        else:
-            redshift_dist_log_norm = jnp.stack(redshift_dist_log_norm_list, axis=-1)
+        per_component_log_estimated_rates = jnp.stack(
+            per_component_log_estimated_rates_list, axis=-1
+        )  # type: ignore
 
-        per_component_log_estimated_rates = (
-            redshift_dist_log_norm  # type: ignore
-            + jnp.stack(per_component_log_estimated_rates, axis=-1)  # type: ignore
+        return self.time_scale * jnp.exp(
+            jnn.logsumexp(per_component_log_estimated_rates, axis=-1)
         )
-        per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
-
-        return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
