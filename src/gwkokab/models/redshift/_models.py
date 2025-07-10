@@ -42,23 +42,14 @@ class PowerlawRedshift(Distribution):
         "kappa": constraints.real,
     }
     reparametrized_params = ["z_max", "kappa"]
-    pytree_data_fields = ("_support", "z_grid", "cdfgrid", "kappa", "z_max")
+    pytree_data_fields = ("_support", "kappa", "z_max")
 
     def __init__(
         self, z_max: Array, kappa: Array, *, validate_args: Optional[bool] = None
     ):
         self.z_max, self.kappa = promote_shapes(z_max, kappa)
         batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
-        self.z_grid = jnp.linspace(0.0, self.z_max, 2500)
         self._support = constraints.interval(0.0, z_max)
-        cdfgrid: Array = quadax.cumulative_trapezoid(
-            jnp.exp(
-                self.log_differential_spacetime_volume(self.z_grid) - self.log_norm()
-            ),
-            x=self.z_grid,
-            initial=0.0,
-        )
-        self.cdfgrid = cdfgrid / cdfgrid[-1]
         super(PowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
@@ -77,11 +68,12 @@ class PowerlawRedshift(Distribution):
 
     def log_norm(self) -> Array:
         """Placeholder method for computing the log normalization constant."""
+        z_grid = jnp.linspace(0.0, self.z_max, 2500)
         log_differential_spacetime_volume = self.log_differential_spacetime_volume(
-            self.z_grid
+            z_grid
         )
         pdfs = jnp.exp(log_differential_spacetime_volume)
-        norm = trapezoid(pdfs, self.z_grid)
+        norm = trapezoid(pdfs, z_grid)
         return jnp.log(norm)
 
     def sample(self, key, sample_shape=()):
@@ -102,7 +94,13 @@ class PowerlawRedshift(Distribution):
             Redshift samples.
         """
         u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
-        return jnp.interp(u, self.cdfgrid, self.z_grid)
+        z_grid = jnp.linspace(0.0, self.z_max, 2500)
+        pdfgrid = jnp.exp(
+            self.log_differential_spacetime_volume(z_grid) - self.log_norm()
+        )
+        cdfgrid: Array = quadax.cumulative_trapezoid(pdfgrid, x=z_grid, initial=0.0)
+        cdfgrid = cdfgrid / cdfgrid[-1]
+        return jnp.interp(u, cdfgrid, z_grid)
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:

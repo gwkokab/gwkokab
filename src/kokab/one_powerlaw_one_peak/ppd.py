@@ -10,6 +10,8 @@ from numpyro.distributions.distribution import DistributionLike, TransformedDist
 
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
+    COS_TILT_1,
+    COS_TILT_2,
     MASS_RATIO,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
@@ -74,6 +76,7 @@ def main() -> None:
     nf_samples_mapping = read_json(args.nf_samples_mapping)
 
     use_spin = constants.get("use_spin", False)
+    use_tilt = constants.get("use_tilt", False)
     use_redshift = constants.get("use_redshift", False)
 
     parameters = [PRIMARY_MASS_SOURCE.name]
@@ -84,6 +87,8 @@ def main() -> None:
 
     if use_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
+    if use_tilt:
+        parameters.extend([COS_TILT_1.name, COS_TILT_2.name])
     if use_redshift:
         parameters.append(REDSHIFT.name)
 

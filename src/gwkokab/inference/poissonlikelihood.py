@@ -131,6 +131,9 @@ def poisson_likelihood(
 
         model_instance: Distribution = dist_fn(**mapped_params)
 
+        # μ = E_{Ω|Λ}[VT(ω)]
+        expected_rates = jax.block_until_ready(ERate_fn(model_instance, redshift_index))
+
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
         ) -> Tuple[Array, None]:
@@ -165,8 +168,7 @@ def poisson_likelihood(
             )
             total_log_likelihood += _total_log_likelihood
 
-        # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = ERate_fn(model_instance, redshift_index)
+        total_log_likelihood = jax.block_until_ready(total_log_likelihood)
 
         log_prior = priors.log_prob(x)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)

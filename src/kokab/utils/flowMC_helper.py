@@ -167,7 +167,9 @@ def _save_data_from_sampler(
 
     key_unweighted = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
     unweighted_samples = np.asarray(
-        sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
+        jax.block_until_ready(
+            sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
+        )
     )
     np.savetxt(
         rf"{out_dir}/nf_samples_unweighted.dat", unweighted_samples, header=header
@@ -179,7 +181,9 @@ def _save_data_from_sampler(
 
     gc.collect()
 
-    logpdf_val = jax.lax.map(lambda s: logpdf(s, None), unweighted_samples)
+    logpdf_val = jax.block_until_ready(
+        jax.lax.map(lambda s: logpdf(s, None), unweighted_samples)
+    )
     logger.debug(
         "Nan count in logpdf values: {nan_count}", nan_count=jnp.isnan(logpdf_val).sum()
     )
@@ -192,7 +196,9 @@ def _save_data_from_sampler(
         inf_count=jnp.isposinf(logpdf_val).sum(),
     )
 
-    nf_model_log_prob_val = sampler.nf_model.log_prob(unweighted_samples)
+    nf_model_log_prob_val = jax.block_until_ready(
+        sampler.nf_model.log_prob(unweighted_samples)
+    )
     logger.debug(
         "Nan count in nf_model_log_prob values: {nan_count}",
         nan_count=jnp.isnan(nf_model_log_prob_val).sum(),

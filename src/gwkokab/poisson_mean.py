@@ -14,7 +14,7 @@ from numpyro.distributions.distribution import Distribution, DistributionLike
 from .cosmology import PLANCK_2015_Cosmology
 from .models.redshift._models import PowerlawRedshift
 from .models.utils import ScaledMixture
-from .utils.tools import error_if
+from .utils.tools import batch_and_remainder, error_if
 from .vts import (
     NeuralNetProbabilityOfDetection,
     RealInjectionVolumeTimeSensitivity,
@@ -142,7 +142,10 @@ class PoissonMean(eqx.Module):
                 "We parse the injection files to get the time scales."
             )
             self.time_scale = logVT_estimator.analysis_time_years
-            self.num_samples_per_component = [logVT_estimator.total_injections]
+            self.num_samples_per_component = [
+                logVT_estimator.total_injections,
+                logVT_estimator.batch_size,
+            ]
 
         else:
             self.logVT_estimator = logVT_estimator
@@ -263,30 +266,64 @@ class PoissonMean(eqx.Module):
         Array
             Estimated rate/s.
         """
-        if self.is_injection_based:  # injection based sampling method
-            # log w_i, ω_i
-            log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
-            # n_total = n_accepted + n_rejected
-            num_samples = self.num_samples_per_component[0]  # type: ignore
-            # log p(ω_i|λ)
+        if not self.is_injection_based:  # per component rate estimation
+            return self.calculate_per_component_rate(model, redshift_index)
+
+        # injection based sampling method
+        assert redshift_index is not None, (
+            "Redshift index must be provided for injection based sampling method."
+        )
+
+        def _f(_: None, data: Tuple[Array, Array]) -> Tuple[None, Array]:
+            log_weights, samples = data
+            # log p(θ_i|λ)
             model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
-            # log p(ω_i|λ) - log w_i
+            # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
-            # TODO(Qazalbash): handle the case for reading redshift from injections here for redshift independent models.
+
             z = jax.lax.dynamic_index_in_dim(
                 samples, redshift_index, axis=-1, keepdims=False
             )
-            log_factor_redshift = PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
-            # (T / n_total) * exp(log Σ exp(log p(ω_i|λ) - log w_i))
-            return (self.time_scale / num_samples) * jnp.exp(
-                jnn.logsumexp(
-                    log_factor_redshift + log_prob,
-                    where=~jnp.isneginf(log_prob) | ~jnp.isneginf(log_factor_redshift),
-                    axis=-1,
-                )
+            log_prob += PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
+            partial_logsumexp = jnn.logsumexp(
+                log_prob, where=~jnp.isneginf(log_prob), axis=-1
             )
-        else:  # per component rate estimation
-            return self.calculate_per_component_rate(model, redshift_index)
+
+            return None, partial_logsumexp
+
+        # n_total = n_accepted + n_rejected, batch size
+        num_samples, batch_size = self.num_samples_per_component  # type: ignore
+
+        # log w_i, θ_i
+        log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
+
+        n_accepted = log_weights.shape[0]
+        if n_accepted <= batch_size:
+            # If the number of accepted injections is less than or equal to the batch size,
+            # we can process them all at once.
+            _, log_prob = _f(None, (log_weights, samples))
+        else:
+            batched_log_weights, remainder_log_weights = batch_and_remainder(
+                log_weights, batch_size
+            )
+            batched_samples, remainder_samples = batch_and_remainder(
+                samples, batch_size
+            )
+            _, batched_logprob = jax.lax.scan(
+                _f,
+                None,
+                (batched_log_weights, batched_samples),
+            )
+            _, remainder_logprob = _f(None, (remainder_log_weights, remainder_samples))
+            log_prob = jnp.concatenate(
+                [batched_logprob, jnp.expand_dims(remainder_logprob, axis=0)],
+                axis=0,
+            )
+
+        # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
+        return (self.time_scale / num_samples) * jnp.exp(
+            jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
+        )
 
     def calculate_per_component_rate(
         self, model: ScaledMixture, redshift_index: Optional[int]
@@ -313,20 +350,22 @@ class PoissonMean(eqx.Module):
             f"but got {len(self.proposal_log_weights_and_samples)}",
         )
 
-        per_component_log_estimated_rates = []
+        per_component_log_estimated_rates_list = []
 
         logVT_fn = self.logVT_estimator.get_mapped_logVT()  # type: ignore
-
-        redshift_dist_log_norm_list = []
 
         for i in range(model.mixture_size):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
             component_dist: DistributionLike = model.component_distributions[i]
             num_samples = self.num_samples_per_component[i]  # type: ignore
+            log_constant = -jnp.log(num_samples)
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
                 samples = component_dist.sample(self.key, (num_samples,))
+                log_constant += jax.lax.dynamic_index_in_dim(
+                    model.log_scales, index=i, axis=-1, keepdims=False
+                )
                 per_sample_log_estimated_rates = logVT_fn(samples)
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
@@ -346,39 +385,30 @@ class PoissonMean(eqx.Module):
                 if redshift_index is None:
                     zmin = self.parameter_ranges.get("redshift_min", 0.0)
                     zmax = self.parameter_ranges.get("redshift_max", 5.0)
+                    log_constant += jnp.log(zmax - zmin)  # uniform log norm
                     z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
                     per_sample_log_estimated_rates += (
                         PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
                     )
-                    redshift_dist_log_norm_list.append(
-                        jnp.log(zmax - zmin)  # Uniform distribution log norm
-                    )
-                else:
+                elif log_weights_and_samples is None:
                     for m_dist in component_dist.marginal_distributions:
                         if isinstance(m_dist, PowerlawRedshift):
-                            if log_weights_and_samples is None:
-                                redshift_dist_log_norm_list.append(m_dist.log_norm())
+                            log_constant += m_dist.log_norm()
                             break
 
-            per_sample_log_estimated_rates = jnp.nan_to_num(
-                per_sample_log_estimated_rates, nan=-jnp.inf
-            )
-            per_component_log_estimated_rate = jnn.logsumexp(
+            per_component_log_estimated_rate = log_constant + jnn.logsumexp(
                 per_sample_log_estimated_rates,
                 where=~jnp.isneginf(per_sample_log_estimated_rates),
-            ) - jnp.log(num_samples)
-            per_component_log_estimated_rates.append(per_component_log_estimated_rate)
+                axis=-1,
+            )
+            per_component_log_estimated_rates_list.append(
+                per_component_log_estimated_rate
+            )
 
-        if len(redshift_dist_log_norm_list) == 0:
-            redshift_dist_log_norm: Array = jnp.zeros(())
-        else:
-            redshift_dist_log_norm = jnp.stack(redshift_dist_log_norm_list, axis=-1)
+        per_component_log_estimated_rates = jnp.stack(
+            per_component_log_estimated_rates_list, axis=-1
+        )  # type: ignore
 
-        per_component_log_estimated_rates = (
-            redshift_dist_log_norm  # type: ignore
-            + model.log_scales  # type: ignore
-            + jnp.stack(per_component_log_estimated_rates, axis=-1)  # type: ignore
+        return self.time_scale * jnp.exp(
+            jnn.logsumexp(per_component_log_estimated_rates, axis=-1)
         )
-        per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
-
-        return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
