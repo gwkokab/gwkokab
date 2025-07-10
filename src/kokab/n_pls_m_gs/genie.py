@@ -741,4 +741,4 @@ def main() -> None:
         num_realizations=args.num_realizations,
         error_size=args.error_size,
     )
-    popfactory.produce()
+    popfactory.produce(jrd.PRNGKey(args.seed))

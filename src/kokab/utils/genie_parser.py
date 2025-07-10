@@ -39,6 +39,12 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         default=5,
         type=int,
     )
+    genie_group.add_argument(
+        "--seed",
+        help="Random seed for reproducibility.",
+        default=37,
+        type=int,
+    )
 
     vt_group = parser.add_argument_group("VT Options")
 
