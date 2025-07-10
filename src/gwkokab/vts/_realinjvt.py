@@ -52,6 +52,8 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         parameters: Sequence[str],
         filename: str,
         batch_size: Optional[int] = None,
+        far_cut: float = 1.0,
+        snr_cut: float = 10.0,
         spin_case: Literal["aligned_spin", "full_spin"] = "aligned_spin",
     ) -> None:
         """Convenience class for loading a neural vt.
@@ -64,6 +66,10 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             The filename of the neural vt.
         batch_size: Optional[int]
             The batch size of the neural vt.
+        far_cut : float
+            The FAR cut to apply to the injections. Default is 1.0.
+        snr_cut : float
+            The SNR cut to apply to the injections. Default is 10.0.
         spin_case : Literal[&quot;aligned_spin&quot;, &quot;full_spin&quot;]
             The spin case of the injections. Default is 'aligned_spin'.
         """
@@ -98,40 +104,44 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             self.analysis_time_years = (
                 float(f.attrs["analysis_time_s"]) / SECONDS_PER_YEAR
             )
-            self.total_injections = int(f.attrs["n_accepted"] + f.attrs["n_rejected"])
+            self.total_injections = int(f.attrs["total_generated"])
+
+            injections = f["injections"]
+
+            ifar = np.max(
+                [injections[k][:] for k in injections.keys() if "far" in k],
+                axis=0,
+            )
+            snr = injections["optimal_snr_net"][:]
+            runs = injections["name"][:].astype(str)
+
+            found = np.where(runs == "o3", ifar > 1 / far_cut, snr > snr_cut)
+
+            sampling_prob = (
+                injections["sampling_pdf"][found][:]
+                / injections["mixture_weight"][found][:]
+            )
+
             injs = []
             for p in parameters:
                 if p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
-                        f["injections"]["spin1x"][:],  # χ_1x
-                        f["injections"]["spin1y"][:],  # χ_1y
-                        f["injections"]["spin1z"][:],  # χ_1z
+                        injections["spin1x"][found][:],  # χ_1x
+                        injections["spin1y"][found][:],  # χ_1y
+                        injections["spin1z"][found][:],  # χ_1z
                     )
+                    sampling_prob *= 2.0 * np.pi * np.square(_inj)
                 elif p == gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
-                        f["injections"]["spin2x"][:],  # χ_2x
-                        f["injections"]["spin2y"][:],  # χ_2y
-                        f["injections"]["spin2z"][:],  # χ_2z
+                        injections["spin2x"][found][:],  # χ_2x
+                        injections["spin2y"][found][:],  # χ_2y
+                        injections["spin2z"][found][:],  # χ_2z
                     )
+                    sampling_prob *= 2.0 * np.pi * np.square(_inj)
                 else:
-                    _inj = f["injections"][_PARAM_MAPPING[p]][:]
+                    _inj = injections[_PARAM_MAPPING[p]][found][:]
                 injs.append(_inj)
             self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
-            sampling_prob = f["injections"]["sampling_pdf"][:]
-
-            if (
-                gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name not in parameters
-                and gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name not in parameters
-            ):
-                logger.debug(
-                    "Removing spin magnitude from sampling probability, "
-                    "as it is not in the parameters."
-                )
-                # If max_spin1 is not available, use 1.0 as default.
-                # If max_spin2 is not available, use 1.0 as default.
-                max_spin1 = f.attrs.get("max_spin1", 1.0)
-                max_spin2 = f.attrs.get("max_spin2", 1.0)
-                sampling_prob = 4.0 * max_spin1 * max_spin2 * sampling_prob
 
             self.sampling_prob = jax.device_put(sampling_prob, may_alias=True)
 
