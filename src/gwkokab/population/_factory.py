@@ -250,7 +250,7 @@ class PopulationFactory:
             nan_mask = np.isnan(noisy_data).any(axis=1)
             noisy_data = noisy_data[~nan_mask]  # type: ignore
 
-            if (count := noisy_data.shape[0]) < 1:
+            if noisy_data.shape[0] < 1:
                 warnings.warn(
                     f"Skipping file {index} due to all NaN values or insufficient data.",
                     category=UserWarning,
@@ -284,53 +284,10 @@ class PopulationFactory:
         ) as f:
             for i, (mean, cov) in enumerate(zip(means, covs)):
                 if mean is not None and cov is not None:
-                    event_group = f.create_group(f"event_{i}")
+                    event_name = self.event_filename.format(i)
+                    event_group = f.create_group(event_name)
                     event_group.create_dataset("mean", data=mean)
                     event_group.create_dataset("cov", data=cov)
-
-        if self.log_selection_fn is None:
-            raw_output_dir = os.path.join(
-                realizations_path, self.error_dir, self.event_filename
-            )
-
-            os.makedirs(
-                os.path.join(realizations_path, "raw_" + self.error_dir), exist_ok=True
-            )
-
-            injections_file_path = os.path.join(
-                realizations_path, "raw_" + self.injection_filename
-            )
-            raw_data_inj = np.loadtxt(injections_file_path, skiprows=1)
-            keys = jrd.split(key, raw_data_inj.shape[0] * len(heads))
-
-            for index in range(raw_data_inj.shape[0]):
-                noisy_data = np.empty((self.error_size, len(self.parameters)))
-                data = raw_data_inj[index]
-                i = 0
-                for head, err_fn in zip(heads, error_fns):
-                    key_idx = index * len(heads) + i
-                    noisy_data_i: Array = err_fn(
-                        data[head], self.error_size, keys[key_idx]
-                    )
-                    if noisy_data_i.ndim == 1:
-                        noisy_data_i = noisy_data_i.reshape(self.error_size, -1)
-                    noisy_data[:, head] = noisy_data_i
-                    i += 1
-                nan_mask = np.isnan(noisy_data).any(axis=1)
-                masked_noisey_data = noisy_data[~nan_mask]
-                count = np.count_nonzero(masked_noisey_data)
-                if count < 2:
-                    warnings.warn(
-                        f"Skipping file {index} due to all NaN values or insufficient data.",
-                        category=UserWarning,
-                    )
-                    continue
-                np.savetxt(
-                    raw_output_dir.format(index),
-                    masked_noisey_data,
-                    header=" ".join(self.parameters),
-                    comments="",  # To remove the default comment character '#'
-                )
 
     def produce(self, key: PRNGKeyArray) -> None:
         """Generate realizations and add errors to the populations.
