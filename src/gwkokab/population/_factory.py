@@ -7,6 +7,7 @@ import warnings
 from collections.abc import Callable
 from typing import List, Optional, Tuple
 
+import h5py
 import numpy as np
 import tqdm
 from jax import nn as jnn, numpy as jnp, random as jrd
@@ -32,6 +33,7 @@ class PopulationFactory:
     realizations_dir: str = "realization_{}"
     root_dir: str = "data"
     verbose: bool = True
+    mean_covs_filename: str = "means_covs.hdf5"
 
     def __init__(
         self,
@@ -226,9 +228,15 @@ class PopulationFactory:
 
         injections_file_path = os.path.join(realizations_path, self.injection_filename)
         data_inj = np.loadtxt(injections_file_path, skiprows=1)
-        keys = jrd.split(key, data_inj.shape[0] * (len(heads) + 1))
 
-        for index in range(data_inj.shape[0]):
+        n_injections = data_inj.shape[0]
+
+        keys = jrd.split(key, n_injections * (len(heads) + 1))
+
+        means: List[Optional[np.ndarray]] = [None for _ in range(n_injections)]
+        covs: List[Optional[np.ndarray]] = [None for _ in range(n_injections)]
+
+        for index in range(n_injections):
             noisy_data = np.empty((self.error_size, len(self.parameters)))
             data = data_inj[index]
             i = 0
@@ -241,19 +249,44 @@ class PopulationFactory:
                 i += 1
             nan_mask = np.isnan(noisy_data).any(axis=1)
             noisy_data = noisy_data[~nan_mask]  # type: ignore
-            count = np.count_nonzero(noisy_data)
-            if count < 1:
+
+            if (count := noisy_data.shape[0]) < 1:
                 warnings.warn(
                     f"Skipping file {index} due to all NaN values or insufficient data.",
                     category=UserWarning,
                 )
                 continue
+
+            mean = np.mean(noisy_data, axis=0)
+            error_if(
+                np.isnan(mean).any(),
+                msg=f"Mean for realization {realization_number} contains NaN values.",
+            )
+
+            cov = np.cov(noisy_data.T)
+            error_if(
+                np.isnan(cov).any(),
+                msg=f"Covariance for realization {realization_number} contains NaN values.",
+            )
+
+            means[index] = mean
+            covs[index] = cov
+
             np.savetxt(
                 output_dir.format(index),
                 noisy_data,
                 header=" ".join(self.parameters),
                 comments="",  # To remove the default comment character '#'
             )
+
+        with h5py.File(
+            os.path.join(realizations_path, self.mean_covs_filename), "w"
+        ) as f:
+            for i, (mean, cov) in enumerate(zip(means, covs)):
+                if mean is not None and cov is not None:
+                    event_group = f.create_group(f"event_{i}")
+                    event_group.create_dataset("mean", data=mean)
+                    event_group.create_dataset("cov", data=cov)
 
         if self.log_selection_fn is None:
             raw_output_dir = os.path.join(
