@@ -144,8 +144,13 @@ def poisson_likelihood(
             )
             safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
+            # log p(ω|data_n)
+            model_log_prob = jax.lax.map(
+                model_instance.log_prob, safe_data, batch_size=1_000
+            )
+
             # log p(ω|data_n) - log π_n
-            log_prob: Array = model_instance.log_prob(safe_data) - safe_log_ref_prior
+            log_prob: Array = model_log_prob - safe_log_ref_prior
             log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
 
             # log Σ exp (log p(ω|data_n) - log π_n)
