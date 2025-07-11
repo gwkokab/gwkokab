@@ -14,7 +14,7 @@ Effective sample size (ESS) = `((max_samples * train_thinning) / n_chains) > n_l
 
 For the global sampler the following condition is required.
 
-`n_flow_samples ≥ n_global_steps × n_chains`
+`n_flow_samples <= n_global_steps × n_chains`
 
 ## Overall convergence checks and associated parameters to tune
 
@@ -22,7 +22,7 @@ For the global sampler the following condition is required.
 | ------------- | --------------------------------------------- |
 | `m` | Number of parameters you want to recover |
 | `n_chains` | should be ≥ $m^2$ |
-| `n_flow_samples`| Number of samples NF draws per loop,  `n_flow_samples ≥ n_global_steps × n_chains` , start with `n_flow_samples = 100*m` and increase as needed |
+| `n_flow_samples`| Number of samples NF draws per loop,  `n_flow_samples <= n_global_steps × n_chains` , start with `n_flow_samples = 100*m` and increase as needed |
 | `n_global_steps` | How many times you attempt a global proposal per training loop `n_flow_samples/n_chains` |
 | `n_local_steps` | Number of steps local sampler take to generate points to train NFs. |
 | `number of samples in first training loop` | `(n_chains * n_local_steps) / train_thinning` = points generated in each loop for training and keep adding in next loop until reaches the `n_max_samples` |
@@ -81,7 +81,7 @@ For the global sampler the following condition is required.
 | ---------------- | --------------------------------------------- |
 | `n_global_steps` | ≥ 50 for effective cross-mode proposals       |
 | `use_global`     | Must be `true` for complex/multimodal targets |
-| `n_flow_sample`  | ≥ `n_global_steps × n_chains`                 |
+| `n_flow_sample`  | <= `n_global_steps × n_chains`                 |
 
 * **Rule**: Flow must be well-trained enough to produce viable global proposals. start with minimum required n_flow_sample = n_global_steps × n_chains for memory efficiency. This number cause the memory peaks and may cause to resource exhaustion.
 
