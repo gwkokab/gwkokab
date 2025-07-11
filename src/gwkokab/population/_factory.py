@@ -284,7 +284,7 @@ class PopulationFactory:
         ) as f:
             for i, (mean, cov) in enumerate(zip(means, covs)):
                 if mean is not None and cov is not None:
-                    event_name = self.event_filename.format(i)
+                    event_name = "event_{}".format(i)
                     event_group = f.create_group(event_name)
                     event_group.create_dataset("mean", data=mean)
                     event_group.create_dataset("cov", data=cov)
