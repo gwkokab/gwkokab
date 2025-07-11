@@ -16,6 +16,7 @@ from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
 from ..models.wrappers import ModelRegistry
+from ..utils.tools import error_if
 from ._utils import ensure_dat_extension
 
 
@@ -36,7 +37,7 @@ class PopulationFactory:
         self,
         model: ScaledMixture,
         parameters: List[str],
-        logVT_fn: Optional[Callable[[Array], Array]],
+        log_selection_fn: Optional[Callable[[Array], Array]],
         ERate_fn: Callable[[ScaledMixture, Optional[int]], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
@@ -50,7 +51,7 @@ class PopulationFactory:
             Model for the population.
         parameters : List[str]
             Parameters for the model in order.
-        logVT_fn : Callable[[Array], Array]
+        log_selection_fn : Callable[[Array], Array]
             logarithm of volume time sensitivity function.
         ERate_fn : Callable[[ScaledMixture, Optional[int]], Array]
             Expected rate function.
@@ -68,30 +69,28 @@ class PopulationFactory:
         ValueError
             If parameters are not provided.
         """
+        error_if(model is None, msg="Model is not provided.")
+        error_if(
+            not isinstance(model, ScaledMixture),
+            msg="The model must be a `ScaledMixture` model for multi-rate model."
+            "See `gwkokab.model.utils.ScaledMixture` for more details.",
+        )
+        error_if(len(parameters) == 0, msg="Parameters are not provided.")
+
         self.model = model
         self.parameters = parameters
-        self.logVT_fn = logVT_fn
+        self.log_selection_fn = log_selection_fn
         self.ERate_fn = ERate_fn
         self.num_realizations = num_realizations
         self.error_size = error_size
+
         if "redshift" in parameters:
-            self.redshift_index = parameters.index("redshift")
+            self.redshift_index: Optional[int] = parameters.index("redshift")
         else:
             self.redshift_index = None
 
         self.event_filename = ensure_dat_extension(self.event_filename)
         self.injection_filename = ensure_dat_extension(self.injection_filename)
-
-        if self.model is None:
-            raise ValueError("Model is not provided.")
-        if not isinstance(self.model, ScaledMixture):
-            raise ValueError(
-                "The model must be a `ScaledMixture` model for multi-rate model."
-                "See `gwkokab.model.utils.ScaledMixture` for more details."
-            )
-
-        if self.parameters == []:
-            raise ValueError("Parameters are not provided.")
 
     def _generate_population(
         self, size: int, *, key: PRNGKeyArray
@@ -99,7 +98,7 @@ class PopulationFactory:
         r"""Generate population for a realization."""
 
         old_size = size
-        if self.logVT_fn is not None:
+        if self.log_selection_fn is not None:
             size += int(1e4)
 
         population, [indices] = self.model.sample_with_intermediates(key, (size,))
@@ -107,16 +106,16 @@ class PopulationFactory:
         raw_population = population
         raw_indices = indices
 
-        if self.logVT_fn is not None:
+        if self.log_selection_fn is not None:
             _, key = jrd.split(key)
-            logVT = self.logVT_fn(population)
-            logVT = jnp.nan_to_num(
-                logVT,
+            log_selection = self.log_selection_fn(population)
+            log_selection = jnp.nan_to_num(
+                log_selection,
                 nan=-jnp.inf,
                 posinf=-jnp.inf,
                 neginf=-jnp.inf,
             )
-            vt = jnn.softmax(logVT)
+            vt = jnn.softmax(log_selection)
             _, key = jrd.split(key)
             index = jrd.choice(
                 key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
@@ -256,7 +255,7 @@ class PopulationFactory:
                 comments="",  # To remove the default comment character '#'
             )
 
-        if self.logVT_fn is None:
+        if self.log_selection_fn is None:
             raw_output_dir = os.path.join(
                 realizations_path, self.error_dir, self.event_filename
             )
@@ -300,18 +299,15 @@ class PopulationFactory:
                     comments="",  # To remove the default comment character '#'
                 )
 
-    def produce(self, key: Optional[PRNGKeyArray] = None) -> None:
+    def produce(self, key: PRNGKeyArray) -> None:
         """Generate realizations and add errors to the populations.
 
         Parameters
         ----------
-        key : Optional[PRNGKeyArray], optional
+        key : PRNGKeyArray
             Pseudo-random number generator key for reproducibility, by default None
         """
-        if key is None:
-            key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
-        else:
-            assert is_prng_key(key)
+        assert is_prng_key(key)
         self._generate_realizations(key)
         keys = jrd.split(key, self.num_realizations)
         with tqdm.tqdm(
