@@ -48,6 +48,28 @@ def read_json(json_file: str) -> Dict:
     return content
 
 
+def write_json(json_file: str, content: Dict) -> None:
+    """Write a dictionary to a json file.
+
+    Parameters
+    ----------
+    json_file : str
+        path of the json file
+    content : dict
+        content to write to the json file
+
+    Raises
+    ------
+    ValueError
+        If the file is not writable or if the content is not a valid json serializable object
+    """
+    try:
+        with open(json_file, "w") as f:
+            json.dump(content, f, indent=4)
+    except (FileNotFoundError, TypeError) as e:
+        raise ValueError(f"Error writing configuration: {e}")
+
+
 def expand_arguments(arg: str, n: int) -> List[str]:
     """Extend the argument with a number of strings.
 
