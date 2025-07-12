@@ -723,7 +723,7 @@ def main() -> None:
     )
 
     nvt = vt_json_read_and_process(parameters_name, args.vt_json)
-    logVT = nvt.get_mapped_logVT()
+    log_selection_fn = nvt.get_mapped_logVT()
 
     pmean_key, factory_key = jrd.split(jrd.PRNGKey(args.seed), 2)
 
@@ -733,7 +733,7 @@ def main() -> None:
     popfactory = PopulationFactory(
         model=model,
         parameters=parameters_name,
-        logVT_fn=logVT,
+        log_selection_fn=log_selection_fn,
         ERate_fn=erate_estimator.__call__,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
