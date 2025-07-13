@@ -217,7 +217,6 @@ class Monk(Guru):
             redshift_index = None
 
         logger.debug("Baking the model")
-        print(self.baked_model.get_dummy())
         constants, variables, duplicates, dist_fn = self.baked_model.get_dist()  # type: ignore
         variables_index: dict[str, int] = {
             key: i for i, key in enumerate(variables.keys())
