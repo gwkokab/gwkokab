@@ -5,7 +5,7 @@
 from typing import Callable, Dict, List, Optional, Tuple
 
 import jax
-from jax import numpy as jnp, random as jrd
+from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
 from numpyro.distributions import Distribution, MultivariateNormal
@@ -95,12 +95,30 @@ def analytical_likelihood(
             carry: Array, loop_data: Tuple[Array, Array, PRNGKeyArray]
         ) -> Tuple[Array, None]:
             mean, cov, rng_key = loop_data
+            mvn_key, proposal_mvn_key = jrd.split(rng_key, num=2)
+
             mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
-            # data_i ~ G(θ, z | μ_i, Σ_i)
-            data = mvn.sample(rng_key, (N_samples,))
-            # log ρ(data_i|Λ,κ)
-            log_prob = model_instance.log_prob(data)
-            # log Σ exp log p(data_i|Λ,κ)
+            # samples_i ~ G(θ, z | μ_i, Σ_i)
+            samples = mvn.sample(mvn_key, (N_samples,))
+            # weights = softmax(log ρ(samples_i|Λ,κ))
+            weights = jnn.softmax(model_instance.log_prob(samples))
+            # μ = Σ samples_i * weights
+            proposal_mean = jnp.average(samples, axis=0, weights=weights)
+            # Σ = Σ (samples_i - μ) * (samples_i - μ)^T * weights
+            proposal_cov = jnp.cov(samples, rowvar=False, aweights=weights)
+
+            proposal_mvn = MultivariateNormal(
+                loc=proposal_mean, covariance_matrix=proposal_cov
+            )
+            # data ~ G(θ, z | μ, Σ)
+            data = proposal_mvn.sample(proposal_mvn_key, (N_samples,))
+
+            # log_prob = log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i) - log G(θ, z | μ, Σ)
+            log_prob = (
+                mvn.log_prob(data)
+                + model_instance.log_prob(data)
+                - proposal_mvn.log_prob(data)
+            )
             carry += jax.nn.logsumexp(
                 log_prob, axis=-1, where=(~jnp.isneginf(log_prob))
             )
