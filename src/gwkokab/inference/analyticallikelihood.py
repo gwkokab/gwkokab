@@ -22,7 +22,8 @@ def analytical_likelihood(
     means: List[Array],
     covariances: List[Array],
     key: PRNGKeyArray,
-    N_samples: int = 10_000,
+    n_samples: int = 10_000,
+    max_iter: int = 5,
 ) -> Callable[[Array, Array], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
@@ -59,9 +60,11 @@ def analytical_likelihood(
         mean vectors in `means`.
     key : PRNGKeyArray
         JAX random key for sampling
-    N_samples : int, optional
+    n_samples : int, optional
         Number of samples to draw from the multivariate normal distribution for each
         event to compute the likelihood, by default 10_000
+    max_iter : int, optional
+        Maximum number of iterations for the fitting process, by default 5
 
     Returns
     -------
@@ -71,6 +74,7 @@ def analytical_likelihood(
         and a second array (not used in this implementation).
     """
     n_events = len(means)
+    n_dims = means[0].shape[0]
     mean_stack: Array = jax.block_until_ready(
         jax.device_put(jnp.stack(means, axis=0), may_alias=True)
     )
@@ -95,29 +99,40 @@ def analytical_likelihood(
             carry: Array, loop_data: Tuple[Array, Array, PRNGKeyArray]
         ) -> Tuple[Array, None]:
             mean, cov, rng_key = loop_data
-            mvn_key, proposal_mvn_key = jrd.split(rng_key, num=2)
+            event_mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
+            fit_mean = mean
+            # Σ_f = Σ_i
+            fit_scale_tril = event_mvn.scale_tril  # not changing the scale_tril here
+            for _ in range(max_iter):
+                # See implementation of sample method in `numpyro.distributions.MultivariateNormal`
 
-            mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
-            # samples_i ~ G(θ, z | μ_i, Σ_i)
-            samples = mvn.sample(mvn_key, (N_samples,))
-            # weights = softmax(log ρ(samples_i|Λ,κ))
-            weights = jnn.softmax(model_instance.log_prob(samples))
-            # μ = Σ samples_i * weights
-            proposal_mean = jnp.average(samples, axis=0, weights=weights)
-            # Σ = Σ (samples_i - μ) * (samples_i - μ)^T * weights
-            proposal_cov = jnp.cov(samples, rowvar=False, aweights=weights)
+                # eps ~ N(0, I)
+                eps = jrd.normal(key, shape=(3_000, n_dims))
 
-            proposal_mvn = MultivariateNormal(
-                loc=proposal_mean, covariance_matrix=proposal_cov
-            )
-            # data ~ G(θ, z | μ, Σ)
-            data = proposal_mvn.sample(proposal_mvn_key, (N_samples,))
+                # fit_samples = μ_f + Σ_f * eps
+                fit_samples = fit_mean + jnp.squeeze(
+                    jnp.matmul(fit_scale_tril, eps[..., jnp.newaxis]), axis=-1
+                )
+                # weights = softmax(log ρ(fit_samples | Λ, κ) + log G(θ, z | μ_i, Σ_i))
+                weights = jnn.softmax(
+                    model_instance.log_prob(fit_samples)
+                    + event_mvn.log_prob(fit_samples)
+                )
+                # μ_f = sum(weights * fit_samples)
+                fit_mean = jnp.average(fit_samples, axis=0, weights=weights)
+                (rng_key,) = jrd.split(rng_key, num=1)
 
-            # log_prob = log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i) - log G(θ, z | μ, Σ)
+            # fit_mvn = G(θ, z | μ_f, Σ_f)
+            fit_mvn = MultivariateNormal(loc=fit_mean, scale_tril=fit_scale_tril)
+
+            # data ~ G(θ, z | μ_f, Σ_f)
+            data = fit_mvn.sample(rng_key, (n_samples,))
+
+            # log_prob = log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i) - log G(θ, z | μ_f, Σ_f)
             log_prob = (
-                mvn.log_prob(data)
+                event_mvn.log_prob(data)
                 + model_instance.log_prob(data)
-                - proposal_mvn.log_prob(data)
+                - fit_mvn.log_prob(data)
             )
             carry += jax.nn.logsumexp(
                 log_prob, axis=-1, where=(~jnp.isneginf(log_prob))
@@ -128,7 +143,7 @@ def analytical_likelihood(
 
         total_log_likelihood, _ = jax.lax.scan(
             scan_fn,  # type: ignore[arg-type]
-            -n_events * jnp.log(N_samples),  # - Σ log(M_i)
+            -n_events * jnp.log(n_samples),  # - Σ log(M_i)
             (mean_stack, cov_stack, keys),
             length=n_events,
         )
