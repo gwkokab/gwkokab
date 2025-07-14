@@ -208,7 +208,7 @@ class Monk(Guru):
         """
         return {}
 
-    def run(self) -> None:
+    def run(self, n_samples: int, max_iter: int) -> None:
         """Runs the Monk analysis."""
         parameters = self.parameters
         if "redshift" in parameters:
@@ -264,7 +264,8 @@ class Monk(Guru):
             list_of_means,
             list_of_covariances,
             self.rng_key,
-            N_samples=10_000,
+            n_samples=n_samples,
+            max_iter=max_iter,
         )
 
         handler = flowMChandler(
@@ -299,7 +300,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     enable_validation()
 
     monk_group = parser.add_argument_group("Monk Options")
-
     monk_group.add_argument(
         "--data-filename",
         help="Path to the HDF5 file containing the data.",
@@ -310,6 +310,21 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--seed",
         help="Seed for the random number generator.",
         default=37,
+        type=int,
+    )
+
+    likelihood_group = parser.add_argument_group("Likelihood Options")
+    likelihood_group.add_argument(
+        "--n-samples",
+        help="Number of samples to draw from the multivariate normal distribution for each "
+        "event to compute the likelihood, by default 10_000",
+        default=10_000,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--max-iter",
+        help="Maximum number of iterations for the fitting process, by default 5",
+        default=5,
         type=int,
     )
 

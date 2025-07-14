@@ -38,4 +38,7 @@ def main() -> None:
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
         analysis_name="ecc_matters",
-    ).run()
+    ).run(
+        n_samples=args.n_samples,
+        max_iter=args.max_iter,
+    )

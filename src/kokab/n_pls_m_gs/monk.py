@@ -403,4 +403,7 @@ def main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-    ).run()
+    ).run(
+        n_samples=args.n_samples,
+        max_iter=args.max_iter,
+    )
