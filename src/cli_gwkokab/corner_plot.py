@@ -49,7 +49,7 @@ def make_parser() -> argparse.ArgumentParser:
         "--quantiles",
         help="quantiles for the corner plot",
         default=None,
-        type=list[float],
+        type=list[float],  # type: ignore[arg-type]
     )
     parser.add_argument(
         "-b",
@@ -122,6 +122,12 @@ def make_parser() -> argparse.ArgumentParser:
         type=int,
         default=100,
     )
+    parser.add_argument(
+        "--title-fmt",
+        help="format string for titles in the corner plot",
+        default=".3f",
+        type=str,
+    )
 
     return parser
 
@@ -148,6 +154,7 @@ def main() -> None:
         color=args.color,
         plot_datapoints=False,
         range=args.range,
+        title_fmt=args.title_fmt,
     )
     scaling_factor = args.scale
     figure.set_size_inches(scaling_factor * args.size[0], scaling_factor * args.size[1])

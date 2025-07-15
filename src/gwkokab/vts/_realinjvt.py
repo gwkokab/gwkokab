@@ -113,9 +113,13 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                 axis=0,
             )
             snr = injections["optimal_snr_net"][:]
-            runs = injections["name"][:].astype(str)
 
-            found = np.where(runs == "o3", ifar > 1 / far_cut, snr > snr_cut)
+            try:
+                runs = injections["name"][:].astype(str)
+                found = np.where(runs == "o3", ifar > 1 / far_cut, snr > snr_cut)
+            except KeyError:
+                found = np.logical_and(ifar > 1 / far_cut, snr > snr_cut)
+
             n_total = found.shape[0]
             n_found = np.sum(found)
             logger.debug(
@@ -126,13 +130,16 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                 snr_cut,
             )
 
-            sampling_prob = (
-                injections["sampling_pdf"][found][:]
-                / injections["mixture_weight"][found][:]
-            )
+            sampling_prob = 1.0 / injections["mixture_weight"][found][:]
 
             injs = []
             for p in parameters:
+                if p == gwk_parameters.PRIMARY_MASS_SOURCE.name:
+                    sampling_prob *= injections[
+                        "mass1_source_mass2_source_sampling_pdf"
+                    ][found][:]
+                if p == gwk_parameters.REDSHIFT.name:
+                    sampling_prob *= injections["redshift_sampling_pdf"][found][:]
                 if p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
                         injections["spin1x"][found][:],  # χ_1x
