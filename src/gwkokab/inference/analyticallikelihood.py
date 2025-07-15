@@ -107,7 +107,7 @@ def analytical_likelihood(
                 # See implementation of sample method in `numpyro.distributions.MultivariateNormal`
 
                 # eps ~ N(0, I)
-                eps = jrd.normal(key, shape=(3_000, n_dims))
+                eps = jrd.normal(key, shape=(1_000, n_dims))
 
                 # fit_samples = μ_f + Σ_f * eps
                 fit_samples = fit_mean + jnp.squeeze(
@@ -147,6 +147,8 @@ def analytical_likelihood(
             (mean_stack, cov_stack, keys),
             length=n_events,
         )
+
+        total_log_likelihood = jax.block_until_ready(total_log_likelihood)
 
         # log L(Λ,κ) = -μ + Σ log Σ exp (log ρ(data_n|Λ,κ)) - Σ log(M_i)
         log_likelihood = total_log_likelihood - expected_rates
