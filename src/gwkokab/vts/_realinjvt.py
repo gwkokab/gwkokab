@@ -113,9 +113,13 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                 axis=0,
             )
             snr = injections["optimal_snr_net"][:]
-            runs = injections["name"][:].astype(str)
 
-            found = np.where(runs == "o3", ifar > 1 / far_cut, snr > snr_cut)
+            try:
+                runs = injections["name"][:].astype(str)
+                found = np.where(runs == "o3", ifar > 1 / far_cut, snr > snr_cut)
+            except KeyError:
+                found = np.logical_and(ifar > 1 / far_cut, snr > snr_cut)
+
             n_total = found.shape[0]
             n_found = np.sum(found)
             logger.debug(
