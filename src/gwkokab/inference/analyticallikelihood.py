@@ -5,12 +5,39 @@
 from typing import Callable, Dict, List, Optional, Tuple
 
 import jax
-from jax import nn as jnn, numpy as jnp, random as jrd
+from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
 from numpyro.distributions import Distribution, MultivariateNormal
 
 from gwkokab.models.utils import JointDistribution
+
+
+def _mvn_samples(
+    loc: Array, scale_tril: Array, n_samples: int, key: PRNGKeyArray
+) -> Array:
+    """Generate samples from a multivariate normal distribution using method from
+    `numpyro.distributions.MultivariateNormal`.
+
+    Parameters
+    ----------
+    loc : Array
+        Mean vector of the multivariate normal distribution.
+    scale_tril : Array
+        Lower triangular matrix of the covariance matrix (Cholesky decomposition).
+    n_samples : int
+        Number of samples to generate.
+    key : PRNGKeyArray
+        JAX random key for sampling.
+
+    Returns
+    -------
+    Array
+        Samples drawn from the multivariate normal distribution.
+    """
+    eps = jrd.normal(key, shape=(n_samples, *loc.shape))
+    samples = loc + jnp.squeeze(jnp.matmul(scale_tril, eps[..., jnp.newaxis]), axis=-1)
+    return samples
 
 
 def analytical_likelihood(
@@ -74,7 +101,6 @@ def analytical_likelihood(
         and a second array (not used in this implementation).
     """
     n_events = len(means)
-    n_dims = means[0].shape[0]
     mean_stack: Array = jax.block_until_ready(
         jax.device_put(jnp.stack(means, axis=0), may_alias=True)
     )
@@ -95,40 +121,47 @@ def analytical_likelihood(
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = jax.block_until_ready(ERate_fn(model_instance, redshift_index))
 
-        def scan_fn(
-            carry: Array, loop_data: Tuple[Array, Array, PRNGKeyArray]
-        ) -> Tuple[Array, None]:
-            mean, cov, rng_key = loop_data
-            event_mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
-            fit_mean = mean
-            # Σ_f = Σ_i
-            fit_scale_tril = event_mvn.scale_tril  # not changing the scale_tril here
-            for _ in range(max_iter):
-                # See implementation of sample method in `numpyro.distributions.MultivariateNormal`
+        event_mvn = MultivariateNormal(loc=mean_stack, covariance_matrix=cov_stack)
 
-                # eps ~ N(0, I)
-                eps = jrd.normal(key, shape=(1_000, n_dims))
+        rng_key = key
+        fit_mean = mean_stack
+        # Σ_f = Σ_i
+        fit_scale_tril = event_mvn.scale_tril  # not changing the scale_tril here
 
-                # fit_samples = μ_f + Σ_f * eps
-                fit_samples = fit_mean + jnp.squeeze(
-                    jnp.matmul(fit_scale_tril, eps[..., jnp.newaxis]), axis=-1
-                )
-                # weights = softmax(log ρ(fit_samples | Λ, κ) + log G(θ, z | μ_i, Σ_i))
-                weights = jnn.softmax(
+        for _ in range(max_iter):
+            fit_samples = _mvn_samples(
+                loc=fit_mean,
+                scale_tril=fit_scale_tril,
+                n_samples=1_000,
+                key=rng_key,
+            )
+
+            # weights = ρ(fit_samples | Λ, κ) * G(θ, z | μ_i, Σ_i))
+            weights = jnp.expand_dims(
+                jnp.exp(
                     model_instance.log_prob(fit_samples)
                     + event_mvn.log_prob(fit_samples)
-                )
-                # μ_f = sum(weights * fit_samples)
-                fit_mean = jnp.average(fit_samples, axis=0, weights=weights)
-                (rng_key,) = jrd.split(rng_key, num=1)
+                ),
+                axis=-1,
+            )
+            # μ_f = sum(weights * fit_samples) / sum(weights)
+            fit_mean = jnp.sum(fit_samples * weights, axis=0) / jnp.sum(weights, axis=0)
+            (rng_key,) = jrd.split(rng_key, num=1)
 
-            # fit_mvn = G(θ, z | μ_f, Σ_f)
-            fit_mvn = MultivariateNormal(loc=fit_mean, scale_tril=fit_scale_tril)
+        def scan_fn(
+            carry: Array, loop_data: Tuple[Array, Array, Array, PRNGKeyArray]
+        ) -> Tuple[Array, None]:
+            mean, cov, fit_mean, rng_key = loop_data
 
+            # event_mvn = G(θ, z | μ_i, Σ_i)
+            event_mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
+
+            # fit_mvn = G(θ, z | μ_f, Σ_i)
+            fit_mvn = MultivariateNormal(loc=fit_mean, covariance_matrix=cov)
             # data ~ G(θ, z | μ_f, Σ_f)
             data = fit_mvn.sample(rng_key, (n_samples,))
 
-            # log_prob = log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i) - log G(θ, z | μ_f, Σ_f)
+            # log_prob = log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i) - log G(θ, z | μ_f, Σ_i)
             log_prob = (
                 event_mvn.log_prob(data)
                 + model_instance.log_prob(data)
@@ -139,12 +172,12 @@ def analytical_likelihood(
             )
             return carry, None
 
-        keys = jrd.split(key, (n_events,))
+        keys = jrd.split(rng_key, (n_events,))
 
         total_log_likelihood, _ = jax.lax.scan(
             scan_fn,  # type: ignore[arg-type]
             -n_events * jnp.log(n_samples),  # - Σ log(M_i)
-            (mean_stack, cov_stack, keys),
+            (mean_stack, cov_stack, fit_mean, keys),
             length=n_events,
         )
 
