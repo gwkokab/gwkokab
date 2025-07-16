@@ -137,7 +137,19 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
 
             injs = []
             for p in parameters:
-                if p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
+                if p == "cos_tilt_1":
+                    χ_1x = injections["spin1x"][found][:]
+                    χ_1y = injections["spin1y"][found][:]
+                    χ_1z = injections["spin1z"][found][:]
+                    a1 = np.sqrt(np.square(χ_1x) + np.square(χ_1y) + np.square(χ_1z))
+                    _inj = χ_1z / a1
+                elif p == "cos_tilt_2":
+                    χ_2x = injections["spin2x"][found][:]
+                    χ_2y = injections["spin2y"][found][:]
+                    χ_2z = injections["spin2z"][found][:]
+                    a2 = np.sqrt(np.square(χ_2x) + np.square(χ_2y) + np.square(χ_2z))
+                    _inj = χ_2z / a2
+                elif p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
                         injections["spin1x"][found][:],  # χ_1x
                         injections["spin1y"][found][:],  # χ_1y
