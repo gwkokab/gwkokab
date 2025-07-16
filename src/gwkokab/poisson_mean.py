@@ -390,11 +390,11 @@ class PoissonMean(eqx.Module):
                     per_sample_log_estimated_rates += (
                         PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
                     )
-                elif log_weights_and_samples is None:
-                    for m_dist in component_dist.marginal_distributions:
-                        if isinstance(m_dist, PowerlawRedshift):
-                            log_constant += m_dist.log_norm()
-                            break
+                # elif log_weights_and_samples is None:
+                #     for m_dist in component_dist.marginal_distributions:
+                #         if isinstance(m_dist, PowerlawRedshift):
+                #             log_constant += m_dist.log_norm()
+                #             break
 
             per_component_log_estimated_rate = log_constant + jnn.logsumexp(
                 per_sample_log_estimated_rates,
