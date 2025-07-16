@@ -116,4 +116,4 @@ class PowerlawRedshift(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.kappa * jnp.log1p(value) - self.log_norm()
+        return self.kappa * jnp.log1p(value)
