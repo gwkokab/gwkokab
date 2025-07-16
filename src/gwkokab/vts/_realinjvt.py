@@ -130,16 +130,13 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                 snr_cut,
             )
 
-            sampling_prob = 1.0 / injections["mixture_weight"][found][:]
+            sampling_prob = (
+                injections["sampling_pdf"][found][:]
+                / injections["mixture_weight"][found][:]
+            )
 
             injs = []
             for p in parameters:
-                if p == gwk_parameters.PRIMARY_MASS_SOURCE.name:
-                    sampling_prob *= injections[
-                        "mass1_source_mass2_source_sampling_pdf"
-                    ][found][:]
-                if p == gwk_parameters.REDSHIFT.name:
-                    sampling_prob *= injections["redshift_sampling_pdf"][found][:]
                 if p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
                     _inj = spin_converter(
                         injections["spin1x"][found][:],  # χ_1x
