@@ -142,6 +142,7 @@ def main() -> None:
     model = Bake(SmoothedPowerlawAndPeak)(
         use_spin=has_spin,
         use_redshift=has_redshift,
+        use_tilt=has_tilt,
         **model_prior_param,
     )
 
