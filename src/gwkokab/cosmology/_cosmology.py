@@ -22,7 +22,7 @@ import jax.numpy as jnp
 import quadax
 from jaxtyping import ArrayLike
 
-from gwkokab.constants import C_SI, DEFAULT_DZ, M_PER_GPC
+from gwkokab.constants import C, DEFAULT_DZ
 
 
 class Cosmology(eqx.Module):
@@ -46,11 +46,11 @@ class Cosmology(eqx.Module):
         omega_matter: ArrayLike,
         omega_radiation: ArrayLike,
         omega_lambda: ArrayLike,
-        max_z: float = 10.0,
+        max_z: float = 2.3,
         dz: float = DEFAULT_DZ,
     ):
         self._Ho = Ho  # SI units: s^-1
-        self._c_over_Ho = C_SI / self._Ho
+        self._c_over_Ho = C / self._Ho  # (km/s) / (km/s/Mpc)
         self._OmegaMatter = omega_matter
         self._OmegaRadiation = omega_radiation
         self._OmegaLambda = omega_lambda
@@ -104,19 +104,3 @@ class Cosmology(eqx.Module):
     @property
     def DL(self):
         return self._Dc * (1.0 + self._z)
-
-    # --------- Gpc-compatible versions ---------
-    def z_to_Dc_Gpc(self, z):
-        return self.z_to_Dc(z) / M_PER_GPC
-
-    def z_to_DL_Gpc(self, z):
-        return self.z_to_DL(z) / M_PER_GPC
-
-    def DL_Gpc_to_z(self, DL_Gpc):
-        return jnp.interp(DL_Gpc * M_PER_GPC, self.DL, self._z)
-
-    def dVcdz_Gpc3(self, z):
-        return self.dVcdz(z) / M_PER_GPC**3
-
-    def logdVcdz_Gpc3(self, z):
-        return self.logdVcdz(z) - 3 * jnp.log(M_PER_GPC)

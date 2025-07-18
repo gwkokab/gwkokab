@@ -284,7 +284,7 @@ class PoissonMean(eqx.Module):
             z = jax.lax.dynamic_index_in_dim(
                 samples, redshift_index, axis=-1, keepdims=False
             )
-            log_prob += PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
+            log_prob += PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z)
             partial_logsumexp = jnn.logsumexp(
                 log_prob, where=~jnp.isneginf(log_prob), axis=-1
             )
@@ -377,9 +377,9 @@ class PoissonMean(eqx.Module):
                     z = jax.lax.dynamic_index_in_dim(
                         samples, redshift_index, axis=-1, keepdims=False
                     )
-                    per_sample_log_estimated_rates += (
-                        PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
-                    )
+                    per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
+                        z
+                    ) - jnp.log1p(z)
 
             if self.is_pdet:
                 if redshift_index is None:
@@ -387,9 +387,9 @@ class PoissonMean(eqx.Module):
                     zmax = self.parameter_ranges.get("redshift_max", 5.0)
                     log_constant += jnp.log(zmax - zmin)  # uniform log norm
                     z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
-                    per_sample_log_estimated_rates += (
-                        PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
-                    )
+                    per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
+                        z
+                    ) - jnp.log1p(z)
                 elif log_weights_and_samples is None:
                     for m_dist in component_dist.marginal_distributions:
                         if isinstance(m_dist, PowerlawRedshift):
