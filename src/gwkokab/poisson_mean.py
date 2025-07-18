@@ -321,7 +321,7 @@ class PoissonMean(eqx.Module):
             )
 
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (self.time_scale / num_samples) * jnp.exp(
+        return (4 * jnp.pi * 1e-9 * self.time_scale / num_samples) * jnp.exp(
             jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
         )
 
@@ -384,7 +384,7 @@ class PoissonMean(eqx.Module):
             if self.is_pdet:
                 if redshift_index is None:
                     zmin = self.parameter_ranges.get("redshift_min", 0.0)
-                    zmax = self.parameter_ranges.get("redshift_max", 5.0)
+                    zmax = self.parameter_ranges.get("redshift_max", 2.3)
                     log_constant += jnp.log(zmax - zmin)  # uniform log norm
                     z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
                     per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
@@ -409,6 +409,10 @@ class PoissonMean(eqx.Module):
             per_component_log_estimated_rates_list, axis=-1
         )  # type: ignore
 
-        return self.time_scale * jnp.exp(
-            jnn.logsumexp(per_component_log_estimated_rates, axis=-1)
+        return (
+            4
+            * jnp.pi  # 4*pi for total volume instead of per unit solid angle
+            * 1e-9  # Mpc^3 to Gpc^3
+            * self.time_scale
+            * jnp.exp(jnn.logsumexp(per_component_log_estimated_rates, axis=-1))
         )

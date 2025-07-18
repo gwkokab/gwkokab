@@ -88,7 +88,7 @@ class Cosmology(eqx.Module):
     def logdVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
         if Dc is None:
             Dc = self.z_to_Dc(z)
-        return jnp.log(4 * jnp.pi) + 2 * jnp.log(Dc) + jnp.log(self.dDcdz(z))
+        return 2 * jnp.log(Dc) + jnp.log(self.dDcdz(z))  # units in Mpc^3/sr
 
     # --------- Interpolators ---------
     def z_to_Dc(self, z):
