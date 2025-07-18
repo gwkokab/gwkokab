@@ -11,6 +11,8 @@ from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
 from numpyro.distributions.distribution import Distribution, DistributionLike
 
+from gwkokab.constants import Mpc3_to_Gpc3
+
 from .cosmology import PLANCK_2015_Cosmology
 from .models.redshift._models import PowerlawRedshift
 from .models.utils import ScaledMixture
@@ -321,7 +323,7 @@ class PoissonMean(eqx.Module):
             )
 
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (4 * jnp.pi * 1e-9 * self.time_scale / num_samples) * jnp.exp(
+        return (Mpc3_to_Gpc3 * self.time_scale / num_samples) * jnp.exp(
             jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
         )
 
@@ -410,9 +412,7 @@ class PoissonMean(eqx.Module):
         )  # type: ignore
 
         return (
-            4
-            * jnp.pi  # 4*pi for total volume instead of per unit solid angle
-            * 1e-9  # Mpc^3 to Gpc^3
+            Mpc3_to_Gpc3
             * self.time_scale
             * jnp.exp(jnn.logsumexp(per_component_log_estimated_rates, axis=-1))
         )
