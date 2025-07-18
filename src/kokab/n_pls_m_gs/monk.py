@@ -405,5 +405,6 @@ def main() -> None:
         check_leaks=args.check_leaks,
     ).run(
         n_samples=args.n_samples,
-        max_iter=args.max_iter,
+        max_iter_mean=args.max_iter_mean,
+        max_iter_cov=args.max_iter_cov,
     )

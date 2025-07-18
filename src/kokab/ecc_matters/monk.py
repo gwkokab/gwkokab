@@ -40,5 +40,6 @@ def main() -> None:
         analysis_name="ecc_matters",
     ).run(
         n_samples=args.n_samples,
-        max_iter=args.max_iter,
+        max_iter_mean=args.max_iter_mean,
+        max_iter_cov=args.max_iter_cov,
     )

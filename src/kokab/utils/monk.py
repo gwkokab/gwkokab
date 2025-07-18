@@ -208,7 +208,7 @@ class Monk(Guru):
         """
         return {}
 
-    def run(self, n_samples: int, max_iter: int) -> None:
+    def run(self, n_samples: int, max_iter_mean: int, max_iter_cov: int) -> None:
         """Runs the Monk analysis."""
         parameters = self.parameters
         if "redshift" in parameters:
@@ -265,7 +265,8 @@ class Monk(Guru):
             list_of_covariances,
             self.rng_key,
             n_samples=n_samples,
-            max_iter=max_iter,
+            max_iter_mean=max_iter_mean,
+            max_iter_cov=max_iter_cov,
         )
 
         handler = flowMChandler(
@@ -322,9 +323,15 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         type=int,
     )
     likelihood_group.add_argument(
-        "--max-iter",
-        help="Maximum number of iterations for the fitting process, by default 5",
-        default=5,
+        "--max-iter-mean",
+        help="Maximum number of iterations for the fitting process of the mean, by default 10",
+        default=10,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--max-iter-cov",
+        help="Maximum number of iterations for the fitting process of the covariance, by default 3",
+        default=3,
         type=int,
     )
 
