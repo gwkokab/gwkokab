@@ -7,6 +7,7 @@ import warnings
 from collections.abc import Callable
 from typing import List, Optional, Tuple
 
+import h5py
 import numpy as np
 import tqdm
 from jax import nn as jnn, numpy as jnp, random as jrd
@@ -16,6 +17,7 @@ from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
 from ..models.wrappers import ModelRegistry
+from ..utils.tools import error_if
 from ._utils import ensure_dat_extension
 
 
@@ -31,12 +33,13 @@ class PopulationFactory:
     realizations_dir: str = "realization_{}"
     root_dir: str = "data"
     verbose: bool = True
+    mean_covs_filename: str = "means_covs.hdf5"
 
     def __init__(
         self,
         model: ScaledMixture,
         parameters: List[str],
-        logVT_fn: Optional[Callable[[Array], Array]],
+        log_selection_fn: Optional[Callable[[Array], Array]],
         ERate_fn: Callable[[ScaledMixture, Optional[int]], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
@@ -50,7 +53,7 @@ class PopulationFactory:
             Model for the population.
         parameters : List[str]
             Parameters for the model in order.
-        logVT_fn : Callable[[Array], Array]
+        log_selection_fn : Callable[[Array], Array]
             logarithm of volume time sensitivity function.
         ERate_fn : Callable[[ScaledMixture, Optional[int]], Array]
             Expected rate function.
@@ -68,30 +71,28 @@ class PopulationFactory:
         ValueError
             If parameters are not provided.
         """
+        error_if(model is None, msg="Model is not provided.")
+        error_if(
+            not isinstance(model, ScaledMixture),
+            msg="The model must be a `ScaledMixture` model for multi-rate model."
+            "See `gwkokab.model.utils.ScaledMixture` for more details.",
+        )
+        error_if(len(parameters) == 0, msg="Parameters are not provided.")
+
         self.model = model
         self.parameters = parameters
-        self.logVT_fn = logVT_fn
+        self.log_selection_fn = log_selection_fn
         self.ERate_fn = ERate_fn
         self.num_realizations = num_realizations
         self.error_size = error_size
+
         if "redshift" in parameters:
-            self.redshift_index = parameters.index("redshift")
+            self.redshift_index: Optional[int] = parameters.index("redshift")
         else:
             self.redshift_index = None
 
         self.event_filename = ensure_dat_extension(self.event_filename)
         self.injection_filename = ensure_dat_extension(self.injection_filename)
-
-        if self.model is None:
-            raise ValueError("Model is not provided.")
-        if not isinstance(self.model, ScaledMixture):
-            raise ValueError(
-                "The model must be a `ScaledMixture` model for multi-rate model."
-                "See `gwkokab.model.utils.ScaledMixture` for more details."
-            )
-
-        if self.parameters == []:
-            raise ValueError("Parameters are not provided.")
 
     def _generate_population(
         self, size: int, *, key: PRNGKeyArray
@@ -99,7 +100,7 @@ class PopulationFactory:
         r"""Generate population for a realization."""
 
         old_size = size
-        if self.logVT_fn is not None:
+        if self.log_selection_fn is not None:
             size += int(1e4)
 
         population, [indices] = self.model.sample_with_intermediates(key, (size,))
@@ -107,16 +108,16 @@ class PopulationFactory:
         raw_population = population
         raw_indices = indices
 
-        if self.logVT_fn is not None:
+        if self.log_selection_fn is not None:
             _, key = jrd.split(key)
-            logVT = self.logVT_fn(population)
-            logVT = jnp.nan_to_num(
-                logVT,
+            log_selection = self.log_selection_fn(population)
+            log_selection = jnp.nan_to_num(
+                log_selection,
                 nan=-jnp.inf,
                 posinf=-jnp.inf,
                 neginf=-jnp.inf,
             )
-            vt = jnn.softmax(logVT)
+            vt = jnn.softmax(log_selection)
             _, key = jrd.split(key)
             index = jrd.choice(
                 key, jnp.arange(population.shape[0]), p=vt, shape=(old_size,)
@@ -227,9 +228,15 @@ class PopulationFactory:
 
         injections_file_path = os.path.join(realizations_path, self.injection_filename)
         data_inj = np.loadtxt(injections_file_path, skiprows=1)
-        keys = jrd.split(key, data_inj.shape[0] * (len(heads) + 1))
 
-        for index in range(data_inj.shape[0]):
+        n_injections = data_inj.shape[0]
+
+        keys = jrd.split(key, n_injections * (len(heads) + 1))
+
+        means: List[Optional[np.ndarray]] = [None for _ in range(n_injections)]
+        covs: List[Optional[np.ndarray]] = [None for _ in range(n_injections)]
+
+        for index in range(n_injections):
             noisy_data = np.empty((self.error_size, len(self.parameters)))
             data = data_inj[index]
             i = 0
@@ -242,13 +249,29 @@ class PopulationFactory:
                 i += 1
             nan_mask = np.isnan(noisy_data).any(axis=1)
             noisy_data = noisy_data[~nan_mask]  # type: ignore
-            count = np.count_nonzero(noisy_data)
-            if count < 1:
+
+            if noisy_data.shape[0] < 1:
                 warnings.warn(
                     f"Skipping file {index} due to all NaN values or insufficient data.",
                     category=UserWarning,
                 )
                 continue
+
+            mean = np.mean(noisy_data, axis=0)
+            error_if(
+                np.isnan(mean).any(),
+                msg=f"Mean for realization {realization_number} contains NaN values.",
+            )
+
+            cov = np.cov(noisy_data.T)
+            error_if(
+                np.isnan(cov).any(),
+                msg=f"Covariance for realization {realization_number} contains NaN values.",
+            )
+
+            means[index] = mean
+            covs[index] = cov
+
             np.savetxt(
                 output_dir.format(index),
                 noisy_data,
@@ -256,62 +279,25 @@ class PopulationFactory:
                 comments="",  # To remove the default comment character '#'
             )
 
-        if self.logVT_fn is None:
-            raw_output_dir = os.path.join(
-                realizations_path, self.error_dir, self.event_filename
-            )
+        with h5py.File(
+            os.path.join(realizations_path, self.mean_covs_filename), "w"
+        ) as f:
+            for i, (mean, cov) in enumerate(zip(means, covs)):
+                if mean is not None and cov is not None:
+                    event_name = "event_{}".format(i)
+                    event_group = f.create_group(event_name)
+                    event_group.create_dataset("mean", data=mean)
+                    event_group.create_dataset("cov", data=cov)
 
-            os.makedirs(
-                os.path.join(realizations_path, "raw_" + self.error_dir), exist_ok=True
-            )
-
-            injections_file_path = os.path.join(
-                realizations_path, "raw_" + self.injection_filename
-            )
-            raw_data_inj = np.loadtxt(injections_file_path, skiprows=1)
-            keys = jrd.split(key, raw_data_inj.shape[0] * len(heads))
-
-            for index in range(raw_data_inj.shape[0]):
-                noisy_data = np.empty((self.error_size, len(self.parameters)))
-                data = raw_data_inj[index]
-                i = 0
-                for head, err_fn in zip(heads, error_fns):
-                    key_idx = index * len(heads) + i
-                    noisy_data_i: Array = err_fn(
-                        data[head], self.error_size, keys[key_idx]
-                    )
-                    if noisy_data_i.ndim == 1:
-                        noisy_data_i = noisy_data_i.reshape(self.error_size, -1)
-                    noisy_data[:, head] = noisy_data_i
-                    i += 1
-                nan_mask = np.isnan(noisy_data).any(axis=1)
-                masked_noisey_data = noisy_data[~nan_mask]
-                count = np.count_nonzero(masked_noisey_data)
-                if count < 2:
-                    warnings.warn(
-                        f"Skipping file {index} due to all NaN values or insufficient data.",
-                        category=UserWarning,
-                    )
-                    continue
-                np.savetxt(
-                    raw_output_dir.format(index),
-                    masked_noisey_data,
-                    header=" ".join(self.parameters),
-                    comments="",  # To remove the default comment character '#'
-                )
-
-    def produce(self, key: Optional[PRNGKeyArray] = None) -> None:
+    def produce(self, key: PRNGKeyArray) -> None:
         """Generate realizations and add errors to the populations.
 
         Parameters
         ----------
-        key : Optional[PRNGKeyArray], optional
+        key : PRNGKeyArray
             Pseudo-random number generator key for reproducibility, by default None
         """
-        if key is None:
-            key = jrd.PRNGKey(np.random.randint(0, 2**32 - 1))
-        else:
-            assert is_prng_key(key)
+        assert is_prng_key(key)
         self._generate_realizations(key)
         keys = jrd.split(key, self.num_realizations)
         with tqdm.tqdm(
