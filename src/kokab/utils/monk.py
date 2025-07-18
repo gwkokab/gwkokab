@@ -227,7 +227,7 @@ class Monk(Guru):
         priors = JointDistribution(*variables.values(), validate_args=True)
 
         write_json("constants.json", constants)
-        write_json("nf_samples_mapping.json.json", variables_index)
+        write_json("nf_samples_mapping.json", variables_index)
 
         flowmc_handler_kwargs = read_json(self.flowMC_settings_filename)
 
