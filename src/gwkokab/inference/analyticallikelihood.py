@@ -191,6 +191,7 @@ def analytical_likelihood(
 
             return new_fit_cov, None
 
+        (rng_key,) = jrd.split(rng_key, 1)
         fit_cov, _ = jax.lax.scan(
             scan_fit_cov_fn,  # type: ignore[arg-type]
             fit_cov,
@@ -223,6 +224,7 @@ def analytical_likelihood(
             )
             return carry + log_likelihood, None
 
+        (rng_key,) = jrd.split(rng_key, 1)
         keys = jrd.split(rng_key, (n_events,))
 
         total_log_likelihood, _ = jax.lax.scan(
