@@ -61,9 +61,9 @@ class PowerlawRedshift(Distribution):
 
     def log_differential_spacetime_volume(self, z: Array) -> Array:
         """Placeholder method for computing the differential spacetime volume."""
-        log_differential_spacetime_volume_val = (
-            PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z) + self.log_prob(z)
-        )
+        log_differential_spacetime_volume_val = PLANCK_2015_Cosmology.logdVcdz(z) + (
+            self.kappa - 1
+        ) * jnp.log1p(z)
         return log_differential_spacetime_volume_val
 
     def log_norm(self) -> Array:
@@ -95,9 +95,9 @@ class PowerlawRedshift(Distribution):
         """
         u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
         z_grid = jnp.linspace(0.0, self.z_max, 2500)
-        pdfgrid = jnp.exp(
-            self.log_differential_spacetime_volume(z_grid) - self.log_norm()
-        )
+        pdfgrid = jnp.exp(self.log_differential_spacetime_volume(z_grid))
+        norm = trapezoid(pdfgrid, z_grid)
+        pdfgrid /= norm
         cdfgrid: Array = quadax.cumulative_trapezoid(pdfgrid, x=z_grid, initial=0.0)
         cdfgrid = cdfgrid / cdfgrid[-1]
         return jnp.interp(u, cdfgrid, z_grid)
@@ -116,4 +116,4 @@ class PowerlawRedshift(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.kappa * jnp.log1p(value)
+        return self.log_differential_spacetime_volume(value) - self.log_norm()
