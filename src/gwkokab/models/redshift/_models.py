@@ -68,7 +68,13 @@ class PowerlawRedshift(Distribution):
 
     def log_norm(self) -> Array:
         """Placeholder method for computing the log normalization constant."""
-        return self.kappa * jnp.log1p(self.z_max)
+        z_grid = jnp.linspace(0.0, self.z_max, 2500)
+        log_differential_spacetime_volume = self.log_differential_spacetime_volume(
+            z_grid
+        )
+        pdfs = jnp.exp(log_differential_spacetime_volume)
+        norm = trapezoid(pdfs, z_grid)
+        return jnp.log(norm)
 
     def sample(self, key, sample_shape=()):
         """Draw samples from the distribution using inverse transform sampling.
@@ -89,9 +95,9 @@ class PowerlawRedshift(Distribution):
         """
         u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
         z_grid = jnp.linspace(0.0, self.z_max, 2500)
-        pdfgrid = jnp.exp(self.log_differential_spacetime_volume(z_grid))
-        norm = trapezoid(pdfgrid, z_grid)
-        pdfgrid = pdfgrid / norm
+        pdfgrid = jnp.exp(
+            self.log_differential_spacetime_volume(z_grid) - self.log_norm()
+        )
         cdfgrid: Array = quadax.cumulative_trapezoid(pdfgrid, x=z_grid, initial=0.0)
         cdfgrid = cdfgrid / cdfgrid[-1]
         return jnp.interp(u, cdfgrid, z_grid)
