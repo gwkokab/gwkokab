@@ -281,10 +281,6 @@ class PoissonMean(eqx.Module):
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 
-            z = jax.lax.dynamic_index_in_dim(
-                samples, redshift_index, axis=-1, keepdims=False
-            )
-            log_prob += PLANCK_2015_Cosmology.logdVcdz_Gpc3(z) - jnp.log1p(z)
             partial_logsumexp = jnn.logsumexp(
                 log_prob, where=~jnp.isneginf(log_prob), axis=-1
             )
