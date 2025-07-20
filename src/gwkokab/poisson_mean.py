@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
 import jax
@@ -17,7 +17,6 @@ from .cosmology import PLANCK_2015_Cosmology
 from .models.utils import ScaledMixture
 from .utils.tools import batch_and_remainder, error_if
 from .vts import (
-    NeuralNetProbabilityOfDetection,
     RealInjectionVolumeTimeSensitivity,
     SyntheticInjectionVolumeTimeSensitivity,
     VolumeTimeSensitivityInterface,
@@ -70,8 +69,6 @@ class PoissonMean(eqx.Module):
 
     is_injection_based: bool = eqx.field(init=False, default=False)
     """Flag to check if the class is injection based or not."""
-    is_pdet: bool = eqx.field(init=False, default=False)
-    """Flag to check if the class is a neural pdet or not."""
     key: PRNGKeyArray = eqx.field(init=False)
     logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(
         init=False, default=None
@@ -83,9 +80,6 @@ class PoissonMean(eqx.Module):
         eqx.field(init=False)
     )
     time_scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
-    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(
-        init=False, static=True, default=None
-    )
 
     def __init__(
         self,
@@ -123,9 +117,6 @@ class PoissonMean(eqx.Module):
         ValueError
             If the proposal distribution is not a distribution.
         """
-        if isinstance(logVT_estimator, NeuralNetProbabilityOfDetection):
-            self.is_pdet = True
-            self.parameter_ranges = logVT_estimator.parameter_ranges
         if isinstance(
             logVT_estimator,
             (
@@ -377,15 +368,6 @@ class PoissonMean(eqx.Module):
                     per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
                         z
                     ) - jnp.log1p(z)
-
-            if self.is_pdet and redshift_index is None:
-                zmin = self.parameter_ranges.get("redshift_min", 0.0)
-                zmax = self.parameter_ranges.get("redshift_max", 2.3)
-                log_constant += jnp.log(zmax - zmin)  # uniform log norm
-                z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
-                per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
-                    z
-                ) - jnp.log1p(z)
 
             per_component_log_estimated_rate = log_constant + jnn.logsumexp(
                 per_sample_log_estimated_rates,
