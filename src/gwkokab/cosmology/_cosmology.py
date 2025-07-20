@@ -14,15 +14,14 @@ from gwkokab.constants import C, DEFAULT_DZ
 class Cosmology(eqx.Module):
     """Flat ΛCDM cosmology with Mpc-based units for distances and comoving volumes."""
 
-    _c_over_Ho: ArrayLike = eqx.field(init=False)
-    _Ho: ArrayLike = eqx.field(init=False)
-    _OmegaKappa: ArrayLike = eqx.field(init=False)
-    _OmegaLambda: ArrayLike = eqx.field(init=False)
-    _OmegaMatter: ArrayLike = eqx.field(init=False)
-    _OmegaRadiation: ArrayLike = eqx.field(init=False)
-    _z: ArrayLike = eqx.field(init=False)
-    _Dc: ArrayLike = eqx.field(init=False)
-    Vc: ArrayLike = eqx.field(init=False)
+    _Ho: ArrayLike
+    _OmegaKappa: ArrayLike
+    _OmegaLambda: ArrayLike
+    _OmegaMatter: ArrayLike
+    _OmegaRadiation: ArrayLike
+    _z: ArrayLike
+    _Dc: ArrayLike
+    Vc: ArrayLike
 
     def __init__(
         self,
@@ -32,9 +31,25 @@ class Cosmology(eqx.Module):
         omega_lambda: ArrayLike,
         max_z: float = 4.0,
         dz: float = DEFAULT_DZ,
-    ):
+    ) -> None:
+        """Initialize the cosmology with given parameters.
+
+        Parameters
+        ----------
+        Ho : ArrayLike
+            Hubble constant in m/s/Mpc.
+        omega_matter : ArrayLike
+            Matter density parameter (Ω_m).
+        omega_radiation : ArrayLike
+            Radiation density parameter (Ω_r).
+        omega_lambda : ArrayLike
+            Dark energy density parameter (Ω_Λ).
+        max_z : float, optional
+            Maximum redshift to consider, by default 4.0
+        dz : float, optional
+            Redshift bin width, by default DEFAULT_DZ
+        """
         self._Ho = Ho  # Hubble constant in m/s/Mpc
-        self._c_over_Ho = C / Ho  # Units: Mpc= (m/s)/(m/s/Mpc)
         self._OmegaMatter = omega_matter
         self._OmegaRadiation = omega_radiation
         self._OmegaLambda = omega_lambda
@@ -65,7 +80,7 @@ class Cosmology(eqx.Module):
         )
 
     def dDcdz(self, z: ArrayLike) -> ArrayLike:
-        return self._c_over_Ho / self.z_to_E(z)
+        return C / self._Ho / self.z_to_E(z)
 
     def logdVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
         if Dc is None:
@@ -100,13 +115,3 @@ class Cosmology(eqx.Module):
     @property
     def Dc(self) -> ArrayLike:
         return self._Dc
-
-    # --------- Utility validation ---------
-    def assert_z_range_covers(self, z: ArrayLike, name="z"):
-        """Raise if any redshift exceeds grid limit (run outside JAX tracing)."""
-        max_z = float(jnp.max(z))
-        if max_z > float(self._z[-1]):
-            raise ValueError(
-                f"{name} contains z={max_z:.3f} which exceeds cosmology grid limit z={float(self._z[-1]):.3f}. "
-                f"Please re-instantiate with a higher max_z."
-            )
