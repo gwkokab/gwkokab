@@ -80,7 +80,7 @@ class Cosmology(eqx.Module):
         )
 
     def dDcdz(self, z: ArrayLike) -> ArrayLike:
-        return C / self._Ho / self.z_to_E(z)
+        return (C / self._Ho) / self.z_to_E(z)
 
     def logdVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
         if Dc is None:
@@ -97,7 +97,7 @@ class Cosmology(eqx.Module):
 
     def z_to_DL(self, z: ArrayLike) -> ArrayLike:
         """Luminosity distance in Mpc."""
-        return self.z_to_Dc(z) * (1.0 + z)
+        return jnp.interp(z, self._z, self.DL)
 
     def DL_to_z(self, DL: ArrayLike) -> ArrayLike:
         """Approximate inversion DL -> z using precomputed grid."""
