@@ -282,10 +282,6 @@ class PoissonMean(eqx.Module):
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 
-            z = jax.lax.dynamic_index_in_dim(
-                samples, redshift_index, axis=-1, keepdims=False
-            )
-            log_prob += PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z)
             partial_logsumexp = jnn.logsumexp(
                 log_prob, where=~jnp.isneginf(log_prob), axis=-1
             )
@@ -382,15 +378,14 @@ class PoissonMean(eqx.Module):
                         z
                     ) - jnp.log1p(z)
 
-            if self.is_pdet:
-                if redshift_index is None:
-                    zmin = self.parameter_ranges.get("redshift_min", 0.0)
-                    zmax = self.parameter_ranges.get("redshift_max", 2.3)
-                    log_constant += jnp.log(zmax - zmin)  # uniform log norm
-                    z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
-                    per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
-                        z
-                    ) - jnp.log1p(z)
+            if self.is_pdet and redshift_index is None:
+                zmin = self.parameter_ranges.get("redshift_min", 0.0)
+                zmax = self.parameter_ranges.get("redshift_max", 2.3)
+                log_constant += jnp.log(zmax - zmin)  # uniform log norm
+                z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
+                per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
+                    z
+                ) - jnp.log1p(z)
 
             per_component_log_estimated_rate = log_constant + jnn.logsumexp(
                 per_sample_log_estimated_rates,
@@ -405,7 +400,6 @@ class PoissonMean(eqx.Module):
             per_component_log_estimated_rates_list, axis=-1
         )  # type: ignore
 
-        return (
-            self.time_scale
-            * jnp.exp(jnn.logsumexp(per_component_log_estimated_rates, axis=-1))
+        return self.time_scale * jnp.exp(
+            jnn.logsumexp(per_component_log_estimated_rates, axis=-1)
         )
