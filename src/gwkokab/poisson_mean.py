@@ -14,7 +14,6 @@ from numpyro.distributions.distribution import Distribution, DistributionLike
 from gwkokab.constants import Mpc3_to_Gpc3
 
 from .cosmology import PLANCK_2015_Cosmology
-from .models.redshift._models import PowerlawRedshift
 from .models.utils import ScaledMixture
 from .utils.tools import batch_and_remainder, error_if
 from .vts import (
@@ -392,11 +391,6 @@ class PoissonMean(eqx.Module):
                     per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
                         z
                     ) - jnp.log1p(z)
-                elif log_weights_and_samples is None:
-                    for m_dist in component_dist.marginal_distributions:
-                        if isinstance(m_dist, PowerlawRedshift):
-                            log_constant += m_dist.log_norm()
-                            break
 
             per_component_log_estimated_rate = log_constant + jnn.logsumexp(
                 per_sample_log_estimated_rates,
@@ -412,7 +406,6 @@ class PoissonMean(eqx.Module):
         )  # type: ignore
 
         return (
-            Mpc3_to_Gpc3
-            * self.time_scale
+            self.time_scale
             * jnp.exp(jnn.logsumexp(per_component_log_estimated_rates, axis=-1))
         )
