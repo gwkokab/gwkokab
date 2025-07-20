@@ -5,6 +5,7 @@
 from collections.abc import Sequence
 from typing import Literal, Optional
 
+import bilby
 import equinox as eqx
 import h5py
 import jax
@@ -130,10 +131,17 @@ class RealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                 snr_cut,
             )
 
-            sampling_prob = (
-                injections["sampling_pdf"][found][:]
-                / injections["mixture_weight"][found][:]
-            )
+            sampling_prob = 1.0 / injections["mixture_weight"][found][:]
+
+            redshift = injections["redshift"][found][:]
+
+            sampling_prob *= bilby.gw.prior.UniformComovingVolume(
+                np.min(redshift),
+                np.max(redshift),
+                cosmology="Planck15",
+                name="redshift",
+                unit="Mpc",
+            ).prob(redshift) * np.square(1 + redshift)
 
             injs = []
             for p in parameters:
