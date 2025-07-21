@@ -382,6 +382,8 @@ class PoissonMean(eqx.Module):
             per_component_log_estimated_rates_list, axis=-1
         )  # type: ignore
 
-        return self.time_scale * jnp.exp(
-            jnn.logsumexp(per_component_log_estimated_rates, axis=-1)
+        return (
+            Mpc3_to_Gpc3
+            * self.time_scale
+            * jnp.exp(jnn.logsumexp(per_component_log_estimated_rates, axis=-1))
         )
