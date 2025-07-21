@@ -14,7 +14,7 @@ from numpyro.distributions.distribution import Distribution, DistributionLike
 from gwkokab.constants import Mpc3_to_Gpc3
 
 from .cosmology import PLANCK_2015_Cosmology
-from .models.redshift._models import PowerlawRedshift
+from .models import PowerlawRedshift
 from .models.utils import ScaledMixture
 from .utils.tools import batch_and_remainder, error_if
 from .vts import (
@@ -352,10 +352,15 @@ class PoissonMean(eqx.Module):
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
                 samples = component_dist.sample(self.key, (num_samples,))
-                log_constant += jax.lax.dynamic_index_in_dim(
+                log_rate_i = jax.lax.dynamic_index_in_dim(
                     model.log_scales, index=i, axis=-1, keepdims=False
                 )
+                log_constant += log_rate_i
                 per_sample_log_estimated_rates = logVT_fn(samples)
+                for m_dist in component_dist.marginal_distributions:
+                    if isinstance(m_dist, PowerlawRedshift):
+                        log_constant += m_dist.log_norm()
+                        break
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
                 component_log_prob = component_dist.log_prob(samples).reshape(
@@ -369,21 +374,6 @@ class PoissonMean(eqx.Module):
                     per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
                         z
                     ) - jnp.log1p(z)
-
-            if self.is_pdet:
-                if redshift_index is None:
-                    zmin = self.parameter_ranges.get("redshift_min", 0.0)
-                    zmax = self.parameter_ranges.get("redshift_max", 2.3)
-                    log_constant += jnp.log(zmax - zmin)  # uniform log norm
-                    z = jrd.uniform(self.key, (num_samples,), minval=zmin, maxval=zmax)
-                    per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
-                        z
-                    ) - jnp.log1p(z)
-                elif log_weights_and_samples is None:
-                    for m_dist in component_dist.marginal_distributions:
-                        if isinstance(m_dist, PowerlawRedshift):
-                            log_constant += m_dist.log_norm()
-                            break
 
             per_component_log_estimated_rate = log_constant + jnn.logsumexp(
                 per_sample_log_estimated_rates,
