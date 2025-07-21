@@ -3,6 +3,7 @@
 
 from typing import Optional
 
+import jax
 import quadax
 from jax import Array, numpy as jnp, random as jrd
 from jax.lax import broadcast_shapes
@@ -61,9 +62,11 @@ class PowerlawRedshift(Distribution):
 
     def log_differential_spacetime_volume(self, z: Array) -> Array:
         """Placeholder method for computing the differential spacetime volume."""
-        log_differential_spacetime_volume_val = PLANCK_2015_Cosmology.logdVcdz(z) + (
-            self.kappa - 1
-        ) * jnp.log1p(z)
+        logdVcdz = PLANCK_2015_Cosmology.logdVcdz(z)
+        log_time_dilation = -jnp.log1p(z)
+        log_differential_spacetime_volume_val = (
+            log_time_dilation + logdVcdz + self.kappa * jnp.log1p(z)
+        )
         return log_differential_spacetime_volume_val
 
     def log_norm(self) -> Array:
@@ -74,7 +77,7 @@ class PowerlawRedshift(Distribution):
         )
         pdfs = jnp.exp(log_differential_spacetime_volume)
         norm = trapezoid(pdfs, z_grid)
-        return jnp.log(norm)
+        return jax.lax.stop_gradient(jnp.log(norm))
 
     def sample(self, key, sample_shape=()):
         """Draw samples from the distribution using inverse transform sampling.
