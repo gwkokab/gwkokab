@@ -3,7 +3,6 @@
 
 from typing import Optional
 
-import jax
 import quadax
 from jax import Array, numpy as jnp, random as jrd
 from jax.lax import broadcast_shapes
@@ -77,7 +76,7 @@ class PowerlawRedshift(Distribution):
         )
         pdfs = jnp.exp(log_differential_spacetime_volume)
         norm = trapezoid(pdfs, z_grid)
-        return jax.lax.stop_gradient(jnp.log(norm))
+        return jnp.log(norm)
 
     def sample(self, key, sample_shape=()):
         """Draw samples from the distribution using inverse transform sampling.
