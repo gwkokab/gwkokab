@@ -81,9 +81,7 @@ class PoissonMean(eqx.Module):
         eqx.field(init=False)
     )
     time_scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
-    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(
-        init=False, static=True, default=None
-    )
+    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(init=False, default=None)
 
     def __init__(
         self,
