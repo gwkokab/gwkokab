@@ -105,6 +105,25 @@ class PowerlawRedshift(Distribution):
         cdfgrid = cdfgrid / cdfgrid[-1]
         return jnp.interp(u, cdfgrid, z_grid)
 
+    def log_psi_of_z(self, z: Array) -> Array:
+        r"""Evaluate the psi function at a given redshift.
+
+        .. math::
+
+            \ln\psi(z) = \kappa \log(1 + z)
+
+        Parameters
+        ----------
+        z : ArrayLike
+            Redshift(s) to evaluate.
+
+        Returns
+        -------
+        ArrayLike
+            Values of the psi function.
+        """
+        return self.kappa * jnp.log1p(z)
+
     @validate_sample
     def log_prob(self, value: Array) -> Array:
         """Evaluate the log probability density function at a given redshift.
@@ -119,4 +138,4 @@ class PowerlawRedshift(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.kappa * jnp.log1p(value)
+        return self.log_psi_of_z(value)
