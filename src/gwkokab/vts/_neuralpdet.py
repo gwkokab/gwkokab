@@ -23,7 +23,9 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
     """The batch size used by :func:`jax.lax.map` in mapped functions."""
     neural_vt_model: eqx.nn.MLP = eqx.field(init=False)
     """The neural volume-time sensitivity model."""
-    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(init=False, static=True)
+    parameter_ranges: Optional[Dict[str, Union[int, float]]] = eqx.field(
+        init=False, static=True
+    )
     """Ranges of the parameters expected by the model."""
 
     def __init__(
@@ -72,7 +74,10 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
             for k, v in f.attrs.items():
                 if k.endswith("_min") or k.endswith("_max"):
                     parameter_ranges[k] = lax.stop_gradient(v)
-        self.parameter_ranges = parameter_ranges
+        if len(parameter_ranges) > 0:
+            self.parameter_ranges = parameter_ranges
+        else:
+            self.parameter_ranges = None
 
     def get_logVT(self) -> Callable[[Array], Array]:  # TODO: rename to get_pdet
         """Gets the logVT function."""

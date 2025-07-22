@@ -3,7 +3,7 @@
 
 
 from collections.abc import Sequence
-from typing import Optional
+from typing import Dict, Optional, Union
 
 import equinox as eqx
 import h5py
@@ -65,6 +65,21 @@ class SyntheticInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
             self.sampling_prob = jax.device_put(f["sampling_pdf"][:], may_alias=True)
             self.total_injections = self.sampling_prob.shape[0]
+            parameters: Dict[str, Union[int, float]] = {}
+
+            for i, p in enumerate(parameters):
+                try:
+                    minimum = f.attrs[p + "_min"]
+                except KeyError:
+                    minimum = np.min(self.injections[:, i])
+                try:
+                    maximum = f.attrs[p + "_max"]
+                except KeyError:
+                    maximum = np.max(self.injections[:, i])
+
+                parameters[p + "_min"] = minimum
+                parameters[p + "_max"] = maximum
+            self.parameter_ranges = parameters
 
     def get_logVT(self):
         raise NotImplementedError("Injection based VTs do not have a logVT method.")

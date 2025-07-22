@@ -702,24 +702,25 @@ def main() -> None:
 
     model_param = match_all(extended_params, model_json)
 
-    model = NPowerlawMGaussian(
-        N_pl=N_pl,
-        N_g=N_g,
-        use_spin=has_spin,
-        use_tilt=has_tilt,
-        use_eccentricity=has_eccentricity,
-        use_mean_anomaly=has_mean_anomaly,
-        use_redshift=has_redshift,
-        use_cos_iota=has_cos_iota,
-        use_phi_12=has_phi_12,
-        use_polarization_angle=has_polarization_angle,
-        use_right_ascension=has_right_ascension,
-        use_sin_declination=has_sin_declination,
-        use_detection_time=has_detection_time,
-        use_phi_1=has_phi_1,
-        use_phi_2=has_phi_2,
-        use_phi_orb=has_phi_orb,
-        **model_param,
+    model_param.update(
+        {
+            "N_pl": N_pl,
+            "N_g": N_g,
+            "use_spin": has_spin,
+            "use_tilt": has_tilt,
+            "use_eccentricity": has_eccentricity,
+            "use_mean_anomaly": has_mean_anomaly,
+            "use_redshift": has_redshift,
+            "use_cos_iota": has_cos_iota,
+            "use_phi_12": has_phi_12,
+            "use_polarization_angle": has_polarization_angle,
+            "use_right_ascension": has_right_ascension,
+            "use_sin_declination": has_sin_declination,
+            "use_detection_time": has_detection_time,
+            "use_phi_1": has_phi_1,
+            "use_phi_2": has_phi_2,
+            "use_phi_orb": has_phi_orb,
+        }
     )
 
     nvt = vt_json_read_and_process(parameters_name, args.vt_json)
@@ -731,7 +732,8 @@ def main() -> None:
     erate_estimator = PoissonMean(nvt, key=pmean_key, **pmean_kwargs)
 
     popfactory = PopulationFactory(
-        model=model,
+        model_fn=NPowerlawMGaussian,
+        model_params=model_param,
         parameters=parameters_name,
         logVT_fn=logVT,
         ERate_fn=erate_estimator.__call__,

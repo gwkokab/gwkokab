@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
 import jax
@@ -81,6 +81,9 @@ class PoissonMean(eqx.Module):
         eqx.field(init=False)
     )
     time_scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
+    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(
+        init=False, static=True, default=None
+    )
 
     def __init__(
         self,
@@ -118,6 +121,8 @@ class PoissonMean(eqx.Module):
         ValueError
             If the proposal distribution is not a distribution.
         """
+        if hasattr(logVT_estimator, "parameter_ranges"):
+            self.parameter_ranges = logVT_estimator.parameter_ranges
         if isinstance(
             logVT_estimator,
             (
@@ -244,7 +249,12 @@ class PoissonMean(eqx.Module):
         self.proposal_log_weights_and_samples = tuple(proposal_log_weights_and_samples)
         self.key = key
 
-    def __call__(self, model: ScaledMixture, redshift_index: Optional[int]) -> Array:
+    def __call__(
+        self,
+        model: ScaledMixture,
+        redshift_index: Optional[int],
+        model_params: Dict[str, Array],
+    ) -> Array:
         r"""Estimate the rate/s by using the given model.
 
         Parameters
@@ -259,8 +269,18 @@ class PoissonMean(eqx.Module):
         Array
             Estimated rate/s.
         """
+        if self.parameter_ranges is not None:
+            z_max = self.parameter_ranges["redshift_max"]
+            for k in model_params:
+                if "z_max" in k:
+                    model_params[k] = jax.lax.stop_gradient(z_max)
+
+            model_instance: ScaledMixture = model(**model_params)
+        else:
+            model_instance: ScaledMixture = model(**model_params)
+
         if not self.is_injection_based:  # per component rate estimation
-            return self.calculate_per_component_rate(model, redshift_index)
+            return self.calculate_per_component_rate(model_instance, redshift_index)
 
         # injection based sampling method
         assert redshift_index is not None, (
@@ -270,7 +290,9 @@ class PoissonMean(eqx.Module):
         def _f(_: None, data: Tuple[Array, Array]) -> Tuple[None, Array]:
             log_weights, samples = data
             # log p(θ_i|λ)
-            model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
+            model_log_prob = model_instance.log_prob(samples).reshape(
+                log_weights.shape[0]
+            )
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 
@@ -309,9 +331,15 @@ class PoissonMean(eqx.Module):
                 axis=0,
             )
 
+        for m_dist in model.component_distributions[0].marginal_distributions:
+            if isinstance(m_dist, PowerlawRedshift):
+                log_constant = m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
+                break
+
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (Mpc3_to_Gpc3 * self.time_scale / num_samples) * jnp.exp(
-            jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
+        return (self.time_scale / num_samples) * jnp.exp(
+            log_constant
+            + jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
         )
 
     def calculate_per_component_rate(
