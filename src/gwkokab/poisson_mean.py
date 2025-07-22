@@ -294,6 +294,13 @@ class PoissonMean(eqx.Module):
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 
+            z = jax.lax.dynamic_index_in_dim(
+                samples, redshift_index, axis=-1, keepdims=False
+            )
+            log_prob += (
+                PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z) + jnp.log(Mpc3_to_Gpc3)
+            )
+
             partial_logsumexp = jnn.logsumexp(
                 log_prob, where=~jnp.isneginf(log_prob), axis=-1
             )
@@ -329,15 +336,9 @@ class PoissonMean(eqx.Module):
                 axis=0,
             )
 
-        for m_dist in model.component_distributions[0].marginal_distributions:
-            if isinstance(m_dist, PowerlawRedshift):
-                log_constant = m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
-                break
-
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
         return (self.time_scale / num_samples) * jnp.exp(
-            log_constant
-            + jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
+            jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
         )
 
     def calculate_per_component_rate(
