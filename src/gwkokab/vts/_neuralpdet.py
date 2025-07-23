@@ -23,9 +23,7 @@ class NeuralNetProbabilityOfDetection(eqx.Module):
     """The batch size used by :func:`jax.lax.map` in mapped functions."""
     neural_vt_model: eqx.nn.MLP = eqx.field(init=False)
     """The neural volume-time sensitivity model."""
-    parameter_ranges: Optional[Dict[str, Union[int, float]]] = eqx.field(
-        init=False, static=True
-    )
+    parameter_ranges: Optional[Dict[str, Union[int, float]]] = eqx.field(init=False)
     """Ranges of the parameters expected by the model."""
 
     def __init__(

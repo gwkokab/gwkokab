@@ -19,9 +19,7 @@ class VolumeTimeSensitivityInterface(eqx.Module):
     """The indices to shuffle the input to the model."""
     batch_size: Optional[int] = eqx.field(init=False, static=True, default=None)
     """The batch size used by :func:`jax.lax.map` in mapped functions."""
-    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(
-        init=False, static=True, default=None
-    )
+    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(init=False, default=None)
 
     @abstractmethod
     def get_logVT(self) -> Callable[[Array], Array]:
