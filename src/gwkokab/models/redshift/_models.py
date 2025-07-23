@@ -137,4 +137,4 @@ class PowerlawRedshift(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.log_psi_of_z(value)
+        return self.log_differential_spacetime_volume(value) - self.log_norm()
