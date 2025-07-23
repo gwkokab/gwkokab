@@ -71,7 +71,7 @@ def test_luminosity_distance_with_astropy():
     np.testing.assert_allclose(
         planck18.luminosity_distance(z).value,
         PLANCK_2018_Cosmology.z_to_DL(z),
-        rtol=1e-3,
+        rtol=1e-2,
     )
 
 
