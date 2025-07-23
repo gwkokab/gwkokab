@@ -25,7 +25,7 @@ def poisson_likelihood(
     dist_builder: Bake,
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
-    ERate_fn: Callable[[Distribution, Optional[int]], Array],
+    ERate_fn: Callable[[Distribution, Optional[int], dict[str, Array]], Array],
     where_fns: Optional[List[Callable[..., Array]]] = None,
     n_buckets: Optional[int] = None,
     threshold: float = 3.0,
@@ -132,7 +132,9 @@ def poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = jax.block_until_ready(ERate_fn(model_instance, redshift_index))
+        expected_rates = jax.block_until_ready(
+            ERate_fn(dist_fn, redshift_index, mapped_params)
+        )
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]

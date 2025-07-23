@@ -5,7 +5,7 @@
 import os
 import warnings
 from collections.abc import Callable
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import h5py
 import numpy as np
@@ -37,10 +37,11 @@ class PopulationFactory:
 
     def __init__(
         self,
-        model: ScaledMixture,
+        model_fn: Union[ScaledMixture, Callable[..., ScaledMixture]],
+        model_params: dict[str, Array],
         parameters: List[str],
         log_selection_fn: Optional[Callable[[Array], Array]],
-        ERate_fn: Callable[[ScaledMixture, Optional[int]], Array],
+        ERate_fn: Callable[[ScaledMixture, Optional[int], dict[str, Array]], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
     ) -> None:
@@ -49,8 +50,11 @@ class PopulationFactory:
 
         Parameters
         ----------
-        model : ScaledMixture
-            Model for the population.
+        model_fn : Union[ScaledMixture, Callable[..., ScaledMixture]]
+            Model for the population. If a callable is provided, it should return a
+            `ScaledMixture` model.
+        model_params : dict[str, Array]
+            Parameters for the model.
         parameters : List[str]
             Parameters for the model in order.
         log_selection_fn : Callable[[Array], Array]
@@ -71,20 +75,14 @@ class PopulationFactory:
         ValueError
             If parameters are not provided.
         """
-        error_if(model is None, msg="Model is not provided.")
-        error_if(
-            not isinstance(model, ScaledMixture),
-            msg="The model must be a `ScaledMixture` model for multi-rate model."
-            "See `gwkokab.model.utils.ScaledMixture` for more details.",
-        )
-        error_if(len(parameters) == 0, msg="Parameters are not provided.")
-
-        self.model = model
+        self.model_fn = model_fn
+        self.model: ScaledMixture = model_fn(**model_params)
         self.parameters = parameters
         self.log_selection_fn = log_selection_fn
         self.ERate_fn = ERate_fn
         self.num_realizations = num_realizations
         self.error_size = error_size
+        self.model_params = model_params
 
         if "redshift" in parameters:
             self.redshift_index: Optional[int] = parameters.index("redshift")
@@ -131,7 +129,7 @@ class PopulationFactory:
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
-        exp_rate = self.ERate_fn(self.model, self.redshift_index)
+        exp_rate = self.ERate_fn(self.model_fn, self.redshift_index, self.model_params)
         logger.debug(f"Expected rate for the population is {exp_rate}")
         size = int(jrd.poisson(poisson_key, exp_rate))
         logger.debug(f"Population size is {size}")

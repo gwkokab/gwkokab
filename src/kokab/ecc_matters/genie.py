@@ -86,8 +86,6 @@ def main() -> None:
         ["scale_Mc", "scale_eta", "loc", "scale", "low", "high"], err_json
     )
 
-    model = EccentricityMattersModel(**model_param)
-
     error_magazine.register(
         (m1_source, m2_source),
         lambda x, size, key: banana_error_m1_m2(
@@ -123,7 +121,8 @@ def main() -> None:
     erate_estimator = PoissonMean(nvt, key=pmean_key, **pmean_kwargs)
 
     popfactory = PopulationFactory(
-        model=model,
+        model_fn=EccentricityMattersModel,
+        model_params=model_param,
         parameters=model_parameters,
         log_selection_fn=log_selection_fn,
         ERate_fn=erate_estimator.__call__,
