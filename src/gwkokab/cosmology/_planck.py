@@ -28,7 +28,7 @@ PLANCK_2015_Cosmology = Cosmology(
     PLANCK_2015_OmegaRadiation,
     PLANCK_2015_OmegaLambda,
 )
-"Cosmology : See Table4 in arXiv:1502.01589, OmegaMatter from astropy Planck 2015"
+
 
 PLANCK_2018_Ho = 67.32 * H0_SI  # Hubble constant in s^-1
 PLANCK_2018_OmegaMatter = 0.3158
@@ -41,4 +41,3 @@ PLANCK_2018_Cosmology = Cosmology(
     PLANCK_2018_OmegaRadiation,
     PLANCK_2018_OmegaLambda,
 )
-"Cosmology : See Table1 in arXiv:1807.06209"
