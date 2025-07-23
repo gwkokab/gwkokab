@@ -68,7 +68,7 @@ class PoissonMean(eqx.Module):
     improve the performance of the importance sampling.
     """
 
-    is_injection_based: bool = eqx.field(init=False, default=False)
+    is_injection_based: bool = eqx.field(init=False, default=False, static=True)
     """Flag to check if the class is injection based or not."""
     key: PRNGKeyArray = eqx.field(init=False)
     logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(

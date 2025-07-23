@@ -241,6 +241,7 @@ def _save_data_from_sampler(
     gc.collect()
 
 
+# TODO(Qazalbash): Convert this class into a single function.
 class flowMChandler(object):
     r"""Handler class for running flowMC."""
 
