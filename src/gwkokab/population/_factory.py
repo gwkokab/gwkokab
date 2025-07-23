@@ -40,7 +40,7 @@ class PopulationFactory:
         model_fn: ScaledMixture,
         model_params: dict[str, Array],
         parameters: List[str],
-        logVT_fn: Optional[Callable[[Array], Array]],
+        log_selection_fn: Optional[Callable[[Array], Array]],
         ERate_fn: Callable[[ScaledMixture, Optional[int], dict[str, Array]], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
@@ -73,7 +73,7 @@ class PopulationFactory:
             If parameters are not provided.
         """
         self.model_fn = model_fn
-        self.model = model_fn(**model_params)
+        self.model: ScaledMixture = model_fn(**model_params)
         self.parameters = parameters
         self.log_selection_fn = log_selection_fn
         self.ERate_fn = ERate_fn
