@@ -13,10 +13,10 @@ from ..utils import (
     combine_distributions,
     create_beta_distributions,
     create_independent_spin_orientation_gaussian_isotropic,
-    create_powerlaw_redshift,
     create_powerlaws,
     create_truncated_normal_distributions,
     create_uniform_distributions,
+    create_volumetric_powerlaw_redshift,
     JointDistribution,
     ScaledMixture,
 )
@@ -25,7 +25,7 @@ from ..utils import (
 build_spin_distributions = create_beta_distributions
 build_tilt_distributions = create_independent_spin_orientation_gaussian_isotropic
 build_eccentricity_distributions = create_truncated_normal_distributions
-build_redshift_distributions = create_powerlaw_redshift
+build_redshift_distributions = create_volumetric_powerlaw_redshift
 build_cos_iota_distribution = create_uniform_distributions
 build_phi_12_distribution = create_uniform_distributions
 build_polarization_angle_distribution = create_uniform_distributions

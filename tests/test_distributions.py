@@ -29,10 +29,10 @@ from gwkokab.models import (
     NPowerlawMGaussian,
     NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
-    PowerlawRedshift,
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio,
+    VolumetricPowerlawRedshift,
     Wysocki2019MassModel,
 )
 from gwkokab.models.constraints import (
@@ -400,10 +400,10 @@ CONTINUOUS = [
             **generic_npmg,
         },
     ),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
+    (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
+    (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
+    (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
+    (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
     ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2) #########
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 0, **generic_nspmsg}),
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 0, "N_g": 1, **generic_nspmsg}),

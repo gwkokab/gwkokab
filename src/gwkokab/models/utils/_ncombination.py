@@ -22,7 +22,7 @@ from ...models._models import (
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio,
 )
-from ...models.redshift import PowerlawRedshift
+from ...models.redshift import VolumetricPowerlawRedshift
 from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ...utils.tools import fetch_first_matching_value
@@ -31,7 +31,7 @@ from ...utils.tools import fetch_first_matching_value
 __all__ = [
     "combine_distributions",
     "create_beta_distributions",
-    "create_powerlaw_redshift",
+    "create_volumetric_powerlaw_redshift",
     "create_powerlaws",
     "create_smoothed_gaussians",
     "create_smoothed_powerlaws",
@@ -355,7 +355,7 @@ def create_powerlaws(
     return powerlaws_collection
 
 
-def create_powerlaw_redshift(
+def create_volumetric_powerlaw_redshift(
     N: int,
     parameter_name: Literal["redshift"],
     component_type: Literal["pl", "g"],
@@ -401,7 +401,9 @@ def create_powerlaw_redshift(
             raise ValueError(f"Missing parameter {z_max_name}_{i}")
 
         powerlaw_redshift_collection.append(
-            PowerlawRedshift(kappa=kappa, z_max=z_max, validate_args=validate_args)
+            VolumetricPowerlawRedshift(
+                kappa=kappa, z_max=z_max, validate_args=validate_args
+            )
         )
 
     return powerlaw_redshift_collection

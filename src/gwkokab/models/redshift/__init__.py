@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from ._models import PowerlawRedshift as PowerlawRedshift
+from ._models import VolumetricPowerlawRedshift as VolumetricPowerlawRedshift

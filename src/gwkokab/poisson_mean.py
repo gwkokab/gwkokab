@@ -14,7 +14,7 @@ from numpyro.distributions.distribution import Distribution, DistributionLike
 from gwkokab.constants import Mpc3_to_Gpc3
 
 from .cosmology import PLANCK_2015_Cosmology
-from .models import PowerlawRedshift
+from .models import VolumetricPowerlawRedshift
 from .models.utils import ScaledMixture
 from .utils.tools import batch_and_remainder, error_if
 from .vts import (
@@ -385,7 +385,7 @@ class PoissonMean(eqx.Module):
                 log_constant += log_rate_i
                 per_sample_log_estimated_rates = logVT_fn(samples)
                 for m_dist in component_dist.marginal_distributions:
-                    if isinstance(m_dist, PowerlawRedshift):
+                    if isinstance(m_dist, VolumetricPowerlawRedshift):
                         log_constant += m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
                         break
             else:  # case 2: importance sampling

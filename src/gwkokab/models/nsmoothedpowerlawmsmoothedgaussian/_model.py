@@ -16,15 +16,15 @@ from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIs
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..constraints import any_constraint
-from ..redshift import PowerlawRedshift
+from ..redshift import VolumetricPowerlawRedshift
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
     create_independent_spin_orientation_gaussian_isotropic,
-    create_powerlaw_redshift,
     create_smoothed_gaussians,
     create_smoothed_powerlaws,
     create_truncated_normal_distributions,
+    create_volumetric_powerlaw_redshift,
     JointDistribution,
     ScaledMixture,
 )
@@ -35,7 +35,7 @@ build_gaussian_distributions = create_smoothed_gaussians
 build_spin_distributions = create_beta_distributions
 build_tilt_distributions = create_independent_spin_orientation_gaussian_isotropic
 build_eccentricity_distributions = create_truncated_normal_distributions
-build_redshift_distributions = create_powerlaw_redshift
+build_redshift_distributions = create_volumetric_powerlaw_redshift
 
 
 def _build_non_mass_distributions(
@@ -482,7 +482,7 @@ def SmoothedPowerlawAndPeak(
     if use_redshift:
         z_max = params["z_max"]
         kappa = params["kappa"]
-        powerlaw_z = PowerlawRedshift(
+        powerlaw_z = VolumetricPowerlawRedshift(
             z_max=z_max, kappa=kappa, validate_args=validate_args
         )
 

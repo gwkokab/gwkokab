@@ -13,7 +13,6 @@ from ._ncombination import (
     combine_distributions as combine_distributions,
     create_beta_distributions as create_beta_distributions,
     create_independent_spin_orientation_gaussian_isotropic as create_independent_spin_orientation_gaussian_isotropic,
-    create_powerlaw_redshift as create_powerlaw_redshift,
     create_powerlaws as create_powerlaws,
     create_smoothed_gaussians as create_smoothed_gaussians,
     create_smoothed_gaussians_raw as create_smoothed_gaussians_raw,
@@ -22,5 +21,6 @@ from ._ncombination import (
     create_truncated_normal_distributions as create_truncated_normal_distributions,
     create_truncated_normal_distributions_for_cos_tilt as create_truncated_normal_distributions_for_cos_tilt,
     create_uniform_distributions as create_uniform_distributions,
+    create_volumetric_powerlaw_redshift as create_volumetric_powerlaw_redshift,
 )
 from ._scaledmixture import ScaledMixture as ScaledMixture

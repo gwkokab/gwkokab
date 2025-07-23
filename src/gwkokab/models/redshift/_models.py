@@ -13,7 +13,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from ...cosmology import PLANCK_2015_Cosmology
 
 
-class PowerlawRedshift(Distribution):
+class VolumetricPowerlawRedshift(Distribution):
     r"""Redshift distribution for compact binary mergers modeled as a power law modulated
     by the cosmological volume element.
 
@@ -50,7 +50,7 @@ class PowerlawRedshift(Distribution):
         self.z_max, self.kappa = promote_shapes(z_max, kappa)
         batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
         self._support = constraints.interval(0.0, z_max)
-        super(PowerlawRedshift, self).__init__(
+        super(VolumetricPowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
 
