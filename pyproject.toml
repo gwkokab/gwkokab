@@ -87,7 +87,7 @@ test = [
     "coveralls>=4.0.1",
     "pytest>=8.3.0",
     "tensorflow_probability>=0.18",
-    "astropy>=7.0.0",
+    "astropy>=6.0.0",
 ]
 cuda12 = ["jax[cuda12]>=0.4.30"]
 # tpu = ["jax[tpu]>=0.4.30"]
