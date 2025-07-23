@@ -5,7 +5,7 @@
 import os
 import warnings
 from collections.abc import Callable
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import h5py
 import numpy as np
@@ -37,7 +37,7 @@ class PopulationFactory:
 
     def __init__(
         self,
-        model_fn: ScaledMixture,
+        model_fn: Union[ScaledMixture, Callable[..., ScaledMixture]],
         model_params: dict[str, Array],
         parameters: List[str],
         log_selection_fn: Optional[Callable[[Array], Array]],
@@ -50,8 +50,11 @@ class PopulationFactory:
 
         Parameters
         ----------
-        model : ScaledMixture
-            Model for the population.
+        model_fn : Union[ScaledMixture, Callable[..., ScaledMixture]]
+            Model for the population. If a callable is provided, it should return a
+            `ScaledMixture` model.
+        model_params : dict[str, Array]
+            Parameters for the model.
         parameters : List[str]
             Parameters for the model in order.
         log_selection_fn : Callable[[Array], Array]
