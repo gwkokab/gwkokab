@@ -65,7 +65,7 @@ class SyntheticInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
             self.sampling_prob = jax.device_put(f["sampling_pdf"][:], may_alias=True)
             self.total_injections = self.sampling_prob.shape[0]
-            parameters: Dict[str, Union[int, float]] = {}
+            param_ranges: Dict[str, Union[int, float]] = {}
 
             for i, p in enumerate(parameters):
                 try:
@@ -77,9 +77,9 @@ class SyntheticInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
                 except KeyError:
                     maximum = np.max(self.injections[:, i])
 
-                parameters[p + "_min"] = minimum
-                parameters[p + "_max"] = maximum
-            self.parameter_ranges = parameters
+                param_ranges[p + "_min"] = minimum
+                param_ranges[p + "_max"] = maximum
+            self.parameter_ranges = param_ranges
 
     def get_logVT(self):
         raise NotImplementedError("Injection based VTs do not have a logVT method.")
