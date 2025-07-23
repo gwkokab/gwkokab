@@ -64,7 +64,7 @@ class PowerlawRedshift(Distribution):
         logdVcdz = PLANCK_2015_Cosmology.logdVcdz(z)
         log_time_dilation = -jnp.log1p(z)
         log_differential_spacetime_volume_val = (
-            log_time_dilation + logdVcdz + self.kappa * jnp.log1p(z)
+            log_time_dilation + logdVcdz + self.log_psi_of_z(z)
         )
         return log_differential_spacetime_volume_val
 
