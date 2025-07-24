@@ -710,7 +710,7 @@ def main() -> None:
             "use_tilt": has_tilt,
             "use_eccentricity": has_eccentricity,
             "use_mean_anomaly": has_mean_anomaly,
-            "use_redshift": has_redshift,
+            "use_volumetric_redshift": has_redshift,
             "use_cos_iota": has_cos_iota,
             "use_phi_12": has_phi_12,
             "use_polarization_angle": has_polarization_angle,

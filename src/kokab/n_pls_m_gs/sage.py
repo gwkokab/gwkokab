@@ -80,10 +80,17 @@ def make_parser() -> ArgumentParser:
         action="store_true",
         help="Include tilt parameters in the model.",
     )
-    model_group.add_argument(
-        "--add-redshift",
+
+    redshift_group = model_group.add_mutually_exclusive_group()
+    redshift_group.add_argument(
+        "--add-volumetric-redshift",
         action="store_true",
-        help="Include redshift parameter in the model",
+        help="Include redshift model with comoving volume",
+    )
+    redshift_group.add_argument(
+        "--add-simple-redshift",
+        action="store_true",
+        help="Include powerlaw describing redshift",
     )
     model_group.add_argument(
         "--add-truncated-normal-eccentricity",
@@ -150,7 +157,7 @@ def main() -> None:
     has_spin = args.add_beta_spin or args.add_truncated_normal_spin
     has_tilt = args.add_tilt
     has_eccentricity = args.add_truncated_normal_eccentricity
-    has_redshift = args.add_redshift
+    has_redshift = args.add_volumetric_redshift or args.add_simple_redshift
     has_cos_iota = args.add_cos_iota
     has_phi_12 = args.add_phi_12
     has_polarization_angle = args.add_polarization_angle
@@ -447,7 +454,8 @@ def main() -> None:
         use_spin=has_spin,
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
-        use_redshift=has_redshift,
+        use_volumetric_redshift=args.add_volumetric_redshift,
+        use_simple_redshift=args.use_simple_redshift,
         use_cos_iota=has_cos_iota,
         use_phi_12=has_phi_12,
         use_polarization_angle=has_polarization_angle,
