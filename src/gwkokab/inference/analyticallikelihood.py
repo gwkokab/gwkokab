@@ -46,7 +46,7 @@ def analytical_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
     variables_index: Dict[str, int],
-    ERate_fn: Callable[[Distribution, Optional[int]], Array],
+    ERate_fn: Callable[[Distribution, Optional[int], dict[str, Array]], Array],
     redshift_index: Optional[int],
     means: List[Array],
     covariances: List[Array],
@@ -89,7 +89,7 @@ def analytical_likelihood(
         priors for the model parameters
     variables_index : Dict[str, int]
         mapping of variable names to their indices in the input array
-    ERate_fn : Callable[[Distribution, Optional[int]], Array]
+    ERate_fn : Callable[[Distribution, Optional[int], dict[str, Array]], Array]
         function to compute the expected event rates
     redshift_index : Optional[int]
         index of the redshift variable in the input array, if applicable
@@ -140,7 +140,7 @@ def analytical_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = ERate_fn(model_instance, redshift_index)
+        expected_rates = ERate_fn(dist_fn, redshift_index, mapped_params)
 
         event_mvn = MultivariateNormal(loc=mean_stack, covariance_matrix=cov_stack)
 
