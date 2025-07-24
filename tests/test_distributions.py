@@ -996,6 +996,11 @@ def test_log_prob_gradient(jax_dist, params):
         "SmoothedPowerlawAndPeak",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
+
+    if jax_dist.__name__ in ("VolumetricPowerlawRedshift",):
+        pytest.skip(
+            reason=f"{jax_dist.__name__} uses interpolation and is not differentiable"
+        )
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
             pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
