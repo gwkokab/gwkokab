@@ -396,12 +396,10 @@ class PoissonMean(eqx.Module):
                             z = jax.lax.dynamic_index_in_dim(
                                 samples, redshift_index, axis=-1, keepdims=False
                             )
-                            log_constant += (
-                                PLANCK_2015_Cosmology.logdVcdz(z)
-                                - jnp.log1p(z)
-                                + jnp.log(Mpc3_to_Gpc3)
+                            per_sample_log_estimated_rates += (
+                                PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z)
                             )
-                            log_constant += m_dist.log_norm()
+                            log_constant += m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
                             break
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
@@ -413,11 +411,10 @@ class PoissonMean(eqx.Module):
                     z = jax.lax.dynamic_index_in_dim(
                         samples, redshift_index, axis=-1, keepdims=False
                     )
-                    per_sample_log_estimated_rates += (
-                        PLANCK_2015_Cosmology.logdVcdz(z)
-                        - jnp.log1p(z)
-                        + jnp.log(Mpc3_to_Gpc3)
-                    )
+                    per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
+                        z
+                    ) - jnp.log1p(z)
+                    log_constant += jnp.log(Mpc3_to_Gpc3)
 
             per_component_log_estimated_rate = log_constant + jnn.logsumexp(
                 per_sample_log_estimated_rates,
