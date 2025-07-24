@@ -312,7 +312,7 @@ def analytical_likelihood(
 
         (vi_mean, _, opt_state, _), _ = jax.lax.scan(
             variational_inference_fn,
-            (vi_mean, moment_matching_cov, opt_state, jrd.split(subkey, n_vi_steps)),
+            (vi_mean, moment_matching_cov, opt_state, subkey),
             length=n_vi_steps,
         )
 
