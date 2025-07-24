@@ -455,7 +455,7 @@ def main() -> None:
         use_tilt=has_tilt,
         use_eccentricity=has_eccentricity,
         use_volumetric_redshift=args.add_volumetric_redshift,
-        use_simple_redshift=args.use_simple_redshift,
+        use_simple_redshift=args.add_simple_redshift,
         use_cos_iota=has_cos_iota,
         use_phi_12=has_phi_12,
         use_polarization_angle=has_polarization_angle,
