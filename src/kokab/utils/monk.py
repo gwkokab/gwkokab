@@ -209,7 +209,12 @@ class Monk(Guru):
         return {}
 
     def run(
-        self, n_samples: int, max_iter_mean: int, max_iter_cov: int, n_vi_steps: int
+        self,
+        n_samples: int,
+        max_iter_mean: int,
+        max_iter_cov: int,
+        n_vi_steps: int,
+        learning_rate: float,
     ) -> None:
         """Runs the Monk analysis."""
         parameters = self.parameters
@@ -270,6 +275,7 @@ class Monk(Guru):
             max_iter_mean=max_iter_mean,
             max_iter_cov=max_iter_cov,
             n_vi_steps=n_vi_steps,
+            learning_rate=learning_rate,
         )
 
         handler = flowMChandler(
@@ -342,6 +348,12 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Number of steps for the variational inference",
         default=5,
         type=int,
+    )
+    likelihood_group.add_argument(
+        "--learning-rate",
+        help="Learning rate for the variational inference, by default 0.01",
+        default=0.01,
+        type=float,
     )
 
     pmean_group = parser.add_argument_group("Poisson Mean Options")
