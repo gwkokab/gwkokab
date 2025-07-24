@@ -271,7 +271,9 @@ def analytical_likelihood(
                 updated mean vector and optimizer state
             """
             keys = jrd.split(key, n_events)
-            _, grads = jax.vmap(jax.value_and_grad(loss_fn))(mu, cov, keys)
+            _, grads = jax.vmap(jax.value_and_grad(loss_fn), in_axes=(0, 0, 0))(
+                mu, cov, keys
+            )
             updates, opt_state = opt.update(grads, opt_state)
             mu = optax.apply_updates(mu, updates)
             return mu, opt_state
