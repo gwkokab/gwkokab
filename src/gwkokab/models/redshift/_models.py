@@ -171,7 +171,6 @@ class SimpleRedshiftPowerlaw(Distribution):
         super(SimpleRedshiftPowerlaw, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
-        print(self.kappa, self.z_max)
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
