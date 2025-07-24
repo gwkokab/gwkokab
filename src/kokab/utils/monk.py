@@ -208,7 +208,9 @@ class Monk(Guru):
         """
         return {}
 
-    def run(self, n_samples: int, max_iter_mean: int, max_iter_cov: int) -> None:
+    def run(
+        self, n_samples: int, max_iter_mean: int, max_iter_cov: int, n_vi_steps: int
+    ) -> None:
         """Runs the Monk analysis."""
         parameters = self.parameters
         if "redshift" in parameters:
@@ -267,6 +269,7 @@ class Monk(Guru):
             n_samples=n_samples,
             max_iter_mean=max_iter_mean,
             max_iter_cov=max_iter_cov,
+            n_vi_steps=n_vi_steps,
         )
 
         handler = flowMChandler(
@@ -332,6 +335,12 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--max-iter-cov",
         help="Maximum number of iterations for the fitting process of the covariance, by default 3",
         default=3,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--n-vi-steps",
+        help="Number of steps for the variational inference",
+        default=5,
         type=int,
     )
 

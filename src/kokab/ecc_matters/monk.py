@@ -42,4 +42,5 @@ def main() -> None:
         n_samples=args.n_samples,
         max_iter_mean=args.max_iter_mean,
         max_iter_cov=args.max_iter_cov,
+        n_vi_steps=args.n_vi_steps,
     )
