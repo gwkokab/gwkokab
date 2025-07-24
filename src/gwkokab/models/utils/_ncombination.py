@@ -22,7 +22,7 @@ from ...models._models import (
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio,
 )
-from ...models.redshift import VolumetricPowerlawRedshift
+from ...models.redshift import SimpleRedshiftPowerlaw, VolumetricPowerlawRedshift
 from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ...utils.tools import fetch_first_matching_value
@@ -362,7 +362,7 @@ def create_volumetric_powerlaw_redshift(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of PowerlawRedshift distributions.
+    """Create a list of VolumetricPowerlawRedshift distributions.
 
     Parameters
     ----------
@@ -380,7 +380,7 @@ def create_volumetric_powerlaw_redshift(
     Returns
     -------
     List[Distribution]
-        list of PowerlawRedshift distributions
+        list of VolumetricPowerlawRedshift distributions
 
     Raises
     ------
@@ -402,6 +402,60 @@ def create_volumetric_powerlaw_redshift(
 
         powerlaw_redshift_collection.append(
             VolumetricPowerlawRedshift(
+                kappa=kappa, z_max=z_max, validate_args=validate_args
+            )
+        )
+
+    return powerlaw_redshift_collection
+
+
+def create_simple_redshift_powerlaw(
+    N: int,
+    parameter_name: Literal["redshift"],
+    component_type: Literal["pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of SimpleRedshiftPowerlaw distributions.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[&quot;redshift&quot;]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of PowerlawSimpleRedshiftPowerlawRedshift distributions
+
+    Raises
+    ------
+    ValueError
+        if :code:`kappa` or :code:`z_max` parameters are missing
+    """
+    powerlaw_redshift_collection = []
+    kappa_name = f"{parameter_name}_kappa_{component_type}"
+    z_max_name = f"{parameter_name}_z_max_{component_type}"
+
+    for i in range(N):
+        kappa = fetch_first_matching_value(params, f"{kappa_name}_{i}", kappa_name)
+        if kappa is None:
+            raise ValueError(f"Missing parameter {kappa_name}_{i}")
+
+        z_max = fetch_first_matching_value(params, f"{z_max_name}_{i}", z_max_name)
+        if z_max is None:
+            raise ValueError(f"Missing parameter {z_max_name}_{i}")
+
+        powerlaw_redshift_collection.append(
+            SimpleRedshiftPowerlaw(
                 kappa=kappa, z_max=z_max, validate_args=validate_args
             )
         )

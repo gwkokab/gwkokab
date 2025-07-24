@@ -21,10 +21,10 @@ from ..utils import (
     combine_distributions,
     create_beta_distributions,
     create_independent_spin_orientation_gaussian_isotropic,
+    create_simple_redshift_powerlaw,
     create_smoothed_gaussians,
     create_smoothed_powerlaws,
     create_truncated_normal_distributions,
-    create_volumetric_powerlaw_redshift,
     JointDistribution,
     ScaledMixture,
 )
@@ -35,7 +35,7 @@ build_gaussian_distributions = create_smoothed_gaussians
 build_spin_distributions = create_beta_distributions
 build_tilt_distributions = create_independent_spin_orientation_gaussian_isotropic
 build_eccentricity_distributions = create_truncated_normal_distributions
-build_redshift_distributions = create_volumetric_powerlaw_redshift
+build_redshift_distributions = create_simple_redshift_powerlaw
 
 
 def _build_non_mass_distributions(

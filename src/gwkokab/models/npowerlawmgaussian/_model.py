@@ -14,6 +14,7 @@ from ..utils import (
     create_beta_distributions,
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaws,
+    create_simple_redshift_powerlaw,
     create_truncated_normal_distributions,
     create_uniform_distributions,
     create_volumetric_powerlaw_redshift,
@@ -46,7 +47,8 @@ def _build_non_mass_distributions(
     use_tilt: bool,
     use_eccentricity: bool,
     use_mean_anomaly: bool,
-    use_redshift: bool,
+    use_volumetric_redshift: bool,
+    use_simple_redshift: bool,
     use_cos_iota: bool,
     use_polarization_angle: bool,
     use_right_ascension: bool,
@@ -118,7 +120,8 @@ def _build_non_mass_distributions(
         (use_phi_12, "phi_12", build_phi_12_distribution),
         (use_eccentricity, "ecc", build_eccentricity_distributions),
         (use_mean_anomaly, "mean_anomaly", build_mean_anomaly_distribution),
-        (use_redshift, "redshift", build_redshift_distributions),
+        (use_volumetric_redshift, "redshift", create_volumetric_powerlaw_redshift),
+        (use_simple_redshift, "redshift", create_simple_redshift_powerlaw),
         (use_right_ascension, "ra", build_right_ascension_distribution),
         (use_sin_declination, "dec", build_sin_declination_distribution),
         (use_detection_time, "detection_time", build_detection_time_distribution),
@@ -150,7 +153,8 @@ def _build_pl_component_distributions(
     use_tilt: bool,
     use_eccentricity: bool,
     use_mean_anomaly: bool,
-    use_redshift: bool,
+    use_volumetric_redshift: bool,
+    use_simple_redshift: bool,
     use_cos_iota: bool,
     use_polarization_angle: bool,
     use_right_ascension: bool,
@@ -222,7 +226,8 @@ def _build_pl_component_distributions(
         use_spin=use_spin,
         use_tilt=use_tilt,
         use_eccentricity=use_eccentricity,
-        use_redshift=use_redshift,
+        use_volumetric_redshift=use_volumetric_redshift,
+        use_simple_redshift=use_simple_redshift,
         use_cos_iota=use_cos_iota,
         use_phi_12=use_phi_12,
         use_polarization_angle=use_polarization_angle,
@@ -249,7 +254,8 @@ def _build_g_component_distributions(
     use_tilt: bool,
     use_eccentricity: bool,
     use_mean_anomaly: bool,
-    use_redshift: bool,
+    use_volumetric_redshift: bool,
+    use_simple_redshift: bool,
     use_cos_iota: bool,
     use_polarization_angle: bool,
     use_right_ascension: bool,
@@ -335,7 +341,8 @@ def _build_g_component_distributions(
         use_spin=use_spin,
         use_tilt=use_tilt,
         use_eccentricity=use_eccentricity,
-        use_redshift=use_redshift,
+        use_volumetric_redshift=use_volumetric_redshift,
+        use_simple_redshift=use_simple_redshift,
         use_cos_iota=use_cos_iota,
         use_phi_12=use_phi_12,
         use_polarization_angle=use_polarization_angle,
@@ -362,7 +369,8 @@ def NPowerlawMGaussian(
     use_spin: bool = False,
     use_tilt: bool = False,
     use_eccentricity: bool = False,
-    use_redshift: bool = False,
+    use_volumetric_redshift: bool = False,
+    use_simple_redshift: bool = False,
     use_cos_iota: bool = False,
     use_phi_12: bool = False,
     use_polarization_angle: bool = False,
@@ -468,8 +476,10 @@ def NPowerlawMGaussian(
         whether to include eccentricity, defaults to False
     use_mean_anomaly : bool
         whether to include mean_anomaly, defaults to False
-    use_redshift : bool
-        whether to include redshift, defaults to False
+    use_volumetric_redshift : bool
+        whether to include volumetric_redshift, defaults to False
+    use_simple_redshift : bool
+        whether to include simple_redshift, defaults to False
     use_cos_iota : bool
         whether to include cos_iota, defaults to False
     use_polarization_angle : bool
@@ -502,7 +512,8 @@ def NPowerlawMGaussian(
             use_spin=use_spin,
             use_tilt=use_tilt,
             use_eccentricity=use_eccentricity,
-            use_redshift=use_redshift,
+            use_volumetric_redshift=use_volumetric_redshift,
+            use_simple_redshift=use_simple_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
             use_polarization_angle=use_polarization_angle,
@@ -523,7 +534,8 @@ def NPowerlawMGaussian(
             use_spin=use_spin,
             use_tilt=use_tilt,
             use_eccentricity=use_eccentricity,
-            use_redshift=use_redshift,
+            use_volumetric_redshift=use_volumetric_redshift,
+            use_simple_redshift=use_simple_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
             use_polarization_angle=use_polarization_angle,

@@ -14,8 +14,8 @@ from numpyro.distributions.distribution import Distribution, DistributionLike
 from gwkokab.constants import Mpc3_to_Gpc3
 
 from .cosmology import PLANCK_2015_Cosmology
-from .models import VolumetricPowerlawRedshift
-from .models.utils import ScaledMixture
+from .models import SimpleRedshiftPowerlaw, VolumetricPowerlawRedshift
+from .models.utils import JointDistribution, ScaledMixture
 from .utils.tools import batch_and_remainder, error_if
 from .vts import (
     RealInjectionVolumeTimeSensitivity,
@@ -384,10 +384,25 @@ class PoissonMean(eqx.Module):
                 )
                 log_constant += log_rate_i
                 per_sample_log_estimated_rates = logVT_fn(samples)
-                for m_dist in component_dist.marginal_distributions:
-                    if isinstance(m_dist, VolumetricPowerlawRedshift):
-                        log_constant += m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
-                        break
+                if isinstance(component_dist, JointDistribution):
+                    for m_dist in component_dist.marginal_distributions:
+                        if isinstance(m_dist, VolumetricPowerlawRedshift):
+                            log_constant += m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
+                            break
+                        if isinstance(m_dist, SimpleRedshiftPowerlaw):
+                            assert redshift_index is not None, (
+                                "Redshift index must be provided for SimpleRedshiftPowerlaw."
+                            )
+                            z = jax.lax.dynamic_index_in_dim(
+                                samples, redshift_index, axis=-1, keepdims=False
+                            )
+                            log_constant += (
+                                PLANCK_2015_Cosmology.logdVcdz(z)
+                                - jnp.log1p(z)
+                                + jnp.log(Mpc3_to_Gpc3)
+                            )
+                            log_constant += m_dist.log_norm()
+                            break
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
                 component_log_prob = component_dist.log_prob(samples).reshape(
