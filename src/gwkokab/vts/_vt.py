@@ -16,6 +16,9 @@ from ._popmodelvt import (
 from ._realinjvt import (
     RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
 )
+from ._semianalyticalinjvt import (
+    SemiAnalyticalRealInjectionVolumeTimeSensitivity as SemiAnalyticalRealInjectionVolumeTimeSensitivity,
+)
 from ._syninjvt import (
     SyntheticInjectionVolumeTimeSensitivity as SyntheticInjectionVolumeTimeSensitivity,
 )
@@ -35,6 +38,8 @@ def __getattr__(name):
             return SyntheticInjectionVolumeTimeSensitivity
         case "NeuralNetProbabilityOfDetection":
             return NeuralNetProbabilityOfDetection
+        case "SemiAnalyticalRealInjectionVolumeTimeSensitivity":
+            return SemiAnalyticalRealInjectionVolumeTimeSensitivity
         case "pdet_O3":
             return pdet_O3
         case _:
@@ -49,6 +54,7 @@ class _Available:
     names: List[str] = [
         "NeuralNetVolumeTimeSensitivity",
         "PopModelsCalibratedVolumeTimeSensitivity",
+        "SemiAnalyticalRealInjectionVolumeTimeSensitivity",
         "PopModelsVolumeTimeSensitivity",
         "SyntheticInjectionVolumeTimeSensitivity",
         "RealInjectionVolumeTimeSensitivity",
