@@ -399,7 +399,7 @@ class PoissonMean(eqx.Module):
                             per_sample_log_estimated_rates += (
                                 PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z)
                             )
-                            log_constant += jnp.log(Mpc3_to_Gpc3)
+                            log_constant += m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
                             break
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
