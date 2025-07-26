@@ -56,6 +56,7 @@ def analytical_likelihood(
     max_iter_cov: int = 3,
     n_vi_steps: int = 5,
     learning_rate: float = 1e-2,
+    batch_size: int = 1_000,
 ) -> Callable[[Array, Array], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
@@ -113,6 +114,8 @@ def analytical_likelihood(
     learning_rate : float, optional
         Learning rate for the Adam optimizer used in the variational inference
         optimization, by default 1e-2
+    batch_size : int, optional
+        Batch size for the sampling process, by default 1_000
 
     Returns
     -------
@@ -323,22 +326,31 @@ def analytical_likelihood(
         def scan_fn(
             carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]
         ) -> Tuple[Array, None]:
-            mean, cov, fit_mean, fit_cov, rng_key = loop_data
+            mean, cov, fit_mean_i, fit_cov_i, rng_key = loop_data
 
             # event_mvn = G(θ, z | μ_i, Σ_i)
             event_mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
 
             # fit_mvn = G(θ, z | μ_f, Σ_f)
-            fit_mvn = MultivariateNormal(loc=fit_mean, covariance_matrix=fit_cov)
+            fit_mvn = MultivariateNormal(loc=fit_mean_i, covariance_matrix=fit_cov_i)
             # data ~ G(θ, z | μ_f, Σ_f)
             data = fit_mvn.sample(rng_key, (n_samples,))
 
-            # log_prob = log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i) - log G(θ, z | μ_f, Σ_i)
-            log_prob = (
-                event_mvn.log_prob(data)
-                + model_instance.log_prob(data)
-                - fit_mvn.log_prob(data)
+            # log ρ(data | Λ, κ)
+            model_instance_log_prob = jax.lax.map(
+                model_instance.log_prob, data, batch_size=batch_size
             )
+            # log G(θ, z | μ_i, Σ_i)
+            event_mvn_log_prob = jax.lax.map(
+                event_mvn.log_prob, data, batch_size=batch_size
+            )
+            # log G(θ, z | μ_f, Σ_i)
+            fit_mvn_log_prob = jax.lax.map(
+                fit_mvn.log_prob, data, batch_size=batch_size
+            )
+
+            # log_prob = log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i) - log G(θ, z | μ_f, Σ_i)
+            log_prob = model_instance_log_prob + event_mvn_log_prob - fit_mvn_log_prob
             log_likelihood = jax.nn.logsumexp(
                 log_prob, axis=-1, where=(~jnp.isneginf(log_prob))
             )
