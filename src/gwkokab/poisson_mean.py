@@ -267,15 +267,7 @@ class PoissonMean(eqx.Module):
         Array
             Estimated rate/s.
         """
-        if self.parameter_ranges is not None:
-            z_max = self.parameter_ranges["redshift_max"]
-            for k in model_params:
-                if "z_max" in k:
-                    model_params[k] = jax.lax.stop_gradient(z_max)
-
-            model_instance: ScaledMixture = model(**model_params)
-        else:
-            model_instance: ScaledMixture = model(**model_params)
+        model_instance: ScaledMixture = model(**model_params)
 
         if not self.is_injection_based:  # per component rate estimation
             return self.calculate_per_component_rate(model_instance, redshift_index)
@@ -366,7 +358,7 @@ class PoissonMean(eqx.Module):
             f"but got {len(self.proposal_log_weights_and_samples)}",
         )
 
-        per_component_log_estimated_rates_list = []
+        log_estimated_rates = jnp.asarray(-jnp.inf)
 
         logVT_fn = self.logVT_estimator.get_mapped_logVT()  # type: ignore
 
@@ -374,7 +366,6 @@ class PoissonMean(eqx.Module):
             log_weights_and_samples = self.proposal_log_weights_and_samples[i]
             component_dist: DistributionLike = model.component_distributions[i]
             num_samples = self.num_samples_per_component[i]  # type: ignore
-            log_constant = -jnp.log(num_samples)
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
@@ -382,12 +373,11 @@ class PoissonMean(eqx.Module):
                 log_rate_i = jax.lax.dynamic_index_in_dim(
                     model.log_scales, index=i, axis=-1, keepdims=False
                 )
-                log_constant += log_rate_i
-                per_sample_log_estimated_rates = logVT_fn(samples)
+                per_sample_log_estimated_rates = log_rate_i + logVT_fn(samples)
                 if isinstance(component_dist, JointDistribution):
                     for m_dist in component_dist.marginal_distributions:
                         if isinstance(m_dist, VolumetricPowerlawRedshift):
-                            log_constant += m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
+                            per_sample_log_estimated_rates += m_dist.log_norm()
                             break
                         if isinstance(m_dist, SimpleRedshiftPowerlaw):
                             assert redshift_index is not None, (
@@ -397,9 +387,11 @@ class PoissonMean(eqx.Module):
                                 samples, redshift_index, axis=-1, keepdims=False
                             )
                             per_sample_log_estimated_rates += (
-                                PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z)
+                                PLANCK_2015_Cosmology.logdVcdz(z)
+                                - jnp.log1p(z)
+                                + jnp.log(Mpc3_to_Gpc3)
+                                + m_dist.log_norm()
                             )
-                            log_constant += m_dist.log_norm() + jnp.log(Mpc3_to_Gpc3)
                             break
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
@@ -411,24 +403,20 @@ class PoissonMean(eqx.Module):
                     z = jax.lax.dynamic_index_in_dim(
                         samples, redshift_index, axis=-1, keepdims=False
                     )
-                    per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
-                        z
-                    ) - jnp.log1p(z)
-                    log_constant += jnp.log(Mpc3_to_Gpc3)
+                    per_sample_log_estimated_rates += (
+                        PLANCK_2015_Cosmology.logdVcdz(z)
+                        + jnp.log(Mpc3_to_Gpc3)
+                        - jnp.log1p(z)
+                    )
 
-            per_component_log_estimated_rate = log_constant + jnn.logsumexp(
+            per_component_log_estimated_rate_i = jnn.logsumexp(
                 per_sample_log_estimated_rates,
                 where=~jnp.isneginf(per_sample_log_estimated_rates),
                 axis=-1,
-            )
-            per_component_log_estimated_rates_list.append(
-                per_component_log_estimated_rate
+            ) - jnp.log(num_samples)
+            log_estimated_rates = jnp.logaddexp(
+                per_component_log_estimated_rate_i,
+                log_estimated_rates,
             )
 
-        per_component_log_estimated_rates = jnp.stack(
-            per_component_log_estimated_rates_list, axis=-1
-        )  # type: ignore
-
-        return self.time_scale * jnp.exp(
-            jnn.logsumexp(per_component_log_estimated_rates, axis=-1)
-        )
+        return self.time_scale * jnp.exp(log_estimated_rates)
