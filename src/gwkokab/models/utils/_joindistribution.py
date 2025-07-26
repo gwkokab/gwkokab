@@ -16,8 +16,8 @@ from ..constraints import all_constraint
 
 
 class JointDistribution(Distribution):
-    pytree_aux_fields = ("marginal_distributions", "shaped_values")
-    pytree_data_fields = ("_support",)
+    pytree_aux_fields = ("shaped_values",)
+    pytree_data_fields = ("marginal_distributions", "_support")
 
     def __init__(
         self,
