@@ -101,7 +101,7 @@ class VolumetricPowerlawRedshift(Distribution):
             Redshift samples.
         """
         u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
-        z_grid = jnp.linspace(0.0, self.z_max, 2500)
+        z_grid = jnp.linspace(0.0, self.z_max, 10_000)
         pdfgrid = jnp.exp(self.log_differential_spacetime_volume(z_grid))
         norm = trapezoid(pdfgrid, z_grid)
         pdfgrid /= norm
@@ -142,7 +142,7 @@ class VolumetricPowerlawRedshift(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.log_differential_spacetime_volume(value) - self.log_norm()
+        return self.log_psi_of_z(value)
 
 
 class SimpleRedshiftPowerlaw(Distribution):
@@ -211,7 +211,17 @@ class SimpleRedshiftPowerlaw(Distribution):
             Redshift samples.
         """
         u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
-        return self.icdf(u)
+        Z = jnp.exp(self.log_norm())
+        kappa_neq_neg_one = jnp.not_equal(self.kappa, -1.0)
+        safe_kappa = jnp.where(kappa_neq_neg_one, self.kappa, 0.0)
+        kappa1p = safe_kappa + 1
+        samples_kappa_neq_neg_one = (
+            jnp.power(u * kappa1p * Z + 1, jnp.reciprocal(kappa1p)) - 1
+        )
+        samples_kappa_eq_neg_one = jnp.expm1(u * Z)
+        return jnp.where(
+            kappa_neq_neg_one, samples_kappa_neq_neg_one, samples_kappa_eq_neg_one
+        )
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
@@ -227,4 +237,4 @@ class SimpleRedshiftPowerlaw(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.kappa * jnp.log1p(value) - self.log_norm()
+        return self.kappa * jnp.log1p(value)
