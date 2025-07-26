@@ -405,8 +405,6 @@ def SmoothedPowerlawAndPeak(
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
-    log_rate = params["log_rate"]
-
     smoothed_powerlaw = TransformedDistribution(
         SmoothedPowerlawPrimaryMassRatio(
             alpha=params["alpha"],
@@ -487,7 +485,6 @@ def SmoothedPowerlawAndPeak(
         powerlaw_z = SimpleRedshiftPowerlaw(
             z_max=z_max, kappa=kappa, validate_args=validate_args
         )
-        log_rate += powerlaw_z.log_norm()
 
         component_distribution_pl.append(powerlaw_z)
         component_distribution_g.append(powerlaw_z)
@@ -509,8 +506,8 @@ def SmoothedPowerlawAndPeak(
     return ScaledMixture(
         log_scales=jnp.stack(
             [
-                log_rate + jnp.log1p(-params["lambda_peak"]),  # type: ignore[arg-type, operator]
-                log_rate + jnp.log(params["lambda_peak"]),  # type: ignore[arg-type]
+                params["log_rate"] + jnp.log1p(-params["lambda_peak"]),  # type: ignore[arg-type, operator]
+                params["log_rate"] + jnp.log(params["lambda_peak"]),  # type: ignore[arg-type]
             ],
             axis=-1,
         ),
