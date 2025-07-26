@@ -11,9 +11,14 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ...cosmology import PLANCK_2015_Cosmology
+from ..utils import (
+    doubly_truncated_power_law_cdf,
+    doubly_truncated_power_law_icdf,
+    doubly_truncated_power_law_log_norm_constant,
+)
 
 
-class PowerlawRedshift(Distribution):
+class VolumetricPowerlawRedshift(Distribution):
     r"""Redshift distribution for compact binary mergers modeled as a power law modulated
     by the cosmological volume element.
 
@@ -50,7 +55,7 @@ class PowerlawRedshift(Distribution):
         self.z_max, self.kappa = promote_shapes(z_max, kappa)
         batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
         self._support = constraints.interval(0.0, z_max)
-        super(PowerlawRedshift, self).__init__(
+        super(VolumetricPowerlawRedshift, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
 
@@ -96,7 +101,7 @@ class PowerlawRedshift(Distribution):
             Redshift samples.
         """
         u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
-        z_grid = jnp.linspace(0.0, self.z_max, 2500)
+        z_grid = jnp.linspace(0.0, self.z_max, 10_000)
         pdfgrid = jnp.exp(self.log_differential_spacetime_volume(z_grid))
         norm = trapezoid(pdfgrid, z_grid)
         pdfgrid /= norm
@@ -138,3 +143,98 @@ class PowerlawRedshift(Distribution):
             Log-probability values.
         """
         return self.log_psi_of_z(value)
+
+
+class SimpleRedshiftPowerlaw(Distribution):
+    r"""Evolving redshift distribution for compact binary mergers with a power-law
+    evolution in the comoving volume element.
+
+    .. math::
+        p(z\mid\kappa) =
+        \frac{(\kappa+1)(1 + z)^{\kappa}}{\left(1 + z_{\mathrm{max}}\right)^{\kappa+1}-1},
+        \qquad 0 \leq z \leq z_{\mathrm{max}}
+    """
+
+    arg_constraints = {
+        "z_max": constraints.positive,
+        "kappa": constraints.real,
+    }
+    reparametrized_params = ["kappa", "z_max"]
+    pytree_data_fields = ("_support", "kappa", "z_max")
+
+    def __init__(
+        self, kappa: Array, z_max: Array, *, validate_args: Optional[bool] = None
+    ):
+        self.z_max, self.kappa = promote_shapes(z_max, kappa)
+        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
+        self._support = constraints.interval(0.0, z_max)
+        super(SimpleRedshiftPowerlaw, self).__init__(
+            batch_shape=batch_shape, validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        """The support of the distribution, which is the interval [0, z_max]."""
+        return self._support
+
+    def log_norm(self) -> Array:
+        """Placeholder method for computing the log normalization constant."""
+        return doubly_truncated_power_law_log_norm_constant(
+            self.kappa, 1.0, 1.0 + self.z_max
+        )
+
+    def cdf(self, value):
+        return doubly_truncated_power_law_cdf(
+            1 + value, self.kappa, 1.0, 1.0 + self.z_max
+        )
+
+    def icdf(self, q):
+        return (
+            doubly_truncated_power_law_icdf(q, self.kappa, 1.0, 1.0 + self.z_max) - 1.0
+        )
+
+    def sample(self, key, sample_shape=()):
+        """Draw samples from the distribution using inverse transform sampling.
+
+        Note: Sampling is only supported when z_max is a static scalar.
+
+        Parameters
+        ----------
+        key : jax.random.PRNGKey
+            A PRNG key for sampling.
+        sample_shape : tuple
+            Shape of the desired sample batch.
+
+        Returns
+        -------
+        samples : Array
+            Redshift samples.
+        """
+        u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
+        Z = jnp.exp(self.log_norm())
+        kappa_neq_neg_one = jnp.not_equal(self.kappa, -1.0)
+        safe_kappa = jnp.where(kappa_neq_neg_one, self.kappa, 0.0)
+        kappa1p = safe_kappa + 1
+        samples_kappa_neq_neg_one = (
+            jnp.power(u * kappa1p * Z + 1, jnp.reciprocal(kappa1p)) - 1
+        )
+        samples_kappa_eq_neg_one = jnp.expm1(u * Z)
+        return jnp.where(
+            kappa_neq_neg_one, samples_kappa_neq_neg_one, samples_kappa_eq_neg_one
+        )
+
+    @validate_sample
+    def log_prob(self, value: Array) -> Array:
+        """Evaluate the log probability density function at a given redshift.
+
+        Parameters
+        ----------
+        value : ArrayLike
+            Redshift(s) to evaluate.
+
+        Returns
+        -------
+        ArrayLike
+            Log-probability values.
+        """
+        return self.kappa * jnp.log1p(value)

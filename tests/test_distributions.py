@@ -29,7 +29,6 @@ from gwkokab.models import (
     NPowerlawMGaussian,
     NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
-    PowerlawRedshift,
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio,
@@ -400,10 +399,14 @@ CONTINUOUS = [
             **generic_npmg,
         },
     ),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
+    # not valid distributions
+    # (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
+    # (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
+    # (SimpleRedshiftPowerlaw, {"kappa": 2.7, "z_max": 1.0}),
+    # (SimpleRedshiftPowerlaw, {"kappa": 1.2, "z_max": 2.3}),
+    # (SimpleRedshiftPowerlaw, {"kappa": 0.0, "z_max": 1.0}),
+    # (SimpleRedshiftPowerlaw, {"kappa": -1.0, "z_max": 2.3}),
+    # (SimpleRedshiftPowerlaw, {"kappa": -2.0, "z_max": 4.0}),
     ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2) #########
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 0, **generic_nspmsg}),
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 0, "N_g": 1, **generic_nspmsg}),
@@ -992,6 +995,11 @@ def test_log_prob_gradient(jax_dist, params):
         "SmoothedPowerlawAndPeak",
     ):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
+
+    if jax_dist.__name__ in ("VolumetricPowerlawRedshift",):
+        pytest.skip(
+            reason=f"{jax_dist.__name__} uses interpolation and is not differentiable"
+        )
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
             pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
