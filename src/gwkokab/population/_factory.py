@@ -76,7 +76,6 @@ class PopulationFactory:
             If parameters are not provided.
         """
         self.model_fn = model_fn
-        self.model: ScaledMixture = model_fn(**model_params)
         self.parameters = parameters
         self.log_selection_fn = log_selection_fn
         self.ERate_fn = ERate_fn
@@ -101,7 +100,9 @@ class PopulationFactory:
         if self.log_selection_fn is not None:
             size += int(1e4)
 
-        population, [indices] = self.model.sample_with_intermediates(key, (size,))
+        model: ScaledMixture = self.model_fn(**self.model_params)
+
+        population, [indices] = model.sample_with_intermediates(key, (size,))
 
         raw_population = population
         raw_indices = indices
@@ -129,7 +130,13 @@ class PopulationFactory:
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
-        exp_rate = self.ERate_fn(self.model_fn, self.redshift_index, self.model_params)
+        model_params = self.model_params.copy()
+        # TODO(Qazalbash): uncomment when generating data from volumetric redshift
+        # if "use_volumetric_redshift" in model_params:
+        #     model_params["use_volumetric_redshift"] = False
+        #     model_params["use_simple_redshift"] = True
+
+        exp_rate = self.ERate_fn(self.model_fn, self.redshift_index, model_params)
         logger.debug(f"Expected rate for the population is {exp_rate}")
         size = int(jrd.poisson(poisson_key, exp_rate))
         logger.debug(f"Population size is {size}")
