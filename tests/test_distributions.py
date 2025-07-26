@@ -29,11 +29,9 @@ from gwkokab.models import (
     NPowerlawMGaussian,
     NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
-    SimpleRedshiftPowerlaw,
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawAndPeak,
     SmoothedPowerlawPrimaryMassRatio,
-    VolumetricPowerlawRedshift,
     Wysocki2019MassModel,
 )
 from gwkokab.models.constraints import (
@@ -401,13 +399,14 @@ CONTINUOUS = [
             **generic_npmg,
         },
     ),
-    (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
-    (SimpleRedshiftPowerlaw, {"kappa": 2.7, "z_max": 1.0}),
-    (SimpleRedshiftPowerlaw, {"kappa": 1.2, "z_max": 2.3}),
-    (SimpleRedshiftPowerlaw, {"kappa": 0.0, "z_max": 1.0}),
-    (SimpleRedshiftPowerlaw, {"kappa": -1.0, "z_max": 2.3}),
-    (SimpleRedshiftPowerlaw, {"kappa": -2.0, "z_max": 4.0}),
+    # not valid distributions
+    # (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
+    # (VolumetricPowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
+    # (SimpleRedshiftPowerlaw, {"kappa": 2.7, "z_max": 1.0}),
+    # (SimpleRedshiftPowerlaw, {"kappa": 1.2, "z_max": 2.3}),
+    # (SimpleRedshiftPowerlaw, {"kappa": 0.0, "z_max": 1.0}),
+    # (SimpleRedshiftPowerlaw, {"kappa": -1.0, "z_max": 2.3}),
+    # (SimpleRedshiftPowerlaw, {"kappa": -2.0, "z_max": 4.0}),
     ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2) #########
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 0, **generic_nspmsg}),
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 0, "N_g": 1, **generic_nspmsg}),
