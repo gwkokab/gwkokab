@@ -6,11 +6,7 @@ from typing import Dict, List, Literal, Optional
 
 from jax import numpy as jnp
 from jaxtyping import Array
-from numpyro.distributions import (
-    constraints,
-    Distribution,
-    TransformedDistribution,
-)
+from numpyro.distributions import constraints, Distribution
 
 from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
@@ -25,6 +21,7 @@ from ..utils import (
     create_smoothed_gaussians,
     create_smoothed_powerlaws,
     create_truncated_normal_distributions,
+    ExtendedSupportTransformedDistribution,
     JointDistribution,
     ScaledMixture,
 )
@@ -405,7 +402,7 @@ def SmoothedPowerlawAndPeak(
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
-    smoothed_powerlaw = TransformedDistribution(
+    smoothed_powerlaw = ExtendedSupportTransformedDistribution(
         SmoothedPowerlawPrimaryMassRatio(
             alpha=params["alpha"],
             beta=params["beta"],
@@ -417,7 +414,7 @@ def SmoothedPowerlawAndPeak(
         transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
         validate_args=validate_args,
     )
-    smoothed_gaussian = TransformedDistribution(
+    smoothed_gaussian = ExtendedSupportTransformedDistribution(
         SmoothedGaussianPrimaryMassRatio(
             loc=params["loc"],
             scale=params["scale"],

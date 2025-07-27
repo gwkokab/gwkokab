@@ -17,6 +17,7 @@ from numpyro.distributions.constraints import (
     independent,
     positive,
 )
+from numpyro.distributions.transforms import Transform
 
 
 __all__ = [
@@ -358,6 +359,41 @@ class _AnyConstraint(Constraint):
         )
 
 
+class _TransformedConstraint(Constraint):
+    def __init__(self, base_support: Constraint, transforms: Sequence[Transform]):
+        self.base_support = base_support
+        self.transforms = transforms
+
+    def __call__(self, x: Array) -> Array:
+        y = x
+        mask = jnp.ones(x.shape[:-1], dtype=bool)
+        for transform in reversed(self.transforms):
+            mask = jnp.logical_and(mask, transform.codomain.check(y))
+            y = transform.inv(y)
+        mask = jnp.logical_and(mask, self.base_support.check(y))
+        return mask
+
+    def feasible_like(self, prototype: Array) -> Array:
+        fl = self.base_support.feasible_like(prototype)
+        for transform in self.transforms:
+            fl = transform(fl)
+        return fl
+
+    def tree_flatten(self):
+        return (self.base_support, self.transforms), (
+            ("base_support", "transforms"),
+            dict(),
+        )
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, _AnyConstraint):
+            return False
+        return self.base_support == other.base_support and all(
+            transform == other_transform
+            for transform, other_transform in zip(self.transforms, other.transforms)
+        )
+
+
 mass_sandwich = _MassSandwichConstraint
 mass_ratio_mass_sandwich = _MassRatioMassSandwichConstraint
 increasing_vector = _IncreasingVector()
@@ -368,3 +404,4 @@ positive_increasing_vector = _PositiveIncreasingVector()
 positive_decreasing_vector = _PositiveDecreasingVector()
 all_constraint = _AllConstraint
 any_constraint = _AnyConstraint
+transform_constraint = _TransformedConstraint

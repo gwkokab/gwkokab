@@ -8,6 +8,9 @@ from ._doubletruncpowerlaw import (
     doubly_truncated_power_law_log_norm_constant as doubly_truncated_power_law_log_norm_constant,
     doubly_truncated_power_law_log_prob as doubly_truncated_power_law_log_prob,
 )
+from ._extendedsupporttransformeddistribution import (
+    ExtendedSupportTransformedDistribution as ExtendedSupportTransformedDistribution,
+)
 from ._joindistribution import JointDistribution as JointDistribution
 from ._ncombination import (
     combine_distributions as combine_distributions,
