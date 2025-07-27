@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Literal, Optional, Tuple
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
-from numpyro.distributions import Distribution, TransformedDistribution
+from numpyro.distributions import Distribution
 
 from ..constraints import any_constraint
 from ..utils import (
@@ -17,6 +17,7 @@ from ..utils import (
     create_powerlaws,
     create_truncated_normal_distributions,
     create_uniform_distributions,
+    ExtendedSupportTransformedDistribution,
     JointDistribution,
     ScaledMixture,
 )
@@ -212,7 +213,7 @@ def _build_pl_component_distributions(
     mass_distributions = jtr.map(
         lambda powerlaw: [powerlaw],
         powerlaws,
-        is_leaf=lambda x: isinstance(x, TransformedDistribution),
+        is_leaf=lambda x: isinstance(x, ExtendedSupportTransformedDistribution),
     )
 
     build_distributions = _build_non_mass_distributions(

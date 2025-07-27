@@ -11,7 +11,6 @@ from numpyro.distributions import (
     Distribution,
     MixtureGeneral,
     Normal,
-    TransformedDistribution,
     TruncatedNormal,
     TwoSidedTruncatedDistribution,
     Uniform,
@@ -25,6 +24,7 @@ from ...models._models import (
 from ...models.redshift import PowerlawRedshift
 from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
+from ...models.utils import ExtendedSupportTransformedDistribution
 from ...utils.tools import fetch_first_matching_value
 
 
@@ -299,8 +299,8 @@ def create_powerlaws(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[TransformedDistribution]:
-    """Create a list of TransformedDistribution for powerlaws.
+) -> List[ExtendedSupportTransformedDistribution]:
+    """Create a list of ExtendedSupportTransformedDistribution for powerlaws.
 
     Parameters
     ----------
@@ -313,8 +313,8 @@ def create_powerlaws(
 
     Returns
     -------
-    List[TransformedDistribution]
-        list of TransformedDistribution for powerlaws
+    List[ExtendedSupportTransformedDistribution]
+        list of ExtendedSupportTransformedDistribution for powerlaws
 
     Raises
     ------
@@ -346,7 +346,7 @@ def create_powerlaws(
         powerlaw = PowerlawPrimaryMassRatio(
             alpha=alpha, beta=beta, mmin=mmin, mmax=mmax, validate_args=validate_args
         )
-        transformed_powerlaw = TransformedDistribution(
+        transformed_powerlaw = ExtendedSupportTransformedDistribution(
             base_distribution=powerlaw,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,
@@ -411,7 +411,7 @@ def create_smoothed_powerlaws_raw(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[TransformedDistribution]:
+) -> List[ExtendedSupportTransformedDistribution]:
     """Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
     and mass ratio. We call it the raw version because it does not include the
     transformation to component masses.
@@ -427,7 +427,7 @@ def create_smoothed_powerlaws_raw(
 
     Returns
     -------
-    List[TransformedDistribution]
+    List[ExtendedSupportTransformedDistribution]
         list of SmoothedPowerlawPrimaryMassRatio for powerlaws
 
     Raises
@@ -478,7 +478,7 @@ def create_smoothed_gaussians_raw(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[TransformedDistribution]:
+) -> List[ExtendedSupportTransformedDistribution]:
     """Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
     and mass ratio. We call it the raw version because it does not include the
     transformation to component masses.
@@ -494,7 +494,7 @@ def create_smoothed_gaussians_raw(
 
     Returns
     -------
-    List[TransformedDistribution]
+    List[ExtendedSupportTransformedDistribution]
         list of SmoothedGaussianPrimaryMassRatio distributions
 
     Raises
@@ -551,7 +551,7 @@ def create_smoothed_powerlaws(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[TransformedDistribution]:
+) -> List[ExtendedSupportTransformedDistribution]:
     """Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
     and secondary mass. It includes the transformation to component masses.
 
@@ -566,14 +566,14 @@ def create_smoothed_powerlaws(
 
     Returns
     -------
-    List[TransformedDistribution]
+    List[ExtendedSupportTransformedDistribution]
         list of SmoothedPowerlawPrimaryMassRatio for powerlaws
     """
     smoothed_powerlaws_collection = create_smoothed_powerlaws_raw(
         N, params, validate_args
     )
     smoothed_powerlaws_collection = jtr.map(
-        lambda smoothed_powerlaw: TransformedDistribution(
+        lambda smoothed_powerlaw: ExtendedSupportTransformedDistribution(
             base_distribution=smoothed_powerlaw,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,
@@ -588,7 +588,7 @@ def create_smoothed_gaussians(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[TransformedDistribution]:
+) -> List[ExtendedSupportTransformedDistribution]:
     """Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
     and secondary mass. It includes the transformation to component masses.
 
@@ -603,14 +603,14 @@ def create_smoothed_gaussians(
 
     Returns
     -------
-    List[TransformedDistribution]
+    List[ExtendedSupportTransformedDistribution]
         list of SmoothedGaussianPrimaryMassRatio distributions
     """
     smoothed_gaussians_collection = create_smoothed_gaussians_raw(
         N, params, validate_args
     )
     smoothed_gaussians_collection = jtr.map(
-        lambda smoothed_gaussian: TransformedDistribution(
+        lambda smoothed_gaussian: ExtendedSupportTransformedDistribution(
             base_distribution=smoothed_gaussian,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,

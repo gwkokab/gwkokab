@@ -6,9 +6,10 @@ import functools as ft
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import pandas as pd
-from numpyro.distributions.distribution import DistributionLike, TransformedDistribution
+from numpyro.distributions.distribution import DistributionLike
 
 from gwkokab.models import SmoothedPowerlawAndPeak
+from gwkokab.models.utils import ExtendedSupportTransformedDistribution
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -44,7 +45,9 @@ def model(raw: bool, **params) -> DistributionLike:
     validate_args = params.pop("validate_args", True)
     _model = SmoothedPowerlawAndPeak(**params, validate_args=validate_args)
     if raw:
-        if isinstance(_model._component_distributions[0], TransformedDistribution):
+        if isinstance(
+            _model._component_distributions[0], ExtendedSupportTransformedDistribution
+        ):
             _model._component_distributions[0] = (
                 _model._component_distributions[0].marginal_distributions[0].base_dist
             )
@@ -52,7 +55,9 @@ def model(raw: bool, **params) -> DistributionLike:
             _model._component_distributions[0].marginal_distributions[0] = (
                 _model._component_distributions[0].marginal_distributions[0].base_dist
             )
-        if isinstance(_model._component_distributions[1], TransformedDistribution):
+        if isinstance(
+            _model._component_distributions[1], ExtendedSupportTransformedDistribution
+        ):
             _model._component_distributions[1] = (
                 _model._component_distributions[1].marginal_distributions[0].base_dist
             )
