@@ -161,6 +161,7 @@ def main() -> None:
         log_ref_priors = [d[..., -1] for d in data]
         data = [d[..., :-1] for d in data]
     else:
+        logger.info("Reading reference priors")
         log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
