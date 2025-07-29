@@ -19,6 +19,7 @@ from .models.utils import JointDistribution, ScaledMixture
 from .utils.tools import batch_and_remainder, error_if
 from .vts import (
     RealInjectionVolumeTimeSensitivity,
+    SemiAnalyticalRealInjectionVolumeTimeSensitivity,
     SyntheticInjectionVolumeTimeSensitivity,
     VolumeTimeSensitivityInterface,
 )
@@ -126,6 +127,7 @@ class PoissonMean(eqx.Module):
             (
                 RealInjectionVolumeTimeSensitivity,
                 SyntheticInjectionVolumeTimeSensitivity,
+                SemiAnalyticalRealInjectionVolumeTimeSensitivity,
             ),
         ):
             self.is_injection_based = True
