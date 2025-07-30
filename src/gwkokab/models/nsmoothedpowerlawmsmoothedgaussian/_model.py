@@ -12,7 +12,7 @@ from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIs
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
 from ..constraints import any_constraint
-from ..redshift import SimpleRedshiftPowerlaw
+from ..redshift import VolumetricPowerlawRedshift
 from ..utils import (
     combine_distributions,
     create_beta_distributions,
@@ -479,7 +479,7 @@ def SmoothedPowerlawAndPeak(
     if use_redshift:
         z_max = params["z_max"]
         kappa = params["kappa"]
-        powerlaw_z = SimpleRedshiftPowerlaw(
+        powerlaw_z = VolumetricPowerlawRedshift(
             z_max=z_max, kappa=kappa, validate_args=validate_args
         )
 
