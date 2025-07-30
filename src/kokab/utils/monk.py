@@ -232,6 +232,24 @@ class Monk(Guru):
         for key, value in duplicates.items():
             variables_index[key] = variables_index[value]
 
+        # TODO(Qazalbash): refactor logic for grouping variables and logging them into a
+        # function and use it for both Sage and Monk.
+        group_variables: dict[int, list[str]] = {}
+        for key, value in variables_index.items():  # type: ignore
+            group_variables[value] = group_variables.get(value, []) + [key]  # type: ignore
+
+        logger.debug(
+            "Number of recovering variables: {num_vars}", num_vars=len(group_variables)
+        )
+
+        for key, value in constants.items():  # type: ignore
+            logger.debug(
+                "Constant variable: {name} = {variable}", name=key, variable=value
+            )
+
+        for value in group_variables.values():  # type: ignore
+            logger.debug("Recovering variable: {variable}", variable=", ".join(value))
+
         priors = JointDistribution(*variables.values(), validate_args=True)
 
         write_json("constants.json", constants)
