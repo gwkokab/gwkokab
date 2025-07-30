@@ -6,6 +6,7 @@ import functools as ft
 from typing import Callable, Dict, List, Optional, Tuple
 
 import jax
+import optax
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
@@ -45,7 +46,7 @@ def analytical_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
     variables_index: Dict[str, int],
-    ERate_fn: Callable[[Distribution, Optional[int]], Array],
+    ERate_fn: Callable[[Distribution, Optional[int], dict[str, Array]], Array],
     redshift_index: Optional[int],
     means: List[Array],
     covariances: List[Array],
@@ -53,6 +54,9 @@ def analytical_likelihood(
     n_samples: int = 10_000,
     max_iter_mean: int = 10,
     max_iter_cov: int = 3,
+    n_vi_steps: int = 5,
+    learning_rate: float = 1e-2,
+    batch_size: int = 1_000,
 ) -> Callable[[Array, Array], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
@@ -69,6 +73,15 @@ def analytical_likelihood(
         \rho(\theta_{i,j},z_{i,j}\mid\Lambda,\kappa)
         \bigg>_{\theta_{i,j},z_{i,j}\sim\mathcal{G}(\theta,z|\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i)}
 
+
+    First we are optimizing the mean vector and covariance matrix of the multivariate
+    normal distribution that approximates the product of event distributions (also a
+    multivariate normal distribution) and phenomenological model distribution by
+    Importance Sampling and Moment Matching. After that, we perform Variational
+    Inference to optimize the mean vector of the multivariate normal distribution to
+    minimize the Reverse KL divergence between the product of event distributions and
+    the phenomenological model distribution.
+
     Parameters
     ----------
     dist_fn : Callable[..., Distribution]
@@ -77,7 +90,7 @@ def analytical_likelihood(
         priors for the model parameters
     variables_index : Dict[str, int]
         mapping of variable names to their indices in the input array
-    ERate_fn : Callable[[Distribution, Optional[int]], Array]
+    ERate_fn : Callable[[Distribution, Optional[int], dict[str, Array]], Array]
         function to compute the expected event rates
     redshift_index : Optional[int]
         index of the redshift variable in the input array, if applicable
@@ -96,6 +109,13 @@ def analytical_likelihood(
         Maximum number of iterations for the fitting process of the mean, by default 10
     max_iter_cov : int, optional
         Maximum number of iterations for the fitting process of the covariance, by default 3
+    n_vi_steps: int, optional
+        Number of steps for the variational inference optimization, by default 5
+    learning_rate : float, optional
+        Learning rate for the Adam optimizer used in the variational inference
+        optimization, by default 1e-2
+    batch_size : int, optional
+        Batch size for the sampling process, by default 1_000
 
     Returns
     -------
@@ -123,108 +143,220 @@ def analytical_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = ERate_fn(model_instance, redshift_index)
+        expected_rates = ERate_fn(dist_fn, redshift_index, mapped_params)
 
         event_mvn = MultivariateNormal(loc=mean_stack, covariance_matrix=cov_stack)
 
         rng_key = key
-        fit_mean = mean_stack
-        fit_cov = event_mvn.covariance_matrix
+        moment_matching_mean = mean_stack
+        moment_matching_cov = event_mvn.covariance_matrix
+
+        model_log_prob_vmap_fn = jax.vmap(
+            model_instance.log_prob, in_axes=(1,), out_axes=-1
+        )
+
+        normalized_weights_fn = lambda samples: jax.nn.softmax(
+            jnp.expand_dims(
+                model_log_prob_vmap_fn(samples) + event_mvn.log_prob(samples),
+                axis=-1,
+            ),
+            axis=0,
+        )
 
         @jax.jit
-        def scan_fit_mean_fn(
-            fit_mean_i: Array, key: PRNGKeyArray
+        def scan_moment_matching_mean_fn(
+            moment_matching_mean_i: Array, key: PRNGKeyArray
         ) -> Tuple[Array, None]:
-            fit_samples = _mvn_samples(
-                loc=fit_mean_i,
-                cov=fit_cov,
+            samples = _mvn_samples(
+                loc=moment_matching_mean_i,
+                cov=moment_matching_cov,
                 n_samples=1_000,
                 key=key,
             )
 
-            # weights = ρ(fit_samples | Λ, κ) * G(θ, z | μ_i, Σ_i))
-            log_weights = jnp.expand_dims(
-                jax.vmap(model_instance.log_prob, in_axes=(1,), out_axes=-1)(
-                    fit_samples
-                )
-                + event_mvn.log_prob(fit_samples),
-                axis=-1,
-            )
-            # Normalize weights
-            weights = jax.nn.softmax(log_weights, axis=0)
+            # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
+            weights = normalized_weights_fn(samples)
 
-            # μ_f = sum(weights * fit_samples)
-            new_fit_mean = jnp.sum(fit_samples * weights, axis=0)
+            # μ_f = sum(weights * samples)
+            new_fit_mean = jnp.sum(samples * weights, axis=0)
 
             return new_fit_mean, None
 
-        fit_mean, _ = jax.lax.scan(
-            scan_fit_mean_fn,  # type: ignore[arg-type]
-            fit_mean,
-            jrd.split(rng_key, max_iter_mean),
+        rng_key, subkey = jrd.split(rng_key)
+
+        moment_matching_mean, _ = jax.lax.scan(
+            scan_moment_matching_mean_fn,  # type: ignore[arg-type]
+            moment_matching_mean,
+            jrd.split(subkey, max_iter_mean),
             length=max_iter_mean,
         )
 
         @jax.jit
-        def scan_fit_cov_fn(fit_cov_i: Array, key: PRNGKeyArray) -> Tuple[Array, None]:
-            fit_samples = _mvn_samples(
-                loc=fit_mean,
-                cov=fit_cov_i,
+        def scan_moment_matching_cov_fn(
+            moment_matching_cov_i: Array, key: PRNGKeyArray
+        ) -> Tuple[Array, None]:
+            samples = _mvn_samples(
+                loc=moment_matching_mean,
+                cov=moment_matching_cov_i,
                 n_samples=1_000,
                 key=key,
             )
 
-            # weights = ρ(fit_samples | Λ, κ) * G(θ, z | μ_i, Σ_i))
-            log_weights = jnp.expand_dims(
-                jax.vmap(model_instance.log_prob, in_axes=(1,), out_axes=-1)(
-                    fit_samples
-                )
-                + event_mvn.log_prob(fit_samples),
-                axis=-1,
-            )
-            # Normalize weights
-            weights = jax.nn.softmax(log_weights, axis=0)
+            # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
+            weights = normalized_weights_fn(samples)
 
-            # Σ_f = sum(weights * (fit_samples - μ_f) * (fit_samples - μ_f).T)
-            centered = fit_samples - fit_mean
+            # Σ_f = sum(weights * (samples - μ_f) * (samples - μ_f).T)
+            centered = samples - moment_matching_mean
             new_fit_cov = jnp.einsum("sei,sej->eij", weights * centered, centered)
 
             return new_fit_cov, None
 
-        (rng_key,) = jrd.split(rng_key, 1)
-        fit_cov, _ = jax.lax.scan(
-            scan_fit_cov_fn,  # type: ignore[arg-type]
-            fit_cov,
-            jrd.split(rng_key, max_iter_cov),
+        rng_key, subkey = jrd.split(rng_key)
+        moment_matching_cov, _ = jax.lax.scan(
+            scan_moment_matching_cov_fn,  # type: ignore[arg-type]
+            moment_matching_cov,
+            jrd.split(subkey, max_iter_cov),
             length=max_iter_cov,
         )
+
+        @jax.jit
+        def loss_fn(mu: Array, cov: Array, key: PRNGKeyArray) -> Array:
+            """Compute Reverse KL divergence between the model and the fitted
+            multivariate normal distribution.
+
+            Parameters
+            ----------
+            mu : Array
+                mean vector of the multivariate normal distribution
+            cov : Array
+                covariance matrix of the multivariate normal distribution
+            key : PRNGKeyArray
+                random key for sampling
+
+            Returns
+            -------
+            Array
+                loss value
+            """
+            fit_dist = MultivariateNormal(loc=mu, covariance_matrix=cov)
+            model_samples = model_instance.sample(key=key, sample_shape=(1_000,))
+
+            log_p = model_instance.log_prob(model_samples)
+
+            return fit_dist.entropy() - jnp.mean(
+                jnp.exp(fit_dist.log_prob(model_samples) - log_p) * log_p
+            )
+
+        @jax.jit
+        def step(
+            mu: Array,
+            cov: Array,
+            opt_state: optax.OptState,
+            key: PRNGKeyArray,
+        ) -> Tuple[Array, optax.OptState]:
+            """Perform a single optimization step to update the mean vector to minimize
+            the loss function.
+
+            Parameters
+            ----------
+            mu : Array
+                mean vector of the multivariate normal distribution
+            cov : Array
+                covariance matrix of the multivariate normal distribution
+            opt_state : optax.OptState
+                optimizer state
+            key : PRNGKeyArray
+                random key for sampling
+
+            Returns
+            -------
+            Tuple[Array, optax.OptState]
+                updated mean vector and optimizer state
+            """
+            keys = jrd.split(key, n_events)
+            _, grads = jax.vmap(jax.value_and_grad(loss_fn), in_axes=(0, 0, 0))(
+                mu, cov, keys
+            )
+            updates, opt_state = opt.update(grads, opt_state)
+            mu = optax.apply_updates(mu, updates)
+            return mu, opt_state
+
+        @jax.jit
+        def variational_inference_fn(
+            carry: Tuple[Array, Array, optax.OptState, Array], _: Optional[Array]
+        ) -> Tuple[Tuple[Array, Array, optax.OptState, Array], None]:
+            """Perform a single step of the gradient descent optimization to update the
+            mean vector and covariance matrix.
+
+            Parameters
+            ----------
+            carry : Tuple[Array, Array, optax.OptState, Array]
+                carry tuple containing the current mean vector, covariance matrix,
+                optimizer state, and random key
+            _ : Optional[Array]
+                unused placeholder for the scan function
+
+            Returns
+            -------
+            Tuple[Tuple[Array, Array, optax.OptState, Array], None]
+                updated mean vector, unchanged covariance matrix, optimizer state, and
+                random key
+            """
+            mu, cov, opt_state, key = carry
+            key, subkey = jrd.split(key)
+            mu, opt_state = step(mu, cov, opt_state, subkey)
+            return (mu, cov, opt_state, key), None
+
+        vi_mean = moment_matching_mean
+        opt = optax.adam(learning_rate=learning_rate)
+        opt_state = opt.init(vi_mean)
+
+        rng_key, subkey = jrd.split(rng_key)
+
+        (vi_mean, _, _, _), _ = jax.lax.scan(
+            variational_inference_fn,
+            (vi_mean, moment_matching_cov, opt_state, subkey),
+            length=n_vi_steps,
+        )
+
+        fit_mean = jnp.where(jnp.isnan(vi_mean), moment_matching_mean, vi_mean)
+        fit_cov = moment_matching_cov
 
         @jax.jit
         def scan_fn(
             carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]
         ) -> Tuple[Array, None]:
-            mean, cov, fit_mean, fit_cov, rng_key = loop_data
+            mean, cov, fit_mean_i, fit_cov_i, rng_key_i = loop_data
 
             # event_mvn = G(θ, z | μ_i, Σ_i)
             event_mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
 
             # fit_mvn = G(θ, z | μ_f, Σ_f)
-            fit_mvn = MultivariateNormal(loc=fit_mean, covariance_matrix=fit_cov)
+            fit_mvn = MultivariateNormal(loc=fit_mean_i, covariance_matrix=fit_cov_i)
+
             # data ~ G(θ, z | μ_f, Σ_f)
-            data = fit_mvn.sample(rng_key, (n_samples,))
+            data = fit_mvn.sample(rng_key_i, (n_samples,))
+
+            # log ρ(data | Λ, κ)
+            model_instance_log_prob = jax.lax.map(
+                model_instance.log_prob, data, batch_size=batch_size
+            )
+            # log G(θ, z | μ_i, Σ_i)
+            event_mvn_log_prob = jax.lax.map(
+                event_mvn.log_prob, data, batch_size=batch_size
+            )
+            # log G(θ, z | μ_f, Σ_i)
+            fit_mvn_log_prob = jax.lax.map(
+                fit_mvn.log_prob, data, batch_size=batch_size
+            )
 
             # log_prob = log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i) - log G(θ, z | μ_f, Σ_i)
-            log_prob = (
-                event_mvn.log_prob(data)
-                + model_instance.log_prob(data)
-                - fit_mvn.log_prob(data)
-            )
+            log_prob = model_instance_log_prob + event_mvn_log_prob - fit_mvn_log_prob
             log_likelihood = jax.nn.logsumexp(
                 log_prob, axis=-1, where=(~jnp.isneginf(log_prob))
             )
             return carry + log_likelihood, None
 
-        (rng_key,) = jrd.split(rng_key, 1)
         keys = jrd.split(rng_key, (n_events,))
 
         total_log_likelihood, _ = jax.lax.scan(

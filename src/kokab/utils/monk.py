@@ -208,7 +208,15 @@ class Monk(Guru):
         """
         return {}
 
-    def run(self, n_samples: int, max_iter_mean: int, max_iter_cov: int) -> None:
+    def run(
+        self,
+        n_samples: int,
+        max_iter_mean: int,
+        max_iter_cov: int,
+        n_vi_steps: int,
+        learning_rate: float,
+        batch_size: int,
+    ) -> None:
         """Runs the Monk analysis."""
         parameters = self.parameters
         if "redshift" in parameters:
@@ -223,6 +231,24 @@ class Monk(Guru):
         }
         for key, value in duplicates.items():
             variables_index[key] = variables_index[value]
+
+        # TODO(Qazalbash): refactor logic for grouping variables and logging them into a
+        # function and use it for both Sage and Monk.
+        group_variables: dict[int, list[str]] = {}
+        for key, value in variables_index.items():  # type: ignore
+            group_variables[value] = group_variables.get(value, []) + [key]  # type: ignore
+
+        logger.debug(
+            "Number of recovering variables: {num_vars}", num_vars=len(group_variables)
+        )
+
+        for key, value in constants.items():  # type: ignore
+            logger.debug(
+                "Constant variable: {name} = {variable}", name=key, variable=value
+            )
+
+        for value in group_variables.values():  # type: ignore
+            logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
         priors = JointDistribution(*variables.values(), validate_args=True)
 
@@ -267,6 +293,9 @@ class Monk(Guru):
             n_samples=n_samples,
             max_iter_mean=max_iter_mean,
             max_iter_cov=max_iter_cov,
+            n_vi_steps=n_vi_steps,
+            learning_rate=learning_rate,
+            batch_size=batch_size,
         )
 
         handler = flowMChandler(
@@ -332,6 +361,24 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--max-iter-cov",
         help="Maximum number of iterations for the fitting process of the covariance, by default 3",
         default=3,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--n-vi-steps",
+        help="Number of steps for the variational inference",
+        default=5,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--learning-rate",
+        help="Learning rate for the variational inference, by default 0.01",
+        default=0.01,
+        type=float,
+    )
+    likelihood_group.add_argument(
+        "--batch-size",
+        help="Batch size for the `jax.lax.map` used in the likelihood computation, by default 1000",
+        default=1_000,
         type=int,
     )
 
