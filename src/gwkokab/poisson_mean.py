@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Dict, List, Literal, Optional, Tuple, Union
+from typing import Dict, Final, List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
 import jax
+import numpy as np
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
@@ -23,6 +24,10 @@ from .vts import (
     SyntheticInjectionVolumeTimeSensitivity,
     VolumeTimeSensitivityInterface,
 )
+
+
+LN_4_PI: Final[float] = np.log(4 * np.pi)
+LN_MPC3_TO_GPC3: Final[float] = np.log(Mpc3_to_Gpc3)
 
 
 class PoissonMean(eqx.Module):
@@ -292,7 +297,10 @@ class PoissonMean(eqx.Module):
                 samples, redshift_index, axis=-1, keepdims=False
             )
             log_prob += (
-                PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z) + jnp.log(Mpc3_to_Gpc3)
+                LN_4_PI
+                + LN_MPC3_TO_GPC3
+                + PLANCK_2015_Cosmology.logdVcdz(z)
+                - jnp.log1p(z)
             )
 
             partial_logsumexp = jnn.logsumexp(
@@ -389,9 +397,10 @@ class PoissonMean(eqx.Module):
                                 samples, redshift_index, axis=-1, keepdims=False
                             )
                             per_sample_log_estimated_rates += (
-                                PLANCK_2015_Cosmology.logdVcdz(z)
+                                LN_4_PI
+                                + LN_MPC3_TO_GPC3
+                                + PLANCK_2015_Cosmology.logdVcdz(z)
                                 - jnp.log1p(z)
-                                + jnp.log(Mpc3_to_Gpc3)
                                 + m_dist.log_norm()
                             )
                             break
@@ -406,8 +415,9 @@ class PoissonMean(eqx.Module):
                         samples, redshift_index, axis=-1, keepdims=False
                     )
                     per_sample_log_estimated_rates += (
-                        PLANCK_2015_Cosmology.logdVcdz(z)
-                        + jnp.log(Mpc3_to_Gpc3)
+                        LN_4_PI
+                        + LN_MPC3_TO_GPC3
+                        + PLANCK_2015_Cosmology.logdVcdz(z)
                         - jnp.log1p(z)
                     )
 
