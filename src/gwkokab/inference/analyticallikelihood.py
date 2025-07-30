@@ -151,6 +151,18 @@ def analytical_likelihood(
         moment_matching_mean = mean_stack
         moment_matching_cov = event_mvn.covariance_matrix
 
+        model_log_prob_vmap_fn = jax.vmap(
+            model_instance.log_prob, in_axes=(1,), out_axes=-1
+        )
+
+        normalized_weights_fn = lambda samples: jax.nn.softmax(
+            jnp.expand_dims(
+                model_log_prob_vmap_fn(samples) + event_mvn.log_prob(samples),
+                axis=-1,
+            ),
+            axis=0,
+        )
+
         @jax.jit
         def scan_moment_matching_mean_fn(
             moment_matching_mean_i: Array, key: PRNGKeyArray
@@ -162,14 +174,8 @@ def analytical_likelihood(
                 key=key,
             )
 
-            # weights = ρ(samples | Λ, κ) * G(θ, z | μ_i, Σ_i))
-            log_weights = jnp.expand_dims(
-                jax.vmap(model_instance.log_prob, in_axes=(1,), out_axes=-1)(samples)
-                + event_mvn.log_prob(samples),
-                axis=-1,
-            )
-            # Normalize weights
-            weights = jax.nn.softmax(log_weights, axis=0)
+            # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
+            weights = normalized_weights_fn(samples)
 
             # μ_f = sum(weights * samples)
             new_fit_mean = jnp.sum(samples * weights, axis=0)
@@ -196,14 +202,8 @@ def analytical_likelihood(
                 key=key,
             )
 
-            # weights = ρ(samples | Λ, κ) * G(θ, z | μ_i, Σ_i))
-            log_weights = jnp.expand_dims(
-                jax.vmap(model_instance.log_prob, in_axes=(1,), out_axes=-1)(samples)
-                + event_mvn.log_prob(samples),
-                axis=-1,
-            )
-            # Normalize weights
-            weights = jax.nn.softmax(log_weights, axis=0)
+            # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
+            weights = normalized_weights_fn(samples)
 
             # Σ_f = sum(weights * (samples - μ_f) * (samples - μ_f).T)
             centered = samples - moment_matching_mean
@@ -313,7 +313,7 @@ def analytical_likelihood(
 
         rng_key, subkey = jrd.split(rng_key)
 
-        (vi_mean, _, opt_state, _), _ = jax.lax.scan(
+        (vi_mean, _, _, _), _ = jax.lax.scan(
             variational_inference_fn,
             (vi_mean, moment_matching_cov, opt_state, subkey),
             length=n_vi_steps,
@@ -326,15 +326,16 @@ def analytical_likelihood(
         def scan_fn(
             carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]
         ) -> Tuple[Array, None]:
-            mean, cov, fit_mean_i, fit_cov_i, rng_key = loop_data
+            mean, cov, fit_mean_i, fit_cov_i, rng_key_i = loop_data
 
             # event_mvn = G(θ, z | μ_i, Σ_i)
             event_mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
 
             # fit_mvn = G(θ, z | μ_f, Σ_f)
             fit_mvn = MultivariateNormal(loc=fit_mean_i, covariance_matrix=fit_cov_i)
+
             # data ~ G(θ, z | μ_f, Σ_f)
-            data = fit_mvn.sample(rng_key, (n_samples,))
+            data = fit_mvn.sample(rng_key_i, (n_samples,))
 
             # log ρ(data | Λ, κ)
             model_instance_log_prob = jax.lax.map(
