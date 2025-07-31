@@ -17,7 +17,7 @@ from ._utils import load_model
 
 
 class NeuralNetVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
-    neural_vt_model: eqx.nn.MLP = eqx.field(init=False)
+    neural_vt_model: eqx.nn.MLP
     """The neural volume-time sensitivity model."""
 
     def __init__(
