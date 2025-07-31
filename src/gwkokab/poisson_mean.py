@@ -74,20 +74,16 @@ class PoissonMean(eqx.Module):
     improve the performance of the importance sampling.
     """
 
-    is_injection_based: bool = eqx.field(init=False, default=False, static=True)
+    is_injection_based: bool = eqx.field(default=False, static=True)
     """Flag to check if the class is injection based or not."""
-    key: PRNGKeyArray = eqx.field(init=False)
-    logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(
-        init=False, default=None
-    )
+    key: PRNGKeyArray
+    logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(default=None)
     num_samples_per_component: Optional[List[int]] = eqx.field(
-        init=False, static=True, default=None
+        static=True, default=None
     )
-    proposal_log_weights_and_samples: Tuple[Optional[Tuple[Array, Array]], ...] = (
-        eqx.field(init=False)
-    )
-    time_scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
-    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(init=False, default=None)
+    proposal_log_weights_and_samples: Tuple[Optional[Tuple[Array, Array]], ...]
+    time_scale: Union[int, float, Array] = eqx.field(default=1.0)
+    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(default=None)
 
     def __init__(
         self,
