@@ -10,6 +10,7 @@ from jax.scipy.integrate import trapezoid
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
+from ...constants import Mpc3_to_Gpc3
 from ...cosmology import PLANCK_2015_Cosmology
 from ..utils import (
     doubly_truncated_power_law_cdf,
@@ -69,7 +70,11 @@ class VolumetricPowerlawRedshift(Distribution):
         logdVcdz = PLANCK_2015_Cosmology.logdVcdz(z)
         log_time_dilation = -jnp.log1p(z)
         log_differential_spacetime_volume_val = (
-            log_time_dilation + logdVcdz + self.log_psi_of_z(z)
+            jnp.log(4.0 * jnp.pi)
+            + jnp.log(Mpc3_to_Gpc3)
+            + log_time_dilation
+            + logdVcdz
+            + self.log_psi_of_z(z)
         )
         return log_differential_spacetime_volume_val
 
