@@ -279,6 +279,15 @@ class PoissonMean(eqx.Module):
         assert redshift_index is not None, (
             "Redshift index must be provided for injection based sampling method."
         )
+        flag = False
+        for comp_dist in model_instance.component_distributions:
+            if isinstance(comp_dist, JointDistribution):
+                for m_dist in comp_dist.marginal_distributions:
+                    if isinstance(m_dist, SimpleRedshiftPowerlaw):
+                        flag = True
+                        break
+            if flag:
+                break
 
         def _f(_: None, data: Tuple[Array, Array]) -> Tuple[None, Array]:
             log_weights, samples = data
@@ -289,16 +298,17 @@ class PoissonMean(eqx.Module):
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 
-            z = jax.lax.dynamic_index_in_dim(
-                samples, redshift_index, axis=-1, keepdims=False
-            )
+            if flag:
+                z = jax.lax.dynamic_index_in_dim(
+                    samples, redshift_index, axis=-1, keepdims=False
+                )
 
-            log_prob += (
-                LN_4_PI
-                + LN_MPC3_TO_GPC3
-                + PLANCK_2015_Cosmology.logdVcdz(z)
-                - jnp.log1p(z)
-            )
+                log_prob += (
+                    LN_4_PI
+                    + LN_MPC3_TO_GPC3
+                    + PLANCK_2015_Cosmology.logdVcdz(z)
+                    - jnp.log1p(z)
+                )
 
             partial_logsumexp = jnn.logsumexp(
                 log_prob, where=~jnp.isneginf(log_prob), axis=-1
