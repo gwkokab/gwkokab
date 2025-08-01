@@ -41,7 +41,7 @@ class PopulationFactory:
         model_params: dict[str, Array],
         parameters: List[str],
         log_selection_fn: Optional[Callable[[Array], Array]],
-        ERate_fn: Callable[[ScaledMixture, Optional[int], dict[str, Array]], Array],
+        ERate_fn: Callable[[ScaledMixture], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
     ) -> None:
@@ -75,19 +75,12 @@ class PopulationFactory:
         ValueError
             If parameters are not provided.
         """
-        self.model_fn = model_fn
         self.model: ScaledMixture = model_fn(**model_params)
         self.parameters = parameters
         self.log_selection_fn = log_selection_fn
         self.ERate_fn = ERate_fn
         self.num_realizations = num_realizations
         self.error_size = error_size
-        self.model_params = model_params
-
-        if "redshift" in parameters:
-            self.redshift_index: Optional[int] = parameters.index("redshift")
-        else:
-            self.redshift_index = None
 
         self.event_filename = ensure_dat_extension(self.event_filename)
         self.injection_filename = ensure_dat_extension(self.injection_filename)
@@ -129,7 +122,7 @@ class PopulationFactory:
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
-        exp_rate = self.ERate_fn(self.model_fn, self.redshift_index, self.model_params)
+        exp_rate = self.ERate_fn(self.model)
         logger.debug(f"Expected rate for the population is {exp_rate}")
         size = int(jrd.poisson(poisson_key, exp_rate))
         logger.debug(f"Population size is {size}")

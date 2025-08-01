@@ -21,11 +21,10 @@ __all__ = ["poisson_likelihood"]
 
 
 def poisson_likelihood(
-    parameters_name: List[str],
     dist_builder: Bake,
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
-    ERate_fn: Callable[[Distribution, Optional[int], dict[str, Array]], Array],
+    ERate_fn: Callable[[Distribution], Array],
     where_fns: Optional[List[Callable[..., Array]]] = None,
     n_buckets: Optional[int] = None,
     threshold: float = 3.0,
@@ -62,10 +61,6 @@ def poisson_likelihood(
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
-    if "redshift" in parameters_name:
-        redshift_index = parameters_name.index("redshift")
-    else:
-        redshift_index = None
     dummy_model = dist_builder.get_dummy()
     warn_if(
         not isinstance(dummy_model, ScaledMixture),
@@ -132,9 +127,7 @@ def poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = jax.block_until_ready(
-            ERate_fn(dist_fn, redshift_index, mapped_params)
-        )
+        expected_rates = jax.block_until_ready(ERate_fn(model_instance))
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]

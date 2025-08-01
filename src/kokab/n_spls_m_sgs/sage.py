@@ -350,7 +350,6 @@ def main() -> None:
         log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
-        parameters_name=parameters_name,
         dist_builder=model,
         data=data,
         log_ref_priors=log_ref_priors,
