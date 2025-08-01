@@ -147,7 +147,7 @@ class VolumetricPowerlawRedshift(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.log_differential_spacetime_volume(value) - self.log_norm()
+        return self.log_differential_spacetime_volume(value)
 
 
 class SimpleRedshiftPowerlaw(Distribution):
@@ -242,4 +242,4 @@ class SimpleRedshiftPowerlaw(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.kappa * jnp.log1p(value) - self.log_norm()
+        return self.kappa * jnp.log1p(value)
