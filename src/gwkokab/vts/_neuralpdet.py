@@ -15,15 +15,13 @@ from ._utils import load_model
 
 
 class NeuralNetProbabilityOfDetection(eqx.Module):
-    shuffle_indices: Optional[Sequence[int]] = eqx.field(
-        init=False, static=True, default=None
-    )
+    shuffle_indices: Optional[Sequence[int]] = eqx.field(static=True, default=None)
     """The indices to shuffle the input to the model."""
-    batch_size: Optional[int] = eqx.field(init=False, static=True, default=None)
+    batch_size: Optional[int] = eqx.field(static=True, default=None)
     """The batch size used by :func:`jax.lax.map` in mapped functions."""
-    neural_vt_model: eqx.nn.MLP = eqx.field(init=False)
+    neural_vt_model: eqx.nn.MLP
     """The neural volume-time sensitivity model."""
-    parameter_ranges: Optional[Dict[str, Union[int, float]]] = eqx.field(init=False)
+    parameter_ranges: Optional[Dict[str, Union[int, float]]]
     """Ranges of the parameters expected by the model."""
 
     def __init__(

@@ -5,7 +5,6 @@
 from collections.abc import Sequence
 from typing import Dict, Optional, Union
 
-import equinox as eqx
 import h5py
 import jax
 import numpy as np
@@ -35,13 +34,13 @@ _PARAM_MAPPING = {
 
 
 class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
-    injections: Array = eqx.field(init=False)
+    injections: Array
     """Array of real injections of shape (n_injections, n_features)."""
-    sampling_prob: Array = eqx.field(init=False)
+    sampling_prob: Array
     """Array of sampling probabilities of shape (n_injections,)."""
-    analysis_time_years: float = eqx.field(init=False)
+    analysis_time_years: float
     """Analysis time in years."""
-    total_injections: int = eqx.field(init=False)
+    total_injections: int
     """Total number of injections.
 
     This includes both accepted and rejected injections.

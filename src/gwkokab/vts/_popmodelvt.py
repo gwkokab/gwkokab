@@ -55,9 +55,9 @@ def _check_and_get(name: str, f: h5py.File) -> Array:
 
 
 class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
-    logVT_interpolator: RegularGridInterpolator = eqx.field(init=False)
+    logVT_interpolator: RegularGridInterpolator
     """Interpolator for the log volume time sensitivity function."""
-    m_min: float = eqx.field(converter=float, init=False, static=True)
+    m_min: float = eqx.field(converter=float, static=True)
     """Minimum mass."""
 
     def __init__(
@@ -394,9 +394,9 @@ _correction_bases_aligned_spin = {
 
 
 class PopModelsCalibratedVolumeTimeSensitivity(PopModelsVolumeTimeSensitivity):
-    coeffs: Array = eqx.field(converter=jnp.asarray, init=False)
+    coeffs: Array = eqx.field(converter=jnp.asarray)
     """Coefficients for the basis functions."""
-    basis: Sequence[Callable[..., float | Array]] = eqx.field(init=False)
+    basis: Sequence[Callable[..., float | Array]]
     """Basis functions to use for the correction."""
 
     def __init__(
