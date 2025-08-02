@@ -347,10 +347,7 @@ class PoissonMean(eqx.Module):
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
                 samples = component_dist.sample(self.key, (num_samples,))
-                log_rate_i = jax.lax.dynamic_index_in_dim(
-                    model.log_scales, index=i, axis=-1, keepdims=False
-                )
-                per_sample_log_estimated_rates = log_rate_i + logVT_fn(samples)
+                per_sample_log_estimated_rates = logVT_fn(samples)
                 if isinstance(component_dist, JointDistribution):
                     for m_dist in component_dist.marginal_distributions:
                         if isinstance(m_dist, PowerlawRedshift):
@@ -363,11 +360,18 @@ class PoissonMean(eqx.Module):
                 )
                 per_sample_log_estimated_rates = log_weights + component_log_prob
 
-            log_estimated_rate_i = jnn.logsumexp(
-                per_sample_log_estimated_rates,
-                where=~jnp.isneginf(per_sample_log_estimated_rates),
-                axis=-1,
-            ) - jnp.log(num_samples)
+            log_rate_i = jax.lax.dynamic_index_in_dim(
+                model.log_scales, index=i, axis=-1, keepdims=False
+            )
+            log_estimated_rate_i = (
+                log_rate_i
+                - jnp.log(num_samples)
+                + jnn.logsumexp(
+                    per_sample_log_estimated_rates,
+                    where=~jnp.isneginf(per_sample_log_estimated_rates),
+                    axis=-1,
+                )
+            )
 
             log_estimated_rate = jnp.logaddexp(log_estimated_rate, log_estimated_rate_i)
 
