@@ -17,6 +17,7 @@ from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
 from ..models.wrappers import ModelRegistry
+from ..poisson_mean import PoissonMean
 from ..utils.tools import error_if
 from ._utils import ensure_dat_extension
 
@@ -41,7 +42,7 @@ class PopulationFactory:
         model_params: dict[str, Array],
         parameters: List[str],
         log_selection_fn: Optional[Callable[[Array], Array]],
-        ERate_fn: Callable[[ScaledMixture], Array],
+        ERate_obj: PoissonMean,
         num_realizations: int = 5,
         error_size: int = 2_000,
     ) -> None:
@@ -78,7 +79,7 @@ class PopulationFactory:
         self.model: ScaledMixture = model_fn(**model_params)
         self.parameters = parameters
         self.log_selection_fn = log_selection_fn
-        self.ERate_fn = ERate_fn
+        self.ERate_fn = ERate_obj
         self.num_realizations = num_realizations
         self.error_size = error_size
 

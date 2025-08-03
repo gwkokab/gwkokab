@@ -125,7 +125,7 @@ def main() -> None:
         model_params=model_param,
         parameters=model_parameters,
         log_selection_fn=log_selection_fn,
-        ERate_fn=erate_estimator,
+        ERate_obj=erate_estimator,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
     )
