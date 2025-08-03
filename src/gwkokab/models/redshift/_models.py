@@ -96,7 +96,7 @@ class PowerlawRedshift(Distribution):
             Redshift samples.
         """
         u = jrd.uniform(key, shape=sample_shape + self.batch_shape)
-        z_grid = jnp.linspace(0.0, self.z_max, 2500)
+        z_grid = jnp.linspace(0.0, self.z_max, 10_000)
         pdfgrid = jnp.exp(self.log_differential_spacetime_volume(z_grid))
         norm = trapezoid(pdfgrid, z_grid)
         pdfgrid /= norm
@@ -137,4 +137,4 @@ class PowerlawRedshift(Distribution):
         ArrayLike
             Log-probability values.
         """
-        return self.log_psi_of_z(value)
+        return self.log_differential_spacetime_volume(value)

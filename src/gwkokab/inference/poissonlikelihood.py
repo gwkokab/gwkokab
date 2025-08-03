@@ -12,6 +12,7 @@ from loguru import logger
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
+from ..poisson_mean import PoissonMean
 from ..utils.tools import warn_if
 from .bake import Bake
 from .jenks import pad_and_stack
@@ -21,11 +22,10 @@ __all__ = ["poisson_likelihood"]
 
 
 def poisson_likelihood(
-    parameters_name: List[str],
     dist_builder: Bake,
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
-    ERate_fn: Callable[[Distribution, Optional[int], dict[str, Array]], Array],
+    ERate_obj: PoissonMean,
     where_fns: Optional[List[Callable[..., Array]]] = None,
     n_buckets: Optional[int] = None,
     threshold: float = 3.0,
@@ -62,18 +62,16 @@ def poisson_likelihood(
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
-    if "redshift" in parameters_name:
-        redshift_index = parameters_name.index("redshift")
-    else:
-        redshift_index = None
     dummy_model = dist_builder.get_dummy()
     warn_if(
         not isinstance(dummy_model, ScaledMixture),
         msg="The model provided is not a ScaledMixture. "
         "Rate estimation will therefore be skipped.",
     )
-    sum_log_size = sum([jnp.log(d.shape[0]) for d in data])
+    n_events = len(data)
+    sum_log_size = sum([np.log(d.shape[0]) for d in data])
     log_constants = -sum_log_size  # -Σ log(M_i)
+    log_constants += n_events * np.log(ERate_obj.time_scale)
 
     _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
         data, log_ref_priors, n_buckets=n_buckets, threshold=threshold
@@ -132,9 +130,7 @@ def poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = jax.block_until_ready(
-            ERate_fn(dist_fn, redshift_index, mapped_params)
-        )
+        expected_rates = jax.block_until_ready(ERate_obj(model_instance))
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
@@ -148,11 +144,14 @@ def poisson_likelihood(
 
             # log p(ω|data_n)
             model_log_prob = jax.lax.map(
-                model_instance.log_prob, safe_data, batch_size=1_000
+                model_instance.log_prob,
+                safe_data,
+                batch_size=1_000,  # TODO(Qazalbash): add parameter to control batch size
             )
+            safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
 
             # log p(ω|data_n) - log π_n
-            log_prob: Array = model_log_prob - safe_log_ref_prior
+            log_prob: Array = safe_model_log_prob - safe_log_ref_prior
             log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
 
             # log Σ exp (log p(ω|data_n) - log π_n)
@@ -163,23 +162,22 @@ def poisson_likelihood(
             )
             return carry + log_prob_sum, None
 
-        total_log_likelihood = jnp.zeros(())
+        total_log_likelihood = log_constants  # - Σ log(M_i)
         # Σ log Σ exp (log p(ω|data_n) - log π_n)
         for batched_data, batched_log_ref_priors, batched_mask in zip(
             data_group, log_ref_priors_group, masks_group
         ):
-            _total_log_likelihood, _ = jax.lax.scan(
+            total_log_likelihood, _ = jax.lax.scan(
                 single_event_fn,  # type: ignore
-                jnp.zeros(()),
+                total_log_likelihood,
                 (batched_data, batched_log_ref_priors, batched_mask),
             )
-            total_log_likelihood += _total_log_likelihood
 
         total_log_likelihood = jax.block_until_ready(total_log_likelihood)
 
         log_prior = priors.log_prob(x)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
-        log_likelihood = total_log_likelihood - expected_rates + log_constants
+        log_likelihood = total_log_likelihood - expected_rates
         # log p(ω|data) = log π(ω) + log L(ω)
         log_posterior = log_prior + log_likelihood
 

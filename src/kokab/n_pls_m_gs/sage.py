@@ -474,11 +474,10 @@ def main() -> None:
         log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
-        parameters_name=parameters_name,
         dist_builder=model,
         data=data,
         log_ref_priors=log_ref_priors,
-        ERate_fn=erate_estimator.__call__,
+        ERate_obj=erate_estimator,
         where_fns=None if len(where_fns) == 0 else where_fns,
         n_buckets=args.n_buckets,
         threshold=args.threshold,

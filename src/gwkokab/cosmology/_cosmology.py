@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import quadax
 from jaxtyping import ArrayLike
 
-from gwkokab.constants import C, DEFAULT_DZ
+from gwkokab.constants import SPEED_OF_LIGHT
 
 
 class Cosmology(eqx.Module):
@@ -30,7 +30,7 @@ class Cosmology(eqx.Module):
         omega_radiation: ArrayLike,
         omega_lambda: ArrayLike,
         max_z: float = 4.0,
-        dz: float = DEFAULT_DZ,
+        dz: float = 1e-3,
     ) -> None:
         """Initialize the cosmology with given parameters.
 
@@ -80,12 +80,17 @@ class Cosmology(eqx.Module):
         )
 
     def dDcdz(self, z: ArrayLike) -> ArrayLike:
-        return (C / self._Ho) / self.z_to_E(z)
+        return (SPEED_OF_LIGHT / self._Ho) / self.z_to_E(z)
 
     def logdVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
         if Dc is None:
             Dc = self.z_to_Dc(z)
-        return jnp.log(4 * jnp.pi) + 2 * jnp.log(Dc) + jnp.log(self.dDcdz(z))  # Mpc³
+        return (
+            jnp.log(4.0 * jnp.pi)  # Conversion of steradians
+            - 9.0 * jnp.log(10.0)  # Conversion from Mpc^3 to Gpc^3
+            + 2 * jnp.log(Dc)
+            + jnp.log(self.dDcdz(z))
+        )
 
     def dVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
         return jnp.exp(self.logdVcdz(z, Dc=Dc))
