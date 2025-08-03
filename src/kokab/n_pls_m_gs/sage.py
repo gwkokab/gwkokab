@@ -477,7 +477,7 @@ def main() -> None:
         dist_builder=model,
         data=data,
         log_ref_priors=log_ref_priors,
-        ERate_fn=erate_estimator.__call__,
+        ERate_obj=erate_estimator,
         where_fns=None if len(where_fns) == 0 else where_fns,
         n_buckets=args.n_buckets,
         threshold=args.threshold,

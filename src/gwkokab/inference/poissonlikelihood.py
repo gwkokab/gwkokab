@@ -12,6 +12,7 @@ from loguru import logger
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
+from ..poisson_mean import PoissonMean
 from ..utils.tools import warn_if
 from .bake import Bake
 from .jenks import pad_and_stack
@@ -24,7 +25,7 @@ def poisson_likelihood(
     dist_builder: Bake,
     data: List[np.ndarray],
     log_ref_priors: List[np.ndarray],
-    ERate_fn: Callable[[Distribution], Array],
+    ERate_obj: PoissonMean,
     where_fns: Optional[List[Callable[..., Array]]] = None,
     n_buckets: Optional[int] = None,
     threshold: float = 3.0,
@@ -67,8 +68,10 @@ def poisson_likelihood(
         msg="The model provided is not a ScaledMixture. "
         "Rate estimation will therefore be skipped.",
     )
+    n_events = len(data)
     sum_log_size = sum([np.log(d.shape[0]) for d in data])
     log_constants = -sum_log_size  # -Σ log(M_i)
+    log_constants += n_events * np.log(ERate_obj.time_scale)
 
     _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
         data, log_ref_priors, n_buckets=n_buckets, threshold=threshold
@@ -127,7 +130,7 @@ def poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = jax.block_until_ready(ERate_fn(model_instance))
+        expected_rates = jax.block_until_ready(ERate_obj(model_instance))
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
