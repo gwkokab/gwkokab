@@ -132,6 +132,48 @@ def _save_data_from_sampler(
         "Local acceptance rates saved to {out_dir}/local_accs.dat", out_dir=out_dir
     )
 
+    for n_chain in range(n_chains):
+        np.savetxt(
+            rf"{out_dir}/global_accs_{n_chain}.dat",
+            np.column_stack(
+                _same_length_arrays(
+                    max(
+                        train_global_accs[n_chain, :].shape[0],
+                        prod_global_accs[n_chain, :].shape[0],
+                    ),
+                    train_global_accs[n_chain, :],
+                    prod_global_accs[n_chain, :],
+                )
+            ),
+            header="train prod",
+            comments="#",
+        )
+        logger.info(
+            "Saving chain {n_chain} global acceptance rates to {out_dir}/global_accs_{n_chain}.dat",
+            n_chain=n_chain,
+            out_dir=out_dir,
+        )
+        np.savetxt(
+            rf"{out_dir}/local_accs_{n_chain}.dat",
+            np.column_stack(
+                _same_length_arrays(
+                    max(
+                        train_local_accs[n_chain, :].shape[0],
+                        prod_local_accs[n_chain, :].shape[0],
+                    ),
+                    train_local_accs[n_chain, :],
+                    prod_local_accs[n_chain, :],
+                )
+            ),
+            header="train prod",
+            comments="#",
+        )
+        logger.info(
+            "Saving chain {n_chain} local acceptance rates to {out_dir}/local_accs_{n_chain}.dat",
+            n_chain=n_chain,
+            out_dir=out_dir,
+        )
+
     np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
 
     for i in range(n_chains):
