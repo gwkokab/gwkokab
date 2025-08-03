@@ -26,7 +26,6 @@ from ..utils.kernel import log_planck_taper_window
 from .constraints import mass_ratio_mass_sandwich, mass_sandwich
 from .utils import (
     doubly_truncated_power_law_icdf,
-    doubly_truncated_power_law_log_norm_constant,
     doubly_truncated_power_law_log_prob,
     JointDistribution,
 )
@@ -109,13 +108,11 @@ class PowerlawPrimaryMassRatio(Distribution):
         log_prob_m1 = doubly_truncated_power_law_log_prob(
             x=m1, alpha=-self.alpha, low=self.mmin, high=self.mmax
         )
-        log_prob_q = self.beta * jnp.log(q) - jnp.where(
+        log_prob_q = jnp.where(
             jnp.less_equal(m1, self.mmin),
-            0.0,
-            doubly_truncated_power_law_log_norm_constant(
-                alpha=self.beta,
-                low=self.mmin / m1,
-                high=lax.stop_gradient(1.0),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
             ),
         )
 
