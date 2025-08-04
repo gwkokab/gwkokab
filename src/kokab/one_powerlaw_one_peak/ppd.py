@@ -9,7 +9,10 @@ import pandas as pd
 from numpyro.distributions.distribution import DistributionLike
 
 from gwkokab.models import SmoothedPowerlawAndPeak
-from gwkokab.models.utils import ExtendedSupportTransformedDistribution
+from gwkokab.models.utils import (
+    ExtendedSupportTransformedDistribution,
+    JointDistribution,
+)
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -48,22 +51,40 @@ def model(raw: bool, **params) -> DistributionLike:
         if isinstance(
             _model._component_distributions[0], ExtendedSupportTransformedDistribution
         ):
-            _model._component_distributions[0] = (
-                _model._component_distributions[0].marginal_distributions[0].base_dist
+            component_distributions = list(_model._component_distributions)
+            component_distributions[0] = component_distributions[0].base_dist
+            _model._component_distributions = component_distributions
+        elif isinstance(_model._component_distributions[0], JointDistribution):
+            marginal_distributions = list(
+                _model._component_distributions[0].marginal_distributions
             )
+            marginal_distributions[0] = marginal_distributions[0].base_dist
+            _model._component_distributions[
+                0
+            ].marginal_distributions = marginal_distributions
         else:
-            _model._component_distributions[0].marginal_distributions[0] = (
-                _model._component_distributions[0].marginal_distributions[0].base_dist
+            raise ValueError(
+                "The first component distribution must be either an ExtendedSupportTransformedDistribution "
+                "or a JointDistribution to access the base distribution."
             )
         if isinstance(
             _model._component_distributions[1], ExtendedSupportTransformedDistribution
         ):
-            _model._component_distributions[1] = (
-                _model._component_distributions[1].marginal_distributions[0].base_dist
+            component_distributions = list(_model._component_distributions)
+            component_distributions[1] = component_distributions[1].base_dist
+            _model._component_distributions = component_distributions
+        elif isinstance(_model._component_distributions[1], JointDistribution):
+            marginal_distributions = list(
+                _model._component_distributions[1].marginal_distributions
             )
+            marginal_distributions[0] = marginal_distributions[0].base_dist
+            _model._component_distributions[
+                1
+            ].marginal_distributions = marginal_distributions
         else:
-            _model._component_distributions[1].marginal_distributions[0] = (
-                _model._component_distributions[1].marginal_distributions[0].base_dist
+            raise ValueError(
+                "The second component distribution must be either an ExtendedSupportTransformedDistribution "
+                "or a JointDistribution to access the base distribution."
             )
     return _model
 
