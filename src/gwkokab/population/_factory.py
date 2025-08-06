@@ -100,6 +100,25 @@ class PopulationFactory:
         raw_population = population
         raw_indices = indices
 
+        m1_index = self.parameters.index("mass_1_source")
+        m2_index = self.parameters.index("mass_2_source")
+
+        m1 = population[:, m1_index]
+        m2 = population[:, m2_index]
+
+        mask = np.less_equal(m2, m1)
+
+        count = jnp.sum(mask)
+
+        logger.debug(
+            "Number of injections with m2 <= m1: {count} out of {size}",
+            count=count,
+            size=size,
+        )
+
+        population = population[mask]
+        indices = indices[mask]
+
         if self.log_selection_fn is not None:
             _, key = jrd.split(key)
             log_selection = self.log_selection_fn(population)
