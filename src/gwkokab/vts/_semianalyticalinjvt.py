@@ -135,14 +135,19 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
                 elif p == "cos_tilt_2":
                     _inj = χ_2z / a2
                 elif p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
-                    sampling_prob *= 2.0 * np.pi * np.square(a1)
                     _inj = a1
                 elif p == gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name:
-                    sampling_prob *= 2.0 * np.pi * np.square(a2)
                     _inj = a2
                 else:
                     _inj = injections[_PARAM_MAPPING[p]][found][:]
                 injs.append(_inj)
+
+            if (
+                gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name not in parameters
+                and gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name not in parameters
+            ):
+                sampling_prob *= np.square(4.0 * np.pi * a1 * a2)
+
             self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
 
             self.sampling_prob = jax.device_put(sampling_prob, may_alias=True)
