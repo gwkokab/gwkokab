@@ -170,9 +170,6 @@ def main() -> None:
         ERate_obj=erate_estimator,
         n_buckets=args.n_buckets,
         threshold=args.threshold,
-        redshift_index=None
-        if "redshift" not in parameters_name
-        else parameters_name.index("redshift"),
     )
 
     constants = model.constants

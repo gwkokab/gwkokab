@@ -481,9 +481,6 @@ def main() -> None:
         where_fns=None if len(where_fns) == 0 else where_fns,
         n_buckets=args.n_buckets,
         threshold=args.threshold,
-        redshift_index=None
-        if "redshift" not in parameters_name
-        else parameters_name.index("redshift"),
     )
 
     constants = model.constants

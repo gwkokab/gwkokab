@@ -29,7 +29,6 @@ def poisson_likelihood(
     where_fns: Optional[List[Callable[..., Array]]] = None,
     n_buckets: Optional[int] = None,
     threshold: float = 3.0,
-    redshift_index: Optional[int] = None,
 ) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
@@ -131,9 +130,7 @@ def poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = jax.block_until_ready(
-            ERate_obj(model_instance, redshift_index)
-        )
+        expected_rates = jax.block_until_ready(ERate_obj(model_instance))
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
