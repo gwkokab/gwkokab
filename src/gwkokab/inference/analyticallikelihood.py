@@ -507,15 +507,17 @@ def analytical_likelihood(
                 )
                 return estimate_3, error_3, N_1 + N_2, rng_key
 
+            state_0 = (
+                jnp.zeros(()),  # starting estimate is zero
+                jnp.zeros(()),  # starting error is zero
+                100,
+                rng_key_i,
+            )
+
             log_likelihood, _, _, _ = eqx.internal.while_loop(
                 _error_fn,
                 while_body_fn,
-                (
-                    jnp.zeros(()),
-                    jnp.zeros(()),  # starting error is zero
-                    jnp.zeros(()),
-                    rng_key_i,
-                ),
+                while_body_fn(state_0),
                 kind="checkpointed",
                 checkpoints=1,  # TODO(Qazalbash): provide a way to set this
                 max_steps=20,  # TODO(Qazalbash): provide a way to set this
