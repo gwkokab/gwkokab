@@ -216,6 +216,9 @@ class Monk(Guru):
         n_vi_steps: int,
         learning_rate: float,
         batch_size: int,
+        minimum_mc_error: float,
+        n_checkpoints: int,
+        n_max_steps: int,
     ) -> None:
         """Runs the Monk analysis."""
         parameters = self.parameters
@@ -351,8 +354,8 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     likelihood_group.add_argument(
         "--n-samples",
         help="Number of samples to draw from the multivariate normal distribution for each "
-        "event to compute the likelihood, by default 10_000",
-        default=10_000,
+        "event to compute the likelihood, by default 1_000",
+        default=1_000,
         type=int,
     )
     likelihood_group.add_argument(
@@ -381,8 +384,26 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     likelihood_group.add_argument(
         "--batch-size",
-        help="Batch size for the `jax.lax.map` used in the likelihood computation, by default 1000",
-        default=1_000,
+        help="Batch size for the `jax.lax.map` used in the likelihood computation, by default 100",
+        default=100,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--minimum-mc-error",
+        help="Minimum Monte Carlo error for the likelihood computation",
+        default=0.01,
+        type=float,
+    )
+    likelihood_group.add_argument(
+        "--n-checkpoints",
+        help="Number of checkpoints to save during the optimization process, by default 1",
+        default=1,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--n-max-steps",
+        help="Maximum number of steps until minimum Monte Carlo error is reached",
+        default=20,
         type=int,
     )
 

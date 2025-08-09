@@ -143,24 +143,6 @@ def _combine_monte_carlo_errors(
     return combined_error
 
 
-@jax.jit
-def _error_fn(state: StateT) -> Array:
-    """Check if the error in the Monte Carlo estimation is below a threshold.
-
-    Parameters
-    ----------
-    state : StateT
-        The state of the Monte Carlo estimation.
-
-    Returns
-    -------
-    Array
-        A boolean array indicating whether the error is below the threshold (0.01).
-    """
-    _, error, _, _ = state
-    return jnp.less_equal(error, 0.01)
-
-
 @ft.partial(jax.jit, static_argnames=("n_samples",))
 def _mvn_samples(loc: Array, cov: Array, n_samples: int, key: PRNGKeyArray) -> Array:
     """Generate samples from a multivariate normal distribution using method from
@@ -197,12 +179,15 @@ def analytical_likelihood(
     means: List[Array],
     covariances: List[Array],
     key: PRNGKeyArray,
+    minimum_mc_error: float = 1e-2,
     n_samples: int = 1_000,
     max_iter_mean: int = 10,
     max_iter_cov: int = 3,
     n_vi_steps: int = 5,
     learning_rate: float = 1e-2,
     batch_size: int = 1_00,
+    n_checkpoints: int = 1,
+    n_max_steps: int = 20,
 ) -> Callable[[Array, Array], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
@@ -248,6 +233,8 @@ def analytical_likelihood(
         mean vectors in `means`.
     key : PRNGKeyArray
         JAX random key for sampling
+    minimum_mc_error : float, optional
+        Minimum threshold for Monte Carlo error, by default 1e-2
     n_samples : int, optional
         Number of samples to draw from the multivariate normal distribution for each
         event to compute the likelihood, by default 1_000
@@ -262,6 +249,10 @@ def analytical_likelihood(
         optimization, by default 1e-2
     batch_size : int, optional
         Batch size for the sampling process, by default 100
+    n_checkpoints : int, optional
+        Number of checkpoints to save during the optimization process, by default 1
+    n_max_steps : int, optional
+        Maximum number of steps for the optimization process, by default 20
 
     Returns
     -------
@@ -536,12 +527,12 @@ def analytical_likelihood(
             )
 
             log_likelihood_i, _, _, _ = eqx.internal.while_loop(
-                _error_fn,
+                lambda state: jnp.less_equal(state[1], minimum_mc_error),
                 while_body_fn,
                 while_body_fn(state_0),  # this makes it a do-while loop
                 kind="checkpointed",
-                checkpoints=1,  # TODO(Qazalbash): provide a way to set this
-                max_steps=20,  # TODO(Qazalbash): provide a way to set this
+                checkpoints=n_checkpoints,
+                max_steps=n_max_steps,
             )
 
             return carry + log_likelihood_i, None
