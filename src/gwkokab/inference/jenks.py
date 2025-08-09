@@ -196,6 +196,9 @@ def _partition_data(
     data: Sequence[int], n_buckets: Optional[int] = None, threshold: float = 3.0
 ) -> Sequence[int]:
     if len(set(data)) == 1:
+        logger.debug(
+            "All elements in the data are identical in size. Returning single bucket."
+        )
         return [0, len(data) - 1]
     if n_buckets is not None:
         indexes, total_loss = _partition_data_for_bucket(data, n_buckets)
