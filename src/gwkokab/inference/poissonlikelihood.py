@@ -101,7 +101,9 @@ def poisson_likelihood(
     )
 
     constants, variables, duplicates, dist_fn = dist_builder.get_dist()  # type: ignore
-    variables_index: dict[str, int] = {key: i for i, key in enumerate(variables.keys())}
+    variables_index: dict[str, int] = {
+        key: i for i, key in enumerate(sorted(variables.keys()))
+    }
     for key, value in duplicates.items():
         variables_index[key] = variables_index[value]
 
@@ -119,7 +121,9 @@ def poisson_likelihood(
     for value in group_variables.values():  # type: ignore
         logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
-    priors = JointDistribution(*variables.values(), validate_args=True)
+    priors = JointDistribution(
+        *[variables[key] for key in sorted(variables.keys())], validate_args=True
+    )
 
     def likelihood_fn(x: Array, _: Array) -> Array:
         mapped_params = {
