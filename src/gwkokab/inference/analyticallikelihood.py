@@ -475,20 +475,19 @@ def analytical_likelihood(
                 estimate_1, error_1, N_1, rng_key = state
                 N_2 = 100
                 rng_key, subkey = jrd.split(rng_key)
+
                 # data ~ G(θ, z | μ_f, Σ_f)
                 data = fit_mvn.sample(subkey, (N_2,))
+
                 # log ρ(data | Λ, κ)
-                model_instance_log_prob = jax.lax.map(
-                    model_instance.log_prob, data, batch_size=batch_size
-                )
+                model_instance_log_prob = model_instance.log_prob(data)
+
                 # log G(θ, z | μ_i, Σ_i)
-                event_mvn_log_prob = jax.lax.map(
-                    event_mvn.log_prob, data, batch_size=batch_size
-                )
+                event_mvn_log_prob = event_mvn.log_prob(data)
+
                 # log G(θ, z | μ_f, Σ_i)
-                fit_mvn_log_prob = jax.lax.map(
-                    fit_mvn.log_prob, data, batch_size=batch_size
-                )
+                fit_mvn_log_prob = fit_mvn.log_prob(data)
+
                 log_prob = (
                     model_instance_log_prob + event_mvn_log_prob - fit_mvn_log_prob
                 )
@@ -514,7 +513,7 @@ def analytical_likelihood(
                 rng_key_i,
             )
 
-            log_likelihood, _, _, _ = eqx.internal.while_loop(
+            likelihood, _, _, _ = eqx.internal.while_loop(
                 _error_fn,
                 while_body_fn,
                 while_body_fn(state_0),
@@ -523,13 +522,13 @@ def analytical_likelihood(
                 max_steps=20,  # TODO(Qazalbash): provide a way to set this
             )
 
-            return carry + log_likelihood, None
+            return carry + jnp.log(likelihood), None
 
         keys = jrd.split(rng_key, (n_events,))
 
         total_log_likelihood, _ = jax.lax.scan(
             scan_fn,  # type: ignore[arg-type]
-            -n_events * jnp.log(n_samples),  # - Σ log(M_i)
+            jnp.zeros(()),
             (mean_stack, cov_stack, fit_mean, fit_cov, keys),
             length=n_events,
         )
