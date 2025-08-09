@@ -15,6 +15,8 @@ from numpyro.distributions import Distribution, MultivariateNormal
 
 from gwkokab.models.utils import JointDistribution
 
+from ..utils.tools import warn_if
+
 
 StateT: TypeAlias = Tuple[
     Array,  # old monte-carlo-estimate
@@ -26,7 +28,9 @@ StateT: TypeAlias = Tuple[
 
 
 @jax.jit
-def _monte_carlo_estimate_and_error(log_probs: Array, N: Array) -> Tuple[Array, Array]:
+def _monte_carlo_log_estimate_and_error(
+    log_probs: Array, N: Array
+) -> Tuple[Array, Array]:
     """Computes the Monte Carlo estimate and error for the given log probabilities.
 
     Parameters
@@ -39,18 +43,18 @@ def _monte_carlo_estimate_and_error(log_probs: Array, N: Array) -> Tuple[Array, 
     Returns
     -------
     Tuple[Array, Array]
-        Monte Carlo estimate and error.
+        Monte Carlo logarithm of estimate, and Monte Carlo error.
     """
     mask = ~jnp.isneginf(log_probs)
-    moment_1 = jnp.exp(jnn.logsumexp(log_probs, where=mask, axis=-1)) / N
+    log_moment_1 = jnn.logsumexp(log_probs, where=mask, axis=-1) - jnp.log(N)
     moment_2 = jnp.exp(jnn.logsumexp(2.0 * log_probs, where=mask, axis=-1)) / N
-    error = jnp.sqrt((moment_2 - jnp.square(moment_1)) / (N - 1.0))
-    return moment_1, error
+    error = jnp.sqrt((moment_2 - jnp.exp(2.0 * log_moment_1)) / (N - 1.0))
+    return log_moment_1, error
 
 
 @jax.jit
-def _combine_monte_carlo_estimates(
-    estimates_1: Array, estimates_2: Array, N_1: int, N_2: int
+def _combine_monte_carlo_log_estimates(
+    log_estimates_1: Array, log_estimates_2: Array, N_1: int, N_2: int
 ) -> Array:
     r"""Combine two Monte Carlo estimates into a single estimate using the formula:
 
@@ -74,17 +78,19 @@ def _combine_monte_carlo_estimates(
     Array
         Combined Monte Carlo estimate :math:`\hat{\mu}`.
     """
-    combined_estimate = (N_1 * estimates_1 + N_2 * estimates_2) / (N_1 + N_2)
-    return combined_estimate
+    combined_log_estimate = jnp.logaddexp(
+        jnp.log(N_1) + log_estimates_1, jnp.log(N_2) + log_estimates_2
+    ) - jnp.log(N_1 + N_2)
+    return combined_log_estimate
 
 
 @jax.jit
 def _combine_monte_carlo_errors(
     error_1: Array,
     error_2: Array,
-    estimate_1: Array,
-    estimate_2: Array,
-    estimate_3: Array,
+    log_estimate_1: Array,
+    log_estimate_2: Array,
+    log_estimate_3: Array,
     N_1: int,
     N_2: int,
 ) -> Array:
@@ -104,11 +110,11 @@ def _combine_monte_carlo_errors(
         Error of the first Monte Carlo estimate :math:`\hat{\epsilon}_1`.
     error_2 : Array
         Error of the second Monte Carlo estimate :math:`\hat{\epsilon}_2`.
-    estimate_1 : Array
+    log_estimate_1 : Array
         Estimate of the first Monte Carlo estimate :math:`\hat{\mu}_1`.
-    estimate_2 : Array
+    log_estimate_2 : Array
         Estimate of the second Monte Carlo estimate :math:`\hat{\mu}_2`.
-    estimate_3 : Array
+    log_estimate_3 : Array
         Estimate of the combined Monte Carlo estimate :math:`\hat{\mu}`.
     N_1 : int
         Number of samples used for the first estimate :math:`N_1`.
@@ -122,10 +128,14 @@ def _combine_monte_carlo_errors(
     """
     N_3 = N_1 + N_2
 
-    sum_prob_sq_1 = N_1 * ((N_1 - 1.0) * jnp.square(error_1) + jnp.square(estimate_1))
-    sum_prob_sq_2 = N_2 * ((N_2 - 1.0) * jnp.square(error_2) + jnp.square(estimate_2))
+    sum_prob_sq_1 = N_1 * (
+        (N_1 - 1.0) * jnp.square(error_1) + jnp.exp(2.0 * log_estimate_1)
+    )
+    sum_prob_sq_2 = N_2 * (
+        (N_2 - 1.0) * jnp.square(error_2) + jnp.exp(2.0 * log_estimate_2)
+    )
 
-    combined_error_sq = -jnp.square(estimate_3) / (N_3 - 1.0)
+    combined_error_sq = -jnp.exp(2.0 * log_estimate_3) / (N_3 - 1.0)
     combined_error_sq += (sum_prob_sq_1 + sum_prob_sq_2) / N_3 / (N_3 - 1.0)
 
     combined_error = jnp.sqrt(combined_error_sq)
@@ -187,12 +197,12 @@ def analytical_likelihood(
     means: List[Array],
     covariances: List[Array],
     key: PRNGKeyArray,
-    n_samples: int = 10_000,
+    n_samples: int = 1_000,
     max_iter_mean: int = 10,
     max_iter_cov: int = 3,
     n_vi_steps: int = 5,
     learning_rate: float = 1e-2,
-    batch_size: int = 1_000,
+    batch_size: int = 1_00,
 ) -> Callable[[Array, Array], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
@@ -240,7 +250,7 @@ def analytical_likelihood(
         JAX random key for sampling
     n_samples : int, optional
         Number of samples to draw from the multivariate normal distribution for each
-        event to compute the likelihood, by default 10_000
+        event to compute the likelihood, by default 1_000
     max_iter_mean : int, optional
         Maximum number of iterations for the fitting process of the mean, by default 10
     max_iter_cov : int, optional
@@ -251,7 +261,7 @@ def analytical_likelihood(
         Learning rate for the Adam optimizer used in the variational inference
         optimization, by default 1e-2
     batch_size : int, optional
-        Batch size for the sampling process, by default 1_000
+        Batch size for the sampling process, by default 100
 
     Returns
     -------
@@ -260,6 +270,7 @@ def analytical_likelihood(
         given the data. The function takes two arguments: an array of model parameters
         and a second array (not used in this implementation).
     """
+    warn_if(batch_size > n_samples, msg="Batch size is greater than number of samples")
     n_events = len(means)
     mean_stack: Array = jax.block_until_ready(
         jax.device_put(jnp.stack(means, axis=0), may_alias=True)
@@ -458,6 +469,9 @@ def analytical_likelihood(
         fit_mean = jnp.where(jnp.isnan(vi_mean), moment_matching_mean, vi_mean)
         fit_cov = moment_matching_cov
 
+        fit_mean = jax.block_until_ready(fit_mean)
+        fit_cov = jax.block_until_ready(fit_cov)
+
         @jax.jit
         def scan_fn(
             carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]
@@ -472,57 +486,65 @@ def analytical_likelihood(
 
             @jax.jit
             def while_body_fn(state: StateT) -> StateT:
-                estimate_1, error_1, N_1, rng_key = state
-                N_2 = 100
+                log_estimate_1, error_1, N_1, rng_key = state
+                N_2 = n_samples
                 rng_key, subkey = jrd.split(rng_key)
 
                 # data ~ G(θ, z | μ_f, Σ_f)
                 data = fit_mvn.sample(subkey, (N_2,))
 
                 # log ρ(data | Λ, κ)
-                model_instance_log_prob = model_instance.log_prob(data)
+                model_instance_log_prob = jax.lax.map(
+                    model_instance.log_prob, data, batch_size=batch_size
+                )
 
                 # log G(θ, z | μ_i, Σ_i)
-                event_mvn_log_prob = event_mvn.log_prob(data)
+                event_mvn_log_prob = jax.lax.map(
+                    event_mvn.log_prob, data, batch_size=batch_size
+                )
 
                 # log G(θ, z | μ_f, Σ_i)
-                fit_mvn_log_prob = fit_mvn.log_prob(data)
+                fit_mvn_log_prob = jax.lax.map(
+                    fit_mvn.log_prob, data, batch_size=batch_size
+                )
 
                 log_prob = (
                     model_instance_log_prob + event_mvn_log_prob - fit_mvn_log_prob
                 )
-                estimate_2, error_2 = _monte_carlo_estimate_and_error(log_prob, N_2)
-                estimate_3 = _combine_monte_carlo_estimates(
-                    estimate_1, estimate_2, N_1, N_2
+                log_estimate_2, error_2 = _monte_carlo_log_estimate_and_error(
+                    log_prob, N_2
+                )
+                log_estimate_3 = _combine_monte_carlo_log_estimates(
+                    log_estimate_1, log_estimate_2, N_1, N_2
                 )
                 error_3 = _combine_monte_carlo_errors(
                     error_1,
                     error_2,
-                    estimate_1,
-                    estimate_2,
-                    estimate_3,
+                    log_estimate_1,
+                    log_estimate_2,
+                    log_estimate_3,
                     N_1,
                     N_2,
                 )
-                return estimate_3, error_3, N_1 + N_2, rng_key
+                return log_estimate_3, error_3, N_1 + N_2, rng_key
 
             state_0 = (
-                jnp.zeros(()),  # starting estimate is zero
+                -jnp.inf,  # starting log estimate is -inf
                 jnp.zeros(()),  # starting error is zero
-                100,
+                n_samples,
                 rng_key_i,
             )
 
-            likelihood, _, _, _ = eqx.internal.while_loop(
+            log_likelihood_i, _, _, _ = eqx.internal.while_loop(
                 _error_fn,
                 while_body_fn,
-                while_body_fn(state_0),
+                while_body_fn(state_0),  # this makes it a do-while loop
                 kind="checkpointed",
                 checkpoints=1,  # TODO(Qazalbash): provide a way to set this
                 max_steps=20,  # TODO(Qazalbash): provide a way to set this
             )
 
-            return carry + jnp.log(likelihood), None
+            return carry + log_likelihood_i, None
 
         keys = jrd.split(rng_key, (n_events,))
 
