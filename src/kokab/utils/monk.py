@@ -227,7 +227,7 @@ class Monk(Guru):
         logger.debug("Baking the model")
         constants, variables, duplicates, dist_fn = self.baked_model.get_dist()  # type: ignore
         variables_index: dict[str, int] = {
-            key: i for i, key in enumerate(variables.keys())
+            key: i for i, key in enumerate(sorted(variables.keys()))
         }
         for key, value in duplicates.items():
             variables_index[key] = variables_index[value]
@@ -250,7 +250,9 @@ class Monk(Guru):
         for value in group_variables.values():  # type: ignore
             logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
-        priors = JointDistribution(*variables.values(), validate_args=True)
+        priors = JointDistribution(
+            *[variables[key] for key in sorted(variables.keys())], validate_args=True
+        )
 
         write_json("constants.json", constants)
         write_json("nf_samples_mapping.json", variables_index)
@@ -268,7 +270,9 @@ class Monk(Guru):
         ]
         flowmc_handler_kwargs["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
-        flowmc_handler_kwargs["data_dump_kwargs"]["labels"] = list(variables.keys())
+        flowmc_handler_kwargs["data_dump_kwargs"]["labels"] = list(
+            sorted(variables.keys())
+        )
 
         flowmc_handler_kwargs = flowMC_default_parameters(**flowmc_handler_kwargs)
 
