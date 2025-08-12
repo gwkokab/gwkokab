@@ -263,12 +263,29 @@ class PoissonMean(eqx.Module):
 
         # injection based sampling method
 
+        log_Z_norm = []
+
+        for component_dist in model_instance.component_distributions:
+            if isinstance(component_dist, JointDistribution):
+                for m_dist in component_dist.marginal_distributions:
+                    if isinstance(m_dist, PowerlawRedshift):
+                        log_Z_norm.append(m_dist.log_norm())
+
+        log_Z_norm = jnp.asarray(log_Z_norm)
+
         def _f(_: None, data: Tuple[Array, Array]) -> Tuple[None, Array]:
             log_weights, samples = data
-            # log p(θ_i|λ)
-            model_log_prob = model_instance.log_prob(samples).reshape(
-                log_weights.shape[0]
+            sum_log_probs = model_instance.component_log_probs(samples)
+            safe_sum_log_probs = jnp.where(
+                jnp.isneginf(sum_log_probs), -jnp.inf, sum_log_probs
             )
+            model_log_prob = jax.nn.logsumexp(
+                log_Z_norm + safe_sum_log_probs,
+                where=~jnp.isneginf(sum_log_probs),
+                axis=-1,
+            )
+            # log p(θ_i|λ)
+            model_log_prob = model_log_prob.reshape(log_weights.shape[0])
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 
@@ -359,6 +376,11 @@ class PoissonMean(eqx.Module):
                     num_samples
                 )
                 per_sample_log_estimated_rates = log_weights + component_log_prob
+                if isinstance(component_dist, JointDistribution):
+                    for m_dist in component_dist.marginal_distributions:
+                        if isinstance(m_dist, PowerlawRedshift):
+                            per_sample_log_estimated_rates += m_dist.log_norm()
+                            break
 
             log_rate_i = jax.lax.dynamic_index_in_dim(
                 model.log_scales, index=i, axis=-1, keepdims=False
