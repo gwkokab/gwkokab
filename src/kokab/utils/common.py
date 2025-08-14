@@ -11,7 +11,7 @@ import jax
 import numpy as np
 import pandas as pd
 from numpyro import distributions as dist
-from numpyro.distributions.distribution import DistributionLike
+from numpyro._typing import DistributionLike
 
 from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
 from kokab.utils.priors import available as available_priors

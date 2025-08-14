@@ -9,7 +9,8 @@ import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
-from numpyro.distributions.distribution import Distribution, DistributionLike
+from numpyro._typing import DistributionLike
+from numpyro.distributions.distribution import Distribution
 
 from .models import PowerlawRedshift
 from .models.utils import JointDistribution, ScaledMixture

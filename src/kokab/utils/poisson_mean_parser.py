@@ -6,7 +6,7 @@ import json
 from typing import Any, Dict, List, Literal, Union
 
 from jaxtyping import PRNGKeyArray
-from numpyro.distributions.distribution import DistributionLike
+from numpyro._typing import DistributionLike
 
 from gwkokab.models.utils import JointDistribution
 from gwkokab.poisson_mean import PoissonMean
