@@ -3,7 +3,7 @@
 
 
 import warnings
-from typing import Dict, Optional, Tuple, TypeVar
+from typing import Callable, Dict, Optional, Tuple, TypeVar
 
 import jax
 from jaxtyping import Array
@@ -112,3 +112,40 @@ def batch_and_remainder(x: Array, batch_size: int) -> Tuple[Array, Array]:
     scan_tree = treedef.unflatten(scan_leaves)
     remainder_tree = treedef.unflatten(remainder_leaves)
     return scan_tree, remainder_tree
+
+
+def batched_map(
+    f: Callable[[Array], Array], xs: Array, *, batch_size: Optional[int] = None
+) -> Array:
+    """Same as :func:`jax.lax.map` but without the :func:`jax.vmap`. :code:`f` is
+    applied on the leading dimension of the input array.
+
+    Parameters
+    ----------
+    f : Callable[[Array], Array]
+        The function to apply to each element.
+    xs : Array
+        The input array.
+    batch_size : Optional[int], optional
+        The batch size for processing, by default None
+
+    Returns
+    -------
+    Array
+        The output array.
+    """
+    if batch_size is not None:
+        scan_xs, remainder_xs = batch_and_remainder(xs, batch_size)
+        g = lambda _, x: ((), f(x))
+        _, scan_ys = jax.lax.scan(g, (), scan_xs)
+        remainder_ys = f(remainder_xs)
+        flatten = lambda x: x.reshape(-1, *x.shape[2:])
+        ys = jax.tree_util.tree_map(
+            lambda x, y: jax.lax.concatenate([flatten(x), y], dimension=0),
+            scan_ys,
+            remainder_ys,
+        )
+    else:
+        g = lambda _, x: ((), f(x))
+        _, ys = jax.lax.scan(g, (), xs)
+    return ys

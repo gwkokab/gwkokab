@@ -12,7 +12,7 @@ from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.tools import batched_map, error_if
 
 
 def wipe_log_rate(
@@ -239,7 +239,7 @@ def compute_and_save_ppd(
     shape = xx_mesh.shape
     xx_mesh = xx_mesh.reshape(-1, shape[-1])
 
-    prob_values: Array = jax.lax.map(
+    prob_values: Array = batched_map(
         partial(
             compute_probs,
             xx_mesh=xx_mesh,
