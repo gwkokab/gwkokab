@@ -64,7 +64,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         "--batch-size",
         help="Batch size for the computation of log prob per sample.",
         type=int,
-        default=1000,
+        default=None,
     )
 
     return parser
