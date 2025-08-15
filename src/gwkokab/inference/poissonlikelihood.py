@@ -152,10 +152,11 @@ def poisson_likelihood(
             None,  # type: ignore
             batch_data,
         )
+        model_log_prob = model_log_prob.reshape(-1)
 
         if has_remainder:
             model_log_prob = jnp.concatenate(
-                [model_log_prob, jnp.expand_dims(log_prob_fn(remainder_data), axis=0)],
+                [model_log_prob, log_prob_fn(remainder_data)],
                 axis=0,
             )
 
