@@ -82,7 +82,7 @@ def poisson_likelihood(
     has_remainder = n_batches * chunk_size != total_size
 
     _data_group = np.vstack(data)
-    log_ref_priors: np.ndarray = np.vstack(log_ref_priors)  # type: ignore
+    log_ref_priors: np.ndarray = np.concatenate(log_ref_priors)  # type: ignore
 
     batch_data, remainder_data = batch_and_remainder(_data_group, batch_size=chunk_size)  # type: ignore
 
