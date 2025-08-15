@@ -136,6 +136,7 @@ def poisson_likelihood(
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = jax.block_until_ready(ERate_obj(model_instance))
 
+        @jax.checkpoint
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
         ) -> Tuple[Array, None]:
@@ -147,11 +148,7 @@ def poisson_likelihood(
             safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
             # log p(ω|data_n)
-            model_log_prob = jax.lax.map(
-                model_instance.log_prob,
-                safe_data,
-                batch_size=1_000,  # TODO(Qazalbash): add parameter to control batch size
-            )
+            model_log_prob = jax.vmap(model_instance.log_prob)(safe_data)
             safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
 
             # log p(ω|data_n) - log π_n
