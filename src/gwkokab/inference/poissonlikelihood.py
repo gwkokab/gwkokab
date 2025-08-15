@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import List, Optional, Tuple
 
 import jax
@@ -13,9 +13,8 @@ from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
 from ..poisson_mean import PoissonMean
-from ..utils.tools import warn_if
+from ..utils.tools import batch_and_remainder, warn_if
 from .bake import Bake
-from .jenks import pad_and_stack
 
 
 __all__ = ["poisson_likelihood"]
@@ -73,31 +72,41 @@ def poisson_likelihood(
     log_constants = -sum_log_size  # -Σ log(M_i)
     log_constants += n_events * np.log(ERate_obj.time_scale)
 
-    _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
-        data, log_ref_priors, n_buckets=n_buckets, threshold=threshold
+    indexes = [0]
+    for i in range(n_events):
+        indexes.append(indexes[-1] + data[i].shape[0])
+
+    chunk_size = 512
+    total_size = indexes[-1]
+    n_batches = total_size // chunk_size
+    has_remainder = n_batches * chunk_size != total_size
+
+    _data_group = np.vstack(data)
+    log_ref_priors: np.ndarray = np.vstack(log_ref_priors)  # type: ignore
+
+    batch_data, remainder_data = batch_and_remainder(_data_group, batch_size=chunk_size)  # type: ignore
+
+    batch_data: Array = jax.block_until_ready(  # type: ignore
+        jax.device_put(batch_data, may_alias=True)
+    )
+    remainder_data: Array = jax.block_until_ready(  # type: ignore
+        jax.device_put(remainder_data, may_alias=True)
+    )
+    log_ref_priors: Array = jax.block_until_ready(  # type: ignore
+        jax.device_put(log_ref_priors, may_alias=True)
     )
 
-    data_group: Sequence[Array] = jax.block_until_ready(
-        jax.device_put(_data_group, may_alias=True)
-    )
-    log_ref_priors_group: Sequence[Array] = jax.block_until_ready(
-        jax.device_put(_log_ref_priors_group, may_alias=True)
-    )
-    masks_group: Sequence[Array] = jax.block_until_ready(
-        jax.device_put(_masks_group, may_alias=True)
-    )
-
     logger.debug(
-        "data_group.shape: {shape}",
-        shape=", ".join([str(d.shape) for d in data_group]),
+        "batch_data.shape={batch_data_shape}",
+        batch_data_shape=batch_data.shape,
     )
     logger.debug(
-        "log_ref_priors_group.shape: {shape}",
-        shape=", ".join([str(d.shape) for d in log_ref_priors_group]),
+        "remainder_data.shape={remainder_data_shape}",
+        remainder_data_shape=remainder_data.shape,
     )
     logger.debug(
-        "masks_group.shape: {shape}",
-        shape=", ".join([str(d.shape) for d in masks_group]),
+        "log_ref_priors.shape={log_ref_priors_shape}",
+        log_ref_priors_shape=log_ref_priors.shape,
     )
 
     constants, variables, duplicates, dist_fn = dist_builder.get_dist()  # type: ignore
@@ -136,48 +145,33 @@ def poisson_likelihood(
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = jax.block_until_ready(ERate_obj(model_instance))
 
-        def single_event_fn(
-            carry: Array, input: Tuple[Array, Array, Array]
-        ) -> Tuple[Array, None]:
-            safe_data, safe_log_ref_prior, mask = input
+        log_prob_fn = jax.vmap(model_instance.log_prob)
 
-            # log p(ω|data_n)
-            model_log_prob = jax.checkpoint(
-                jax.vmap(model_instance.log_prob),
-                prevent_cse=False,
-            )(safe_data)
-            safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
+        _, model_log_prob = jax.lax.scan(
+            lambda _, data: (_, log_prob_fn(data)),
+            None,  # type: ignore
+            batch_data,
+        )
 
-            # log p(ω|data_n) - log π_n
-            log_prob: Array = safe_model_log_prob - safe_log_ref_prior
-            log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
-
-            # log Σ exp (log p(ω|data_n) - log π_n)
-            log_prob_sum = jax.nn.logsumexp(
-                log_prob,
-                axis=-1,
-                where=(~jnp.isneginf(log_prob)) & mask,
+        if has_remainder:
+            model_log_prob = jnp.concatenate(
+                [model_log_prob, log_prob_fn(remainder_data)],
+                axis=0,
             )
-            return carry + log_prob_sum, None
+
+        log_prob_ratio = model_log_prob - log_ref_priors
 
         total_log_likelihood = log_constants  # - Σ log(M_i)
-        # Σ log Σ exp (log p(ω|data_n) - log π_n)
-        for batched_data, batched_log_ref_priors, batched_mask in zip(
-            data_group, log_ref_priors_group, masks_group
-        ):
-            with jax.ensure_compile_time_eval():
-                safe_batched_data = jnp.where(
-                    jnp.expand_dims(batched_mask, axis=-1),
-                    batched_data,
-                    model_instance.support.feasible_like(batched_data),
-                )
-                safe_batched_log_ref_priors = jnp.where(
-                    batched_mask, batched_log_ref_priors, 0.0
-                )
-            total_log_likelihood, _ = jax.lax.scan(
-                single_event_fn,  # type: ignore
-                total_log_likelihood,
-                (safe_batched_data, safe_batched_log_ref_priors, batched_mask),
+        for i in range(n_events):
+            log_prob_ratio_i = jax.lax.dynamic_slice_in_dim(
+                log_prob_ratio,
+                start_index=indexes[i],
+                slice_size=indexes[i + 1] - indexes[i],
+            )
+            total_log_likelihood += jax.nn.logsumexp(
+                log_prob_ratio_i,
+                where=~jnp.isneginf(log_prob_ratio_i),
+                axis=-1,
             )
 
         total_log_likelihood = jax.block_until_ready(total_log_likelihood)
