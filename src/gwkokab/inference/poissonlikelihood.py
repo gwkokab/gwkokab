@@ -211,5 +211,5 @@ def poisson_likelihood(
         return jnp.where(predicate, likelihood_fn(x, _), -jnp.inf)
 
     if where_fns is None:
-        return variables_index, priors, likelihood_fn
-    return variables_index, priors, likelihood_fn_with_checks
+        return variables_index, priors, jax.jit(likelihood_fn)
+    return variables_index, priors, jax.jit(likelihood_fn_with_checks)
