@@ -136,14 +136,16 @@ def poisson_likelihood(
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = jax.block_until_ready(ERate_obj(model_instance))
 
-        @jax.checkpoint
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
         ) -> Tuple[Array, None]:
             safe_data, safe_log_ref_prior, mask = input
 
             # log p(ω|data_n)
-            model_log_prob = jax.vmap(model_instance.log_prob)(safe_data)
+            model_log_prob = jax.checkpoint(
+                jax.vmap(model_instance.log_prob),
+                prevent_cse=True,
+            )(safe_data)
             safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
 
             # log p(ω|data_n) - log π_n
