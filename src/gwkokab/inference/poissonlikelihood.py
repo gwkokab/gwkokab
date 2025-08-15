@@ -171,13 +171,13 @@ def poisson_likelihood(
                     batched_data,
                     model_instance.support.feasible_like(batched_data),
                 )
-                safe_log_ref_priors_group = jnp.where(
+                safe_batched_log_ref_priors = jnp.where(
                     batched_mask, batched_log_ref_priors, 0.0
                 )
             total_log_likelihood, _ = jax.lax.scan(
                 single_event_fn,  # type: ignore
                 total_log_likelihood,
-                (safe_batched_data, safe_log_ref_priors_group, batched_mask),
+                (safe_batched_data, safe_batched_log_ref_priors, batched_mask),
             )
 
         total_log_likelihood = jax.block_until_ready(total_log_likelihood)
