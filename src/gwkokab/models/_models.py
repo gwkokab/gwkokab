@@ -881,30 +881,19 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         """Pre-compute q normalization function using efficient vectorization."""
         # Create m1 grid with higher density where needed
         m1_grid = jnp.linspace(self.mmin, self.mmax, m1_grid_size)
+        q_min = self.mmin / self.mmax
+        q_max = 1.0
+        q_grid = jnp.linspace(q_min, q_max, q_grid_size)
 
-        # For each m1, compute the normalization integral over q
-        def compute_q_norm_for_m1(m1):
-            q_min = jnp.maximum(self.mmin / m1, self.mmin / self.mmax)
-            q_max = 1.0
-            q_grid = jnp.linspace(q_min, q_max, q_grid_size)
-
-            # Vectorized log probability computation
-            m1_expanded = jnp.broadcast_to(m1[..., None], q_grid.shape)
-            values = jnp.stack([m1_expanded, q_grid], axis=-1)
-            log_probs = self._log_prob_q_unnormalized(values)
-            probs = jnp.exp(log_probs)
-
-            # Trapezoidal integration
-            integral = jnp.trapezoid(probs, x=q_grid, axis=-1)
-
-            return jnp.clip(
-                integral,
-                min=jnp.finfo(jnp.result_type(float)).tiny,
-                max=jnp.finfo(jnp.result_type(float)).max,
-            )
-
-        # Vectorized computation over m1 grid
-        Z_q_values = jax.vmap(compute_q_norm_for_m1)(m1_grid[None, :])
+        values = jnp.stack((m1_grid, q_grid), axis=-1).reshape(-1, 2)
+        log_probs = self._log_prob_q_unnormalized(values)
+        probs = jnp.exp(log_probs)
+        Z_q_values = jnp.trapezoid(probs, x=q_grid, axis=-1)
+        Z_q_values = jnp.clip(
+            Z_q_values,
+            min=jnp.finfo(jnp.result_type(float)).tiny,
+            max=jnp.finfo(jnp.result_type(float)).max,
+        )
 
         # Create interpolator function
         def interpolate_Z_q(m1):
