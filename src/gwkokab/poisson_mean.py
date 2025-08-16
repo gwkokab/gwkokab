@@ -267,9 +267,9 @@ class PoissonMean(eqx.Module):
         def _f(_: None, data: Tuple[Array, Array]) -> Tuple[None, Array]:
             log_weights, samples = data
             # log p(θ_i|λ)
-            model_log_prob = model_instance.log_prob(samples).reshape(
-                log_weights.shape[0]
-            )
+            model_log_prob = jax.checkpoint(jax.vmap(model_instance.log_prob))(
+                samples
+            ).reshape(log_weights.shape[0])
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 

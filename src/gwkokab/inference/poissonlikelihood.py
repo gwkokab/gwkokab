@@ -136,19 +136,16 @@ def poisson_likelihood(
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = jax.block_until_ready(ERate_obj(model_instance))
 
-        @jax.checkpoint
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
         ) -> Tuple[Array, None]:
-            data, log_ref_prior, mask = input
-
-            safe_data = jnp.where(
-                mask[:, jnp.newaxis], data, model_instance.support.feasible_like(data)
-            )
-            safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
+            safe_data, safe_log_ref_prior, mask = input
 
             # log p(ω|data_n)
-            model_log_prob = jax.vmap(model_instance.log_prob)(safe_data)
+            model_log_prob = jax.checkpoint(
+                jax.vmap(model_instance.log_prob),
+                prevent_cse=False,
+            )(safe_data)
             safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
 
             # log p(ω|data_n) - log π_n
@@ -168,10 +165,19 @@ def poisson_likelihood(
         for batched_data, batched_log_ref_priors, batched_mask in zip(
             data_group, log_ref_priors_group, masks_group
         ):
+            with jax.ensure_compile_time_eval():
+                safe_batched_data = jnp.where(
+                    jnp.expand_dims(batched_mask, axis=-1),
+                    batched_data,
+                    model_instance.support.feasible_like(batched_data),
+                )
+                safe_batched_log_ref_priors = jnp.where(
+                    batched_mask, batched_log_ref_priors, 0.0
+                )
             total_log_likelihood, _ = jax.lax.scan(
                 single_event_fn,  # type: ignore
                 total_log_likelihood,
-                (batched_data, batched_log_ref_priors, batched_mask),
+                (safe_batched_data, safe_batched_log_ref_priors, batched_mask),
             )
 
         total_log_likelihood = jax.block_until_ready(total_log_likelihood)
@@ -205,5 +211,5 @@ def poisson_likelihood(
         return jnp.where(predicate, likelihood_fn(x, _), -jnp.inf)
 
     if where_fns is None:
-        return variables_index, priors, likelihood_fn
-    return variables_index, priors, likelihood_fn_with_checks
+        return variables_index, priors, jax.jit(likelihood_fn)
+    return variables_index, priors, jax.jit(likelihood_fn_with_checks)
