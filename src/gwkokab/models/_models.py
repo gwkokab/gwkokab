@@ -844,7 +844,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         self.delta = jnp.broadcast_to(delta, batch_shape)
 
         # Pre-compute normalization constants more efficiently
-        self._logZ = self._compute_m1_normalization()
+        self._logZ = self._compute_m1_normalization(m1_grid_size)
         self._Z_q_interpolator = self._precompute_q_normalization(
             m1_grid_size, q_grid_size
         )
