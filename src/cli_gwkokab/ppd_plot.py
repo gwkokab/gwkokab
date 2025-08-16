@@ -370,5 +370,5 @@ def main() -> None:
                 alpha=args.grid_alpha,
             )
         ax.legend()
-        plt.savefig(filename, dpi=args.dpi, bbox_inches="tight")
-        plt.close("all")
+        fig.savefig(filename, dpi=args.dpi, bbox_inches="tight")
+    plt.close("all")

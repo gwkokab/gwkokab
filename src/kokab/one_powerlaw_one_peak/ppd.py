@@ -9,7 +9,7 @@ from typing import Optional
 import pandas as pd
 from jax import numpy as jnp
 from jaxtyping import Array
-from numpyro.distributions.distribution import DistributionLike
+from numpyro._typing import DistributionLike
 
 from gwkokab.models import (
     SmoothedGaussianPrimaryMassRatio,

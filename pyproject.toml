@@ -54,7 +54,7 @@ dependencies = [
     "matplotlib>=3.9.0",
     "mplcursors>=0.6",
     "numpy<3",
-    "numpyro>=0.16.0",
+    "numpyro>=0.19.0",
     "pandas>=2.2.0",
     "quadax>=0.2.5",
     "RIFT>=0.0.15.11",
