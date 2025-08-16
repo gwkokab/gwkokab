@@ -887,7 +887,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
 
         values = jnp.stack((m1_grid, q_grid), axis=-1).reshape(-1, 2)
         log_probs = self._log_prob_q_unnormalized(values)
-        probs = jnp.exp(log_probs)
+        probs = jnp.exp(log_probs).reshape(m1_grid_size, q_grid_size)
         Z_q_values = jnp.trapezoid(probs, x=q_grid, axis=-1)
         Z_q_values = jnp.clip(
             Z_q_values,
