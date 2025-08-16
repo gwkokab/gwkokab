@@ -6,6 +6,7 @@ from typing import Optional
 
 import chex
 import interpax
+import jax
 from jax import lax, numpy as jnp, random as jrd, tree as jtr
 from jax.nn import softplus
 from jax.scipy import special
@@ -763,13 +764,6 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         p(q\mid m_1,\beta) \propto q^{\beta}S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
 
     Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
-
-    .. attention::
-
-        If :code:`low` or :code:`high` are not provided to the `TruncatedNormal`, they
-        default to  :math:`-\infty` or :math:`+\infty`, respectively. This class relies
-        on this behavior to produce the desired distribution when bounds are
-        unspecified.
     """
 
     arg_constraints = {
@@ -783,18 +777,27 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
     pytree_data_fields = (
         "_logZ",
         "_support",
-        "_Z_q_given_m1",
+        "_Z_q_interpolator",
         "beta",
         "delta",
         "loc",
         "mmax",
         "mmin",
         "scale",
-        "_m1s",
     )
 
     def __init__(
-        self, loc, scale, beta, mmin, mmax, delta, *, validate_args=None
+        self,
+        loc,
+        scale,
+        beta,
+        mmin,
+        mmax,
+        delta,
+        *,
+        m1_grid_size=64,
+        q_grid_size=64,
+        validate_args=None,
     ) -> None:
         """
         Parameters
@@ -811,6 +814,10 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             Maximum mass
         delta : ArrayLike
             width of the smoothing window
+        m1_grid_size : int, optional
+            Grid size for m1 integration (default: 64)
+        q_grid_size : int, optional
+            Grid size for q integration (default: 64)
         """
         self.loc, self.scale, self.beta, self.mmin, self.mmax, self.delta = (
             promote_shapes(loc, scale, beta, mmin, mmax, delta)
@@ -824,83 +831,133 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             jnp.shape(delta),
         )
         self._support = mass_ratio_mass_sandwich(mmin, mmax)
-        super(SmoothedGaussianPrimaryMassRatio, self).__init__(
+        super().__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
-        mmin = jnp.broadcast_to(mmin, batch_shape)
-        mmax = jnp.broadcast_to(mmax, batch_shape)
+        # Broadcast all parameters to batch shape
+        self.loc = jnp.broadcast_to(loc, batch_shape)
+        self.scale = jnp.broadcast_to(scale, batch_shape)
+        self.beta = jnp.broadcast_to(beta, batch_shape)
+        self.mmin = jnp.broadcast_to(mmin, batch_shape)
+        self.mmax = jnp.broadcast_to(mmax, batch_shape)
+        self.delta = jnp.broadcast_to(delta, batch_shape)
 
-        # Compute the normalization constant for primary mass distribution
-
-        _m1s_delta = jnp.linspace(mmin, mmin + delta, 30, dtype=jnp.result_type(float))
-
-        _Z = (
-            jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0)
-            + special.ndtr((self.mmax - self.loc) / self.scale)
-            - special.ndtr((self.mmin + self.delta - self.loc) / self.scale)
-        )
-        self._logZ = jnp.where(
-            jnp.isnan(_Z) | jnp.isinf(_Z) | jnp.less(_Z, 0.0), 0.0, jnp.log(_Z)
+        # Pre-compute normalization constants more efficiently
+        self._logZ = self._compute_m1_normalization()
+        self._Z_q_interpolator = self._precompute_q_normalization(
+            m1_grid_size, q_grid_size
         )
 
-        del _m1s_delta
+    def _compute_m1_normalization(self, m1_grid_size):
+        """Compute normalization for m1 distribution using analytical + numerical
+        approach.
+        """
+        # For the smooth region (m1 > mmin + delta), use analytical CDF
+        analytical_part = special.ndtr(
+            (self.mmax - self.loc) / self.scale
+        ) - special.ndtr((self.mmin + self.delta - self.loc) / self.scale)
 
-        # Compute the normalization constant for mass ratio distribution
+        m1_smooth = jnp.linspace(self.mmin + self.delta, self.mmax, m1_grid_size)
 
-        self._m1s = jnp.linspace(mmin, mmax, 120, dtype=jnp.result_type(float))
-        _qs = jnp.linspace(mmin / mmax, 1.0, 120, dtype=jnp.result_type(float))
-        _m1qs_grid = jnp.stack(jnp.meshgrid(self._m1s, _qs, indexing="ij"), axis=-1)
+        # Vectorized computation
+        log_probs = jax.vmap(self._log_prob_m1_unnormalized)(m1_smooth[None, :])
+        probs = jnp.exp(log_probs)
 
-        _prob_q = jnp.exp(self._log_prob_q(jnp.expand_dims(_m1qs_grid, axis=-2)))
-
-        self._Z_q_given_m1 = jnp.clip(
-            jnp.trapezoid(_prob_q, _qs, axis=1).reshape(
-                *(self._m1s.shape + batch_shape)
-            ),
-            min=jnp.finfo(jnp.result_type(float)).tiny,
-            max=jnp.finfo(jnp.result_type(float)).max,
+        # Trapezoidal integration with non-uniform spacing
+        dm1 = jnp.diff(m1_smooth)
+        numerical_part = jnp.sum(
+            0.5 * (probs[..., :-1] + probs[..., 1:]) * dm1, axis=-1
         )
-        del _m1qs_grid, _qs, _prob_q
+
+        total_Z = analytical_part + numerical_part
+        return jnp.where(
+            (jnp.isnan(total_Z) | jnp.isinf(total_Z) | (total_Z <= 0)),
+            0.0,
+            jnp.log(total_Z),
+        )
+
+    def _precompute_q_normalization(self, m1_grid_size, q_grid_size):
+        """Pre-compute q normalization function using efficient vectorization."""
+        # Create m1 grid with higher density where needed
+        m1_grid = jnp.linspace(self.mmin, self.mmax, m1_grid_size)
+
+        # For each m1, compute the normalization integral over q
+        def compute_q_norm_for_m1(m1):
+            q_min = jnp.maximum(self.mmin / m1, self.mmin / self.mmax)
+            q_max = 1.0
+            q_grid = jnp.linspace(q_min, q_max, q_grid_size)
+
+            # Vectorized log probability computation
+            m1_expanded = jnp.broadcast_to(m1[..., None], q_grid.shape)
+            values = jnp.stack([m1_expanded, q_grid], axis=-1)
+            log_probs = self._log_prob_q_unnormalized(values)
+            probs = jnp.exp(log_probs)
+
+            # Trapezoidal integration
+            integral = jnp.trapezoid(probs, x=q_grid, axis=-1)
+
+            return jnp.clip(
+                integral,
+                min=jnp.finfo(jnp.result_type(float)).tiny,
+                max=jnp.finfo(jnp.result_type(float)).max,
+            )
+
+        # Vectorized computation over m1 grid
+        Z_q_values = jax.vmap(compute_q_norm_for_m1)(m1_grid[None, :])
+
+        # Create interpolator function
+        def interpolate_Z_q(m1):
+            return interpax.interp1d(m1, m1_grid, Z_q_values, method="cubic")
+
+        return interpolate_Z_q
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
-    def support(self) -> constraints.Constraint:
+    def support(self):
         return self._support
 
-    def _log_prob_m1(self, m1: Array, logZ: ArrayLike = 0.0) -> Array:
-        log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
-        log_prob_norm = norm.logpdf(m1, loc=self.loc, scale=self.scale)
-        log_prob_m1 = log_prob_norm + log_smoothing_m1 - logZ
-        return jnp.nan_to_num(
-            log_prob_m1,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
-        )
+    def _log_prob_m1_unnormalized(self, m1):
+        """Unnormalized log probability for m1."""
+        log_smoothing = log_planck_taper_window((m1 - self.mmin) / self.delta)
+        log_normal = norm.logpdf(m1, loc=self.loc, scale=self.scale)
+        return log_normal + log_smoothing
 
-    def _log_prob_q(self, value: Array, logZ: ArrayLike = 0.0) -> Array:
+    def _log_prob_m1(self, m1, logZ=None):
+        """Normalized log probability for m1."""
+        if logZ is None:
+            logZ = self._logZ
+        log_prob = self._log_prob_m1_unnormalized(m1) - logZ
+        return jnp.nan_to_num(log_prob, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf)
+
+    def _log_prob_q_unnormalized(self, value):
+        """Unnormalized log probability for q given m1."""
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
-        log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
-        log_prob_q = self.beta * jnp.log(q) + log_smoothing_q - logZ
+        log_smoothing = log_planck_taper_window((m2 - self.mmin) / self.delta)
+        log_power = self.beta * jnp.log(q)
+        return log_power + log_smoothing
+
+    def _log_prob_q(self, value, log_Z_q=None):
+        """Normalized log probability for q given m1."""
+        if log_Z_q is None:
+            m1, _ = jnp.unstack(value, axis=-1)
+            Z_q = self._Z_q_interpolator(m1)
+            log_Z_q = jnp.where(
+                (jnp.isnan(Z_q) | jnp.isinf(Z_q) | (Z_q <= 0)), 0.0, jnp.log(Z_q)
+            )
+
+        log_prob = self._log_prob_q_unnormalized(value) - log_Z_q
         mask = self.support(value)
-        log_prob_q = jnp.where(mask, log_prob_q, -jnp.inf)
-        return jnp.nan_to_num(
-            log_prob_q,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
-        )
+        log_prob = jnp.where(mask, log_prob, -jnp.inf)
+        return jnp.nan_to_num(log_prob, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf)
 
     @validate_sample
-    def log_prob(self, value: ArrayLike) -> ArrayLike:
+    def log_prob(self, value):
+        """Compute log probability of samples."""
         m1, _ = jnp.unstack(value, axis=-1)
-        log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        _Z_q = interpax.interp1d(m1, self._m1s, self._Z_q_given_m1)
-        log_Z_q = jnp.where(
-            jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
-            0.0,
-            jnp.log(_Z_q),
-        )
-        log_prob_q = self._log_prob_q(value, log_Z_q)
+
+        # Compute log probabilities
+        log_prob_m1 = self._log_prob_m1(m1)
+        log_prob_q = self._log_prob_q(value)
+
         return log_prob_m1 + log_prob_q
