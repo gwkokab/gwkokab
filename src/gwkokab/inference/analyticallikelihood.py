@@ -3,7 +3,6 @@
 
 
 import functools as ft
-
 from typing import Callable, Dict, List, Optional, Tuple, TypeAlias
 
 import equinox as eqx
