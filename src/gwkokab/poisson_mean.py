@@ -347,7 +347,7 @@ class PoissonMean(eqx.Module):
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
-                samples = jax.checkpoint(jax.jit(component_dist.sample))(
+                samples = jax.checkpoint(component_dist.sample)(
                     self.key, (num_samples,)
                 )
                 per_sample_log_estimated_rates = logVT_fn(samples)
