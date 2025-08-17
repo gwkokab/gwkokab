@@ -3,6 +3,7 @@
 
 
 import functools as ft
+
 from typing import Callable, Dict, List, Optional, Tuple, TypeAlias
 
 import equinox as eqx
@@ -262,6 +263,7 @@ def analytical_likelihood(
         and a second array (not used in this implementation).
     """
     warn_if(batch_size > n_samples, msg="Batch size is greater than number of samples")
+
     n_events = len(means)
     mean_stack: Array = jax.block_until_ready(
         jax.device_put(jnp.stack(means, axis=0), may_alias=True)
