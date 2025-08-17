@@ -142,6 +142,7 @@ def main() -> None:
 
     has_log_ref_prior = LOG_REF_PRIOR_NAME in POSTERIOR_COLUMNS
     if has_log_ref_prior:
+        log_ref_prior_idx = POSTERIOR_COLUMNS.index(LOG_REF_PRIOR_NAME)
         POSTERIOR_COLUMNS.remove(LOG_REF_PRIOR_NAME)
 
     N_pl = args.n_pl
@@ -468,8 +469,8 @@ def main() -> None:
 
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
     if has_log_ref_prior:
-        log_ref_priors = [d[..., -1] for d in data]
-        data = [d[..., :-1] for d in data]
+        log_ref_priors = [d[..., log_ref_prior_idx] for d in data]
+        data = [np.delete(d, log_ref_prior_idx, axis=-1) for d in data]
     else:
         log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
