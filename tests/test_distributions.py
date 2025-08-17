@@ -401,8 +401,8 @@ CONTINUOUS = [
         },
     ),
     (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
+    (PowerlawRedshift, {"kappa": 1.0, "z_max": 2.3}),
+    (PowerlawRedshift, {"kappa": 2.7, "z_max": 1.0}),
     (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
     ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2) #########
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 0, **generic_nspmsg}),
