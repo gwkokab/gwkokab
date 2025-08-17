@@ -12,6 +12,7 @@ from loguru import logger
 from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import Distribution
 
+from .cosmology import PLANCK_2015_Cosmology
 from .models import PowerlawRedshift
 from .models.utils import JointDistribution, ScaledMixture
 from .utils.tools import batch_and_remainder, error_if
@@ -272,6 +273,10 @@ class PoissonMean(eqx.Module):
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 
+            # TODO(Qazalbash): remove hardcoding on redshift index
+            z = jax.lax.dynamic_index_in_dim(samples, index=-1, axis=-1)
+            log_prob += PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z)
+
             partial_logsumexp = jnn.logsumexp(
                 log_prob, where=~jnp.isneginf(log_prob), axis=-1
             )
@@ -358,6 +363,11 @@ class PoissonMean(eqx.Module):
                     samples
                 ).reshape(num_samples)
                 per_sample_log_estimated_rates = log_weights + component_log_prob
+                # TODO(Qazalbash): remove hardcoding on redshift index
+                z = jax.lax.dynamic_index_in_dim(samples, index=-1, axis=-1)
+                per_sample_log_estimated_rates += PLANCK_2015_Cosmology.logdVcdz(
+                    z
+                ) - jnp.log1p(z)
 
             log_rate_i = jax.lax.dynamic_index_in_dim(
                 model.log_scales, index=i, axis=-1, keepdims=False
