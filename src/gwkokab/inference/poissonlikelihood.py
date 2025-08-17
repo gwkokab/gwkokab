@@ -134,7 +134,7 @@ def poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = jax.block_until_ready(ERate_obj(model_instance))
+        expected_rates = ERate_obj(model_instance)
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
@@ -165,22 +165,19 @@ def poisson_likelihood(
         for batched_data, batched_log_ref_priors, batched_mask in zip(
             data_group, log_ref_priors_group, masks_group
         ):
-            with jax.ensure_compile_time_eval():
-                safe_batched_data = jnp.where(
-                    jnp.expand_dims(batched_mask, axis=-1),
-                    batched_data,
-                    model_instance.support.feasible_like(batched_data),
-                )
-                safe_batched_log_ref_priors = jnp.where(
-                    batched_mask, batched_log_ref_priors, 0.0
-                )
+            safe_batched_data = jnp.where(
+                jnp.expand_dims(batched_mask, axis=-1),
+                batched_data,
+                model_instance.support.feasible_like(batched_data),
+            )
+            safe_batched_log_ref_priors = jnp.where(
+                batched_mask, batched_log_ref_priors, 0.0
+            )
             total_log_likelihood, _ = jax.lax.scan(
                 single_event_fn,  # type: ignore
                 total_log_likelihood,
                 (safe_batched_data, safe_batched_log_ref_priors, batched_mask),
             )
-
-        total_log_likelihood = jax.block_until_ready(total_log_likelihood)
 
         log_prior = priors.log_prob(x)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)

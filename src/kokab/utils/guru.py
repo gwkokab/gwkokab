@@ -21,9 +21,8 @@ class Guru:
 
     @property
     def rng_key(self) -> PRNGKeyArray:
-        _rng_key = self._rng_key
-        (self._rng_key,) = jrd.split(_rng_key, num=1)
-        return _rng_key
+        self._rng_key, subkey = jrd.split(self._rng_key)
+        return subkey
 
     def set_rng_key(
         self, *, key: Optional[PRNGKeyArray] = None, seed: Optional[int] = None

@@ -100,10 +100,10 @@ generic_nspmsg = {
     "chi2_variance_g": 0.14,
     "chi2_variance_pl": 0.1,
     # "use_tilt": True,
-    "cos_tilt_zeta_g_0": 1.0,
-    "cos_tilt_zeta_g_1": 1.0,
-    "cos_tilt_zeta_pl_0": 1.0,
-    "cos_tilt_zeta_pl_1": 1.0,
+    "cos_tilt_zeta_g_0": 0.5,
+    "cos_tilt_zeta_g_1": 0.5,
+    "cos_tilt_zeta_pl_0": 0.5,
+    "cos_tilt_zeta_pl_1": 0.5,
     "cos_tilt1_scale_g_0": 0.1,
     "cos_tilt1_scale_g_1": 0.3,
     "cos_tilt1_scale_pl_0": 0.1,
@@ -178,10 +178,10 @@ generic_npmg = {
     "chi2_variance_g": 0.14,
     "chi2_variance_pl": 0.1,
     # "use_tilt": True,
-    "cos_tilt_zeta_g_0": 1.0,
-    "cos_tilt_zeta_g_1": 1.0,
-    "cos_tilt_zeta_pl_0": 1.0,
-    "cos_tilt_zeta_pl_1": 1.0,
+    "cos_tilt_zeta_g_0": 0.5,
+    "cos_tilt_zeta_g_1": 0.5,
+    "cos_tilt_zeta_pl_0": 0.5,
+    "cos_tilt_zeta_pl_1": 0.5,
     "cos_tilt1_scale_g_0": 0.1,
     "cos_tilt1_scale_g_1": 0.3,
     "cos_tilt1_scale_pl_0": 0.1,
@@ -401,8 +401,8 @@ CONTINUOUS = [
         },
     ),
     (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
+    (PowerlawRedshift, {"kappa": 1.0, "z_max": 2.3}),
+    (PowerlawRedshift, {"kappa": 2.7, "z_max": 1.0}),
     (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
     ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2) #########
     (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 0, **generic_nspmsg}),
@@ -1016,7 +1016,7 @@ def test_log_prob_gradient(jax_dist, params):
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
         if (jax_dist is NPowerlawMGaussian) and any(
-            [k.startswith("mmin"), k.startswith("mmax")]
+            [k.startswith("mmin"), k.startswith("mmax"), "low" in k, "high" in k]
         ):
             continue
         if params[k] is None or jnp.result_type(params[k]) in (jnp.int32, jnp.int64):

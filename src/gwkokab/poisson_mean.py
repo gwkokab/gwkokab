@@ -76,7 +76,7 @@ class PoissonMean(eqx.Module):
     )
     proposal_log_weights_and_samples: Tuple[Optional[Tuple[Array, Array]], ...]
     time_scale: Union[int, float, Array] = eqx.field(default=1.0)
-    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(default=None)
+    parameter_ranges: Optional[Dict[str, Union[int, float]]] = eqx.field(default=None)
 
     def __init__(
         self,
@@ -250,8 +250,6 @@ class PoissonMean(eqx.Module):
         ----------
         model : ScaledMixture
             Model instance.
-        redshift_index : int
-            Redshift index for the model.
 
         Returns
         -------
@@ -264,12 +262,13 @@ class PoissonMean(eqx.Module):
 
         # injection based sampling method
 
-        def _f(_: None, data: Tuple[Array, Array]) -> Tuple[None, Array]:
+        def _f(carry_logsumexp: Array, data: Tuple[Array, Array]) -> Tuple[Array, None]:
             log_weights, samples = data
             # log p(θ_i|λ)
-            model_log_prob = jax.checkpoint(jax.vmap(model_instance.log_prob))(
-                samples
-            ).reshape(log_weights.shape[0])
+            model_log_prob = jax.checkpoint(
+                jax.vmap(model_instance.log_prob),
+                prevent_cse=False,
+            )(samples).reshape(log_weights.shape[0])
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
 
@@ -277,7 +276,7 @@ class PoissonMean(eqx.Module):
                 log_prob, where=~jnp.isneginf(log_prob), axis=-1
             )
 
-            return None, partial_logsumexp
+            return jnp.logaddexp(carry_logsumexp, partial_logsumexp), None
 
         # n_total = n_accepted + n_rejected, batch size
         num_samples, batch_size = self.num_samples_per_component  # type: ignore
@@ -286,10 +285,11 @@ class PoissonMean(eqx.Module):
         log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
 
         n_accepted = log_weights.shape[0]
+        initial_logprob = jnp.asarray(-jnp.inf)
         if n_accepted <= batch_size:
             # If the number of accepted injections is less than or equal to the batch size,
             # we can process them all at once.
-            _, log_prob = _f(None, (log_weights, samples))
+            log_prob, _ = _f(initial_logprob, (log_weights, samples))
         else:
             batched_log_weights, remainder_log_weights = batch_and_remainder(
                 log_weights, batch_size
@@ -297,21 +297,17 @@ class PoissonMean(eqx.Module):
             batched_samples, remainder_samples = batch_and_remainder(
                 samples, batch_size
             )
-            _, batched_logprob = jax.lax.scan(
+            batched_logprob, _ = jax.lax.scan(
                 _f,
-                None,
+                initial_logprob,
                 (batched_log_weights, batched_samples),
             )
-            _, remainder_logprob = _f(None, (remainder_log_weights, remainder_samples))
-            log_prob = jnp.concatenate(
-                [batched_logprob, jnp.expand_dims(remainder_logprob, axis=0)],
-                axis=0,
+            log_prob, _ = _f(
+                batched_logprob, (remainder_log_weights, remainder_samples)
             )
 
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (self.time_scale / num_samples) * jnp.exp(
-            jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
-        )
+        return (self.time_scale / num_samples) * jnp.exp(log_prob)
 
     def calculate_per_component_rate(self, model: ScaledMixture) -> Array:
         r"""Estimate the per component rate/s by using the given model.
@@ -347,7 +343,9 @@ class PoissonMean(eqx.Module):
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
-                samples = component_dist.sample(self.key, (num_samples,))
+                samples = jax.jit(component_dist.sample, static_argnums=(1,))(
+                    self.key, (num_samples,)
+                )
                 per_sample_log_estimated_rates = logVT_fn(samples)
                 if isinstance(component_dist, JointDistribution):
                     for m_dist in component_dist.marginal_distributions:
@@ -356,9 +354,9 @@ class PoissonMean(eqx.Module):
                             break
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
-                component_log_prob = component_dist.log_prob(samples).reshape(
-                    num_samples
-                )
+                component_log_prob = jax.checkpoint(jax.jit(component_dist.log_prob))(
+                    samples
+                ).reshape(num_samples)
                 per_sample_log_estimated_rates = log_weights + component_log_prob
 
             log_rate_i = jax.lax.dynamic_index_in_dim(
