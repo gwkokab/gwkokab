@@ -76,7 +76,7 @@ class PoissonMean(eqx.Module):
     )
     proposal_log_weights_and_samples: Tuple[Optional[Tuple[Array, Array]], ...]
     time_scale: Union[int, float, Array] = eqx.field(default=1.0)
-    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(default=None)
+    parameter_ranges: Optional[Dict[str, Union[int, float]]] = eqx.field(default=None)
 
     def __init__(
         self,
