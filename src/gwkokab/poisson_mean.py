@@ -347,7 +347,9 @@ class PoissonMean(eqx.Module):
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
-                samples = component_dist.sample(self.key, (num_samples,))
+                samples = jax.checkpoint(jax.jit(component_dist.sample))(
+                    self.key, (num_samples,)
+                )
                 per_sample_log_estimated_rates = logVT_fn(samples)
                 if isinstance(component_dist, JointDistribution):
                     for m_dist in component_dist.marginal_distributions:
@@ -356,9 +358,9 @@ class PoissonMean(eqx.Module):
                             break
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
-                component_log_prob = component_dist.log_prob(samples).reshape(
-                    num_samples
-                )
+                component_log_prob = jax.checkpoint(jax.jit(component_dist.log_prob))(
+                    samples
+                ).reshape(num_samples)
                 per_sample_log_estimated_rates = log_weights + component_log_prob
 
             log_rate_i = jax.lax.dynamic_index_in_dim(
