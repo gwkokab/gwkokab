@@ -7,7 +7,7 @@
 """
 
 from collections.abc import Sequence
-from typing import Tuple
+from typing import Tuple, Union
 
 from jax import lax, numpy as jnp
 from jaxtyping import Array
@@ -360,9 +360,16 @@ class _AnyConstraint(Constraint):
 
 
 class _TransformedConstraint(Constraint):
-    def __init__(self, base_support: Constraint, transforms: Sequence[Transform]):
+    def __init__(
+        self,
+        base_support: Constraint,
+        transforms: Union[Transform, Sequence[Transform]],
+    ):
         self.base_support = base_support
-        self.transforms = transforms
+        if isinstance(transforms, Transform):
+            self.transforms = (transforms,)
+        else:
+            self.transforms = tuple(transforms)
 
     def __call__(self, x: Array) -> Array:
         y = x
@@ -387,6 +394,8 @@ class _TransformedConstraint(Constraint):
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _AnyConstraint):
+            return False
+        if len(self.transforms) != len(other.transforms):
             return False
         return self.base_support == other.base_support and all(
             transform == other_transform
