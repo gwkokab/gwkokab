@@ -19,7 +19,7 @@ from flowMC.proposal.Gaussian_random_walk import GaussianRandomWalk  # noqa F401
 from flowMC.proposal.HMC import HMC  # noqa F401
 from flowMC.proposal.MALA import MALA  # noqa F401
 from flowMC.Sampler import Sampler  # noqa F401
-from jax import nn as jnn, random as jrd
+from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array
 from loguru import logger
 
@@ -55,7 +55,6 @@ def _save_data_from_sampler(
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
     logpdf: Optional[Callable] = None,
-    batch_size: int = 1000,
 ) -> None:
     """This functions saves the data from a sampler to disk. The data saved includes the
     samples from the flow, the chains from the training and production phases, the log
@@ -73,9 +72,8 @@ def _save_data_from_sampler(
         number of samples to draw from the flow, by default 5000
     logpdf : Callable, optional
         The log probability function.
-    batch_size : int, optional
-        The batch size for the log probability function, by default 1000
     """
+    logger.info("Saving data from sampler to directory: {out_dir}", out_dir=out_dir)
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]
     if logpdf is None:
@@ -114,6 +112,10 @@ def _save_data_from_sampler(
         header="train prod",
         comments="#",
     )
+    logger.info(
+        "Global acceptance rates saved to {out_dir}/global_accs.dat", out_dir=out_dir
+    )
+
     np.savetxt(
         rf"{out_dir}/local_accs.dat",
         np.column_stack(
@@ -126,10 +128,60 @@ def _save_data_from_sampler(
         header="train prod",
         comments="#",
     )
+    logger.info(
+        "Local acceptance rates saved to {out_dir}/local_accs.dat", out_dir=out_dir
+    )
+
+    for n_chain in range(n_chains):
+        np.savetxt(
+            rf"{out_dir}/global_accs_{n_chain}.dat",
+            np.column_stack(
+                _same_length_arrays(
+                    max(
+                        train_global_accs[n_chain, :].shape[0],
+                        prod_global_accs[n_chain, :].shape[0],
+                    ),
+                    train_global_accs[n_chain, :],
+                    prod_global_accs[n_chain, :],
+                )
+            ),
+            header="train prod",
+            comments="#",
+        )
+        logger.info(
+            "Saving chain {n_chain} global acceptance rates to {out_dir}/global_accs_{n_chain}.dat",
+            n_chain=n_chain,
+            out_dir=out_dir,
+        )
+        np.savetxt(
+            rf"{out_dir}/local_accs_{n_chain}.dat",
+            np.column_stack(
+                _same_length_arrays(
+                    max(
+                        train_local_accs[n_chain, :].shape[0],
+                        prod_local_accs[n_chain, :].shape[0],
+                    ),
+                    train_local_accs[n_chain, :],
+                    prod_local_accs[n_chain, :],
+                )
+            ),
+            header="train prod",
+            comments="#",
+        )
+        logger.info(
+            "Saving chain {n_chain} local acceptance rates to {out_dir}/local_accs_{n_chain}.dat",
+            n_chain=n_chain,
+            out_dir=out_dir,
+        )
 
     np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
 
     for i in range(n_chains):
+        logger.info(
+            "Saving chain {i} data to {out_dir}/train_chains_{i}.dat and {out_dir}/prod_chains_{i}.dat",
+            i=i,
+            out_dir=out_dir,
+        )
         np.savetxt(
             rf"{out_dir}/train_chains_{i}.dat",
             train_chains[i, :, :],
@@ -155,25 +207,67 @@ def _save_data_from_sampler(
 
     gc.collect()
 
-    key_unweighted, key_weighted = jrd.split(
-        jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
-    )
-
+    key_unweighted = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
     unweighted_samples = np.asarray(
-        sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
+        jax.block_until_ready(
+            sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
+        )
     )
     np.savetxt(
         rf"{out_dir}/nf_samples_unweighted.dat", unweighted_samples, header=header
     )
+    logger.info(
+        "Unweighted samples saved to {out_dir}/nf_samples_unweighted.dat",
+        out_dir=out_dir,
+    )
 
     gc.collect()
 
-    logpdf_val = jax.lax.map(
-        lambda s: logpdf(s, None), unweighted_samples, batch_size=batch_size
+    logpdf_val = jax.block_until_ready(
+        jax.lax.map(lambda s: logpdf(s, None), unweighted_samples)
     )
-    nf_model_log_prob_val = sampler.nf_model.log_prob(unweighted_samples)
+    logger.debug(
+        "Nan count in logpdf values: {nan_count}", nan_count=jnp.isnan(logpdf_val).sum()
+    )
+    logger.debug(
+        "Neginf count in logpdf values: {inf_count}",
+        inf_count=jnp.isneginf(logpdf_val).sum(),
+    )
+    logger.debug(
+        "Posinf count in logpdf values: {inf_count}",
+        inf_count=jnp.isposinf(logpdf_val).sum(),
+    )
 
-    weights = np.asarray(jnn.softmax(logpdf_val - nf_model_log_prob_val))
+    nf_model_log_prob_val = jax.block_until_ready(
+        sampler.nf_model.log_prob(unweighted_samples)
+    )
+    logger.debug(
+        "Nan count in nf_model_log_prob values: {nan_count}",
+        nan_count=jnp.isnan(nf_model_log_prob_val).sum(),
+    )
+    logger.debug(
+        "Neginf count in nf_model_log_prob values: {inf_count}",
+        inf_count=jnp.isneginf(nf_model_log_prob_val).sum(),
+    )
+    logger.debug(
+        "Posinf count in nf_model_log_prob values: {inf_count}",
+        inf_count=jnp.isposinf(nf_model_log_prob_val).sum(),
+    )
+
+    weights = jnn.softmax(logpdf_val - nf_model_log_prob_val)
+    logger.debug(
+        "Nan count in weights values: {nan_count}", nan_count=jnp.isnan(weights).sum()
+    )
+    logger.debug(
+        "Neginf count in weights values: {inf_count}",
+        inf_count=jnp.isneginf(weights).sum(),
+    )
+    logger.debug(
+        "Posinf count in weights values: {inf_count}",
+        inf_count=jnp.isposinf(weights).sum(),
+    )
+
+    weights = np.asarray(weights)  # type: ignore
     ess = int(1.0 / np.sum(np.square(weights)))
     logger.debug("Effective sample size is {} out of {}".format(ess, n_samples))
     if ess == 0:
@@ -182,10 +276,14 @@ def _save_data_from_sampler(
         np.random.choice(n_samples, size=ess, p=weights)
     ]
     np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", weighted_samples, header=header)
+    logger.info(
+        "Weighted samples saved to {out_dir}/nf_samples_weighted.dat", out_dir=out_dir
+    )
 
     gc.collect()
 
 
+# TODO(Qazalbash): Convert this class into a single function.
 class flowMChandler(object):
     r"""Handler class for running flowMC."""
 

@@ -589,11 +589,6 @@ def FlexibleMixtureModel(
     )
 
 
-_m1s = jnp.linspace(0.5, 200.0, 120, dtype=jnp.result_type(float))
-_qs = jnp.linspace(0.001, 1.0, 120, dtype=jnp.result_type(float))
-_m1qs_grid = jnp.stack(jnp.meshgrid(_m1s, _qs, indexing="ij"), axis=-1)
-
-
 class SmoothedPowerlawPrimaryMassRatio(Distribution):
     r""":class:`PowerlawPrimaryMassRatio` with smoothing kernel on the lower edge.
 
@@ -627,6 +622,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         "delta",
         "mmax",
         "mmin",
+        "_m1s",
     )
 
     def __init__(
@@ -675,8 +671,8 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
 
         _m1s_delta = jnp.linspace(mmin, mmin + delta, 30, dtype=jnp.result_type(float))
 
-        _Z = lax.stop_gradient(
-            jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0)
+        _Z = jnp.trapezoid(
+            jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0
         ) + self._powerlaw_norm_constant(
             alpha=-self.alpha, low=self.mmin + self.delta, high=self.mmax
         )
@@ -688,13 +684,20 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
 
         # Compute the normalization constant for mass ratio distribution
 
+        self._m1s = jnp.linspace(mmin, mmax, 120, dtype=jnp.result_type(float))
+        _qs = jnp.linspace(mmin / mmax, 1.0, 120, dtype=jnp.result_type(float))
+        _m1qs_grid = jnp.stack(jnp.meshgrid(self._m1s, _qs, indexing="ij"), axis=-1)
+
         _prob_q = jnp.exp(self._log_prob_q(jnp.expand_dims(_m1qs_grid, axis=-2)))
 
         self._Z_q_given_m1 = jnp.clip(
-            jnp.trapezoid(_prob_q, _qs, axis=1).reshape(*(_m1s.shape + batch_shape)),
+            jnp.trapezoid(_prob_q, _qs, axis=1).reshape(
+                *(self._m1s.shape + batch_shape)
+            ),
             min=jnp.finfo(jnp.result_type(float)).tiny,
             max=jnp.finfo(jnp.result_type(float)).max,
         )
+        del _m1qs_grid, _qs, _prob_q
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
@@ -739,13 +742,11 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
-        log_Z_q = lax.stop_gradient(
-            jnp.where(
-                jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
-                0.0,
-                jnp.log(_Z_q),
-            )
+        _Z_q = interpax.interp1d(m1, self._m1s, self._Z_q_given_m1)
+        log_Z_q = jnp.where(
+            jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
+            0.0,
+            jnp.log(_Z_q),
         )
         log_prob_q = self._log_prob_q(value, log_Z_q)
         return log_prob_m1 + log_prob_q
@@ -789,6 +790,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "mmax",
         "mmin",
         "scale",
+        "_m1s",
     )
 
     def __init__(
@@ -834,11 +836,7 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         _m1s_delta = jnp.linspace(mmin, mmin + delta, 30, dtype=jnp.result_type(float))
 
         _Z = (
-            lax.stop_gradient(
-                jnp.trapezoid(
-                    jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0
-                )
-            )
+            jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0)
             + special.ndtr((self.mmax - self.loc) / self.scale)
             - special.ndtr((self.mmin + self.delta - self.loc) / self.scale)
         )
@@ -850,13 +848,20 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
 
         # Compute the normalization constant for mass ratio distribution
 
+        self._m1s = jnp.linspace(mmin, mmax, 120, dtype=jnp.result_type(float))
+        _qs = jnp.linspace(mmin / mmax, 1.0, 120, dtype=jnp.result_type(float))
+        _m1qs_grid = jnp.stack(jnp.meshgrid(self._m1s, _qs, indexing="ij"), axis=-1)
+
         _prob_q = jnp.exp(self._log_prob_q(jnp.expand_dims(_m1qs_grid, axis=-2)))
 
         self._Z_q_given_m1 = jnp.clip(
-            jnp.trapezoid(_prob_q, _qs, axis=1).reshape(*(_m1s.shape + batch_shape)),
+            jnp.trapezoid(_prob_q, _qs, axis=1).reshape(
+                *(self._m1s.shape + batch_shape)
+            ),
             min=jnp.finfo(jnp.result_type(float)).tiny,
             max=jnp.finfo(jnp.result_type(float)).max,
         )
+        del _m1qs_grid, _qs, _prob_q
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
@@ -891,13 +896,11 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        _Z_q = interpax.interp1d(m1, _m1s, self._Z_q_given_m1)
-        log_Z_q = lax.stop_gradient(
-            jnp.where(
-                jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
-                0.0,
-                jnp.log(_Z_q),
-            )
+        _Z_q = interpax.interp1d(m1, self._m1s, self._Z_q_given_m1)
+        log_Z_q = jnp.where(
+            jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
+            0.0,
+            jnp.log(_Z_q),
         )
         log_prob_q = self._log_prob_q(value, log_Z_q)
         return log_prob_m1 + log_prob_q

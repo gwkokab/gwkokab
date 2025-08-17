@@ -5,12 +5,14 @@
 import json
 from typing import Any, Dict, List, Literal, Union
 
-from numpyro.distributions.distribution import DistributionLike
+from jaxtyping import PRNGKeyArray
+from numpyro._typing import DistributionLike
 
 from gwkokab.models.utils import JointDistribution
+from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
 
-from .common import get_dist
+from .common import get_dist, vt_json_read_and_process
 
 
 ProposalDistArgType = Dict[str, Union[Literal["self"], List[Dict[str, Any]]]]
@@ -88,3 +90,34 @@ def poisson_mean_parser(filepath: str) -> PoissonMeanConfig:
     except KeyError:
         pass
     return pmean_json
+
+
+def read_pmean(
+    key: PRNGKeyArray, parameters: List[str], filename: str, selection_fn_filename: str
+) -> PoissonMean:
+    """Read the Poisson mean from a JSON file and create a PoissonMean instance.
+
+    Parameters
+    ----------
+    key : PRNGKeyArray
+        The random number generator key.
+    parameters : List[str]
+        List of parameters to be used in the Poisson mean.
+    filename : str
+        The path to the JSON file containing the configuration of the Poisson mean.
+    selection_fn_filename : str
+        The path to the JSON file containing the selection function.
+
+    Returns
+    -------
+    PoissonMean
+        An instance of the PoissonMean class initialized with the configuration from the JSON file.
+    """
+    selection_fn = vt_json_read_and_process(parameters, selection_fn_filename)
+    kwargs = poisson_mean_parser(filename)
+    erate_estimator = PoissonMean(
+        selection_fn,
+        key=key,
+        **kwargs,  # type: ignore[arg-type]
+    )
+    return erate_estimator

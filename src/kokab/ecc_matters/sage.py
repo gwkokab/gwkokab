@@ -20,6 +20,7 @@ from kokab.utils.common import (
     flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
+    LOG_REF_PRIOR_NAME,
     read_json,
     vt_json_read_and_process,
 )
@@ -47,7 +48,12 @@ def main() -> None:
     KEY = jrd.PRNGKey(SEED)
     KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
-    POSTERIOR_COLUMNS = args.posterior_columns
+    POSTERIOR_COLUMNS: list[str] = args.posterior_columns
+
+    has_log_ref_prior = LOG_REF_PRIOR_NAME in POSTERIOR_COLUMNS
+    if has_log_ref_prior:
+        log_ref_prior_idx = POSTERIOR_COLUMNS.index(LOG_REF_PRIOR_NAME)
+        POSTERIOR_COLUMNS.remove(LOG_REF_PRIOR_NAME)
 
     prior_dict = read_json(args.prior_json)
 
@@ -64,19 +70,29 @@ def main() -> None:
         msg="The parameters in the posterior data do not match the parameters in the model.",
     )
 
-    nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
+    parameters_name = [param.name for param in parameters]
+    nvt = vt_json_read_and_process(parameters_name, args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
 
+    if has_log_ref_prior:
+        POSTERIOR_COLUMNS.append(LOG_REF_PRIOR_NAME)
+
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
+    if has_log_ref_prior:
+        log_ref_priors = [d[..., log_ref_prior_idx] for d in data]
+        data = [np.delete(d, log_ref_prior_idx, axis=-1) for d in data]
+    else:
+        log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
         dist_builder=model,
         data=data,
         log_ref_priors=log_ref_priors,
-        ERate_fn=erate_estimator.__call__,
+        ERate_obj=erate_estimator,
+        n_buckets=args.n_buckets,
+        threshold=args.threshold,
     )
 
     constants = model.constants
@@ -98,7 +114,9 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
+    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(
+        sorted(model.variables.keys())
+    )
 
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
 

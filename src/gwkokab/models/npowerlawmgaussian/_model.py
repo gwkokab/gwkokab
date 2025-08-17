@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Literal, Optional, Tuple
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
-from numpyro.distributions import Distribution, TransformedDistribution
+from numpyro.distributions import Distribution
 
 from ..constraints import any_constraint
 from ..utils import (
@@ -17,6 +17,7 @@ from ..utils import (
     create_powerlaws,
     create_truncated_normal_distributions,
     create_uniform_distributions,
+    ExtendedSupportTransformedDistribution,
     JointDistribution,
     ScaledMixture,
 )
@@ -108,7 +109,6 @@ def _build_non_mass_distributions(
         list of distributions
     """
     build_distributions = mass_distributions
-
     _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
         (use_spin, "chi1", build_spin_distributions),
         (use_spin, "chi2", build_spin_distributions),
@@ -213,7 +213,7 @@ def _build_pl_component_distributions(
     mass_distributions = jtr.map(
         lambda powerlaw: [powerlaw],
         powerlaws,
-        is_leaf=lambda x: isinstance(x, TransformedDistribution),
+        is_leaf=lambda x: isinstance(x, ExtendedSupportTransformedDistribution),
     )
 
     build_distributions = _build_non_mass_distributions(
@@ -547,7 +547,7 @@ def NPowerlawMGaussian(
         component_dists = pl_component_dist + g_component_dist
 
     N = N_pl + N_g
-    log_rates = jnp.stack([params.get(f"log_rate_{i}", 0.0) for i in range(N)], axis=-1)
+    log_rates = jnp.stack([params[f"log_rate_{i}"] for i in range(N)], axis=-1)
 
     return ScaledMixture(
         log_rates,

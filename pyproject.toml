@@ -49,11 +49,12 @@ dependencies = [
     "jax>=0.4.30,<=0.5.3",
     "jaxlib>=0.4.30,<=0.5.3",
     "jaxtyping>=0.2.36",
+    "jenkspy==0.4.1",
     "loguru>=0.7.0",
     "matplotlib>=3.9.0",
     "mplcursors>=0.6",
     "numpy<3",
-    "numpyro>=0.16.0",
+    "numpyro>=0.19.0",
     "pandas>=2.2.0",
     "quadax>=0.2.5",
     "RIFT>=0.0.15.11",
@@ -82,7 +83,12 @@ docs = [
     "sphinx>=2.0",
     "sphinx_design",
 ]
-test = ["coveralls>=4.0.1", "pytest>=8.3.0", "tensorflow_probability>=0.18"]
+test = [
+    "coveralls>=4.0.1",
+    "pytest>=8.3.0",
+    "tensorflow_probability>=0.18",
+    "astropy>=6.0.0",
+]
 cuda12 = ["jax[cuda12]>=0.4.30"]
 # tpu = ["jax[tpu]>=0.4.30"]
 
@@ -120,6 +126,9 @@ sage_ecc_matters = "kokab.ecc_matters.sage:main"
 sage_n_pls_m_gs = "kokab.n_pls_m_gs.sage:main"
 sage_n_spls_m_sgs = "kokab.n_spls_m_sgs.sage:main"
 sage_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.sage:main"
+## Monk scripts
+monk_ecc_matters = "kokab.ecc_matters.monk:main"
+monk_n_pls_m_gs = "kokab.n_pls_m_gs.monk:main"
 ## PPD scripts
 ppd_ecc_matters = "kokab.ecc_matters.ppd:main"
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"

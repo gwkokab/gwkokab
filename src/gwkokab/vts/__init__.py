@@ -10,14 +10,23 @@ The primary ingredient in these analyses is the population-averaged sensitive vo
 """
 
 from ._abc import VolumeTimeSensitivityInterface as VolumeTimeSensitivityInterface
-from ._injvt import (
-    RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
+from ._neuralpdet import (
+    NeuralNetProbabilityOfDetection as NeuralNetProbabilityOfDetection,
 )
 from ._neuralvt import NeuralNetVolumeTimeSensitivity as NeuralNetVolumeTimeSensitivity
 from ._pdet import pdet_O3 as pdet_O3
 from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity as PopModelsCalibratedVolumeTimeSensitivity,
     PopModelsVolumeTimeSensitivity as PopModelsVolumeTimeSensitivity,
+)
+from ._realinjvt import (
+    RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
+)
+from ._semianalyticalinjvt import (
+    SemiAnalyticalRealInjectionVolumeTimeSensitivity as SemiAnalyticalRealInjectionVolumeTimeSensitivity,
+)
+from ._syninjvt import (
+    SyntheticInjectionVolumeTimeSensitivity as SyntheticInjectionVolumeTimeSensitivity,
 )
 from ._train import train_regressor as train_regressor
 from ._utils import (

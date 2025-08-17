@@ -2,17 +2,25 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import List, Literal, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import equinox as eqx
+import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
-from numpyro.distributions.distribution import Distribution, DistributionLike
+from numpyro._typing import DistributionLike
+from numpyro.distributions.distribution import Distribution
 
-from .models.utils import ScaledMixture
-from .utils.tools import error_if
-from .vts import RealInjectionVolumeTimeSensitivity, VolumeTimeSensitivityInterface
+from .models import PowerlawRedshift
+from .models.utils import JointDistribution, ScaledMixture
+from .utils.tools import batch_and_remainder, error_if
+from .vts import (
+    RealInjectionVolumeTimeSensitivity,
+    SemiAnalyticalRealInjectionVolumeTimeSensitivity,
+    SyntheticInjectionVolumeTimeSensitivity,
+    VolumeTimeSensitivityInterface,
+)
 
 
 class PoissonMean(eqx.Module):
@@ -59,19 +67,16 @@ class PoissonMean(eqx.Module):
     improve the performance of the importance sampling.
     """
 
-    is_injection_based: bool = eqx.field(init=False, default=False)
+    is_injection_based: bool = eqx.field(default=False, static=True)
     """Flag to check if the class is injection based or not."""
-    key: PRNGKeyArray = eqx.field(init=False)
-    logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(
-        init=False, default=None
-    )
+    key: PRNGKeyArray
+    logVT_estimator: Optional[VolumeTimeSensitivityInterface] = eqx.field(default=None)
     num_samples_per_component: Optional[List[int]] = eqx.field(
-        init=False, static=True, default=None
+        static=True, default=None
     )
-    proposal_log_weights_and_samples: Tuple[Optional[Tuple[Array, Array]], ...] = (
-        eqx.field(init=False)
-    )
-    time_scale: Union[int, float, Array] = eqx.field(init=False, default=1.0)
+    proposal_log_weights_and_samples: Tuple[Optional[Tuple[Array, Array]], ...]
+    time_scale: Union[int, float, Array] = eqx.field(default=1.0)
+    parameter_ranges: Optional[Dict[str, Union[int, float]]] = eqx.field(default=None)
 
     def __init__(
         self,
@@ -109,7 +114,16 @@ class PoissonMean(eqx.Module):
         ValueError
             If the proposal distribution is not a distribution.
         """
-        if isinstance(logVT_estimator, RealInjectionVolumeTimeSensitivity):
+        if hasattr(logVT_estimator, "parameter_ranges"):
+            self.parameter_ranges = logVT_estimator.parameter_ranges
+        if isinstance(
+            logVT_estimator,
+            (
+                RealInjectionVolumeTimeSensitivity,
+                SyntheticInjectionVolumeTimeSensitivity,
+                SemiAnalyticalRealInjectionVolumeTimeSensitivity,
+            ),
+        ):
             self.is_injection_based = True
             self.key = key
             self.proposal_log_weights_and_samples = (
@@ -120,7 +134,10 @@ class PoissonMean(eqx.Module):
                 "We parse the injection files to get the time scales."
             )
             self.time_scale = logVT_estimator.analysis_time_years
-            self.num_samples_per_component = [logVT_estimator.total_injections]
+            self.num_samples_per_component = [
+                logVT_estimator.total_injections,
+                logVT_estimator.batch_size,
+            ]
 
         else:
             self.logVT_estimator = logVT_estimator
@@ -226,7 +243,7 @@ class PoissonMean(eqx.Module):
         self.proposal_log_weights_and_samples = tuple(proposal_log_weights_and_samples)
         self.key = key
 
-    def __call__(self, model: ScaledMixture) -> Array:
+    def __call__(self, model_instance: ScaledMixture) -> Array:
         r"""Estimate the rate/s by using the given model.
 
         Parameters
@@ -239,21 +256,58 @@ class PoissonMean(eqx.Module):
         Array
             Estimated rate/s.
         """
-        if self.is_injection_based:  # injection based sampling method
-            # log w_i, ω_i
-            log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
-            # n_total = n_accepted + n_rejected
-            num_samples = self.num_samples_per_component[0]  # type: ignore
-            # log p(ω_i|λ)
-            model_log_prob = model.log_prob(samples).reshape(log_weights.shape[0])
-            # log p(ω_i|λ) - log w_i
+
+        if not self.is_injection_based:  # per component rate estimation
+            return self.calculate_per_component_rate(model_instance)
+
+        # injection based sampling method
+
+        def _f(carry_logsumexp: Array, data: Tuple[Array, Array]) -> Tuple[Array, None]:
+            log_weights, samples = data
+            # log p(θ_i|λ)
+            model_log_prob = jax.checkpoint(
+                jax.vmap(model_instance.log_prob),
+                prevent_cse=False,
+            )(samples).reshape(log_weights.shape[0])
+            # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
-            # (T / n_total) * exp(log Σ exp(log p(ω_i|λ) - log w_i))
-            return (self.time_scale / num_samples) * jnp.exp(
-                jnn.logsumexp(log_prob, where=~jnp.isneginf(log_prob), axis=-1)
+
+            partial_logsumexp = jnn.logsumexp(
+                log_prob, where=~jnp.isneginf(log_prob), axis=-1
             )
-        else:  # per component rate estimation
-            return self.calculate_per_component_rate(model)
+
+            return jnp.logaddexp(carry_logsumexp, partial_logsumexp), None
+
+        # n_total = n_accepted + n_rejected, batch size
+        num_samples, batch_size = self.num_samples_per_component  # type: ignore
+
+        # log w_i, θ_i
+        log_weights, samples = self.proposal_log_weights_and_samples[0]  # type: ignore
+
+        n_accepted = log_weights.shape[0]
+        initial_logprob = jnp.asarray(-jnp.inf)
+        if n_accepted <= batch_size:
+            # If the number of accepted injections is less than or equal to the batch size,
+            # we can process them all at once.
+            log_prob, _ = _f(initial_logprob, (log_weights, samples))
+        else:
+            batched_log_weights, remainder_log_weights = batch_and_remainder(
+                log_weights, batch_size
+            )
+            batched_samples, remainder_samples = batch_and_remainder(
+                samples, batch_size
+            )
+            batched_logprob, _ = jax.lax.scan(
+                _f,
+                initial_logprob,
+                (batched_log_weights, batched_samples),
+            )
+            log_prob, _ = _f(
+                batched_logprob, (remainder_log_weights, remainder_samples)
+            )
+
+        # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
+        return (self.time_scale / num_samples) * jnp.exp(log_prob)
 
     def calculate_per_component_rate(self, model: ScaledMixture) -> Array:
         r"""Estimate the per component rate/s by using the given model.
@@ -278,7 +332,7 @@ class PoissonMean(eqx.Module):
             f"but got {len(self.proposal_log_weights_and_samples)}",
         )
 
-        per_component_log_estimated_rates = []
+        log_estimated_rate = jnp.asarray(-jnp.inf)
 
         logVT_fn = self.logVT_estimator.get_mapped_logVT()  # type: ignore
 
@@ -289,22 +343,35 @@ class PoissonMean(eqx.Module):
             if (
                 log_weights_and_samples is None
             ):  # case 1: "self" meaning inverse transform sampling
-                samples = component_dist.sample(self.key, (num_samples,))
+                samples = jax.jit(component_dist.sample, static_argnums=(1,))(
+                    self.key, (num_samples,)
+                )
                 per_sample_log_estimated_rates = logVT_fn(samples)
+                if isinstance(component_dist, JointDistribution):
+                    for m_dist in component_dist.marginal_distributions:
+                        if isinstance(m_dist, PowerlawRedshift):
+                            per_sample_log_estimated_rates += m_dist.log_norm()
+                            break
             else:  # case 2: importance sampling
                 log_weights, samples = log_weights_and_samples
-                component_log_prob = component_dist.log_prob(samples).reshape(
-                    num_samples
-                )
+                component_log_prob = jax.checkpoint(jax.jit(component_dist.log_prob))(
+                    samples
+                ).reshape(num_samples)
                 per_sample_log_estimated_rates = log_weights + component_log_prob
-            per_component_log_estimated_rate = jnn.logsumexp(
-                per_sample_log_estimated_rates,
-                where=~jnp.isneginf(per_sample_log_estimated_rates),
-            ) - jnp.log(num_samples)
-            per_component_log_estimated_rates.append(per_component_log_estimated_rate)
 
-        per_component_log_estimated_rates = model.log_scales + jnp.stack(
-            per_component_log_estimated_rates, axis=-1
-        )  # type: ignore
-        per_component_estimated_rates = jnp.exp(per_component_log_estimated_rates)  # type: ignore
-        return self.time_scale * jnp.sum(per_component_estimated_rates, axis=-1)
+            log_rate_i = jax.lax.dynamic_index_in_dim(
+                model.log_scales, index=i, axis=-1, keepdims=False
+            )
+            log_estimated_rate_i = (
+                log_rate_i
+                - jnp.log(num_samples)
+                + jnn.logsumexp(
+                    per_sample_log_estimated_rates,
+                    where=~jnp.isneginf(per_sample_log_estimated_rates),
+                    axis=-1,
+                )
+            )
+
+            log_estimated_rate = jnp.logaddexp(log_estimated_rate, log_estimated_rate_i)
+
+        return self.time_scale * jnp.exp(log_estimated_rate)

@@ -7,7 +7,6 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
 from typing import List, Tuple
 
-import numpy as np
 from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
 
@@ -105,7 +104,7 @@ def make_parser() -> ArgumentParser:
     model_group.add_argument(
         "--add-redshift",
         action="store_true",
-        help="Include redshift parameters in the model.",
+        help="Include redshift parameter in the model",
     )
     model_group.add_argument(
         "--add-cos-iota",
@@ -535,8 +534,8 @@ def main() -> None:
 
         all_params.extend(
             [
-                ("redshift_lamb_g", N_g),
-                ("redshift_lamb_pl", N_pl),
+                ("redshift_kappa_g", N_g),
+                ("redshift_kappa_pl", N_pl),
                 ("redshift_z_max_g", N_g),
                 ("redshift_z_max_pl", N_pl),
             ]
@@ -703,42 +702,42 @@ def main() -> None:
 
     model_param = match_all(extended_params, model_json)
 
-    model = NPowerlawMGaussian(
-        N_pl=N_pl,
-        N_g=N_g,
-        use_spin=has_spin,
-        use_tilt=has_tilt,
-        use_eccentricity=has_eccentricity,
-        use_mean_anomaly=has_mean_anomaly,
-        use_redshift=has_redshift,
-        use_cos_iota=has_cos_iota,
-        use_phi_12=has_phi_12,
-        use_polarization_angle=has_polarization_angle,
-        use_right_ascension=has_right_ascension,
-        use_sin_declination=has_sin_declination,
-        use_detection_time=has_detection_time,
-        use_phi_1=has_phi_1,
-        use_phi_2=has_phi_2,
-        use_phi_orb=has_phi_orb,
-        **model_param,
+    model_param.update(
+        {
+            "N_pl": N_pl,
+            "N_g": N_g,
+            "use_spin": has_spin,
+            "use_tilt": has_tilt,
+            "use_eccentricity": has_eccentricity,
+            "use_mean_anomaly": has_mean_anomaly,
+            "use_redshift": has_redshift,
+            "use_cos_iota": has_cos_iota,
+            "use_phi_12": has_phi_12,
+            "use_polarization_angle": has_polarization_angle,
+            "use_right_ascension": has_right_ascension,
+            "use_sin_declination": has_sin_declination,
+            "use_detection_time": has_detection_time,
+            "use_phi_1": has_phi_1,
+            "use_phi_2": has_phi_2,
+            "use_phi_orb": has_phi_orb,
+        }
     )
 
     nvt = vt_json_read_and_process(parameters_name, args.vt_json)
-    logVT = nvt.get_mapped_logVT()
+    log_selection_fn = nvt.get_mapped_logVT()
+
+    pmean_key, factory_key = jrd.split(jrd.PRNGKey(args.seed), 2)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(
-        nvt,
-        key=jrd.PRNGKey(np.random.randint(0, 2**32, dtype=np.uint32)),
-        **pmean_kwargs,
-    )
+    erate_estimator = PoissonMean(nvt, key=pmean_key, **pmean_kwargs)
 
     popfactory = PopulationFactory(
-        model=model,
+        model_fn=NPowerlawMGaussian,
+        model_params=model_param,
         parameters=parameters_name,
-        logVT_fn=logVT,
-        ERate_fn=erate_estimator.__call__,
+        log_selection_fn=log_selection_fn,
+        ERate_obj=erate_estimator,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
     )
-    popfactory.produce()
+    popfactory.produce(factory_key)

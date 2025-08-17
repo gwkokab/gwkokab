@@ -8,7 +8,7 @@ default_install_hook_types: [pre-commit, commit-msg]
 files: src||scripts||tests||examples
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.12.2"
+    rev: "v0.12.8"
     hooks:
       - id: ruff
         args: [--fix]
@@ -30,7 +30,7 @@ repos:
         stages: [pre-commit, commit-msg]
         args: [--ignore-words-list, "statics,socio-economic,precessing,astroid", --check-filenames, --skip, "*.ipynb"]
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.27.2
+    rev: v8.28.0
     hooks:
       - id: gitleaks
   - repo: https://github.com/google/yamlfmt
@@ -39,7 +39,7 @@ repos:
       - id: yamlfmt
         args: [-formatter, retain_line_breaks=true]
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict

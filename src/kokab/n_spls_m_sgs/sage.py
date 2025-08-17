@@ -32,7 +32,6 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
 )
 from gwkokab.poisson_mean import PoissonMean
-from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 from gwkokab.utils.tools import error_if
 from kokab.utils import poisson_mean_parser, sage_parser
 from kokab.utils.common import (
@@ -40,6 +39,7 @@ from kokab.utils.common import (
     flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
+    LOG_REF_PRIOR_NAME,
     read_json,
     vt_json_read_and_process,
 )
@@ -115,7 +115,12 @@ def main() -> None:
     KEY = jrd.PRNGKey(SEED)
     KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
-    POSTERIOR_COLUMNS = args.posterior_columns
+    POSTERIOR_COLUMNS: list[str] = args.posterior_columns
+
+    has_log_ref_prior = LOG_REF_PRIOR_NAME in POSTERIOR_COLUMNS
+    if has_log_ref_prior:
+        log_ref_prior_idx = POSTERIOR_COLUMNS.index(LOG_REF_PRIOR_NAME)
+        POSTERIOR_COLUMNS.remove(LOG_REF_PRIOR_NAME)
 
     N_pl = args.n_pl
     N_g = args.n_g
@@ -236,9 +241,8 @@ def main() -> None:
                     variances = vars_g
 
                 valid_var = variances <= means * (1 - means)
-                α, β = beta_dist_mean_variance_to_concentrations(means, variances)
-                valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
-                return jnp.all(jnp.logical_and(valid_var, valid_ab))
+                valid_var = jnp.logical_and(valid_var, variances > 0.0)
+                return jnp.all(valid_var)
 
             where_fns.append(mean_variance_check)
 
@@ -254,6 +258,36 @@ def main() -> None:
                 ("cos_tilt2_scale_pl", N_pl),
             ]
         )
+
+        def tilt_scale_should_be_positive(**kwargs) -> Array:
+            if N_pl > 0:
+                scale_pl = jnp.stack(
+                    [
+                        kwargs[f"cos_tilt{i}_scale_pl_{j}"]
+                        for j in range(N_pl)
+                        for i in (1, 2)
+                    ]
+                )
+            if N_g > 0:
+                scale_g = jnp.stack(
+                    [
+                        kwargs[f"cos_tilt{i}_scale_g_{j}"]
+                        for j in range(N_g)
+                        for i in (1, 2)
+                    ]
+                )
+
+            if N_pl > 0 and N_g > 0:
+                scales = jnp.concatenate([scale_pl, scale_g])
+            elif N_pl > 0:
+                scales = scale_pl
+            else:
+                scales = scale_g
+
+            return jnp.all(scales > 0.0)
+
+        where_fns.append(tilt_scale_should_be_positive)
+
     if has_eccentricity:
         parameters.append(ECCENTRICITY)
         all_params.extend(
@@ -272,8 +306,8 @@ def main() -> None:
         parameters.append(REDSHIFT)
         all_params.extend(
             [
-                ("redshift_lamb_g", N_g),
-                ("redshift_lamb_pl", N_pl),
+                ("redshift_kappa_g", N_g),
+                ("redshift_kappa_pl", N_pl),
                 ("redshift_z_max_g", N_g),
                 ("redshift_z_max_pl", N_pl),
             ]
@@ -300,19 +334,29 @@ def main() -> None:
         **model_prior_param,
     )
 
-    nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
+    parameters_name = [param.name for param in parameters]
+    nvt = vt_json_read_and_process(parameters_name, args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
 
+    if has_log_ref_prior:
+        POSTERIOR_COLUMNS.append(LOG_REF_PRIOR_NAME)
+
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
+    if has_log_ref_prior:
+        log_ref_priors = [d[..., log_ref_prior_idx] for d in data]
+        data = [np.delete(d, log_ref_prior_idx, axis=-1) for d in data]
+    else:
+        log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
         dist_builder=model,
         data=data,
         log_ref_priors=log_ref_priors,
-        ERate_fn=erate_estimator.__call__,
+        ERate_obj=erate_estimator,
+        n_buckets=args.n_buckets,
+        threshold=args.threshold,
     )
 
     constants = model.constants
@@ -341,7 +385,9 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
+    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(
+        sorted(model.variables.keys())
+    )
 
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
 

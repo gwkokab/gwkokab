@@ -6,16 +6,12 @@ from typing import Dict, List, Literal, Optional
 
 from jax import numpy as jnp
 from jaxtyping import Array
-from numpyro.distributions import (
-    constraints,
-    Distribution,
-    TransformedDistribution,
-    TruncatedNormal,
-)
+from numpyro.distributions import constraints, Distribution
 
-from ...cosmology import PLANCK_2015_Cosmology
+from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from .._models import SmoothedGaussianPrimaryMassRatio, SmoothedPowerlawPrimaryMassRatio
+from ..constraints import any_constraint
 from ..redshift import PowerlawRedshift
 from ..utils import (
     combine_distributions,
@@ -25,6 +21,7 @@ from ..utils import (
     create_smoothed_gaussians,
     create_smoothed_powerlaws,
     create_truncated_normal_distributions,
+    ExtendedSupportTransformedDistribution,
     JointDistribution,
     ScaledMixture,
 )
@@ -401,10 +398,11 @@ def NSmoothedPowerlawMSmoothedGaussian(
 def SmoothedPowerlawAndPeak(
     use_spin: bool = False,
     use_redshift: bool = False,
+    use_tilt: bool = False,
     validate_args: Optional[bool] = None,
-    **params: Dict[str, Array],
+    **params: Array,
 ) -> ScaledMixture:
-    smoothed_powerlaw = TransformedDistribution(
+    smoothed_powerlaw = ExtendedSupportTransformedDistribution(
         SmoothedPowerlawPrimaryMassRatio(
             alpha=params["alpha"],
             beta=params["beta"],
@@ -416,7 +414,7 @@ def SmoothedPowerlawAndPeak(
         transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
         validate_args=validate_args,
     )
-    smoothed_gaussian = TransformedDistribution(
+    smoothed_gaussian = ExtendedSupportTransformedDistribution(
         SmoothedGaussianPrimaryMassRatio(
             loc=params["loc"],
             scale=params["scale"],
@@ -434,50 +432,55 @@ def SmoothedPowerlawAndPeak(
     component_distribution_g = [smoothed_gaussian]
 
     if use_spin:
-        chi1_dist_pl = TruncatedNormal(
-            loc=params["chi1_loc_pl"],
-            scale=params["chi1_scale_pl"],
-            low=params["chi1_low_pl"],
-            high=params["chi1_high_pl"],
+        chi1_dist_pl = BetaFromMeanVar(
+            mean=params["chi1_mean_pl"],
+            variance=params["chi1_variance_pl"],
             validate_args=validate_args,
         )
 
-        chi2_dist_pl = TruncatedNormal(
-            loc=params["chi2_loc_pl"],
-            scale=params["chi2_scale_pl"],
-            low=params["chi2_low_pl"],
-            high=params["chi2_high_pl"],
+        chi2_dist_pl = BetaFromMeanVar(
+            mean=params["chi2_mean_pl"],
+            variance=params["chi2_variance_pl"],
             validate_args=validate_args,
         )
 
-        chi1_dist_g = TruncatedNormal(
-            loc=params["chi1_loc_g"],
-            scale=params["chi1_scale_g"],
-            low=params["chi1_low_g"],
-            high=params["chi1_high_g"],
+        chi1_dist_g = BetaFromMeanVar(
+            mean=params["chi1_mean_g"],
+            variance=params["chi1_variance_g"],
             validate_args=validate_args,
         )
 
-        chi2_dist_g = TruncatedNormal(
-            loc=params["chi2_loc_g"],
-            scale=params["chi2_scale_g"],
-            low=params["chi2_low_g"],
-            high=params["chi2_high_g"],
+        chi2_dist_g = BetaFromMeanVar(
+            mean=params["chi2_mean_g"],
+            variance=params["chi2_variance_g"],
             validate_args=validate_args,
         )
 
         component_distribution_pl.extend([chi1_dist_pl, chi2_dist_pl])
         component_distribution_g.extend([chi1_dist_g, chi2_dist_g])
 
-    if use_redshift:
-        zgrid = jnp.linspace(0.001, params["z_max"], 100)
-        dVcdz = 4.0 * jnp.pi * PLANCK_2015_Cosmology.dVcdz_Gpc3(zgrid)
-        powerlaw_z = PowerlawRedshift(
-            z_max=params["z_max"],
-            lamb=params["lamb"],
-            zgrid=zgrid,
-            dVcdz=dVcdz,
+    if use_tilt:
+        tilt_dist_pl = IndependentSpinOrientationGaussianIsotropic(
+            zeta=params["cos_tilt_zeta_pl"],
+            scale1=params["cos_tilt1_scale_pl"],
+            scale2=params["cos_tilt2_scale_pl"],
             validate_args=validate_args,
+        )
+        tilt_dist_g = IndependentSpinOrientationGaussianIsotropic(
+            zeta=params["cos_tilt_zeta_g"],
+            scale1=params["cos_tilt1_scale_g"],
+            scale2=params["cos_tilt2_scale_g"],
+            validate_args=validate_args,
+        )
+
+        component_distribution_pl.append(tilt_dist_pl)
+        component_distribution_g.append(tilt_dist_g)
+
+    if use_redshift:
+        z_max = params["z_max"]
+        kappa = params["kappa"]
+        powerlaw_z = PowerlawRedshift(
+            z_max=z_max, kappa=kappa, validate_args=validate_args
         )
 
         component_distribution_pl.append(powerlaw_z)
@@ -496,16 +499,20 @@ def SmoothedPowerlawAndPeak(
         component_distribution_g = JointDistribution(
             *component_distribution_g, validate_args=validate_args
         )
-
     return ScaledMixture(
         log_scales=jnp.stack(
             [
-                jnp.log1p(-params["lambda_peak"]) + params["log_rate"],
-                jnp.log(params["lambda_peak"]) + params["log_rate"],
+                params["log_rate"] + jnp.log1p(-params["lambda_peak"]),  # type: ignore[arg-type, operator]
+                params["log_rate"] + jnp.log(params["lambda_peak"]),  # type: ignore[arg-type]
             ],
             axis=-1,
         ),
         component_distributions=[component_distribution_pl, component_distribution_g],
-        support=constraints.real_vector,
+        support=any_constraint(
+            [
+                component_distribution_pl.support,  # type: ignore[attr-defined]
+                component_distribution_g.support,  # type: ignore[attr-defined]
+            ]
+        ),
         validate_args=validate_args,
     )

@@ -10,7 +10,7 @@ import jax
 import numpy as np
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
-from numpyro.distributions.distribution import DistributionLike
+from numpyro._typing import DistributionLike
 
 from gwkokab.utils.tools import error_if
 

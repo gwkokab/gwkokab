@@ -13,6 +13,8 @@ from loguru import logger
 from gwkokab.inference import Bake, poisson_likelihood
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
+    COS_TILT_1,
+    COS_TILT_2,
     PRIMARY_MASS_SOURCE,
     PRIMARY_SPIN_MAGNITUDE,
     REDSHIFT,
@@ -26,6 +28,7 @@ from kokab.utils.common import (
     flowMC_default_parameters,
     get_posterior_data,
     get_processed_priors,
+    LOG_REF_PRIOR_NAME,
     read_json,
     vt_json_read_and_process,
 )
@@ -42,6 +45,11 @@ def make_parser() -> ArgumentParser:
         "--add-spin",
         action="store_true",
         help="Include spin parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-tilt",
+        action="store_true",
+        help="Include tilt parameters in the model.",
     )
     model_group.add_argument(
         "--add-redshift",
@@ -66,12 +74,18 @@ def main() -> None:
     KEY = jrd.PRNGKey(SEED)
     KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
     POSTERIOR_REGEX = args.posterior_regex
-    POSTERIOR_COLUMNS = args.posterior_columns
+    POSTERIOR_COLUMNS: list[str] = args.posterior_columns
+
+    has_log_ref_prior = LOG_REF_PRIOR_NAME in POSTERIOR_COLUMNS
+    if has_log_ref_prior:
+        log_ref_prior_idx = POSTERIOR_COLUMNS.index(LOG_REF_PRIOR_NAME)
+        POSTERIOR_COLUMNS.remove(LOG_REF_PRIOR_NAME)
 
     prior_dict = read_json(args.prior_json)
 
     has_spin = args.add_spin
     has_redshift = args.add_redshift
+    has_tilt = args.add_tilt
 
     model_parameters = [
         "alpha",
@@ -91,28 +105,33 @@ def main() -> None:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
         model_parameters.extend(
             [
-                "chi1_high_g",
-                "chi1_high_pl",
-                "chi1_loc_g",
-                "chi1_loc_pl",
-                "chi1_low_g",
-                "chi1_low_pl",
-                "chi1_scale_g",
-                "chi1_scale_pl",
-                "chi2_high_g",
-                "chi2_high_pl",
-                "chi2_loc_g",
-                "chi2_loc_pl",
-                "chi2_low_g",
-                "chi2_low_pl",
-                "chi2_scale_g",
-                "chi2_scale_pl",
+                "chi1_mean_g",
+                "chi1_mean_pl",
+                "chi1_variance_g",
+                "chi1_variance_pl",
+                "chi2_mean_g",
+                "chi2_mean_pl",
+                "chi2_variance_g",
+                "chi2_variance_pl",
+            ]
+        )
+
+    if has_tilt:
+        parameters.extend([COS_TILT_1, COS_TILT_2])
+        model_parameters.extend(
+            [
+                "cos_tilt_zeta_g",
+                "cos_tilt_zeta_pl",
+                "cos_tilt1_scale_g",
+                "cos_tilt1_scale_pl",
+                "cos_tilt2_scale_g",
+                "cos_tilt2_scale_pl",
             ]
         )
 
     if has_redshift:
         parameters.append(REDSHIFT)
-        model_parameters.extend(["lamb", "z_max"])
+        model_parameters.extend(["kappa", "z_max"])
 
     error_if(
         set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
@@ -124,27 +143,39 @@ def main() -> None:
     model = Bake(SmoothedPowerlawAndPeak)(
         use_spin=has_spin,
         use_redshift=has_redshift,
+        use_tilt=has_tilt,
         **model_prior_param,
     )
 
-    nvt = vt_json_read_and_process([param.name for param in parameters], args.vt_json)
+    parameters_name = [param.name for param in parameters]
+    nvt = vt_json_read_and_process(parameters_name, args.vt_json)
 
     pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
     erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
     del nvt
 
+    if has_log_ref_prior:
+        POSTERIOR_COLUMNS.append(LOG_REF_PRIOR_NAME)
+
     data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
+    if has_log_ref_prior:
+        log_ref_priors = [d[..., log_ref_prior_idx] for d in data]
+        data = [np.delete(d, log_ref_prior_idx, axis=-1) for d in data]
+    else:
+        log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
     variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
         dist_builder=model,
         data=data,
         log_ref_priors=log_ref_priors,
-        ERate_fn=erate_estimator.__call__,
+        ERate_obj=erate_estimator,
+        n_buckets=args.n_buckets,
+        threshold=args.threshold,
     )
 
     constants = model.constants
     constants["use_spin"] = int(has_spin)
+    constants["use_tilt"] = int(has_tilt)
     constants["use_redshift"] = int(has_redshift)
 
     with open("constants.json", "w") as f:
@@ -164,7 +195,9 @@ def main() -> None:
     FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
     FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
 
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(model.variables.keys())
+    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(
+        sorted(model.variables.keys())
+    )
 
     FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
 

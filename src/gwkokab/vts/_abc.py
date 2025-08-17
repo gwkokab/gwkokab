@@ -4,7 +4,7 @@
 
 from abc import abstractmethod
 from collections.abc import Callable, Sequence
-from typing import Optional
+from typing import Dict, Optional, Union
 
 import equinox as eqx
 from jaxtyping import Array
@@ -13,12 +13,11 @@ from jaxtyping import Array
 class VolumeTimeSensitivityInterface(eqx.Module):
     """Interface for volume time sensitivity."""
 
-    shuffle_indices: Optional[Sequence[int]] = eqx.field(
-        init=False, static=True, default=None
-    )
+    shuffle_indices: Optional[Sequence[int]] = eqx.field(static=True, default=None)
     """The indices to shuffle the input to the model."""
-    batch_size: Optional[int] = eqx.field(init=False, static=True, default=None)
+    batch_size: Optional[int] = eqx.field(static=True, default=None)
     """The batch size used by :func:`jax.lax.map` in mapped functions."""
+    parameter_ranges: Dict[str, Union[int, float]] = eqx.field(default=None)
 
     @abstractmethod
     def get_logVT(self) -> Callable[[Array], Array]:
