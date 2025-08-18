@@ -9,6 +9,7 @@ from typing import Tuple
 import arviz as az
 import jax
 import numpy as np
+import pandas as pd
 from jax import random as jrd
 from jaxtyping import Array
 from loguru import logger
@@ -149,7 +150,7 @@ def main() -> None:
     )
 
     posterior_samples = mcmc.get_samples(group_by_chain=True)
-    write_json("posterior_samples.json", posterior_samples)
+    pd.DataFrame(posterior_samples).to_csv("posterior_samples.csv", index=False)
 
     mcmc_data = az.from_numpyro(mcmc)
 
