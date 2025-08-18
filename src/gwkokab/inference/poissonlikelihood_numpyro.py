@@ -78,8 +78,8 @@ def numpyro_poisson_likelihood(
             safe_data, safe_log_ref_prior, mask = input
 
             # log p(ω|data_n)
-            model_log_prob = jax.lax.map(
-                model_instance.log_prob, safe_data, batch_size=1000
+            model_log_prob = jax.jit(jax.vmap(jax.jit(model_instance.log_prob)))(
+                safe_data
             )
             safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
 
