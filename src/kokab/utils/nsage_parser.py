@@ -65,25 +65,12 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         default="pmean.json",
     )
 
-    numpyro_group = parser.add_argument_group("Numpyro Options")
-
-    numpyro_group.add_argument(
-        "--num-warmup",
-        help="Number of warmup steps for the NUTS sampler.",
-        type=int,
-        default=1000,
-    )
-    numpyro_group.add_argument(
-        "--num-samples",
-        help="Number of samples to draw from the posterior.",
-        type=int,
-        default=5000,
-    )
-    numpyro_group.add_argument(
-        "--num-chains",
-        help="Number of chains to run in parallel.",
-        type=int,
-        default=50,
+    sampler_group = parser.add_argument_group("Numpyro Options")
+    sampler_group.add_argument(
+        "--sampler-config",
+        help="Path to the JSON file containing the sampler configuration.",
+        type=str,
+        required=True,
     )
 
     optm_group = parser.add_argument_group("Optimization Options")

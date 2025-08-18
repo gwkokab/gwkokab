@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import Tuple
@@ -135,19 +134,13 @@ def main() -> None:
 
     constants = model.constants
 
-    with open("constants.json", "w") as f:
-        json.dump(constants, f)
+    write_json("constants.json", constants)
+    write_json("nf_samples_mapping.json", variables_index)
 
-    with open("nf_samples_mapping.json", "w") as f:
-        json.dump(variables_index, f)
+    sampler_config = read_json(args.sampler_config)
 
-    kernel = NUTS(likelihood_fn)
-    mcmc = MCMC(
-        kernel,
-        num_warmup=args.num_warmup,
-        num_samples=args.num_samples,
-        num_chains=args.num_chains,
-    )
+    kernel = NUTS(likelihood_fn, **sampler_config["kernel"])
+    mcmc = MCMC(kernel, **sampler_config["mcmc"])
     mcmc.run(
         KEY2,
         data_group=data_group,
