@@ -78,10 +78,9 @@ def numpyro_poisson_likelihood(
             safe_data, safe_log_ref_prior, mask = input
 
             # log p(ω|data_n)
-            model_log_prob = jax.checkpoint(
-                jax.vmap(model_instance.log_prob),
-                prevent_cse=False,
-            )(safe_data)
+            model_log_prob = jax.lax.map(
+                model_instance.log_prob, safe_data, batch_size=1000
+            )
             safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
 
             # log p(ω|data_n) - log π_n
@@ -116,6 +115,8 @@ def numpyro_poisson_likelihood(
             )
 
         # Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
-        numpyro.factor("total_log_likelihood", total_log_likelihood)
+        numpyro.factor(
+            "total_log_likelihood", jnp.nan_to_num(total_log_likelihood, nan=-jnp.inf)
+        )
 
     return likelihood_fn, variables_index  # type: ignore
