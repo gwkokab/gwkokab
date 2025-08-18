@@ -7,6 +7,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import Tuple
 
+import arviz as az
 import jax
 import numpy as np
 from jax import random as jrd
@@ -27,6 +28,7 @@ from kokab.utils.common import (
     LOG_REF_PRIOR_NAME,
     read_json,
     vt_json_read_and_process,
+    write_json,
 )
 
 
@@ -49,7 +51,7 @@ def main() -> None:
 
     SEED = args.seed
     KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2 = jrd.split(KEY, 4)
+    KEY1, KEY2 = jrd.split(KEY)
     POSTERIOR_REGEX = args.posterior_regex
     POSTERIOR_COLUMNS: list[str] = args.posterior_columns
 
@@ -153,7 +155,13 @@ def main() -> None:
         masks_group=masks_group,
     )
 
-    posterior_samples = mcmc.get_samples()
+    posterior_samples = mcmc.get_samples(group_by_chain=True)
+    write_json("posterior_samples.json", posterior_samples)
 
-    print(type(posterior_samples))
-    print(posterior_samples)
+    mcmc_data = az.from_numpyro(mcmc)
+
+    summary = az.summary(mcmc_data)
+    summary.to_csv("posterior_summary.csv")
+
+    fig = az.plot_trace(mcmc_data, compact=True, figsize=(15, 25))
+    fig.savefig("posterior_trace.png")
