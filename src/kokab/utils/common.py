@@ -3,6 +3,7 @@
 
 
 import json
+import os
 import warnings
 from collections.abc import Sequence
 from typing import Dict, List, Optional, Tuple, Union
@@ -353,3 +354,22 @@ def ppd_ranges(
             int(_range[2]),
         )
     return _ranges
+
+
+def save_inference_data(inference_data) -> None:
+    os.makedirs("inference_data", exist_ok=True)
+    write_json("posterior_summary.json", inference_data.to_dict())
+    header = list(inference_data.posterior.data_vars.keys())
+    posterior_data = np.permute_dims(
+        np.asarray(inference_data.posterior.to_dataarray()),
+        (1, 2, 0),  # (variable, chain, draw) -> (chain, draw, variable)
+    )
+    n_chains = posterior_data.shape[0]
+
+    for i in range(n_chains):
+        np.savetxt(
+            f"inference_data/posterior_chain_{i}.txt",
+            posterior_data[i],
+            header=",".join(header),
+            comments="",
+        )
