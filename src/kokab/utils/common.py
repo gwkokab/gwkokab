@@ -358,7 +358,11 @@ def ppd_ranges(
 
 def save_inference_data(inference_data) -> None:
     os.makedirs("inference_data", exist_ok=True)
-    write_json("posterior_summary.json", inference_data.to_dict())
+    summary = inference_data.to_dict()
+    summary_converted = {
+        k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in summary.items()
+    }
+    write_json("posterior_summary.json", summary_converted)
     header = list(inference_data.posterior.data_vars.keys())
     posterior_data = np.permute_dims(
         np.asarray(inference_data.posterior.to_dataarray()),
