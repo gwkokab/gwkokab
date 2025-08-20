@@ -6,7 +6,6 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 from typing import Tuple
 
-import arviz as az
 import jax
 import numpy as np
 from jax import random as jrd
@@ -149,6 +148,4 @@ def main() -> None:
         masks_group=masks_group,
     )
 
-    mcmc_data = az.from_numpyro(mcmc)
-
-    save_inference_data(mcmc_data)
+    save_inference_data(mcmc)
