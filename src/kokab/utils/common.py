@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Tuple, Union
 import jax
 import numpy as np
 import pandas as pd
+import xarray as xr
 from numpyro import distributions as dist
 from numpyro._typing import DistributionLike
 
@@ -359,9 +360,7 @@ def ppd_ranges(
 def save_inference_data(inference_data) -> None:
     os.makedirs("inference_data", exist_ok=True)
     summary = inference_data.to_dict()
-    summary_converted = {
-        k: v.tolist() if isinstance(v, np.ndarray) else v for k, v in summary.items()
-    }
+    summary_converted = {k: list(v) for k, v in summary.items()}
     write_json("posterior_summary.json", summary_converted)
     header = list(inference_data.posterior.data_vars.keys())
     posterior_data = np.permute_dims(
