@@ -367,7 +367,7 @@ def save_inference_data(mcmc: numpyro.infer.MCMC) -> None:
 
     posterior_samples = mcmc.get_samples()
     np.savetxt(
-        "samples.dat",
+        "numpyro_sampler_data/samples.dat",
         np.column_stack([posterior_samples[key] for key in header]),
         header=" ".join(header),
     )
@@ -386,7 +386,7 @@ def save_inference_data(mcmc: numpyro.infer.MCMC) -> None:
         np.savetxt(
             f"numpyro_sampler_data/chain_{i}.dat",
             posterior_data[i],
-            header=",".join(header),
+            header=" ".join(header),
             comments="#",
             delimiter=" ",
         )
