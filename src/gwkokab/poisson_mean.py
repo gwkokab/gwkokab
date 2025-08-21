@@ -274,8 +274,6 @@ class PoissonMean(eqx.Module):
             log_prob = model_log_prob - log_weights
 
             # TODO(Qazalbash): remove hardcoding on redshift index
-            z = jax.lax.dynamic_index_in_dim(samples, index=-1, axis=-1, keepdims=False)
-            log_prob += PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z)
 
             partial_logsumexp = jnn.logsumexp(
                 log_prob, where=~jnp.isneginf(log_prob), axis=-1
