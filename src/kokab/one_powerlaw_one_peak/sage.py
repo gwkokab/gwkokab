@@ -7,7 +7,8 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
 
 import numpy as np
-from jax import random as jrd
+from jax import numpy as jnp, random as jrd
+from jaxtyping import Array
 from loguru import logger
 
 from gwkokab.inference import Bake, poisson_likelihood
@@ -100,6 +101,7 @@ def main() -> None:
     ]
 
     parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
+    where_fns = []
 
     if has_spin:
         parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
@@ -115,6 +117,40 @@ def main() -> None:
                 "chi2_variance_pl",
             ]
         )
+
+        def mean_variance_check(
+            chi1_mean_g: Array,
+            chi1_mean_pl: Array,
+            chi1_variance_g: Array,
+            chi1_variance_pl: Array,
+            chi2_mean_g: Array,
+            chi2_mean_pl: Array,
+            chi2_variance_g: Array,
+            chi2_variance_p: Array,
+        ) -> Array:
+            means = jnp.stack(
+                [
+                    chi1_mean_g,
+                    chi1_mean_pl,
+                    chi2_mean_g,
+                    chi2_mean_pl,
+                ],
+                axis=-1,
+            )
+            vars = jnp.stack(
+                [
+                    chi1_variance_g,
+                    chi1_variance_pl,
+                    chi2_variance_g,
+                    chi2_variance_p,
+                ],
+                axis=-1,
+            )
+            valid_var = vars < means * (1.0 - means)
+            valid_var = jnp.logical_and(valid_var, vars > 0.0)
+            return jnp.all(valid_var)
+
+        where_fns.append(mean_variance_check)
 
     if has_tilt:
         parameters.extend([COS_TILT_1, COS_TILT_2])
@@ -169,6 +205,7 @@ def main() -> None:
         data=data,
         log_ref_priors=log_ref_priors,
         ERate_obj=erate_estimator,
+        where_fns=None if len(where_fns) == 0 else where_fns,
         n_buckets=args.n_buckets,
         threshold=args.threshold,
     )
