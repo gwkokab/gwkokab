@@ -127,6 +127,8 @@ def main() -> None:
             chi2_mean_pl: Array,
             chi2_variance_g: Array,
             chi2_variance_p: Array,
+            *args,
+            **kwargs,
         ) -> Array:
             means = jnp.stack(
                 [
