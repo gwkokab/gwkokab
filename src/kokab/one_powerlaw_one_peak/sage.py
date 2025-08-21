@@ -126,7 +126,7 @@ def main() -> None:
             chi2_mean_g: Array,
             chi2_mean_pl: Array,
             chi2_variance_g: Array,
-            chi2_variance_p: Array,
+            chi2_variance_pl: Array,
             *args,
             **kwargs,
         ) -> Array:
