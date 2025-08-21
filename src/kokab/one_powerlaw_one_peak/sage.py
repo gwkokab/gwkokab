@@ -144,7 +144,7 @@ def main() -> None:
                     chi1_variance_g,
                     chi1_variance_pl,
                     chi2_variance_g,
-                    chi2_variance_p,
+                    chi2_variance_pl,
                 ],
                 axis=-1,
             )
