@@ -69,25 +69,32 @@ def numpyro_poisson_likelihood(
 
         model_instance: Distribution = dist_fn(**mapped_params)
 
-        # μ = E_{Ω|Λ}[VT(ω)]
+        # μ = E_{θ|Λ}[VT(θ)]
         numpyro.factor("expected_rates", ERate_obj(model_instance))
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
         ) -> Tuple[Array, None]:
-            safe_data, safe_log_ref_prior, mask = input
+            data, log_ref_prior, mask = input
 
-            # log p(ω|data_n)
+            safe_data = jnp.where(
+                jnp.expand_dims(mask, axis=-1),
+                data,
+                model_instance.support.feasible_like(data),
+            )
+            safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
+
+            # log p(θ|data_n)
             model_log_prob = jax.jit(jax.vmap(jax.jit(model_instance.log_prob)))(
                 safe_data
             )
             safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
 
-            # log p(ω|data_n) - log π_n
+            # log p(θ|data_n) - log π_n
             log_prob: Array = safe_model_log_prob - safe_log_ref_prior
             log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
 
-            # log Σ exp (log p(ω|data_n) - log π_n)
+            # log Σ exp (log p(θ|data_n) - log π_n)
             log_prob_sum = jax.nn.logsumexp(
                 log_prob,
                 axis=-1,
@@ -96,25 +103,17 @@ def numpyro_poisson_likelihood(
             return carry + log_prob_sum, None
 
         total_log_likelihood = log_constants  # - Σ log(M_i)
-        # Σ log Σ exp (log p(ω|data_n) - log π_n)
-        for batched_data, batched_log_ref_priors, batched_mask in zip(
+        # Σ log Σ exp (log p(θ|data_n) - log π_n)
+        for batched_data, batched_log_ref_priors, batched_masks in zip(
             data_group, log_ref_priors_group, masks_group
         ):
-            safe_batched_data = jnp.where(
-                jnp.expand_dims(batched_mask, axis=-1),
-                batched_data,
-                model_instance.support.feasible_like(batched_data),
-            )
-            safe_batched_log_ref_priors = jnp.where(
-                batched_mask, batched_log_ref_priors, 0.0
-            )
             total_log_likelihood, _ = jax.lax.scan(
                 single_event_fn,  # type: ignore
                 total_log_likelihood,
-                (safe_batched_data, safe_batched_log_ref_priors, batched_mask),
+                (batched_data, batched_log_ref_priors, batched_masks),
             )
 
-        # Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
+        # Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
         numpyro.factor(
             "total_log_likelihood", jnp.nan_to_num(total_log_likelihood, nan=-jnp.inf)
         )
