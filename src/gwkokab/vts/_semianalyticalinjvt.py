@@ -146,7 +146,7 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
                 gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name not in parameters
                 and gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name not in parameters
             ):
-                sampling_prob *= 4.0 * np.square(np.pi * a1 * a2)
+                sampling_prob *= np.square(4 * np.pi * a1 * a2)
 
             self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
 
