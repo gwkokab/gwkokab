@@ -70,7 +70,7 @@ def numpyro_poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params, validate_args=True)
 
         # μ = E_{θ|Λ}[VT(θ)]
-        numpyro.factor("expected_rates", ERate_obj(model_instance))
+        numpyro.factor("expected_rates", -ERate_obj(model_instance))
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
