@@ -268,14 +268,33 @@ class NSage(Guru):
 
         sampler_config = read_json(self.sampler_settings_filename)
 
-        kernel = NUTS(likelihood_fn, **sampler_config["kernel"])
-        mcmc = MCMC(kernel, **sampler_config["mcmc"])
-        mcmc.run(
-            self.rng_key,
-            data_group=data_group,
-            log_ref_priors_group=log_ref_priors_group,
-            masks_group=masks_group,
-        )
+        def f() -> MCMC:
+            kernel = NUTS(likelihood_fn, **sampler_config["kernel"])
+            mcmc = MCMC(kernel, **sampler_config["mcmc"])
+            mcmc.run(
+                self.rng_key,
+                data_group=data_group,
+                log_ref_priors_group=log_ref_priors_group,
+                masks_group=masks_group,
+            )
+            return mcmc
+
+        if self.debug_nans:
+            with jax.debug_nans(True):
+                mcmc = f()
+        elif self.profile_memory:
+            mcmc = f()
+
+            import datetime
+
+            time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+            filename = f"{self.analysis_name}_memory_{time}.prof"
+            jax.profiler.save_device_memory_profile(filename)
+        elif self.check_leaks:
+            with jax.checking_leaks():
+                mcmc = f()
+        else:
+            mcmc = f()
 
         save_inference_data(mcmc)
 
