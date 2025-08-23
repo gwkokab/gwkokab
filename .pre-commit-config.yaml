@@ -8,7 +8,7 @@ default_install_hook_types: [pre-commit, commit-msg]
 files: src||scripts||tests||examples
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.12.8"
+    rev: "v0.12.10"
     hooks:
       - id: ruff
         args: [--fix]
@@ -70,7 +70,7 @@ repos:
         additional_dependencies: [tomli]
         args: [--close-quotes-on-newline, --in-place, --config, ./pyproject.toml]
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.33.2
+    rev: 0.33.3
     hooks:
       - id: check-dependabot
       - id: check-github-workflows
