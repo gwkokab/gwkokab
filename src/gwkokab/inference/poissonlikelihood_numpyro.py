@@ -82,7 +82,11 @@ def numpyro_poisson_likelihood(
                 axis=-1,
                 where=(~jnp.isneginf(log_prob)),
             )
-            return log_prob_sum
+            return jnp.clip(
+                log_prob_sum,
+                min=jnp.finfo(jnp.result_type(float)).min,
+                max=jnp.finfo(jnp.result_type(float)).max,
+            )
 
         numpyro.factor("log_constants", log_constants)  # - Σ log(M_i)
 
