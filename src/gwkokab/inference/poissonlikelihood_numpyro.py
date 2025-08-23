@@ -52,11 +52,7 @@ def numpyro_poisson_likelihood(
     for value in group_variables.values():  # type: ignore
         logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
-    def likelihood_fn(
-        data_group: List[Array],
-        log_ref_priors_group: List[Array],
-        masks_group: List[Array],
-    ):
+    def likelihood_fn(data: List[Array], log_ref_priors: List[Array]):
         variables_samples = [
             numpyro.sample(parameter_name, prior_dist)
             for parameter_name, prior_dist in sorted(
@@ -72,48 +68,26 @@ def numpyro_poisson_likelihood(
         # μ = E_{θ|Λ}[VT(θ)]
         numpyro.factor("expected_rates", ERate_obj(model_instance))
 
-        def single_event_fn(
-            carry: Array, input: Tuple[Array, Array, Array]
-        ) -> Tuple[Array, None]:
-            data, log_ref_prior, mask = input
-
-            safe_data = jnp.where(
-                jnp.expand_dims(mask, axis=-1),
-                data,
-                model_instance.support.feasible_like(data),
-            )
-            safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
-
+        def single_event_fn(data: Array, log_ref_prior: Array) -> Array:
             # log p(θ|data_n)
-            model_log_prob = jax.jit(jax.vmap(jax.jit(model_instance.log_prob)))(
-                safe_data
-            )
-            safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
+            model_log_prob = jax.jit(jax.vmap(jax.jit(model_instance.log_prob)))(data)
 
             # log p(θ|data_n) - log π_n
-            log_prob: Array = safe_model_log_prob - safe_log_ref_prior
-            log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
+            log_prob: Array = model_log_prob - log_ref_prior
+            log_prob = jnp.where(~jnp.isnan(log_prob), log_prob, -jnp.inf)
 
             # log Σ exp (log p(θ|data_n) - log π_n)
             log_prob_sum = jax.nn.logsumexp(
                 log_prob,
                 axis=-1,
-                where=(~jnp.isneginf(log_prob)) & mask,
+                where=(~jnp.isneginf(log_prob)),
             )
-            return carry + log_prob_sum, None
+            return log_prob_sum
 
-        total_log_likelihood = log_constants  # - Σ log(M_i)
+        numpyro.factor("log_constants", log_constants)  # - Σ log(M_i)
+
         # Σ log Σ exp (log p(θ|data_n) - log π_n)
-        for batched_data, batched_log_ref_priors, batched_masks in zip(
-            data_group, log_ref_priors_group, masks_group
-        ):
-            total_log_likelihood, _ = jax.lax.scan(
-                single_event_fn,  # type: ignore
-                total_log_likelihood,
-                (batched_data, batched_log_ref_priors, batched_masks),
-            )
-
-        # Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
-        numpyro.factor("total_log_likelihood", total_log_likelihood)
+        for i, (d, lrp) in enumerate(zip(data, log_ref_priors)):
+            numpyro.factor(f"log_likelihood_{i}", single_event_fn(d, lrp))
 
     return likelihood_fn, variables_index  # type: ignore
