@@ -4,13 +4,17 @@
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from glob import glob
+from typing import Tuple
 
+import jax
 import numpy as np
 from jax import random as jrd
+from jaxtyping import Array
 from loguru import logger
 from numpyro.infer import MCMC, NUTS
 
 from gwkokab.inference import Bake, numpyro_poisson_likelihood
+from gwkokab.inference.jenks import pad_and_stack
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import error_if
@@ -86,13 +90,35 @@ def main() -> None:
     else:
         log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
 
+    _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
+        data, log_ref_priors, n_buckets=args.n_buckets, threshold=args.threshold
+    )
+
+    _data_group = tuple(_data_group)
+    _log_ref_priors_group = tuple(_log_ref_priors_group)
+    _masks_group = tuple(_masks_group)
+
+    data_group: Tuple[Array] = jax.block_until_ready(
+        jax.device_put(_data_group, may_alias=True)
+    )
+    log_ref_priors_group: Tuple[Array] = jax.block_until_ready(
+        jax.device_put(_log_ref_priors_group, may_alias=True)
+    )
+    masks_group: Tuple[Array] = jax.block_until_ready(
+        jax.device_put(_masks_group, may_alias=True)
+    )
+
     logger.debug(
-        "data.shape: {shape}",
-        shape=", ".join([str(d.shape) for d in data]),
+        "data_group.shape: {shape}",
+        shape=", ".join([str(d.shape) for d in data_group]),
     )
     logger.debug(
-        "log_ref_priors.shape: {shape}",
-        shape=", ".join([str(d.shape) for d in log_ref_priors]),
+        "log_ref_priors_group.shape: {shape}",
+        shape=", ".join([str(d.shape) for d in log_ref_priors_group]),
+    )
+    logger.debug(
+        "masks_group.shape: {shape}",
+        shape=", ".join([str(d.shape) for d in masks_group]),
     )
 
     n_events = len(data)
@@ -115,6 +141,11 @@ def main() -> None:
 
     kernel = NUTS(likelihood_fn, **sampler_config["kernel"])
     mcmc = MCMC(kernel, **sampler_config["mcmc"])
-    mcmc.run(KEY2, data=data, log_ref_priors=log_ref_priors)
+    mcmc.run(
+        KEY2,
+        data_group=data_group,
+        log_ref_priors_group=log_ref_priors_group,
+        masks_group=masks_group,
+    )
 
     save_inference_data(mcmc)
