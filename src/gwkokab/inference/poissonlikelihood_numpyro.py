@@ -114,8 +114,6 @@ def numpyro_poisson_likelihood(
             )
 
         # Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
-        numpyro.factor(
-            "total_log_likelihood", jnp.nan_to_num(total_log_likelihood, nan=-jnp.inf)
-        )
+        numpyro.factor("total_log_likelihood", total_log_likelihood)
 
     return likelihood_fn, variables_index  # type: ignore
