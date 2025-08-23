@@ -9,49 +9,22 @@ import jax
 import numpyro
 from jax import Array, numpy as jnp
 from jaxtyping import ArrayLike
-from loguru import logger
+from numpyro._typing import DistributionLike
 from numpyro.distributions import Distribution
 
-from ..models.utils import ScaledMixture
 from ..poisson_mean import PoissonMean
-from ..utils.tools import warn_if
-from .bake import Bake
 
 
 __all__ = ["numpyro_poisson_likelihood"]
 
 
 def numpyro_poisson_likelihood(
-    dist_builder: Bake, log_constants: ArrayLike, ERate_obj: PoissonMean
-) -> Tuple[Callable[..., Array], Dict[str, int]]:
-    dummy_model = dist_builder.get_dummy()
-    warn_if(
-        not isinstance(dummy_model, ScaledMixture),
-        msg="The model provided is not a ScaledMixture. "
-        "Rate estimation will therefore be skipped.",
-    )
-
-    constants, variables, duplicates, dist_fn = dist_builder.get_dist()  # type: ignore
-    variables_index: dict[str, int] = {
-        key: i for i, key in enumerate(sorted(variables.keys()))
-    }
-    for key, value in duplicates.items():
-        variables_index[key] = variables_index[value]
-
-    group_variables: dict[int, list[str]] = {}
-    for key, value in variables_index.items():  # type: ignore
-        group_variables[value] = group_variables.get(value, []) + [key]  # type: ignore
-
-    logger.debug(
-        "Number of recovering variables: {num_vars}", num_vars=len(group_variables)
-    )
-
-    for key, value in constants.items():  # type: ignore
-        logger.debug("Constant variable: {name} = {variable}", name=key, variable=value)
-
-    for value in group_variables.values():  # type: ignore
-        logger.debug("Recovering variable: {variable}", variable=", ".join(value))
-
+    dist_fn: Callable[..., DistributionLike],
+    variables: Dict[str, DistributionLike],
+    variables_index: Dict[str, int],
+    log_constants: ArrayLike,
+    ERate_obj: PoissonMean,
+) -> Callable[..., Array]:
     def likelihood_fn(
         data_group: List[Array],
         log_ref_priors_group: List[Array],
@@ -116,4 +89,4 @@ def numpyro_poisson_likelihood(
         # Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
         numpyro.factor("total_log_likelihood", total_log_likelihood)
 
-    return likelihood_fn, variables_index  # type: ignore
+    return likelihood_fn  # type: ignore
