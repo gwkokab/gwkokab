@@ -37,6 +37,7 @@ def main() -> None:
     EccentricityMattersNSage(
         model=EccentricityMattersModel,
         posterior_regex=args.posterior_regex,
+        posterior_columns=args.posterior_columns,
         seed=args.seed,
         prior_filename=args.prior_json,
         selection_fn_filename=args.vt_json,
@@ -47,7 +48,6 @@ def main() -> None:
         check_leaks=args.check_leaks,
         analysis_name="ecc_matters",
     ).run(
-        has_log_ref_prior=args.has_log_ref_prior,
         n_buckets=args.n_buckets,
         threshold=args.threshold,
     )

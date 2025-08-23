@@ -20,6 +20,7 @@ from gwkokab.utils.tools import warn_if
 from kokab.utils.common import (
     get_posterior_data,
     get_processed_priors,
+    LOG_REF_PRIOR_NAME,
     read_json,
     save_inference_data,
     write_json,
@@ -34,6 +35,7 @@ class NSage(Guru):
         self,
         model: Union[Distribution, Callable[..., Distribution]],
         posterior_regex: str,
+        posterior_columns: List[str],
         seed: int,
         prior_filename: str,
         selection_fn_filename: str,
@@ -53,6 +55,8 @@ class NSage(Guru):
             that returns a Distribution.
         posterior_regex : str
             path to the HDF5 file containing the data.
+        posterior_columns : List[str]
+            list of columns to extract from the posterior samples.
         seed : int
             seed for the random number generator.
         prior_filename : str
@@ -83,6 +87,7 @@ class NSage(Guru):
         self.analysis_name = "nsage_" + (analysis_name or model.__name__)
         self.posterior_regex = posterior_regex
         self.prior_filename = prior_filename
+        self.posterior_columns = posterior_columns
         self.selection_fn_filename = selection_fn_filename
         self.poisson_mean_filename = poisson_mean_filename
         self.sampler_settings_filename = sampler_settings_filename
@@ -159,21 +164,17 @@ class NSage(Guru):
         """
         return {}
 
-    def read_data(
-        self, has_log_ref_prior: bool
-    ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
-        warn_if(
-            True,
-            msg=f"Make sure the posterior samples are in correct order i.e. {', '.join(self.parameters)}.",
-        )
-        data = get_posterior_data(glob(self.posterior_regex), self.parameters)
-        if has_log_ref_prior:
+    def read_data(self) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+        data = get_posterior_data(glob(self.posterior_regex), self.posterior_columns)
+        if LOG_REF_PRIOR_NAME in self.posterior_columns:
+            idx = self.posterior_columns.index(LOG_REF_PRIOR_NAME)
+            self.posterior_columns.pop(idx)
             warn_if(
                 True,
                 msg="Please ensure that reference prior is in the last column of the posteriors.",
             )
-            log_ref_priors = [d[..., -1] for d in data]
-            data = [np.delete(d, -1, axis=-1) for d in data]
+            log_ref_priors = [d[..., idx] for d in data]
+            data = [np.delete(d, idx, axis=-1) for d in data]
         else:
             log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
         assert len(data) == len(log_ref_priors), (
@@ -181,12 +182,7 @@ class NSage(Guru):
         )
         return data, log_ref_priors
 
-    def run(
-        self,
-        has_log_ref_prior: bool,
-        n_buckets: int,
-        threshold: float,
-    ) -> None:
+    def run(self, n_buckets: int, threshold: float) -> None:
         """Runs the NSage analysis."""
         logger.debug("Baking the model")
         constants, variables, duplicates, dist_fn = self.baked_model.get_dist()  # type: ignore
@@ -224,7 +220,7 @@ class NSage(Guru):
             self.selection_fn_filename,
         )
 
-        data, log_ref_priors = self.read_data(has_log_ref_prior)
+        data, log_ref_priors = self.read_data()
 
         _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
             data, log_ref_priors, n_buckets=n_buckets, threshold=threshold
@@ -313,11 +309,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         nargs="+",
         type=str,
         required=True,
-    )
-    nsage_group.add_argument(
-        "--has-log-ref-prior",
-        help="Indicates if log reference priors are used.",
-        action="store_true",
     )
     nsage_group.add_argument(
         "--seed",
