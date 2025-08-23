@@ -100,7 +100,11 @@ def numpyro_poisson_likelihood(
                 axis=-1,
                 where=(~jnp.isneginf(log_prob)) & mask,
             )
-            return carry + log_prob_sum, None
+            return carry + jnp.clip(
+                log_prob_sum,
+                min=jnp.finfo(jnp.result_type(float)).min,
+                max=jnp.finfo(jnp.result_type(float)).max,
+            ), None
 
         total_log_likelihood = log_constants  # - Σ log(M_i)
         # Σ log Σ exp (log p(θ|data_n) - log π_n)
