@@ -372,8 +372,9 @@ def save_inference_data(mcmc: numpyro.infer.MCMC) -> None:
         header=" ".join(header),
     )
 
-    summary = {k: list(v) for k, v in inference_data.to_dict().items()}
-    write_json("posterior_summary.json", summary)
+    summary = az.summary(inference_data)
+
+    pd.DataFrame(summary).to_json("posterior_summary.json")
 
     posterior_data = np.permute_dims(
         np.asarray(inference_data.posterior.to_dataarray()),
