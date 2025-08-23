@@ -368,4 +368,23 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         default="prior.json",
     )
 
+    debug_group = parser.add_argument_group("Debug Options")
+    debug_group.add_argument(
+        "--debug-nans",
+        help="Checks for NaNs in each computation. See details in the documentation: "
+        "https://jax.readthedocs.io/en/latest/_autosummary/jax.debug_nans.html#jax.debug_nans.",
+        action="store_true",
+    )
+    debug_group.add_argument(
+        "--profile-memory",
+        help="Enable memory profiling.",
+        action="store_true",
+    )
+    debug_group.add_argument(
+        "--check-leaks",
+        help="Check for JAX Tracer leaks. See details in the documentation: "
+        "https://jax.readthedocs.io/en/latest/_autosummary/jax.checking_leaks.html#jax.checking_leaks.",
+        action="store_true",
+    )
+
     return parser
