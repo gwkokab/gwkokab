@@ -67,7 +67,7 @@ def numpyro_poisson_likelihood(
             name: variables_samples[i] for name, i in variables_index.items()
         }
 
-        model_instance: Distribution = dist_fn(**mapped_params)
+        model_instance: Distribution = dist_fn(**mapped_params, validate_args=True)
 
         # μ = E_{θ|Λ}[VT(θ)]
         numpyro.factor("expected_rates", ERate_obj(model_instance))

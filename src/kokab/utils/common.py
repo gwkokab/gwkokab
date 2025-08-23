@@ -241,7 +241,9 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
         if isinstance(value, dict):
             value_cpy = value.copy()
             dist_type = value_cpy.pop("dist")
-            matched_prior_params[key] = available_priors[dist_type](**value_cpy)
+            matched_prior_params[key] = available_priors[dist_type](
+                **value_cpy, validate_args=True
+            )
     for param in params:
         if param not in matched_prior_params:
             raise ValueError(f"Missing prior for {param}")
