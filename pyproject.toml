@@ -128,6 +128,7 @@ sage_n_spls_m_sgs = "kokab.n_spls_m_sgs.sage:main"
 sage_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.sage:main"
 ## NSage scripts
 nsage_ecc_matters = "kokab.ecc_matters.nsage:main"
+nsage_n_pls_m_gs = "kokab.n_pls_m_gs.nsage:main"
 ## Monk scripts
 monk_ecc_matters = "kokab.ecc_matters.monk:main"
 monk_n_pls_m_gs = "kokab.n_pls_m_gs.monk:main"
