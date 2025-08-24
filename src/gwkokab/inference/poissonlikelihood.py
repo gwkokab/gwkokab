@@ -11,6 +11,7 @@ from jax import Array, numpy as jnp
 from loguru import logger
 from numpyro.distributions import Distribution
 
+from ..cosmology import PLANCK_2015_Cosmology
 from ..models.utils import JointDistribution, ScaledMixture
 from ..poisson_mean import PoissonMean
 from ..utils.tools import warn_if
@@ -151,6 +152,9 @@ def poisson_likelihood(
             # log p(ω|data_n) - log π_n
             log_prob: Array = safe_model_log_prob - safe_log_ref_prior
             log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
+
+            z = jax.lax.dynamic_index_in_dim(safe_data, -1, axis=-1, keepdims=False)
+            log_prob += PLANCK_2015_Cosmology.logdVcdz(z) - jnp.log1p(z)
 
             # log Σ exp (log p(ω|data_n) - log π_n)
             log_prob_sum = jax.nn.logsumexp(
