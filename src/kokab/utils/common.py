@@ -376,7 +376,7 @@ def save_inference_data(mcmc: numpyro.infer.MCMC) -> None:
 
     summary = az.summary(inference_data)
 
-    pd.DataFrame(summary).to_json("posterior_summary.json")
+    pd.DataFrame(summary).to_json("posterior_summary.json", indent=4)
 
     posterior_data = np.permute_dims(
         np.asarray(inference_data.posterior.to_dataarray()),
