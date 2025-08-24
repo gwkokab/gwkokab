@@ -153,7 +153,7 @@ def main() -> None:
         prior_filename=args.prior_json,
         selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
-        sampler_settings_filename=args.flowMC_json,
+        sampler_settings_filename=args.sampler_config,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
