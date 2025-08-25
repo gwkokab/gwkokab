@@ -43,7 +43,7 @@ def numpyro_poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params, validate_args=True)
 
         # μ = E_{θ|Λ}[VT(θ)]
-        numpyro.factor("expected_rates", -ERate_obj(model_instance))
+        expected_rates = ERate_obj(model_instance)
 
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
@@ -86,7 +86,7 @@ def numpyro_poisson_likelihood(
                 (batched_data, batched_log_ref_priors, batched_masks),
             )
 
-        # Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
-        numpyro.factor("total_log_likelihood", total_log_likelihood)
+        # - μ + Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
+        numpyro.factor("log_likelihood", total_log_likelihood - expected_rates)
 
     return likelihood_fn  # type: ignore
