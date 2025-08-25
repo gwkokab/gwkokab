@@ -221,12 +221,6 @@ class Monk(Guru):
         n_max_steps: int,
     ) -> None:
         """Runs the Monk analysis."""
-        parameters = self.parameters
-        if "redshift" in parameters:
-            redshift_index = parameters.index("redshift")
-        else:
-            redshift_index = None
-
         logger.debug("Baking the model")
         constants, variables, duplicates, dist_fn = self.baked_model.get_dist()  # type: ignore
         variables_index: dict[str, int] = {
@@ -293,7 +287,6 @@ class Monk(Guru):
             priors,
             variables_index,
             ERate_fn,
-            redshift_index,
             list_of_means,
             list_of_covariances,
             self.rng_key,
@@ -303,6 +296,9 @@ class Monk(Guru):
             n_vi_steps=n_vi_steps,
             learning_rate=learning_rate,
             batch_size=batch_size,
+            minimum_mc_error=minimum_mc_error,
+            n_checkpoints=n_checkpoints,
+            n_max_steps=n_max_steps,
         )
 
         handler = flowMChandler(

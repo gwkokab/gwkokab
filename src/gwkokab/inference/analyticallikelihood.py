@@ -175,7 +175,6 @@ def analytical_likelihood(
     priors: JointDistribution,
     variables_index: Dict[str, int],
     ERate_fn: Callable[[Distribution], Array],
-    redshift_index: Optional[int],
     means: List[Array],
     covariances: List[Array],
     key: PRNGKeyArray,
