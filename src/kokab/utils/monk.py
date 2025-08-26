@@ -7,6 +7,8 @@ from collections.abc import Callable
 from typing import Dict, List, Tuple, Union
 
 import h5py
+import jax
+from jax import numpy as jnp
 from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions import Distribution
@@ -216,14 +218,11 @@ class Monk(Guru):
         n_vi_steps: int,
         learning_rate: float,
         batch_size: int,
+        minimum_mc_error: float,
+        n_checkpoints: int,
+        n_max_steps: int,
     ) -> None:
         """Runs the Monk analysis."""
-        parameters = self.parameters
-        if "redshift" in parameters:
-            redshift_index = parameters.index("redshift")
-        else:
-            redshift_index = None
-
         logger.debug("Baking the model")
         constants, variables, duplicates, dist_fn = self.baked_model.get_dist()  # type: ignore
         variables_index: dict[str, int] = {
@@ -278,6 +277,15 @@ class Monk(Guru):
 
         list_of_means, list_of_covariances = _read_mean_covariances(self.data_filename)
 
+        mean_stack: Array = jax.block_until_ready(
+            jax.device_put(jnp.stack(list_of_means, axis=0), may_alias=True)
+        )
+        cov_stack: Array = jax.block_until_ready(
+            jax.device_put(jnp.stack(list_of_covariances, axis=0), may_alias=True)
+        )
+        logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
+        logger.debug("cov_stack.shape: {shape}", shape=cov_stack.shape)
+
         ERate_fn = read_pmean(
             self.rng_key,
             self.parameters,
@@ -290,21 +298,23 @@ class Monk(Guru):
             priors,
             variables_index,
             ERate_fn,
-            redshift_index,
-            list_of_means,
-            list_of_covariances,
             self.rng_key,
+            n_events=mean_stack.shape[0],
             n_samples=n_samples,
             max_iter_mean=max_iter_mean,
             max_iter_cov=max_iter_cov,
             n_vi_steps=n_vi_steps,
             learning_rate=learning_rate,
             batch_size=batch_size,
+            minimum_mc_error=minimum_mc_error,
+            n_checkpoints=n_checkpoints,
+            n_max_steps=n_max_steps,
         )
 
         handler = flowMChandler(
             logpdf=logpdf,
             initial_position=initial_position,
+            data=(mean_stack, cov_stack),
             **flowmc_handler_kwargs,
         )
 
@@ -351,8 +361,8 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     likelihood_group.add_argument(
         "--n-samples",
         help="Number of samples to draw from the multivariate normal distribution for each "
-        "event to compute the likelihood, by default 10_000",
-        default=10_000,
+        "event to compute the likelihood, by default 1_000",
+        default=1_000,
         type=int,
     )
     likelihood_group.add_argument(
@@ -381,8 +391,26 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     likelihood_group.add_argument(
         "--batch-size",
-        help="Batch size for the `jax.lax.map` used in the likelihood computation, by default 1000",
-        default=1_000,
+        help="Batch size for the `jax.lax.map` used in the likelihood computation, by default 100",
+        default=100,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--minimum-mc-error",
+        help="Minimum Monte Carlo error for the likelihood computation",
+        default=0.01,
+        type=float,
+    )
+    likelihood_group.add_argument(
+        "--n-checkpoints",
+        help="Number of checkpoints to save during the optimization process, by default 1",
+        default=1,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--n-max-steps",
+        help="Maximum number of steps until minimum Monte Carlo error is reached",
+        default=20,
         type=int,
     )
 

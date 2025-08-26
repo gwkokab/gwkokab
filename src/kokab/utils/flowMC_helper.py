@@ -295,7 +295,7 @@ class flowMChandler(object):
         sampler_kwargs: dict[str, Any],
         data_dump_kwargs: dict[str, Any],
         initial_position: Array,
-        data: Optional[dict] = None,
+        data: Optional[Any] = None,
         apply_gradient_checkpoint: bool = False,
         gradient_checkpoint_policy: Optional[Callable[..., bool]] = None,
     ) -> None:
