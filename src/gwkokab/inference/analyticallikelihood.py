@@ -3,14 +3,13 @@
 
 
 import functools as ft
-from typing import Callable, Dict, List, Optional, Tuple, TypeAlias
+from typing import Callable, Dict, Optional, Tuple, TypeAlias
 
 import equinox as eqx
 import jax
 import optax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
-from loguru import logger
 from numpyro.distributions import Distribution, MultivariateNormal
 
 from gwkokab.models.utils import JointDistribution
@@ -175,9 +174,8 @@ def analytical_likelihood(
     priors: JointDistribution,
     variables_index: Dict[str, int],
     ERate_fn: Callable[[Distribution], Array],
-    means: List[Array],
-    covariances: List[Array],
     key: PRNGKeyArray,
+    n_events: int,
     minimum_mc_error: float = 1e-2,
     n_samples: int = 1_000,
     max_iter_mean: int = 10,
@@ -187,7 +185,7 @@ def analytical_likelihood(
     batch_size: int = 1_00,
     n_checkpoints: int = 1,
     n_max_steps: int = 20,
-) -> Callable[[Array, Array], Array]:
+) -> Callable[[Array, Tuple[Array, Array]], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
     .. math::
@@ -224,12 +222,8 @@ def analytical_likelihood(
         function to compute the expected event rates
     redshift_index : Optional[int]
         index of the redshift variable in the input array, if applicable
-    means : List[Array]
-        List of mean vectors for each event. Each vector should have the same length and
-        should correspond to the parameters of the distribution along with covariances.
-    covariances : List[Array]
-        List of covariance matrices for each event. Each matrix should correspond to the
-        mean vectors in `means`.
+    n_events : int
+        number of events
     key : PRNGKeyArray
         JAX random key for sampling
     minimum_mc_error : float, optional
@@ -262,17 +256,9 @@ def analytical_likelihood(
     """
     warn_if(batch_size > n_samples, msg="Batch size is greater than number of samples")
 
-    n_events = len(means)
-    mean_stack: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(means, axis=0), may_alias=True)
-    )
-    cov_stack: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(covariances, axis=0), may_alias=True)
-    )
-    logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
-    logger.debug("cov_stack.shape: {shape}", shape=cov_stack.shape)
+    def likelihood_fn(x: Array, data: Tuple[Array, Array]) -> Array:
+        mean_stack, cov_stack = data
 
-    def likelihood_fn(x: Array, _: Array) -> Array:
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()

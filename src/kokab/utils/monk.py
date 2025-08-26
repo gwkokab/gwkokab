@@ -7,6 +7,8 @@ from collections.abc import Callable
 from typing import Dict, List, Tuple, Union
 
 import h5py
+import jax
+from jax import numpy as jnp
 from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions import Distribution
@@ -275,6 +277,15 @@ class Monk(Guru):
 
         list_of_means, list_of_covariances = _read_mean_covariances(self.data_filename)
 
+        mean_stack: Array = jax.block_until_ready(
+            jax.device_put(jnp.stack(list_of_means, axis=0), may_alias=True)
+        )
+        cov_stack: Array = jax.block_until_ready(
+            jax.device_put(jnp.stack(list_of_covariances, axis=0), may_alias=True)
+        )
+        logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
+        logger.debug("cov_stack.shape: {shape}", shape=cov_stack.shape)
+
         ERate_fn = read_pmean(
             self.rng_key,
             self.parameters,
@@ -287,9 +298,8 @@ class Monk(Guru):
             priors,
             variables_index,
             ERate_fn,
-            list_of_means,
-            list_of_covariances,
             self.rng_key,
+            n_events=mean_stack.shape[0],
             n_samples=n_samples,
             max_iter_mean=max_iter_mean,
             max_iter_cov=max_iter_cov,
@@ -304,6 +314,7 @@ class Monk(Guru):
         handler = flowMChandler(
             logpdf=logpdf,
             initial_position=initial_position,
+            data=(mean_stack, cov_stack),
             **flowmc_handler_kwargs,
         )
 
