@@ -47,6 +47,7 @@ jobs:
         env:
           XLA_FLAGS: "--xla_force_host_platform_device_count=8"
           JAX_TRACEBACK_FILTERING: "off"
+          JAX_ENABLE_X64: 1
           JAX_ARRAY: 1
           PY_COLORS: 1
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
@@ -80,6 +81,7 @@ jobs:
         env:
           XLA_FLAGS: "--xla_force_host_platform_device_count=8"
           JAX_TRACEBACK_FILTERING: "off"
+          JAX_ENABLE_X64: 1
           JAX_ARRAY: 1
           PY_COLORS: 1
         run: |
