@@ -25,7 +25,7 @@ maintainers = [
 description = "A JAX-based gravitational-wave population inference toolkit for parametric models"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
