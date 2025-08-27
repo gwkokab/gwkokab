@@ -96,7 +96,7 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
             injections = f["injections"]
 
             ifar = np.max(
-                [injections[k][:] for k in injections.keys() if "far" in k],
+                [injections[k][:] for k in injections.keys() if "ifar" in k],
                 axis=0,
             )
             snr = injections["optimal_snr_net"][:]
