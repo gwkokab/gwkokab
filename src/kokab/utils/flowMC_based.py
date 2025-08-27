@@ -10,7 +10,6 @@ from typing import Any, Dict, List, Optional
 
 import jax
 import numpy as np
-from flowMC.resource.nf_model.rqSpline import MaskedCouplingRQSpline
 from flowMC.resource_strategy_bundle.RQSpline_MALA import RQSpline_MALA_Bundle
 from flowMC.Sampler import Sampler
 from jax import numpy as jnp, random as jrd
@@ -205,7 +204,7 @@ def _save_data_from_sampler(
 
     gc.collect()
 
-    nf_model: MaskedCouplingRQSpline = sampler_resources["model"]
+    nf_model = sampler_resources["model"]
 
     _, subkey = jrd.split(rng_key)
     unweighted_samples = np.asarray(
