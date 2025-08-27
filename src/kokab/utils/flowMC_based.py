@@ -235,7 +235,9 @@ def _save_data_from_sampler(
         inf_count=jnp.isposinf(logpdf_val).sum(),
     )
 
-    nf_model_log_prob_val = jax.block_until_ready(nf_model.log_prob(unweighted_samples))
+    nf_model_log_prob_val = jax.block_until_ready(
+        jax.lax.map(nf_model.log_prob, unweighted_samples)
+    )
     logger.debug(
         "Nan count in nf_model_log_prob values: {nan_count}",
         nan_count=jnp.isnan(nf_model_log_prob_val).sum(),
