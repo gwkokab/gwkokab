@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple, Union
 import jax
 import numpy as np
 from jaxtyping import Array
+from loguru import logger
 from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
 
@@ -128,6 +129,19 @@ class Sage(FlowMCBased):
         )
         masks_group: Tuple[Array] = jax.block_until_ready(
             jax.device_put(_masks_group, may_alias=True)
+        )
+
+        logger.debug(
+            "data_group.shape: {shape}",
+            shape=", ".join([str(d.shape) for d in data_group]),
+        )
+        logger.debug(
+            "log_ref_priors_group.shape: {shape}",
+            shape=", ".join([str(d.shape) for d in log_ref_priors_group]),
+        )
+        logger.debug(
+            "masks_group.shape: {shape}",
+            shape=", ".join([str(d.shape) for d in masks_group]),
         )
 
         n_events = len(data)

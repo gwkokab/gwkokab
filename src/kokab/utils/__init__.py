@@ -13,5 +13,4 @@ from . import (
     ppd_parser as ppd_parser,
     regex as regex,
     sage as sage,
-    sage_parser as sage_parser,
 )
