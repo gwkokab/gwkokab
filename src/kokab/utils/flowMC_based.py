@@ -222,7 +222,7 @@ def _save_data_from_sampler(
     gc.collect()
 
     logpdf_val = jax.block_until_ready(
-        jax.lax.map(lambda s: logpdf(s, None), unweighted_samples)
+        jax.lax.map(lambda s: logpdf(s), unweighted_samples)
     )
     logger.debug(
         "Nan count in logpdf values: {nan_count}", nan_count=jnp.isnan(logpdf_val).sum()
