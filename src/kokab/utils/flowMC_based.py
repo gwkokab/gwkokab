@@ -336,7 +336,7 @@ class FlowMCBased(Guru):
             )
             if expected_type is int:
                 error_if(
-                    var < 1,
+                    var < 1 and var_name != "chain_batch_size",
                     err=ValueError,
                     msg=f"expected a positive integer, got {var} for {var_name}",
                 )
