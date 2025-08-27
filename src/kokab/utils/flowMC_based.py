@@ -10,10 +10,11 @@ from typing import Any, Dict, List, Optional
 
 import jax
 import numpy as np
+from flowMC.resource.nf_model.base import NFModel
 from flowMC.resource_strategy_bundle.RQSpline_MALA import RQSpline_MALA_Bundle
 from flowMC.Sampler import Sampler
 from jax import numpy as jnp, random as jrd
-from jaxtyping import Array
+from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
 
 from gwkokab.models.utils import JointDistribution
@@ -49,6 +50,7 @@ def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray, .
 def _save_data_from_sampler(
     sampler: Sampler,
     *,
+    rng_key: PRNGKeyArray,
     out_dir: str,
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
@@ -203,11 +205,11 @@ def _save_data_from_sampler(
 
     gc.collect()
 
-    key_unweighted = jrd.PRNGKey(np.random.randint(1, 2**32 - 1))
+    nf_model: NFModel = sampler_resources["model"]
+
+    _, subkey = jrd.split(rng_key)
     unweighted_samples = np.asarray(
-        jax.block_until_ready(
-            sampler.sample_flow(n_samples=n_samples, rng_key=key_unweighted)
-        )
+        jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
     )
     np.savetxt(
         rf"{out_dir}/nf_samples_unweighted.dat", unweighted_samples, header=header
@@ -234,9 +236,7 @@ def _save_data_from_sampler(
         inf_count=jnp.isposinf(logpdf_val).sum(),
     )
 
-    nf_model_log_prob_val = jax.block_until_ready(
-        sampler.nf_model.log_prob(unweighted_samples)
-    )
+    nf_model_log_prob_val = jax.block_until_ready(nf_model.log_prob(unweighted_samples))
     logger.debug(
         "Nan count in nf_model_log_prob values: {nan_count}",
         nan_count=jnp.isnan(nf_model_log_prob_val).sum(),
@@ -340,6 +340,7 @@ class FlowMCBased(Guru):
                     err=ValueError,
                     msg=f"expected a positive integer, got {var} for {var_name}",
                 )
+            logger.debug(f"{var_name}: {var}")
         error_if(
             not all(isinstance(x, int) and x > 0 for x in rq_spline_hidden_units),
             msg=f"expected a list of positive integers, got {rq_spline_hidden_units} for rq_spline_hidden_units",
@@ -398,9 +399,11 @@ class FlowMCBased(Guru):
 
         _save_data_from_sampler(
             sampler,
+            rng_key=self.rng_key,
             logpdf=ft.partial(logpdf, data=data),  # type: ignore
             out_dir="sampler_data",
             labels=labels,
+            n_samples=sampler_config["data_dump"]["n_samples"],
         )
 
 
