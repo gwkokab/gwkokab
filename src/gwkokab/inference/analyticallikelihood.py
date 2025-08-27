@@ -3,13 +3,12 @@
 
 
 import functools as ft
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple
 
 import jax
 import optax
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
-from loguru import logger
 from numpyro.distributions import Distribution, MultivariateNormal
 
 from gwkokab.models.utils import JointDistribution
@@ -48,16 +47,15 @@ def analytical_likelihood(
     variables_index: Dict[str, int],
     ERate_fn: Callable[[Distribution], Array],
     redshift_index: Optional[int],
-    means: List[Array],
-    covariances: List[Array],
     key: PRNGKeyArray,
+    n_events: int,
     n_samples: int = 10_000,
     max_iter_mean: int = 10,
     max_iter_cov: int = 3,
     n_vi_steps: int = 5,
     learning_rate: float = 1e-2,
     batch_size: int = 1_000,
-) -> Callable[[Array, Array], Array]:
+) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
     .. math::
@@ -124,17 +122,10 @@ def analytical_likelihood(
         given the data. The function takes two arguments: an array of model parameters
         and a second array (not used in this implementation).
     """
-    n_events = len(means)
-    mean_stack: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(means, axis=0), may_alias=True)
-    )
-    cov_stack: Array = jax.block_until_ready(
-        jax.device_put(jnp.stack(covariances, axis=0), may_alias=True)
-    )
-    logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
-    logger.debug("cov_stack.shape: {shape}", shape=cov_stack.shape)
 
-    def likelihood_fn(x: Array, _: Array) -> Array:
+    def likelihood_fn(x: Array, data: Dict[str, Any]) -> Array:
+        mean_stack: Array = data["mean_stack"]
+        cov_stack: Array = data["cov_stack"]
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
