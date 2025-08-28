@@ -53,6 +53,7 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
         batch_size: Optional[int] = None,
         far_cut: float = 1.0,
         snr_cut: float = 10.0,
+        ifar_pipelines: Optional[Sequence[str]] = None,
     ) -> None:
         """Convenience class for loading a neural vt.
 
@@ -68,6 +69,8 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
             The FAR cut to apply to the injections. Default is 1.0.
         snr_cut : float
             The SNR cut to apply to the injections. Default is 10.0.
+        ifar_pipelines: Optional[Sequence[str]]
+            Pipelines name to select ifar from.
         """
         error_if(not parameters, msg="parameters sequence cannot be empty")
         error_if(
@@ -95,10 +98,18 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
 
             injections = f["injections"]
 
-            ifar = np.max(
-                [injections[k][:] for k in injections.keys() if "ifar" in k],
-                axis=0,
-            )
+            if ifar_pipelines is None:
+                ifar_pipelines = [k for k in injections.keys() if "ifar" in k]
+                logger.debug(
+                    "No pipelines specified for ifar, using all available: {}",
+                    ", ".join(ifar_pipelines),
+                )
+            else:
+                logger.debug(
+                    "Selecting ifar from pipelines: {}", ", ".join(ifar_pipelines)
+                )
+
+            ifar = np.max([injections[k][:] for k in ifar_pipelines], axis=0)
             snr = injections["optimal_snr_net"][:]
 
             runs = injections["name"][:].astype(str)
