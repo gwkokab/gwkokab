@@ -210,6 +210,7 @@ def main() -> None:
             plot_datapoints=False,
             range=args.range,
             title_fmt=args.title_fmt,
+            plot_density=False,
             hist_kwargs={"density": True},
         )
 
