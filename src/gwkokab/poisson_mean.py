@@ -16,7 +16,6 @@ from .models import PowerlawRedshift
 from .models.utils import JointDistribution, ScaledMixture
 from .utils.tools import batch_and_remainder, error_if
 from .vts import (
-    RealInjectionVolumeTimeSensitivity,
     SemiAnalyticalRealInjectionVolumeTimeSensitivity,
     SyntheticInjectionVolumeTimeSensitivity,
     VolumeTimeSensitivityInterface,
@@ -119,7 +118,6 @@ class PoissonMean(eqx.Module):
         if isinstance(
             logVT_estimator,
             (
-                RealInjectionVolumeTimeSensitivity,
                 SyntheticInjectionVolumeTimeSensitivity,
                 SemiAnalyticalRealInjectionVolumeTimeSensitivity,
             ),
