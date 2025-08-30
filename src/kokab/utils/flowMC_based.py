@@ -172,6 +172,7 @@ def _save_data_from_sampler(
         )
 
     np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
+    logger.info("Loss values saved to {out_dir}/loss.dat", out_dir=out_dir)
 
     for i in range(n_chains):
         logger.info(
@@ -203,9 +204,11 @@ def _save_data_from_sampler(
         )
 
     gc.collect()
+    logger.debug(
+        "Garbage collection completed after saving chains and log probabilities."
+    )
 
     nf_model = sampler_resources["model"]
-
     _, subkey = jrd.split(rng_key)
     unweighted_samples = np.asarray(
         jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
@@ -219,6 +222,7 @@ def _save_data_from_sampler(
     )
 
     gc.collect()
+    logger.debug("Garbage collection completed after unweighted samples.")
 
     logpdf_val = jax.block_until_ready(
         jax.lax.map(lambda s: logpdf(s), unweighted_samples)
@@ -278,6 +282,7 @@ def _save_data_from_sampler(
     )
 
     gc.collect()
+    logger.debug("Garbage collection completed after weighted samples.")
 
 
 class FlowMCBased(Guru):
@@ -290,7 +295,13 @@ class FlowMCBased(Guru):
         labels: List[str],
     ) -> None:
         sampler_config = read_json(self.sampler_settings_filename)
+        logger.debug(
+            "Sampler configuration loaded: {sampler_config}",
+            sampler_config=sampler_config,
+        )
+
         RQSpline_MALA_Bundle_value = sampler_config.pop("RQSpline_MALA_Bundle", {})
+
         batch_size = RQSpline_MALA_Bundle_value["batch_size"]
         chain_batch_size = RQSpline_MALA_Bundle_value["chain_batch_size"]
         global_thinning = RQSpline_MALA_Bundle_value["global_thinning"]
@@ -309,6 +320,8 @@ class FlowMCBased(Guru):
         rq_spline_n_bins = RQSpline_MALA_Bundle_value["rq_spline_n_bins"]
         rq_spline_n_layers = RQSpline_MALA_Bundle_value["rq_spline_n_layers"]
         verbose = RQSpline_MALA_Bundle_value["verbose"]
+
+        logger.debug("Validation for Sampler parameters starting")
 
         for var, var_name, expected_type in (
             (batch_size, "batch_size", int),
@@ -348,6 +361,7 @@ class FlowMCBased(Guru):
         )
 
         initial_position = priors.sample(self.rng_key, (n_chains,))
+
         n_dims = initial_position.shape[1]
 
         bundle = RQSpline_MALA_Bundle(
@@ -373,6 +387,7 @@ class FlowMCBased(Guru):
             n_NFproposal_batch_size=n_NFproposal_batch_size,
             verbose=verbose,
         )
+        logger.info("RQSpline_MALA_Bundle created successfully.")
 
         sampler = Sampler(
             n_dims,
@@ -381,17 +396,19 @@ class FlowMCBased(Guru):
             resource_strategy_bundles=bundle,
         )
 
+        logger.debug("Sampler initialized, starting sampling.")
+
         if self.debug_nans:
             with jax.debug_nans(True):
                 sampler.sample(initial_position, data)
         elif self.profile_memory:
             sampler.sample(initial_position, data)
-
             import datetime
 
             time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
             filename = f"{self.analysis_name}_memory_{time}.prof"
             jax.profiler.save_device_memory_profile(filename)
+            logger.debug(f"Memory profile saved as {filename}")
         elif self.check_leaks:
             with jax.checking_leaks():
                 sampler.sample(initial_position, data)
@@ -406,6 +423,8 @@ class FlowMCBased(Guru):
             labels=labels,
             n_samples=sampler_config["data_dump"]["n_samples"],
         )
+
+        logger.info("Sampling and data saving complete.")
 
 
 get_parser = guru_parser
