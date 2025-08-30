@@ -46,20 +46,28 @@ class Sage(FlowMCBased):
         Parameters
         ----------
         model : Union[Distribution, Callable[..., Distribution]]
-            model to be used in the Monk class. It can be a Distribution or a callable
+            model to be used in the Sage class. It can be a Distribution or a callable
             that returns a Distribution.
-        data_filename : str
-            path to the HDF5 file containing the data.
+        where_fns : Optional[List[Callable[..., Array]]]
+            List of functions to apply to the data before passing it to the model.
+        posterior_regex : str
+            Regular expression to match posterior files.
+        posterior_columns : List[str]
+            List of columns to extract from the posterior files.
         seed : int
-            seed for the random number generator.
+            Seed for the random number generator.
         prior_filename : str
-            path to the JSON file containing the prior distributions.
+            Path to the JSON file containing the prior distributions.
         selection_fn_filename : str
-            path to the JSON file containing the selection function.
+            Path to the JSON file containing the selection function.
         poisson_mean_filename : str
-            path to the JSON file containing the Poisson mean configuration.
+            Path to the JSON file containing the Poisson mean configuration.
         sampler_settings_filename : str
-            path to the JSON file containing the sampler settings.
+            Path to the JSON file containing the sampler settings.
+        n_buckets : int
+            Number of buckets to use for padding and stacking the data.
+        threshold : float
+            Threshold for padding and stacking the data.
         debug_nans : bool, optional
             If True, checks for NaNs in each computation. See details in the
             [documentation](https://jax.readthedocs.io/en/latest/_autosummary/jax.debug_nans.html#jax.debug_nans),
