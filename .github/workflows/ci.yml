@@ -33,6 +33,13 @@ jobs:
         python-version:
           - "3.11"
           # - "3.12" # closing until https://git.ligo.org/kipp/python-ligo-lw/-/issues/33 is resolved
+    env:
+      XLA_FLAGS: "--xla_force_host_platform_device_count=8"
+      JAX_TRACEBACK_FILTERING: "off"
+      JAX_ENABLE_X64: 1
+      JAX_ARRAY: 1
+      PY_COLORS: 1
+      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
     steps:
       - uses: actions/checkout@v4
@@ -44,13 +51,6 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
       - name: Run tests and coverage
-        env:
-          XLA_FLAGS: "--xla_force_host_platform_device_count=8"
-          JAX_TRACEBACK_FILTERING: "off"
-          JAX_ENABLE_X64: 1
-          JAX_ARRAY: 1
-          PY_COLORS: 1
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
         run: |
           uv run coverage run --source=src -m pytest tests
           uv run coveralls --service=github-actions
@@ -65,7 +65,12 @@ jobs:
       matrix:
         python-version:
           - "3.11"
-
+    env:
+      XLA_FLAGS: "--xla_force_host_platform_device_count=8"
+      JAX_TRACEBACK_FILTERING: "off"
+      JAX_ENABLE_X64: 1
+      JAX_ARRAY: 1
+      PY_COLORS: 1
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -78,11 +83,5 @@ jobs:
           uv pip install -r docs/requirements.txt
           pip freeze
       - name: Test documentation
-        env:
-          XLA_FLAGS: "--xla_force_host_platform_device_count=8"
-          JAX_TRACEBACK_FILTERING: "off"
-          JAX_ENABLE_X64: 1
-          JAX_ARRAY: 1
-          PY_COLORS: 1
         run: |
           uv run pytest docs --tb=short --doctest-glob='*.md' --doctest-glob='*.rst' --doctest-continue-on-failure
