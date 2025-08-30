@@ -3,11 +3,9 @@
 
 
 import json
-import warnings
 from collections.abc import Sequence
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
-import jax
 import numpy as np
 import pandas as pd
 from numpyro import distributions as dist
@@ -91,57 +89,6 @@ def expand_arguments(arg: str, n: int) -> List[str]:
         list of extended arguments
     """
     return [f"{arg}_{i}" for i in range(n)]
-
-
-def flowMC_default_parameters(**kwargs) -> dict:
-    """Convert a json file to a dictionary."""
-
-    key_key_value = [
-        ("data_dump_kwargs", "out_dir", "sampler_data"),
-        ("local_sampler_kwargs", "jit", True),
-        ("nf_model_kwargs", "model", "MaskedCouplingRQSpline"),
-        ("sampler_kwargs", "data", None),
-        ("sampler_kwargs", "logging", True),
-        ("sampler_kwargs", "outdir", "inf-plot"),
-        ("sampler_kwargs", "precompile", False),
-        ("sampler_kwargs", "use_global", True),
-        ("sampler_kwargs", "verbose", False),
-    ]
-
-    for key1, key2, value in key_key_value:
-        if kwargs[key1].get(key2) is None:
-            kwargs[key1][key2] = value
-
-    local_sampler_name = kwargs["local_sampler_kwargs"].get("sampler")
-    if local_sampler_name is None:
-        raise ValueError("Local sampler name is not provided.")
-
-    if local_sampler_name == "HMC":
-        condition_matrix = kwargs["local_sampler_kwargs"].get("condition_matrix")
-        if condition_matrix is None:
-            warnings.warn(
-                "HMC Sampler: `condition_matrix` is not provided. Using identity matrix."
-            )
-            condition_matrix = np.eye(kwargs["sampler_kwargs"]["n_dim"])
-        kwargs["local_sampler_kwargs"]["condition_matrix"] = np.asarray(
-            condition_matrix
-        )
-    gradient_checkpoint_policy_name: Optional[str] = kwargs.get(
-        "gradient_checkpoint_policy"
-    )
-    if gradient_checkpoint_policy_name is not None:
-        try:
-            kwargs["gradient_checkpoint_policy"] = getattr(
-                jax.checkpoint_policies, gradient_checkpoint_policy_name
-            )
-        except AttributeError:
-            raise ValueError(
-                f"Invalid gradient checkpoint policy: {gradient_checkpoint_policy_name}\n"
-                "Please choose from `jax.checkpoint_policies` available at "
-                "https://docs.jax.dev/en/latest/gradient-checkpointing.html#list-of-policies"
-            )
-
-    return kwargs
 
 
 def get_posterior_data(
