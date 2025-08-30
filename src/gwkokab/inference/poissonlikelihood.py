@@ -145,7 +145,7 @@ def poisson_likelihood(
             predicate = jnp.logical_and(
                 predicate, where_fn(**constants, **mapped_params)
             )
-        predicate = jnp.logical_and(jnp.all(x), predicate)
+        predicate = jnp.logical_and(jnp.all(jnp.isfinite(x)), predicate)
         return jnp.where(predicate, likelihood_fn(x, data), -jnp.inf)
 
     return eqx.filter_jit(likelihood_fn_with_checks)
