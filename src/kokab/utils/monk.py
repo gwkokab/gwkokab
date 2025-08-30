@@ -15,9 +15,7 @@ from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import analytical_likelihood
-from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import error_if
-from kokab.utils.common import flowMC_default_parameters, read_json, write_json
 from kokab.utils.poisson_mean_parser import read_pmean
 
 from .flowMC_based import FlowMCBased
@@ -154,63 +152,7 @@ class Monk(FlowMCBased):
 
     def run(self) -> None:
         """Runs the Monk analysis."""
-        parameters = self.parameters
-        if "redshift" in parameters:
-            redshift_index = parameters.index("redshift")
-        else:
-            redshift_index = None
-
-        logger.debug("Baking the model")
-        constants, variables, duplicates, dist_fn = self.baked_model.get_dist()  # type: ignore
-        variables_index: dict[str, int] = {
-            key: i for i, key in enumerate(sorted(variables.keys()))
-        }
-        for key, value in duplicates.items():
-            variables_index[key] = variables_index[value]
-
-        # TODO(Qazalbash): refactor logic for grouping variables and logging them into a
-        # function and use it for both Sage and Monk.
-        group_variables: dict[int, list[str]] = {}
-        for key, value in variables_index.items():  # type: ignore
-            group_variables[value] = group_variables.get(value, []) + [key]  # type: ignore
-
-        logger.debug(
-            "Number of recovering variables: {num_vars}", num_vars=len(group_variables)
-        )
-
-        for key, value in constants.items():  # type: ignore
-            logger.debug(
-                "Constant variable: {name} = {variable}", name=key, variable=value
-            )
-
-        for value in group_variables.values():  # type: ignore
-            logger.debug("Recovering variable: {variable}", variable=", ".join(value))
-
-        priors = JointDistribution(
-            *[variables[key] for key in sorted(variables.keys())], validate_args=True
-        )
-
-        write_json("constants.json", constants)
-        write_json("nf_samples_mapping.json", variables_index)
-
-        flowmc_handler_kwargs = read_json(self.sampler_settings_filename)
-
-        flowmc_handler_kwargs["sampler_kwargs"]["rng_key"] = self.rng_key
-        flowmc_handler_kwargs["nf_model_kwargs"]["key"] = self.rng_key
-
-        n_chains = flowmc_handler_kwargs["sampler_kwargs"]["n_chains"]
-        initial_position = priors.sample(self.rng_key, (n_chains,))
-
-        flowmc_handler_kwargs["nf_model_kwargs"]["n_features"] = initial_position.shape[
-            1
-        ]
-        flowmc_handler_kwargs["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
-
-        flowmc_handler_kwargs["data_dump_kwargs"]["labels"] = list(
-            sorted(variables.keys())
-        )
-
-        flowmc_handler_kwargs = flowMC_default_parameters(**flowmc_handler_kwargs)
+        _, dist_fn, priors, variables_index = self.bake_model()
 
         list_of_means, list_of_covariances = _read_mean_covariances(self.data_filename)
 
@@ -237,7 +179,6 @@ class Monk(FlowMCBased):
             priors,
             variables_index,
             ERate_fn,
-            redshift_index,
             self.rng_key,
             n_events=n_events,
             n_samples=self.n_samples,

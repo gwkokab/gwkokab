@@ -46,7 +46,6 @@ def analytical_likelihood(
     priors: JointDistribution,
     variables_index: Dict[str, int],
     ERate_fn: Callable[[Distribution], Array],
-    redshift_index: Optional[int],
     key: PRNGKeyArray,
     n_events: int,
     n_samples: int = 10_000,
@@ -90,8 +89,6 @@ def analytical_likelihood(
         mapping of variable names to their indices in the input array
     ERate_fn : Callable[[Distribution], Array]
         function to compute the expected event rates
-    redshift_index : Optional[int]
-        index of the redshift variable in the input array, if applicable
     means : List[Array]
         List of mean vectors for each event. Each vector should have the same length and
         should correspond to the parameters of the distribution along with covariances.
