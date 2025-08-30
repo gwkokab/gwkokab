@@ -411,7 +411,7 @@ def main() -> None:
         prior_filename=args.prior_json,
         selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
-        sampler_settings_filename=args.flowMC_json,
+        sampler_settings_filename=args.sampler_config,
         n_samples=args.n_samples,
         max_iter_mean=args.max_iter_mean,
         max_iter_cov=args.max_iter_cov,
