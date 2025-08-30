@@ -7,3 +7,6 @@
 from .analyticallikelihood import analytical_likelihood as analytical_likelihood
 from .bake import Bake as Bake
 from .poissonlikelihood import poisson_likelihood as poisson_likelihood
+from .poissonlikelihood_numpyro import (
+    numpyro_poisson_likelihood as numpyro_poisson_likelihood,
+)

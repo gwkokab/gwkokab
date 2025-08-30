@@ -8,6 +8,7 @@ from . import (
     genie_parser as genie_parser,
     guru as guru,
     monk as monk,
+    nsage as nsage,
     poisson_mean_parser as poisson_mean_parser,
     ppd as ppd,
     ppd_parser as ppd_parser,
