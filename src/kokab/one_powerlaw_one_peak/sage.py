@@ -20,7 +20,7 @@ from gwkokab.parameters import (
 from kokab.utils.sage import get_parser, Sage
 
 
-class NPowerlawMGaussianSage(Sage):
+class SmoothedPowerlawAndPeakSage(Sage):
     def __init__(
         self,
         has_spin: bool,
@@ -151,7 +151,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    NPowerlawMGaussianSage(
+    SmoothedPowerlawAndPeakSage(
         has_spin=args.add_spin,
         has_tilt=args.add_tilt,
         has_redshift=args.add_redshift,
