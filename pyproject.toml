@@ -25,7 +25,7 @@ maintainers = [
 description = "A JAX-based gravitational-wave population inference toolkit for parametric models"
 readme = "README.md"
 license = { file = "LICENSE" }
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: Education",
@@ -34,16 +34,16 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3",
 ]
 dependencies = [
     "arviz>=0.20.0",
     "chex>=0.1.87",
     "equinox>=0.11.3",
-    "flowMC==0.3.4",
+    "flowMC==0.4.5",
     "h5py>=3.12.1",
     "interpax>=0.3.5",
     "jax>=0.4.30,<=0.5.3",
@@ -124,7 +124,6 @@ genie_n_pls_m_gs = "kokab.n_pls_m_gs.genie:main"
 ## Sage scripts
 sage_ecc_matters = "kokab.ecc_matters.sage:main"
 sage_n_pls_m_gs = "kokab.n_pls_m_gs.sage:main"
-sage_n_spls_m_sgs = "kokab.n_spls_m_sgs.sage:main"
 sage_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.sage:main"
 ## Monk scripts
 monk_ecc_matters = "kokab.ecc_matters.monk:main"
@@ -132,7 +131,6 @@ monk_n_pls_m_gs = "kokab.n_pls_m_gs.monk:main"
 ## PPD scripts
 ppd_ecc_matters = "kokab.ecc_matters.ppd:main"
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
-ppd_n_spls_m_sgs = "kokab.n_spls_m_sgs.ppd:main"
 ppd_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.ppd:main"
 
 [tool.pytest.ini_options]

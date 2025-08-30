@@ -2,34 +2,31 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from collections.abc import Callable, Sequence
-from typing import List, Optional, Tuple
+from collections.abc import Callable
+from typing import Any, Dict, List, Optional, Tuple
 
+import equinox as eqx
 import jax
-import numpy as np
 from jax import Array, numpy as jnp
-from loguru import logger
-from numpyro.distributions import Distribution
+from jaxtyping import ArrayLike
+from numpyro._typing import DistributionLike
 
-from ..models.utils import JointDistribution, ScaledMixture
+from ..models.utils import JointDistribution
 from ..poisson_mean import PoissonMean
-from ..utils.tools import warn_if
-from .bake import Bake
-from .jenks import pad_and_stack
 
 
 __all__ = ["poisson_likelihood"]
 
 
 def poisson_likelihood(
-    dist_builder: Bake,
-    data: List[np.ndarray],
-    log_ref_priors: List[np.ndarray],
+    dist_fn: Callable[..., DistributionLike],
+    priors: JointDistribution,
+    variables_index: Dict[str, int],
+    log_constants: ArrayLike,
     ERate_obj: PoissonMean,
-    where_fns: Optional[List[Callable[..., Array]]] = None,
-    n_buckets: Optional[int] = None,
-    threshold: float = 3.0,
-) -> Tuple[dict[str, int], JointDistribution, Callable[[Array, Array], Array]]:
+    where_fns: Optional[List[Callable[..., Array]]],
+    constants: Dict[str, Array],
+) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
 
@@ -62,76 +59,17 @@ def poisson_likelihood(
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
-    dummy_model = dist_builder.get_dummy()
-    warn_if(
-        not isinstance(dummy_model, ScaledMixture),
-        msg="The model provided is not a ScaledMixture. "
-        "Rate estimation will therefore be skipped.",
-    )
-    n_events = len(data)
-    sum_log_size = sum([np.log(d.shape[0]) for d in data])
-    log_constants = -sum_log_size  # -Σ log(M_i)
-    log_constants += n_events * np.log(ERate_obj.time_scale)
 
-    _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
-        data, log_ref_priors, n_buckets=n_buckets, threshold=threshold
-    )
-
-    data_group: Sequence[Array] = jax.block_until_ready(
-        jax.device_put(_data_group, may_alias=True)
-    )
-    log_ref_priors_group: Sequence[Array] = jax.block_until_ready(
-        jax.device_put(_log_ref_priors_group, may_alias=True)
-    )
-    masks_group: Sequence[Array] = jax.block_until_ready(
-        jax.device_put(_masks_group, may_alias=True)
-    )
-
-    logger.debug(
-        "data_group.shape: {shape}",
-        shape=", ".join([str(d.shape) for d in data_group]),
-    )
-    logger.debug(
-        "log_ref_priors_group.shape: {shape}",
-        shape=", ".join([str(d.shape) for d in log_ref_priors_group]),
-    )
-    logger.debug(
-        "masks_group.shape: {shape}",
-        shape=", ".join([str(d.shape) for d in masks_group]),
-    )
-
-    constants, variables, duplicates, dist_fn = dist_builder.get_dist()  # type: ignore
-    variables_index: dict[str, int] = {
-        key: i for i, key in enumerate(sorted(variables.keys()))
-    }
-    for key, value in duplicates.items():
-        variables_index[key] = variables_index[value]
-
-    group_variables: dict[int, list[str]] = {}
-    for key, value in variables_index.items():  # type: ignore
-        group_variables[value] = group_variables.get(value, []) + [key]  # type: ignore
-
-    logger.debug(
-        "Number of recovering variables: {num_vars}", num_vars=len(group_variables)
-    )
-
-    for key, value in constants.items():  # type: ignore
-        logger.debug("Constant variable: {name} = {variable}", name=key, variable=value)
-
-    for value in group_variables.values():  # type: ignore
-        logger.debug("Recovering variable: {variable}", variable=", ".join(value))
-
-    priors = JointDistribution(
-        *[variables[key] for key in sorted(variables.keys())], validate_args=True
-    )
-
-    def likelihood_fn(x: Array, _: Array) -> Array:
+    def likelihood_fn(x: Array, data: Dict[str, Tuple[Array]]) -> Array:
+        data_group: Tuple[Array] = data["data_group"]
+        log_ref_priors_group: Tuple[Array] = data["log_ref_priors_group"]
+        masks_group: Tuple[Array] = data["masks_group"]
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
         }
 
-        model_instance: Distribution = dist_fn(**mapped_params)
+        model_instance = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = ERate_obj(model_instance)
@@ -194,7 +132,10 @@ def poisson_likelihood(
 
         return log_posterior
 
-    def likelihood_fn_with_checks(x: Array, _: Array) -> Array:
+    if where_fns is None:
+        return eqx.filter_jit(likelihood_fn)
+
+    def likelihood_fn_with_checks(x: Array, data: Dict[str, Tuple[Array]]) -> Array:
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
@@ -204,9 +145,7 @@ def poisson_likelihood(
             predicate = jnp.logical_and(
                 predicate, where_fn(**constants, **mapped_params)
             )
-        predicate = jnp.logical_and(jnp.all(x), predicate)
-        return jnp.where(predicate, likelihood_fn(x, _), -jnp.inf)
+        predicate = jnp.logical_and(jnp.all(jnp.isfinite(x)), predicate)
+        return jnp.where(predicate, likelihood_fn(x, data), -jnp.inf)
 
-    if where_fns is None:
-        return variables_index, priors, jax.jit(likelihood_fn)
-    return variables_index, priors, jax.jit(likelihood_fn_with_checks)
+    return eqx.filter_jit(likelihood_fn_with_checks)

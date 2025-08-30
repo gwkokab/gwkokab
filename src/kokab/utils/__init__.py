@@ -4,6 +4,7 @@
 
 from . import (
     common as common,
+    flowMC_based as flowMC_based,
     genie_parser as genie_parser,
     guru as guru,
     monk as monk,
@@ -11,5 +12,5 @@ from . import (
     ppd as ppd,
     ppd_parser as ppd_parser,
     regex as regex,
-    sage_parser as sage_parser,
+    sage as sage,
 )

@@ -15,7 +15,6 @@ import os
 from . import (
     ecc_matters as ecc_matters,
     n_pls_m_gs as n_pls_m_gs,
-    n_spls_m_sgs as n_spls_m_sgs,
     one_powerlaw_one_peak as one_powerlaw_one_peak,
     utils as utils,
 )
