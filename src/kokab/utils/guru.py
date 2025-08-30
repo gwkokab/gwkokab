@@ -20,7 +20,7 @@ from kokab.utils.common import get_processed_priors, read_json, write_json
 
 class Guru:
     """Guru is a class which contains all the common functionality among Genie, Sage and
-    Monk classes.
+    Guru classes.
     """
 
     _rng_key: PRNGKeyArray
@@ -145,11 +145,11 @@ class Guru:
         Raises
         ------
         NotImplementedError
-            If the Monk class is used directly, this method raises a NotImplementedError.
-            It is expected that subclasses of Monk will implement this method.
+            If the Guru class is used directly, this method raises a NotImplementedError.
+            It is expected that subclasses of Guru will implement this method.
         """
         msg = (
-            "The Monk class should not be used directly. Please use a subclass that "
+            "The Guru class should not be used directly. Please use a subclass that "
             "implements the parameters property."
         )
         logger.error(msg)
@@ -167,11 +167,11 @@ class Guru:
         Raises
         ------
         NotImplementedError
-            If the Monk class is used directly, this method raises a NotImplementedError.
-            It is expected that subclasses of Monk will implement this method.
+            If the Guru class is used directly, this method raises a NotImplementedError.
+            It is expected that subclasses of Guru will implement this method.
         """
         msg = (
-            "The Monk class should not be used directly. Please use a subclass that "
+            "The Guru class should not be used directly. Please use a subclass that "
             "implements the model_parameters property."
         )
         logger.error(msg)
@@ -190,7 +190,7 @@ class Guru:
 
 
 def get_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the Monk script.
+    """Populate the command line argument parser with the arguments for the Guru script.
 
     Parameters
     ----------
