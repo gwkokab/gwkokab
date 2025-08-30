@@ -408,7 +408,7 @@ class FlowMCBased(Guru):
             time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
             filename = f"{self.analysis_name}_memory_{time}.prof"
             jax.profiler.save_device_memory_profile(filename)
-            logger.debug(f"Memory profile saved as {filename}")
+            logger.debug("Memory profile saved as {filename}", filename=filename)
         elif self.check_leaks:
             with jax.checking_leaks():
                 sampler.sample(initial_position, data)
