@@ -92,8 +92,9 @@ class Guru:
 
         Returns
         -------
-        Bake
-            A Bake object that wraps the model with the constants and prior parameters.
+        Tuple[ Dict[str, Union[int, float, bool, None]], Callable[..., DistributionLike], JointDistribution, Dict[str, int], ]
+            A tuple containing the constants, the distribution function, the prior
+            distribution, and the variables index.
         """
         prior_dict = read_json(self.prior_filename)
         model_prior_param = get_processed_priors(self.model_parameters, prior_dict)
