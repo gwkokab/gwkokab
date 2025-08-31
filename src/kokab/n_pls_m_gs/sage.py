@@ -28,8 +28,8 @@ from gwkokab.parameters import (
     SIN_DECLINATION,
 )
 from kokab.utils.common import expand_arguments
-from kokab.utils.flowMC_based import FlowMCBased
-from kokab.utils.numpyro_based import NumpyroBased
+from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser
 
 
@@ -325,7 +325,7 @@ class NPowerlawMGaussianNSage(NPowerlawMGaussianCore, NumpyroBased):
     likelihood_fn = numpyro_poisson_likelihood
 
 
-def parse(parser: ArgumentParser) -> ArgumentParser:
+def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(
         "--n-pl",
@@ -400,8 +400,9 @@ def parse(parser: ArgumentParser) -> ArgumentParser:
 
 def f_main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
-    parser = parse(parser)
+    parser = flowMC_arg_parser(parser)
 
     args = parser.parse_args()
 
@@ -437,8 +438,9 @@ def f_main() -> None:
 
 def n_main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
-    parser = parse(parser)
+    parser = numpyro_arg_parser(parser)
 
     args = parser.parse_args()
 

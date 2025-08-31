@@ -8,8 +8,8 @@ from typing import List
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from kokab.ecc_matters.common import EccentricityMattersModel
-from kokab.utils.flowMC_based import FlowMCBased
-from kokab.utils.numpyro_based import NumpyroBased
+from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser as sage_parser
 
 
@@ -34,6 +34,7 @@ class EccentricityMattersNSage(EccentricityMattersCore, NumpyroBased):
 def f_main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = sage_parser(parser)
+    parser = flowMC_arg_parser(parser)
 
     args = parser.parse_args()
 
@@ -59,6 +60,7 @@ def f_main() -> None:
 def n_main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = sage_parser(parser)
+    parser = numpyro_arg_parser(parser)
 
     args = parser.parse_args()
 
