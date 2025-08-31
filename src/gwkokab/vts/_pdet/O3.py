@@ -21,20 +21,7 @@ from astropy import units
 from astropy.cosmology import Planck15, z_at_value
 from jaxtyping import Array, PRNGKeyArray
 
-from ...parameters import (
-    COS_IOTA,
-    COS_TILT_1,
-    COS_TILT_2,
-    PHI_12,
-    POLARIZATION_ANGLE,
-    PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
-    REDSHIFT,
-    RIGHT_ASCENSION,
-    SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
-    SIN_DECLINATION,
-)
+from ...parameters import Parameters
 from ...utils.tools import error_if
 from ._emulator import Emulator
 
@@ -89,27 +76,31 @@ class pdet_O3(Emulator):
         error_if(parameters is None, msg="Must provide list of parameters")
 
         self.all_parameters = (
-            PRIMARY_MASS_SOURCE.name,
-            SECONDARY_MASS_SOURCE.name,
-            PRIMARY_SPIN_MAGNITUDE.name,
-            SECONDARY_SPIN_MAGNITUDE.name,
-            COS_TILT_1.name,
-            COS_TILT_2.name,
-            PHI_12.name,
-            REDSHIFT.name,
-            COS_IOTA.name,
-            POLARIZATION_ANGLE.name,
-            RIGHT_ASCENSION.name,
-            SIN_DECLINATION.name,
+            Parameters.PRIMARY_MASS_SOURCE.value,
+            Parameters.SECONDARY_MASS_SOURCE.value,
+            Parameters.PRIMARY_SPIN_MAGNITUDE.value,
+            Parameters.SECONDARY_SPIN_MAGNITUDE.value,
+            Parameters.COS_TILT_1.value,
+            Parameters.COS_TILT_2.value,
+            Parameters.PHI_12.value,
+            Parameters.REDSHIFT.value,
+            Parameters.COS_IOTA.value,
+            Parameters.POLARIZATION_ANGLE.value,
+            Parameters.RIGHT_ASCENSION.value,
+            Parameters.SIN_DECLINATION.value,
         )
 
         error_if(
-            PRIMARY_MASS_SOURCE.name not in parameters,
-            msg="Must include {0} parameter".format(PRIMARY_MASS_SOURCE.name),
+            Parameters.PRIMARY_MASS_SOURCE.value not in parameters,
+            msg="Must include {0} parameter".format(
+                Parameters.PRIMARY_MASS_SOURCE.value
+            ),
         )
         error_if(
-            SECONDARY_MASS_SOURCE.name not in parameters,
-            msg="Must include {0} parameter".format(SECONDARY_MASS_SOURCE.name),
+            Parameters.SECONDARY_MASS_SOURCE.value not in parameters,
+            msg="Must include {0} parameter".format(
+                Parameters.SECONDARY_MASS_SOURCE.value
+            ),
         )
 
         self.is_full = set(self.all_parameters) == set(parameters)
@@ -120,11 +111,11 @@ class pdet_O3(Emulator):
             missing_params = set(self.all_parameters) - set(parameters)
 
             proposal_dist = {
-                REDSHIFT.name: (0.0, 10.0),
-                COS_IOTA.name: (-1.0, 1.0),
-                POLARIZATION_ANGLE.name: (0.0, jnp.pi),
-                RIGHT_ASCENSION.name: (0.0, 2.0 * jnp.pi),
-                SIN_DECLINATION.name: (-1.0, 1.0),
+                Parameters.REDSHIFT.value: (0.0, 10.0),
+                Parameters.COS_IOTA.value: (-1.0, 1.0),
+                Parameters.POLARIZATION_ANGLE.value: (0.0, jnp.pi),
+                Parameters.RIGHT_ASCENSION.value: (0.0, 2.0 * jnp.pi),
+                Parameters.SIN_DECLINATION.value: (-1.0, 1.0),
             }
             for param in missing_params:
                 if param in proposal_dist:
@@ -258,20 +249,20 @@ class pdet_O3(Emulator):
 
         missing_params = {}
 
-        if PRIMARY_SPIN_MAGNITUDE.name not in parameter_dict:
-            missing_params[PRIMARY_SPIN_MAGNITUDE.name] = jnp.zeros(shape)
+        if Parameters.PRIMARY_SPIN_MAGNITUDE.value not in parameter_dict:
+            missing_params[Parameters.PRIMARY_SPIN_MAGNITUDE.value] = jnp.zeros(shape)
 
-        if SECONDARY_SPIN_MAGNITUDE.name not in parameter_dict:
-            missing_params[SECONDARY_SPIN_MAGNITUDE.name] = jnp.zeros(shape)
+        if Parameters.SECONDARY_SPIN_MAGNITUDE.value not in parameter_dict:
+            missing_params[Parameters.SECONDARY_SPIN_MAGNITUDE.value] = jnp.zeros(shape)
 
-        if COS_TILT_1.name not in parameter_dict:
-            missing_params[COS_TILT_1.name] = jnp.ones(shape)
+        if Parameters.COS_TILT_1.value not in parameter_dict:
+            missing_params[Parameters.COS_TILT_1.value] = jnp.ones(shape)
 
-        if COS_TILT_2.name not in parameter_dict:
-            missing_params[COS_TILT_2.name] = jnp.ones(shape)
+        if Parameters.COS_TILT_2.value not in parameter_dict:
+            missing_params[Parameters.COS_TILT_2.value] = jnp.ones(shape)
 
-        if PHI_12.name not in parameter_dict:
-            missing_params[PHI_12.name] = jnp.zeros(shape)
+        if Parameters.PHI_12.value not in parameter_dict:
+            missing_params[Parameters.PHI_12.value] = jnp.zeros(shape)
 
         parameter_dict.update(missing_params)
 

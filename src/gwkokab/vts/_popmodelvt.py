@@ -13,12 +13,7 @@ from jax.numpy import trapezoid
 from jax.scipy.interpolate import RegularGridInterpolator
 from jaxtyping import Array
 
-from gwkokab.parameters import (
-    PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
-    SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
-)
+from gwkokab.parameters import Parameters
 from gwkokab.utils.transformations import (
     chirp_mass,
     log_chirp_mass,
@@ -98,15 +93,17 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
         self.batch_size = batch_size
         self.m_min = m_min
         if (
-            PRIMARY_MASS_SOURCE.name not in parameters
-            or SECONDARY_MASS_SOURCE.name not in parameters
+            Parameters.PRIMARY_MASS_SOURCE.value not in parameters
+            or Parameters.SECONDARY_MASS_SOURCE.value not in parameters
         ):
             raise ValueError(
-                f"{self.__class__.__name__} requires {PRIMARY_MASS_SOURCE.name} and {SECONDARY_MASS_SOURCE.name}"
+                f"{self.__class__.__name__} requires "
+                f"{Parameters.PRIMARY_MASS_SOURCE.value} and "
+                f"{Parameters.SECONDARY_MASS_SOURCE.value}"
             )
         spin_required = (
-            PRIMARY_SPIN_MAGNITUDE.name in parameters
-            and SECONDARY_SPIN_MAGNITUDE.name in parameters
+            Parameters.PRIMARY_SPIN_MAGNITUDE.value in parameters
+            and Parameters.SECONDARY_SPIN_MAGNITUDE.value in parameters
         )
 
         if not spin_required and not zero_spin:
@@ -116,24 +113,24 @@ class PopModelsVolumeTimeSensitivity(VolumeTimeSensitivityInterface):
             del s1z, s2z
             points = (logM, qtilde)
             self.shuffle_indices = [
-                parameters.index(PRIMARY_MASS_SOURCE.name),
-                parameters.index(SECONDARY_MASS_SOURCE.name),
+                parameters.index(Parameters.PRIMARY_MASS_SOURCE.value),
+                parameters.index(Parameters.SECONDARY_MASS_SOURCE.value),
             ]
         elif spin_required and not zero_spin:
             VT, logM, qtilde, s1z, s2z = self._load_file(filename, zero_spin)
             points = (logM, qtilde, s1z, s2z)
             self.shuffle_indices = [
-                parameters.index(PRIMARY_MASS_SOURCE.name),
-                parameters.index(SECONDARY_MASS_SOURCE.name),
-                parameters.index(PRIMARY_SPIN_MAGNITUDE.name),
-                parameters.index(SECONDARY_SPIN_MAGNITUDE.name),
+                parameters.index(Parameters.PRIMARY_MASS_SOURCE.value),
+                parameters.index(Parameters.SECONDARY_MASS_SOURCE.value),
+                parameters.index(Parameters.PRIMARY_SPIN_MAGNITUDE.value),
+                parameters.index(Parameters.SECONDARY_SPIN_MAGNITUDE.value),
             ]
         elif not spin_required and zero_spin:
             VT, logM, qtilde = self._load_file(filename, zero_spin)
             points = (logM, qtilde)
             self.shuffle_indices = [
-                parameters.index(PRIMARY_MASS_SOURCE.name),
-                parameters.index(SECONDARY_MASS_SOURCE.name),
+                parameters.index(Parameters.PRIMARY_MASS_SOURCE.value),
+                parameters.index(Parameters.SECONDARY_MASS_SOURCE.value),
             ]
         else:
             raise ValueError(
