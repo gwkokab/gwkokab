@@ -3,7 +3,7 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
@@ -65,7 +65,7 @@ class NPowerlawMGaussianCore(Sage):
                 Optional[List[Callable[..., Array]]],
                 Dict[str, Array],
             ],
-            Callable[[Array, Dict[str, Any]], Array],
+            Callable,
         ],
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
@@ -337,11 +337,11 @@ class NPowerlawMGaussianCore(Sage):
 
 
 class NPowerlawMGaussianFSage(NPowerlawMGaussianCore, FlowMCBased):
-    likelihood_fn = poisson_likelihood
+    pass
 
 
 class NPowerlawMGaussianNSage(NPowerlawMGaussianCore, NumpyroBased):
-    likelihood_fn = numpyro_poisson_likelihood
+    pass
 
 
 def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:

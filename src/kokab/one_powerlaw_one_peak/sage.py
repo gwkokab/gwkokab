@@ -3,7 +3,7 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Callable, Dict, List, Optional, Union
 
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
@@ -43,7 +43,7 @@ class SmoothedPowerlawAndPeakCore(Sage):
                 Optional[List[Callable[..., Array]]],
                 Dict[str, Array],
             ],
-            Callable[[Array, Dict[str, Any]], Array],
+            Callable,
         ],
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
@@ -149,11 +149,11 @@ class SmoothedPowerlawAndPeakCore(Sage):
 
 
 class SmoothedPowerlawAndPeakFSage(SmoothedPowerlawAndPeakCore, FlowMCBased):
-    likelihood_fn = poisson_likelihood
+    pass
 
 
 class SmoothedPowerlawAndPeakNSage(SmoothedPowerlawAndPeakCore, NumpyroBased):
-    likelihood_fn = numpyro_poisson_likelihood
+    pass
 
 
 def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
