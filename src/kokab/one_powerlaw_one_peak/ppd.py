@@ -22,20 +22,8 @@ from gwkokab.models.spin import (
     BetaFromMeanVar,
     IndependentSpinOrientationGaussianIsotropic,
 )
-from gwkokab.models.utils import (
-    JointDistribution,
-    ScaledMixture,
-)
-from gwkokab.parameters import (
-    COS_TILT_1,
-    COS_TILT_2,
-    MASS_RATIO,
-    PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
-    REDSHIFT,
-    SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
-)
+from gwkokab.models.utils import JointDistribution, ScaledMixture
+from gwkokab.parameters import Parameters
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
 from kokab.utils.common import ppd_ranges, read_json
@@ -194,18 +182,23 @@ def main() -> None:
     use_tilt = constants.get("use_tilt", False)
     use_redshift = constants.get("use_redshift", False)
 
-    parameters = [PRIMARY_MASS_SOURCE.name]
+    parameters = [Parameters.PRIMARY_MASS_SOURCE.value]
     if args.raw:
-        parameters.append(MASS_RATIO.name)
+        parameters.append(Parameters.MASS_RATIO.value)
     else:
-        parameters.append(SECONDARY_MASS_SOURCE.name)
+        parameters.append(Parameters.SECONDARY_MASS_SOURCE.value)
 
     if use_spin:
-        parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
+        parameters.extend(
+            [
+                Parameters.PRIMARY_SPIN_MAGNITUDE.value,
+                Parameters.SECONDARY_SPIN_MAGNITUDE.value,
+            ]
+        )
     if use_tilt:
-        parameters.extend([COS_TILT_1.name, COS_TILT_2.name])
+        parameters.extend([Parameters.COS_TILT_1.value, Parameters.COS_TILT_2.value])
     if use_redshift:
-        parameters.append(REDSHIFT.name)
+        parameters.append(Parameters.REDSHIFT.value)
 
     ranges = ppd_ranges(parameters, args.range)
 

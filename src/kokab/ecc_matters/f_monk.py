@@ -5,7 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
-from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.parameters import Parameters
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils.f_monk import Monk, monk_arg_parser
 
@@ -13,7 +13,11 @@ from kokab.utils.f_monk import Monk, monk_arg_parser
 class EccentricityMattersMonk(Monk):
     @property
     def parameters(self) -> List[str]:
-        return [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name, ECCENTRICITY.name]
+        return [
+            Parameters.PRIMARY_MASS_SOURCE.value,
+            Parameters.SECONDARY_MASS_SOURCE.value,
+            Parameters.ECCENTRICITY.value,
+        ]
 
     @property
     def model_parameters(self) -> List[str]:

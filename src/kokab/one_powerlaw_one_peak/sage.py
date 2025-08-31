@@ -11,15 +11,7 @@ from numpyro._typing import DistributionLike
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.models.utils import JointDistribution
-from gwkokab.parameters import (
-    COS_TILT_1,
-    COS_TILT_2,
-    PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
-    REDSHIFT,
-    SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
-)
+from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
@@ -92,14 +84,17 @@ class SmoothedPowerlawAndPeakCore(Sage):
 
     @property
     def parameters(self) -> List[str]:
-        names = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+        names = [
+            Parameters.PRIMARY_MASS_SOURCE.value,
+            Parameters.SECONDARY_MASS_SOURCE.value,
+        ]
         if self.has_spin:
-            names.append(PRIMARY_SPIN_MAGNITUDE.name)
-            names.append(SECONDARY_SPIN_MAGNITUDE.name)
+            names.append(Parameters.PRIMARY_SPIN_MAGNITUDE.value)
+            names.append(Parameters.SECONDARY_SPIN_MAGNITUDE.value)
         if self.has_tilt:
-            names.extend([COS_TILT_1.name, COS_TILT_2.name])
+            names.extend([Parameters.COS_TILT_1.value, Parameters.COS_TILT_2.value])
         if self.has_redshift:
-            names.append(REDSHIFT.name)
+            names.append(Parameters.REDSHIFT.value)
         return names
 
     @property

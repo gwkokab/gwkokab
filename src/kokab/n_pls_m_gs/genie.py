@@ -14,51 +14,12 @@ import gwkokab
 from gwkokab.errors import banana_error_m1_m2, truncated_normal_error
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
-from gwkokab.parameters import (
-    COS_IOTA,
-    COS_TILT_1,
-    COS_TILT_2,
-    DETECTION_TIME,
-    ECCENTRICITY,
-    MEAN_ANOMALY,
-    PHI_1,
-    PHI_2,
-    PHI_12,
-    PHI_ORB,
-    POLARIZATION_ANGLE,
-    PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
-    REDSHIFT,
-    RIGHT_ASCENSION,
-    SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
-    SIN_DECLINATION,
-)
+from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.population import error_magazine, PopulationFactory
 from kokab.utils import genie_parser, poisson_mean_parser
 from kokab.utils.common import expand_arguments, vt_json_read_and_process
 from kokab.utils.regex import match_all
-
-
-m1_source_name = PRIMARY_MASS_SOURCE.name
-m2_source_name = SECONDARY_MASS_SOURCE.name
-chi1_name = PRIMARY_SPIN_MAGNITUDE.name
-chi2_name = SECONDARY_SPIN_MAGNITUDE.name
-cos_tilt_1_name = COS_TILT_1.name
-cos_tilt_2_name = COS_TILT_2.name
-ecc_name = ECCENTRICITY.name
-mean_anomaly_name = MEAN_ANOMALY.name
-redshift_name = REDSHIFT.name
-cos_iota_name = COS_IOTA.name
-phi_12_name = PHI_12.name
-polarization_angle_name = POLARIZATION_ANGLE.name
-right_ascension_name = RIGHT_ASCENSION.name
-sin_declination_name = SIN_DECLINATION.name
-detection_time_name = DETECTION_TIME.name
-phi_1_name = PHI_1.name
-phi_2_name = PHI_2.name
-phi_orb_name = PHI_ORB.name
 
 
 def make_parser() -> ArgumentParser:
@@ -220,58 +181,78 @@ def main() -> None:
     if has_mean_anomaly:
         err_params_name.extend(
             [
-                mean_anomaly_name + "_high",
-                mean_anomaly_name + "_low",
-                mean_anomaly_name + "_scale",
+                Parameters.MEAN_ANOMALY.value + "_high",
+                Parameters.MEAN_ANOMALY.value + "_low",
+                Parameters.MEAN_ANOMALY.value + "_scale",
             ]
         )
     if has_redshift:
         err_params_name.extend(["redshift_high", "redshift_low", "redshift_scale"])
     if has_cos_iota:
         err_params_name.extend(
-            [cos_iota_name + "_high", cos_iota_name + "_low", cos_iota_name + "_scale"]
+            [
+                Parameters.COS_IOTA.value + "_high",
+                Parameters.COS_IOTA.value + "_low",
+                Parameters.COS_IOTA.value + "_scale",
+            ]
         )
     if has_polarization_angle:
         err_params_name.extend(
             [
-                polarization_angle_name + "_high",
-                polarization_angle_name + "_low",
-                polarization_angle_name + "_scale",
+                Parameters.POLARIZATION_ANGLE.value + "_high",
+                Parameters.POLARIZATION_ANGLE.value + "_low",
+                Parameters.POLARIZATION_ANGLE.value + "_scale",
             ]
         )
     if has_right_ascension:
         err_params_name.extend(
             [
-                right_ascension_name + "_high",
-                right_ascension_name + "_low",
-                right_ascension_name + "_scale",
+                Parameters.RIGHT_ASCENSION.value + "_high",
+                Parameters.RIGHT_ASCENSION.value + "_low",
+                Parameters.RIGHT_ASCENSION.value + "_scale",
             ]
         )
     if has_sin_declination:
         err_params_name.extend(
             [
-                sin_declination_name + "_high",
-                sin_declination_name + "_low",
-                sin_declination_name + "_scale",
+                Parameters.SIN_DECLINATION.value + "_high",
+                Parameters.SIN_DECLINATION.value + "_low",
+                Parameters.SIN_DECLINATION.value + "_scale",
             ]
         )
     if has_detection_time:
-        err_params_name.append(detection_time_name + "_scale")
+        err_params_name.append(Parameters.DETECTION_TIME.value + "_scale")
     if has_phi_1:
         err_params_name.extend(
-            [phi_1_name + "_high", phi_1_name + "_low", phi_1_name + "_scale"]
+            [
+                Parameters.PHI_1.value + "_high",
+                Parameters.PHI_1.value + "_low",
+                Parameters.PHI_1.value + "_scale",
+            ]
         )
     if has_phi_2:
         err_params_name.extend(
-            [phi_2_name + "_high", phi_2_name + "_low", phi_2_name + "_scale"]
+            [
+                Parameters.PHI_2.value + "_high",
+                Parameters.PHI_2.value + "_low",
+                Parameters.PHI_2.value + "_scale",
+            ]
         )
     if has_phi_12:
         err_params_name.extend(
-            [phi_12_name + "_high", phi_12_name + "_low", phi_12_name + "_scale"]
+            [
+                Parameters.PHI_12.value + "_high",
+                Parameters.PHI_12.value + "_low",
+                Parameters.PHI_12.value + "_scale",
+            ]
         )
     if has_phi_orb:
         err_params_name.extend(
-            [phi_orb_name + "_high", phi_orb_name + "_low", phi_orb_name + "_scale"]
+            [
+                Parameters.PHI_ORB.value + "_high",
+                Parameters.PHI_ORB.value + "_low",
+                Parameters.PHI_ORB.value + "_scale",
+            ]
         )
 
     err_params_value = match_all(err_params_name, err_json)
@@ -292,10 +273,9 @@ def main() -> None:
         ("mmin_pl", N_pl),
     ]
 
-    parameters_name: Tuple[str, ...] = (m1_source_name, m2_source_name)
+    parameters_name: Tuple[str, ...] = (Parameters.PRIMARY_MASS_SOURCE.value,)
 
     error_magazine.register(
-        (m1_source_name, m2_source_name),
         lambda x, size, key: banana_error_m1_m2(
             x,
             size,
@@ -306,7 +286,10 @@ def main() -> None:
     )
 
     if has_spin:
-        parameters_name += (chi1_name, chi2_name)
+        parameters_name += (
+            Parameters.PRIMARY_SPIN_MAGNITUDE.value,
+            Parameters.SECONDARY_SPIN_MAGNITUDE.value,
+        )
         if args.add_truncated_normal_spin:
             gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
                 create_truncated_normal_distributions
@@ -346,7 +329,7 @@ def main() -> None:
             )
 
         error_magazine.register(
-            chi1_name,
+            Parameters.PRIMARY_SPIN_MAGNITUDE.value,
             partial(
                 truncated_normal_error,
                 scale=err_params_value["chi1_scale"],
@@ -358,7 +341,7 @@ def main() -> None:
         )
 
         error_magazine.register(
-            chi2_name,
+            Parameters.SECONDARY_SPIN_MAGNITUDE.value,
             partial(
                 truncated_normal_error,
                 scale=err_params_value["chi2_scale"],
@@ -370,7 +353,7 @@ def main() -> None:
         )
 
     if has_tilt:
-        parameters_name += (cos_tilt_1_name, cos_tilt_2_name)
+        parameters_name += (Parameters.COS_TILT_1.value, Parameters.COS_TILT_2.value)
         all_params.extend(
             [
                 ("cos_tilt_zeta_g", N_g),
@@ -383,7 +366,7 @@ def main() -> None:
         )
 
         error_magazine.register(
-            cos_tilt_1_name,
+            Parameters.COS_TILT_1.value,
             partial(
                 truncated_normal_error,
                 scale=err_params_value["cos_tilt_1_scale"],
@@ -395,7 +378,7 @@ def main() -> None:
         )
 
         error_magazine.register(
-            cos_tilt_2_name,
+            Parameters.COS_TILT_2.value,
             partial(
                 truncated_normal_error,
                 scale=err_params_value["cos_tilt_2_scale"],
@@ -407,79 +390,81 @@ def main() -> None:
         )
 
     if has_phi_1:
-        parameters_name += (phi_1_name,)
+        parameters_name += (Parameters.PHI_1.value,)
 
         all_params.extend(
             [
-                (phi_1_name + "_high_g", N_g),
-                (phi_1_name + "_high_pl", N_pl),
-                (phi_1_name + "_low_g", N_g),
-                (phi_1_name + "_low_pl", N_pl),
+                (Parameters.PHI_1.value + "_high_g", N_g),
+                (Parameters.PHI_1.value + "_high_pl", N_pl),
+                (Parameters.PHI_1.value + "_low_g", N_g),
+                (Parameters.PHI_1.value + "_low_pl", N_pl),
             ]
         )
 
-        @error_magazine.register(phi_1_name)
+        @error_magazine.register(Parameters.PHI_1.value)
         def phi_1_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[phi_1_name + "_scale"],
-                low=err_params_value.get(phi_1_name + "_low", 0.0),
-                high=err_params_value.get(phi_1_name + "_high", 2 * jnp.pi),
+                scale=err_params_value[Parameters.PHI_1.value + "_scale"],
+                low=err_params_value.get(Parameters.PHI_1.value + "_low", 0.0),
+                high=err_params_value.get(Parameters.PHI_1.value + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
     if has_phi_2:
-        parameters_name += (phi_2_name,)
+        parameters_name += (Parameters.PHI_2.value,)
 
         all_params.extend(
             [
-                (phi_2_name + "_high_g", N_g),
-                (phi_2_name + "_high_pl", N_pl),
-                (phi_2_name + "_low_g", N_g),
-                (phi_2_name + "_low_pl", N_pl),
+                (Parameters.PHI_2.value + "_high_g", N_g),
+                (Parameters.PHI_2.value + "_high_pl", N_pl),
+                (Parameters.PHI_2.value + "_low_g", N_g),
+                (Parameters.PHI_2.value + "_low_pl", N_pl),
             ]
         )
 
-        @error_magazine.register(phi_2_name)
+        @error_magazine.register(Parameters.PHI_2.value)
         def phi_2_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[phi_2_name + "_scale"],
-                low=err_params_value.get(phi_2_name + "_low", 0.0),
-                high=err_params_value.get(phi_2_name + "_high", 2 * jnp.pi),
+                scale=err_params_value[Parameters.PHI_2.value + "_scale"],
+                low=err_params_value.get(Parameters.PHI_2.value + "_low", 0.0),
+                high=err_params_value.get(Parameters.PHI_2.value + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
     if has_phi_12:
-        parameters_name += (phi_12_name,)
+        parameters_name += (Parameters.PHI_12.value,)
 
         all_params.extend(
             [
-                (phi_12_name + "_high_g", N_g),
-                (phi_12_name + "_high_pl", N_pl),
-                (phi_12_name + "_low_g", N_g),
-                (phi_12_name + "_low_pl", N_pl),
+                (Parameters.PHI_12.value + "_high_g", N_g),
+                (Parameters.PHI_12.value + "_high_pl", N_pl),
+                (Parameters.PHI_12.value + "_low_g", N_g),
+                (Parameters.PHI_12.value + "_low_pl", N_pl),
             ]
         )
 
-        @error_magazine.register(phi_12_name)
+        @error_magazine.register(Parameters.PHI_12.value)
         def phi_12_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[phi_12_name + "_scale"],
-                low=err_params_value.get(phi_12_name + "_low", 0.0),
-                high=err_params_value.get(phi_12_name + "_high", 2 * jnp.pi),
+                scale=err_params_value[Parameters.PHI_12.value + "_scale"],
+                low=err_params_value.get(Parameters.PHI_12.value + "_low", 0.0),
+                high=err_params_value.get(
+                    Parameters.PHI_12.value + "_high", 2 * jnp.pi
+                ),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
     if has_eccentricity:
-        parameters_name += (ecc_name,)
+        parameters_name += (Parameters.ECCENTRICITY.value,)
         all_params.extend(
             [
                 ("ecc_high_g", N_g),
@@ -494,7 +479,7 @@ def main() -> None:
         )
 
         error_magazine.register(
-            ecc_name,
+            Parameters.ECCENTRICITY.value,
             partial(
                 truncated_normal_error,
                 scale=err_params_value["ecc_scale"],
@@ -506,19 +491,19 @@ def main() -> None:
         )
 
     if has_mean_anomaly:
-        parameters_name += (mean_anomaly_name,)
+        parameters_name += (Parameters.MEAN_ANOMALY.value,)
 
         all_params.extend(
             [
-                (mean_anomaly_name + "_high_g", N_g),
-                (mean_anomaly_name + "_high_pl", N_pl),
-                (mean_anomaly_name + "_low_g", N_g),
-                (mean_anomaly_name + "_low_pl", N_pl),
+                (Parameters.MEAN_ANOMALY.value + "_high_g", N_g),
+                (Parameters.MEAN_ANOMALY.value + "_high_pl", N_pl),
+                (Parameters.MEAN_ANOMALY.value + "_low_g", N_g),
+                (Parameters.MEAN_ANOMALY.value + "_low_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            mean_anomaly_name,
+            Parameters.MEAN_ANOMALY.value,
             partial(
                 truncated_normal_error,
                 scale=err_params_value["mean_anomaly_scale"],
@@ -530,7 +515,7 @@ def main() -> None:
         )
 
     if has_redshift:
-        parameters_name += (redshift_name,)
+        parameters_name += (Parameters.REDSHIFT.value,)
 
         all_params.extend(
             [
@@ -542,7 +527,7 @@ def main() -> None:
         )
 
         error_magazine.register(
-            redshift_name,
+            Parameters.REDSHIFT.value,
             partial(
                 truncated_normal_error,
                 scale=err_params_value["redshift_scale"],
@@ -554,143 +539,147 @@ def main() -> None:
         )
 
     if has_right_ascension:
-        parameters_name += (right_ascension_name,)
+        parameters_name += (Parameters.RIGHT_ASCENSION.value,)
 
         all_params.extend(
             [
-                (right_ascension_name + "_high_g", N_g),
-                (right_ascension_name + "_high_pl", N_pl),
-                (right_ascension_name + "_low_g", N_g),
-                (right_ascension_name + "_low_pl", N_pl),
+                (Parameters.RIGHT_ASCENSION.value + "_high_g", N_g),
+                (Parameters.RIGHT_ASCENSION.value + "_high_pl", N_pl),
+                (Parameters.RIGHT_ASCENSION.value + "_low_g", N_g),
+                (Parameters.RIGHT_ASCENSION.value + "_low_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            right_ascension_name,
+            Parameters.RIGHT_ASCENSION.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[right_ascension_name + "_scale"],
-                low=err_params_value.get(right_ascension_name + "_low"),
-                high=err_params_value.get(right_ascension_name + "_high"),
+                scale=err_params_value[Parameters.RIGHT_ASCENSION.value + "_scale"],
+                low=err_params_value.get(Parameters.RIGHT_ASCENSION.value + "_low"),
+                high=err_params_value.get(Parameters.RIGHT_ASCENSION.value + "_high"),
                 cut_low=0.0,
                 cut_high=2.0 * jnp.pi,
             ),
         )
 
     if has_sin_declination:
-        parameters_name += (sin_declination_name,)
+        parameters_name += (Parameters.SIN_DECLINATION.value,)
 
         all_params.extend(
             [
-                (sin_declination_name + "_high_g", N_g),
-                (sin_declination_name + "_high_pl", N_pl),
-                (sin_declination_name + "_low_g", N_g),
-                (sin_declination_name + "_low_pl", N_pl),
+                (Parameters.SIN_DECLINATION.value + "_high_g", N_g),
+                (Parameters.SIN_DECLINATION.value + "_high_pl", N_pl),
+                (Parameters.SIN_DECLINATION.value + "_low_g", N_g),
+                (Parameters.SIN_DECLINATION.value + "_low_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            sin_declination_name,
+            Parameters.SIN_DECLINATION.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[sin_declination_name + "_scale"],
-                low=err_params_value.get(sin_declination_name + "_low"),
-                high=err_params_value.get(sin_declination_name + "_high"),
+                scale=err_params_value[Parameters.SIN_DECLINATION.value + "_scale"],
+                low=err_params_value.get(Parameters.SIN_DECLINATION.value + "_low"),
+                high=err_params_value.get(Parameters.SIN_DECLINATION.value + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
     if has_detection_time:
-        parameters_name += (detection_time_name,)
+        parameters_name += (Parameters.DETECTION_TIME.value,)
 
         all_params.extend(
             [
-                (detection_time_name + "_high_g", N_g),
-                (detection_time_name + "_high_pl", N_pl),
-                (detection_time_name + "_low_g", N_g),
-                (detection_time_name + "_low_pl", N_pl),
+                (Parameters.DETECTION_TIME.value + "_high_g", N_g),
+                (Parameters.DETECTION_TIME.value + "_high_pl", N_pl),
+                (Parameters.DETECTION_TIME.value + "_low_g", N_g),
+                (Parameters.DETECTION_TIME.value + "_low_pl", N_pl),
             ]
         )
 
-        @error_magazine.register(detection_time_name)
+        @error_magazine.register(Parameters.DETECTION_TIME.value)
         def detection_time_error(x, size, key):
             eps = 1e-6  # To avoid log(0) or log of negative
             safe_x = jnp.maximum(x, eps)
             err_x = dist.LogNormal(
                 loc=jnp.log(safe_x),
-                scale=err_params_value[detection_time_name + "_scale"],
+                scale=err_params_value[Parameters.DETECTION_TIME.value + "_scale"],
             ).sample(key=key, sample_shape=(size,))
 
             return err_x
 
     if has_cos_iota:
-        parameters_name += (cos_iota_name,)
+        parameters_name += (Parameters.COS_IOTA.value,)
 
         all_params.extend(
             [
-                (cos_iota_name + "_high_g", N_g),
-                (cos_iota_name + "_high_pl", N_pl),
-                (cos_iota_name + "_low_g", N_g),
-                (cos_iota_name + "_low_pl", N_pl),
+                (Parameters.COS_IOTA.value + "_high_g", N_g),
+                (Parameters.COS_IOTA.value + "_high_pl", N_pl),
+                (Parameters.COS_IOTA.value + "_low_g", N_g),
+                (Parameters.COS_IOTA.value + "_low_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            cos_iota_name,
+            Parameters.COS_IOTA.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[cos_iota_name + "_scale"],
-                low=err_params_value.get(cos_iota_name + "_low"),
-                high=err_params_value.get(cos_iota_name + "_high"),
+                scale=err_params_value[Parameters.COS_IOTA.value + "_scale"],
+                low=err_params_value.get(Parameters.COS_IOTA.value + "_low"),
+                high=err_params_value.get(Parameters.COS_IOTA.value + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
     if has_polarization_angle:
-        parameters_name += (polarization_angle_name,)
+        parameters_name += (Parameters.POLARIZATION_ANGLE.value,)
 
         all_params.extend(
             [
-                (polarization_angle_name + "_high_g", N_g),
-                (polarization_angle_name + "_high_pl", N_pl),
-                (polarization_angle_name + "_low_g", N_g),
-                (polarization_angle_name + "_low_pl", N_pl),
+                (Parameters.POLARIZATION_ANGLE.value + "_high_g", N_g),
+                (Parameters.POLARIZATION_ANGLE.value + "_high_pl", N_pl),
+                (Parameters.POLARIZATION_ANGLE.value + "_low_g", N_g),
+                (Parameters.POLARIZATION_ANGLE.value + "_low_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            polarization_angle_name,
+            Parameters.POLARIZATION_ANGLE.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[polarization_angle_name + "_scale"],
-                low=err_params_value.get(polarization_angle_name + "_low"),
-                high=err_params_value.get(polarization_angle_name + "_high"),
+                scale=err_params_value[Parameters.POLARIZATION_ANGLE.value + "_scale"],
+                low=err_params_value.get(Parameters.POLARIZATION_ANGLE.value + "_low"),
+                high=err_params_value.get(
+                    Parameters.POLARIZATION_ANGLE.value + "_high"
+                ),
                 cut_low=0.0,
                 cut_high=jnp.pi,
             ),
         )
 
     if has_phi_orb:
-        parameters_name += (phi_orb_name,)
+        parameters_name += (Parameters.PHI_ORB.value,)
 
         all_params.extend(
             [
-                (phi_orb_name + "_high_g", N_g),
-                (phi_orb_name + "_high_pl", N_pl),
-                (phi_orb_name + "_low_g", N_g),
-                (phi_orb_name + "_low_pl", N_pl),
+                (Parameters.PHI_ORB.value + "_high_g", N_g),
+                (Parameters.PHI_ORB.value + "_high_pl", N_pl),
+                (Parameters.PHI_ORB.value + "_low_g", N_g),
+                (Parameters.PHI_ORB.value + "_low_pl", N_pl),
             ]
         )
 
-        @error_magazine.register(phi_orb_name)
+        @error_magazine.register(Parameters.PHI_ORB.value)
         def phi_orb_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[phi_orb_name + "_scale"],
-                low=err_params_value.get(phi_orb_name + "_low", 0.0),
-                high=err_params_value.get(phi_orb_name + "_high", 2 * jnp.pi),
+                scale=err_params_value[Parameters.PHI_ORB.value + "_scale"],
+                low=err_params_value.get(Parameters.PHI_ORB.value + "_low", 0.0),
+                high=err_params_value.get(
+                    Parameters.PHI_ORB.value + "_high", 2 * jnp.pi
+                ),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)

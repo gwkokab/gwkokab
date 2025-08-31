@@ -6,7 +6,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import pandas as pd
 
-from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.parameters import Parameters
 from gwkokab.utils.tools import error_if
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils import ppd, ppd_parser
@@ -33,9 +33,9 @@ def main() -> None:
     nf_samples_mapping = read_json(args.nf_samples_mapping)
 
     parameters = [
-        PRIMARY_MASS_SOURCE.name,
-        SECONDARY_MASS_SOURCE.name,
-        ECCENTRICITY.name,
+        Parameters.PRIMARY_MASS_SOURCE.value,
+        Parameters.SECONDARY_MASS_SOURCE.value,
+        Parameters.ECCENTRICITY.value,
     ]
     ranges = ppd_ranges(parameters, args.range)
 

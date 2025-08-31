@@ -15,22 +15,7 @@ from gwkokab.models.utils import (
     create_truncated_normal_distributions,
     JointDistribution,
 )
-from gwkokab.parameters import (
-    COS_IOTA,
-    COS_TILT_1,
-    COS_TILT_2,
-    DETECTION_TIME,
-    ECCENTRICITY,
-    PHI_12,
-    POLARIZATION_ANGLE,
-    PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
-    REDSHIFT,
-    RIGHT_ASCENSION,
-    SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
-    SIN_DECLINATION,
-)
+from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
 from kokab.utils.common import expand_arguments
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
@@ -137,28 +122,31 @@ class NPowerlawMGaussianCore(Sage):
 
     @property
     def parameters(self) -> List[str]:
-        names = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+        names = [
+            Parameters.PRIMARY_MASS_SOURCE.value,
+            Parameters.SECONDARY_MASS_SOURCE.value,
+        ]
         if self.has_beta_spin or self.has_truncated_normal_spin:
-            names.append(PRIMARY_SPIN_MAGNITUDE.name)
-            names.append(SECONDARY_SPIN_MAGNITUDE.name)
+            names.append(Parameters.PRIMARY_SPIN_MAGNITUDE.value)
+            names.append(Parameters.SECONDARY_SPIN_MAGNITUDE.value)
         if self.has_tilt:
-            names.extend([COS_TILT_1.name, COS_TILT_2.name])
+            names.extend([Parameters.COS_TILT_1.value, Parameters.COS_TILT_2.value])
         if self.has_phi_12:
-            names.append(PHI_12.name)
+            names.append(Parameters.PHI_12.value)
         if self.has_eccentricity:
-            names.append(ECCENTRICITY.name)
+            names.append(Parameters.ECCENTRICITY.value)
         if self.has_redshift:
-            names.append(REDSHIFT.name)
+            names.append(Parameters.REDSHIFT.value)
         if self.has_right_ascension:
-            names.append(RIGHT_ASCENSION.name)
+            names.append(Parameters.RIGHT_ASCENSION.value)
         if self.has_sin_declination:
-            names.append(SIN_DECLINATION.name)
+            names.append(Parameters.SIN_DECLINATION.value)
         if self.has_detection_time:
-            names.append(DETECTION_TIME.name)
+            names.append(Parameters.DETECTION_TIME.value)
         if self.has_cos_iota:
-            names.append(COS_IOTA.name)
+            names.append(Parameters.COS_IOTA.value)
         if self.has_polarization_angle:
-            names.append(POLARIZATION_ANGLE.name)
+            names.append(Parameters.POLARIZATION_ANGLE.value)
         return names
 
     @property
@@ -229,14 +217,14 @@ class NPowerlawMGaussianCore(Sage):
         if self.has_phi_12:
             all_params.extend(
                 [
-                    (PHI_12.name + "_high_g", self.N_g),
-                    (PHI_12.name + "_high_pl", self.N_pl),
-                    (PHI_12.name + "_loc_g", self.N_g),
-                    (PHI_12.name + "_loc_pl", self.N_pl),
-                    (PHI_12.name + "_low_g", self.N_g),
-                    (PHI_12.name + "_low_pl", self.N_pl),
-                    (PHI_12.name + "_scale_g", self.N_g),
-                    (PHI_12.name + "_scale_pl", self.N_pl),
+                    (Parameters.PHI_12.value + "_high_g", self.N_g),
+                    (Parameters.PHI_12.value + "_high_pl", self.N_pl),
+                    (Parameters.PHI_12.value + "_loc_g", self.N_g),
+                    (Parameters.PHI_12.value + "_loc_pl", self.N_pl),
+                    (Parameters.PHI_12.value + "_low_g", self.N_g),
+                    (Parameters.PHI_12.value + "_low_pl", self.N_pl),
+                    (Parameters.PHI_12.value + "_scale_g", self.N_g),
+                    (Parameters.PHI_12.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -257,76 +245,76 @@ class NPowerlawMGaussianCore(Sage):
         if self.has_redshift:
             all_params.extend(
                 [
-                    (REDSHIFT.name + "_kappa_g", self.N_g),
-                    (REDSHIFT.name + "_kappa_pl", self.N_pl),
-                    (REDSHIFT.name + "_z_max_g", self.N_g),
-                    (REDSHIFT.name + "_z_max_pl", self.N_pl),
+                    (Parameters.REDSHIFT.value + "_kappa_g", self.N_g),
+                    (Parameters.REDSHIFT.value + "_kappa_pl", self.N_pl),
+                    (Parameters.REDSHIFT.value + "_z_max_g", self.N_g),
+                    (Parameters.REDSHIFT.value + "_z_max_pl", self.N_pl),
                 ]
             )
 
         if self.has_right_ascension:
             all_params.extend(
                 [
-                    (RIGHT_ASCENSION.name + "_high_g", self.N_g),
-                    (RIGHT_ASCENSION.name + "_high_pl", self.N_pl),
-                    (RIGHT_ASCENSION.name + "_loc_g", self.N_g),
-                    (RIGHT_ASCENSION.name + "_loc_pl", self.N_pl),
-                    (RIGHT_ASCENSION.name + "_low_g", self.N_g),
-                    (RIGHT_ASCENSION.name + "_low_pl", self.N_pl),
-                    (RIGHT_ASCENSION.name + "_scale_g", self.N_g),
-                    (RIGHT_ASCENSION.name + "_scale_pl", self.N_pl),
+                    (Parameters.RIGHT_ASCENSION.value + "_high_g", self.N_g),
+                    (Parameters.RIGHT_ASCENSION.value + "_high_pl", self.N_pl),
+                    (Parameters.RIGHT_ASCENSION.value + "_loc_g", self.N_g),
+                    (Parameters.RIGHT_ASCENSION.value + "_loc_pl", self.N_pl),
+                    (Parameters.RIGHT_ASCENSION.value + "_low_g", self.N_g),
+                    (Parameters.RIGHT_ASCENSION.value + "_low_pl", self.N_pl),
+                    (Parameters.RIGHT_ASCENSION.value + "_scale_g", self.N_g),
+                    (Parameters.RIGHT_ASCENSION.value + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_sin_declination:
             all_params.extend(
                 [
-                    (SIN_DECLINATION.name + "_high_g", self.N_g),
-                    (SIN_DECLINATION.name + "_high_pl", self.N_pl),
-                    (SIN_DECLINATION.name + "_loc_g", self.N_g),
-                    (SIN_DECLINATION.name + "_loc_pl", self.N_pl),
-                    (SIN_DECLINATION.name + "_low_g", self.N_g),
-                    (SIN_DECLINATION.name + "_low_pl", self.N_pl),
-                    (SIN_DECLINATION.name + "_scale_g", self.N_g),
-                    (SIN_DECLINATION.name + "_scale_pl", self.N_pl),
+                    (Parameters.SIN_DECLINATION.value + "_high_g", self.N_g),
+                    (Parameters.SIN_DECLINATION.value + "_high_pl", self.N_pl),
+                    (Parameters.SIN_DECLINATION.value + "_loc_g", self.N_g),
+                    (Parameters.SIN_DECLINATION.value + "_loc_pl", self.N_pl),
+                    (Parameters.SIN_DECLINATION.value + "_low_g", self.N_g),
+                    (Parameters.SIN_DECLINATION.value + "_low_pl", self.N_pl),
+                    (Parameters.SIN_DECLINATION.value + "_scale_g", self.N_g),
+                    (Parameters.SIN_DECLINATION.value + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_detection_time:
             all_params.extend(
                 [
-                    (DETECTION_TIME.name + "_high_g", self.N_g),
-                    (DETECTION_TIME.name + "_high_pl", self.N_pl),
-                    (DETECTION_TIME.name + "_low_g", self.N_g),
-                    (DETECTION_TIME.name + "_low_pl", self.N_pl),
+                    (Parameters.DETECTION_TIME.value + "_high_g", self.N_g),
+                    (Parameters.DETECTION_TIME.value + "_high_pl", self.N_pl),
+                    (Parameters.DETECTION_TIME.value + "_low_g", self.N_g),
+                    (Parameters.DETECTION_TIME.value + "_low_pl", self.N_pl),
                 ]
             )
 
         if self.has_cos_iota:
             all_params.extend(
                 [
-                    (COS_IOTA.name + "_high_g", self.N_g),
-                    (COS_IOTA.name + "_high_pl", self.N_pl),
-                    (COS_IOTA.name + "_loc_g", self.N_g),
-                    (COS_IOTA.name + "_loc_pl", self.N_pl),
-                    (COS_IOTA.name + "_low_g", self.N_g),
-                    (COS_IOTA.name + "_low_pl", self.N_pl),
-                    (COS_IOTA.name + "_scale_g", self.N_g),
-                    (COS_IOTA.name + "_scale_pl", self.N_pl),
+                    (Parameters.COS_IOTA.value + "_high_g", self.N_g),
+                    (Parameters.COS_IOTA.value + "_high_pl", self.N_pl),
+                    (Parameters.COS_IOTA.value + "_loc_g", self.N_g),
+                    (Parameters.COS_IOTA.value + "_loc_pl", self.N_pl),
+                    (Parameters.COS_IOTA.value + "_low_g", self.N_g),
+                    (Parameters.COS_IOTA.value + "_low_pl", self.N_pl),
+                    (Parameters.COS_IOTA.value + "_scale_g", self.N_g),
+                    (Parameters.COS_IOTA.value + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_polarization_angle:
             all_params.extend(
                 [
-                    (POLARIZATION_ANGLE.name + "_high_g", self.N_g),
-                    (POLARIZATION_ANGLE.name + "_high_pl", self.N_pl),
-                    (POLARIZATION_ANGLE.name + "_loc_g", self.N_g),
-                    (POLARIZATION_ANGLE.name + "_loc_pl", self.N_pl),
-                    (POLARIZATION_ANGLE.name + "_low_g", self.N_g),
-                    (POLARIZATION_ANGLE.name + "_low_pl", self.N_pl),
-                    (POLARIZATION_ANGLE.name + "_scale_g", self.N_g),
-                    (POLARIZATION_ANGLE.name + "_scale_pl", self.N_pl),
+                    (Parameters.POLARIZATION_ANGLE.value + "_high_g", self.N_g),
+                    (Parameters.POLARIZATION_ANGLE.value + "_high_pl", self.N_pl),
+                    (Parameters.POLARIZATION_ANGLE.value + "_loc_g", self.N_g),
+                    (Parameters.POLARIZATION_ANGLE.value + "_loc_pl", self.N_pl),
+                    (Parameters.POLARIZATION_ANGLE.value + "_low_g", self.N_g),
+                    (Parameters.POLARIZATION_ANGLE.value + "_low_pl", self.N_pl),
+                    (Parameters.POLARIZATION_ANGLE.value + "_scale_g", self.N_g),
+                    (Parameters.POLARIZATION_ANGLE.value + "_scale_pl", self.N_pl),
                 ]
             )
 

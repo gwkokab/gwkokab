@@ -9,22 +9,7 @@ import pandas as pd
 import gwkokab
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
-from gwkokab.parameters import (
-    COS_IOTA,
-    COS_TILT_1,
-    COS_TILT_2,
-    DETECTION_TIME,
-    ECCENTRICITY,
-    PHI_12,
-    POLARIZATION_ANGLE,
-    PRIMARY_MASS_SOURCE,
-    PRIMARY_SPIN_MAGNITUDE,
-    REDSHIFT,
-    RIGHT_ASCENSION,
-    SECONDARY_MASS_SOURCE,
-    SECONDARY_SPIN_MAGNITUDE,
-    SIN_DECLINATION,
-)
+from gwkokab.parameters import Parameters
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
 from kokab.utils.common import ppd_ranges, read_json
@@ -123,37 +108,45 @@ def main() -> None:
     has_sin_declination = constants.get("use_sin_declination", False)
     has_detection_time = constants.get("use_detection_time", False)
 
-    parameters = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+    parameters = [
+        Parameters.PRIMARY_MASS_SOURCE.value,
+        Parameters.SECONDARY_MASS_SOURCE.value,
+    ]
 
     if has_spin:
-        parameters.extend([PRIMARY_SPIN_MAGNITUDE.name, SECONDARY_SPIN_MAGNITUDE.name])
+        parameters.extend(
+            [
+                Parameters.PRIMARY_SPIN_MAGNITUDE.value,
+                Parameters.SECONDARY_SPIN_MAGNITUDE.value,
+            ]
+        )
 
     if has_tilt:
-        parameters.extend([COS_TILT_1.name, COS_TILT_2.name])
+        parameters.extend([Parameters.COS_TILT_1.value, Parameters.COS_TILT_2.value])
 
     if has_phi_12:
-        parameters.append(PHI_12.name)
+        parameters.append(Parameters.PHI_12.value)
 
     if has_eccentricity:
-        parameters.append(ECCENTRICITY.name)
+        parameters.append(Parameters.ECCENTRICITY.value)
 
     if has_redshift:
-        parameters.append(REDSHIFT.name)
+        parameters.append(Parameters.REDSHIFT.value)
 
     if has_right_ascension:
-        parameters.append(RIGHT_ASCENSION.name)
+        parameters.append(Parameters.RIGHT_ASCENSION.value)
 
     if has_sin_declination:
-        parameters.append(SIN_DECLINATION.name)
+        parameters.append(Parameters.SIN_DECLINATION.value)
 
     if has_detection_time:
-        parameters.append(DETECTION_TIME.name)
+        parameters.append(Parameters.DETECTION_TIME.value)
 
     if has_cos_iota:
-        parameters.append(COS_IOTA.name)
+        parameters.append(Parameters.COS_IOTA.value)
 
     if has_polarization_angle:
-        parameters.append(POLARIZATION_ANGLE.name)
+        parameters.append(Parameters.POLARIZATION_ANGLE.value)
 
     ranges = ppd_ranges(parameters, args.range)
 
