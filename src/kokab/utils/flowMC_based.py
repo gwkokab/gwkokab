@@ -19,7 +19,7 @@ from loguru import logger
 from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import error_if
 from kokab.utils.common import read_json
-from kokab.utils.guru import get_parser as guru_parser, Guru
+from kokab.utils.guru import Guru, guru_arg_parser
 
 
 def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray, ...]:
@@ -295,10 +295,6 @@ class FlowMCBased(Guru):
         labels: List[str],
     ) -> None:
         sampler_config = read_json(self.sampler_settings_filename)
-        logger.debug(
-            "Sampler configuration loaded: {sampler_config}",
-            sampler_config=sampler_config,
-        )
 
         RQSpline_MALA_Bundle_value = sampler_config.pop("RQSpline_MALA_Bundle", {})
 
@@ -427,4 +423,4 @@ class FlowMCBased(Guru):
         logger.info("Sampling and data saving complete.")
 
 
-get_parser = guru_parser
+flowMC_arg_parser = guru_arg_parser

@@ -5,27 +5,41 @@
 from argparse import ArgumentParser
 from collections.abc import Callable
 from glob import glob
-from typing import List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import jax
 import numpy as np
-from jaxtyping import Array
+from jaxtyping import Array, ArrayLike
 from loguru import logger
+from numpyro._typing import DistributionLike
 from numpyro.distributions import Distribution
-from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.inference import poisson_likelihood
 from gwkokab.inference.jenks import pad_and_stack
+from gwkokab.models.utils import JointDistribution
+from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import warn_if
 from kokab.utils.common import get_posterior_data, LOG_REF_PRIOR_NAME
 from kokab.utils.poisson_mean_parser import read_pmean
 
-from .flowMC_based import FlowMCBased, get_parser as flowMC_parser
+from .guru import Guru
 
 
-class Sage(FlowMCBased):
+class Sage(Guru):
     def __init__(
         self,
+        likelihood_fn: Callable[
+            [
+                Callable[..., DistributionLike],
+                JointDistribution,
+                Dict[str, DistributionLike],
+                Dict[str, int],
+                ArrayLike,
+                PoissonMean,
+                Optional[List[Callable[..., Array]]],
+                Dict[str, Array],
+            ],
+            Callable,
+        ],
         model: Union[Distribution, Callable[..., Distribution]],
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
@@ -82,8 +96,9 @@ class Sage(FlowMCBased):
             Name of the analysis, by default ""
         """
         assert all(letter.isalpha() or letter == "_" for letter in analysis_name), (
-            "Analysis name must be alphabetic characters only."
+            "Analysis name must contain only letters and underscores."
         )
+        self.likelihood_fn = likelihood_fn
         self.n_buckets = n_buckets
         self.posterior_columns = posterior_columns
         self.posterior_regex = posterior_regex
@@ -92,7 +107,7 @@ class Sage(FlowMCBased):
         self.set_rng_key(seed=seed)
 
         super().__init__(
-            analysis_name="sage_" + (analysis_name or model.__name__),
+            analysis_name=analysis_name,
             check_leaks=check_leaks,
             debug_nans=debug_nans,
             model=model,
@@ -159,7 +174,7 @@ class Sage(FlowMCBased):
         return n_events, log_constants, data_group, log_ref_priors_group, masks_group
 
     def run(self) -> None:
-        constants, dist_fn, priors, variables_index = self.bake_model()
+        constants, dist_fn, priors, variables, variables_index = self.bake_model()
 
         n_events, log_constants, data_group, log_ref_priors_group, masks_group = (
             self.read_data()
@@ -174,9 +189,10 @@ class Sage(FlowMCBased):
 
         log_constants += n_events * np.log(ERate_obj.time_scale)  # type: ignore
 
-        logpdf = poisson_likelihood(
+        logpdf = self.likelihood_fn(
             dist_fn=dist_fn,
             priors=priors,
+            variables=variables,
             variables_index=variables_index,
             log_constants=log_constants,
             ERate_obj=ERate_obj,
@@ -196,7 +212,7 @@ class Sage(FlowMCBased):
         )
 
 
-def get_parser(parser: ArgumentParser) -> ArgumentParser:
+def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     """Populate the command line argument parser with the arguments for the Sage script.
 
     Parameters
@@ -209,11 +225,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     ArgumentParser
         the command line argument parser
     """
-
-    # Global enable validation for all distributions
-    enable_validation()
-
-    parser = flowMC_parser(parser)
 
     sage_group = parser.add_argument_group("Sage Options")
     sage_group.add_argument(

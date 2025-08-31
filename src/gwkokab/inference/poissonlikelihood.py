@@ -21,6 +21,7 @@ __all__ = ["poisson_likelihood"]
 def poisson_likelihood(
     dist_fn: Callable[..., DistributionLike],
     priors: JointDistribution,
+    variables: Dict[str, DistributionLike],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
     ERate_obj: PoissonMean,
@@ -59,6 +60,7 @@ def poisson_likelihood(
         \sum_{i=1}^{N_{\mathrm{samples}}}
         \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
     """
+    del variables
 
     def likelihood_fn(x: Array, data: Dict[str, Tuple[Array]]) -> Array:
         data_group: Tuple[Array] = data["data_group"]

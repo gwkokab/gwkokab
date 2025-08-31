@@ -19,7 +19,7 @@ from gwkokab.utils.tools import error_if
 from kokab.utils.poisson_mean_parser import read_pmean
 
 from .flowMC_based import FlowMCBased
-from .guru import get_parser as guru_parser
+from .guru import guru_arg_parser as guru_parser
 
 
 def _read_mean_covariances(filename: str) -> Tuple[List[Array], List[Array]]:
@@ -152,7 +152,7 @@ class Monk(FlowMCBased):
 
     def run(self) -> None:
         """Runs the Monk analysis."""
-        _, dist_fn, priors, variables_index = self.bake_model()
+        _, dist_fn, priors, _, variables_index = self.bake_model()
 
         list_of_means, list_of_covariances = _read_mean_covariances(self.data_filename)
 
@@ -197,7 +197,7 @@ class Monk(FlowMCBased):
         )
 
 
-def get_parser(parser: ArgumentParser) -> ArgumentParser:
+def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     """Populate the command line argument parser with the arguments for the Monk script.
 
     Parameters

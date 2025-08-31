@@ -2,12 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+from abc import abstractmethod
 from argparse import ArgumentParser
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from jax import random as jrd
-from jaxtyping import PRNGKeyArray
+from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
 from numpyro._typing import DistributionLike
 from numpyro.util import is_prng_key
@@ -87,6 +88,7 @@ class Guru:
         Callable[..., DistributionLike],
         JointDistribution,
         Dict[str, int],
+        Dict[str, int],
     ]:
         """Returns a Bake object for the model.
 
@@ -132,7 +134,7 @@ class Guru:
             *[variables[key] for key in sorted(variables.keys())], validate_args=True
         )
 
-        return constants, dist_fn, priors, variables_index
+        return constants, dist_fn, priors, variables, variables_index
 
     @property
     def parameters(self) -> List[str]:
@@ -189,8 +191,19 @@ class Guru:
         """
         return {}
 
+    @abstractmethod
+    def driver(
+        self,
+        *,
+        logpdf: Callable[[Array, Dict[str, Any]], Array],
+        priors: JointDistribution,
+        data: Dict[str, Any],
+        labels: List[str],
+    ) -> None:
+        raise NotImplementedError()
 
-def get_parser(parser: ArgumentParser) -> ArgumentParser:
+
+def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     """Populate the command line argument parser with the arguments for the Guru script.
 
     Parameters
