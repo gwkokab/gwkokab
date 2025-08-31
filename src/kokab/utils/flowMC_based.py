@@ -19,7 +19,7 @@ from loguru import logger
 from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import error_if
 from kokab.utils.common import read_json
-from kokab.utils.guru import Guru, guru_arg_parser as guru_parser
+from kokab.utils.guru import Guru, guru_arg_parser
 
 
 def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray, ...]:
@@ -423,4 +423,4 @@ class FlowMCBased(Guru):
         logger.info("Sampling and data saving complete.")
 
 
-flowMC_arg_parser = guru_parser
+flowMC_arg_parser = guru_arg_parser
