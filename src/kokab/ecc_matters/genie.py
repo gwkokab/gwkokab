@@ -10,18 +10,13 @@ from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
-from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.population import error_magazine, PopulationFactory
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils import genie_parser, poisson_mean_parser
 from kokab.utils.common import vt_json_read_and_process
 from kokab.utils.regex import match_all
-
-
-m1_source = PRIMARY_MASS_SOURCE.name
-m2_source = SECONDARY_MASS_SOURCE.name
-ecc = ECCENTRICITY.name
 
 
 def make_parser() -> ArgumentParser:
@@ -87,7 +82,7 @@ def main() -> None:
     )
 
     error_magazine.register(
-        (m1_source, m2_source),
+        (Parameters.PRIMARY_MASS_SOURCE.value, Parameters.SECONDARY_MASS_SOURCE.value),
         lambda x, size, key: banana_error_m1_m2(
             x,
             size,
@@ -97,7 +92,7 @@ def main() -> None:
         ),
     )
 
-    @error_magazine.register(ecc)
+    @error_magazine.register(Parameters.ECCENTRICITY.value)
     def ecc_error_fn(x, size, key):
         err_x = dist.TruncatedNormal(
             loc=x,
@@ -110,7 +105,11 @@ def main() -> None:
         err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
         return err_x
 
-    model_parameters = [m1_source, m2_source, ecc]
+    model_parameters = [
+        Parameters.PRIMARY_MASS_SOURCE.value,
+        Parameters.SECONDARY_MASS_SOURCE.value,
+        Parameters.ECCENTRICITY.value,
+    ]
 
     nvt = vt_json_read_and_process(model_parameters, args.vt_json)
     log_selection_fn = nvt.get_mapped_logVT()

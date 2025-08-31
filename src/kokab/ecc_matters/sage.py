@@ -6,7 +6,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
-from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
+from gwkokab.parameters import Parameters
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
@@ -16,7 +16,11 @@ from kokab.utils.sage import Sage, sage_arg_parser as sage_parser
 class EccentricityMattersCore(Sage):
     @property
     def parameters(self) -> List[str]:
-        return [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name, ECCENTRICITY.name]
+        return [
+            Parameters.PRIMARY_MASS_SOURCE.name,
+            Parameters.SECONDARY_MASS_SOURCE.name,
+            Parameters.ECCENTRICITY.name,
+        ]
 
     @property
     def model_parameters(self) -> List[str]:
