@@ -3,9 +3,10 @@
 
 
 import importlib.metadata
+from typing import Final
 
 
-__version__ = importlib.metadata.version("gwkokab")
+__version__: Final[str] = importlib.metadata.version("gwkokab")
 
 
 from . import (

@@ -2,18 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from glob import glob
-from typing import List, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
-import numpy as np
-from jax import numpy as jnp, random as jrd
 from jaxtyping import Array
-from loguru import logger
 
 import gwkokab
-from gwkokab.inference import Bake, poisson_likelihood
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
@@ -32,24 +26,297 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
     SIN_DECLINATION,
 )
-from gwkokab.poisson_mean import PoissonMean
-from gwkokab.utils.tools import error_if
-from kokab.utils import poisson_mean_parser, sage_parser
-from kokab.utils.common import (
-    expand_arguments,
-    flowMC_default_parameters,
-    get_posterior_data,
-    get_processed_priors,
-    LOG_REF_PRIOR_NAME,
-    read_json,
-    vt_json_read_and_process,
-)
-from kokab.utils.flowMC_helper import flowMChandler
+from kokab.utils.common import expand_arguments
+from kokab.utils.sage import get_parser, Sage
 
 
-def make_parser() -> ArgumentParser:
+class NPowerlawMGaussianSage(Sage):
+    def __init__(
+        self,
+        N_pl: int,
+        N_g: int,
+        has_beta_spin: bool,
+        has_truncated_normal_spin: bool,
+        has_tilt: bool,
+        has_eccentricity: bool,
+        has_redshift: bool,
+        has_cos_iota: bool,
+        has_phi_12: bool,
+        has_polarization_angle: bool,
+        has_right_ascension: bool,
+        has_sin_declination: bool,
+        has_detection_time: bool,
+        where_fns: Optional[List[Callable[..., Array]]],
+        posterior_regex: str,
+        posterior_columns: List[str],
+        seed: int,
+        prior_filename: str,
+        selection_fn_filename: str,
+        poisson_mean_filename: str,
+        sampler_settings_filename: str,
+        n_buckets: int,
+        threshold: float,
+        debug_nans: bool = False,
+        profile_memory: bool = False,
+        check_leaks: bool = False,
+    ) -> None:
+        self.N_pl = N_pl
+        self.N_g = N_g
+        self.has_beta_spin = has_beta_spin
+        self.has_truncated_normal_spin = has_truncated_normal_spin
+        if self.has_truncated_normal_spin:
+            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+                create_truncated_normal_distributions
+            )
+        self.has_tilt = has_tilt
+        self.has_eccentricity = has_eccentricity
+        self.has_redshift = has_redshift
+        self.has_cos_iota = has_cos_iota
+        self.has_phi_12 = has_phi_12
+        self.has_polarization_angle = has_polarization_angle
+        self.has_right_ascension = has_right_ascension
+        self.has_sin_declination = has_sin_declination
+        self.has_detection_time = has_detection_time
+
+        super().__init__(
+            model=NPowerlawMGaussian,
+            posterior_regex=posterior_regex,
+            posterior_columns=posterior_columns,
+            seed=seed,
+            prior_filename=prior_filename,
+            selection_fn_filename=selection_fn_filename,
+            poisson_mean_filename=poisson_mean_filename,
+            sampler_settings_filename=sampler_settings_filename,
+            analysis_name="n_pls_m_gs",
+            n_buckets=n_buckets,
+            threshold=threshold,
+            debug_nans=debug_nans,
+            profile_memory=profile_memory,
+            check_leaks=check_leaks,
+            where_fns=where_fns,
+        )
+
+    @property
+    def constants(self) -> Dict[str, Union[int, float, bool]]:
+        return {
+            "N_pl": self.N_pl,
+            "N_g": self.N_g,
+            "use_spin": self.has_beta_spin or self.has_truncated_normal_spin,
+            "use_tilt": self.has_tilt,
+            "use_eccentricity": self.has_eccentricity,
+            "use_redshift": self.has_redshift,
+            "use_cos_iota": self.has_cos_iota,
+            "use_phi_12": self.has_phi_12,
+            "use_polarization_angle": self.has_polarization_angle,
+            "use_right_ascension": self.has_right_ascension,
+            "use_sin_declination": self.has_sin_declination,
+            "use_detection_time": self.has_detection_time,
+        }
+
+    @property
+    def parameters(self) -> List[str]:
+        names = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+        if self.has_beta_spin or self.has_truncated_normal_spin:
+            names.append(PRIMARY_SPIN_MAGNITUDE.name)
+            names.append(SECONDARY_SPIN_MAGNITUDE.name)
+        if self.has_tilt:
+            names.extend([COS_TILT_1.name, COS_TILT_2.name])
+        if self.has_phi_12:
+            names.append(PHI_12.name)
+        if self.has_eccentricity:
+            names.append(ECCENTRICITY.name)
+        if self.has_redshift:
+            names.append(REDSHIFT.name)
+        if self.has_right_ascension:
+            names.append(RIGHT_ASCENSION.name)
+        if self.has_sin_declination:
+            names.append(SIN_DECLINATION.name)
+        if self.has_detection_time:
+            names.append(DETECTION_TIME.name)
+        if self.has_cos_iota:
+            names.append(COS_IOTA.name)
+        if self.has_polarization_angle:
+            names.append(POLARIZATION_ANGLE.name)
+        return names
+
+    @property
+    def model_parameters(self) -> List[str]:
+        all_params: List[Tuple[str, int]] = [
+            ("log_rate", self.N_pl + self.N_g),
+            ("alpha_pl", self.N_pl),
+            ("beta_pl", self.N_pl),
+            ("m1_loc_g", self.N_g),
+            ("m2_loc_g", self.N_g),
+            ("m1_scale_g", self.N_g),
+            ("m2_scale_g", self.N_g),
+            ("m1_low_g", self.N_g),
+            ("m2_low_g", self.N_g),
+            ("m1_high_g", self.N_g),
+            ("m2_high_g", self.N_g),
+            ("mmax_pl", self.N_pl),
+            ("mmin_pl", self.N_pl),
+        ]
+
+        if self.has_truncated_normal_spin:
+            all_params.extend(
+                [
+                    ("chi1_high_g", self.N_g),
+                    ("chi1_high_pl", self.N_pl),
+                    ("chi1_loc_g", self.N_g),
+                    ("chi1_loc_pl", self.N_pl),
+                    ("chi1_low_g", self.N_g),
+                    ("chi1_low_pl", self.N_pl),
+                    ("chi1_scale_g", self.N_g),
+                    ("chi1_scale_pl", self.N_pl),
+                    ("chi2_high_g", self.N_g),
+                    ("chi2_high_pl", self.N_pl),
+                    ("chi2_loc_g", self.N_g),
+                    ("chi2_loc_pl", self.N_pl),
+                    ("chi2_low_g", self.N_g),
+                    ("chi2_low_pl", self.N_pl),
+                    ("chi2_scale_g", self.N_g),
+                    ("chi2_scale_pl", self.N_pl),
+                ]
+            )
+        if self.has_beta_spin:
+            all_params.extend(
+                [
+                    ("chi1_mean_g", self.N_g),
+                    ("chi1_mean_pl", self.N_pl),
+                    ("chi1_variance_g", self.N_g),
+                    ("chi1_variance_pl", self.N_pl),
+                    ("chi2_mean_g", self.N_g),
+                    ("chi2_mean_pl", self.N_pl),
+                    ("chi2_variance_g", self.N_g),
+                    ("chi2_variance_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_tilt:
+            all_params.extend(
+                [
+                    ("cos_tilt_zeta_g", self.N_g),
+                    ("cos_tilt_zeta_pl", self.N_pl),
+                    ("cos_tilt1_scale_g", self.N_g),
+                    ("cos_tilt1_scale_pl", self.N_pl),
+                    ("cos_tilt2_scale_g", self.N_g),
+                    ("cos_tilt2_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_phi_12:
+            all_params.extend(
+                [
+                    (PHI_12.name + "_high_g", self.N_g),
+                    (PHI_12.name + "_high_pl", self.N_pl),
+                    (PHI_12.name + "_loc_g", self.N_g),
+                    (PHI_12.name + "_loc_pl", self.N_pl),
+                    (PHI_12.name + "_low_g", self.N_g),
+                    (PHI_12.name + "_low_pl", self.N_pl),
+                    (PHI_12.name + "_scale_g", self.N_g),
+                    (PHI_12.name + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_eccentricity:
+            all_params.extend(
+                [
+                    ("ecc_high_g", self.N_g),
+                    ("ecc_high_pl", self.N_pl),
+                    ("ecc_loc_g", self.N_g),
+                    ("ecc_loc_pl", self.N_pl),
+                    ("ecc_low_g", self.N_g),
+                    ("ecc_low_pl", self.N_pl),
+                    ("ecc_scale_g", self.N_g),
+                    ("ecc_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_redshift:
+            all_params.extend(
+                [
+                    (REDSHIFT.name + "_kappa_g", self.N_g),
+                    (REDSHIFT.name + "_kappa_pl", self.N_pl),
+                    (REDSHIFT.name + "_z_max_g", self.N_g),
+                    (REDSHIFT.name + "_z_max_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_right_ascension:
+            all_params.extend(
+                [
+                    (RIGHT_ASCENSION.name + "_high_g", self.N_g),
+                    (RIGHT_ASCENSION.name + "_high_pl", self.N_pl),
+                    (RIGHT_ASCENSION.name + "_loc_g", self.N_g),
+                    (RIGHT_ASCENSION.name + "_loc_pl", self.N_pl),
+                    (RIGHT_ASCENSION.name + "_low_g", self.N_g),
+                    (RIGHT_ASCENSION.name + "_low_pl", self.N_pl),
+                    (RIGHT_ASCENSION.name + "_scale_g", self.N_g),
+                    (RIGHT_ASCENSION.name + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_sin_declination:
+            all_params.extend(
+                [
+                    (SIN_DECLINATION.name + "_high_g", self.N_g),
+                    (SIN_DECLINATION.name + "_high_pl", self.N_pl),
+                    (SIN_DECLINATION.name + "_loc_g", self.N_g),
+                    (SIN_DECLINATION.name + "_loc_pl", self.N_pl),
+                    (SIN_DECLINATION.name + "_low_g", self.N_g),
+                    (SIN_DECLINATION.name + "_low_pl", self.N_pl),
+                    (SIN_DECLINATION.name + "_scale_g", self.N_g),
+                    (SIN_DECLINATION.name + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_detection_time:
+            all_params.extend(
+                [
+                    (DETECTION_TIME.name + "_high_g", self.N_g),
+                    (DETECTION_TIME.name + "_high_pl", self.N_pl),
+                    (DETECTION_TIME.name + "_low_g", self.N_g),
+                    (DETECTION_TIME.name + "_low_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_cos_iota:
+            all_params.extend(
+                [
+                    (COS_IOTA.name + "_high_g", self.N_g),
+                    (COS_IOTA.name + "_high_pl", self.N_pl),
+                    (COS_IOTA.name + "_loc_g", self.N_g),
+                    (COS_IOTA.name + "_loc_pl", self.N_pl),
+                    (COS_IOTA.name + "_low_g", self.N_g),
+                    (COS_IOTA.name + "_low_pl", self.N_pl),
+                    (COS_IOTA.name + "_scale_g", self.N_g),
+                    (COS_IOTA.name + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_polarization_angle:
+            all_params.extend(
+                [
+                    (POLARIZATION_ANGLE.name + "_high_g", self.N_g),
+                    (POLARIZATION_ANGLE.name + "_high_pl", self.N_pl),
+                    (POLARIZATION_ANGLE.name + "_loc_g", self.N_g),
+                    (POLARIZATION_ANGLE.name + "_loc_pl", self.N_pl),
+                    (POLARIZATION_ANGLE.name + "_low_g", self.N_g),
+                    (POLARIZATION_ANGLE.name + "_low_pl", self.N_pl),
+                    (POLARIZATION_ANGLE.name + "_scale_g", self.N_g),
+                    (POLARIZATION_ANGLE.name + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        extended_params = []
+        for params in all_params:
+            extended_params.extend(expand_arguments(*params))
+        return extended_params
+
+
+def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = sage_parser.get_parser(parser)
+    parser = get_parser(parser)
 
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(
@@ -121,424 +388,33 @@ def make_parser() -> ArgumentParser:
         help="Include detection_time parameter in the model",
     )
 
-    return parser
-
-
-def main() -> None:
-    r"""Main function of the script."""
-    logger.warning(
-        "If you have made any changes to any parameters, please make sure"
-        " that the changes are reflected in scripts that generate plots.",
-    )
-
-    parser = make_parser()
     args = parser.parse_args()
 
-    SEED = args.seed
-    KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
-    POSTERIOR_REGEX = args.posterior_regex
-    POSTERIOR_COLUMNS: list[str] = args.posterior_columns
-
-    has_log_ref_prior = LOG_REF_PRIOR_NAME in POSTERIOR_COLUMNS
-    if has_log_ref_prior:
-        log_ref_prior_idx = POSTERIOR_COLUMNS.index(LOG_REF_PRIOR_NAME)
-        POSTERIOR_COLUMNS.remove(LOG_REF_PRIOR_NAME)
-
-    N_pl = args.n_pl
-    N_g = args.n_g
-
-    has_spin = args.add_beta_spin or args.add_truncated_normal_spin
-    has_tilt = args.add_tilt
-    has_eccentricity = args.add_truncated_normal_eccentricity
-    has_redshift = args.add_redshift
-    has_cos_iota = args.add_cos_iota
-    has_phi_12 = args.add_phi_12
-    has_polarization_angle = args.add_polarization_angle
-    has_right_ascension = args.add_right_ascension
-    has_sin_declination = args.add_sin_declination
-    has_detection_time = args.add_detection_time
-
-    prior_dict = read_json(args.prior_json)
-
-    all_params: List[Tuple[str, int]] = [
-        ("alpha_pl", N_pl),
-        ("beta_pl", N_pl),
-        ("m1_loc_g", N_g),
-        ("m2_loc_g", N_g),
-        ("m1_scale_g", N_g),
-        ("m2_scale_g", N_g),
-        ("m1_low_g", N_g),
-        ("m2_low_g", N_g),
-        ("m1_high_g", N_g),
-        ("m2_high_g", N_g),
-        ("mmax_pl", N_pl),
-        ("mmin_pl", N_pl),
-    ]
-
-    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
-
-    where_fns = []
-
-    if has_spin:
-        parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
-        if args.add_truncated_normal_spin:
-            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
-                create_truncated_normal_distributions
-            )
-            all_params.extend(
-                [
-                    ("chi1_high_g", N_g),
-                    ("chi1_high_pl", N_pl),
-                    ("chi1_loc_g", N_g),
-                    ("chi1_loc_pl", N_pl),
-                    ("chi1_low_g", N_g),
-                    ("chi1_low_pl", N_pl),
-                    ("chi1_scale_g", N_g),
-                    ("chi1_scale_pl", N_pl),
-                    ("chi2_high_g", N_g),
-                    ("chi2_high_pl", N_pl),
-                    ("chi2_loc_g", N_g),
-                    ("chi2_loc_pl", N_pl),
-                    ("chi2_low_g", N_g),
-                    ("chi2_low_pl", N_pl),
-                    ("chi2_scale_g", N_g),
-                    ("chi2_scale_pl", N_pl),
-                ]
-            )
-        if args.add_beta_spin:
-            all_params.extend(
-                [
-                    ("chi1_mean_g", N_g),
-                    ("chi1_mean_pl", N_pl),
-                    ("chi1_variance_g", N_g),
-                    ("chi1_variance_pl", N_pl),
-                    ("chi2_mean_g", N_g),
-                    ("chi2_mean_pl", N_pl),
-                    ("chi2_variance_g", N_g),
-                    ("chi2_variance_pl", N_pl),
-                ]
-            )
-
-            def mean_variance_check(**kwargs) -> Array:
-                if N_pl > 0:
-                    means_pl = jnp.stack(
-                        [
-                            kwargs[f"chi{i}_mean_pl_{j}"]
-                            for j in range(N_pl)
-                            for i in (1, 2)
-                        ]
-                    )
-                    vars_pl = jnp.stack(
-                        [
-                            kwargs[f"chi{i}_variance_pl_{j}"]
-                            for j in range(N_pl)
-                            for i in (1, 2)
-                        ]
-                    )
-                if N_g > 0:
-                    means_g = jnp.stack(
-                        [
-                            kwargs[f"chi{i}_mean_g_{j}"]
-                            for j in range(N_g)
-                            for i in (1, 2)
-                        ]
-                    )
-                    vars_g = jnp.stack(
-                        [
-                            kwargs[f"chi{i}_variance_g_{j}"]
-                            for j in range(N_g)
-                            for i in (1, 2)
-                        ]
-                    )
-
-                if N_pl > 0 and N_g > 0:
-                    means = jnp.concatenate([means_pl, means_g])
-                    variances = jnp.concatenate([vars_pl, vars_g])
-                elif N_pl > 0:
-                    means = means_pl
-                    variances = vars_pl
-                else:
-                    means = means_g
-                    variances = vars_g
-
-                valid_var = variances < means * (1.0 - means)
-                valid_var = jnp.logical_and(valid_var, variances > 0.0)
-                return jnp.all(valid_var)
-
-            where_fns.append(mean_variance_check)
-
-    if has_tilt:
-        parameters.extend([COS_TILT_1, COS_TILT_2])
-        all_params.extend(
-            [
-                ("cos_tilt_zeta_g", N_g),
-                ("cos_tilt_zeta_pl", N_pl),
-                ("cos_tilt1_scale_g", N_g),
-                ("cos_tilt1_scale_pl", N_pl),
-                ("cos_tilt2_scale_g", N_g),
-                ("cos_tilt2_scale_pl", N_pl),
-            ]
-        )
-
-        def tilt_scale_should_be_positive(**kwargs) -> Array:
-            if N_pl > 0:
-                scale_pl = jnp.stack(
-                    [
-                        kwargs[f"cos_tilt{i}_scale_pl_{j}"]
-                        for j in range(N_pl)
-                        for i in (1, 2)
-                    ]
-                )
-            if N_g > 0:
-                scale_g = jnp.stack(
-                    [
-                        kwargs[f"cos_tilt{i}_scale_g_{j}"]
-                        for j in range(N_g)
-                        for i in (1, 2)
-                    ]
-                )
-
-            if N_pl > 0 and N_g > 0:
-                scales = jnp.concatenate([scale_pl, scale_g])
-            elif N_pl > 0:
-                scales = scale_pl
-            else:
-                scales = scale_g
-
-            return jnp.all(scales > 0.0)
-
-        where_fns.append(tilt_scale_should_be_positive)
-
-    if has_phi_12:
-        parameters.append(PHI_12)
-
-        all_params.extend(
-            [
-                (PHI_12.name + "_high_g", N_g),
-                (PHI_12.name + "_high_pl", N_pl),
-                (PHI_12.name + "_loc_g", N_g),
-                (PHI_12.name + "_loc_pl", N_pl),
-                (PHI_12.name + "_low_g", N_g),
-                (PHI_12.name + "_low_pl", N_pl),
-                (PHI_12.name + "_scale_g", N_g),
-                (PHI_12.name + "_scale_pl", N_pl),
-            ]
-        )
-
-    if has_eccentricity:
-        parameters.append(ECCENTRICITY)
-        all_params.extend(
-            [
-                ("ecc_high_g", N_g),
-                ("ecc_high_pl", N_pl),
-                ("ecc_loc_g", N_g),
-                ("ecc_loc_pl", N_pl),
-                ("ecc_low_g", N_g),
-                ("ecc_low_pl", N_pl),
-                ("ecc_scale_g", N_g),
-                ("ecc_scale_pl", N_pl),
-            ]
-        )
-
-    if has_redshift:
-        parameters.append(REDSHIFT)
-
-        all_params.extend(
-            [
-                ("redshift_kappa_g", N_g),
-                ("redshift_kappa_pl", N_pl),
-                ("redshift_z_max_g", N_g),
-                ("redshift_z_max_pl", N_pl),
-            ]
-        )
-
-    if has_right_ascension:
-        parameters.append(RIGHT_ASCENSION)
-
-        all_params.extend(
-            [
-                (RIGHT_ASCENSION.name + "_high_g", N_g),
-                (RIGHT_ASCENSION.name + "_high_pl", N_pl),
-                (RIGHT_ASCENSION.name + "_loc_g", N_g),
-                (RIGHT_ASCENSION.name + "_loc_pl", N_pl),
-                (RIGHT_ASCENSION.name + "_low_g", N_g),
-                (RIGHT_ASCENSION.name + "_low_pl", N_pl),
-                (RIGHT_ASCENSION.name + "_scale_g", N_g),
-                (RIGHT_ASCENSION.name + "_scale_pl", N_pl),
-            ]
-        )
-
-    if has_sin_declination:
-        parameters.append(SIN_DECLINATION)
-
-        all_params.extend(
-            [
-                (SIN_DECLINATION.name + "_high_g", N_g),
-                (SIN_DECLINATION.name + "_high_pl", N_pl),
-                (SIN_DECLINATION.name + "_loc_g", N_g),
-                (SIN_DECLINATION.name + "_loc_pl", N_pl),
-                (SIN_DECLINATION.name + "_low_g", N_g),
-                (SIN_DECLINATION.name + "_low_pl", N_pl),
-                (SIN_DECLINATION.name + "_scale_g", N_g),
-                (SIN_DECLINATION.name + "_scale_pl", N_pl),
-            ]
-        )
-
-    if has_detection_time:
-        parameters.append(DETECTION_TIME)
-
-        all_params.extend(
-            [
-                (DETECTION_TIME.name + "_high_g", N_g),
-                (DETECTION_TIME.name + "_high_pl", N_pl),
-                (DETECTION_TIME.name + "_low_g", N_g),
-                (DETECTION_TIME.name + "_low_pl", N_pl),
-            ]
-        )
-
-    if has_cos_iota:
-        parameters.append(COS_IOTA)
-
-        all_params.extend(
-            [
-                (COS_IOTA.name + "_high_g", N_g),
-                (COS_IOTA.name + "_high_pl", N_pl),
-                (COS_IOTA.name + "_loc_g", N_g),
-                (COS_IOTA.name + "_loc_pl", N_pl),
-                (COS_IOTA.name + "_low_g", N_g),
-                (COS_IOTA.name + "_low_pl", N_pl),
-                (COS_IOTA.name + "_scale_g", N_g),
-                (COS_IOTA.name + "_scale_pl", N_pl),
-            ]
-        )
-
-    if has_polarization_angle:
-        parameters.append(POLARIZATION_ANGLE)
-
-        all_params.extend(
-            [
-                (POLARIZATION_ANGLE.name + "_high_g", N_g),
-                (POLARIZATION_ANGLE.name + "_high_pl", N_pl),
-                (POLARIZATION_ANGLE.name + "_loc_g", N_g),
-                (POLARIZATION_ANGLE.name + "_loc_pl", N_pl),
-                (POLARIZATION_ANGLE.name + "_low_g", N_g),
-                (POLARIZATION_ANGLE.name + "_low_pl", N_pl),
-                (POLARIZATION_ANGLE.name + "_scale_g", N_g),
-                (POLARIZATION_ANGLE.name + "_scale_pl", N_pl),
-            ]
-        )
-
-    all_params.append(("log_rate", N_pl + N_g))
-
-    error_if(
-        set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
-        msg="The parameters in the posterior data do not match the parameters in the model.",
-    )
-
-    extended_params = []
-    for params in all_params:
-        extended_params.extend(expand_arguments(*params))
-
-    model_prior_param = get_processed_priors(extended_params, prior_dict)
-
-    model = Bake(NPowerlawMGaussian)(
-        N_pl=N_pl,
-        N_g=N_g,
-        use_spin=has_spin,
-        use_tilt=has_tilt,
-        use_eccentricity=has_eccentricity,
-        use_redshift=has_redshift,
-        use_cos_iota=has_cos_iota,
-        use_phi_12=has_phi_12,
-        use_polarization_angle=has_polarization_angle,
-        use_right_ascension=has_right_ascension,
-        use_sin_declination=has_sin_declination,
-        use_detection_time=has_detection_time,
-        **model_prior_param,
-    )
-
-    parameters_name = [param.name for param in parameters]
-    nvt = vt_json_read_and_process(parameters_name, args.vt_json)
-
-    pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
-
-    if has_log_ref_prior:
-        POSTERIOR_COLUMNS.append(LOG_REF_PRIOR_NAME)
-
-    data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    if has_log_ref_prior:
-        log_ref_priors = [d[..., log_ref_prior_idx] for d in data]
-        data = [np.delete(d, log_ref_prior_idx, axis=-1) for d in data]
-    else:
-        log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
-
-    variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
-        dist_builder=model,
-        data=data,
-        log_ref_priors=log_ref_priors,
-        ERate_obj=erate_estimator,
-        where_fns=None if len(where_fns) == 0 else where_fns,
+    NPowerlawMGaussianSage(
+        N_pl=args.n_pl,
+        N_g=args.n_g,
+        has_beta_spin=args.add_beta_spin,
+        has_truncated_normal_spin=args.add_truncated_normal_spin,
+        has_tilt=args.add_tilt,
+        has_eccentricity=args.add_truncated_normal_eccentricity,
+        has_redshift=args.add_redshift,
+        has_cos_iota=args.add_cos_iota,
+        has_phi_12=args.add_phi_12,
+        has_polarization_angle=args.add_polarization_angle,
+        has_right_ascension=args.add_right_ascension,
+        has_sin_declination=args.add_sin_declination,
+        has_detection_time=args.add_detection_time,
+        posterior_regex=args.posterior_regex,
+        posterior_columns=args.posterior_columns,
+        seed=args.seed,
+        prior_filename=args.prior_json,
+        selection_fn_filename=args.vt_json,
+        poisson_mean_filename=args.pmean_json,
+        sampler_settings_filename=args.sampler_config,
         n_buckets=args.n_buckets,
         threshold=args.threshold,
-    )
-
-    constants = model.constants
-
-    constants["N_pl"] = N_pl
-    constants["N_g"] = N_g
-    constants["use_spin"] = int(has_spin)
-    constants["use_tilt"] = int(has_tilt)
-    constants["use_eccentricity"] = int(has_eccentricity)
-    constants["use_redshift"] = int(has_redshift)
-    constants["use_cos_iota"] = int(has_cos_iota)
-    constants["use_phi_12"] = int(has_phi_12)
-    constants["use_polarization_angle"] = int(has_polarization_angle)
-    constants["use_right_ascension"] = int(has_right_ascension)
-    constants["use_sin_declination"] = int(has_sin_declination)
-    constants["use_detection_time"] = int(has_detection_time)
-
-    with open("constants.json", "w") as f:
-        json.dump(constants, f)
-
-    with open("nf_samples_mapping.json", "w") as f:
-        json.dump(variables_index, f)
-
-    FLOWMC_HANDLER_KWARGS = read_json(args.flowMC_json)
-
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
-
-    N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
-    initial_position = priors.sample(KEY3, (N_CHAINS,))
-
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
-
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(
-        sorted(model.variables.keys())
-    )
-
-    FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
-
-    if args.adam_optimizer:
-        from flowMC.strategy.optimization import optimization_Adam
-
-        adam_kwargs = read_json(args.adam_json)
-        Adam_opt = optimization_Adam(**adam_kwargs)
-
-        FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
-
-    handler = flowMChandler(
-        logpdf=poisson_likelihood_fn,
-        initial_position=initial_position,
-        **FLOWMC_HANDLER_KWARGS,
-    )
-
-    handler.run(
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        file_prefix="n_pls_m_gs",
-    )
+        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
+    ).run()

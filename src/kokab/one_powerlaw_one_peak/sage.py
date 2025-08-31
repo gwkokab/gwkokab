@@ -2,15 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import json
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from glob import glob
+from typing import Callable, Dict, List, Optional, Union
 
-import numpy as np
-from jax import random as jrd
-from loguru import logger
+from jaxtyping import Array
 
-from gwkokab.inference import Bake, poisson_likelihood
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
     COS_TILT_1,
@@ -21,30 +17,126 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-from gwkokab.poisson_mean import PoissonMean
-from gwkokab.utils.tools import error_if
-from kokab.utils import poisson_mean_parser, sage_parser
-from kokab.utils.common import (
-    flowMC_default_parameters,
-    get_posterior_data,
-    get_processed_priors,
-    LOG_REF_PRIOR_NAME,
-    read_json,
-    vt_json_read_and_process,
-)
-from kokab.utils.flowMC_helper import flowMChandler
+from kokab.utils.sage import get_parser, Sage
 
 
-def make_parser() -> ArgumentParser:
+class SmoothedPowerlawAndPeakSage(Sage):
+    def __init__(
+        self,
+        has_spin: bool,
+        has_tilt: bool,
+        has_redshift: bool,
+        where_fns: Optional[List[Callable[..., Array]]],
+        posterior_regex: str,
+        posterior_columns: List[str],
+        seed: int,
+        prior_filename: str,
+        selection_fn_filename: str,
+        poisson_mean_filename: str,
+        sampler_settings_filename: str,
+        n_buckets: int,
+        threshold: float,
+        debug_nans: bool = False,
+        profile_memory: bool = False,
+        check_leaks: bool = False,
+    ) -> None:
+        self.has_spin = has_spin
+        self.has_tilt = has_tilt
+        self.has_redshift = has_redshift
+
+        super().__init__(
+            model=SmoothedPowerlawAndPeak,
+            posterior_regex=posterior_regex,
+            posterior_columns=posterior_columns,
+            seed=seed,
+            prior_filename=prior_filename,
+            selection_fn_filename=selection_fn_filename,
+            poisson_mean_filename=poisson_mean_filename,
+            sampler_settings_filename=sampler_settings_filename,
+            analysis_name="one_powerlaw_one_peak",
+            n_buckets=n_buckets,
+            threshold=threshold,
+            debug_nans=debug_nans,
+            profile_memory=profile_memory,
+            check_leaks=check_leaks,
+            where_fns=where_fns,
+        )
+
+    @property
+    def constants(self) -> Dict[str, Union[int, float, bool]]:
+        return {
+            "use_spin": self.has_spin,
+            "use_tilt": self.has_tilt,
+            "use_redshift": self.has_redshift,
+        }
+
+    @property
+    def parameters(self) -> List[str]:
+        names = [PRIMARY_MASS_SOURCE.name, SECONDARY_MASS_SOURCE.name]
+        if self.has_spin:
+            names.append(PRIMARY_SPIN_MAGNITUDE.name)
+            names.append(SECONDARY_SPIN_MAGNITUDE.name)
+        if self.has_tilt:
+            names.extend([COS_TILT_1.name, COS_TILT_2.name])
+        if self.has_redshift:
+            names.append(REDSHIFT.name)
+        return names
+
+    @property
+    def model_parameters(self) -> List[str]:
+        model_parameters = [
+            "alpha",
+            "beta",
+            "delta",
+            "lambda_peak",
+            "loc",
+            "log_rate",
+            "mmax",
+            "mmin",
+            "scale",
+        ]
+
+        if self.has_spin:
+            model_parameters.extend(
+                [
+                    "chi1_mean_g",
+                    "chi1_mean_pl",
+                    "chi1_variance_g",
+                    "chi1_variance_pl",
+                    "chi2_mean_g",
+                    "chi2_mean_pl",
+                    "chi2_variance_g",
+                    "chi2_variance_pl",
+                ]
+            )
+
+        if self.has_tilt:
+            model_parameters.extend(
+                [
+                    "cos_tilt_zeta_g",
+                    "cos_tilt_zeta_pl",
+                    "cos_tilt1_scale_g",
+                    "cos_tilt1_scale_pl",
+                    "cos_tilt2_scale_g",
+                    "cos_tilt2_scale_pl",
+                ]
+            )
+
+        if self.has_redshift:
+            model_parameters.extend(["kappa", "z_max"])
+
+        return model_parameters
+
+
+def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = sage_parser.get_parser(parser)
+    parser = get_parser(parser)
 
     model_group = parser.add_argument_group("Model Options")
-
     model_group.add_argument(
         "--add-spin",
         action="store_true",
-        help="Include spin parameters in the model.",
+        help="Include beta spin parameters in the model.",
     )
     model_group.add_argument(
         "--add-tilt",
@@ -54,170 +146,26 @@ def make_parser() -> ArgumentParser:
     model_group.add_argument(
         "--add-redshift",
         action="store_true",
-        help="Include redshift parameters in the model.",
+        help="Include redshift parameter in the model",
     )
 
-    return parser
-
-
-def main() -> None:
-    r"""Main function of the script."""
-    logger.warning(
-        "If you have made any changes to any parameters, please make sure"
-        " that the changes are reflected in scripts that generate plots.",
-    )
-
-    parser = make_parser()
     args = parser.parse_args()
 
-    SEED = args.seed
-    KEY = jrd.PRNGKey(SEED)
-    KEY1, KEY2, KEY3, KEY4 = jrd.split(KEY, 4)
-    POSTERIOR_REGEX = args.posterior_regex
-    POSTERIOR_COLUMNS: list[str] = args.posterior_columns
-
-    has_log_ref_prior = LOG_REF_PRIOR_NAME in POSTERIOR_COLUMNS
-    if has_log_ref_prior:
-        log_ref_prior_idx = POSTERIOR_COLUMNS.index(LOG_REF_PRIOR_NAME)
-        POSTERIOR_COLUMNS.remove(LOG_REF_PRIOR_NAME)
-
-    prior_dict = read_json(args.prior_json)
-
-    has_spin = args.add_spin
-    has_redshift = args.add_redshift
-    has_tilt = args.add_tilt
-
-    model_parameters = [
-        "alpha",
-        "beta",
-        "delta",
-        "lambda_peak",
-        "loc",
-        "log_rate",
-        "mmax",
-        "mmin",
-        "scale",
-    ]
-
-    parameters = [PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE]
-
-    if has_spin:
-        parameters.extend([PRIMARY_SPIN_MAGNITUDE, SECONDARY_SPIN_MAGNITUDE])
-        model_parameters.extend(
-            [
-                "chi1_mean_g",
-                "chi1_mean_pl",
-                "chi1_variance_g",
-                "chi1_variance_pl",
-                "chi2_mean_g",
-                "chi2_mean_pl",
-                "chi2_variance_g",
-                "chi2_variance_pl",
-            ]
-        )
-
-    if has_tilt:
-        parameters.extend([COS_TILT_1, COS_TILT_2])
-        model_parameters.extend(
-            [
-                "cos_tilt_zeta_g",
-                "cos_tilt_zeta_pl",
-                "cos_tilt1_scale_g",
-                "cos_tilt1_scale_pl",
-                "cos_tilt2_scale_g",
-                "cos_tilt2_scale_pl",
-            ]
-        )
-
-    if has_redshift:
-        parameters.append(REDSHIFT)
-        model_parameters.extend(["kappa", "z_max"])
-
-    error_if(
-        set(POSTERIOR_COLUMNS) != set(map(lambda p: p.name, parameters)),
-        msg="The parameters in the posterior data do not match the parameters in the model.",
-    )
-
-    model_prior_param = get_processed_priors(model_parameters, prior_dict)
-
-    model = Bake(SmoothedPowerlawAndPeak)(
-        use_spin=has_spin,
-        use_redshift=has_redshift,
-        use_tilt=has_tilt,
-        **model_prior_param,
-    )
-
-    parameters_name = [param.name for param in parameters]
-    nvt = vt_json_read_and_process(parameters_name, args.vt_json)
-
-    pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(nvt, key=KEY4, **pmean_kwargs)  # type: ignore[arg-type]
-    del nvt
-
-    if has_log_ref_prior:
-        POSTERIOR_COLUMNS.append(LOG_REF_PRIOR_NAME)
-
-    data = get_posterior_data(glob(POSTERIOR_REGEX), POSTERIOR_COLUMNS)
-    if has_log_ref_prior:
-        log_ref_priors = [d[..., log_ref_prior_idx] for d in data]
-        data = [np.delete(d, log_ref_prior_idx, axis=-1) for d in data]
-    else:
-        log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
-
-    variables_index, priors, poisson_likelihood_fn = poisson_likelihood(
-        dist_builder=model,
-        data=data,
-        log_ref_priors=log_ref_priors,
-        ERate_obj=erate_estimator,
+    SmoothedPowerlawAndPeakSage(
+        has_spin=args.add_spin,
+        has_tilt=args.add_tilt,
+        has_redshift=args.add_redshift,
+        posterior_regex=args.posterior_regex,
+        posterior_columns=args.posterior_columns,
+        seed=args.seed,
+        prior_filename=args.prior_json,
+        selection_fn_filename=args.vt_json,
+        poisson_mean_filename=args.pmean_json,
+        sampler_settings_filename=args.sampler_config,
         n_buckets=args.n_buckets,
         threshold=args.threshold,
-    )
-
-    constants = model.constants
-    constants["use_spin"] = int(has_spin)
-    constants["use_tilt"] = int(has_tilt)
-    constants["use_redshift"] = int(has_redshift)
-
-    with open("constants.json", "w") as f:
-        json.dump(constants, f)
-
-    with open("nf_samples_mapping.json", "w") as f:
-        json.dump(variables_index, f)
-
-    FLOWMC_HANDLER_KWARGS = read_json(args.flowMC_json)
-
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["rng_key"] = KEY1
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["key"] = KEY2
-
-    N_CHAINS = FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_chains"]
-    initial_position = priors.sample(KEY3, (N_CHAINS,))
-
-    FLOWMC_HANDLER_KWARGS["nf_model_kwargs"]["n_features"] = initial_position.shape[1]
-    FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["n_dim"] = initial_position.shape[1]
-
-    FLOWMC_HANDLER_KWARGS["data_dump_kwargs"]["labels"] = list(
-        sorted(model.variables.keys())
-    )
-
-    FLOWMC_HANDLER_KWARGS = flowMC_default_parameters(**FLOWMC_HANDLER_KWARGS)
-
-    if args.adam_optimizer:
-        from flowMC.strategy.optimization import optimization_Adam
-
-        adam_kwargs = read_json(args.adam_json)
-        Adam_opt = optimization_Adam(**adam_kwargs)
-
-        FLOWMC_HANDLER_KWARGS["sampler_kwargs"]["strategies"] = [Adam_opt, "default"]
-
-    handler = flowMChandler(
-        logpdf=poisson_likelihood_fn,
-        initial_position=initial_position,
-        **FLOWMC_HANDLER_KWARGS,
-    )
-
-    handler.run(
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        file_prefix="one_powerlaw_one_peak",
-    )
+        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
+    ).run()

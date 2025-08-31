@@ -316,6 +316,10 @@ def pad_and_stack(
         and which are padded.
     """
     error_if(
+        not (0.0 <= threshold <= 100.0),
+        msg="Threshold must be between 0 and 100.",
+    )
+    error_if(
         not all(len(arrays[0]) == len(arr) for arr in arrays),
         msg="All arrays must have the same length.",
     )

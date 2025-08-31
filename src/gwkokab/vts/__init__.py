@@ -19,9 +19,6 @@ from ._popmodelvt import (
     PopModelsCalibratedVolumeTimeSensitivity as PopModelsCalibratedVolumeTimeSensitivity,
     PopModelsVolumeTimeSensitivity as PopModelsVolumeTimeSensitivity,
 )
-from ._realinjvt import (
-    RealInjectionVolumeTimeSensitivity as RealInjectionVolumeTimeSensitivity,
-)
 from ._semianalyticalinjvt import (
     SemiAnalyticalRealInjectionVolumeTimeSensitivity as SemiAnalyticalRealInjectionVolumeTimeSensitivity,
 )
