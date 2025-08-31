@@ -28,7 +28,7 @@ def numpyro_poisson_likelihood(
     ERate_obj: PoissonMean,
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
-) -> Callable[..., Array]:
+) -> Callable[[List[Array], List[Array], List[Array]], Array]:
     del priors
     del where_fns
     del constants
@@ -65,6 +65,7 @@ def numpyro_poisson_likelihood(
             )
             safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
+            # TODO(Qazalbash): investigate effects of `equinox.filter_vmap` and `equinox.filter_jit`
             # log p(θ|data_n)
             model_log_prob = jax.jit(jax.vmap(jax.jit(model_instance.log_prob)))(
                 safe_data
