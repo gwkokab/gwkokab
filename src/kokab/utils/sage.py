@@ -192,6 +192,7 @@ class Sage(Guru):
         logpdf = self.likelihood_fn(
             dist_fn=dist_fn,
             priors=priors,
+            variables=variables,
             variables_index=variables_index,
             log_constants=log_constants,
             ERate_obj=ERate_obj,
