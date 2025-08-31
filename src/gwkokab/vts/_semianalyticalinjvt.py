@@ -11,25 +11,25 @@ import numpy as np
 from jaxtyping import Array
 from loguru import logger
 
-from gwkokab import parameters as gwk_parameters
 from gwkokab.constants import SECONDS_PER_YEAR
+from gwkokab.parameters import Parameters
 
 from ..utils.tools import error_if
 from ._abc import VolumeTimeSensitivityInterface
 
 
 _PARAM_MAPPING = {
-    gwk_parameters.PRIMARY_MASS_SOURCE.name: "mass1_source",
-    gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name: "spin1z",
-    gwk_parameters.PRIMARY_SPIN_X.name: "spin1x",
-    gwk_parameters.PRIMARY_SPIN_Y.name: "spin1y",
-    gwk_parameters.PRIMARY_SPIN_Z.name: "spin1z",
-    gwk_parameters.REDSHIFT.name: "redshift",
-    gwk_parameters.SECONDARY_MASS_SOURCE.name: "mass2_source",
-    gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name: "spin2z",
-    gwk_parameters.SECONDARY_SPIN_X.name: "spin2x",
-    gwk_parameters.SECONDARY_SPIN_Y.name: "spin2y",
-    gwk_parameters.SECONDARY_SPIN_Z.name: "spin2z",
+    Parameters.PRIMARY_MASS_SOURCE.value: "mass1_source",
+    Parameters.PRIMARY_SPIN_MAGNITUDE.value: "spin1z",
+    Parameters.PRIMARY_SPIN_X.value: "spin1x",
+    Parameters.PRIMARY_SPIN_Y.value: "spin1y",
+    Parameters.PRIMARY_SPIN_Z.value: "spin1z",
+    Parameters.REDSHIFT.value: "redshift",
+    Parameters.SECONDARY_MASS_SOURCE.value: "mass2_source",
+    Parameters.SECONDARY_SPIN_MAGNITUDE.value: "spin2z",
+    Parameters.SECONDARY_SPIN_X.value: "spin2x",
+    Parameters.SECONDARY_SPIN_Y.value: "spin2y",
+    Parameters.SECONDARY_SPIN_Z.value: "spin2z",
 }
 
 
@@ -145,17 +145,17 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
                     _inj = χ_1z / a1
                 elif p == "cos_tilt_2":
                     _inj = χ_2z / a2
-                elif p == gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name:
+                elif p == Parameters.PRIMARY_SPIN_MAGNITUDE.value:
                     _inj = a1
-                elif p == gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name:
+                elif p == Parameters.SECONDARY_SPIN_MAGNITUDE.value:
                     _inj = a2
                 else:
                     _inj = injections[_PARAM_MAPPING[p]][found][:]
                 injs.append(_inj)
 
             if (
-                gwk_parameters.PRIMARY_SPIN_MAGNITUDE.name not in parameters
-                and gwk_parameters.SECONDARY_SPIN_MAGNITUDE.name not in parameters
+                Parameters.PRIMARY_SPIN_MAGNITUDE.value not in parameters
+                and Parameters.SECONDARY_SPIN_MAGNITUDE.value not in parameters
             ):
                 sampling_prob *= np.square(4 * np.pi * a1 * a2)
 
