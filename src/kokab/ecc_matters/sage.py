@@ -24,11 +24,11 @@ class EccentricityMattersCore(Sage):
 
 
 class EccentricityMattersFSage(EccentricityMattersCore, FlowMCBased):
-    likelihood_fn = poisson_likelihood
+    pass
 
 
 class EccentricityMattersNSage(EccentricityMattersCore, NumpyroBased):
-    likelihood_fn = numpyro_poisson_likelihood
+    pass
 
 
 def f_main() -> None:
@@ -39,6 +39,7 @@ def f_main() -> None:
     args = parser.parse_args()
 
     EccentricityMattersFSage(
+        likelihood_fn=poisson_likelihood,
         model=EccentricityMattersModel,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
@@ -65,6 +66,7 @@ def n_main() -> None:
     args = parser.parse_args()
 
     EccentricityMattersNSage(
+        likelihood_fn=numpyro_poisson_likelihood,
         model=EccentricityMattersModel,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,

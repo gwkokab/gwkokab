@@ -3,14 +3,18 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
-from jaxtyping import Array
+from jaxtyping import Array, ArrayLike
+from numpyro._typing import DistributionLike
 
 import gwkokab
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.utils import create_truncated_normal_distributions
+from gwkokab.models.utils import (
+    create_truncated_normal_distributions,
+    JointDistribution,
+)
 from gwkokab.parameters import (
     COS_IOTA,
     COS_TILT_1,
@@ -27,6 +31,7 @@ from gwkokab.parameters import (
     SECONDARY_SPIN_MAGNITUDE,
     SIN_DECLINATION,
 )
+from gwkokab.poisson_mean import PoissonMean
 from kokab.utils.common import expand_arguments
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
@@ -49,6 +54,19 @@ class NPowerlawMGaussianCore(Sage):
         has_right_ascension: bool,
         has_sin_declination: bool,
         has_detection_time: bool,
+        likelihood_fn: Callable[
+            [
+                Callable[..., DistributionLike],
+                JointDistribution,
+                Dict[str, DistributionLike],
+                Dict[str, int],
+                ArrayLike,
+                PoissonMean,
+                Optional[List[Callable[..., Array]]],
+                Dict[str, Array],
+            ],
+            Callable[[Array, Dict[str, Any]], Array],
+        ],
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
         posterior_columns: List[str],
@@ -82,6 +100,7 @@ class NPowerlawMGaussianCore(Sage):
         self.has_detection_time = has_detection_time
 
         super().__init__(
+            likelihood_fn=likelihood_fn,
             model=NPowerlawMGaussian,
             posterior_regex=posterior_regex,
             posterior_columns=posterior_columns,
@@ -420,6 +439,7 @@ def f_main() -> None:
         has_right_ascension=args.add_right_ascension,
         has_sin_declination=args.add_sin_declination,
         has_detection_time=args.add_detection_time,
+        likelihood_fn=poisson_likelihood,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
         seed=args.seed,
@@ -458,6 +478,7 @@ def n_main() -> None:
         has_right_ascension=args.add_right_ascension,
         has_sin_declination=args.add_sin_declination,
         has_detection_time=args.add_detection_time,
+        likelihood_fn=numpyro_poisson_likelihood,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
         seed=args.seed,

@@ -25,7 +25,6 @@ class Guru:
     """
 
     _rng_key: PRNGKeyArray
-    likelihood_fn: Callable[..., Callable[..., Array]]
 
     def __init__(
         self,

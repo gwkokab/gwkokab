@@ -3,12 +3,14 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
-from jaxtyping import Array
+from jaxtyping import Array, ArrayLike
+from numpyro._typing import DistributionLike
 
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import SmoothedPowerlawAndPeak
+from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import (
     COS_TILT_1,
     COS_TILT_2,
@@ -18,6 +20,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
+from gwkokab.poisson_mean import PoissonMean
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser
@@ -29,6 +32,19 @@ class SmoothedPowerlawAndPeakCore(Sage):
         has_spin: bool,
         has_tilt: bool,
         has_redshift: bool,
+        likelihood_fn: Callable[
+            [
+                Callable[..., DistributionLike],
+                JointDistribution,
+                Dict[str, DistributionLike],
+                Dict[str, int],
+                ArrayLike,
+                PoissonMean,
+                Optional[List[Callable[..., Array]]],
+                Dict[str, Array],
+            ],
+            Callable[[Array, Dict[str, Any]], Array],
+        ],
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
         posterior_columns: List[str],
@@ -48,6 +64,7 @@ class SmoothedPowerlawAndPeakCore(Sage):
         self.has_redshift = has_redshift
 
         super().__init__(
+            likelihood_fn=likelihood_fn,
             model=SmoothedPowerlawAndPeak,
             posterior_regex=posterior_regex,
             posterior_columns=posterior_columns,
@@ -171,6 +188,7 @@ def f_main() -> None:
         has_spin=args.add_spin,
         has_tilt=args.add_tilt,
         has_redshift=args.add_redshift,
+        likelihood_fn=poisson_likelihood,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
         seed=args.seed,
@@ -199,6 +217,7 @@ def n_main() -> None:
         has_spin=args.add_spin,
         has_tilt=args.add_tilt,
         has_redshift=args.add_redshift,
+        likelihood_fn=numpyro_poisson_likelihood,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
         seed=args.seed,

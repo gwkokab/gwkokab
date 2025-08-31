@@ -25,22 +25,21 @@ from .guru import Guru
 
 
 class Sage(Guru):
-    likelihood_fn: Callable[
-        [
-            Callable[..., DistributionLike],
-            JointDistribution,
-            Dict[str, DistributionLike],
-            Dict[str, int],
-            ArrayLike,
-            PoissonMean,
-            Optional[List[Callable[..., Array]]],
-            Dict[str, Array],
-        ],
-        Callable[[Array, Dict[str, Any]], Array],
-    ]
-
     def __init__(
         self,
+        likelihood_fn: Callable[
+            [
+                Callable[..., DistributionLike],
+                JointDistribution,
+                Dict[str, DistributionLike],
+                Dict[str, int],
+                ArrayLike,
+                PoissonMean,
+                Optional[List[Callable[..., Array]]],
+                Dict[str, Array],
+            ],
+            Callable[[Array, Dict[str, Any]], Array],
+        ],
         model: Union[Distribution, Callable[..., Distribution]],
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
@@ -99,6 +98,7 @@ class Sage(Guru):
         assert all(letter.isalpha() or letter == "_" for letter in analysis_name), (
             "Analysis name must be alphabetic characters only."
         )
+        self.likelihood_fn = likelihood_fn
         self.n_buckets = n_buckets
         self.posterior_columns = posterior_columns
         self.posterior_regex = posterior_regex
