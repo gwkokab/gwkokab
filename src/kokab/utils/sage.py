@@ -174,7 +174,7 @@ class Sage(Guru):
         return n_events, log_constants, data_group, log_ref_priors_group, masks_group
 
     def run(self) -> None:
-        constants, dist_fn, priors, _, variables_index = self.bake_model()
+        constants, dist_fn, priors, variables, variables_index = self.bake_model()
 
         n_events, log_constants, data_group, log_ref_priors_group, masks_group = (
             self.read_data()
@@ -189,21 +189,7 @@ class Sage(Guru):
 
         log_constants += n_events * np.log(ERate_obj.time_scale)  # type: ignore
 
-        likelihood_fn: Callable[
-            [
-                Callable[..., DistributionLike],
-                JointDistribution,
-                Dict[str, DistributionLike],
-                Dict[str, int],
-                ArrayLike,
-                PoissonMean,
-                Optional[List[Callable[..., Array]]],
-                Dict[str, Array],
-            ],
-            Callable[[Array, Dict[str, Any]], Array],
-        ] = getattr(self, "likelihood_fn")
-
-        logpdf = likelihood_fn(
+        logpdf = self.likelihood_fn(
             dist_fn=dist_fn,
             priors=priors,
             variables_index=variables_index,
