@@ -20,7 +20,7 @@ from jax import numpy as jnp
 from jaxtyping import Array
 from loguru import logger
 
-from ..utils.tools import error_if
+from gwkokab.utils.tools import error_if
 
 
 __all__ = ["pad_and_stack"]

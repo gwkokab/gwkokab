@@ -14,7 +14,6 @@ from loguru import logger
 from numpyro._typing import DistributionLike
 from numpyro.distributions import Distribution
 
-from gwkokab.inference.jenks import pad_and_stack
 from gwkokab.models.utils import JointDistribution
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import warn_if
@@ -22,6 +21,7 @@ from kokab.utils.common import get_posterior_data, LOG_REF_PRIOR_NAME
 from kokab.utils.poisson_mean_parser import read_pmean
 
 from .guru import Guru
+from .jenks import pad_and_stack
 
 
 class Sage(Guru):

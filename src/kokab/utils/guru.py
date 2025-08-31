@@ -13,10 +13,11 @@ from loguru import logger
 from numpyro._typing import DistributionLike
 from numpyro.util import is_prng_key
 
-from gwkokab.inference import Bake
 from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import error_if
 from kokab.utils.common import get_processed_priors, read_json, write_json
+
+from .bake import Bake
 
 
 class Guru:
