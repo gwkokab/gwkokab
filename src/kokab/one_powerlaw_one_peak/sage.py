@@ -3,8 +3,11 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Dict, List, Union
+from typing import Callable, Dict, List, Optional, Union
 
+from jaxtyping import Array
+
+from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import SmoothedPowerlawAndPeak
 from gwkokab.parameters import (
     COS_TILT_1,
@@ -15,15 +18,18 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-from kokab.utils.nsage import get_parser, NSage
+from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
+from kokab.utils.sage import Sage, sage_arg_parser
 
 
-class SmoothedPowerlawAndPeakNSage(NSage):
+class SmoothedPowerlawAndPeakCore(Sage):
     def __init__(
         self,
         has_spin: bool,
         has_tilt: bool,
         has_redshift: bool,
+        where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
         posterior_columns: List[str],
         seed: int,
@@ -31,6 +37,8 @@ class SmoothedPowerlawAndPeakNSage(NSage):
         selection_fn_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
+        n_buckets: int,
+        threshold: float,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -40,18 +48,21 @@ class SmoothedPowerlawAndPeakNSage(NSage):
         self.has_redshift = has_redshift
 
         super().__init__(
-            SmoothedPowerlawAndPeak,
-            posterior_regex,
-            posterior_columns,
-            seed,
-            prior_filename,
-            selection_fn_filename,
-            poisson_mean_filename,
-            sampler_settings_filename,
+            model=SmoothedPowerlawAndPeak,
+            posterior_regex=posterior_regex,
+            posterior_columns=posterior_columns,
+            seed=seed,
+            prior_filename=prior_filename,
+            selection_fn_filename=selection_fn_filename,
+            poisson_mean_filename=poisson_mean_filename,
+            sampler_settings_filename=sampler_settings_filename,
+            analysis_name="one_powerlaw_one_peak",
+            n_buckets=n_buckets,
+            threshold=threshold,
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            analysis_name="n_pls_m_gs",
+            where_fns=where_fns,
         )
 
     @property
@@ -76,7 +87,7 @@ class SmoothedPowerlawAndPeakNSage(NSage):
 
     @property
     def model_parameters(self) -> List[str]:
-        model_parameters: List[str] = [
+        model_parameters = [
             "alpha",
             "beta",
             "delta",
@@ -120,10 +131,15 @@ class SmoothedPowerlawAndPeakNSage(NSage):
         return model_parameters
 
 
-def main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = get_parser(parser)
+class SmoothedPowerlawAndPeakFSage(SmoothedPowerlawAndPeakCore, FlowMCBased):
+    likelihood_fn = poisson_likelihood
 
+
+class SmoothedPowerlawAndPeakNSage(SmoothedPowerlawAndPeakCore, NumpyroBased):
+    likelihood_fn = numpyro_poisson_likelihood
+
+
+def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(
         "--add-spin",
@@ -140,6 +156,42 @@ def main() -> None:
         action="store_true",
         help="Include redshift parameter in the model",
     )
+    return parser
+
+
+def f_main() -> None:
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = model_arg_parser(parser)
+    parser = sage_arg_parser(parser)
+    parser = flowMC_arg_parser(parser)
+
+    args = parser.parse_args()
+
+    SmoothedPowerlawAndPeakFSage(
+        has_spin=args.add_spin,
+        has_tilt=args.add_tilt,
+        has_redshift=args.add_redshift,
+        posterior_regex=args.posterior_regex,
+        posterior_columns=args.posterior_columns,
+        seed=args.seed,
+        prior_filename=args.prior_json,
+        selection_fn_filename=args.vt_json,
+        poisson_mean_filename=args.pmean_json,
+        sampler_settings_filename=args.sampler_config,
+        n_buckets=args.n_buckets,
+        threshold=args.threshold,
+        debug_nans=args.debug_nans,
+        profile_memory=args.profile_memory,
+        check_leaks=args.check_leaks,
+        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
+    ).run()
+
+
+def n_main() -> None:
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = model_arg_parser(parser)
+    parser = sage_arg_parser(parser)
+    parser = numpyro_arg_parser(parser)
 
     args = parser.parse_args()
 
@@ -154,10 +206,10 @@ def main() -> None:
         selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
+        n_buckets=args.n_buckets,
+        threshold=args.threshold,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-    ).run(
-        n_buckets=args.n_buckets,
-        threshold=args.threshold,
-    )
+        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
+    ).run()

@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import jax
 import numpyro
@@ -12,6 +12,7 @@ from jaxtyping import ArrayLike
 from numpyro._typing import DistributionLike
 from numpyro.distributions import Distribution
 
+from ..models.utils import JointDistribution
 from ..poisson_mean import PoissonMean
 
 
@@ -20,11 +21,18 @@ __all__ = ["numpyro_poisson_likelihood"]
 
 def numpyro_poisson_likelihood(
     dist_fn: Callable[..., DistributionLike],
+    priors: JointDistribution,
     variables: Dict[str, DistributionLike],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
     ERate_obj: PoissonMean,
+    where_fns: Optional[List[Callable[..., Array]]],
+    constants: Dict[str, Array],
 ) -> Callable[..., Array]:
+    del priors
+    del where_fns
+    del constants
+
     def likelihood_fn(
         data_group: List[Array],
         log_ref_priors_group: List[Array],

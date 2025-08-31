@@ -7,7 +7,7 @@ from typing import List
 
 from gwkokab.parameters import ECCENTRICITY, PRIMARY_MASS_SOURCE, SECONDARY_MASS_SOURCE
 from kokab.ecc_matters.common import EccentricityMattersModel
-from kokab.utils.f_monk import get_parser, Monk
+from kokab.utils.f_monk import Monk, monk_arg_parser
 
 
 class EccentricityMattersMonk(Monk):
@@ -22,7 +22,7 @@ class EccentricityMattersMonk(Monk):
 
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = get_parser(parser)
+    parser = monk_arg_parser(parser)
 
     args = parser.parse_args()
 

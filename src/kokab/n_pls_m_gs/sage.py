@@ -8,6 +8,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 from jaxtyping import Array
 
 import gwkokab
+from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import (
@@ -27,10 +28,12 @@ from gwkokab.parameters import (
     SIN_DECLINATION,
 )
 from kokab.utils.common import expand_arguments
-from kokab.utils.f_sage import get_parser, Sage
+from kokab.utils.flowMC_based import FlowMCBased
+from kokab.utils.numpyro_based import NumpyroBased
+from kokab.utils.sage import Sage, sage_arg_parser
 
 
-class NPowerlawMGaussianSage(Sage):
+class NPowerlawMGaussianCore(Sage):
     def __init__(
         self,
         N_pl: int,
@@ -314,10 +317,15 @@ class NPowerlawMGaussianSage(Sage):
         return extended_params
 
 
-def main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = get_parser(parser)
+class NPowerlawMGaussianFSage(NPowerlawMGaussianCore, FlowMCBased):
+    likelihood_fn = poisson_likelihood
 
+
+class NPowerlawMGaussianNSage(NPowerlawMGaussianCore, NumpyroBased):
+    likelihood_fn = numpyro_poisson_likelihood
+
+
+def parse(parser: ArgumentParser) -> ArgumentParser:
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(
         "--n-pl",
@@ -387,10 +395,54 @@ def main() -> None:
         action="store_true",
         help="Include detection_time parameter in the model",
     )
+    return parser
+
+
+def f_main() -> None:
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = sage_arg_parser(parser)
+    parser = parse(parser)
 
     args = parser.parse_args()
 
-    NPowerlawMGaussianSage(
+    NPowerlawMGaussianFSage(
+        N_pl=args.n_pl,
+        N_g=args.n_g,
+        has_beta_spin=args.add_beta_spin,
+        has_truncated_normal_spin=args.add_truncated_normal_spin,
+        has_tilt=args.add_tilt,
+        has_eccentricity=args.add_truncated_normal_eccentricity,
+        has_redshift=args.add_redshift,
+        has_cos_iota=args.add_cos_iota,
+        has_phi_12=args.add_phi_12,
+        has_polarization_angle=args.add_polarization_angle,
+        has_right_ascension=args.add_right_ascension,
+        has_sin_declination=args.add_sin_declination,
+        has_detection_time=args.add_detection_time,
+        posterior_regex=args.posterior_regex,
+        posterior_columns=args.posterior_columns,
+        seed=args.seed,
+        prior_filename=args.prior_json,
+        selection_fn_filename=args.vt_json,
+        poisson_mean_filename=args.pmean_json,
+        sampler_settings_filename=args.sampler_config,
+        n_buckets=args.n_buckets,
+        threshold=args.threshold,
+        debug_nans=args.debug_nans,
+        profile_memory=args.profile_memory,
+        check_leaks=args.check_leaks,
+        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
+    ).run()
+
+
+def n_main() -> None:
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = sage_arg_parser(parser)
+    parser = parse(parser)
+
+    args = parser.parse_args()
+
+    NPowerlawMGaussianNSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
         has_beta_spin=args.add_beta_spin,

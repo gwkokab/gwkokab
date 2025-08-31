@@ -3,13 +3,10 @@
 
 
 import json
-import os
 from collections.abc import Sequence
 from typing import Dict, List, Tuple, Union
 
-import arviz as az
 import numpy as np
-import numpyro
 import pandas as pd
 from numpyro import distributions as dist
 from numpyro._typing import DistributionLike
@@ -305,38 +302,3 @@ def ppd_ranges(
             int(_range[2]),
         )
     return _ranges
-
-
-def save_inference_data(mcmc: numpyro.infer.MCMC) -> None:
-    os.makedirs("numpyro_sampler_data", exist_ok=True)
-
-    inference_data = az.from_numpyro(mcmc)
-
-    header = list(inference_data.posterior.data_vars.keys())
-
-    posterior_samples = mcmc.get_samples()
-    np.savetxt(
-        "numpyro_sampler_data/samples.dat",
-        np.column_stack([posterior_samples[key] for key in header]),
-        header=" ".join(header),
-    )
-
-    summary = az.summary(inference_data)
-
-    pd.DataFrame(summary).to_json("posterior_summary.json", indent=4)
-
-    posterior_data = np.permute_dims(
-        np.asarray(inference_data.posterior.to_dataarray()),
-        (1, 2, 0),  # (variable, chain, draw) -> (chain, draw, variable)
-    )
-
-    n_chains = posterior_data.shape[0]
-
-    for i in range(n_chains):
-        np.savetxt(
-            f"numpyro_sampler_data/chain_{i}.dat",
-            posterior_data[i],
-            header=" ".join(header),
-            comments="#",
-            delimiter=" ",
-        )

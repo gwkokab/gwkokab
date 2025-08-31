@@ -25,7 +25,7 @@ from gwkokab.parameters import (
     SIN_DECLINATION,
 )
 from kokab.utils.common import expand_arguments
-from kokab.utils.f_monk import get_parser, Monk
+from kokab.utils.f_monk import Monk, monk_arg_parser
 
 
 class NPowerlawMGaussianMonk(Monk):
@@ -318,7 +318,7 @@ class NPowerlawMGaussianMonk(Monk):
 
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = get_parser(parser)
+    parser = monk_arg_parser(parser)
 
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(
