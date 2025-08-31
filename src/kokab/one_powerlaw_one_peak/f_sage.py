@@ -17,7 +17,7 @@ from gwkokab.parameters import (
     SECONDARY_MASS_SOURCE,
     SECONDARY_SPIN_MAGNITUDE,
 )
-from kokab.utils.sage import get_parser, Sage
+from kokab.utils.f_sage import get_parser, Sage
 
 
 class SmoothedPowerlawAndPeakSage(Sage):

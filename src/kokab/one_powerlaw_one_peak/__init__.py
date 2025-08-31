@@ -14,5 +14,3 @@
     - :code:`sage_one_powerlaw_one_peak`
     - :code:`ppd_one_powerlaw_one_peak`
 """
-
-from . import ppd as ppd, sage as sage

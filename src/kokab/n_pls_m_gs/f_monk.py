@@ -3,9 +3,7 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Callable, Dict, List, Optional, Tuple, Union
-
-from jaxtyping import Array
+from typing import Dict, List, Tuple, Union
 
 import gwkokab
 from gwkokab.models import NPowerlawMGaussian
@@ -27,10 +25,10 @@ from gwkokab.parameters import (
     SIN_DECLINATION,
 )
 from kokab.utils.common import expand_arguments
-from kokab.utils.sage import get_parser, Sage
+from kokab.utils.f_monk import get_parser, Monk
 
 
-class NPowerlawMGaussianSage(Sage):
+class NPowerlawMGaussianMonk(Monk):
     def __init__(
         self,
         N_pl: int,
@@ -46,16 +44,18 @@ class NPowerlawMGaussianSage(Sage):
         has_right_ascension: bool,
         has_sin_declination: bool,
         has_detection_time: bool,
-        where_fns: Optional[List[Callable[..., Array]]],
-        posterior_regex: str,
-        posterior_columns: List[str],
+        data_filename: str,
         seed: int,
         prior_filename: str,
         selection_fn_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
-        n_buckets: int,
-        threshold: float,
+        n_samples: int,
+        max_iter_mean: int,
+        max_iter_cov: int,
+        n_vi_steps: int,
+        learning_rate: float,
+        batch_size: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -79,21 +79,23 @@ class NPowerlawMGaussianSage(Sage):
         self.has_detection_time = has_detection_time
 
         super().__init__(
-            model=NPowerlawMGaussian,
-            posterior_regex=posterior_regex,
-            posterior_columns=posterior_columns,
-            seed=seed,
-            prior_filename=prior_filename,
-            selection_fn_filename=selection_fn_filename,
-            poisson_mean_filename=poisson_mean_filename,
-            sampler_settings_filename=sampler_settings_filename,
-            analysis_name="n_pls_m_gs",
-            n_buckets=n_buckets,
-            threshold=threshold,
+            NPowerlawMGaussian,
+            data_filename,
+            seed,
+            prior_filename,
+            selection_fn_filename,
+            poisson_mean_filename,
+            sampler_settings_filename,
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            where_fns=where_fns,
+            analysis_name="n_pls_m_gs",
+            n_samples=n_samples,
+            max_iter_mean=max_iter_mean,
+            max_iter_cov=max_iter_cov,
+            n_vi_steps=n_vi_steps,
+            learning_rate=learning_rate,
+            batch_size=batch_size,
         )
 
     @property
@@ -390,7 +392,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    NPowerlawMGaussianSage(
+    NPowerlawMGaussianMonk(
         N_pl=args.n_pl,
         N_g=args.n_g,
         has_beta_spin=args.add_beta_spin,
@@ -404,17 +406,19 @@ def main() -> None:
         has_right_ascension=args.add_right_ascension,
         has_sin_declination=args.add_sin_declination,
         has_detection_time=args.add_detection_time,
-        posterior_regex=args.posterior_regex,
-        posterior_columns=args.posterior_columns,
+        data_filename=args.data_filename,
         seed=args.seed,
         prior_filename=args.prior_json,
         selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
-        n_buckets=args.n_buckets,
-        threshold=args.threshold,
+        n_samples=args.n_samples,
+        max_iter_mean=args.max_iter_mean,
+        max_iter_cov=args.max_iter_cov,
+        n_vi_steps=args.n_vi_steps,
+        learning_rate=args.learning_rate,
+        batch_size=args.batch_size,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
     ).run()
