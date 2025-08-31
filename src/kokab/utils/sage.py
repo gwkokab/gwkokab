@@ -5,7 +5,7 @@
 from argparse import ArgumentParser
 from collections.abc import Callable
 from glob import glob
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import jax
 import numpy as np
@@ -38,7 +38,7 @@ class Sage(Guru):
                 Optional[List[Callable[..., Array]]],
                 Dict[str, Array],
             ],
-            Callable[[Array, Dict[str, Any]], Array],
+            Callable,
         ],
         model: Union[Distribution, Callable[..., Distribution]],
         where_fns: Optional[List[Callable[..., Array]]],
@@ -96,7 +96,7 @@ class Sage(Guru):
             Name of the analysis, by default ""
         """
         assert all(letter.isalpha() or letter == "_" for letter in analysis_name), (
-            "Analysis name must be alphabetic characters only."
+            "Analysis name must contain only letters and underscores."
         )
         self.likelihood_fn = likelihood_fn
         self.n_buckets = n_buckets
@@ -107,7 +107,7 @@ class Sage(Guru):
         self.set_rng_key(seed=seed)
 
         super().__init__(
-            analysis_name="sage_" + (analysis_name or model.__name__),
+            analysis_name=analysis_name,
             check_leaks=check_leaks,
             debug_nans=debug_nans,
             model=model,
