@@ -15,7 +15,7 @@ from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import analytical_likelihood
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.tools import error_if, warn_if
 from kokab.utils.poisson_mean_parser import read_pmean
 
 from .flowMC_based import FlowMCBased
@@ -172,6 +172,11 @@ class Monk(FlowMCBased):
             self.parameters,
             self.poisson_mean_filename,
             self.selection_fn_filename,
+        )
+
+        warn_if(
+            self.batch_size > self.n_samples,
+            msg="Batch size is greater than number of samples",
         )
 
         logpdf = analytical_likelihood(
