@@ -279,6 +279,7 @@ def main() -> None:
     )
 
     error_magazine.register(
+        (Parameters.PRIMARY_MASS_SOURCE.value, Parameters.SECONDARY_MASS_SOURCE.value),
         lambda x, size, key: banana_error_m1_m2(
             x,
             size,
