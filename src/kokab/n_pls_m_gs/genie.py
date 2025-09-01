@@ -273,7 +273,10 @@ def main() -> None:
         ("mmin_pl", N_pl),
     ]
 
-    parameters_name: Tuple[str, ...] = (Parameters.PRIMARY_MASS_SOURCE.value,)
+    parameters_name: Tuple[str, ...] = (
+        Parameters.PRIMARY_MASS_SOURCE.value,
+        Parameters.SECONDARY_MASS_SOURCE.value,
+    )
 
     error_magazine.register(
         lambda x, size, key: banana_error_m1_m2(
