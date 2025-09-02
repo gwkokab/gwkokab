@@ -8,7 +8,7 @@ from typing import List
 from gwkokab.inference import analytical_likelihood
 from gwkokab.parameters import Parameters
 from kokab.ecc_matters.common import EccentricityMattersModel
-from kokab.utils.flowMC_based import FlowMCBased
+from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.monk import Monk, monk_arg_parser
 
 
@@ -33,6 +33,7 @@ class EccentricityMattersFMonk(EccentricityMattersCore, FlowMCBased):
 def f_main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = monk_arg_parser(parser)
+    parser = flowMC_arg_parser(parser)
 
     args = parser.parse_args()
 

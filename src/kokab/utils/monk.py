@@ -17,7 +17,7 @@ from numpyro.distributions.distribution import enable_validation
 from gwkokab.utils.tools import error_if, warn_if
 from kokab.utils.poisson_mean_parser import read_pmean
 
-from .guru import Guru, guru_arg_parser as guru_parser
+from .guru import Guru
 
 
 def _read_mean_covariances(filename: str) -> Tuple[List[Array], List[Array]]:
@@ -246,8 +246,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
     # Global enable validation for all distributions
     enable_validation()
-
-    parser = guru_parser(parser)
 
     monk_group = parser.add_argument_group("Monk Options")
     monk_group.add_argument(
