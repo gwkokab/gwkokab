@@ -3,17 +3,19 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union
 
 import gwkokab
+from gwkokab.inference import analytical_likelihood
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import Parameters
 from kokab.utils.common import expand_arguments
-from kokab.utils.f_monk import Monk, monk_arg_parser
+from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.utils.monk import Monk, monk_arg_parser
 
 
-class NPowerlawMGaussianMonk(Monk):
+class NPowerlawMGaussianCore(Monk):
     def __init__(
         self,
         N_pl: int,
@@ -29,6 +31,7 @@ class NPowerlawMGaussianMonk(Monk):
         has_right_ascension: bool,
         has_sin_declination: bool,
         has_detection_time: bool,
+        likelihood_fn: Callable[..., Callable],
         data_filename: str,
         seed: int,
         prior_filename: str,
@@ -41,6 +44,9 @@ class NPowerlawMGaussianMonk(Monk):
         n_vi_steps: int,
         learning_rate: float,
         batch_size: int,
+        minimum_mc_error: float,
+        n_checkpoints: int,
+        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -64,6 +70,7 @@ class NPowerlawMGaussianMonk(Monk):
         self.has_detection_time = has_detection_time
 
         super().__init__(
+            likelihood_fn,
             NPowerlawMGaussian,
             data_filename,
             seed,
@@ -74,13 +81,16 @@ class NPowerlawMGaussianMonk(Monk):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            analysis_name="n_pls_m_gs",
+            analysis_name="f_monk_n_pls_m_gs",
             n_samples=n_samples,
             max_iter_mean=max_iter_mean,
             max_iter_cov=max_iter_cov,
             n_vi_steps=n_vi_steps,
             learning_rate=learning_rate,
             batch_size=batch_size,
+            minimum_mc_error=minimum_mc_error,
+            n_checkpoints=n_checkpoints,
+            n_max_steps=n_max_steps,
         )
 
     @property
@@ -304,10 +314,11 @@ class NPowerlawMGaussianMonk(Monk):
         return extended_params
 
 
-def main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = monk_arg_parser(parser)
+class NPowerlawMGaussianFMonk(NPowerlawMGaussianCore, FlowMCBased):
+    pass
 
+
+def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(
         "--n-pl",
@@ -377,10 +388,18 @@ def main() -> None:
         action="store_true",
         help="Include detection_time parameter in the model",
     )
+    return parser
+
+
+def f_main() -> None:
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = model_arg_parser(parser)
+    parser = monk_arg_parser(parser)
+    parser = flowMC_arg_parser(parser)
 
     args = parser.parse_args()
 
-    NPowerlawMGaussianMonk(
+    NPowerlawMGaussianFMonk(
         N_pl=args.n_pl,
         N_g=args.n_g,
         has_beta_spin=args.add_beta_spin,
@@ -394,6 +413,7 @@ def main() -> None:
         has_right_ascension=args.add_right_ascension,
         has_sin_declination=args.add_sin_declination,
         has_detection_time=args.add_detection_time,
+        likelihood_fn=analytical_likelihood,
         data_filename=args.data_filename,
         seed=args.seed,
         prior_filename=args.prior_json,
@@ -406,6 +426,9 @@ def main() -> None:
         n_vi_steps=args.n_vi_steps,
         learning_rate=args.learning_rate,
         batch_size=args.batch_size,
+        minimum_mc_error=args.minimum_mc_error,
+        n_checkpoints=args.n_checkpoints,
+        n_max_steps=args.n_max_steps,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,

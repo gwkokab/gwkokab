@@ -5,12 +5,14 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
+from gwkokab.inference import analytical_likelihood
 from gwkokab.parameters import Parameters
 from kokab.ecc_matters.common import EccentricityMattersModel
-from kokab.utils.f_monk import Monk, monk_arg_parser
+from kokab.utils.flowMC_based import FlowMCBased
+from kokab.utils.monk import Monk, monk_arg_parser
 
 
-class EccentricityMattersMonk(Monk):
+class EccentricityMattersCore(Monk):
     @property
     def parameters(self) -> List[str]:
         return [
@@ -24,13 +26,18 @@ class EccentricityMattersMonk(Monk):
         return ["log_rate", "alpha_m", "mmin", "mmax", "loc", "scale", "low", "high"]
 
 
-def main() -> None:
+class EccentricityMattersFMonk(EccentricityMattersCore, FlowMCBased):
+    pass
+
+
+def f_main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = monk_arg_parser(parser)
 
     args = parser.parse_args()
 
-    EccentricityMattersMonk(
+    EccentricityMattersFMonk(
+        likelihood_fn=analytical_likelihood,
         model=EccentricityMattersModel,
         data_filename=args.data_filename,
         seed=args.seed,
@@ -41,11 +48,14 @@ def main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        analysis_name="ecc_matters",
+        analysis_name="f_monk_ecc_matters",
         n_samples=args.n_samples,
         max_iter_mean=args.max_iter_mean,
         max_iter_cov=args.max_iter_cov,
         n_vi_steps=args.n_vi_steps,
         learning_rate=args.learning_rate,
         batch_size=args.batch_size,
+        minimum_mc_error=args.minimum_mc_error,
+        n_checkpoints=args.n_checkpoints,
+        n_max_steps=args.n_max_steps,
     ).run()

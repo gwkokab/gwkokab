@@ -14,12 +14,10 @@ from loguru import logger
 from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.inference import analytical_likelihood
 from gwkokab.utils.tools import error_if, warn_if
 from kokab.utils.poisson_mean_parser import read_pmean
 
-from .flowMC_based import FlowMCBased
-from .guru import guru_arg_parser as guru_parser
+from .guru import Guru, guru_arg_parser as guru_parser
 
 
 def _read_mean_covariances(filename: str) -> Tuple[List[Array], List[Array]]:
@@ -73,9 +71,10 @@ def _read_mean_covariances(filename: str) -> Tuple[List[Array], List[Array]]:
     return list_of_means, list_of_covariances
 
 
-class Monk(FlowMCBased):
+class Monk(Guru):
     def __init__(
         self,
+        likelihood_fn: Callable[..., Callable],
         model: Union[Distribution, Callable[..., Distribution]],
         data_filename: str,
         seed: int,
@@ -89,15 +88,19 @@ class Monk(FlowMCBased):
         n_vi_steps: int,
         learning_rate: float,
         batch_size: int,
+        minimum_mc_error: float,
+        n_checkpoints: int,
+        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
         analysis_name: str = "",
     ) -> None:
         """
-
         Parameters
         ----------
+        likelihood_fn : Callable[..., Callable]
+            The likelihood function to be used in the analysis.
         model : Union[Distribution, Callable[..., Distribution]]
             model to be used in the Monk class. It can be a Distribution or a callable
             that returns a Distribution.
@@ -111,8 +114,26 @@ class Monk(FlowMCBased):
             path to the JSON file containing the selection function.
         poisson_mean_filename : str
             path to the JSON file containing the Poisson mean configuration.
-        flowMC_settings_filename : str
-            path to the JSON file containing the flowMC settings.
+        sampler_settings_filename : str
+            path to the JSON file containing the sampler settings.
+        n_samples : int
+            number of samples to draw.
+        max_iter_mean : int
+            maximum number of iterations for moment match mean.
+        max_iter_cov : int
+            maximum number of iterations for moment match covariance.
+        n_vi_steps : int
+            number of variational inference steps.
+        learning_rate : float
+            learning rate for the Adam optimizer for variational inference step.
+        batch_size : int
+            batch size for the :func:`~jax.lax.map` function used inside the while loop.
+        minimum_mc_error : float
+            minimum Monte Carlo error.
+        n_checkpoints : int
+            number of checkpoints of while loop body.
+        n_max_steps : int
+            Max steps to go for while loop.
         debug_nans : bool, optional
             If True, checks for NaNs in each computation. See details in the
             [documentation](https://jax.readthedocs.io/en/latest/_autosummary/jax.debug_nans.html#jax.debug_nans),
@@ -129,6 +150,7 @@ class Monk(FlowMCBased):
         assert all(letter.isalpha() or letter == "_" for letter in analysis_name), (
             "Analysis name must be alphabetic characters only."
         )
+        self.likelihood_fn = likelihood_fn
         self.data_filename = data_filename
         self.n_samples = n_samples
         self.max_iter_mean = max_iter_mean
@@ -136,10 +158,13 @@ class Monk(FlowMCBased):
         self.n_vi_steps = n_vi_steps
         self.learning_rate = learning_rate
         self.batch_size = batch_size
+        self.minimum_mc_error = minimum_mc_error
+        self.n_checkpoints = n_checkpoints
+        self.n_max_steps = n_max_steps
         self.set_rng_key(seed=seed)
 
         super().__init__(
-            analysis_name=analysis_name or model.__name__,
+            analysis_name=analysis_name,
             check_leaks=check_leaks,
             debug_nans=debug_nans,
             model=model,
@@ -179,7 +204,7 @@ class Monk(FlowMCBased):
             msg="Batch size is greater than number of samples",
         )
 
-        logpdf = analytical_likelihood(
+        logpdf = self.likelihood_fn(
             dist_fn,
             priors,
             variables_index,
@@ -192,6 +217,9 @@ class Monk(FlowMCBased):
             n_vi_steps=self.n_vi_steps,
             learning_rate=self.learning_rate,
             batch_size=self.batch_size,
+            minimum_mc_error=self.minimum_mc_error,
+            n_checkpoints=self.n_checkpoints,
+            n_max_steps=self.n_max_steps,
         )
 
         self.driver(
@@ -233,19 +261,19 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     likelihood_group.add_argument(
         "--n-samples",
         help="Number of samples to draw from the multivariate normal distribution for each "
-        "event to compute the likelihood, by default 10_000",
-        default=10_000,
+        "event to compute the likelihood.",
+        default=100,
         type=int,
     )
     likelihood_group.add_argument(
         "--max-iter-mean",
-        help="Maximum number of iterations for the fitting process of the mean, by default 10",
+        help="Maximum number of iterations for the fitting process of the mean.",
         default=10,
         type=int,
     )
     likelihood_group.add_argument(
         "--max-iter-cov",
-        help="Maximum number of iterations for the fitting process of the covariance, by default 3",
+        help="Maximum number of iterations for the fitting process of the covariance.",
         default=3,
         type=int,
     )
@@ -257,14 +285,32 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     likelihood_group.add_argument(
         "--learning-rate",
-        help="Learning rate for the variational inference, by default 0.01",
+        help="Learning rate for the variational inference.",
         default=0.01,
         type=float,
     )
     likelihood_group.add_argument(
         "--batch-size",
-        help="Batch size for the `jax.lax.map` used in the likelihood computation, by default 1000",
-        default=1_000,
+        help="Batch size for the `jax.lax.map` used in the likelihood computation.",
+        default=10,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--minimum-mc-error",
+        help="Minimum Monte Carlo error for the likelihood computation.",
+        default=0.01,
+        type=float,
+    )
+    likelihood_group.add_argument(
+        "--n-checkpoints",
+        help="Number of checkpoints to save during the optimization process.",
+        default=10,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--n-max-steps",
+        help="Maximum number of steps until minimum Monte Carlo error is reached.",
+        default=10,
         type=int,
     )
 
