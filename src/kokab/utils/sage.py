@@ -208,7 +208,7 @@ class Sage(Guru):
                 "log_ref_priors_group": log_ref_priors_group,
                 "masks_group": masks_group,
             },
-            labels=sorted(variables_index.keys()),
+            labels=sorted(variables.keys()),
         )
 
 
