@@ -448,9 +448,7 @@ def SmoothedPowerlawAndPeak(
 
         component_distributions.append(powerlaw_z)
 
-    if len(component_distributions) == 1:
-        component_distributions = component_distributions[0]
-    else:
+    if len(component_distributions) > 1:
         component_distributions = JointDistribution(
             *component_distributions, validate_args=validate_args
         )
