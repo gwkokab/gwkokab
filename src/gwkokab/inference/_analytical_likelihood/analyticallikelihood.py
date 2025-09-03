@@ -147,37 +147,39 @@ def analytical_likelihood(
             ),
             axis=0,
         )
+        if max_iter_mean > 0:
+            rng_key, subkey = jrd.split(rng_key)
+            moment_matching_mean = moment_match_mean(
+                subkey,
+                moment_matching_mean,
+                moment_matching_cov,
+                normalized_weights_fn,
+                max_iter_mean,
+                100,
+            )
 
-        rng_key, subkey = jrd.split(rng_key)
-        moment_matching_mean = moment_match_mean(
-            subkey,
-            moment_matching_mean,
-            moment_matching_cov,
-            normalized_weights_fn,
-            max_iter_mean,
-            100,
-        )
+        if max_iter_cov > 0:
+            rng_key, subkey = jrd.split(rng_key)
+            moment_matching_cov = moment_match_cov(
+                subkey,
+                moment_matching_mean,
+                moment_matching_cov,
+                normalized_weights_fn,
+                max_iter_cov,
+                100,
+            )
 
-        rng_key, subkey = jrd.split(rng_key)
-        moment_matching_cov = moment_match_cov(
-            subkey,
-            moment_matching_mean,
-            moment_matching_cov,
-            normalized_weights_fn,
-            max_iter_cov,
-            100,
-        )
-
-        rng_key, subkey = jrd.split(rng_key)
-        vi_mean = match_mean_by_variational_inference(
-            subkey,
-            moment_matching_mean,
-            moment_matching_cov,
-            model_instance,
-            learning_rate,
-            n_vi_steps,
-            100,
-        )
+        if n_vi_steps > 0:
+            rng_key, subkey = jrd.split(rng_key)
+            vi_mean = match_mean_by_variational_inference(
+                subkey,
+                moment_matching_mean,
+                moment_matching_cov,
+                model_instance,
+                learning_rate,
+                n_vi_steps,
+                100,
+            )
 
         fit_mean = jnp.where(jnp.isnan(vi_mean), moment_matching_mean, vi_mean)
         fit_cov = moment_matching_cov
