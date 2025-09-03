@@ -177,7 +177,7 @@ class Monk(Guru):
 
     def run(self) -> None:
         """Runs the Monk analysis."""
-        _, dist_fn, priors, _, variables_index = self.bake_model()
+        _, dist_fn, priors, variables, variables_index = self.bake_model()
 
         list_of_means, list_of_covariances = _read_mean_covariances(self.data_filename)
 
@@ -226,7 +226,7 @@ class Monk(Guru):
             logpdf=logpdf,
             priors=priors,
             data={"mean_stack": mean_stack, "cov_stack": cov_stack},
-            labels=sorted(variables_index.keys()),
+            labels=sorted(variables.keys()),
         )
 
 
