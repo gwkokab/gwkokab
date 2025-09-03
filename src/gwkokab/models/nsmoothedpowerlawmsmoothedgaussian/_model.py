@@ -456,6 +456,6 @@ def SmoothedPowerlawAndPeak(
     return ScaledMixture(
         log_scales=params["log_rate"],
         component_distributions=component_distributions,
-        support=component_distributions.support,  # type: ignore
+        support=component_distributions[0].support,  # type: ignore
         validate_args=validate_args,
     )
