@@ -449,9 +449,9 @@ def SmoothedPowerlawAndPeak(
         component_distributions.append(powerlaw_z)
 
     if len(component_distributions) > 1:
-        component_distributions = JointDistribution(
-            *component_distributions, validate_args=validate_args
-        )
+        component_distributions = [
+            JointDistribution(*component_distributions, validate_args=validate_args)
+        ]
 
     return ScaledMixture(
         log_scales=params["log_rate"],
