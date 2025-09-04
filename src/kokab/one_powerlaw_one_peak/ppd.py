@@ -11,18 +11,20 @@ from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro._typing import DistributionLike
 
-from gwkokab.models import (
-    SmoothedGaussianPrimaryMassRatio,
-    SmoothedPowerlawAndPeak,
-    SmoothedPowerlawPrimaryMassRatio,
-)
-from gwkokab.models.constraints import any_constraint
+from gwkokab.models import SmoothedPowerlawAndPeak, SmoothedTwoComponentPrimaryMassRatio
 from gwkokab.models.redshift import PowerlawRedshift
 from gwkokab.models.spin import (
     BetaFromMeanVar,
     IndependentSpinOrientationGaussianIsotropic,
 )
-from gwkokab.models.utils import JointDistribution, ScaledMixture
+from gwkokab.models.transformations import (
+    PrimaryMassAndMassRatioToComponentMassesTransform,
+)
+from gwkokab.models.utils import (
+    ExtendedSupportTransformedDistribution,
+    JointDistribution,
+    ScaledMixture,
+)
 from gwkokab.parameters import Parameters
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
@@ -36,71 +38,43 @@ def SmoothedPowerlawAndPeak_raw(
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
-    smoothed_powerlaw = SmoothedPowerlawPrimaryMassRatio(
-        alpha=params["alpha"],
-        beta=params["beta"],
-        mmin=params["mmin"],
-        mmax=params["mmax"],
-        delta=params["delta"],
-        validate_args=validate_args,
-    )
-    smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
-        loc=params["loc"],
-        scale=params["scale"],
-        beta=params["beta"],
-        mmin=params["mmin"],
-        mmax=params["mmax"],
-        delta=params["delta"],
+    smoothing_model = ExtendedSupportTransformedDistribution(
+        SmoothedTwoComponentPrimaryMassRatio(
+            alpha=params["alpha"],
+            beta=params["beta"],
+            delta=params["delta"],
+            lambda_peak=params["lambda_peak"],
+            loc=params["loc"],
+            mmax=params["mmax"],
+            mmin=params["mmin"],
+            scale=params["scale"],
+            validate_args=validate_args,
+        ),
+        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
         validate_args=validate_args,
     )
 
-    component_distribution_pl = [smoothed_powerlaw]
-    component_distribution_g = [smoothed_gaussian]
+    component_distributions = [smoothing_model]
 
     if use_spin:
-        chi1_dist_pl = BetaFromMeanVar(
-            mean=params["chi1_mean_pl"],
-            variance=params["chi1_variance_pl"],
+        chi1_dist = BetaFromMeanVar(
+            mean=params["chi_mean"],
+            variance=params["chi_variance"],
             validate_args=validate_args,
         )
-
-        chi2_dist_pl = BetaFromMeanVar(
-            mean=params["chi2_mean_pl"],
-            variance=params["chi2_variance_pl"],
-            validate_args=validate_args,
-        )
-
-        chi1_dist_g = BetaFromMeanVar(
-            mean=params["chi1_mean_g"],
-            variance=params["chi1_variance_g"],
-            validate_args=validate_args,
-        )
-
-        chi2_dist_g = BetaFromMeanVar(
-            mean=params["chi2_mean_g"],
-            variance=params["chi2_variance_g"],
-            validate_args=validate_args,
-        )
-
-        component_distribution_pl.extend([chi1_dist_pl, chi2_dist_pl])
-        component_distribution_g.extend([chi1_dist_g, chi2_dist_g])
+        chi2_dist = chi1_dist
+        component_distributions.append(chi1_dist)
+        component_distributions.append(chi2_dist)
 
     if use_tilt:
-        tilt1_dist_pl = IndependentSpinOrientationGaussianIsotropic(
-            zeta=params["cos_tilt_zeta_pl"],
-            scale1=params["cos_tilt1_scale_pl"],
-            scale2=params["cos_tilt2_scale_pl"],
-            validate_args=validate_args,
-        )
-        tilt1_dist_g = IndependentSpinOrientationGaussianIsotropic(
-            zeta=params["cos_tilt_zeta_g"],
-            scale1=params["cos_tilt1_scale_g"],
-            scale2=params["cos_tilt2_scale_g"],
+        tilt_dist = IndependentSpinOrientationGaussianIsotropic(
+            zeta=params["cos_tilt_zeta"],
+            scale1=params["cos_tilt_scale"],
+            scale2=params["cos_tilt_scale"],
             validate_args=validate_args,
         )
 
-        component_distribution_pl.append(tilt1_dist_pl)
-        component_distribution_g.append(tilt1_dist_g)
+        component_distributions.append(tilt_dist)
 
     if use_redshift:
         z_max = params["z_max"]
@@ -109,37 +83,17 @@ def SmoothedPowerlawAndPeak_raw(
             z_max=z_max, kappa=kappa, validate_args=validate_args
         )
 
-        component_distribution_pl.append(powerlaw_z)
-        component_distribution_g.append(powerlaw_z)
+        component_distributions.append(powerlaw_z)
 
-    if len(component_distribution_pl) == 1:
-        component_distribution_pl = component_distribution_pl[0]
-    else:
-        component_distribution_pl = JointDistribution(
-            *component_distribution_pl, validate_args=validate_args
-        )
+    if len(component_distributions) > 1:
+        component_distributions = [
+            JointDistribution(*component_distributions, validate_args=validate_args)
+        ]
 
-    if len(component_distribution_g) == 1:
-        component_distribution_g = component_distribution_g[0]
-    else:
-        component_distribution_g = JointDistribution(
-            *component_distribution_g, validate_args=validate_args
-        )
     return ScaledMixture(
-        log_scales=jnp.stack(
-            [
-                params["log_rate"] + jnp.log1p(-params["lambda_peak"]),  # type: ignore[arg-type, operator]
-                params["log_rate"] + jnp.log(params["lambda_peak"]),  # type: ignore[arg-type]
-            ],
-            axis=-1,
-        ),
-        component_distributions=[component_distribution_pl, component_distribution_g],
-        support=any_constraint(
-            [
-                component_distribution_pl.support,  # type: ignore[attr-defined]
-                component_distribution_g.support,  # type: ignore[attr-defined]
-            ]
-        ),
+        log_scales=jnp.asarray([params["log_rate"]]),
+        component_distributions=component_distributions,
+        support=component_distributions[0].support,  # type: ignore
         validate_args=validate_args,
     )
 
