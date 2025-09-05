@@ -32,7 +32,8 @@ jobs:
           - ubuntu-latest
         python-version:
           - "3.11"
-          # - "3.12" # closing until https://git.ligo.org/kipp/python-ligo-lw/-/issues/33 is resolved
+          - "3.12"
+          - "3.13"
     env:
       XLA_FLAGS: "--xla_force_host_platform_device_count=8"
       JAX_TRACEBACK_FILTERING: "off"
