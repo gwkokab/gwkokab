@@ -9,7 +9,7 @@ from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
-from gwkokab.models import SmoothedPowerlawAndPeak
+from gwkokab.models import PowerlawPeak
 from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
@@ -18,7 +18,7 @@ from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser
 
 
-class SmoothedPowerlawAndPeakCore(Sage):
+class PowerlawPeakCore(Sage):
     def __init__(
         self,
         has_spin: bool,
@@ -57,7 +57,7 @@ class SmoothedPowerlawAndPeakCore(Sage):
 
         super().__init__(
             likelihood_fn=likelihood_fn,
-            model=SmoothedPowerlawAndPeak,
+            model=PowerlawPeak,
             posterior_regex=posterior_regex,
             posterior_columns=posterior_columns,
             seed=seed,
@@ -123,11 +123,11 @@ class SmoothedPowerlawAndPeakCore(Sage):
         return model_parameters
 
 
-class SmoothedPowerlawAndPeakFSage(SmoothedPowerlawAndPeakCore, FlowMCBased):
+class PowerlawPeakFSage(PowerlawPeakCore, FlowMCBased):
     pass
 
 
-class SmoothedPowerlawAndPeakNSage(SmoothedPowerlawAndPeakCore, NumpyroBased):
+class PowerlawPeakNSage(PowerlawPeakCore, NumpyroBased):
     pass
 
 
@@ -159,7 +159,7 @@ def f_main() -> None:
 
     args = parser.parse_args()
 
-    SmoothedPowerlawAndPeakFSage(
+    PowerlawPeakFSage(
         has_spin=args.add_spin,
         has_tilt=args.add_tilt,
         has_redshift=args.add_redshift,
@@ -188,7 +188,7 @@ def n_main() -> None:
 
     args = parser.parse_args()
 
-    SmoothedPowerlawAndPeakNSage(
+    PowerlawPeakNSage(
         has_spin=args.add_spin,
         has_tilt=args.add_tilt,
         has_redshift=args.add_redshift,

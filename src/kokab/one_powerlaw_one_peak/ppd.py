@@ -14,7 +14,7 @@ from numpyro._typing import DistributionLike
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from gwkokab.models import SmoothedPowerlawAndPeak, SmoothedTwoComponentPrimaryMassRatio
+from gwkokab.models import PowerlawPeak, SmoothedTwoComponentPrimaryMassRatio
 from gwkokab.models.spin import (
     BetaFromMeanVar,
     IndependentSpinOrientationGaussianIsotropic,
@@ -77,7 +77,7 @@ class SimpleRedshiftPowerlaw(Distribution):
         return self.kappa * jnp.log1p(value)
 
 
-def SmoothedPowerlawAndPeak_raw(
+def PowerlawPeak_raw(
     use_spin: bool = False,
     use_redshift: bool = False,
     use_tilt: bool = False,
@@ -162,7 +162,7 @@ def make_parser() -> ArgumentParser:
 
 def model(raw: bool, **params) -> DistributionLike:
     validate_args = params.pop("validate_args", True)
-    _model = SmoothedPowerlawAndPeak_raw if raw else SmoothedPowerlawAndPeak
+    _model = PowerlawPeak_raw if raw else PowerlawPeak
     return _model(**params, validate_args=validate_args)
 
 
