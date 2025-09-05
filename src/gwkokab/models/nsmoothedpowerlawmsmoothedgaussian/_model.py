@@ -401,6 +401,8 @@ def SmoothedPowerlawAndPeak(
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
+    # NOTE: If you change something here, please also change in
+    # kokab/one_powerlaw_one_peak/ppd.py
     smoothing_model = ExtendedSupportTransformedDistribution(
         SmoothedTwoComponentPrimaryMassRatio(
             alpha=params["alpha"],
