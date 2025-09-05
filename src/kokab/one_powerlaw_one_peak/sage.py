@@ -112,30 +112,10 @@ class SmoothedPowerlawAndPeakCore(Sage):
         ]
 
         if self.has_spin:
-            model_parameters.extend(
-                [
-                    "chi1_mean_g",
-                    "chi1_mean_pl",
-                    "chi1_variance_g",
-                    "chi1_variance_pl",
-                    "chi2_mean_g",
-                    "chi2_mean_pl",
-                    "chi2_variance_g",
-                    "chi2_variance_pl",
-                ]
-            )
+            model_parameters.extend(["chi_mean", "chi_variance"])
 
         if self.has_tilt:
-            model_parameters.extend(
-                [
-                    "cos_tilt_zeta_g",
-                    "cos_tilt_zeta_pl",
-                    "cos_tilt1_scale_g",
-                    "cos_tilt1_scale_pl",
-                    "cos_tilt2_scale_g",
-                    "cos_tilt2_scale_pl",
-                ]
-            )
+            model_parameters.extend(["cos_tilt_zeta", "cos_tilt_scale"])
 
         if self.has_redshift:
             model_parameters.extend(["kappa", "z_max"])
