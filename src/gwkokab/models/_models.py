@@ -1013,7 +1013,7 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
         # Compute the normalization constant for mass ratio distribution
 
         self._m1s = jnp.linspace(mmin, mmax, 1000, dtype=jnp.result_type(float))
-        _qs = jnp.linspace(0.01, 1.0, 500, dtype=jnp.result_type(float))
+        _qs = jnp.linspace(0.005, 1.0, 500, dtype=jnp.result_type(float))
         _m1qs_grid = jnp.stack(jnp.meshgrid(self._m1s, _qs, indexing="ij"), axis=-1)
 
         _prob_q = jnp.exp(self._log_prob_q(jnp.expand_dims(_m1qs_grid, axis=-2)))
