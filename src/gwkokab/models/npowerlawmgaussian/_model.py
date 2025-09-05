@@ -10,6 +10,11 @@ from numpyro.distributions import Distribution
 
 from ..constraints import any_constraint
 from ..utils import (
+    ExtendedSupportTransformedDistribution,
+    JointDistribution,
+    ScaledMixture,
+)
+from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
     create_independent_spin_orientation_gaussian_isotropic,
@@ -17,9 +22,6 @@ from ..utils import (
     create_powerlaws,
     create_truncated_normal_distributions,
     create_uniform_distributions,
-    ExtendedSupportTransformedDistribution,
-    JointDistribution,
-    ScaledMixture,
 )
 
 

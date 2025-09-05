@@ -25,14 +25,9 @@ from scipy.sparse import csr_matrix
 
 from gwkokab.models import (
     BetaFromMeanVar,
-    ChiEffMassRatioCorrelated,
     NPowerlawMGaussian,
-    NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPrimaryMassRatio,
     PowerlawRedshift,
-    SmoothedGaussianPrimaryMassRatio,
-    SmoothedPowerlawAndPeak,
-    SmoothedPowerlawPrimaryMassRatio,
     Wysocki2019MassModel,
 )
 from gwkokab.models.constraints import (
@@ -212,83 +207,6 @@ generic_npmg = {
 
 CONTINUOUS = [
     (
-        ChiEffMassRatioCorrelated,
-        {
-            "lambda_peak": 0.7,
-            "lamb": 3.1,
-            "loc_m": 20.0,
-            "scale_m": 3.0,
-            "mmin": 10.0,
-            "mmax": 50.0,
-            "gamma": 3.2,
-            "alpha": 3.14,
-            "beta": 1.2,
-            "mu_eff_0": 0.0,
-            "log10_sigma_eff_0": 0.5,
-            "kappa": 2.7,
-        },
-    ),
-    (
-        SmoothedGaussianPrimaryMassRatio,
-        {
-            "loc": 70.0,
-            "scale": 2.1,
-            "beta": 1.0,
-            "mmin": 10.0,
-            "mmax": 100.0,
-            "delta": 4.1,
-        },
-    ),
-    (
-        SmoothedGaussianPrimaryMassRatio,
-        {
-            "loc": 80.0,
-            "scale": 1.1,
-            "beta": -8.0,
-            "mmin": 70.0,
-            "mmax": 100.0,
-            "delta": 3.14,
-        },
-    ),
-    (
-        SmoothedGaussianPrimaryMassRatio,
-        {
-            "loc": 20.0,
-            "scale": 3.14,
-            "beta": 9.0,
-            "mmin": 5.0,
-            "mmax": 100.0,
-            "delta": 0.8,
-        },
-    ),
-    (
-        SmoothedGaussianPrimaryMassRatio,
-        {
-            "loc": 65.0,
-            "scale": 3.14,
-            "beta": 3.0,
-            "mmin": 50.0,
-            "mmax": 100.0,
-            "delta": 7.4,
-        },
-    ),
-    (
-        SmoothedPowerlawPrimaryMassRatio,
-        {"alpha": -1.0, "beta": 1.0, "mmin": 10.0, "mmax": 50.0, "delta": 4.1},
-    ),
-    (
-        SmoothedPowerlawPrimaryMassRatio,
-        {"alpha": -0.1, "beta": -8.0, "mmin": 70.0, "mmax": 100.0, "delta": 3.14},
-    ),
-    (
-        SmoothedPowerlawPrimaryMassRatio,
-        {"alpha": -1.4, "beta": 9.0, "mmin": 5.0, "mmax": 100.0, "delta": 0.8},
-    ),
-    (
-        SmoothedPowerlawPrimaryMassRatio,
-        {"alpha": 2.0, "beta": 3.0, "mmin": 50.0, "mmax": 70.0, "delta": 7.4},
-    ),
-    (
         PowerlawPrimaryMassRatio,
         {"alpha": -1.0, "beta": 1.0, "mmin": 10.0, "mmax": 50.0},
     ),
@@ -404,159 +322,6 @@ CONTINUOUS = [
     (PowerlawRedshift, {"kappa": 1.0, "z_max": 2.3}),
     (PowerlawRedshift, {"kappa": 2.7, "z_max": 1.0}),
     (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
-    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2) #########
-    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 0, **generic_nspmsg}),
-    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 0, "N_g": 1, **generic_nspmsg}),
-    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 1, **generic_nspmsg}),
-    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 1, "N_g": 2, **generic_nspmsg}),
-    (NSmoothedPowerlawMSmoothedGaussian, {"N_pl": 2, "N_g": 2, **generic_nspmsg}),
-    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2, chi1, chi2) #########
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 0, "use_spin": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 0, "N_g": 1, "use_spin": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 1, "use_spin": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 2, "use_spin": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 2, "N_g": 2, "use_spin": True, **generic_nspmsg},
-    ),
-    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2, cos_tilt_1, cos_tilt_2) #########
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 0, "use_tilt": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 0, "N_g": 1, "use_tilt": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 1, "use_tilt": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 2, "use_tilt": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 2, "N_g": 2, "use_tilt": True, **generic_nspmsg},
-    ),
-    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2, ecc) #########
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 0, "use_eccentricity": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 0, "N_g": 1, "use_eccentricity": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 1, "use_eccentricity": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 1, "N_g": 2, "use_eccentricity": True, **generic_nspmsg},
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {"N_pl": 2, "N_g": 2, "use_eccentricity": True, **generic_nspmsg},
-    ),
-    ######### NSmoothedPowerlawMSmoothedGaussian (m1, m2, chi1, chi2, cos_tilt_1, cos_tilt_2, ecc) #########
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {
-            "N_pl": 1,
-            "N_g": 0,
-            "use_spin": True,
-            "use_tilt": True,
-            "use_eccentricity": True,
-            **generic_nspmsg,
-        },
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {
-            "N_pl": 0,
-            "N_g": 1,
-            "use_spin": True,
-            "use_tilt": True,
-            "use_eccentricity": True,
-            **generic_nspmsg,
-        },
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {
-            "N_pl": 1,
-            "N_g": 1,
-            "use_spin": True,
-            "use_tilt": True,
-            "use_eccentricity": True,
-            **generic_nspmsg,
-        },
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {
-            "N_pl": 1,
-            "N_g": 2,
-            "use_spin": True,
-            "use_tilt": True,
-            "use_eccentricity": True,
-            **generic_nspmsg,
-        },
-    ),
-    (
-        NSmoothedPowerlawMSmoothedGaussian,
-        {
-            "N_pl": 2,
-            "N_g": 2,
-            "use_spin": True,
-            "use_tilt": True,
-            "use_eccentricity": True,
-            **generic_nspmsg,
-        },
-    ),
-    (
-        SmoothedPowerlawAndPeak,
-        {
-            "alpha": 2.0,
-            "beta": 3.0,
-            "mmin": 50.0,
-            "mmax": 70.0,
-            "loc": 37.0,
-            "scale": 2.3,
-            "delta": 5.0,
-            "lambda_peak": 0.7,
-            "log_rate": 2.0,
-        },
-    ),
-    (
-        SmoothedPowerlawAndPeak,
-        {
-            "alpha": 2.5,
-            "beta": 3.1,
-            "mmin": 20.0,
-            "mmax": 70.0,
-            "loc": 37.0,
-            "scale": 2.3,
-            "delta": 5.0,
-            "lambda_peak": 0.2,
-            "log_rate": 2.0,
-        },
-    ),
     (BetaFromMeanVar, {"mean": 0.4, "variance": 0.02}),
     (BetaFromMeanVar, {"mean": 0.5, "variance": 0.05}),
 ]
@@ -760,12 +525,7 @@ def gen_values_outside_bounds(constraint, size, key=jrd.PRNGKey(11)):
 @pytest.mark.parametrize("jax_dist_cls, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
 def test_dist_shape(jax_dist_cls, params, prepend_shape):
-    if jax_dist_cls.__name__ in (
-        "SmoothedGaussianPrimaryMassRatio",
-        "SmoothedPowerlawPrimaryMassRatio",
-        "ChiEffMassRatioCorrelated",
-        "SmoothedPowerlawAndPeak",
-    ):
+    if jax_dist_cls.__name__ in ("PowerlawPeak",):
         pytest.skip(reason=f"{jax_dist_cls.__name__} does not provide sample method")
     if isinstance(jax_dist_cls, types.FunctionType):
         if jax_dist_cls.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
@@ -805,12 +565,7 @@ def test_has_rsample(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_sample_gradient(jax_dist, params):
-    if jax_dist.__name__ in (
-        "SmoothedGaussianPrimaryMassRatio",
-        "SmoothedPowerlawPrimaryMassRatio",
-        "ChiEffMassRatioCorrelated",
-        "SmoothedPowerlawAndPeak",
-    ):
+    if jax_dist.__name__ in ("PowerlawPeak",):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if jax_dist.__name__ in ("PowerlawRedshift",):
         pytest.xfail(
@@ -868,12 +623,7 @@ def test_jit_log_likelihood(jax_dist, params):
     ):
         pytest.xfail(reason="non-jittable params")
 
-    if jax_dist.__name__ in (
-        "SmoothedGaussianPrimaryMassRatio",
-        "SmoothedPowerlawPrimaryMassRatio",
-        "ChiEffMassRatioCorrelated",
-        "SmoothedPowerlawAndPeak",
-    ):
+    if jax_dist.__name__ in ("PowerlawPeak",):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
@@ -985,12 +735,7 @@ def test_gof(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_log_prob_gradient(jax_dist, params):
-    if jax_dist.__name__ in (
-        "SmoothedGaussianPrimaryMassRatio",
-        "SmoothedPowerlawPrimaryMassRatio",
-        "ChiEffMassRatioCorrelated",
-        "SmoothedPowerlawAndPeak",
-    ):
+    if jax_dist.__name__ in ("PowerlawPeak",):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
@@ -1041,12 +786,7 @@ def test_distribution_constraints(jax_dist, params, prepend_shape):
         pytest.skip("skip testing for non-distribution")
     if isinstance(jax_dist, ScaledMixture):
         pytest.skip("skip testing for ScaledMixture")
-    if jax_dist.__name__ in (
-        "ChiEffMassRatioCorrelated",
-        "PowerlawPrimaryMassRatio",
-        "SmoothedGaussianPrimaryMassRatio",
-        "SmoothedPowerlawPrimaryMassRatio",
-    ):
+    if jax_dist.__name__ in ("PowerlawPrimaryMassRatio",):
         pytest.skip(f"skipping test for {jax_dist.__name__}")
     valid_params = {}
     oob_params = {}
@@ -1111,12 +851,7 @@ def test_distribution_constraints(jax_dist, params, prepend_shape):
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
 @pytest.mark.parametrize("sample_shape", [(), (4,)])
 def test_expand(jax_dist, params, prepend_shape, sample_shape):
-    if jax_dist.__name__ in (
-        "SmoothedGaussianPrimaryMassRatio",
-        "SmoothedPowerlawPrimaryMassRatio",
-        "ChiEffMassRatioCorrelated",
-        "SmoothedPowerlawAndPeak",
-    ):
+    if jax_dist.__name__ in ("PowerlawPeak",):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
 
     if isinstance(jax_dist, types.FunctionType):

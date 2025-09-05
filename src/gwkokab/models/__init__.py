@@ -13,23 +13,12 @@ from . import (
     utils as utils,
 )
 from ._models import (
-    FlexibleMixtureModel as FlexibleMixtureModel,
-    MassGapModel as MassGapModel,
+    PowerlawPeak as PowerlawPeak,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
-    SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
-    SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
-from .multivariate import (
-    ChiEffMassRatioConstraint as ChiEffMassRatioConstraint,
-    ChiEffMassRatioCorrelated as ChiEffMassRatioCorrelated,
-)
 from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
-from .nsmoothedpowerlawmsmoothedgaussian import (
-    NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
-    SmoothedPowerlawAndPeak as SmoothedPowerlawAndPeak,
-)
 from .redshift import PowerlawRedshift as PowerlawRedshift
 from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,

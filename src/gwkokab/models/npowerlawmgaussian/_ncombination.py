@@ -4,7 +4,6 @@
 
 from typing import Dict, List, Literal, Optional
 
-from jax import tree as jtr
 from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
@@ -16,16 +15,12 @@ from numpyro.distributions import (
     Uniform,
 )
 
-from ...models._models import (
-    PowerlawPrimaryMassRatio,
-    SmoothedGaussianPrimaryMassRatio,
-    SmoothedPowerlawPrimaryMassRatio,
-)
-from ...models.redshift import PowerlawRedshift
-from ...models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
-from ...models.transformations import PrimaryMassAndMassRatioToComponentMassesTransform
-from ...models.utils import ExtendedSupportTransformedDistribution
 from ...utils.tools import fetch_first_matching_value
+from .._models import PowerlawPrimaryMassRatio
+from ..redshift import PowerlawRedshift
+from ..spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
+from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
+from ..utils import ExtendedSupportTransformedDistribution
 
 
 __all__ = [
@@ -33,8 +28,6 @@ __all__ = [
     "create_beta_distributions",
     "create_powerlaw_redshift",
     "create_powerlaws",
-    "create_smoothed_gaussians",
-    "create_smoothed_powerlaws",
     "create_truncated_normal_distributions_for_cos_tilt",
     "create_truncated_normal_distributions",
 ]
@@ -405,220 +398,6 @@ def create_powerlaw_redshift(
         )
 
     return powerlaw_redshift_collection
-
-
-def create_smoothed_powerlaws_raw(
-    N: int,
-    params: Dict[str, Array],
-    validate_args: Optional[bool] = None,
-) -> List[ExtendedSupportTransformedDistribution]:
-    """Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
-    and mass ratio. We call it the raw version because it does not include the
-    transformation to component masses.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[ExtendedSupportTransformedDistribution]
-        list of SmoothedPowerlawPrimaryMassRatio for powerlaws
-
-    Raises
-    ------
-    ValueError
-        if alpha, beta, mmin, mmax or delta is missing
-    """
-    smoothed_powerlaws_collection = []
-    alpha_name = "alpha_pl"
-    beta_name = "beta_pl"
-    mmin_name = "mmin_pl"
-    mmax_name = "mmax_pl"
-    delta_name = "delta_pl"
-    for i in range(N):
-        alpha = fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
-        if alpha is None:
-            raise ValueError(f"Missing parameter {alpha_name}_{i}")
-
-        beta = fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
-        if beta is None:
-            raise ValueError(f"Missing parameter {beta_name}_{i}")
-
-        mmin = fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
-        if mmin is None:
-            raise ValueError(f"Missing parameter {mmin_name}_{i}")
-
-        mmax = fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
-        if mmax is None:
-            raise ValueError(f"Missing parameter {mmax_name}_{i}")
-
-        delta = fetch_first_matching_value(params, f"{delta_name}_{i}", delta_name)
-        if delta is None:
-            raise ValueError(f"Missing parameter {delta_name}_{i}")
-
-        smoothed_powerlaw = SmoothedPowerlawPrimaryMassRatio(
-            alpha=alpha,
-            beta=beta,
-            mmin=mmin,
-            mmax=mmax,
-            delta=delta,
-            validate_args=validate_args,
-        )
-        smoothed_powerlaws_collection.append(smoothed_powerlaw)
-    return smoothed_powerlaws_collection
-
-
-def create_smoothed_gaussians_raw(
-    N: int,
-    params: Dict[str, Array],
-    validate_args: Optional[bool] = None,
-) -> List[ExtendedSupportTransformedDistribution]:
-    """Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
-    and mass ratio. We call it the raw version because it does not include the
-    transformation to component masses.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[ExtendedSupportTransformedDistribution]
-        list of SmoothedGaussianPrimaryMassRatio distributions
-
-    Raises
-    ------
-    ValueError
-        if loc, scale, beta, mmin, delta, low, or high is missing
-    """
-    smoothed_gaussians_collection = []
-    loc_name = "loc_g"
-    scale_name = "scale_g"
-    beta_name = "beta_g"
-    mmin_name = "mmin_g"
-    mmax_name = "mmax_g"
-    delta_name = "delta_g"
-    for i in range(N):
-        loc = fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
-        if loc is None:
-            raise ValueError(f"Missing parameter {loc_name}_{i}")
-
-        scale = fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
-        if scale is None:
-            raise ValueError(f"Missing parameter {scale_name}_{i}")
-
-        beta = fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
-        if beta is None:
-            raise ValueError(f"Missing parameter {beta_name}_{i}")
-
-        mmin = fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
-        if mmin is None:
-            raise ValueError(f"Missing parameter {mmin_name}_{i}")
-
-        mmax = fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
-        if mmax is None:
-            raise ValueError(f"Missing parameter {mmax_name}_{i}")
-
-        delta = fetch_first_matching_value(params, f"{delta_name}_{i}", delta_name)
-        if delta is None:
-            raise ValueError(f"Missing parameter {delta_name}_{i}")
-
-        smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
-            loc=loc,
-            scale=scale,
-            beta=beta,
-            mmin=mmin,
-            mmax=mmax,
-            delta=delta,
-            validate_args=validate_args,
-        )
-        smoothed_gaussians_collection.append(smoothed_gaussian)
-    return smoothed_gaussians_collection
-
-
-def create_smoothed_powerlaws(
-    N: int,
-    params: Dict[str, Array],
-    validate_args: Optional[bool] = None,
-) -> List[ExtendedSupportTransformedDistribution]:
-    """Create a list of SmoothedPowerlawPrimaryMassRatio for powerlaws in primary mass
-    and secondary mass. It includes the transformation to component masses.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[ExtendedSupportTransformedDistribution]
-        list of SmoothedPowerlawPrimaryMassRatio for powerlaws
-    """
-    smoothed_powerlaws_collection = create_smoothed_powerlaws_raw(
-        N, params, validate_args
-    )
-    smoothed_powerlaws_collection = jtr.map(
-        lambda smoothed_powerlaw: ExtendedSupportTransformedDistribution(
-            base_distribution=smoothed_powerlaw,
-            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-            validate_args=validate_args,
-        ),
-        smoothed_powerlaws_collection,
-        is_leaf=lambda x: isinstance(x, SmoothedPowerlawPrimaryMassRatio),
-    )
-    return smoothed_powerlaws_collection
-
-
-def create_smoothed_gaussians(
-    N: int,
-    params: Dict[str, Array],
-    validate_args: Optional[bool] = None,
-) -> List[ExtendedSupportTransformedDistribution]:
-    """Create a list of SmoothedGaussianPrimaryMassRatio distributions in primary mass
-    and secondary mass. It includes the transformation to component masses.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[ExtendedSupportTransformedDistribution]
-        list of SmoothedGaussianPrimaryMassRatio distributions
-    """
-    smoothed_gaussians_collection = create_smoothed_gaussians_raw(
-        N, params, validate_args
-    )
-    smoothed_gaussians_collection = jtr.map(
-        lambda smoothed_gaussian: ExtendedSupportTransformedDistribution(
-            base_distribution=smoothed_gaussian,
-            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
-            validate_args=validate_args,
-        ),
-        smoothed_gaussians_collection,
-        is_leaf=lambda x: isinstance(x, SmoothedGaussianPrimaryMassRatio),
-    )
-    return smoothed_gaussians_collection
 
 
 def create_uniform_distributions(
