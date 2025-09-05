@@ -8,11 +8,13 @@ from typing import Optional
 
 import pandas as pd
 from jax import numpy as jnp
+from jax.lax import broadcast_shapes
 from jaxtyping import Array
 from numpyro._typing import DistributionLike
+from numpyro.distributions import constraints, Distribution
+from numpyro.distributions.util import promote_shapes, validate_sample
 
 from gwkokab.models import SmoothedPowerlawAndPeak, SmoothedTwoComponentPrimaryMassRatio
-from gwkokab.models.redshift import PowerlawRedshift
 from gwkokab.models.spin import (
     BetaFromMeanVar,
     IndependentSpinOrientationGaussianIsotropic,
@@ -29,6 +31,50 @@ from gwkokab.parameters import Parameters
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
 from kokab.utils.common import ppd_ranges, read_json
+
+
+class SimpleRedshiftPowerlaw(Distribution):
+    arg_constraints = {
+        "z_max": constraints.positive,
+        "kappa": constraints.real,
+    }
+    reparametrized_params = ["z_max", "kappa"]
+    pytree_data_fields = ("_support", "kappa", "z_max")
+
+    def __init__(
+        self, z_max: Array, kappa: Array, *, validate_args: Optional[bool] = None
+    ):
+        self.z_max, self.kappa = promote_shapes(z_max, kappa)
+        batch_shape = broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
+        self._support = constraints.interval(0.0, z_max)
+        super(SimpleRedshiftPowerlaw, self).__init__(
+            batch_shape=batch_shape, validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):
+        """The support of the distribution, which is the interval [0, z_max]."""
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value: Array) -> Array:
+        r"""Evaluate the psi function at a given redshift.
+
+        .. math::
+
+            \ln\psi(z) = \kappa \log(1 + z)
+
+        Parameters
+        ----------
+        z : ArrayLike
+            Redshift(s) to evaluate.
+
+        Returns
+        -------
+        ArrayLike
+            Values of the psi function.
+        """
+        return self.kappa * jnp.log1p(value)
 
 
 def SmoothedPowerlawAndPeak_raw(
@@ -79,7 +125,7 @@ def SmoothedPowerlawAndPeak_raw(
     if use_redshift:
         z_max = params["z_max"]
         kappa = params["kappa"]
-        powerlaw_z = PowerlawRedshift(
+        powerlaw_z = SimpleRedshiftPowerlaw(
             z_max=z_max, kappa=kappa, validate_args=validate_args
         )
 
