@@ -62,7 +62,6 @@ class PowerlawPeakCore(Sage):
             ],
             Callable,
         ],
-        where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
         posterior_columns: List[str],
         seed: int,
@@ -96,7 +95,7 @@ class PowerlawPeakCore(Sage):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            where_fns=where_fns,
+            where_fns=where_fns_list(has_spin=has_spin),
         )
 
     @property
@@ -203,7 +202,6 @@ def f_main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=where_fns_list(has_spin=args.add_spin),
     ).run()
 
 
@@ -234,5 +232,4 @@ def n_main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=where_fns_list(has_spin=args.add_spin),
     ).run()
