@@ -17,9 +17,9 @@ class EccentricityMattersCore(Sage):
     @property
     def parameters(self) -> List[str]:
         return [
-            Parameters.PRIMARY_MASS_SOURCE.name,
-            Parameters.SECONDARY_MASS_SOURCE.name,
-            Parameters.ECCENTRICITY.name,
+            Parameters.PRIMARY_MASS_SOURCE.value,
+            Parameters.SECONDARY_MASS_SOURCE.value,
+            Parameters.ECCENTRICITY.value,
         ]
 
     @property
