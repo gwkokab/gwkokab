@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import functools as ft
 from collections.abc import Callable
 from typing import Dict, List, Optional
 
@@ -54,42 +53,36 @@ def numpyro_poisson_likelihood(
         # μ = E_{θ|Λ}[VT(θ)]
         expected_rates = ERate_obj(model_instance)
 
-        @ft.partial(jax.vmap, in_axes=(0, 0, 0))
-        def single_event_fn(data: Array, log_ref_prior: Array, mask: Array) -> Array:
-            safe_data = jnp.where(
-                jnp.expand_dims(mask, axis=-1),
-                data,
-                model_instance.support.feasible_like(data),
-            )
-            safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
-
-            # TODO(Qazalbash): investigate effects of `equinox.filter_vmap` and `equinox.filter_jit`
-            # log p(θ|data_n)
-            model_log_prob = jax.jit(jax.vmap(jax.jit(model_instance.log_prob)))(
-                safe_data
-            )
-            safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
-
-            # log p(θ|data_n) - log π_n
-            log_prob: Array = safe_model_log_prob - safe_log_ref_prior
-            log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
-
-            # log Σ exp (log p(θ|data_n) - log π_n)
-            log_prob_sum = jax.nn.logsumexp(
-                log_prob,
-                axis=-1,
-                where=(~jnp.isneginf(log_prob)) & mask,
-            )
-            return log_prob_sum
-
         total_log_likelihood = log_constants  # - Σ log(M_i)
         # Σ log Σ exp (log p(θ|data_n) - log π_n)
         for batched_data, batched_log_ref_priors, batched_masks in zip(
             data_group, log_ref_priors_group, masks_group
         ):
-            total_log_likelihood += single_event_fn(
-                batched_data, batched_log_ref_priors, batched_masks
+            safe_data = jnp.where(
+                jnp.expand_dims(batched_masks, axis=-1),
+                batched_data,
+                model_instance.support.feasible_like(batched_data),
             )
+            safe_log_ref_prior = jnp.where(batched_masks, batched_log_ref_priors, 0.0)
+
+            batched_model_log_prob = jax.vmap(jax.vmap(model_instance.log_prob))(
+                safe_data
+            )  # type: ignore
+            safe_model_log_prob = jnp.where(
+                batched_masks, batched_model_log_prob, -jnp.inf
+            )
+            batched_log_prob: Array = safe_model_log_prob - safe_log_ref_prior
+            batched_log_prob = jnp.where(
+                batched_masks & (~jnp.isnan(batched_log_prob)),
+                batched_log_prob,
+                -jnp.inf,
+            )
+            log_prob_sum = jax.nn.logsumexp(
+                batched_log_prob,
+                axis=-1,
+                where=(~jnp.isneginf(batched_log_prob)) & batched_masks,
+            )
+            total_log_likelihood += jnp.sum(log_prob_sum, axis=-1)
 
         # - μ + Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
         numpyro.factor("log_likelihood", total_log_likelihood - expected_rates)
