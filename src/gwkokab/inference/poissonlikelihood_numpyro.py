@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import functools as ft
 from collections.abc import Callable
 from typing import Dict, List, Optional
 
@@ -53,6 +54,7 @@ def numpyro_poisson_likelihood(
         # μ = E_{θ|Λ}[VT(θ)]
         expected_rates = ERate_obj(model_instance)
 
+        @ft.partial(jax.vmap, in_axes=(0, 0, 0))
         def single_event_fn(data: Array, log_ref_prior: Array, mask: Array) -> Array:
             safe_data = jnp.where(
                 jnp.expand_dims(mask, axis=-1),
@@ -85,7 +87,7 @@ def numpyro_poisson_likelihood(
         for batched_data, batched_log_ref_priors, batched_masks in zip(
             data_group, log_ref_priors_group, masks_group
         ):
-            total_log_likelihood += jax.vmap(single_event_fn, in_axes=(0, 0, 0))(
+            total_log_likelihood += single_event_fn(
                 batched_data, batched_log_ref_priors, batched_masks
             )
 
