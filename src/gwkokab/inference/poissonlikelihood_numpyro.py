@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import jax
 import numpyro
@@ -53,11 +53,7 @@ def numpyro_poisson_likelihood(
         # μ = E_{θ|Λ}[VT(θ)]
         expected_rates = ERate_obj(model_instance)
 
-        def single_event_fn(
-            carry: Array, input: Tuple[Array, Array, Array]
-        ) -> Tuple[Array, None]:
-            data, log_ref_prior, mask = input
-
+        def single_event_fn(data: Array, log_ref_prior: Array, mask: Array) -> Array:
             safe_data = jnp.where(
                 jnp.expand_dims(mask, axis=-1),
                 data,
@@ -82,17 +78,15 @@ def numpyro_poisson_likelihood(
                 axis=-1,
                 where=(~jnp.isneginf(log_prob)) & mask,
             )
-            return carry + log_prob_sum, None
+            return log_prob_sum
 
         total_log_likelihood = log_constants  # - Σ log(M_i)
         # Σ log Σ exp (log p(θ|data_n) - log π_n)
         for batched_data, batched_log_ref_priors, batched_masks in zip(
             data_group, log_ref_priors_group, masks_group
         ):
-            total_log_likelihood, _ = jax.lax.scan(
-                single_event_fn,  # type: ignore
-                total_log_likelihood,
-                (batched_data, batched_log_ref_priors, batched_masks),
+            total_log_likelihood += jax.vmap(single_event_fn, in_axes=(0, 0, 0))(
+                batched_data, batched_log_ref_priors, batched_masks
             )
 
         # - μ + Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
