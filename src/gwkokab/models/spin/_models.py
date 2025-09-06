@@ -171,5 +171,5 @@ def BetaFromMeanVar(
     """
     concentration = ((mean * (1.0 - mean)) / variance) - 1.0
     alpha = mean * concentration
-    beta = (1.0 - mean) * concentration
+    beta = concentration - alpha
     return Beta(alpha, beta, validate_args=validate_args)
