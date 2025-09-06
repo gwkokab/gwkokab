@@ -26,7 +26,7 @@ def where_fns_list(has_spin: bool) -> Optional[List[Callable[..., Array]]]:
     if has_spin:
 
         def mean_variance_check(
-            chi_mean: Array, chi_variance: Array, **kwargs
+            *, chi_mean: Array, chi_variance: Array, **kwargs
         ) -> Array:
             concentration = (chi_mean * (1.0 - chi_mean)) / chi_variance - 1.0
             alpha = chi_mean * concentration
@@ -34,7 +34,7 @@ def where_fns_list(has_spin: bool) -> Optional[List[Callable[..., Array]]]:
             valid_var = jnp.greater(alpha, 1.0)
             valid_var = jnp.logical_and(valid_var, jnp.greater(beta, 1.0))
             valid_var = jnp.logical_and(
-                valid_var, jnp.less(chi_variance, chi_mean * (1.0 - chi_mean))
+                valid_var, jnp.less_equal(chi_variance, chi_mean * (1.0 - chi_mean))
             )
             valid_var = jnp.logical_and(valid_var, chi_variance > 0.0)
             return jnp.all(valid_var)
