@@ -5,6 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional, Union
 
+from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 
@@ -16,6 +17,22 @@ from gwkokab.poisson_mean import PoissonMean
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser
+
+
+def where_fns_list(has_spin: bool) -> Optional[List[Callable[..., Array]]]:
+    where_fns = []
+
+    if has_spin:
+
+        def mean_variance_check(
+            chi_mean: Array, chi_variance: Array, **kwargs
+        ) -> Array:
+            valid_var = jnp.less(chi_variance, chi_mean * (1.0 - chi_mean))
+            valid_var = jnp.logical_and(valid_var, chi_variance > 0.0)
+            return jnp.all(valid_var)
+
+        where_fns.append(mean_variance_check)
+    return where_fns if len(where_fns) > 0 else None
 
 
 class PowerlawPeakCore(Sage):
@@ -176,7 +193,7 @@ def f_main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
+        where_fns=where_fns_list(has_spin=args.add_spin),
     ).run()
 
 
@@ -205,5 +222,5 @@ def n_main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
+        where_fns=where_fns_list(has_spin=args.add_spin),
     ).run()
