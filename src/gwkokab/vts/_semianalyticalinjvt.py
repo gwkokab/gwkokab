@@ -141,9 +141,9 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
 
             injs = []
             for p in parameters:
-                if p == "cos_tilt_1":
+                if p == Parameters.COS_TILT_1.value:
                     _inj = χ_1z / a1
-                elif p == "cos_tilt_2":
+                elif p == Parameters.COS_TILT_2.value:
                     _inj = χ_2z / a2
                 elif p == Parameters.PRIMARY_SPIN_MAGNITUDE.value:
                     _inj = a1
