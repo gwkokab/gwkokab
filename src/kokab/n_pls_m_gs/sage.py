@@ -7,14 +7,15 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
+from numpyro.distributions.distribution import enable_validation
 
 import gwkokab
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.utils import (
+from gwkokab.models.npowerlawmgaussian._ncombination import (
     create_truncated_normal_distributions,
-    JointDistribution,
 )
+from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
 from kokab.utils.common import expand_arguments
@@ -406,6 +407,8 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
 
 def f_main() -> None:
+    enable_validation()
+
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
@@ -445,6 +448,8 @@ def f_main() -> None:
 
 
 def n_main() -> None:
+    enable_validation()
+
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)

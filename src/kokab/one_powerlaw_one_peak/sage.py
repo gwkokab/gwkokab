@@ -8,6 +8,7 @@ from typing import Callable, Dict, List, Optional, Union
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
+from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import PowerlawPeak
@@ -169,6 +170,8 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
 
 def f_main() -> None:
+    enable_validation()
+
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
@@ -198,6 +201,8 @@ def f_main() -> None:
 
 
 def n_main() -> None:
+    enable_validation()
+
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
