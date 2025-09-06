@@ -9,7 +9,7 @@ from jax import lax, numpy as jnp, random as jrd
 from jax.scipy import special
 from jax.scipy.stats import norm, uniform
 from jaxtyping import Array, ArrayLike
-from numpyro.distributions import constraints, Distribution
+from numpyro.distributions import constraints, Distribution, Independent
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
@@ -386,14 +386,20 @@ def PowerlawPeak(
     component_distributions = [smoothing_model]
 
     if use_spin:
-        chi1_dist = BetaFromMeanVar(
-            mean=params["chi_mean"],
-            variance=params["chi_variance"],
+        chi_dist = Independent(
+            BetaFromMeanVar(
+                mean=jnp.repeat(
+                    params["chi_mean"], repeats=2, axis=0, total_repeat_length=2
+                ),
+                variance=jnp.repeat(
+                    params["chi_variance"], repeats=2, axis=0, total_repeat_length=2
+                ),
+                validate_args=validate_args,
+            ),
+            reinterpreted_batch_ndims=1,
             validate_args=validate_args,
         )
-        chi2_dist = chi1_dist
-        component_distributions.append(chi1_dist)
-        component_distributions.append(chi2_dist)
+        component_distributions.append(chi_dist)
 
     if use_tilt:
         tilt_dist = IndependentSpinOrientationGaussianIsotropic(
