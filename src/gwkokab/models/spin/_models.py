@@ -4,7 +4,7 @@
 
 from typing import Optional
 
-from jax import lax, numpy as jnp
+from jax import numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.distributions import (
     Beta,
@@ -113,33 +113,35 @@ def IndependentSpinOrientationGaussianIsotropic(
         Mixture model of spin orientations.
     """
     mixing_probs = jnp.stack([1.0 - zeta, zeta], axis=-1)
-    low = lax.stop_gradient(-1.0)
-    high = lax.stop_gradient(1.0)
+    low = -jnp.ones((2,))
+    high = jnp.ones((2,))
     batch_dim = 1
     isotropic_component = Independent(
         Uniform(
             low=low,
             high=high,
             validate_args=validate_args,
-        ).expand((2,)),
+        ),
         batch_dim,
+        validate_args=validate_args,
     )
     gaussian_component = Independent(
         TruncatedNormal(
-            loc=lax.stop_gradient(1.0),
+            loc=high,  # set to high because high=1
             scale=jnp.stack([scale1, scale2], axis=-1),
             low=low,
             high=high,
             validate_args=validate_args,
         ),
         batch_dim,
+        validate_args=validate_args,
     )
     return MixtureGeneral(
         mixing_distribution=CategoricalProbs(
             probs=mixing_probs, validate_args=validate_args
         ),
         component_distributions=[isotropic_component, gaussian_component],
-        support=constraints.independent(constraints.interval(-1.0, 1.0), 1),
+        support=constraints.independent(constraints.interval(-1.0, 1.0), batch_dim),
         validate_args=validate_args,
     )
 

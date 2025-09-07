@@ -388,11 +388,9 @@ def PowerlawPeak(
     if use_spin:
         chi_dist = Independent(
             BetaFromMeanVar(
-                mean=jnp.repeat(
-                    params["chi_mean"], repeats=2, axis=0, total_repeat_length=2
-                ),
-                variance=jnp.repeat(
-                    params["chi_variance"], repeats=2, axis=0, total_repeat_length=2
+                mean=jnp.stack([params["chi_mean"], params["chi_mean"]], axis=-1),
+                variance=jnp.stack(
+                    [params["chi_variance"], params["chi_variance"]], axis=-1
                 ),
                 validate_args=validate_args,
             ),
