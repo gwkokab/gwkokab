@@ -79,7 +79,14 @@ def poisson_likelihood(
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
         ) -> Tuple[Array, None]:
-            safe_data, safe_log_ref_prior, mask = input
+            data, log_ref_prior, mask = input
+
+            safe_data = jnp.where(
+                jnp.expand_dims(mask, axis=-1),
+                data,
+                model_instance.support.feasible_like(data),
+            )
+            safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
             # log p(ω|data_n)
             model_log_prob = jax.checkpoint(
@@ -105,18 +112,10 @@ def poisson_likelihood(
         for batched_data, batched_log_ref_priors, batched_mask in zip(
             data_group, log_ref_priors_group, masks_group
         ):
-            safe_batched_data = jnp.where(
-                jnp.expand_dims(batched_mask, axis=-1),
-                batched_data,
-                model_instance.support.feasible_like(batched_data),
-            )
-            safe_batched_log_ref_priors = jnp.where(
-                batched_mask, batched_log_ref_priors, 0.0
-            )
             total_log_likelihood, _ = jax.lax.scan(
                 single_event_fn,  # type: ignore
                 total_log_likelihood,
-                (safe_batched_data, safe_batched_log_ref_priors, batched_mask),
+                (batched_data, batched_log_ref_priors, batched_mask),
             )
 
         log_prior = priors.log_prob(x)
