@@ -166,7 +166,8 @@ class BetaFromMeanVarConstraint(constraints.Constraint):
 
 
 class BetaFromMeanVar(Beta):
-    pytree_data_fields = ("_support", "concentration0", "concentration1", "_dirichlet")
+    arg_constraints = {"mu": constraints.unit_interval, "var": constraints.positive}
+    pytree_data_fields = ("_support",)
 
     def __init__(
         self,
