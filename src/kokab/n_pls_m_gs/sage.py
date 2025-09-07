@@ -30,19 +30,45 @@ def where_fns_list(has_beta_spin: bool) -> Optional[List[Callable[..., Array]]]:
 
     if has_beta_spin:
 
-        def mean_variance_check(
-            *, chi_mean: Array, chi_variance: Array, **kwargs
-        ) -> Array:
-            concentration = (chi_mean * (1.0 - chi_mean)) / chi_variance - 1.0
-            alpha = chi_mean * concentration
-            beta = (1.0 - chi_mean) * concentration
-            valid_var = jnp.greater(alpha, 1.0)
-            valid_var = jnp.logical_and(valid_var, jnp.greater(beta, 1.0))
-            valid_var = jnp.logical_and(
-                valid_var, jnp.less_equal(chi_variance, chi_mean * (1.0 - chi_mean))
-            )
-            valid_var = jnp.logical_and(valid_var, chi_variance > 0.0)
+        def mean_variance_check(N_pl: int, N_g: int, **kwargs) -> Array:
+            if N_pl > 0:
+                means_pl = jnp.stack(
+                    [kwargs[f"chi{i}_mean_pl_{j}"] for j in range(N_pl) for i in (1, 2)]
+                )
+                vars_pl = jnp.stack(
+                    [
+                        kwargs[f"chi{i}_variance_pl_{j}"]
+                        for j in range(N_pl)
+                        for i in (1, 2)
+                    ]
+                )
+            if N_g > 0:
+                means_g = jnp.stack(
+                    [kwargs[f"chi{i}_mean_g_{j}"] for j in range(N_g) for i in (1, 2)]
+                )
+                vars_g = jnp.stack(
+                    [
+                        kwargs[f"chi{i}_variance_g_{j}"]
+                        for j in range(N_g)
+                        for i in (1, 2)
+                    ]
+                )
+
+            if N_pl > 0 and N_g > 0:
+                means = jnp.concatenate([means_pl, means_g])
+                variances = jnp.concatenate([vars_pl, vars_g])
+            elif N_pl > 0:
+                means = means_pl
+                variances = vars_pl
+            else:
+                means = means_g
+                variances = vars_g
+
+            valid_var = variances <= means * (1 - means)
             return jnp.all(valid_var)
+            # α, β = beta_dist_mean_variance_to_concentrations(means, variances)
+            # valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
+            # return jnp.all(jnp.logical_and(valid_var, valid_ab))
 
         where_fns.append(mean_variance_check)
     return where_fns if len(where_fns) > 0 else None
