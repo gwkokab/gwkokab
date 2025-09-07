@@ -5,6 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
+from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import enable_validation
@@ -22,6 +23,29 @@ from kokab.utils.common import expand_arguments
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser
+
+
+def where_fns_list(has_beta_spin: bool) -> Optional[List[Callable[..., Array]]]:
+    where_fns = []
+
+    if has_beta_spin:
+
+        def mean_variance_check(
+            *, chi_mean: Array, chi_variance: Array, **kwargs
+        ) -> Array:
+            concentration = (chi_mean * (1.0 - chi_mean)) / chi_variance - 1.0
+            alpha = chi_mean * concentration
+            beta = (1.0 - chi_mean) * concentration
+            valid_var = jnp.greater(alpha, 1.0)
+            valid_var = jnp.logical_and(valid_var, jnp.greater(beta, 1.0))
+            valid_var = jnp.logical_and(
+                valid_var, jnp.less_equal(chi_variance, chi_mean * (1.0 - chi_mean))
+            )
+            valid_var = jnp.logical_and(valid_var, chi_variance > 0.0)
+            return jnp.all(valid_var)
+
+        where_fns.append(mean_variance_check)
+    return where_fns if len(where_fns) > 0 else None
 
 
 class NPowerlawMGaussianCore(Sage):
@@ -53,7 +77,6 @@ class NPowerlawMGaussianCore(Sage):
             ],
             Callable,
         ],
-        where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
         posterior_columns: List[str],
         seed: int,
@@ -101,7 +124,7 @@ class NPowerlawMGaussianCore(Sage):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            where_fns=where_fns,
+            where_fns=where_fns_list(has_beta_spin=has_beta_spin),
         )
 
     @property
@@ -443,7 +466,6 @@ def f_main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
     ).run()
 
 
@@ -484,5 +506,4 @@ def n_main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
     ).run()
