@@ -104,8 +104,8 @@ def PowerlawPeak_raw(
 
     if use_spin:
         chi1_dist = BetaFromMeanVar(
-            mean=params["chi_mean"],
-            variance=params["chi_variance"],
+            mu=params["chi_mean"],
+            var=params["chi_variance"],
             validate_args=validate_args,
         )
         chi2_dist = chi1_dist

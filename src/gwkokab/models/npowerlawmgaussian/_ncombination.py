@@ -90,8 +90,8 @@ def create_beta_distributions(
 
         beta_collection.append(
             BetaFromMeanVar(
-                mean=mean,
-                variance=variance,
+                mu=mean,
+                var=variance,
                 validate_args=validate_args,
             )
         )
