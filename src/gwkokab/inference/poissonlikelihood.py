@@ -76,6 +76,8 @@ def poisson_likelihood(
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = ERate_obj(model_instance)
 
+        log_prob_fn = eqx.filter_jit(eqx.filter_vmap(model_instance.log_prob))
+
         def single_event_fn(
             carry: Array, input: Tuple[Array, Array, Array]
         ) -> Tuple[Array, None]:
@@ -89,10 +91,7 @@ def poisson_likelihood(
             safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
 
             # log p(ω|data_n)
-            model_log_prob = jax.checkpoint(
-                jax.vmap(model_instance.log_prob),
-                prevent_cse=False,
-            )(safe_data)
+            model_log_prob = log_prob_fn(safe_data)
             safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
 
             # log p(ω|data_n) - log π_n
