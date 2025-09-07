@@ -147,8 +147,6 @@ def IndependentSpinOrientationGaussianIsotropic(
 
 
 class BetaFromMeanVarConstraint(constraints.Constraint):
-    event_dim = 0
-
     def __init__(self, mu: ArrayLike, var: ArrayLike) -> None:
         self.mu = mu
         self.var = var
@@ -198,6 +196,6 @@ class BetaFromMeanVar(Beta):
             validate_args=validate_args,
         )
 
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    @constraints.dependent_property(is_discrete=False)
     def support(self) -> constraints.Constraint:
         return self._support
