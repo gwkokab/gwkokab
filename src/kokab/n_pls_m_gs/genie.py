@@ -13,7 +13,9 @@ from numpyro import distributions as dist
 import gwkokab
 from gwkokab.errors import banana_error_m1_m2, truncated_normal_error
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.utils import create_truncated_normal_distributions
+from gwkokab.models.npowerlawmgaussian._ncombination import (
+    create_truncated_normal_distributions,
+)
 from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.population import error_magazine, PopulationFactory
