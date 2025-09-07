@@ -166,11 +166,8 @@ class BetaFromMeanVarConstraint(constraints.Constraint):
 
 
 class BetaFromMeanVar(Beta):
-    arg_constraints = {
-        "mean": constraints.unit_interval,
-        "variance": constraints.positive,
-    }
-    pytree_data_fields = ("mean", "variance", "_support")
+    arg_constraints = {"mu": constraints.unit_interval, "var": constraints.positive}
+    pytree_data_fields = ("mu", "var", "_support")
 
     def __init__(
         self,
@@ -179,24 +176,16 @@ class BetaFromMeanVar(Beta):
         *,
         validate_args: Optional[bool] = None,
     ) -> None:
-        r"""Beta distribution parameterized by the expected value and variance.
+        """Beta distribution parameterized by the expected value and variance.
 
         Parameters
         ----------
-
-        mean : ArrayLike
+        mu : ArrayLike
             Expected value of the beta distribution.
-        variance : ArrayLike
+        var : ArrayLike
             Variance of the beta distribution.
-        loc : ArrayLike
-            lower bound of the beta distribution, defaults to 0.0
-        scale : ArrayLike
-            width of the beta distribution, defaults to 1.0
-
-        Returns
-        -------
-        Beta
-            Beta distribution with the specified mean and variance.
+        validate_args : bool, optional
+            Whether to validate the parameters of the distribution. Default is None.
         """
         concentration = ((mu * (1.0 - mu)) / var) - 1.0
         alpha = mu * concentration
@@ -208,6 +197,6 @@ class BetaFromMeanVar(Beta):
             validate_args=validate_args,
         )
 
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    @constraints.dependent_property(is_discrete=False)
     def support(self) -> constraints.Constraint:
         return self._support
