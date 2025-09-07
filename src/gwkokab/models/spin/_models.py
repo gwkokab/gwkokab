@@ -146,68 +146,32 @@ def IndependentSpinOrientationGaussianIsotropic(
     )
 
 
-class BetaFromMeanVarConstraint(constraints.Constraint):
-    def __init__(self, mu: ArrayLike, var: ArrayLike) -> None:
-        self.mu = mu
-        self.var = var
+def BetaFromMeanVar(
+    mean: ArrayLike,
+    variance: ArrayLike,
+    *,
+    validate_args: Optional[bool] = None,
+) -> Beta:
+    r"""Beta distribution parameterized by the expected value and variance.
 
-    def __call__(self, x):
-        return (
-            jnp.all(x >= 0.0)
-            & jnp.all(x <= 1.0)
-            & jnp.all(self.var <= self.mu * (1.0 - self.mu))
-        )
+    Parameters
+    ----------
 
-    def feasible_like(self, prototype):
-        return jnp.full_like(prototype, 0.5)
+    mean : ArrayLike
+        Expected value of the beta distribution.
+    variance : ArrayLike
+        Variance of the beta distribution.
+    loc : ArrayLike
+        lower bound of the beta distribution, defaults to 0.0
+    scale : ArrayLike
+        width of the beta distribution, defaults to 1.0
 
-    def tree_flatten(self):
-        return (self.mu, self.var), (("mu", "var"), dict())
-
-
-class BetaFromMeanVar(Beta):
-    arg_constraints = {
-        "mean": constraints.unit_interval,
-        "variance": constraints.positive,
-    }
-    pytree_data_fields = ("mean", "variance", "_support")
-
-    def __init__(
-        self,
-        mu: ArrayLike,
-        var: ArrayLike,
-        *,
-        validate_args: Optional[bool] = None,
-    ) -> None:
-        r"""Beta distribution parameterized by the expected value and variance.
-
-        Parameters
-        ----------
-
-        mean : ArrayLike
-            Expected value of the beta distribution.
-        variance : ArrayLike
-            Variance of the beta distribution.
-        loc : ArrayLike
-            lower bound of the beta distribution, defaults to 0.0
-        scale : ArrayLike
-            width of the beta distribution, defaults to 1.0
-
-        Returns
-        -------
-        Beta
-            Beta distribution with the specified mean and variance.
-        """
-        concentration = ((mu * (1.0 - mu)) / var) - 1.0
-        alpha = mu * concentration
-        beta = concentration - alpha
-        self._support = BetaFromMeanVarConstraint(mu, var)
-        super().__init__(
-            concentration1=alpha,
-            concentration0=beta,
-            validate_args=validate_args,
-        )
-
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self) -> constraints.Constraint:
-        return self._support
+    Returns
+    -------
+    Beta
+        Beta distribution with the specified mean and variance.
+    """
+    concentration = ((mean * (1.0 - mean)) / variance) - 1.0
+    alpha = mean * concentration
+    beta = concentration - alpha
+    return Beta(alpha, beta, validate_args=validate_args)
