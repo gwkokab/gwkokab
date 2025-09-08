@@ -353,7 +353,11 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
         _Z_q = interpax.interp1d(m1.flatten(), self._m1s, self._Z_q_given_m1).reshape(
             m1.shape
         )
-        log_Z_q = jnp.log(_Z_q)
+        log_Z_q = jnp.where(
+            jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
+            0.0,
+            jnp.log(_Z_q),
+        )
         log_prob_q = self._log_prob_q(value, log_Z_q)
         return log_prob_m1 + log_prob_q
 
