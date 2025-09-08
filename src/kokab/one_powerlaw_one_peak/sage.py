@@ -15,6 +15,7 @@ from gwkokab.models import PowerlawPeak
 from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
+from gwkokab.utils.math import beta_dist_mean_variance_to_concentrations
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser
@@ -28,9 +29,9 @@ def where_fns_list(has_spin: bool) -> Optional[List[Callable[..., Array]]]:
         def mean_variance_check(
             *, chi_mean: Array, chi_variance: Array, **kwargs
         ) -> Array:
-            concentration = (chi_mean * (1.0 - chi_mean)) / chi_variance - 1.0
-            alpha = chi_mean * concentration
-            beta = (1.0 - chi_mean) * concentration
+            alpha, beta = beta_dist_mean_variance_to_concentrations(
+                mean=chi_mean, variance=chi_variance
+            )
             valid_var = jnp.greater(alpha, 1.0)
             valid_var = jnp.logical_and(valid_var, jnp.greater(beta, 1.0))
             valid_var = jnp.logical_and(
