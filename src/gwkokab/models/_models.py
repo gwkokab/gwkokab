@@ -4,7 +4,6 @@
 
 from typing import Optional
 
-import interpax
 from jax import lax, numpy as jnp, random as jrd
 from jax.scipy import special
 from jax.scipy.stats import norm, uniform
@@ -270,9 +269,12 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
         # Compute the normalization constant for primary mass distribution
 
         _m1s_delta = jnp.linspace(mmin, mmin + delta, 100)
-
         numerical_log_norm = jnp.log(
-            jnp.trapezoid(jnp.exp(self._log_prob_m1(_m1s_delta)), _m1s_delta, axis=0)
+            jnp.trapezoid(
+                jnp.exp(self._log_prob_m1_unnorm(_m1s_delta)),
+                _m1s_delta,
+                axis=0,
+            )
         )
 
         analytical_log_norm = jnp.logaddexp(
@@ -300,18 +302,16 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
         _qs = jnp.linspace(0.005, 1.0, 500)
         _m1qs_grid = jnp.stack(jnp.meshgrid(self._m1s, _qs, indexing="ij"), axis=-1)
 
-        _prob_q = jnp.exp(self._log_prob_q(jnp.expand_dims(_m1qs_grid, axis=-2)))
+        _prob_q = jnp.exp(self._log_prob_q_unnorm(_m1qs_grid))
 
-        self._Z_q_given_m1 = jnp.trapezoid(_prob_q, _qs, axis=1).reshape(
-            *(self._m1s.shape + batch_shape)
-        )
+        self._Z_q_given_m1 = jnp.trapezoid(_prob_q, _qs, axis=1)
         del _m1qs_grid, _qs, _prob_q
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
         return self._support
 
-    def _log_prob_m1(self, m1: Array, logZ: ArrayLike = 0.0) -> Array:
+    def _log_prob_m1_unnorm(self, m1: Array) -> Array:
         log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
         log_prob_powerlaw = doubly_truncated_power_law_log_prob(
             m1, -self.alpha, self.mmin, self.mmax
@@ -323,42 +323,23 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
                 jnp.log(self.lambda_peak) + log_prob_norm,
             )
             + log_smoothing_m1
-            - logZ
         )
-        return jnp.nan_to_num(
-            log_prob_m1,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
-        )
+        return log_prob_m1
 
-    def _log_prob_q(self, value: Array, logZ: ArrayLike = 0.0) -> Array:
+    def _log_prob_q_unnorm(self, value: Array) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
         log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
-        log_prob_q = self.beta * jnp.log(q) + log_smoothing_q - logZ
-        mask = self.support(value)
-        log_prob_q = jnp.where(mask, log_prob_q, -jnp.inf)
-        return jnp.nan_to_num(
-            log_prob_q,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
-        )
+        log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
+        return log_prob_q
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
-        log_prob_m1 = self._log_prob_m1(m1, self._logZ)
-        _Z_q = interpax.interp1d(m1.flatten(), self._m1s, self._Z_q_given_m1).reshape(
-            m1.shape
-        )
-        log_Z_q = jnp.where(
-            jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
-            0.0,
-            jnp.log(_Z_q),
-        )
-        log_prob_q = self._log_prob_q(value, log_Z_q)
+        log_prob_m1 = self._log_prob_m1_unnorm(m1) - self._logZ
+        _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=0.0, right=0.0)
+        log_Z_q = jnp.log(_Z_q)
+        log_prob_q = self._log_prob_q_unnorm(value) - log_Z_q
         return log_prob_m1 + log_prob_q
 
 
