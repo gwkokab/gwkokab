@@ -17,8 +17,6 @@ from numpyro.distributions import (
     Uniform,
 )
 
-from ...utils.math import beta_dist_mean_variance_to_concentrations
-
 
 def GaussianSpinModel(
     mu_eff: ArrayLike,
@@ -173,7 +171,6 @@ def BetaFromMeanVar(
     Beta
         Beta distribution with the specified mean and variance.
     """
-    alpha, beta = beta_dist_mean_variance_to_concentrations(
-        mean=mean, variance=variance
-    )
+    alpha = (jnp.square(mean) * (1 - mean) - mean * variance) / variance
+    beta = (mean * jnp.square(1 - mean) - (1 - mean) * variance) / variance
     return Beta(alpha, beta, validate_args=validate_args)
