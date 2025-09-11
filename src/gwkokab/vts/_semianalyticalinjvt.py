@@ -157,7 +157,13 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
                 Parameters.PRIMARY_SPIN_MAGNITUDE.value not in parameters
                 and Parameters.SECONDARY_SPIN_MAGNITUDE.value not in parameters
             ):
-                sampling_prob *= np.square(4 * np.pi * a1 * a2)
+                # Eliminating the probability of cartesian spins
+                sampling_prob *= np.square(4.0 * np.pi * a1 * a2)
+            else:
+                # We parameterize spins in spherical coordinates, neglecting azimuthal
+                # parameters. The injections are parameterized in terms of cartesian
+                # spins. The Jacobian is `1 / (2 pi magnitude ** 2)`.
+                sampling_prob *= np.square(2.0 * np.pi * a1 * a2)
 
             self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
 
