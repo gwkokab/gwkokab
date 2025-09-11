@@ -45,9 +45,10 @@ def _batch_log_prob(
     log_prob_sum = jax.nn.logsumexp(
         batched_log_prob,
         axis=-1,
-        where=(~jnp.isneginf(batched_log_prob)) & batched_masks,
+        where=~jnp.isneginf(batched_log_prob),
     )
-    return jnp.sum(log_prob_sum, axis=-1)
+    safe_log_prob_sum = jnp.where(jnp.isneginf(log_prob_sum), -jnp.inf, log_prob_sum)
+    return jnp.sum(safe_log_prob_sum, axis=-1)
 
 
 def numpyro_poisson_likelihood(
@@ -61,8 +62,6 @@ def numpyro_poisson_likelihood(
     constants: Dict[str, Array],
 ) -> Callable[[List[Array], List[Array], List[Array]], Array]:
     del priors
-    del where_fns
-    del constants
 
     def log_likelihood_fn(
         data_group: List[Array],
@@ -93,7 +92,19 @@ def numpyro_poisson_likelihood(
                 model_instance, batched_data, batched_log_ref_priors, batched_masks
             )
 
+        log_likelihood = total_log_likelihood - expected_rates
+
+        if where_fns is not None and len(where_fns) > 0:
+            mask = where_fns[0](**constants, **mapped_params)
+            for where_fn in where_fns[1:]:
+                mask = mask & where_fn(**constants, **mapped_params)
+            log_likelihood = jnp.where(
+                mask,
+                log_likelihood,
+                -jnp.inf,  # type: ignore
+            )
+
         # - μ + Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
-        numpyro.factor("log_likelihood", total_log_likelihood - expected_rates)
+        numpyro.factor("log_likelihood", log_likelihood)
 
     return log_likelihood_fn  # type: ignore
