@@ -40,7 +40,6 @@ jobs:
       JAX_ENABLE_X64: 1
       JAX_ARRAY: 1
       PY_COLORS: 1
-      COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
 
     steps:
       - uses: actions/checkout@v5
@@ -53,8 +52,7 @@ jobs:
         run: uv sync --all-extras --dev
       - name: Run tests and coverage
         run: |
-          uv run coverage run --source=src -m pytest tests
-          uv run coveralls --service=github-actions
+          uv run pytest tests
       - name: Run build
         run: uv build
 
@@ -81,6 +79,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv venv
+          source .venv/bin/activate
           uv pip install -r docs/requirements.txt
           pip freeze
       - name: Test documentation
