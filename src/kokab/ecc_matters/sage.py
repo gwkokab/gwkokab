@@ -67,8 +67,6 @@ def f_main() -> None:
 
 
 def n_main() -> None:
-    enable_validation()
-
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = sage_parser(parser)
     parser = numpyro_arg_parser(parser)

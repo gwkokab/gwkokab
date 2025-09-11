@@ -207,8 +207,6 @@ def f_main() -> None:
 
 
 def n_main() -> None:
-    enable_validation()
-
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
