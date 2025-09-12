@@ -20,6 +20,7 @@ from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import error_if
 from kokab.utils.common import read_json
 from kokab.utils.guru import Guru, guru_arg_parser
+from kokab.utils.literals import INFERENCE_DIRECTORY
 
 
 def _same_length_arrays(length: int, *arrays: np.ndarray) -> tuple[np.ndarray, ...]:
@@ -415,7 +416,7 @@ class FlowMCBased(Guru):
             sampler,
             rng_key=self.rng_key,
             logpdf=ft.partial(logpdf, data=data),  # type: ignore
-            out_dir="sampler_data",
+            out_dir=INFERENCE_DIRECTORY,
             labels=labels,
             n_samples=sampler_config["data_dump"]["n_samples"],
         )

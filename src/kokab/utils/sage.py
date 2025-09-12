@@ -17,7 +17,8 @@ from numpyro.distributions import Distribution
 from gwkokab.models.utils import JointDistribution
 from gwkokab.poisson_mean import PoissonMean
 from gwkokab.utils.tools import warn_if
-from kokab.utils.common import get_posterior_data, LOG_REF_PRIOR_NAME
+from kokab.utils.common import get_posterior_data
+from kokab.utils.literals import LOG_REF_PRIOR_NAME
 from kokab.utils.poisson_mean_parser import read_pmean
 
 from .guru import Guru

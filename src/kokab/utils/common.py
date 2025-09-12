@@ -16,10 +16,6 @@ from kokab.utils.priors import available as available_priors
 from kokab.utils.regex import match_all
 
 
-LOG_REF_PRIOR_NAME: str = "log_prior"
-"""Helper variable to store the column name of log reference prior."""
-
-
 def read_json(json_file: str) -> Dict:
     """Read json file and return.
 
