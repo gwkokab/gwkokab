@@ -7,6 +7,7 @@ import os
 from glob import glob
 
 import arviz as az
+import glasbey
 import numpy as np
 from arviz.utils import _var_names, get_coords
 from matplotlib import pyplot as plt
@@ -102,6 +103,15 @@ def main() -> None:
 
     chains_filenames = glob(args.chains_regex)
     chains = np.array([np.loadtxt(filename) for filename in chains_filenames])
+
+    n_dims = chains.shape[1]
+    plt.rcParams.update(
+        {
+            "axes.prop_cycle": plt.cycler(
+                color=glasbey.create_palette(palette_size=n_dims)
+            )
+        }
+    )
 
     ## Load data as arviz InferenceData class
     idata = az.convert_to_inference_data(chains)

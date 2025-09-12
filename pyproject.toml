@@ -44,6 +44,7 @@ dependencies = [
     "chex>=0.1.87",
     "equinox>=0.11.3",
     "flowMC==0.4.5",
+    "glasbey>=0.3.0",
     "h5py>=3.12.1",
     "jax>=0.4.30,<=0.5.3",
     "jaxlib>=0.4.30,<=0.5.3",
