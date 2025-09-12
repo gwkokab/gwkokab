@@ -5,6 +5,8 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
+from numpyro.distributions.distribution import enable_validation
+
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.parameters import Parameters
 from kokab.ecc_matters.common import EccentricityMattersModel
@@ -36,6 +38,8 @@ class EccentricityMattersNSage(EccentricityMattersCore, NumpyroBased):
 
 
 def f_main() -> None:
+    enable_validation()
+
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = sage_parser(parser)
     parser = flowMC_arg_parser(parser)

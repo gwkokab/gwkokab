@@ -260,21 +260,25 @@ class PoissonMean(eqx.Module):
 
         # injection based sampling method
 
+        log_prob_fn = eqx.filter_jit(eqx.filter_vmap(model_instance.log_prob))
+
         def _f(carry_logsumexp: Array, data: Tuple[Array, Array]) -> Tuple[Array, None]:
             log_weights, samples = data
             # log p(θ_i|λ)
-            model_log_prob = jax.checkpoint(
-                jax.vmap(model_instance.log_prob),
-                prevent_cse=False,
-            )(samples).reshape(log_weights.shape[0])
+            model_log_prob = log_prob_fn(samples).reshape(log_weights.shape[0])
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
+            safe_log_prob = jnp.where(jnp.isneginf(log_prob), -jnp.inf, log_prob)
 
             partial_logsumexp = jnn.logsumexp(
-                log_prob, where=~jnp.isneginf(log_prob), axis=-1
+                safe_log_prob,
+                where=~jnp.isneginf(safe_log_prob),
+                axis=-1,
             )
-
-            return jnp.logaddexp(carry_logsumexp, partial_logsumexp), None
+            safe_carry_logsumexp = jnp.where(
+                jnp.isneginf(carry_logsumexp), -jnp.inf, carry_logsumexp
+            )
+            return jnp.logaddexp(safe_carry_logsumexp, partial_logsumexp), None
 
         # n_total = n_accepted + n_rejected, batch size
         num_samples, batch_size = self.num_samples_per_component  # type: ignore

@@ -5,22 +5,73 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
+from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
+from numpyro.distributions.distribution import enable_validation
 
 import gwkokab
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.utils import (
+from gwkokab.models.npowerlawmgaussian._ncombination import (
     create_truncated_normal_distributions,
-    JointDistribution,
 )
+from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
 from kokab.utils.common import expand_arguments
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser
+
+
+def where_fns_list(has_beta_spin: bool) -> Optional[List[Callable[..., Array]]]:
+    where_fns = []
+
+    if has_beta_spin:
+
+        def mean_variance_check(N_pl: int, N_g: int, **kwargs) -> Array:
+            if N_pl > 0:
+                means_pl = jnp.stack(
+                    [kwargs[f"chi{i}_mean_pl_{j}"] for j in range(N_pl) for i in (1, 2)]
+                )
+                vars_pl = jnp.stack(
+                    [
+                        kwargs[f"chi{i}_variance_pl_{j}"]
+                        for j in range(N_pl)
+                        for i in (1, 2)
+                    ]
+                )
+            if N_g > 0:
+                means_g = jnp.stack(
+                    [kwargs[f"chi{i}_mean_g_{j}"] for j in range(N_g) for i in (1, 2)]
+                )
+                vars_g = jnp.stack(
+                    [
+                        kwargs[f"chi{i}_variance_g_{j}"]
+                        for j in range(N_g)
+                        for i in (1, 2)
+                    ]
+                )
+
+            if N_pl > 0 and N_g > 0:
+                means = jnp.concatenate([means_pl, means_g])
+                variances = jnp.concatenate([vars_pl, vars_g])
+            elif N_pl > 0:
+                means = means_pl
+                variances = vars_pl
+            else:
+                means = means_g
+                variances = vars_g
+
+            valid_var = variances <= means * (1 - means)
+            return jnp.all(valid_var)
+            # α, β = beta_dist_mean_variance_to_concentrations(means, variances)
+            # valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
+            # return jnp.all(jnp.logical_and(valid_var, valid_ab))
+
+        where_fns.append(mean_variance_check)
+    return where_fns if len(where_fns) > 0 else None
 
 
 class NPowerlawMGaussianCore(Sage):
@@ -52,7 +103,6 @@ class NPowerlawMGaussianCore(Sage):
             ],
             Callable,
         ],
-        where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
         posterior_columns: List[str],
         seed: int,
@@ -100,7 +150,7 @@ class NPowerlawMGaussianCore(Sage):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            where_fns=where_fns,
+            where_fns=where_fns_list(has_beta_spin=has_beta_spin),
         )
 
     @property
@@ -406,6 +456,8 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
 
 def f_main() -> None:
+    enable_validation()
+
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
@@ -440,7 +492,6 @@ def f_main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
     ).run()
 
 
@@ -479,5 +530,4 @@ def n_main() -> None:
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
-        where_fns=None,  # TODO(Qazalbash): Add `where_fns`.
     ).run()
