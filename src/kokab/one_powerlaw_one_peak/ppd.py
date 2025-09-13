@@ -11,7 +11,7 @@ from jax import numpy as jnp
 from jax.lax import broadcast_shapes
 from jaxtyping import Array
 from numpyro._typing import DistributionLike
-from numpyro.distributions import constraints, Distribution
+from numpyro.distributions import constraints, Distribution, Independent
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from gwkokab.models import PowerlawPeak, SmoothedTwoComponentPrimaryMassRatio
@@ -19,11 +19,7 @@ from gwkokab.models.spin import (
     BetaFromMeanVar,
     IndependentSpinOrientationGaussianIsotropic,
 )
-from gwkokab.models.transformations import (
-    PrimaryMassAndMassRatioToComponentMassesTransform,
-)
 from gwkokab.models.utils import (
-    ExtendedSupportTransformedDistribution,
     JointDistribution,
     ScaledMixture,
 )
@@ -84,33 +80,33 @@ def PowerlawPeak_raw(
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
-    smoothing_model = ExtendedSupportTransformedDistribution(
-        SmoothedTwoComponentPrimaryMassRatio(
-            alpha=params["alpha"],
-            beta=params["beta"],
-            delta=params["delta"],
-            lambda_peak=params["lambda_peak"],
-            loc=params["loc"],
-            mmax=params["mmax"],
-            mmin=params["mmin"],
-            scale=params["scale"],
-            validate_args=validate_args,
-        ),
-        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+    smoothing_model = SmoothedTwoComponentPrimaryMassRatio(
+        alpha=params["alpha"],
+        beta=params["beta"],
+        delta=params["delta"],
+        lambda_peak=params["lambda_peak"],
+        loc=params["loc"],
+        mmax=params["mmax"],
+        mmin=params["mmin"],
+        scale=params["scale"],
         validate_args=validate_args,
     )
 
     component_distributions = [smoothing_model]
 
     if use_spin:
-        chi1_dist = BetaFromMeanVar(
-            mean=params["chi_mean"],
-            variance=params["chi_variance"],
+        chi_dist = Independent(
+            BetaFromMeanVar(
+                mean=jnp.stack([params["chi_mean"], params["chi_mean"]], axis=-1),
+                variance=jnp.stack(
+                    [params["chi_variance"], params["chi_variance"]], axis=-1
+                ),
+                validate_args=validate_args,
+            ),
+            reinterpreted_batch_ndims=1,
             validate_args=validate_args,
         )
-        chi2_dist = chi1_dist
-        component_distributions.append(chi1_dist)
-        component_distributions.append(chi2_dist)
+        component_distributions.append(chi_dist)
 
     if use_tilt:
         tilt_dist = IndependentSpinOrientationGaussianIsotropic(
