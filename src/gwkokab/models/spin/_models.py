@@ -171,15 +171,6 @@ def BetaFromMeanVar(
     Beta
         Beta distribution with the specified mean and variance.
     """
-    safe_variance = jnp.where(variance <= 0, 1.0, variance)
-    alpha = jnp.where(
-        variance <= 0,
-        1.0,
-        (jnp.square(mean) * (1 - mean) - mean * variance) / safe_variance,
-    )
-    beta = jnp.where(
-        variance <= 0,
-        1.0,
-        (mean * jnp.square(1 - mean) - (1 - mean) * variance) / safe_variance,
-    )
+    alpha = (jnp.square(mean) * (1 - mean) - mean * variance) / variance
+    beta = (mean * jnp.square(1 - mean) - (1 - mean) * variance) / variance
     return Beta(alpha, beta, validate_args=validate_args)

@@ -24,7 +24,11 @@ def where_fns_list(has_spin: bool) -> Optional[List[Callable[..., Array]]]:
     where_fns = []
 
     if has_spin:
-        where_fns.append(check_min_concentration_for_beta_dist)
+        where_fns.append(
+            lambda chi_mean,
+            chi_variance,
+            **kwargs: check_min_concentration_for_beta_dist(chi_mean, chi_variance)
+        )
 
     return where_fns if len(where_fns) > 0 else None
 
