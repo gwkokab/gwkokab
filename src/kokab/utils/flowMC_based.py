@@ -578,7 +578,12 @@ def _save_data_from_sampler(
         "Local acceptance rates saved to {out_dir}/local_accs.dat", out_dir=out_dir
     )
 
-    for n_chain in range(n_chains):
+    np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
+    logger.info("Loss values saved to {out_dir}/loss.dat", out_dir=out_dir)
+
+    for n_chain in tqdm.trange(
+        n_chains, total=n_chains, unit="chain", desc="Saving data from chains"
+    ):
         np.savetxt(
             rf"{out_dir}/global_accs_{n_chain}.dat",
             np.column_stack(
@@ -594,11 +599,7 @@ def _save_data_from_sampler(
             header="train prod",
             comments="#",
         )
-        logger.info(
-            "Saving chain {n_chain} global acceptance rates to {out_dir}/global_accs_{n_chain}.dat",
-            n_chain=n_chain,
-            out_dir=out_dir,
-        )
+
         np.savetxt(
             rf"{out_dir}/local_accs_{n_chain}.dat",
             np.column_stack(
@@ -614,38 +615,27 @@ def _save_data_from_sampler(
             header="train prod",
             comments="#",
         )
-        logger.info(
-            "Saving chain {n_chain} local acceptance rates to {out_dir}/local_accs_{n_chain}.dat",
-            n_chain=n_chain,
-            out_dir=out_dir,
-        )
 
-    np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
-    logger.info("Loss values saved to {out_dir}/loss.dat", out_dir=out_dir)
-
-    for i in range(n_chains):
-        logger.info(
-            "Saving chain {i} data to {out_dir}/train_chains_{i}.dat and {out_dir}/prod_chains_{i}.dat",
-            i=i,
-            out_dir=out_dir,
-        )
         np.savetxt(
-            rf"{out_dir}/train_chains_{i}.dat",
-            train_chains[i, :, :],
+            rf"{out_dir}/train_chains_{n_chain}.dat",
+            train_chains[n_chain, :, :],
             header=header,
         )
         np.savetxt(
-            rf"{out_dir}/prod_chains_{i}.dat",
-            prod_chains[i, :, :],
+            rf"{out_dir}/prod_chains_{n_chain}.dat",
+            prod_chains[n_chain, :, :],
             header=header,
         )
         np.savetxt(
-            rf"{out_dir}/log_prob_{i}.dat",
+            rf"{out_dir}/log_prob_{n_chain}.dat",
             np.column_stack(
                 _same_length_arrays(
-                    max(train_log_prob[i].shape[0], prod_log_prob[i].shape[0]),
-                    train_log_prob[i],
-                    prod_log_prob[i],
+                    max(
+                        train_log_prob[n_chain].shape[0],
+                        prod_log_prob[n_chain].shape[0],
+                    ),
+                    train_log_prob[n_chain],
+                    prod_log_prob[n_chain],
                 )
             ),
             header="train prod",
