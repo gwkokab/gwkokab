@@ -426,7 +426,7 @@ class Sampler:
         with tqdm.tqdm(range(n_global_steps), total=n_global_steps) as pbar:
             pbar.set_description("Global Tuning")
             for i in pbar:
-                for strategy in self.strategy_order[i : i + 6]:
+                for strategy in self.strategy_order[6 * i : 6 * (i + 1)]:
                     (
                         rng_key,
                         self.resources,
@@ -447,8 +447,11 @@ class Sampler:
 
         with tqdm.tqdm(range(n_local_steps), total=n_local_steps) as pbar:
             pbar.set_description("Global Sampling")
+            offset = 6 * n_global_steps + 2
             for i in pbar:
-                for strategy in self.strategy_order[i : i + 4]:
+                for strategy in self.strategy_order[
+                    offset + 4 * i : offset + 4 * (i + 1)
+                ]:
                     (
                         rng_key,
                         self.resources,
