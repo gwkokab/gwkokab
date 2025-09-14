@@ -20,13 +20,11 @@ from ._abc import VolumeTimeSensitivityInterface
 
 _PARAM_MAPPING = {
     Parameters.PRIMARY_MASS_SOURCE.value: "mass1_source",
-    Parameters.PRIMARY_SPIN_MAGNITUDE.value: "spin1z",
     Parameters.PRIMARY_SPIN_X.value: "spin1x",
     Parameters.PRIMARY_SPIN_Y.value: "spin1y",
     Parameters.PRIMARY_SPIN_Z.value: "spin1z",
     Parameters.REDSHIFT.value: "redshift",
     Parameters.SECONDARY_MASS_SOURCE.value: "mass2_source",
-    Parameters.SECONDARY_SPIN_MAGNITUDE.value: "spin2z",
     Parameters.SECONDARY_SPIN_X.value: "spin2x",
     Parameters.SECONDARY_SPIN_Y.value: "spin2y",
     Parameters.SECONDARY_SPIN_Z.value: "spin2z",
@@ -78,10 +76,6 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
             msg=f"parameters must be a Sequence, got {type(parameters)}",
         )
         error_if(
-            not set(parameters).difference(_PARAM_MAPPING.values()),
-            msg=f"parameters must be one of the following: {set(_PARAM_MAPPING.values())}",
-        )
-        error_if(
             not all(isinstance(p, str) for p in parameters),
             msg="all parameters must be strings",
         )
@@ -94,7 +88,10 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
             self.analysis_time_years = (
                 float(f.attrs["analysis_time_s"]) / SECONDS_PER_YEAR
             )
+            logger.debug("Analysis time: {:.2f} years", self.analysis_time_years)
+
             self.total_injections = int(f.attrs["total_generated"])
+            logger.debug("Total injections: {}", self.total_injections)
 
             injections = f["injections"]
 
@@ -147,8 +144,24 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
                     _inj = χ_2z / a2
                 elif p == Parameters.PRIMARY_SPIN_MAGNITUDE.value:
                     _inj = a1
+                    # We parameterize spins in spherical coordinates, neglecting azimuthal
+                    # parameters. The injections are parameterized in terms of cartesian
+                    # spins. The Jacobian is `1 / (2 pi magnitude ** 2)`.
+                    logger.debug(
+                        "Correcting sampling probability for spherical spin "
+                        "parameterization of primary spin."
+                    )
+                    sampling_prob *= 2.0 * np.pi * np.square(a1)
                 elif p == Parameters.SECONDARY_SPIN_MAGNITUDE.value:
                     _inj = a2
+                    # We parameterize spins in spherical coordinates, neglecting azimuthal
+                    # parameters. The injections are parameterized in terms of cartesian
+                    # spins. The Jacobian is `1 / (2 pi magnitude ** 2)`.
+                    logger.debug(
+                        "Correcting sampling probability for spherical spin "
+                        "parameterization of secondary spin."
+                    )
+                    sampling_prob *= 2.0 * np.pi * np.square(a2)
                 else:
                     _inj = injections[_PARAM_MAPPING[p]][found][:]
                 injs.append(_inj)
@@ -158,12 +171,10 @@ class SemiAnalyticalRealInjectionVolumeTimeSensitivity(VolumeTimeSensitivityInte
                 and Parameters.SECONDARY_SPIN_MAGNITUDE.value not in parameters
             ):
                 # Eliminating the probability of cartesian spins
+                logger.debug(
+                    "Eliminating the probability of cartesian spins from sampling probability."
+                )
                 sampling_prob *= np.square(4.0 * np.pi * a1 * a2)
-            else:
-                # We parameterize spins in spherical coordinates, neglecting azimuthal
-                # parameters. The injections are parameterized in terms of cartesian
-                # spins. The Jacobian is `1 / (2 pi magnitude ** 2)`.
-                sampling_prob *= np.square(2.0 * np.pi * a1 * a2)
 
             self.injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
 
