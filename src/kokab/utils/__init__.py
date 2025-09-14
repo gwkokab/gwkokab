@@ -3,6 +3,7 @@
 
 
 from . import (
+    checks as checks,
     common as common,
     f_monk as f_monk,
     flowMC_based as flowMC_based,
