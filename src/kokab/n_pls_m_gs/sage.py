@@ -19,6 +19,7 @@ from gwkokab.models.npowerlawmgaussian._ncombination import (
 from gwkokab.models.utils import JointDistribution
 from gwkokab.parameters import Parameters
 from gwkokab.poisson_mean import PoissonMean
+from kokab.utils.checks import check_min_concentration_for_beta_dist
 from kokab.utils.common import expand_arguments
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
@@ -64,11 +65,8 @@ def where_fns_list(has_beta_spin: bool) -> Optional[List[Callable[..., Array]]]:
                 means = means_g
                 variances = vars_g
 
-            valid_var = variances <= means * (1 - means)
-            return jnp.all(valid_var)
-            # α, β = beta_dist_mean_variance_to_concentrations(means, variances)
-            # valid_ab = jnp.logical_and(α > 1.0, β > 1.0)
-            # return jnp.all(jnp.logical_and(valid_var, valid_ab))
+            checks = check_min_concentration_for_beta_dist(means, variances)
+            return jnp.all(checks)
 
         where_fns.append(mean_variance_check)
     return where_fns if len(where_fns) > 0 else None
