@@ -326,19 +326,12 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
         )
         return log_prob_m1
 
+    @validate_sample
     def _log_prob_q_unnorm(self, value: Array) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
         log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
-        log_prob_q = (
-            doubly_truncated_power_law_log_prob(
-                x=q,
-                alpha=self.beta,
-                low=jnp.divide(self.mmin, m1),
-                high=1.0,
-            )
-            + log_smoothing_q
-        )
+        log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
 
         return log_prob_q
 
