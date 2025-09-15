@@ -8,7 +8,9 @@ import pandas as pd
 
 import gwkokab
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.utils import create_truncated_normal_distributions
+from gwkokab.models.npowerlawmgaussian._ncombination import (
+    create_truncated_normal_distributions,
+)
 from gwkokab.parameters import Parameters
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
