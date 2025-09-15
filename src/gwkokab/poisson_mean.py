@@ -268,7 +268,11 @@ class PoissonMean(eqx.Module):
             model_log_prob = log_prob_fn(samples).reshape(log_weights.shape[0])
             # log p(θ_i|λ) - log w_i
             log_prob = model_log_prob - log_weights
-            safe_log_prob = jnp.where(jnp.isneginf(log_prob), -jnp.inf, log_prob)
+            safe_log_prob = jnp.where(
+                jnp.isneginf(log_prob) | jnp.isnan(log_prob),
+                -jnp.inf,
+                log_prob,
+            )
 
             partial_logsumexp = jnn.logsumexp(
                 safe_log_prob,
@@ -276,7 +280,9 @@ class PoissonMean(eqx.Module):
                 axis=-1,
             )
             safe_carry_logsumexp = jnp.where(
-                jnp.isneginf(carry_logsumexp), -jnp.inf, carry_logsumexp
+                jnp.isneginf(carry_logsumexp) | jnp.isnan(carry_logsumexp),
+                -jnp.inf,
+                carry_logsumexp,
             )
             return jnp.logaddexp(safe_carry_logsumexp, partial_logsumexp), None
 
