@@ -339,7 +339,7 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1_unnorm(m1) - self._logZ
-        _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=0.0, right=0.0)
+        _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=1.0, right=1.0)
         log_Z_q = jnp.log(_Z_q)
         log_prob_q = self._log_prob_q_unnorm(value) - log_Z_q
         return log_prob_m1 + log_prob_q
