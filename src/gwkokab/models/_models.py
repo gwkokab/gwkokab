@@ -269,30 +269,25 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
         # Compute the normalization constant for primary mass distribution
 
         _m1s_delta = jnp.linspace(mmin, mmin + delta, 100)
-        numerical_log_norm = jnp.log(
-            jnp.trapezoid(
-                jnp.exp(self._log_prob_m1_unnorm(_m1s_delta)),
-                _m1s_delta,
-                axis=0,
-            )
+        numerical_log_norm = jnp.trapezoid(
+            jnp.exp(self._log_prob_m1_unnorm(_m1s_delta)),
+            _m1s_delta,
+            axis=0,
         )
 
-        analytical_log_norm = jnp.logaddexp(
-            jnp.log1p(-self.lambda_peak)
-            + doubly_truncated_power_law_log_norm_constant(
+        analytical_log_norm = (1 - self.lambda_peak) * jnp.exp(
+            doubly_truncated_power_law_log_norm_constant(
                 -self.alpha, self.mmin + self.delta, self.mmax
             )
             - doubly_truncated_power_law_log_norm_constant(
                 -self.alpha, self.mmin, self.mmax
-            ),
-            jnp.log(self.lambda_peak)
-            + jnp.log(
-                special.ndtr((self.mmax - self.loc) / self.scale)
-                - special.ndtr((self.mmin + self.delta - self.loc) / self.scale)
-            ),
+            )
+        ) + self.lambda_peak * (
+            special.ndtr((self.mmax - self.loc) / self.scale)
+            - special.ndtr((self.mmin + self.delta - self.loc) / self.scale)
         )
 
-        self._logZ = jnp.logaddexp(numerical_log_norm, analytical_log_norm)
+        self._logZ = jnp.log(numerical_log_norm + analytical_log_norm)
 
         del _m1s_delta
 
@@ -312,35 +307,41 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
         return self._support
 
     def _log_prob_m1_unnorm(self, m1: Array) -> Array:
-        log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / self.delta)
-        log_prob_powerlaw = doubly_truncated_power_law_log_prob(
-            m1, -self.alpha, self.mmin, self.mmax
+        safe_delta = jnp.where(self.delta <= 0.0, 1.0, self.delta)
+        log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / safe_delta)
+        log_norm_powerlaw = doubly_truncated_power_law_log_norm_constant(
+            -self.alpha, self.mmin, self.mmax
         )
-        log_prob_norm = norm.logpdf(m1, loc=self.loc, scale=self.scale)
+        prob_norm = norm.pdf(m1, loc=self.loc, scale=self.scale)
         log_prob_m1 = (
-            jnp.logaddexp(
-                jnp.log1p(-self.lambda_peak) + log_prob_powerlaw,
-                jnp.log(self.lambda_peak) + log_prob_norm,
+            jnp.log(
+                (1 - self.lambda_peak)
+                * jnp.power(m1, -self.alpha)
+                * jnp.exp(-log_norm_powerlaw)
+                + self.lambda_peak * prob_norm
             )
             + log_smoothing_m1
         )
-        return log_prob_m1
+
+        return jnp.where(self.delta <= 0.0, -jnp.inf, log_prob_m1)
 
     @validate_sample
     def _log_prob_q_unnorm(self, value: Array) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
-        log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / self.delta)
+        safe_delta = jnp.where(self.delta <= 0.0, 1.0, self.delta)
+        log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / safe_delta)
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
 
-        return log_prob_q
+        return jnp.where(self.delta <= 0.0, -jnp.inf, log_prob_q)
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1_unnorm(m1) - self._logZ
         _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=1.0, right=1.0)
-        log_Z_q = jnp.log(_Z_q)
+        safe_Z_q = jnp.where(_Z_q <= 0, 1.0, _Z_q)
+        log_Z_q = jnp.where(_Z_q <= 0, 0.0, jnp.log(safe_Z_q))
         log_prob_q = self._log_prob_q_unnorm(value) - log_Z_q
         return log_prob_m1 + log_prob_q
 
