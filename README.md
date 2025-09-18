@@ -33,11 +33,11 @@ If you would like to contribute, please see the [contributing guidelines](https:
 If you use GWKokab in your research, please cite the following paper:
 
 ```bibtex
-@software{gwkokab2024github,
-    author = {Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy},
-    title = {{GWKokab}: A JAX-based gravitational-wave population inference toolkit for parametric models},
-    url = {https://github.com/gwkokab/gwkokab},
-    version = {0.0.1},
-    year = {2024}
+@article{arxiv:2509.13638,
+    author  = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
+    title   = {GWKokab: An Implementation to Identify the Properties of Multiple Population of Gravitational Wave Sources},
+    journal = {arXiv preprint arXiv:2509.13638},
+    year    = {2025},
+    url     = {https://arxiv.org/pdf/2509.13638v1}
 }
 ```
