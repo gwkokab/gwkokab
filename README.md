@@ -30,7 +30,7 @@ If you would like to contribute, please see the [contributing guidelines](https:
 
 ## Citing GWKokab
 
-If you use GWKokab in your research, please cite the following paper:
+If you use GWKokab in your research, please cite the following:
 
 ```bibtex
 @article{arxiv:2509.13638,
@@ -40,12 +40,13 @@ If you use GWKokab in your research, please cite the following paper:
     year    = {2025},
     url     = {https://arxiv.org/pdf/2509.13638v1}
 }
+```
 
+```bibtex
 @software{gwkokab2024github,
-    author = {Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy},
-    title = {{GWKokab}: A JAX-based gravitational-wave population inference toolkit for parametric models},
-    url = {https://github.com/gwkokab/gwkokab},
-    version = {0.0.1},
-    year = {2024}
+    author  = {Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy},
+    title   = {{GWKokab}: A JAX-based gravitational-wave population inference toolkit for parametric models},
+    url     = {https://github.com/gwkokab/gwkokab},
+    year    = {2024}
 }
 ```

@@ -1,6 +1,6 @@
 # Citing GWKokab
 
-If you have used GWKokab in your research, please cite the following papers:
+If you have used GWKokab in your research, please cite the following:
 
 ```bibtex
 @article{arxiv:2509.13638,
@@ -9,5 +9,14 @@ If you have used GWKokab in your research, please cite the following papers:
     journal = {arXiv preprint arXiv:2509.13638},
     year    = {2025},
     url     = {https://arxiv.org/pdf/2509.13638v1}
+}
+```
+
+```bibtex
+@software{gwkokab2024github,
+    author  = {Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy},
+    title   = {{GWKokab}: A JAX-based gravitational-wave population inference toolkit for parametric models},
+    url     = {https://github.com/gwkokab/gwkokab},
+    year    = {2024}
 }
 ```
