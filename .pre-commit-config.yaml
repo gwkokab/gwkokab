@@ -8,7 +8,7 @@ default_install_hook_types: [pre-commit, commit-msg]
 files: src||scripts||tests||examples
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: "v0.12.10"
+    rev: "v0.13.0"
     hooks:
       - id: ruff
         args: [--fix]
@@ -64,13 +64,13 @@ repos:
     # using an untagged rev for forward compatibility with pre-commit 4.0
     # see https://github.com/PyCQA/docformatter/issues/289
     # This should be changed back to a tag when (>1.7.5) is released
-    rev: 06907d0267368b49b9180eed423fae5697c1e909
+    rev: v1.7.7
     hooks:
       - id: docformatter
         additional_dependencies: [tomli]
         args: [--close-quotes-on-newline, --in-place, --config, ./pyproject.toml]
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.33.3
+    rev: 0.34.0
     hooks:
       - id: check-dependabot
       - id: check-github-workflows
