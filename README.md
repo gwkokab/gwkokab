@@ -1,8 +1,14 @@
 <div align="center">
-<a href="https://gwkokab.readthedocs.io">
-<img src="https://raw.githubusercontent.com/gwkokab/gwkokab/main/docs/source/_static/logo.png" alt="logo" width="400px" height="90px"></img>
-</a>
+  <picture>
+    <!-- Dark mode image -->
+    <source srcset="https://raw.githubusercontent.com/gwkokab/gwkokab/main/docs/source/_static/noBgWhite.png" media="(prefers-color-scheme: dark)">
+    <!-- Light mode image -->
+    <source srcset="https://raw.githubusercontent.com/gwkokab/gwkokab/main/docs/source/_static/noBgBlack.png" media="(prefers-color-scheme: light)">
+    <!-- Fallback image (if no preference detected) -->
+    <img src="https://raw.githubusercontent.com/gwkokab/gwkokab/main/docs/source/_static/noBgColor.png" alt="logo">
+  </picture>
 </div>
+
 
 <h2 align="center">
 A JAX-based gravitational-wave population inference toolkit for parametric models
