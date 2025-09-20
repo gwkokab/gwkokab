@@ -28,7 +28,7 @@ def set_log_level() -> None:
     """
     import os
 
-    valid_levels = ["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"]
+    valid_levels = ("TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL")
 
     if (log_level := os.environ.get("GWKOKAB_LOG_LEVEL", "TRACE")) not in valid_levels:
         raise ValueError(
