@@ -22,6 +22,7 @@ from gwkokab.poisson_mean import PoissonMean
 from kokab.utils.checks import check_min_concentration_for_beta_dist
 from kokab.utils.common import expand_arguments
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.utils.logger import log_info
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.utils.sage import Sage, sage_arg_parser
 
@@ -463,6 +464,8 @@ def f_main() -> None:
 
     args = parser.parse_args()
 
+    log_info(start=True)
+
     NPowerlawMGaussianFSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -500,6 +503,8 @@ def n_main() -> None:
     parser = numpyro_arg_parser(parser)
 
     args = parser.parse_args()
+
+    log_info(start=True)
 
     NPowerlawMGaussianNSage(
         N_pl=args.n_pl,

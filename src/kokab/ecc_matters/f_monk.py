@@ -8,6 +8,7 @@ from typing import List
 from gwkokab.parameters import Parameters
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils.f_monk import Monk, monk_arg_parser
+from kokab.utils.logger import log_info
 
 
 class EccentricityMattersMonk(Monk):
@@ -29,6 +30,8 @@ def main() -> None:
     parser = monk_arg_parser(parser)
 
     args = parser.parse_args()
+
+    log_info(start=True)
 
     EccentricityMattersMonk(
         model=EccentricityMattersModel,

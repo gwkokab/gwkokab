@@ -11,6 +11,7 @@ from gwkokab.models.utils import create_truncated_normal_distributions
 from gwkokab.parameters import Parameters
 from kokab.utils.common import expand_arguments
 from kokab.utils.f_monk import Monk, monk_arg_parser
+from kokab.utils.logger import log_info
 
 
 class NPowerlawMGaussianMonk(Monk):
@@ -379,6 +380,8 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    log_info(start=True)
 
     NPowerlawMGaussianMonk(
         N_pl=args.n_pl,
