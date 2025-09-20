@@ -2,25 +2,51 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import sys
-
 from loguru import logger
 
 
-def set_log_level(log_level: str) -> None:
+def time_now() -> str:
+    """Get the current time as a string in the format YYYYMMDDHHMMSS.
+
+    Returns
+    -------
+    str
+        The current time as a string.
+    """
+    import datetime
+
+    return datetime.datetime.now().strftime(r"%Y%m%d%H%M%S")
+
+
+def set_log_level() -> None:
     """Set the log level for the logger. The preset log level when initialising GWKokab
-    is the value of the GWKOKAB_LOG_LEVEL environment variable, or 'WARNING' if the
+    is the value of the `GWKOKAB_LOG_LEVEL` environment variable, or 'WARNING' if the
     environment variable is unset.
 
-    Parameters
-    ----------
-    log_level : str
-        The log level to set. Options are 'TRACE','DEBUG', 'INFO', 'SUCCESS', 'WARNING',
-        'ERROR', 'CRITICAL'
+    Valid options of `GWKOKAB_LOG_LEVEL` are 'TRACE', 'DEBUG', 'INFO', 'SUCCESS',
+    'WARNING', 'ERROR', and 'CRITICAL'.
     """
+    import os
+
+    valid_levels = ["TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL"]
+
+    if (log_level := os.environ.get("GWKOKAB_LOG_LEVEL", "TRACE")) not in valid_levels:
+        raise ValueError(
+            f"Invalid log level: {log_level}. Valid options are {', '.join(valid_levels)}"
+        )
+
+    current_time = time_now()
+
+    GWKOKAB_LOG_DIR = os.getenv("GWKOKAB_LOG_DIR", "./logs")
+
+    log_filename = f"gwkokab_{current_time}.log"
+    log_filename = os.path.join(GWKOKAB_LOG_DIR, log_filename)
+
+    os.makedirs(GWKOKAB_LOG_DIR, exist_ok=True)
+
     logger.remove()
     logger.add(
-        sys.stderr,
+        log_filename,
         level=log_level,
         format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
         "<level>{level: <8}</level> | "
@@ -28,9 +54,13 @@ def set_log_level(log_level: str) -> None:
     )
     logger.debug(f"Setting LogLevel to {log_level}")
 
+    del os
+
 
 def log_gwkokab_info() -> None:
     """Prints the GWKokab version and the Python version."""
+
+    import sys
 
     import gwkokab as gwk
 
@@ -44,6 +74,7 @@ def log_gwkokab_info() -> None:
     logger.info("Python build: {python_build}", python_build=sys.version_info)
 
     del gwk
+    del sys
 
 
 def log_device_info() -> None:
@@ -97,6 +128,7 @@ def log_info(start: bool = False) -> None:
     start : bool, optional
         If True, log the start message, by default False
     """
+    set_log_level()
     log_gwkokab_info()
     log_device_info()
     if start:

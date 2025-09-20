@@ -16,6 +16,7 @@ from gwkokab.population import error_magazine, PopulationFactory
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils import genie_parser, poisson_mean_parser
 from kokab.utils.common import vt_json_read_and_process
+from kokab.utils.logger import log_info
 from kokab.utils.regex import match_all
 
 
@@ -58,6 +59,8 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    log_info(start=True)
 
     with open(args.model_json, "r") as f:
         model_json = json.load(f)
