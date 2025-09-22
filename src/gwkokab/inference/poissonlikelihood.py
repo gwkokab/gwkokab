@@ -23,7 +23,7 @@ def poisson_likelihood(
     variables: Dict[str, DistributionLike],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
-    poisson_mean_estimator_fn: Callable[[ScaledMixture], Array],
+    poisson_mean_estimator: Callable[[ScaledMixture], Array],
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
 ) -> Callable[[Array, Dict[str, Any]], Array]:
@@ -73,7 +73,7 @@ def poisson_likelihood(
         model_instance = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = poisson_mean_estimator_fn(model_instance)
+        expected_rates = poisson_mean_estimator(model_instance)
 
         log_prob_fn = eqx.filter_jit(eqx.filter_vmap(model_instance.log_prob))
 
