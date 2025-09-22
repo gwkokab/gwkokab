@@ -11,7 +11,7 @@ from jaxtyping import Array, PRNGKeyArray
 
 from ..models.utils import ScaledMixture
 from ..utils.tools import error_if
-from ..vts._utils import load_model
+from ..utils.train import load_model
 
 
 def poisson_mean_from_neural_vt(

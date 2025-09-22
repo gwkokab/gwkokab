@@ -12,7 +12,7 @@ from jaxtyping import Array, PRNGKeyArray
 from ..models import PowerlawRedshift
 from ..models.utils import JointDistribution, ScaledMixture
 from ..utils.tools import error_if
-from ..vts._utils import load_model
+from ..utils.train import load_model
 
 
 def poisson_mean_from_neural_pdet(
