@@ -20,18 +20,15 @@ from ..utils.tools import batch_and_remainder
 
 
 _PARAM_MAPPING = {
-    "mass_1_source": P.PRIMARY_MASS_SOURCE.value,
-    "mass_2_source": P.SECONDARY_MASS_SOURCE.value,
-    "mass1_source": P.PRIMARY_MASS_SOURCE.value,
-    "mass2_source": P.SECONDARY_MASS_SOURCE.value,
-    "redshift": P.REDSHIFT.value,
-    "spin1x": P.PRIMARY_SPIN_X.value,
-    "spin1y": P.PRIMARY_SPIN_Y.value,
-    "spin1z": P.PRIMARY_SPIN_Z.value,
-    "spin2x": P.SECONDARY_SPIN_X.value,
-    "spin2y": P.SECONDARY_SPIN_Y.value,
-    "spin2z": P.SECONDARY_SPIN_Z.value,
-    "z": P.REDSHIFT.value,
+    P.PRIMARY_MASS_SOURCE.value: "mass1_source",
+    P.PRIMARY_SPIN_X.value: "spin1x",
+    P.PRIMARY_SPIN_Y.value: "spin1y",
+    P.PRIMARY_SPIN_Z.value: "spin1z",
+    P.REDSHIFT.value: "redshift",
+    P.SECONDARY_MASS_SOURCE.value: "mass2_source",
+    P.SECONDARY_SPIN_X.value: "spin2x",
+    P.SECONDARY_SPIN_Y.value: "spin2y",
+    P.SECONDARY_SPIN_Z.value: "spin2z",
 }
 
 
