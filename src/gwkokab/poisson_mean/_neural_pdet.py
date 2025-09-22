@@ -3,25 +3,28 @@
 
 
 from collections.abc import Callable, Sequence
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
-from ..models.utils import ScaledMixture
+from ..models import PowerlawRedshift
+from ..models.utils import JointDistribution, ScaledMixture
 from ..utils.tools import error_if
 from ..vts._utils import load_model
 
 
-def neural_vt_its(
+def poisson_mean_from_neural_pdet(
     key: PRNGKeyArray,
     parameters: Sequence[str],
     filename: str,
     batch_size: Optional[int] = None,
     num_samples: int = 1_000,
     time_scale: Union[int, float, Array] = 1.0,
-) -> Callable[[ScaledMixture], Array]:
+) -> Tuple[
+    Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
+]:
     error_if(not parameters, msg="parameters sequence cannot be empty")
     error_if(
         not isinstance(parameters, Sequence),
@@ -54,19 +57,37 @@ def neural_vt_its(
     shuffle_indices = [parameters.index(name) for name in names]
 
     @jax.jit
-    def log_vt(x: Array) -> Array:
+    def log_pdet(x: Array) -> Array:
         x_new = x[..., shuffle_indices]
-        return jnp.squeeze(
+        y_new = jnp.squeeze(
             jax.lax.map(neural_vt_model, x_new, batch_size=batch_size), axis=-1
         )
+        mask = jnp.less_equal(y_new, 0.0)
+        safe_y_new = jnp.where(mask, 1.0, y_new)
+        return jnp.where(mask, -jnp.inf, jnp.log(safe_y_new))
 
     def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
         component_sample = scaled_mixture.component_sample(key, (num_samples,))
         # vmapping over components
-        log_vt_values = jax.vmap(log_vt, in_axes=1)(component_sample)
+        log_pdet_values = jax.vmap(log_pdet, in_axes=1)(component_sample)
+
+        redshift_log_norm = []
+        for component_dist in scaled_mixture.component_distributions:
+            if isinstance(component_dist, JointDistribution):
+                for m_dist in component_dist.marginal_distributions:
+                    if isinstance(m_dist, PowerlawRedshift):
+                        redshift_log_norm.append(m_dist.log_norm())
+                        break
+                else:
+                    redshift_log_norm.append(jnp.zeros(()))
+            else:
+                redshift_log_norm.append(jnp.zeros(()))
+
         mean_per_component = jnp.exp(
-            scaled_mixture.log_scales + jax.nn.logsumexp(log_vt_values, axis=-1)
+            scaled_mixture.log_scales
+            + jnp.stack(redshift_log_norm, axis=-1)
+            + jax.nn.logsumexp(log_pdet_values, axis=-1)
         )
         return (time_scale / num_samples) * jnp.sum(mean_per_component, axis=-1)
 
-    return _poisson_mean
+    return log_pdet, _poisson_mean, time_scale

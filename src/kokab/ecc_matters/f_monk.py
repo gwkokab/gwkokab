@@ -5,7 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
-from gwkokab.parameters import Parameters
+from gwkokab.parameters import Parameters as P
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils.f_monk import Monk, monk_arg_parser
 from kokab.utils.logger import log_info
@@ -15,9 +15,9 @@ class EccentricityMattersMonk(Monk):
     @property
     def parameters(self) -> List[str]:
         return [
-            Parameters.PRIMARY_MASS_SOURCE.value,
-            Parameters.SECONDARY_MASS_SOURCE.value,
-            Parameters.ECCENTRICITY.value,
+            P.PRIMARY_MASS_SOURCE.value,
+            P.SECONDARY_MASS_SOURCE.value,
+            P.ECCENTRICITY.value,
         ]
 
     @property
@@ -38,7 +38,6 @@ def main() -> None:
         data_filename=args.data_filename,
         seed=args.seed,
         prior_filename=args.prior_json,
-        selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         debug_nans=args.debug_nans,

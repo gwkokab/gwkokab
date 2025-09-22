@@ -137,7 +137,7 @@ def load_o1o2o3_or_endO_injection_data(
     return injections, sampling_log_prob, analysis_time_years, total_injections
 
 
-def injection_based_poisson_mean(
+def poisson_mean_from_sensitivity_injections(
     key: PRNGKeyArray,
     parameters: Sequence[str],
     filename: str,
@@ -145,7 +145,9 @@ def injection_based_poisson_mean(
     far_cut: float = 1.0,
     snr_cut: float = 10.0,
     ifar_pipelines: Sequence[str] | None = None,
-) -> Callable[[ScaledMixture], Array]:
+) -> Tuple[
+    Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
+]:
     del key  # Unused.
     # θ_i, log w_i, T, N_total
     samples, log_weights, analysis_time_years, total_injections = (
@@ -157,6 +159,8 @@ def injection_based_poisson_mean(
             ifar_pipelines,
         )
     )
+
+    n_accepted = log_weights.shape[0]
 
     def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
         log_prob_fn = eqx.filter_jit(eqx.filter_vmap(scaled_mixture.log_prob))
@@ -185,7 +189,6 @@ def injection_based_poisson_mean(
             )
             return jnp.logaddexp(safe_carry_logsumexp, partial_logsumexp), None
 
-        n_accepted = log_weights.shape[0]
         initial_logprob = jnp.asarray(-jnp.inf)
         if n_accepted <= batch_size or batch_size is None:
             # If the number of accepted injections is less than or equal to the batch size,
@@ -210,4 +213,4 @@ def injection_based_poisson_mean(
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
         return (analysis_time_years / total_injections) * jnp.exp(log_prob)
 
-    return _poisson_mean
+    return None, _poisson_mean, analysis_time_years

@@ -11,9 +11,8 @@ from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import PowerlawPeak
-from gwkokab.models.utils import JointDistribution
-from gwkokab.parameters import Parameters
-from gwkokab.poisson_mean import PoissonMean
+from gwkokab.models.utils import JointDistribution, ScaledMixture
+from gwkokab.parameters import Parameters as P
 from kokab.utils.checks import check_min_concentration_for_beta_dist
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.logger import log_info
@@ -47,7 +46,7 @@ class PowerlawPeakCore(Sage):
                 Dict[str, DistributionLike],
                 Dict[str, int],
                 ArrayLike,
-                PoissonMean,
+                Callable[[ScaledMixture], Array],
                 Optional[List[Callable[..., Array]]],
                 Dict[str, Array],
             ],
@@ -57,7 +56,6 @@ class PowerlawPeakCore(Sage):
         posterior_columns: List[str],
         seed: int,
         prior_filename: str,
-        selection_fn_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_buckets: int,
@@ -77,7 +75,6 @@ class PowerlawPeakCore(Sage):
             posterior_columns=posterior_columns,
             seed=seed,
             prior_filename=prior_filename,
-            selection_fn_filename=selection_fn_filename,
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
             analysis_name="one_powerlaw_one_peak",
@@ -99,17 +96,14 @@ class PowerlawPeakCore(Sage):
 
     @property
     def parameters(self) -> List[str]:
-        names = [
-            Parameters.PRIMARY_MASS_SOURCE.value,
-            Parameters.SECONDARY_MASS_SOURCE.value,
-        ]
+        names = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
         if self.has_spin:
-            names.append(Parameters.PRIMARY_SPIN_MAGNITUDE.value)
-            names.append(Parameters.SECONDARY_SPIN_MAGNITUDE.value)
+            names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
+            names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.has_tilt:
-            names.extend([Parameters.COS_TILT_1.value, Parameters.COS_TILT_2.value])
+            names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.has_redshift:
-            names.append(Parameters.REDSHIFT.value)
+            names.append(P.REDSHIFT.value)
         return names
 
     @property
@@ -187,7 +181,6 @@ def f_main() -> None:
         posterior_columns=args.posterior_columns,
         seed=args.seed,
         prior_filename=args.prior_json,
-        selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         n_buckets=args.n_buckets,
@@ -217,7 +210,6 @@ def n_main() -> None:
         posterior_columns=args.posterior_columns,
         seed=args.seed,
         prior_filename=args.prior_json,
-        selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         n_buckets=args.n_buckets,

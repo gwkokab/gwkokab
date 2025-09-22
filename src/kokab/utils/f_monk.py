@@ -15,8 +15,9 @@ from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import analytical_likelihood
+from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 from gwkokab.utils.tools import error_if
-from kokab.utils.poisson_mean_parser import read_pmean
+from kokab.utils.common import read_json
 
 from .flowMC_based import FlowMCBased
 from .guru import guru_arg_parser as guru_parser
@@ -80,7 +81,6 @@ class Monk(FlowMCBased):
         data_filename: str,
         seed: int,
         prior_filename: str,
-        selection_fn_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
@@ -107,8 +107,6 @@ class Monk(FlowMCBased):
             seed for the random number generator.
         prior_filename : str
             path to the JSON file containing the prior distributions.
-        selection_fn_filename : str
-            path to the JSON file containing the selection function.
         poisson_mean_filename : str
             path to the JSON file containing the Poisson mean configuration.
         flowMC_settings_filename : str
@@ -147,7 +145,6 @@ class Monk(FlowMCBased):
             prior_filename=prior_filename,
             profile_memory=profile_memory,
             sampler_settings_filename=sampler_settings_filename,
-            selection_fn_filename=selection_fn_filename,
         )
 
     def run(self) -> None:
@@ -167,18 +164,16 @@ class Monk(FlowMCBased):
         logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
         logger.debug("cov_stack.shape: {shape}", shape=cov_stack.shape)
 
-        ERate_fn = read_pmean(
-            self.rng_key,
-            self.parameters,
-            self.poisson_mean_filename,
-            self.selection_fn_filename,
+        pmean_config = read_json(self.poisson_mean_filename)
+        _, poisson_mean_estimator, T_obs = get_selection_fn_and_poisson_mean_estimator(
+            key=self.rng_key, parameters=self.parameters, **pmean_config
         )
 
         logpdf = analytical_likelihood(
             dist_fn,
             priors,
             variables_index,
-            ERate_fn,
+            poisson_mean_estimator,
             self.rng_key,
             n_events=n_events,
             n_samples=self.n_samples,

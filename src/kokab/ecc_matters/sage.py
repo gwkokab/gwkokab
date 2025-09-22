@@ -8,7 +8,7 @@ from typing import List
 from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
-from gwkokab.parameters import Parameters
+from gwkokab.parameters import Parameters as P
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
@@ -19,9 +19,9 @@ class EccentricityMattersCore(Sage):
     @property
     def parameters(self) -> List[str]:
         return [
-            Parameters.PRIMARY_MASS_SOURCE.value,
-            Parameters.SECONDARY_MASS_SOURCE.value,
-            Parameters.ECCENTRICITY.value,
+            P.PRIMARY_MASS_SOURCE.value,
+            P.SECONDARY_MASS_SOURCE.value,
+            P.ECCENTRICITY.value,
         ]
 
     @property
@@ -53,7 +53,6 @@ def f_main() -> None:
         posterior_columns=args.posterior_columns,
         seed=args.seed,
         prior_filename=args.prior_json,
-        selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         analysis_name="f_sage_ecc_matters",
@@ -80,7 +79,6 @@ def n_main() -> None:
         posterior_columns=args.posterior_columns,
         seed=args.seed,
         prior_filename=args.prior_json,
-        selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         analysis_name="n_sage_ecc_matters",

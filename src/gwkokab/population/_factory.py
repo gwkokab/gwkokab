@@ -17,7 +17,6 @@ from numpyro.util import is_prng_key
 
 from ..models.utils import ScaledMixture
 from ..models.wrappers import ModelRegistry
-from ..poisson_mean import PoissonMean
 from ..utils.tools import error_if
 from ._utils import ensure_dat_extension
 
@@ -42,7 +41,7 @@ class PopulationFactory:
         model_params: dict[str, Array],
         parameters: List[str],
         log_selection_fn: Optional[Callable[[Array], Array]],
-        ERate_obj: PoissonMean,
+        poisson_mean_estimator: Callable[[ScaledMixture], Array],
         num_realizations: int = 5,
         error_size: int = 2_000,
     ) -> None:
@@ -60,7 +59,7 @@ class PopulationFactory:
             Parameters for the model in order.
         log_selection_fn : Callable[[Array], Array]
             logarithm of volume time sensitivity function.
-        ERate_fn : Callable[[ScaledMixture, Optional[int]], Array]
+        poisson_mean_estimator : Callable[[ScaledMixture, Optional[int]], Array]
             Expected rate function.
         num_realizations : int, optional
             Number of realizations to generate, by default 5
@@ -79,7 +78,7 @@ class PopulationFactory:
         self.model: ScaledMixture = model_fn(**model_params)
         self.parameters = parameters
         self.log_selection_fn = log_selection_fn
-        self.ERate_fn = ERate_obj
+        self.ERate_fn = poisson_mean_estimator
         self.num_realizations = num_realizations
         self.error_size = error_size
 

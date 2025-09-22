@@ -38,7 +38,6 @@ class Guru:
         prior_filename: str,
         profile_memory: bool,
         sampler_settings_filename: str,
-        selection_fn_filename: str,
     ) -> None:
         self.analysis_name = analysis_name
         self.prior_filename = prior_filename
@@ -47,7 +46,6 @@ class Guru:
         self.debug_nans = debug_nans
         self.profile_memory = profile_memory
         self.check_leaks = check_leaks
-        self.selection_fn_filename = selection_fn_filename
         self.poisson_mean_filename = poisson_mean_filename
 
     @property
@@ -226,12 +224,6 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
 
     pmean_group = parser.add_argument_group("Poisson Mean Options")
-    pmean_group.add_argument(
-        "--vt-json",
-        help="Path to the JSON file containing the VT options.",
-        type=str,
-        default="vt.json",
-    )
     pmean_group.add_argument(
         "--pmean-json",
         help="Path to the JSON file containing the Poisson mean options.",

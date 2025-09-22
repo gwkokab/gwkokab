@@ -3,7 +3,6 @@
 
 
 import json
-from collections.abc import Sequence
 from typing import Dict, List, Tuple, Union
 
 import numpy as np
@@ -11,7 +10,6 @@ import pandas as pd
 from numpyro import distributions as dist
 from numpyro._typing import DistributionLike
 
-from gwkokab.vts import available as available_vts, VolumeTimeSensitivityInterface
 from kokab.utils.priors import available as available_priors
 from kokab.utils.regex import match_all
 
@@ -126,36 +124,6 @@ def get_posterior_data(
     return data_list
 
 
-def get_vt_samples(filename: str, columns: List[str]) -> np.ndarray:
-    """Get the VT samples from a list of files.
-
-    Parameters
-    ----------
-    filename : str
-        list of filenames
-    columns : List[str]
-        list of columns
-
-    Returns
-    -------
-    np.ndarray
-        dictionary of VT samples
-
-    Raises
-    ------
-    KeyError
-        If the file is missing required columns
-    """
-    df = pd.read_csv(filename, delimiter=" ")
-    missing_columns = set(columns) - set(df.columns)
-    if missing_columns:
-        raise KeyError(
-            f"The file '{filename}' is missing required columns: {missing_columns}"
-        )
-    data = df[columns].to_numpy()
-    return data
-
-
 def get_processed_priors(params: List[str], priors: dict) -> dict:
     """Get the processed priors from a list of parameters.
 
@@ -188,55 +156,6 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
         if param not in matched_prior_params:
             raise ValueError(f"Missing prior for {param}")
     return matched_prior_params
-
-
-def check_vt_params(vt_params: List[str], parameters: List[str]) -> None:
-    """Check if all the parameters in the VT are in the model.
-
-    Parameters
-    ----------
-    vt_params : List[str]
-        list of VT parameters
-    parameters : List[str]
-        list of model parameters
-
-    Raises
-    ------
-    ValueError
-        if the parameters in the VT do not match the parameters in the model
-    """
-    if set(vt_params) - set(parameters):
-        raise ValueError(
-            "The parameters in the VT do not match the parameters in the model. "
-            f"VT_PARAMS: {vt_params}, parameters: {parameters}"
-        )
-
-
-def vt_json_read_and_process(
-    parameters: Sequence[str], settings_path: str
-) -> VolumeTimeSensitivityInterface:
-    """Read and process the VT JSON file.
-
-    Parameters
-    ----------
-    parameters : Sequence[str]
-        list of parameters
-    settings_path : str
-        path to the VT settings
-
-    Returns
-    -------
-    VolumeTimeSensitivityInterface
-        VT object
-    """
-    vt_settings = read_json(settings_path)
-    vt_type = vt_settings.pop("type")
-    vt = available_vts[vt_type]
-    if vt_type == "pdet_O3":
-        return vt(parameters=parameters, **vt_settings)
-    else:
-        vt_path = vt_settings.pop("filename")
-        return vt(parameters=parameters, filename=vt_path, **vt_settings)
 
 
 def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:

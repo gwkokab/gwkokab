@@ -11,7 +11,7 @@ from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Distribution, MultivariateNormal
 
-from gwkokab.models.utils import JointDistribution
+from ..models.utils import JointDistribution, ScaledMixture
 
 
 @ft.partial(jax.jit, static_argnames=("n_samples",))
@@ -45,7 +45,7 @@ def analytical_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
     variables_index: Dict[str, int],
-    ERate_fn: Callable[[Distribution], Array],
+    poisson_mean_estimator: Callable[[ScaledMixture], Array],
     key: PRNGKeyArray,
     n_events: int,
     n_samples: int = 10_000,
@@ -87,7 +87,7 @@ def analytical_likelihood(
         priors for the model parameters
     variables_index : Dict[str, int]
         mapping of variable names to their indices in the input array
-    ERate_fn : Callable[[Distribution], Array]
+    poisson_mean_estimator : Callable[[ScaledMixture], Array]
         function to compute the expected event rates
     means : List[Array]
         List of mean vectors for each event. Each vector should have the same length and
@@ -131,7 +131,7 @@ def analytical_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = ERate_fn(model_instance)
+        expected_rates = poisson_mean_estimator(model_instance)
 
         event_mvn = MultivariateNormal(loc=mean_stack, covariance_matrix=cov_stack)
 

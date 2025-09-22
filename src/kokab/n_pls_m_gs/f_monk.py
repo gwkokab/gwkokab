@@ -7,8 +7,10 @@ from typing import Dict, List, Tuple, Union
 
 import gwkokab
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.utils import create_truncated_normal_distributions
-from gwkokab.parameters import Parameters
+from gwkokab.models.npowerlawmgaussian._ncombination import (
+    create_truncated_normal_distributions,
+)
+from gwkokab.parameters import Parameters as P
 from kokab.utils.common import expand_arguments
 from kokab.utils.f_monk import Monk, monk_arg_parser
 from kokab.utils.logger import log_info
@@ -33,7 +35,6 @@ class NPowerlawMGaussianMonk(Monk):
         data_filename: str,
         seed: int,
         prior_filename: str,
-        selection_fn_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
@@ -69,7 +70,6 @@ class NPowerlawMGaussianMonk(Monk):
             data_filename,
             seed,
             prior_filename,
-            selection_fn_filename,
             poisson_mean_filename,
             sampler_settings_filename,
             debug_nans=debug_nans,
@@ -103,31 +103,28 @@ class NPowerlawMGaussianMonk(Monk):
 
     @property
     def parameters(self) -> List[str]:
-        names = [
-            Parameters.PRIMARY_MASS_SOURCE.value,
-            Parameters.SECONDARY_MASS_SOURCE.value,
-        ]
+        names = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
         if self.has_beta_spin or self.has_truncated_normal_spin:
-            names.append(Parameters.PRIMARY_SPIN_MAGNITUDE.value)
-            names.append(Parameters.SECONDARY_SPIN_MAGNITUDE.value)
+            names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
+            names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.has_tilt:
-            names.extend([Parameters.COS_TILT_1.value, Parameters.COS_TILT_2.value])
+            names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.has_phi_12:
-            names.append(Parameters.PHI_12.value)
+            names.append(P.PHI_12.value)
         if self.has_eccentricity:
-            names.append(Parameters.ECCENTRICITY.value)
+            names.append(P.ECCENTRICITY.value)
         if self.has_redshift:
-            names.append(Parameters.REDSHIFT.value)
+            names.append(P.REDSHIFT.value)
         if self.has_right_ascension:
-            names.append(Parameters.RIGHT_ASCENSION.value)
+            names.append(P.RIGHT_ASCENSION.value)
         if self.has_sin_declination:
-            names.append(Parameters.SIN_DECLINATION.value)
+            names.append(P.SIN_DECLINATION.value)
         if self.has_detection_time:
-            names.append(Parameters.DETECTION_TIME.value)
+            names.append(P.DETECTION_TIME.value)
         if self.has_cos_iota:
-            names.append(Parameters.COS_IOTA.value)
+            names.append(P.COS_IOTA.value)
         if self.has_polarization_angle:
-            names.append(Parameters.POLARIZATION_ANGLE.value)
+            names.append(P.POLARIZATION_ANGLE.value)
         return names
 
     @property
@@ -198,14 +195,14 @@ class NPowerlawMGaussianMonk(Monk):
         if self.has_phi_12:
             all_params.extend(
                 [
-                    (Parameters.PHI_12.value + "_high_g", self.N_g),
-                    (Parameters.PHI_12.value + "_high_pl", self.N_pl),
-                    (Parameters.PHI_12.value + "_loc_g", self.N_g),
-                    (Parameters.PHI_12.value + "_loc_pl", self.N_pl),
-                    (Parameters.PHI_12.value + "_low_g", self.N_g),
-                    (Parameters.PHI_12.value + "_low_pl", self.N_pl),
-                    (Parameters.PHI_12.value + "_scale_g", self.N_g),
-                    (Parameters.PHI_12.value + "_scale_pl", self.N_pl),
+                    (P.PHI_12.value + "_high_g", self.N_g),
+                    (P.PHI_12.value + "_high_pl", self.N_pl),
+                    (P.PHI_12.value + "_loc_g", self.N_g),
+                    (P.PHI_12.value + "_loc_pl", self.N_pl),
+                    (P.PHI_12.value + "_low_g", self.N_g),
+                    (P.PHI_12.value + "_low_pl", self.N_pl),
+                    (P.PHI_12.value + "_scale_g", self.N_g),
+                    (P.PHI_12.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -226,76 +223,76 @@ class NPowerlawMGaussianMonk(Monk):
         if self.has_redshift:
             all_params.extend(
                 [
-                    (Parameters.REDSHIFT.value + "_kappa_g", self.N_g),
-                    (Parameters.REDSHIFT.value + "_kappa_pl", self.N_pl),
-                    (Parameters.REDSHIFT.value + "_z_max_g", self.N_g),
-                    (Parameters.REDSHIFT.value + "_z_max_pl", self.N_pl),
+                    (P.REDSHIFT.value + "_kappa_g", self.N_g),
+                    (P.REDSHIFT.value + "_kappa_pl", self.N_pl),
+                    (P.REDSHIFT.value + "_z_max_g", self.N_g),
+                    (P.REDSHIFT.value + "_z_max_pl", self.N_pl),
                 ]
             )
 
         if self.has_right_ascension:
             all_params.extend(
                 [
-                    (Parameters.RIGHT_ASCENSION.value + "_high_g", self.N_g),
-                    (Parameters.RIGHT_ASCENSION.value + "_high_pl", self.N_pl),
-                    (Parameters.RIGHT_ASCENSION.value + "_loc_g", self.N_g),
-                    (Parameters.RIGHT_ASCENSION.value + "_loc_pl", self.N_pl),
-                    (Parameters.RIGHT_ASCENSION.value + "_low_g", self.N_g),
-                    (Parameters.RIGHT_ASCENSION.value + "_low_pl", self.N_pl),
-                    (Parameters.RIGHT_ASCENSION.value + "_scale_g", self.N_g),
-                    (Parameters.RIGHT_ASCENSION.value + "_scale_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION.value + "_high_g", self.N_g),
+                    (P.RIGHT_ASCENSION.value + "_high_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION.value + "_loc_g", self.N_g),
+                    (P.RIGHT_ASCENSION.value + "_loc_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION.value + "_low_g", self.N_g),
+                    (P.RIGHT_ASCENSION.value + "_low_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION.value + "_scale_g", self.N_g),
+                    (P.RIGHT_ASCENSION.value + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_sin_declination:
             all_params.extend(
                 [
-                    (Parameters.SIN_DECLINATION.value + "_high_g", self.N_g),
-                    (Parameters.SIN_DECLINATION.value + "_high_pl", self.N_pl),
-                    (Parameters.SIN_DECLINATION.value + "_loc_g", self.N_g),
-                    (Parameters.SIN_DECLINATION.value + "_loc_pl", self.N_pl),
-                    (Parameters.SIN_DECLINATION.value + "_low_g", self.N_g),
-                    (Parameters.SIN_DECLINATION.value + "_low_pl", self.N_pl),
-                    (Parameters.SIN_DECLINATION.value + "_scale_g", self.N_g),
-                    (Parameters.SIN_DECLINATION.value + "_scale_pl", self.N_pl),
+                    (P.SIN_DECLINATION.value + "_high_g", self.N_g),
+                    (P.SIN_DECLINATION.value + "_high_pl", self.N_pl),
+                    (P.SIN_DECLINATION.value + "_loc_g", self.N_g),
+                    (P.SIN_DECLINATION.value + "_loc_pl", self.N_pl),
+                    (P.SIN_DECLINATION.value + "_low_g", self.N_g),
+                    (P.SIN_DECLINATION.value + "_low_pl", self.N_pl),
+                    (P.SIN_DECLINATION.value + "_scale_g", self.N_g),
+                    (P.SIN_DECLINATION.value + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_detection_time:
             all_params.extend(
                 [
-                    (Parameters.DETECTION_TIME.value + "_high_g", self.N_g),
-                    (Parameters.DETECTION_TIME.value + "_high_pl", self.N_pl),
-                    (Parameters.DETECTION_TIME.value + "_low_g", self.N_g),
-                    (Parameters.DETECTION_TIME.value + "_low_pl", self.N_pl),
+                    (P.DETECTION_TIME.value + "_high_g", self.N_g),
+                    (P.DETECTION_TIME.value + "_high_pl", self.N_pl),
+                    (P.DETECTION_TIME.value + "_low_g", self.N_g),
+                    (P.DETECTION_TIME.value + "_low_pl", self.N_pl),
                 ]
             )
 
         if self.has_cos_iota:
             all_params.extend(
                 [
-                    (Parameters.COS_IOTA.value + "_high_g", self.N_g),
-                    (Parameters.COS_IOTA.value + "_high_pl", self.N_pl),
-                    (Parameters.COS_IOTA.value + "_loc_g", self.N_g),
-                    (Parameters.COS_IOTA.value + "_loc_pl", self.N_pl),
-                    (Parameters.COS_IOTA.value + "_low_g", self.N_g),
-                    (Parameters.COS_IOTA.value + "_low_pl", self.N_pl),
-                    (Parameters.COS_IOTA.value + "_scale_g", self.N_g),
-                    (Parameters.COS_IOTA.value + "_scale_pl", self.N_pl),
+                    (P.COS_IOTA.value + "_high_g", self.N_g),
+                    (P.COS_IOTA.value + "_high_pl", self.N_pl),
+                    (P.COS_IOTA.value + "_loc_g", self.N_g),
+                    (P.COS_IOTA.value + "_loc_pl", self.N_pl),
+                    (P.COS_IOTA.value + "_low_g", self.N_g),
+                    (P.COS_IOTA.value + "_low_pl", self.N_pl),
+                    (P.COS_IOTA.value + "_scale_g", self.N_g),
+                    (P.COS_IOTA.value + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_polarization_angle:
             all_params.extend(
                 [
-                    (Parameters.POLARIZATION_ANGLE.value + "_high_g", self.N_g),
-                    (Parameters.POLARIZATION_ANGLE.value + "_high_pl", self.N_pl),
-                    (Parameters.POLARIZATION_ANGLE.value + "_loc_g", self.N_g),
-                    (Parameters.POLARIZATION_ANGLE.value + "_loc_pl", self.N_pl),
-                    (Parameters.POLARIZATION_ANGLE.value + "_low_g", self.N_g),
-                    (Parameters.POLARIZATION_ANGLE.value + "_low_pl", self.N_pl),
-                    (Parameters.POLARIZATION_ANGLE.value + "_scale_g", self.N_g),
-                    (Parameters.POLARIZATION_ANGLE.value + "_scale_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE.value + "_high_g", self.N_g),
+                    (P.POLARIZATION_ANGLE.value + "_high_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE.value + "_loc_g", self.N_g),
+                    (P.POLARIZATION_ANGLE.value + "_loc_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE.value + "_low_g", self.N_g),
+                    (P.POLARIZATION_ANGLE.value + "_low_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE.value + "_scale_g", self.N_g),
+                    (P.POLARIZATION_ANGLE.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -400,7 +397,6 @@ def main() -> None:
         data_filename=args.data_filename,
         seed=args.seed,
         prior_filename=args.prior_json,
-        selection_fn_filename=args.vt_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         n_samples=args.n_samples,
