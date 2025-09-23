@@ -18,7 +18,7 @@ from gwkokab.models.npowerlawmgaussian._ncombination import (
 )
 from gwkokab.parameters import Parameters as P
 from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
-from gwkokab.population import error_magazine, PopulationFactory
+from kokab.core.population import error_magazine, PopulationFactory
 from kokab.utils import genie_parser
 from kokab.utils.common import expand_arguments, read_json
 from kokab.utils.logger import log_info

@@ -12,7 +12,7 @@ from numpyro import distributions as dist
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import Parameters as P
 from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
-from gwkokab.population import error_magazine, PopulationFactory
+from kokab.core.population import error_magazine, PopulationFactory
 from kokab.ecc_matters.common import EccentricityMattersModel
 from kokab.utils import genie_parser
 from kokab.utils.common import read_json
