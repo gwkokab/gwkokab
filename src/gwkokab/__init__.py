@@ -17,6 +17,5 @@ from . import (
     models as models,
     parameters as parameters,
     poisson_mean as poisson_mean,
-    population as population,
     utils as utils,
 )
