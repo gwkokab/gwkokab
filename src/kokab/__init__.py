@@ -11,6 +11,7 @@ available models is accessible at :doc:`/autoapi/gwkokab/models/index`.
 """
 
 from . import (
+    core as core,
     ecc_matters as ecc_matters,
     n_pls_m_gs as n_pls_m_gs,
     one_powerlaw_one_peak as one_powerlaw_one_peak,

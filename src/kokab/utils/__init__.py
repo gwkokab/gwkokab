@@ -5,7 +5,6 @@
 from . import (
     checks as checks,
     common as common,
-    core as core,
     genie_parser as genie_parser,
     ppd as ppd,
     ppd_parser as ppd_parser,
