@@ -9,10 +9,10 @@ from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.parameters import Parameters as P
+from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
+from kokab.core.sage import Sage, sage_arg_parser as sage_parser
 from kokab.ecc_matters.common import EccentricityMattersModel
-from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
-from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
-from kokab.utils.sage import Sage, sage_arg_parser as sage_parser
 
 
 class EccentricityMattersCore(Sage):

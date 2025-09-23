@@ -11,8 +11,8 @@ from gwkokab.models.npowerlawmgaussian._ncombination import (
     create_truncated_normal_distributions,
 )
 from gwkokab.parameters import Parameters as P
+from kokab.core.monk import Monk, monk_arg_parser
 from kokab.utils.common import expand_arguments
-from kokab.utils.f_monk import Monk, monk_arg_parser
 from kokab.utils.logger import log_info
 
 

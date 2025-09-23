@@ -6,8 +6,8 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
 from gwkokab.parameters import Parameters as P
+from kokab.core.monk import Monk, monk_arg_parser
 from kokab.ecc_matters.common import EccentricityMattersModel
-from kokab.utils.f_monk import Monk, monk_arg_parser
 from kokab.utils.logger import log_info
 
 
