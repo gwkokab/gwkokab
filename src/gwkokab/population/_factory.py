@@ -59,7 +59,7 @@ class PopulationFactory:
             Parameters for the model in order.
         log_selection_fn : Callable[[Array], Array]
             logarithm of volume time sensitivity function.
-        poisson_mean_estimator : Callable[[ScaledMixture, Optional[int]], Array]
+        poisson_mean_estimator : Callable[[ScaledMixture], Array]
             Expected rate function.
         num_realizations : int, optional
             Number of realizations to generate, by default 5
