@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import warnings
 from collections.abc import Sequence
 from typing import Callable, List, Optional, Tuple
 
@@ -157,12 +156,7 @@ def save_model(
         Whether the model was trained on log-transformed data, by default False
     """
     if not filepath.endswith(".hdf5"):
-        if "." in filepath:
-            old_filename = filepath
-            filepath = filepath.split(".")[0] + ".hdf5"
-            warnings.warn(
-                f"Neural VT path does not end with .hdf5: {old_filename}. Saving to {filepath} instead."
-            )
+        raise ValueError("Model save path must end with .hdf5")
 
     with h5py.File(datafilepath, "r") as f:
         # read all attributes from the data file
