@@ -20,8 +20,8 @@ from gwkokab.utils.tools import warn_if
 from kokab.utils.common import get_posterior_data, read_json
 from kokab.utils.literals import LOG_REF_PRIOR_NAME
 
+from ..utils.jenks import pad_and_stack
 from .guru import Guru
-from .jenks import pad_and_stack
 
 
 class Sage(Guru):

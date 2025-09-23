@@ -5,4 +5,11 @@
 #
 """Core modules of Kokab."""
 
-from . import population as population
+from . import (
+    flowMC_based as flowMC_based,
+    guru as guru,
+    monk as monk,
+    numpyro_based as numpyro_based,
+    population as population,
+    sage as sage,
+)

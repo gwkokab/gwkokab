@@ -32,8 +32,8 @@ from loguru import logger
 
 from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import error_if
+from kokab.core.guru import Guru, guru_arg_parser
 from kokab.utils.common import read_json
-from kokab.utils.guru import Guru, guru_arg_parser
 from kokab.utils.literals import INFERENCE_DIRECTORY
 
 

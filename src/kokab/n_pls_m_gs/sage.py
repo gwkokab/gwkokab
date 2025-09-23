@@ -18,12 +18,12 @@ from gwkokab.models.npowerlawmgaussian._ncombination import (
 )
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
+from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
+from kokab.core.sage import Sage, sage_arg_parser
 from kokab.utils.checks import check_min_concentration_for_beta_dist
 from kokab.utils.common import expand_arguments
-from kokab.utils.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.utils.logger import log_info
-from kokab.utils.numpyro_based import numpyro_arg_parser, NumpyroBased
-from kokab.utils.sage import Sage, sage_arg_parser
 
 
 def where_fns_list(has_beta_spin: bool) -> Optional[List[Callable[..., Array]]]:
