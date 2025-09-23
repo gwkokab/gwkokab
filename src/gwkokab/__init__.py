@@ -19,5 +19,4 @@ from . import (
     poisson_mean as poisson_mean,
     population as population,
     utils as utils,
-    vts as vts,
 )

@@ -11,8 +11,7 @@ from jax import Array, numpy as jnp
 from jaxtyping import ArrayLike
 from numpyro._typing import DistributionLike
 
-from ..models.utils import JointDistribution
-from ..poisson_mean import PoissonMean
+from ..models.utils import JointDistribution, ScaledMixture
 
 
 __all__ = ["poisson_likelihood"]
@@ -24,7 +23,7 @@ def poisson_likelihood(
     variables: Dict[str, DistributionLike],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
-    ERate_obj: PoissonMean,
+    poisson_mean_estimator: Callable[[ScaledMixture], Array],
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
 ) -> Callable[[Array, Dict[str, Any]], Array]:
@@ -74,7 +73,7 @@ def poisson_likelihood(
         model_instance = dist_fn(**mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = ERate_obj(model_instance)
+        expected_rates = poisson_mean_estimator(model_instance)
 
         log_prob_fn = eqx.filter_jit(eqx.filter_vmap(model_instance.log_prob))
 

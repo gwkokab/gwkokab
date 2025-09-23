@@ -8,6 +8,15 @@ from .math import (
     beta_dist_concentrations_to_mean_variance as beta_dist_concentrations_to_mean_variance,
     beta_dist_mean_variance_to_concentrations as beta_dist_mean_variance_to_concentrations,
 )
+from .train import (
+    load_model as load_model,
+    make_model as make_model,
+    mse_loss_fn as mse_loss_fn,
+    predict as predict,
+    read_data as read_data,
+    save_model as save_model,
+    train_regressor as train_regressor,
+)
 from .transformations import (
     cart_to_polar as cart_to_polar,
     cart_to_spherical as cart_to_spherical,

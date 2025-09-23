@@ -14,12 +14,11 @@ from loguru import logger
 from numpyro._typing import DistributionLike
 from numpyro.distributions import Distribution
 
-from gwkokab.models.utils import JointDistribution
-from gwkokab.poisson_mean import PoissonMean
+from gwkokab.models.utils import JointDistribution, ScaledMixture
+from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 from gwkokab.utils.tools import warn_if
-from kokab.utils.common import get_posterior_data
+from kokab.utils.common import get_posterior_data, read_json
 from kokab.utils.literals import LOG_REF_PRIOR_NAME
-from kokab.utils.poisson_mean_parser import read_pmean
 
 from .guru import Guru
 from .jenks import pad_and_stack
@@ -35,7 +34,7 @@ class Sage(Guru):
                 Dict[str, DistributionLike],
                 Dict[str, int],
                 ArrayLike,
-                PoissonMean,
+                Callable[[ScaledMixture], Array],
                 Optional[List[Callable[..., Array]]],
                 Dict[str, Array],
             ],
@@ -47,7 +46,6 @@ class Sage(Guru):
         posterior_columns: List[str],
         seed: int,
         prior_filename: str,
-        selection_fn_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_buckets: int,
@@ -73,8 +71,6 @@ class Sage(Guru):
             Seed for the random number generator.
         prior_filename : str
             Path to the JSON file containing the prior distributions.
-        selection_fn_filename : str
-            Path to the JSON file containing the selection function.
         poisson_mean_filename : str
             Path to the JSON file containing the Poisson mean configuration.
         sampler_settings_filename : str
@@ -116,7 +112,6 @@ class Sage(Guru):
             prior_filename=prior_filename,
             profile_memory=profile_memory,
             sampler_settings_filename=sampler_settings_filename,
-            selection_fn_filename=selection_fn_filename,
         )
 
     def read_data(
@@ -181,14 +176,12 @@ class Sage(Guru):
             self.read_data()
         )
 
-        ERate_obj = read_pmean(
-            self.rng_key,
-            self.parameters,
-            self.poisson_mean_filename,
-            self.selection_fn_filename,
+        pmean_config = read_json(self.poisson_mean_filename)
+        _, poisson_mean_estimator, T_obs = get_selection_fn_and_poisson_mean_estimator(
+            key=self.rng_key, parameters=self.parameters, **pmean_config
         )
 
-        log_constants += n_events * np.log(ERate_obj.time_scale)  # type: ignore
+        log_constants += n_events * np.log(T_obs)  # type: ignore
 
         logpdf = self.likelihood_fn(
             dist_fn=dist_fn,
@@ -196,7 +189,7 @@ class Sage(Guru):
             variables=variables,
             variables_index=variables_index,
             log_constants=log_constants,
-            ERate_obj=ERate_obj,
+            poisson_mean_estimator=poisson_mean_estimator,
             where_fns=self.where_fns,
             constants=constants,  # type: ignore
         )

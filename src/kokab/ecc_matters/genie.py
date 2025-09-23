@@ -10,12 +10,12 @@ from jax import numpy as jnp, random as jrd
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
-from gwkokab.parameters import Parameters
-from gwkokab.poisson_mean import PoissonMean
+from gwkokab.parameters import Parameters as P
+from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 from gwkokab.population import error_magazine, PopulationFactory
 from kokab.ecc_matters.common import EccentricityMattersModel
-from kokab.utils import genie_parser, poisson_mean_parser
-from kokab.utils.common import vt_json_read_and_process
+from kokab.utils import genie_parser
+from kokab.utils.common import read_json
 from kokab.utils.logger import log_info
 from kokab.utils.regex import match_all
 
@@ -85,7 +85,7 @@ def main() -> None:
     )
 
     error_magazine.register(
-        (Parameters.PRIMARY_MASS_SOURCE.value, Parameters.SECONDARY_MASS_SOURCE.value),
+        (P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value),
         lambda x, size, key: banana_error_m1_m2(
             x,
             size,
@@ -95,7 +95,7 @@ def main() -> None:
         ),
     )
 
-    @error_magazine.register(Parameters.ECCENTRICITY.value)
+    @error_magazine.register(P.ECCENTRICITY.value)
     def ecc_error_fn(x, size, key):
         err_x = dist.TruncatedNormal(
             loc=x,
@@ -108,26 +108,25 @@ def main() -> None:
         err_x = jnp.where(mask, jnp.full_like(mask, jnp.nan), err_x)
         return err_x
 
-    model_parameters = [
-        Parameters.PRIMARY_MASS_SOURCE.value,
-        Parameters.SECONDARY_MASS_SOURCE.value,
-        Parameters.ECCENTRICITY.value,
+    parameters_name = [
+        P.PRIMARY_MASS_SOURCE.value,
+        P.SECONDARY_MASS_SOURCE.value,
+        P.ECCENTRICITY.value,
     ]
-
-    nvt = vt_json_read_and_process(model_parameters, args.vt_json)
-    log_selection_fn = nvt.get_mapped_logVT()
 
     pmean_key, factory_key = jrd.split(jrd.PRNGKey(args.seed), 2)
 
-    pmean_kwargs = poisson_mean_parser.poisson_mean_parser(args.pmean_json)
-    erate_estimator = PoissonMean(nvt, key=pmean_key, **pmean_kwargs)
+    pmean_config = read_json(args.pmean_json)
+    log_selection_fn, erate_estimator, _ = get_selection_fn_and_poisson_mean_estimator(
+        key=pmean_key, parameters=parameters_name, **pmean_config
+    )
 
     popfactory = PopulationFactory(
         model_fn=EccentricityMattersModel,
         model_params=model_param,
-        parameters=model_parameters,
+        parameters=parameters_name,
         log_selection_fn=log_selection_fn,
-        ERate_obj=erate_estimator,
+        poisson_mean_estimator=erate_estimator,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
     )

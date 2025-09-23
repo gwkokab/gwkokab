@@ -11,7 +11,7 @@ from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.npowerlawmgaussian._ncombination import (
     create_truncated_normal_distributions,
 )
-from gwkokab.parameters import Parameters
+from gwkokab.parameters import Parameters as P
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
 from kokab.utils.common import ppd_ranges, read_json
@@ -110,45 +110,39 @@ def main() -> None:
     has_sin_declination = constants.get("use_sin_declination", False)
     has_detection_time = constants.get("use_detection_time", False)
 
-    parameters = [
-        Parameters.PRIMARY_MASS_SOURCE.value,
-        Parameters.SECONDARY_MASS_SOURCE.value,
-    ]
+    parameters = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
 
     if has_spin:
         parameters.extend(
-            [
-                Parameters.PRIMARY_SPIN_MAGNITUDE.value,
-                Parameters.SECONDARY_SPIN_MAGNITUDE.value,
-            ]
+            [P.PRIMARY_SPIN_MAGNITUDE.value, P.SECONDARY_SPIN_MAGNITUDE.value]
         )
 
     if has_tilt:
-        parameters.extend([Parameters.COS_TILT_1.value, Parameters.COS_TILT_2.value])
+        parameters.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
 
     if has_phi_12:
-        parameters.append(Parameters.PHI_12.value)
+        parameters.append(P.PHI_12.value)
 
     if has_eccentricity:
-        parameters.append(Parameters.ECCENTRICITY.value)
+        parameters.append(P.ECCENTRICITY.value)
 
     if has_redshift:
-        parameters.append(Parameters.REDSHIFT.value)
+        parameters.append(P.REDSHIFT.value)
 
     if has_right_ascension:
-        parameters.append(Parameters.RIGHT_ASCENSION.value)
+        parameters.append(P.RIGHT_ASCENSION.value)
 
     if has_sin_declination:
-        parameters.append(Parameters.SIN_DECLINATION.value)
+        parameters.append(P.SIN_DECLINATION.value)
 
     if has_detection_time:
-        parameters.append(Parameters.DETECTION_TIME.value)
+        parameters.append(P.DETECTION_TIME.value)
 
     if has_cos_iota:
-        parameters.append(Parameters.COS_IOTA.value)
+        parameters.append(P.COS_IOTA.value)
 
     if has_polarization_angle:
-        parameters.append(Parameters.POLARIZATION_ANGLE.value)
+        parameters.append(P.POLARIZATION_ANGLE.value)
 
     ranges = ppd_ranges(parameters, args.range)
 

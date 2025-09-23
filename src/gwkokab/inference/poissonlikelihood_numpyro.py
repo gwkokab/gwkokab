@@ -13,8 +13,7 @@ from jaxtyping import ArrayLike
 from numpyro._typing import DistributionT
 from numpyro.distributions import Distribution
 
-from ..models.utils import JointDistribution
-from ..poisson_mean import PoissonMean
+from ..models.utils import JointDistribution, ScaledMixture
 
 
 __all__ = ["numpyro_poisson_likelihood"]
@@ -57,7 +56,7 @@ def numpyro_poisson_likelihood(
     variables: Dict[str, DistributionT],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
-    ERate_obj: PoissonMean,
+    poisson_mean_estimator: Callable[[ScaledMixture], Array],
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
 ) -> Callable[[List[Array], List[Array], List[Array]], Array]:
@@ -81,7 +80,7 @@ def numpyro_poisson_likelihood(
         model_instance: Distribution = dist_fn(**mapped_params, validate_args=True)
 
         # μ = E_{θ|Λ}[VT(θ)]
-        expected_rates = ERate_obj(model_instance)
+        expected_rates = poisson_mean_estimator(model_instance)
 
         total_log_likelihood = log_constants  # - Σ log(M_i)
         # Σ log Σ exp (log p(θ|data_n) - log π_n)
