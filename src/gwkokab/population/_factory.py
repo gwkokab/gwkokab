@@ -78,7 +78,7 @@ class PopulationFactory:
         self.model: ScaledMixture = model_fn(**model_params)
         self.parameters = parameters
         self.log_selection_fn = log_selection_fn
-        self.ERate_fn = poisson_mean_estimator
+        self.poisson_mean_estimator = poisson_mean_estimator
         self.num_realizations = num_realizations
         self.error_size = error_size
 
@@ -141,7 +141,7 @@ class PopulationFactory:
     def _generate_realizations(self, key: PRNGKeyArray) -> None:
         r"""Generate realizations for the population."""
         poisson_key, rate_key = jrd.split(key)
-        exp_rate = self.ERate_fn(self.model)
+        exp_rate = self.poisson_mean_estimator(self.model)
         logger.debug(f"Expected rate for the population is {exp_rate}")
         size = int(jrd.poisson(poisson_key, exp_rate))
         logger.debug(f"Population size is {size}")
