@@ -187,7 +187,7 @@ def poisson_mean_from_sensitivity_injections(
             return jnp.logaddexp(safe_carry_logsumexp, partial_logsumexp), None
 
         initial_logprob = jnp.asarray(-jnp.inf)
-        if n_accepted <= batch_size or batch_size is None:
+        if batch_size is None or n_accepted <= batch_size:
             # If the number of accepted injections is less than or equal to the batch size,
             # we can process them all at once.
             log_prob, _ = _f(initial_logprob, (log_weights, samples))
