@@ -158,12 +158,7 @@ def create_truncated_normal_distributions(
             raise ValueError(f"Missing parameter {scale_name}_{i}")
 
         low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
-        if low is None:
-            raise ValueError(f"Missing parameter {low_name}_{i}")
-
         high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
-        if high is None:
-            raise ValueError(f"Missing parameter {high_name}_{i}")
 
         truncated_normal_collection.append(
             TruncatedNormal(
