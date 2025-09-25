@@ -431,17 +431,28 @@ def analytical_likelihood(
         moment_matching_mean = mean_stack
         moment_matching_cov = cov_stack
 
-        model_log_prob_vmap_fn = jax.vmap(
-            model_instance.log_prob, in_axes=(1,), out_axes=-1
-        )
-
-        normalized_weights_fn = lambda samples: jax.nn.softmax(
-            jnp.expand_dims(
-                model_log_prob_vmap_fn(samples) + event_mvn.log_prob(samples),
+        def normalized_weights_fn(samples: Array) -> Array:
+            model_log_prob_vmap_fn = jax.vmap(
+                model_instance.log_prob,
+                in_axes=(1,),
+                out_axes=-1,
+            )
+            model_log_prob = model_log_prob_vmap_fn(samples)
+            safe_model_log_prob = jnp.where(
+                jnp.isnan(model_log_prob) | jnp.isneginf(model_log_prob),
+                -jnp.inf,
+                model_log_prob,
+            )
+            log_prob_expanded = jnp.expand_dims(
+                safe_model_log_prob + event_mvn.log_prob(samples),
                 axis=-1,
-            ),
-            axis=0,
-        )
+            )
+            return jax.nn.softmax(
+                log_prob_expanded,
+                where=~jnp.isneginf(log_prob_expanded),
+                axis=0,
+            )
+
         if max_iter_mean > 0:
             rng_key, subkey = jrd.split(rng_key)
             moment_matching_mean = moment_match_mean(
