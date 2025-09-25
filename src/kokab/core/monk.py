@@ -89,6 +89,9 @@ class Monk(FlowMCBased):
         n_vi_steps: int,
         learning_rate: float,
         batch_size: int,
+        minimum_mc_error: float,
+        n_checkpoints: int,
+        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -134,6 +137,9 @@ class Monk(FlowMCBased):
         self.n_vi_steps = n_vi_steps
         self.learning_rate = learning_rate
         self.batch_size = batch_size
+        self.minimum_mc_error = minimum_mc_error
+        self.n_checkpoints = n_checkpoints
+        self.n_max_steps = n_max_steps
         self.set_rng_key(seed=seed)
 
         super().__init__(
@@ -182,6 +188,9 @@ class Monk(FlowMCBased):
             n_vi_steps=self.n_vi_steps,
             learning_rate=self.learning_rate,
             batch_size=self.batch_size,
+            minimum_mc_error=self.minimum_mc_error,
+            n_checkpoints=self.n_checkpoints,
+            n_max_steps=self.n_max_steps,
         )
 
         self.driver(
@@ -223,19 +232,19 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     likelihood_group.add_argument(
         "--n-samples",
         help="Number of samples to draw from the multivariate normal distribution for each "
-        "event to compute the likelihood, by default 10_000",
+        "event to compute the likelihood",
         default=10_000,
         type=int,
     )
     likelihood_group.add_argument(
         "--max-iter-mean",
-        help="Maximum number of iterations for the fitting process of the mean, by default 10",
+        help="Maximum number of iterations for the fitting process of the mean",
         default=10,
         type=int,
     )
     likelihood_group.add_argument(
         "--max-iter-cov",
-        help="Maximum number of iterations for the fitting process of the covariance, by default 3",
+        help="Maximum number of iterations for the fitting process of the covariance",
         default=3,
         type=int,
     )
@@ -247,14 +256,32 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     likelihood_group.add_argument(
         "--learning-rate",
-        help="Learning rate for the variational inference, by default 0.01",
+        help="Learning rate for the variational inference",
         default=0.01,
         type=float,
     )
     likelihood_group.add_argument(
         "--batch-size",
-        help="Batch size for the `jax.lax.map` used in the likelihood computation, by default 1000",
+        help="Batch size for the `jax.lax.map` used in the likelihood computation",
         default=1_000,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--minimum-mc-error",
+        help="Minimum Monte Carlo error for the likelihood computation.",
+        default=0.01,
+        type=float,
+    )
+    likelihood_group.add_argument(
+        "--n-checkpoints",
+        help="Number of checkpoints to save during the optimization process.",
+        default=5,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--n-max-steps",
+        help="Maximum number of steps until minimum Monte Carlo error is reached.",
+        default=10,
         type=int,
     )
 

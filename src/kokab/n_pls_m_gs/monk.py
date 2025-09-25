@@ -43,6 +43,9 @@ class NPowerlawMGaussianMonk(Monk):
         n_vi_steps: int,
         learning_rate: float,
         batch_size: int,
+        minimum_mc_error: float,
+        n_checkpoints: int,
+        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -82,6 +85,9 @@ class NPowerlawMGaussianMonk(Monk):
             n_vi_steps=n_vi_steps,
             learning_rate=learning_rate,
             batch_size=batch_size,
+            minimum_mc_error=minimum_mc_error,
+            n_checkpoints=n_checkpoints,
+            n_max_steps=n_max_steps,
         )
 
     @property
@@ -405,6 +411,9 @@ def main() -> None:
         n_vi_steps=args.n_vi_steps,
         learning_rate=args.learning_rate,
         batch_size=args.batch_size,
+        minimum_mc_error=args.minimum_mc_error,
+        n_checkpoints=args.n_checkpoints,
+        n_max_steps=args.n_max_steps,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
