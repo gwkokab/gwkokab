@@ -573,4 +573,4 @@ def analytical_likelihood(
 
         return log_posterior
 
-    return likelihood_fn
+    return eqx.filter_jit(likelihood_fn)
