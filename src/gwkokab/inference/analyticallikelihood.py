@@ -25,6 +25,7 @@ StateT: TypeAlias = Tuple[
 """State of the Monte Carlo estimation process."""
 
 
+@jax.jit
 def monte_carlo_log_estimate_and_error(
     log_probs: Array, N: Array
 ) -> Tuple[Array, Array]:
@@ -49,6 +50,7 @@ def monte_carlo_log_estimate_and_error(
     return log_moment_1, error
 
 
+@jax.jit
 def combine_monte_carlo_log_estimates(
     log_estimates_1: Array, log_estimates_2: Array, N_1: Array, N_2: Array
 ) -> Array:
@@ -80,6 +82,7 @@ def combine_monte_carlo_log_estimates(
     return combined_log_estimate
 
 
+@jax.jit
 def combine_monte_carlo_errors(
     error_1: Array,
     error_2: Array,
@@ -163,6 +166,7 @@ def mvn_samples(loc: Array, cov: Array, n_samples: int, key: PRNGKeyArray) -> Ar
     return samples
 
 
+@ft.partial(jax.jit, static_argnames=("max_iter", "n_samples"))
 def moment_match_mean(
     rng_key: PRNGKeyArray,
     mean: Array,
@@ -200,6 +204,7 @@ def moment_match_mean(
     return moment_matching_mean
 
 
+@ft.partial(jax.jit, static_argnames=("max_iter", "n_samples"))
 def moment_match_cov(
     rng_key: PRNGKeyArray,
     mean: Array,
