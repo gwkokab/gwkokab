@@ -11,7 +11,8 @@ import optax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro._typing import DistributionT
-from numpyro.distributions import Distribution, MultivariateNormal
+from numpyro.distributions import Distribution
+from numpyro.distributions.continuous import _batch_mahalanobis, tri_logabsdet
 
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
@@ -139,8 +140,10 @@ def combine_monte_carlo_errors(
     return combined_error
 
 
-@ft.partial(jax.jit, static_argnames=("n_samples",))
-def mvn_samples(loc: Array, cov: Array, n_samples: int, key: PRNGKeyArray) -> Array:
+@eqx.filter_jit
+def mvn_samples(
+    loc: Array, scale_tril: Array, n_samples: int, key: PRNGKeyArray
+) -> Array:
     """Generate samples from a multivariate normal distribution using method from
     `numpyro.distributions.MultivariateNormal`.
 
@@ -160,17 +163,24 @@ def mvn_samples(loc: Array, cov: Array, n_samples: int, key: PRNGKeyArray) -> Ar
     Array
         Samples drawn from the multivariate normal distribution.
     """
-    scale_tril = jnp.linalg.cholesky(cov)
     eps = jrd.normal(key, shape=(n_samples, *loc.shape))
     samples = loc + jnp.squeeze(jnp.matmul(scale_tril, eps[..., jnp.newaxis]), axis=-1)
     return samples
+
+
+@eqx.filter_jit
+def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
+    M = _batch_mahalanobis(scale_tril, value - loc)
+    half_log_det = tri_logabsdet(scale_tril)
+    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * jnp.log(2 * jnp.pi)
+    return -0.5 * M - normalize_term
 
 
 @ft.partial(jax.jit, static_argnames=("max_iter", "n_samples", "normalized_weights_fn"))
 def moment_match_mean(
     rng_key: PRNGKeyArray,
     mean: Array,
-    cov: Array,
+    scale_tril: Array,
     normalized_weights_fn: Callable[[Array], Array],
     max_iter: int,
     n_samples: int,
@@ -180,7 +190,7 @@ def moment_match_mean(
     ) -> Tuple[Array, None]:
         samples = mvn_samples(
             loc=moment_matching_mean_i,
-            cov=cov,
+            scale_tril=scale_tril,
             n_samples=n_samples,
             key=key,
         )
@@ -218,7 +228,7 @@ def moment_match_cov(
     ) -> Tuple[Array, None]:
         samples = mvn_samples(
             loc=mean,
-            cov=moment_matching_cov_i,
+            scale_tril=jnp.linalg.cholesky(moment_matching_cov_i),
             n_samples=n_samples,
             key=key,
         )
@@ -245,7 +255,7 @@ def moment_match_cov(
 def match_mean_by_variational_inference(
     rng_key: PRNGKeyArray,
     mean: Array,
-    cov: Array,
+    scale_tril: Array,
     model: DistributionT,
     learning_rate: float,
     steps: int,
@@ -255,7 +265,7 @@ def match_mean_by_variational_inference(
 
     @ft.partial(jax.vmap, in_axes=(0, 0, 0))
     @jax.value_and_grad
-    def loss_fn(mu: Array, cov: Array, key: PRNGKeyArray) -> Array:
+    def loss_fn(mu: Array, scale_tril: Array, key: PRNGKeyArray) -> Array:
         """Compute Reverse KL divergence between the model and the fitted multivariate
         normal distribution.
 
@@ -263,8 +273,8 @@ def match_mean_by_variational_inference(
         ----------
         mu : Array
             mean vector of the multivariate normal distribution
-        cov : Array
-            covariance matrix of the multivariate normal distribution
+        scale_tril : Array
+            Cholesky factor of the covariance matrix of the multivariate normal distribution
         key : PRNGKeyArray
             random key for sampling
 
@@ -273,14 +283,17 @@ def match_mean_by_variational_inference(
         Array
             loss value
         """
-        fit_dist = MultivariateNormal(loc=mu, covariance_matrix=cov)
-        model_samples = model.sample(key=key, sample_shape=(n_samples,))
+        model_samples = mvn_samples(mu, scale_tril, n_samples=n_samples, key=key)
 
         log_p = model.log_prob(model_samples)
 
-        return fit_dist.entropy() - jnp.mean(
-            jnp.exp(fit_dist.log_prob(model_samples) - log_p) * log_p
-        )
+        (n,) = jnp.shape(scale_tril)[-1:]
+        half_log_det = tri_logabsdet(scale_tril)
+        entropy = n * (jnp.log(2 * jnp.pi) + 1) / 2 + half_log_det
+
+        fit_dist_log_prob = mvn_log_prob(mu, scale_tril, model_samples)
+
+        return entropy - jnp.mean(jnp.exp(fit_dist_log_prob - log_p) * log_p)
 
     def variational_inference_fn(
         carry: Tuple[Array, Array, optax.OptState, Array], _: Optional[Array]
@@ -302,15 +315,15 @@ def match_mean_by_variational_inference(
             updated mean vector, unchanged covariance matrix, optimizer state, and
             random key
         """
-        mu, cov, opt_state, key = carry
+        mu, scale_tril, opt_state, key = carry
         key, subkey = jrd.split(key)
         keys = jrd.split(subkey, n_events)
         # Perform a single optimization step to update the mean vector to minimize the
         # loss function.
-        _, grads = loss_fn(mu, cov, keys)
+        _, grads = loss_fn(mu, scale_tril, keys)
         updates, opt_state = opt.update(grads, opt_state)
         mu = optax.apply_updates(mu, updates)
-        return (mu, cov, opt_state, key), None
+        return (mu, scale_tril, opt_state, key), None
 
     vi_mean = mean
     opt = optax.adam(learning_rate=learning_rate)
@@ -320,7 +333,7 @@ def match_mean_by_variational_inference(
 
     (vi_mean, _, _, _), _ = jax.lax.scan(
         variational_inference_fn,
-        (vi_mean, cov, opt_state, subkey),
+        (vi_mean, scale_tril, opt_state, subkey),
         length=steps,
     )
 
@@ -425,11 +438,10 @@ def analytical_likelihood(
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = poisson_mean_estimator(model_instance)
 
-        event_mvn = MultivariateNormal(loc=mean_stack, covariance_matrix=cov_stack)
-
         rng_key = key
         moment_matching_mean = mean_stack
         moment_matching_cov = cov_stack
+        moment_matching_scale_tril = jnp.linalg.cholesky(moment_matching_cov)
 
         def normalized_weights_fn(samples: Array) -> Array:
             model_log_prob_vmap_fn = jax.vmap(
@@ -444,7 +456,8 @@ def analytical_likelihood(
                 model_log_prob,
             )
             log_prob_expanded = jnp.expand_dims(
-                safe_model_log_prob + event_mvn.log_prob(samples),
+                safe_model_log_prob
+                + mvn_log_prob(mean_stack, scale_tril_stack, samples),
                 axis=-1,
             )
             return jax.nn.softmax(
@@ -458,7 +471,7 @@ def analytical_likelihood(
             moment_matching_mean = moment_match_mean(
                 subkey,
                 moment_matching_mean,
-                moment_matching_cov,
+                moment_matching_scale_tril,
                 normalized_weights_fn,
                 max_iter_mean,
                 100,
@@ -474,6 +487,7 @@ def analytical_likelihood(
                 max_iter_cov,
                 100,
             )
+            moment_matching_scale_tril = jnp.linalg.cholesky(moment_matching_cov)
 
         fit_mean = moment_matching_mean
         if n_vi_steps > 0:
@@ -481,7 +495,7 @@ def analytical_likelihood(
             vi_mean = match_mean_by_variational_inference(
                 subkey,
                 moment_matching_mean,
-                moment_matching_cov,
+                moment_matching_scale_tril,
                 model_instance,
                 learning_rate,
                 n_vi_steps,
@@ -489,18 +503,14 @@ def analytical_likelihood(
             )
             fit_mean = jnp.where(jnp.isnan(vi_mean), moment_matching_mean, vi_mean)
 
-        fit_cov = moment_matching_cov
+        fit_scale_tril = moment_matching_scale_tril
+
+        mvn_log_prob_while_body = jax.vmap(mvn_log_prob, in_axes=(None, None, 0))
 
         def scan_fn(
             carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]
         ) -> Tuple[Array, None]:
-            mean, cov, fit_mean_i, fit_cov_i, rng_key_i = loop_data
-
-            # event_mvn = G(θ, z | μ_i, Σ_i)
-            event_mvn = MultivariateNormal(loc=mean, covariance_matrix=cov)
-
-            # fit_mvn = G(θ, z | μ_f, Σ_f)
-            fit_mvn = MultivariateNormal(loc=fit_mean_i, covariance_matrix=fit_cov_i)
+            mean, scale_tril, fit_mean_i, fit_scale_tril_i, rng_key_i = loop_data
 
             def while_body_fn(state: StateT) -> StateT:
                 log_estimate_1, error_1, N_1, rng_key = state
@@ -508,16 +518,23 @@ def analytical_likelihood(
                 rng_key, subkey = jrd.split(rng_key)
 
                 # data ~ G(θ, z | μ_f, Σ_f)
-                data = fit_mvn.sample(subkey, (N_2,))
+                data = mvn_samples(
+                    loc=fit_mean_i,
+                    scale_tril=fit_scale_tril_i,
+                    n_samples=N_2,
+                    key=subkey,
+                )
 
                 # log ρ(data | Λ, κ)
                 model_instance_log_prob = jax.vmap(model_instance.log_prob)(data)
 
                 # log G(θ, z | μ_i, Σ_i)
-                event_mvn_log_prob = jax.vmap(event_mvn.log_prob)(data)
+                event_mvn_log_prob = mvn_log_prob_while_body(mean, scale_tril, data)
 
                 # log G(θ, z | μ_f, Σ_i)
-                fit_mvn_log_prob = jax.vmap(fit_mvn.log_prob)(data)
+                fit_mvn_log_prob = mvn_log_prob_while_body(
+                    fit_mean_i, fit_scale_tril_i, data
+                )
 
                 log_prob = (
                     model_instance_log_prob + event_mvn_log_prob - fit_mvn_log_prob
@@ -563,10 +580,12 @@ def analytical_likelihood(
 
         keys = jrd.split(rng_key, (n_events,))
 
+        scale_tril_stack = jnp.linalg.cholesky(cov_stack)
+
         total_log_likelihood, _ = jax.lax.scan(
             scan_fn,  # type: ignore[arg-type]
             jnp.zeros(()),
-            (mean_stack, cov_stack, fit_mean, fit_cov, keys),
+            (mean_stack, scale_tril_stack, fit_mean, fit_scale_tril, keys),
             length=n_events,
         )
 
