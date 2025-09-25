@@ -166,7 +166,7 @@ def mvn_samples(loc: Array, cov: Array, n_samples: int, key: PRNGKeyArray) -> Ar
     return samples
 
 
-@ft.partial(jax.jit, static_argnames=("max_iter", "n_samples"))
+@ft.partial(jax.jit, static_argnames=("max_iter", "n_samples", "normalized_weights_fn"))
 def moment_match_mean(
     rng_key: PRNGKeyArray,
     mean: Array,
@@ -204,7 +204,7 @@ def moment_match_mean(
     return moment_matching_mean
 
 
-@ft.partial(jax.jit, static_argnames=("max_iter", "n_samples"))
+@ft.partial(jax.jit, static_argnames=("max_iter", "n_samples", "normalized_weights_fn"))
 def moment_match_cov(
     rng_key: PRNGKeyArray,
     mean: Array,
