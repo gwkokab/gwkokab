@@ -499,19 +499,13 @@ def analytical_likelihood(
                 data = fit_mvn.sample(subkey, (N_2,))
 
                 # log ρ(data | Λ, κ)
-                model_instance_log_prob = jax.lax.map(
-                    model_instance.log_prob, data, batch_size=batch_size
-                )
+                model_instance_log_prob = jax.vmap(model_instance.log_prob)(data)
 
                 # log G(θ, z | μ_i, Σ_i)
-                event_mvn_log_prob = jax.lax.map(
-                    event_mvn.log_prob, data, batch_size=batch_size
-                )
+                event_mvn_log_prob = jax.vmap(event_mvn.log_prob)(data)
 
                 # log G(θ, z | μ_f, Σ_i)
-                fit_mvn_log_prob = jax.lax.map(
-                    fit_mvn.log_prob, data, batch_size=batch_size
-                )
+                fit_mvn_log_prob = jax.vmap(fit_mvn.log_prob)(data)
 
                 log_prob = (
                     model_instance_log_prob + event_mvn_log_prob - fit_mvn_log_prob
