@@ -464,6 +464,7 @@ def analytical_likelihood(
                 100,
             )
 
+        fit_mean = moment_matching_mean
         if n_vi_steps > 0:
             rng_key, subkey = jrd.split(rng_key)
             vi_mean = match_mean_by_variational_inference(
@@ -475,8 +476,8 @@ def analytical_likelihood(
                 n_vi_steps,
                 100,
             )
+            fit_mean = jnp.where(jnp.isnan(vi_mean), moment_matching_mean, vi_mean)
 
-        fit_mean = jnp.where(jnp.isnan(vi_mean), moment_matching_mean, vi_mean)
         fit_cov = moment_matching_cov
 
         def scan_fn(
