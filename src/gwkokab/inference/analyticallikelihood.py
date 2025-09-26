@@ -424,9 +424,11 @@ def analytical_likelihood(
         and a second array (not used in this implementation).
     """
 
-    def likelihood_fn(x: Array, data: Dict[str, Array]) -> Array:
+    def log_likelihood_fn(x: Array, data: Dict[str, Array]) -> Array:
         mean_stack = data["mean_stack"]
         cov_stack = data["cov_stack"]
+        scale_tril_stack = data["scale_tril_stack"]
+        T_obs = data["T_obs"]
 
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
@@ -441,7 +443,7 @@ def analytical_likelihood(
         rng_key = key
         moment_matching_mean = mean_stack
         moment_matching_cov = cov_stack
-        moment_matching_scale_tril = jnp.linalg.cholesky(moment_matching_cov)
+        moment_matching_scale_tril = scale_tril_stack
 
         def normalized_weights_fn(samples: Array) -> Array:
             model_log_prob_vmap_fn = jax.vmap(
@@ -573,18 +575,16 @@ def analytical_likelihood(
                 while_body_fn(state_0),  # this makes it a do-while loop
                 kind="checkpointed",
                 checkpoints=n_checkpoints,
-                max_steps=n_max_steps,
+                max_steps=n_max_steps - 1,  # already did one step
             )
 
             return carry + log_likelihood_i, None
 
         keys = jrd.split(rng_key, (n_events,))
 
-        scale_tril_stack = jnp.linalg.cholesky(cov_stack)
-
         total_log_likelihood, _ = jax.lax.scan(
             scan_fn,  # type: ignore[arg-type]
-            jnp.zeros(()),
+            n_events * jnp.log(T_obs),
             (mean_stack, scale_tril_stack, fit_mean, fit_scale_tril, keys),
             length=n_events,
         )
@@ -603,4 +603,4 @@ def analytical_likelihood(
 
         return log_posterior
 
-    return eqx.filter_jit(likelihood_fn)
+    return eqx.filter_jit(log_likelihood_fn)

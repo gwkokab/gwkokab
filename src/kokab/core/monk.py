@@ -166,6 +166,9 @@ class Monk(FlowMCBased):
         cov_stack: Array = jax.block_until_ready(
             jax.device_put(jnp.stack(list_of_covariances, axis=0), may_alias=True)
         )
+        scale_tril_stack: Array = jax.device_put(
+            jnp.linalg.cholesky(cov_stack), may_alias=True
+        )
 
         logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
         logger.debug("cov_stack.shape: {shape}", shape=cov_stack.shape)
@@ -196,7 +199,12 @@ class Monk(FlowMCBased):
         self.driver(
             logpdf=logpdf,
             priors=priors,
-            data={"mean_stack": mean_stack, "cov_stack": cov_stack},
+            data={
+                "mean_stack": mean_stack,
+                "cov_stack": cov_stack,
+                "scale_tril_stack": scale_tril_stack,
+                "T_obs": T_obs,
+            },
             labels=sorted(variables.keys()),
         )
 
