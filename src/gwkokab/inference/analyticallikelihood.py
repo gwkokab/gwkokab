@@ -316,7 +316,7 @@ def match_mean_by_variational_inference(
         Array
             loss value
         """
-        model_samples = model.sample(key, sample=(n_samples,))
+        model_samples = model.sample(key, sample_shape=(n_samples,))
         log_p = model.log_prob(model_samples)
 
         fit_dist_log_prob = mvn_log_prob(mu, scale_tril, model_samples)
