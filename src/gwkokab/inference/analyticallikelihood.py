@@ -252,8 +252,39 @@ def moment_match_cov(
     return moment_matching_cov
 
 
+def kl_divergence_of_two_mvn_with_same_cov(
+    mean_1: Array, mean_2: Array, cov: Array
+) -> Array:
+    r"""Compute the KL divergence between two multivariate normal distributions.
+
+    .. math::
+
+        D_{KL}(\mathcal{N}_1||\mathcal{N}_2)=\frac{1}{2}(\mu_2-\mu_1)^T\Sigma_2^{-1}(\mu_2-\mu_1)
+
+    Parameters
+    ----------
+    mean_1 : Array
+        Mean vector of the first multivariate normal distribution.
+    mean_2 : Array
+        Mean vector of the second multivariate normal distribution.
+    cov : Array
+        Covariance matrix of any multivariate normal distribution.
+
+    Returns
+    -------
+    Array
+        KL divergence between the two multivariate normal distributions.
+    """
+    inv_cov = jnp.linalg.inv(cov)
+    diff = mean_2 - mean_1
+    mahalanobis_term = jnp.einsum("...i,...ij,...j->...", diff, inv_cov, diff)
+    kl_div = 0.5 * mahalanobis_term
+    return kl_div
+
+
 def match_mean_by_variational_inference(
     rng_key: PRNGKeyArray,
+    event_mean: Array,
     mean: Array,
     scale_tril: Array,
     model: DistributionT,
@@ -263,9 +294,11 @@ def match_mean_by_variational_inference(
 ) -> Array:
     n_events = mean.shape[0]
 
-    @ft.partial(jax.vmap, in_axes=(0, 0, 0))
+    @ft.partial(jax.vmap, in_axes=(0, 0, 0, 0))
     @jax.value_and_grad
-    def loss_fn(mu: Array, scale_tril: Array, key: PRNGKeyArray) -> Array:
+    def loss_fn(
+        mu: Array, mean_i: Array, scale_tril: Array, key: PRNGKeyArray
+    ) -> Array:
         """Compute Reverse KL divergence between the model and the fitted multivariate
         normal distribution.
 
@@ -286,24 +319,22 @@ def match_mean_by_variational_inference(
         model_samples = model.sample(key, sample=(n_samples,))
         log_p = model.log_prob(model_samples)
 
-        (n,) = jnp.shape(scale_tril)[-1:]
-        half_log_det = tri_logabsdet(scale_tril)
-        entropy = n * (jnp.log(2 * jnp.pi) + 1) / 2 + half_log_det
-
         fit_dist_log_prob = mvn_log_prob(mu, scale_tril, model_samples)
 
-        return entropy - jnp.mean(jnp.exp(fit_dist_log_prob - log_p) * log_p)
+        return kl_divergence_of_two_mvn_with_same_cov(
+            mu, mean_i, scale_tril @ scale_tril.T
+        ) - jnp.mean(jnp.exp(fit_dist_log_prob - log_p) * log_p)
 
     def variational_inference_fn(
-        carry: Tuple[Array, Array, optax.OptState, Array], _: Optional[Array]
-    ) -> Tuple[Tuple[Array, Array, optax.OptState, Array], None]:
+        carry: Tuple[Array, Array, Array, optax.OptState, Array], _: Optional[Array]
+    ) -> Tuple[Tuple[Array, Array, Array, optax.OptState, Array], None]:
         """Perform a single step of the gradient descent optimization to update the mean
         vector and covariance matrix.
 
         Parameters
         ----------
-        carry : Tuple[Array, Array, optax.OptState, Array]
-            carry tuple containing the current mean vector, covariance matrix,
+        carry : Tuple[Array, Array, Array, optax.OptState, Array]
+            carry tuple containing the current mean vector, event mean vector, covariance matrix,
             optimizer state, and random key
         _ : Optional[Array]
             unused placeholder for the scan function
@@ -314,15 +345,15 @@ def match_mean_by_variational_inference(
             updated mean vector, unchanged covariance matrix, optimizer state, and
             random key
         """
-        mu, scale_tril, opt_state, key = carry
+        mu, mean_i, scale_tril, opt_state, key = carry
         key, subkey = jrd.split(key)
         keys = jrd.split(subkey, n_events)
         # Perform a single optimization step to update the mean vector to minimize the
         # loss function.
-        _, grads = loss_fn(mu, scale_tril, keys)
+        _, grads = loss_fn(mu, mean_i, scale_tril, keys)
         updates, opt_state = opt.update(grads, opt_state)
         mu = optax.apply_updates(mu, updates)
-        return (mu, scale_tril, opt_state, key), None
+        return (mu, mean_i, scale_tril, opt_state, key), None
 
     vi_mean = mean
     opt = optax.adam(learning_rate=learning_rate)
@@ -330,9 +361,9 @@ def match_mean_by_variational_inference(
 
     rng_key, subkey = jrd.split(rng_key)
 
-    (vi_mean, _, _, _), _ = jax.lax.scan(
+    (vi_mean, _, _, _, _), _ = jax.lax.scan(
         variational_inference_fn,
-        (vi_mean, scale_tril, opt_state, subkey),
+        (vi_mean, event_mean, scale_tril, opt_state, subkey),
         length=steps,
     )
 
@@ -495,6 +526,7 @@ def analytical_likelihood(
             rng_key, subkey = jrd.split(rng_key)
             vi_mean = match_mean_by_variational_inference(
                 subkey,
+                mean_stack,
                 moment_matching_mean,
                 moment_matching_scale_tril,
                 model_instance,
