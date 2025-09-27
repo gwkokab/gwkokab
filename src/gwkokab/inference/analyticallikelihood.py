@@ -176,82 +176,7 @@ def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
     return -0.5 * M - normalize_term
 
 
-@ft.partial(jax.jit, static_argnames=("max_iter", "n_samples", "normalized_weights_fn"))
-def moment_match_mean(
-    rng_key: PRNGKeyArray,
-    mean: Array,
-    scale_tril: Array,
-    normalized_weights_fn: Callable[[Array], Array],
-    max_iter: int,
-    n_samples: int,
-) -> Array:
-    def scan_moment_matching_mean_fn(
-        moment_matching_mean_i: Array, key: PRNGKeyArray
-    ) -> Tuple[Array, None]:
-        samples = mvn_samples(
-            loc=moment_matching_mean_i,
-            scale_tril=scale_tril,
-            n_samples=n_samples,
-            key=key,
-        )
-
-        # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
-        weights = normalized_weights_fn(samples)
-
-        # μ_f = sum(weights * samples)
-        new_fit_mean = jnp.sum(samples * weights, axis=0)
-
-        return new_fit_mean, None
-
-    rng_key, subkey = jrd.split(rng_key)
-
-    moment_matching_mean, _ = jax.lax.scan(
-        scan_moment_matching_mean_fn,  # type: ignore[arg-type]
-        mean,
-        jrd.split(subkey, max_iter),
-        length=max_iter,
-    )
-    return moment_matching_mean
-
-
-@ft.partial(jax.jit, static_argnames=("max_iter", "n_samples", "normalized_weights_fn"))
-def moment_match_cov(
-    rng_key: PRNGKeyArray,
-    mean: Array,
-    cov: Array,
-    normalized_weights_fn: Callable[[Array], Array],
-    max_iter: int,
-    n_samples: int,
-) -> Array:
-    def scan_moment_matching_cov_fn(
-        moment_matching_cov_i: Array, key: PRNGKeyArray
-    ) -> Tuple[Array, None]:
-        samples = mvn_samples(
-            loc=mean,
-            scale_tril=jnp.linalg.cholesky(moment_matching_cov_i),
-            n_samples=n_samples,
-            key=key,
-        )
-
-        # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
-        weights = normalized_weights_fn(samples)
-
-        # Σ_f = sum(weights * (samples - μ_f) * (samples - μ_f).T)
-        centered = samples - mean
-        new_fit_cov = jnp.einsum("sei,sej->eij", weights * centered, centered)
-
-        return new_fit_cov, None
-
-    rng_key, subkey = jrd.split(rng_key)
-    moment_matching_cov, _ = jax.lax.scan(
-        scan_moment_matching_cov_fn,  # type: ignore[arg-type]
-        cov,
-        jrd.split(subkey, max_iter),
-        length=max_iter,
-    )
-    return moment_matching_cov
-
-
+@jax.jit
 def kl_divergence_of_two_mvn_with_same_cov(
     mean_1: Array, mean_2: Array, cov: Array
 ) -> Array:
@@ -379,8 +304,6 @@ def analytical_likelihood(
     n_events: int,
     minimum_mc_error: float = 1e-2,
     n_samples: int = 100,
-    max_iter_mean: int = 10,
-    max_iter_cov: int = 3,
     n_vi_steps: int = 5,
     learning_rate: float = 1e-2,
     batch_size: int = 1_00,
@@ -430,10 +353,6 @@ def analytical_likelihood(
     n_samples : int, optional
         Number of samples to draw from the multivariate normal distribution for each
         event to compute the likelihood, by default 100
-    max_iter_mean : int, optional
-        Maximum number of iterations for the fitting process of the mean, by default 10
-    max_iter_cov : int, optional
-        Maximum number of iterations for the fitting process of the covariance, by default 3
     n_vi_steps: int, optional
         Number of steps for the variational inference optimization, by default 5
     learning_rate : float, optional
@@ -456,7 +375,7 @@ def analytical_likelihood(
 
     def log_likelihood_fn(x: Array, data: Dict[str, Array]) -> Array:
         mean_stack = data["mean_stack"]
-        cov_stack = data["cov_stack"]
+        # cov_stack = data["cov_stack"]
         scale_tril_stack = data["scale_tril_stack"]
         T_obs = data["T_obs"]
 
@@ -472,54 +391,7 @@ def analytical_likelihood(
 
         rng_key = key
         moment_matching_mean = mean_stack
-        moment_matching_cov = cov_stack
         moment_matching_scale_tril = scale_tril_stack
-
-        def normalized_weights_fn(samples: Array) -> Array:
-            model_log_prob_vmap_fn = jax.vmap(
-                model_instance.log_prob,
-                in_axes=(1,),
-                out_axes=-1,
-            )
-            model_log_prob = model_log_prob_vmap_fn(samples)
-            safe_model_log_prob = jnp.where(
-                jnp.isnan(model_log_prob) | jnp.isneginf(model_log_prob),
-                -jnp.inf,
-                model_log_prob,
-            )
-            log_prob_expanded = jnp.expand_dims(
-                safe_model_log_prob
-                + mvn_log_prob(mean_stack, scale_tril_stack, samples),
-                axis=-1,
-            )
-            return jax.nn.softmax(
-                log_prob_expanded,
-                where=~jnp.isneginf(log_prob_expanded),
-                axis=0,
-            )
-
-        if max_iter_mean > 0:
-            rng_key, subkey = jrd.split(rng_key)
-            moment_matching_mean = moment_match_mean(
-                subkey,
-                moment_matching_mean,
-                moment_matching_scale_tril,
-                normalized_weights_fn,
-                max_iter_mean,
-                100,
-            )
-
-        if max_iter_cov > 0:
-            rng_key, subkey = jrd.split(rng_key)
-            moment_matching_cov = moment_match_cov(
-                subkey,
-                moment_matching_mean,
-                moment_matching_cov,
-                normalized_weights_fn,
-                max_iter_cov,
-                100,
-            )
-            moment_matching_scale_tril = jnp.linalg.cholesky(moment_matching_cov)
 
         fit_mean = moment_matching_mean
         if n_vi_steps > 0:

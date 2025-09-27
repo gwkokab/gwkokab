@@ -84,8 +84,6 @@ class Monk(FlowMCBased):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        max_iter_mean: int,
-        max_iter_cov: int,
         n_vi_steps: int,
         learning_rate: float,
         batch_size: int,
@@ -132,8 +130,6 @@ class Monk(FlowMCBased):
         )
         self.data_filename = data_filename
         self.n_samples = n_samples
-        self.max_iter_mean = max_iter_mean
-        self.max_iter_cov = max_iter_cov
         self.n_vi_steps = n_vi_steps
         self.learning_rate = learning_rate
         self.batch_size = batch_size
@@ -186,8 +182,6 @@ class Monk(FlowMCBased):
             self.rng_key,
             n_events=n_events,
             n_samples=self.n_samples,
-            max_iter_mean=self.max_iter_mean,
-            max_iter_cov=self.max_iter_cov,
             n_vi_steps=self.n_vi_steps,
             learning_rate=self.learning_rate,
             batch_size=self.batch_size,
@@ -242,18 +236,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Number of samples to draw from the multivariate normal distribution for each "
         "event to compute the likelihood",
         default=10_000,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--max-iter-mean",
-        help="Maximum number of iterations for the fitting process of the mean",
-        default=10,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--max-iter-cov",
-        help="Maximum number of iterations for the fitting process of the covariance",
-        default=3,
         type=int,
     )
     likelihood_group.add_argument(

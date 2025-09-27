@@ -45,8 +45,6 @@ def main() -> None:
         check_leaks=args.check_leaks,
         analysis_name="ecc_matters",
         n_samples=args.n_samples,
-        max_iter_mean=args.max_iter_mean,
-        max_iter_cov=args.max_iter_cov,
         n_vi_steps=args.n_vi_steps,
         learning_rate=args.learning_rate,
         batch_size=args.batch_size,
