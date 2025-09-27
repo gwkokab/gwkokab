@@ -283,8 +283,7 @@ def match_mean_by_variational_inference(
         Array
             loss value
         """
-        model_samples = mvn_samples(mu, scale_tril, n_samples=n_samples, key=key)
-
+        model_samples = model.sample(key, sample=(n_samples,))
         log_p = model.log_prob(model_samples)
 
         (n,) = jnp.shape(scale_tril)[-1:]
