@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import functools as ft
 from typing import Callable, Dict, Optional, Tuple, TypeAlias
 
 import equinox as eqx
@@ -207,11 +206,11 @@ def kl_divergence_of_two_mvn_with_same_cov(
     return kl_div
 
 
-def match_mean_by_variational_inference(
+def find_mean_by_variational_inference(
     rng_key: PRNGKeyArray,
     event_mean: Array,
     mean: Array,
-    scale_tril: Array,
+    event_scale_tril: Array,
     model: DistributionT,
     learning_rate: float,
     steps: int,
@@ -219,78 +218,49 @@ def match_mean_by_variational_inference(
 ) -> Array:
     n_events = mean.shape[0]
 
-    @ft.partial(jax.vmap, in_axes=(0, 0, 0, 0))
-    @jax.value_and_grad
-    def loss_fn(
-        mu: Array, mean_i: Array, scale_tril: Array, key: PRNGKeyArray
-    ) -> Array:
-        """Compute Reverse KL divergence between the model and the fitted multivariate
-        normal distribution.
-
-        Parameters
-        ----------
-        mu : Array
-            mean vector of the multivariate normal distribution
-        scale_tril : Array
-            Cholesky factor of the covariance matrix of the multivariate normal distribution
-        key : PRNGKeyArray
-            random key for sampling
-
-        Returns
-        -------
-        Array
-            loss value
-        """
-        model_samples = model.sample(key, sample_shape=(n_samples,))
-        log_p = model.log_prob(model_samples)
-
-        fit_dist_log_prob = mvn_log_prob(mu, scale_tril, model_samples)
-
-        return kl_divergence_of_two_mvn_with_same_cov(
-            mu, mean_i, scale_tril
-        ) - jnp.mean(jnp.exp(fit_dist_log_prob - log_p) * log_p)
-
     def variational_inference_fn(
-        carry: Tuple[Array, Array, Array, optax.OptState, Array], _: Optional[Array]
-    ) -> Tuple[Tuple[Array, Array, Array, optax.OptState, Array], None]:
-        """Perform a single step of the gradient descent optimization to update the mean
-        vector and covariance matrix.
+        event_mean_i: Array,
+        event_scale_tril_i: Array,
+        key: PRNGKeyArray,
+    ) -> Array:
+        def loss_fn(mean_i: Array, key: PRNGKeyArray) -> Array:
+            model_samples = model.sample(key, sample_shape=(n_samples,))
+            log_p = model.log_prob(model_samples)
 
-        Parameters
-        ----------
-        carry : Tuple[Array, Array, Array, optax.OptState, Array]
-            carry tuple containing the current mean vector, event mean vector, covariance matrix,
-            optimizer state, and random key
-        _ : Optional[Array]
-            unused placeholder for the scan function
+            fit_dist_log_prob = mvn_log_prob(mean_i, event_scale_tril_i, model_samples)
 
-        Returns
-        -------
-        Tuple[Tuple[Array, Array, optax.OptState, Array], None]
-            updated mean vector, unchanged covariance matrix, optimizer state, and
-            random key
-        """
-        mu, mean_i, scale_tril, opt_state, key = carry
-        key, subkey = jrd.split(key)
-        keys = jrd.split(subkey, n_events)
-        # Perform a single optimization step to update the mean vector to minimize the
-        # loss function.
-        _, grads = loss_fn(mu, mean_i, scale_tril, keys)
-        updates, opt_state = opt.update(grads, opt_state)
-        mu = optax.apply_updates(mu, updates)
-        return (mu, mean_i, scale_tril, opt_state, key), None
+            return kl_divergence_of_two_mvn_with_same_cov(
+                mean_i,
+                event_mean_i,
+                event_scale_tril_i,
+            ) - jnp.mean(jnp.exp(fit_dist_log_prob - log_p) * log_p, axis=-1)
 
-    opt = optax.adam(learning_rate=learning_rate)
-    opt_state = opt.init(mean)
+        def step_fn(
+            carry: Tuple[Array, optax.OptState, Array], _: Optional[Array]
+        ) -> Tuple[Tuple[Array, optax.OptState, Array], None]:
+            _mean_i, opt_state, rng_key = carry
+            rng_key, subkey = jrd.split(rng_key)
+            # Perform a single optimization step to update the mean vector to minimize the
+            # loss function.
+            _, grads = jax.value_and_grad(loss_fn)(_mean_i, subkey)
+            updates, opt_state = opt.update(grads, opt_state)
+            _mean_i = optax.apply_updates(_mean_i, updates)
+            return (_mean_i, opt_state, rng_key), None
 
-    rng_key, subkey = jrd.split(rng_key)
+        opt = optax.adam(learning_rate=learning_rate)
+        opt_state = opt.init(event_mean_i)
 
-    (vi_mean, _, _, _, _), _ = jax.lax.scan(
-        variational_inference_fn,
-        (mean, event_mean, scale_tril, opt_state, subkey),
-        length=steps,
+        (vi_mean, *_), _ = jax.lax.scan(
+            step_fn,
+            (event_mean_i, opt_state, key),
+            length=steps,
+        )
+        return vi_mean
+
+    keys = jrd.split(rng_key, n_events)
+    vi_mean = jax.vmap(variational_inference_fn, in_axes=(0, 0, 0))(
+        event_mean, event_scale_tril, keys
     )
-
     return vi_mean
 
 
@@ -395,7 +365,7 @@ def analytical_likelihood(
         fit_mean = moment_matching_mean
         if n_vi_steps > 0:
             rng_key, subkey = jrd.split(rng_key)
-            vi_mean = match_mean_by_variational_inference(
+            vi_mean = find_mean_by_variational_inference(
                 subkey,
                 mean_stack,
                 moment_matching_mean,
