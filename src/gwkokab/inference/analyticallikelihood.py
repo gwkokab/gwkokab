@@ -8,7 +8,7 @@ from typing import Callable, Dict, Optional, Tuple, TypeAlias
 import equinox as eqx
 import jax
 import optax
-from jax import nn as jnn, numpy as jnp, random as jrd
+from jax import nn as jnn, numpy as jnp, random as jrd, scipy as jsp
 from jaxtyping import Array, PRNGKeyArray
 from numpyro._typing import DistributionT
 from numpyro.distributions import Distribution
@@ -178,7 +178,7 @@ def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
 
 @jax.jit
 def kl_divergence_of_two_mvn_with_same_cov(
-    mean_1: Array, mean_2: Array, cov: Array
+    mean_1: Array, mean_2: Array, scale_tril: Array
 ) -> Array:
     r"""Compute the KL divergence between two multivariate normal distributions.
 
@@ -192,17 +192,17 @@ def kl_divergence_of_two_mvn_with_same_cov(
         Mean vector of the first multivariate normal distribution.
     mean_2 : Array
         Mean vector of the second multivariate normal distribution.
-    cov : Array
-        Covariance matrix of any multivariate normal distribution.
+    scale_tril : Array
+        Cholesky factor (Lower Triangular) of the covariance matrix of the multivariate normal distributions.
 
     Returns
     -------
     Array
         KL divergence between the two multivariate normal distributions.
     """
-    inv_cov = jnp.linalg.inv(cov)
     diff = mean_2 - mean_1
-    mahalanobis_term = jnp.einsum("...i,...ij,...j->...", diff, inv_cov, diff)
+    y = jsp.linalg.solve_triangular(scale_tril, diff, lower=True)
+    mahalanobis_term = jnp.sum(y**2, axis=-1)
     kl_div = 0.5 * mahalanobis_term
     return kl_div
 
@@ -247,7 +247,7 @@ def match_mean_by_variational_inference(
         fit_dist_log_prob = mvn_log_prob(mu, scale_tril, model_samples)
 
         return kl_divergence_of_two_mvn_with_same_cov(
-            mu, mean_i, scale_tril @ scale_tril.T
+            mu, mean_i, scale_tril
         ) - jnp.mean(jnp.exp(fit_dist_log_prob - log_p) * log_p)
 
     def variational_inference_fn(
@@ -280,15 +280,14 @@ def match_mean_by_variational_inference(
         mu = optax.apply_updates(mu, updates)
         return (mu, mean_i, scale_tril, opt_state, key), None
 
-    vi_mean = mean
     opt = optax.adam(learning_rate=learning_rate)
-    opt_state = opt.init(vi_mean)
+    opt_state = opt.init(mean)
 
     rng_key, subkey = jrd.split(rng_key)
 
     (vi_mean, _, _, _, _), _ = jax.lax.scan(
         variational_inference_fn,
-        (vi_mean, event_mean, scale_tril, opt_state, subkey),
+        (mean, event_mean, scale_tril, opt_state, subkey),
         length=steps,
     )
 
