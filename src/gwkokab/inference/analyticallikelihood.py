@@ -294,7 +294,10 @@ def analytical_likelihood(
         Learning rate for the Adam optimizer used in the variational inference
         optimization, by default 1e-2
     n_checkpoints : int, optional
-        Number of checkpoints to save during the optimization process, by default 1
+        Checkpoint interval for the checkpointed while-loop, by default 10. For more
+        details, see
+        [`equinox.internal.while_loop`](https://github.com/patrick-kidger/equinox/blob/main/equinox/internal/_loop/loop.py)
+        and its [`"checkpointed"` variant](https://github.com/patrick-kidger/equinox/blob/main/equinox/internal/_loop/checkpointed.py).
     n_max_steps : int, optional
         Maximum number of steps for the optimization process, by default 20
 
