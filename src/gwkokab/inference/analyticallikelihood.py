@@ -247,7 +247,6 @@ def analytical_likelihood(
     n_samples: int = 100,
     n_vi_steps: int = 5,
     learning_rate: float = 1e-2,
-    batch_size: int = 1_00,
     n_checkpoints: int = 10,
     n_max_steps: int = 20,
 ) -> Callable[[Array, Dict[str, Array]], Array]:
@@ -299,8 +298,6 @@ def analytical_likelihood(
     learning_rate : float, optional
         Learning rate for the Adam optimizer used in the variational inference
         optimization, by default 1e-2
-    batch_size : int, optional
-        Batch size for the sampling process, by default 100
     n_checkpoints : int, optional
         Number of checkpoints to save during the optimization process, by default 1
     n_max_steps : int, optional

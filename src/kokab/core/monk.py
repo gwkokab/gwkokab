@@ -86,7 +86,6 @@ class Monk(FlowMCBased):
         n_samples: int,
         n_vi_steps: int,
         learning_rate: float,
-        batch_size: int,
         minimum_mc_error: float,
         n_checkpoints: int,
         n_max_steps: int,
@@ -132,7 +131,6 @@ class Monk(FlowMCBased):
         self.n_samples = n_samples
         self.n_vi_steps = n_vi_steps
         self.learning_rate = learning_rate
-        self.batch_size = batch_size
         self.minimum_mc_error = minimum_mc_error
         self.n_checkpoints = n_checkpoints
         self.n_max_steps = n_max_steps
@@ -184,7 +182,6 @@ class Monk(FlowMCBased):
             n_samples=self.n_samples,
             n_vi_steps=self.n_vi_steps,
             learning_rate=self.learning_rate,
-            batch_size=self.batch_size,
             minimum_mc_error=self.minimum_mc_error,
             n_checkpoints=self.n_checkpoints,
             n_max_steps=self.n_max_steps,
@@ -249,12 +246,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Learning rate for the variational inference",
         default=0.01,
         type=float,
-    )
-    likelihood_group.add_argument(
-        "--batch-size",
-        help="Batch size for the `jax.lax.map` used in the likelihood computation",
-        default=1_000,
-        type=int,
     )
     likelihood_group.add_argument(
         "--minimum-mc-error",
