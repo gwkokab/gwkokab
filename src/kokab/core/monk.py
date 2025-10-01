@@ -8,6 +8,7 @@ from typing import List, Tuple, Union
 
 import h5py
 import jax
+import numpy as np
 from jax import numpy as jnp
 from jaxtyping import Array
 from loguru import logger
@@ -23,14 +24,14 @@ from .flowMC_based import FlowMCBased
 from .guru import guru_arg_parser as guru_parser
 
 
-def _read_mean_covariances(filename: str) -> Tuple[List[Array], List[Array]]:
+def _read_mean_covariances(filename: str) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     """Reads means and covariances from a file.
 
     Args:
         filename (str): The path to the file containing means and covariances.
 
     Returns:
-        Tuple[List[Array], List[Array]]: A tuple containing two lists:
+        Tuple[List[np.ndarray], List[np.ndarray]]: A tuple containing two lists:
             - list_of_means: List of mean arrays.
             - list_of_covariances: List of covariance arrays.
     """
@@ -157,15 +158,14 @@ class Monk(FlowMCBased):
         mean_stack: Array = jax.block_until_ready(
             jax.device_put(jnp.stack(list_of_means, axis=0), may_alias=True)
         )
-        cov_stack: Array = jax.block_until_ready(
-            jax.device_put(jnp.stack(list_of_covariances, axis=0), may_alias=True)
-        )
+        cov_stack = np.stack(list_of_covariances, axis=0)
         scale_tril_stack: Array = jax.device_put(
             jnp.linalg.cholesky(cov_stack), may_alias=True
         )
+        del cov_stack  # We don't need the covariance matrices anymore
 
         logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
-        logger.debug("cov_stack.shape: {shape}", shape=cov_stack.shape)
+        logger.debug("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
 
         pmean_config = read_json(self.poisson_mean_filename)
         _, poisson_mean_estimator, T_obs = get_selection_fn_and_poisson_mean_estimator(
@@ -192,7 +192,6 @@ class Monk(FlowMCBased):
             priors=priors,
             data={
                 "mean_stack": mean_stack,
-                "cov_stack": cov_stack,
                 "scale_tril_stack": scale_tril_stack,
                 "T_obs": T_obs,
             },

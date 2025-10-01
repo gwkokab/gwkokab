@@ -313,7 +313,6 @@ def analytical_likelihood(
 
     def log_likelihood_fn(x: Array, data: Dict[str, Array]) -> Array:
         mean_stack = data["mean_stack"]
-        # cov_stack = data["cov_stack"]
         scale_tril_stack = data["scale_tril_stack"]
         T_obs = data["T_obs"]
 
