@@ -22,7 +22,8 @@ StateT: TypeAlias = Tuple[
     Array,  # old size
     PRNGKeyArray,  # old key
 ]
-"""State of the Monte Carlo estimation process."""
+"""State of the Monte Carlo estimation process:
+   (log_estimate, error_sq, sample_count, rng_key)."""
 
 
 @jax.jit
