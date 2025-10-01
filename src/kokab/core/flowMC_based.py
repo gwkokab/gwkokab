@@ -503,6 +503,7 @@ def _save_data_from_sampler(
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
     logpdf: Optional[Callable] = None,
+    save_weighted_samples: bool = False,
 ) -> None:
     """This functions saves the data from a sampler to disk. The data saved includes the
     samples from the flow, the chains from the training and production phases, the log
@@ -520,6 +521,8 @@ def _save_data_from_sampler(
         number of samples to draw from the flow, by default 5000
     logpdf : Callable, optional
         The log probability function.
+    save_weighted_samples : bool, optional
+        Whether to save weighted samples, by default False
     """
     logger.info("Saving data from sampler to directory: {out_dir}", out_dir=out_dir)
     if labels is None:
@@ -663,6 +666,9 @@ def _save_data_from_sampler(
     gc.collect()
     logger.debug("Garbage collection completed after unweighted samples.")
 
+    if not save_weighted_samples:
+        return
+
     logpdf_val = jax.block_until_ready(
         jax.lax.map(lambda s: logpdf(s), unweighted_samples)
     )
@@ -711,7 +717,9 @@ def _save_data_from_sampler(
     ess = int(1.0 / np.sum(np.square(weights)))
     logger.debug("Effective sample size is {} out of {}".format(ess, n_samples))
     if ess == 0:
-        raise ValueError("Effective sample size is zero, cannot proceed with sampling.")
+        logger.warning("Effective sample size is zero, cannot proceed with sampling.")
+        return
+
     weighted_samples = unweighted_samples[
         np.random.choice(n_samples, size=ess, p=weights)
     ]
@@ -868,6 +876,9 @@ class FlowMCBased(Guru):
             out_dir=INFERENCE_DIRECTORY,
             labels=labels,
             n_samples=sampler_config["data_dump"]["n_samples"],
+            save_weighted_samples=sampler_config["data_dump"].get(
+                "save_weighted_samples", False
+            ),
         )
 
         logger.info("Sampling and data saving complete.")
