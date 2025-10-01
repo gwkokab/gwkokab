@@ -400,7 +400,7 @@ def analytical_likelihood(
             state_0 = (
                 -jnp.inf,  # starting log estimate is -inf
                 jnp.zeros(()),  # starting error is zero
-                n_samples,
+                0.0,  # starting size is zero
                 rng_key_i,
             )
 
