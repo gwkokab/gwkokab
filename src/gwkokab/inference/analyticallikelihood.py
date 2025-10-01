@@ -18,7 +18,7 @@ from gwkokab.models.utils import JointDistribution, ScaledMixture
 
 StateT: TypeAlias = Tuple[
     Array,  # old monte-carlo-estimate
-    Array,  # old error
+    Array,  # old error square
     Array,  # old size
     PRNGKeyArray,  # old key
 ]
@@ -26,7 +26,7 @@ StateT: TypeAlias = Tuple[
 
 
 @jax.jit
-def monte_carlo_log_estimate_and_error(
+def monte_carlo_log_estimate_and_error_sq(
     log_probs: Array, N: Array
 ) -> Tuple[Array, Array]:
     """Computes the Monte Carlo estimate and error for the given log probabilities.
@@ -41,13 +41,13 @@ def monte_carlo_log_estimate_and_error(
     Returns
     -------
     Tuple[Array, Array]
-        Monte Carlo logarithm of estimate, and Monte Carlo error.
+        Monte Carlo logarithm of estimate, and square of the Monte Carlo error.
     """
     mask = ~jnp.isneginf(log_probs)
     log_moment_1 = jnn.logsumexp(log_probs, where=mask, axis=-1) - jnp.log(N)
     moment_2 = jnp.exp(jnn.logsumexp(2.0 * log_probs, where=mask, axis=-1)) / N
-    error = jnp.sqrt((moment_2 - jnp.exp(2.0 * log_moment_1)) / (N - 1.0))
-    return log_moment_1, error
+    error_sq = (moment_2 - jnp.exp(2.0 * log_moment_1)) / (N - 1.0)
+    return log_moment_1, error_sq
 
 
 @jax.jit
@@ -83,9 +83,9 @@ def combine_monte_carlo_log_estimates(
 
 
 @jax.jit
-def combine_monte_carlo_errors(
-    error_1: Array,
-    error_2: Array,
+def combine_monte_carlo_errors_sq(
+    error_1_sq: Array,
+    error_2_sq: Array,
     log_estimate_1: Array,
     log_estimate_2: Array,
     log_estimate_3: Array,
@@ -96,16 +96,16 @@ def combine_monte_carlo_errors(
 
     .. math::
 
-        \hat{\epsilon}=\sqrt{\frac{1}{N_3(N_3-1)}\sum_{k=1}^{2}\left\{N_k(N_k-1)\hat{\epsilon}_k^2+N_k\hat{\mu}^2_k\right\}-\frac{1}{N_3-1}\hat{\mu}^2}
+        \hat{\epsilon}^2=\frac{1}{N_3(N_3-1)}\sum_{k=1}^{2}\left\{N_k(N_k-1)\hat{\epsilon}_k^2+N_k\hat{\mu}^2_k\right\}-\frac{1}{N_3-1}\hat{\mu}^2
 
     where, :math:`N_3 = N_1 + N_2` is the total number of samples.
 
     Parameters
     ----------
-    error_1 : Array
-        Error of the first Monte Carlo estimate :math:`\hat{\epsilon}_1`.
-    error_2 : Array
-        Error of the second Monte Carlo estimate :math:`\hat{\epsilon}_2`.
+    error_1_sq : Array
+        Square of error of the first Monte Carlo estimate :math:`\hat{\epsilon}_1`.
+    error_2_sq : Array
+        Square of error of the second Monte Carlo estimate :math:`\hat{\epsilon}_2`.
     log_estimate_1 : Array
         Estimate of the first Monte Carlo estimate :math:`\hat{\mu}_1`.
     log_estimate_2 : Array
@@ -124,19 +124,13 @@ def combine_monte_carlo_errors(
     """
     N_3 = N_1 + N_2
 
-    sum_prob_sq_1 = N_1 * (
-        (N_1 - 1.0) * jnp.square(error_1) + jnp.exp(2.0 * log_estimate_1)
-    )
-    sum_prob_sq_2 = N_2 * (
-        (N_2 - 1.0) * jnp.square(error_2) + jnp.exp(2.0 * log_estimate_2)
-    )
+    sum_prob_sq_1 = N_1 * ((N_1 - 1.0) * error_1_sq + jnp.exp(2.0 * log_estimate_1))
+    sum_prob_sq_2 = N_2 * ((N_2 - 1.0) * error_2_sq + jnp.exp(2.0 * log_estimate_2))
 
     combined_error_sq = -jnp.exp(2.0 * log_estimate_3) / (N_3 - 1.0)
     combined_error_sq += (sum_prob_sq_1 + sum_prob_sq_2) / N_3 / (N_3 - 1.0)
 
-    combined_error = jnp.sqrt(combined_error_sq)
-
-    return combined_error
+    return combined_error_sq
 
 
 @eqx.filter_jit
@@ -310,6 +304,7 @@ def analytical_likelihood(
         given the data. The function takes two arguments: an array of model parameters
         and a second array (not used in this implementation).
     """
+    minimum_mc_error_sq = minimum_mc_error**2
 
     def log_likelihood_fn(x: Array, data: Dict[str, Array]) -> Array:
         mean_stack = data["mean_stack"]
@@ -355,7 +350,7 @@ def analytical_likelihood(
             mean, scale_tril, fit_mean_i, fit_scale_tril_i, rng_key_i = loop_data
 
             def while_body_fn(state: StateT) -> StateT:
-                log_estimate_1, error_1, N_1, rng_key = state
+                log_estimate_1, error_1_sq, N_1, rng_key = state
                 N_2 = n_samples
                 rng_key, subkey = jrd.split(rng_key)
 
@@ -381,7 +376,7 @@ def analytical_likelihood(
                 log_prob = (
                     model_instance_log_prob + event_mvn_log_prob - fit_mvn_log_prob
                 )
-                log_estimate_2, error_2 = monte_carlo_log_estimate_and_error(
+                log_estimate_2, error_2_sq = monte_carlo_log_estimate_and_error_sq(
                     log_prob,
                     N_2,  # type: ignore[arg-type]
                 )
@@ -391,16 +386,16 @@ def analytical_likelihood(
                     N_1,
                     N_2,  # type: ignore[arg-type]
                 )
-                error_3 = combine_monte_carlo_errors(
-                    error_1,
-                    error_2,
+                error_3_sq = combine_monte_carlo_errors_sq(
+                    error_1_sq,
+                    error_2_sq,
                     log_estimate_1,
                     log_estimate_2,
                     log_estimate_3,
                     N_1,
                     N_2,  # type: ignore[arg-type]
                 )
-                return log_estimate_3, error_3, N_1 + N_2, rng_key
+                return log_estimate_3, error_3_sq, N_1 + N_2, rng_key
 
             state_0 = (
                 -jnp.inf,  # starting log estimate is -inf
@@ -410,7 +405,7 @@ def analytical_likelihood(
             )
 
             log_likelihood_i, _, _, _ = eqx.internal.while_loop(
-                lambda state: jnp.less_equal(state[1], minimum_mc_error),
+                lambda state: jnp.less_equal(state[1], minimum_mc_error_sq),
                 while_body_fn,
                 while_body_fn(state_0),  # this makes it a do-while loop
                 kind="checkpointed",
