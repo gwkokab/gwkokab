@@ -7,7 +7,7 @@ from typing import Callable, Dict, Optional, Tuple, TypeAlias
 import equinox as eqx
 import jax
 import optax
-from jax import nn as jnn, numpy as jnp, random as jrd, scipy as jsp
+from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro._typing import DistributionT
 from numpyro.distributions import Distribution
@@ -173,37 +173,6 @@ def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
     half_log_det = tri_logabsdet(scale_tril)
     normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * jnp.log(2 * jnp.pi)
     return -0.5 * M - normalize_term
-
-
-@jax.jit
-def kl_divergence_of_two_mvn_with_same_cov(
-    mean_1: Array, mean_2: Array, scale_tril: Array
-) -> Array:
-    r"""Compute the KL divergence between two multivariate normal distributions.
-
-    .. math::
-
-        D_{KL}(\mathcal{N}_1||\mathcal{N}_2)=\frac{1}{2}(\mu_2-\mu_1)^T\Sigma_2^{-1}(\mu_2-\mu_1)
-
-    Parameters
-    ----------
-    mean_1 : Array
-        Mean vector of the first multivariate normal distribution.
-    mean_2 : Array
-        Mean vector of the second multivariate normal distribution.
-    scale_tril : Array
-        Cholesky factor (Lower Triangular) of the covariance matrix of the multivariate normal distributions.
-
-    Returns
-    -------
-    Array
-        KL divergence between the two multivariate normal distributions.
-    """
-    diff = mean_2 - mean_1
-    y = jsp.linalg.solve_triangular(scale_tril, diff, lower=True)
-    mahalanobis_term = jnp.sum(y**2, axis=-1)
-    kl_div = 0.5 * mahalanobis_term
-    return kl_div
 
 
 def find_mean_by_variational_inference(
