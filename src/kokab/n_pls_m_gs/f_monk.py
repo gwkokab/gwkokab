@@ -209,14 +209,14 @@ class NPowerlawMGaussianMonk(Monk):
         if self.has_eccentricity:
             all_params.extend(
                 [
-                    ("ecc_high_g", self.N_g),
-                    ("ecc_high_pl", self.N_pl),
-                    ("ecc_loc_g", self.N_g),
-                    ("ecc_loc_pl", self.N_pl),
-                    ("ecc_low_g", self.N_g),
-                    ("ecc_low_pl", self.N_pl),
-                    ("ecc_scale_g", self.N_g),
-                    ("ecc_scale_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_high_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_high_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_loc_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_loc_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_low_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_low_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_scale_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_scale_pl", self.N_pl),
                 ]
             )
 

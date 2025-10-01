@@ -173,16 +173,22 @@ def main() -> None:
     if has_tilt:
         err_params_name.extend(
             [
-                "cos_tilt_1_high",
-                "cos_tilt_1_low",
-                "cos_tilt_1_scale",
-                "cos_tilt_2_high",
-                "cos_tilt_2_low",
-                "cos_tilt_2_scale",
+                P.COS_TILT_1.value + "_high",
+                P.COS_TILT_1.value + "_low",
+                P.COS_TILT_1.value + "_scale",
+                P.COS_TILT_2.value + "_high",
+                P.COS_TILT_2.value + "_low",
+                P.COS_TILT_2.value + "_scale",
             ]
         )
     if has_eccentricity:
-        err_params_name.extend(["ecc_high", "ecc_low", "ecc_scale"])
+        err_params_name.extend(
+            [
+                P.ECCENTRICITY.value + "_high",
+                P.ECCENTRICITY.value + "_low",
+                P.ECCENTRICITY.value + "_scale",
+            ]
+        )
     if has_mean_anomaly:
         err_params_name.extend(
             [
@@ -192,7 +198,13 @@ def main() -> None:
             ]
         )
     if has_redshift:
-        err_params_name.extend(["redshift_high", "redshift_low", "redshift_scale"])
+        err_params_name.extend(
+            [
+                P.REDSHIFT.value + "_high",
+                P.REDSHIFT.value + "_low",
+                P.REDSHIFT.value + "_scale",
+            ]
+        )
     if has_cos_iota:
         err_params_name.extend(
             [
@@ -378,9 +390,9 @@ def main() -> None:
             P.COS_TILT_1.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value["cos_tilt_1_scale"],
-                low=err_params_value.get("cos_tilt_1_low"),
-                high=err_params_value.get("cos_tilt_1_high"),
+                scale=err_params_value[P.COS_TILT_1.value + "_scale"],
+                low=err_params_value.get(P.COS_TILT_1.value + "_low"),
+                high=err_params_value.get(P.COS_TILT_1.value + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
@@ -390,9 +402,9 @@ def main() -> None:
             P.COS_TILT_2.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value["cos_tilt_2_scale"],
-                low=err_params_value.get("cos_tilt_2_low"),
-                high=err_params_value.get("cos_tilt_2_high"),
+                scale=err_params_value[P.COS_TILT_2.value + "_scale"],
+                low=err_params_value.get(P.COS_TILT_2.value + "_low"),
+                high=err_params_value.get(P.COS_TILT_2.value + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
@@ -474,14 +486,14 @@ def main() -> None:
         parameters_name += (P.ECCENTRICITY.value,)
         all_params.extend(
             [
-                ("ecc_high_g", N_g),
-                ("ecc_high_pl", N_pl),
-                ("ecc_loc_g", N_g),
-                ("ecc_loc_pl", N_pl),
-                ("ecc_low_g", N_g),
-                ("ecc_low_pl", N_pl),
-                ("ecc_scale_g", N_g),
-                ("ecc_scale_pl", N_pl),
+                (P.ECCENTRICITY.value + "_high_g", N_g),
+                (P.ECCENTRICITY.value + "_high_pl", N_pl),
+                (P.ECCENTRICITY.value + "_loc_g", N_g),
+                (P.ECCENTRICITY.value + "_loc_pl", N_pl),
+                (P.ECCENTRICITY.value + "_low_g", N_g),
+                (P.ECCENTRICITY.value + "_low_pl", N_pl),
+                (P.ECCENTRICITY.value + "_scale_g", N_g),
+                (P.ECCENTRICITY.value + "_scale_pl", N_pl),
             ]
         )
 
@@ -526,10 +538,10 @@ def main() -> None:
 
         all_params.extend(
             [
-                ("redshift_kappa_g", N_g),
-                ("redshift_kappa_pl", N_pl),
-                ("redshift_z_max_g", N_g),
-                ("redshift_z_max_pl", N_pl),
+                (P.REDSHIFT.value + "_kappa_g", N_g),
+                (P.REDSHIFT.value + "_kappa_pl", N_pl),
+                (P.REDSHIFT.value + "_z_max_g", N_g),
+                (P.REDSHIFT.value + "_z_max_pl", N_pl),
             ]
         )
 
@@ -537,9 +549,9 @@ def main() -> None:
             P.REDSHIFT.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value["redshift_scale"],
-                low=err_params_value.get("redshift_low"),
-                high=err_params_value.get("redshift_high"),
+                scale=err_params_value[P.REDSHIFT.value + "_scale"],
+                low=err_params_value.get(P.REDSHIFT.value + "_low"),
+                high=err_params_value.get(P.REDSHIFT.value + "_high"),
                 cut_low=1e-3,
                 cut_high=None,
             ),
