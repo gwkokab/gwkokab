@@ -228,12 +228,15 @@ def find_mean_by_variational_inference(
             log_p = model.log_prob(model_samples)
 
             fit_dist_log_prob = mvn_log_prob(mean_i, event_scale_tril_i, model_samples)
+            event_dist_log_prob = mvn_log_prob(
+                event_mean_i, event_scale_tril_i, model_samples
+            )
 
-            return kl_divergence_of_two_mvn_with_same_cov(
-                mean_i,
-                event_mean_i,
-                event_scale_tril_i,
-            ) - jnp.mean(jnp.exp(fit_dist_log_prob - log_p) * log_p, axis=-1)
+            return jnp.mean(
+                (jnp.exp(fit_dist_log_prob - log_p) - jnp.exp(event_dist_log_prob))
+                * (fit_dist_log_prob - log_p - event_dist_log_prob),
+                axis=-1,
+            )
 
         def step_fn(
             carry: Tuple[Array, optax.OptState, Array], _: Optional[Array]
