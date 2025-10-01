@@ -64,9 +64,9 @@ def combine_monte_carlo_log_estimates(
     Parameters
     ----------
     estimates_1 : Array
-        First Monte Carlo estimate :math:`\hat{\mu}_1`.
+        First Monte Carlo estimate :math:`\ln\hat{\mu}_1`.
     estimates_2 : Array
-        Second Monte Carlo estimate :math:`\hat{\mu}_2`.
+        Second Monte Carlo estimate :math:`\ln\hat{\mu}_2`.
     N_1 : Array
         Number of samples used for the first estimate :math:`N_1`.
     N_2 : Array
@@ -75,7 +75,7 @@ def combine_monte_carlo_log_estimates(
     Returns
     -------
     Array
-        Combined Monte Carlo estimate :math:`\hat{\mu}`.
+        Combined Monte Carlo estimate :math:`\ln\hat{\mu}`.
     """
     combined_log_estimate = jnp.logaddexp(
         jnp.log(N_1) + log_estimates_1, jnp.log(N_2) + log_estimates_2
@@ -104,15 +104,15 @@ def combine_monte_carlo_errors_sq(
     Parameters
     ----------
     error_1_sq : Array
-        Square of error of the first Monte Carlo estimate :math:`\hat{\epsilon}_1`.
+        Square of error of the first Monte Carlo estimate :math:`\hat{\epsilon}_1^2`.
     error_2_sq : Array
-        Square of error of the second Monte Carlo estimate :math:`\hat{\epsilon}_2`.
+        Square of error of the second Monte Carlo estimate :math:`\hat{\epsilon}_2^2`.
     log_estimate_1 : Array
-        Estimate of the first Monte Carlo estimate :math:`\hat{\mu}_1`.
+        Estimate of the first Monte Carlo estimate :math:`\ln\hat{\mu}_1`.
     log_estimate_2 : Array
-        Estimate of the second Monte Carlo estimate :math:`\hat{\mu}_2`.
+        Estimate of the second Monte Carlo estimate :math:`\ln\hat{\mu}_2`.
     log_estimate_3 : Array
-        Estimate of the combined Monte Carlo estimate :math:`\hat{\mu}`.
+        Estimate of the combined Monte Carlo estimate :math:`\ln\hat{\mu}`.
     N_1 : Array
         Number of samples used for the first estimate :math:`N_1`.
     N_2 : Array
@@ -121,7 +121,7 @@ def combine_monte_carlo_errors_sq(
     Returns
     -------
     Array
-        Combined Monte Carlo error estimate :math:`\hat{\epsilon}`.
+        Combined Monte Carlo squared error estimate :math:`\hat{\epsilon}^2`.
     """
     N_3 = N_1 + N_2
 
