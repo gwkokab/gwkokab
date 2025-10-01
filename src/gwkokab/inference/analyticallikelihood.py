@@ -167,7 +167,7 @@ def mvn_samples(
     return samples
 
 
-@eqx.filter_jit
+@jax.jit
 def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
     M = _batch_mahalanobis(scale_tril, value - loc)
     half_log_det = tri_logabsdet(scale_tril)
