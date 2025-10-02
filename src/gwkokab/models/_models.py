@@ -8,7 +8,7 @@ from jax import lax, numpy as jnp, random as jrd
 from jax.scipy import special
 from jax.scipy.stats import norm, uniform
 from jaxtyping import Array, ArrayLike
-from numpyro.distributions import constraints, Distribution, Independent
+from numpyro.distributions import constraints, Distribution, HalfNormal, Independent
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..models.spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
@@ -350,6 +350,7 @@ def PowerlawPeak(
     use_spin: bool = False,
     use_redshift: bool = False,
     use_tilt: bool = False,
+    use_eccentricity: bool = False,
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
@@ -396,6 +397,13 @@ def PowerlawPeak(
         )
 
         component_distributions.append(tilt_dist)
+
+    if use_eccentricity:
+        ecc_dist = HalfNormal(
+            scale=params["eccentricity_scale"],
+            validate_args=validate_args,
+        )
+        component_distributions.append(ecc_dist)
 
     if use_redshift:
         z_max = params["z_max"]
