@@ -50,7 +50,7 @@ If you use GWKokab in your research, please cite the following:
 
 ```bibtex
 @software{gwkokab2024github,
-    author  = {Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy},
+    author  = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
     title   = {{GWKokab}: A JAX-based gravitational-wave population inference toolkit for parametric models},
     url     = {https://github.com/gwkokab/gwkokab},
     year    = {2024}
