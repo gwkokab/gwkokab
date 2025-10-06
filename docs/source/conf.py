@@ -143,7 +143,7 @@ def linkcode_resolve(domain, info):
 
 
 intersphinx_mapping = {
-    "jax": ("https://jax.readthedocs.io/en/latest/", None),
+    "jax": ("https://docs.jax.dev/en/latest/", None),
     "jaxtyping": ("https://docs.kidger.site/jaxtyping/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "numpyro": ("https://num.pyro.ai/en/stable/", None),
