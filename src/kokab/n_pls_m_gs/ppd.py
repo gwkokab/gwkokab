@@ -5,12 +5,12 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import pandas as pd
-
-import gwkokab
-from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.npowerlawmgaussian._ncombination import (
     create_truncated_normal_distributions,
 )
+
+import gwkokab
+from gwkokab.models import NPowerlawMGaussian
 from gwkokab.parameters import Parameters as P
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
