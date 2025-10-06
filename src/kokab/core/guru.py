@@ -7,17 +7,74 @@ from argparse import ArgumentParser
 from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from jax import random as jrd
+import jax
+from jax import lax, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
-from numpyro._typing import DistributionLike
+from numpyro._typing import DistributionT
+from numpyro.distributions.distribution import Distribution
 from numpyro.util import is_prng_key
 
 from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import error_if
 from kokab.utils.common import get_processed_priors, read_json, write_json
 
-from .bake import Bake
+
+def _bake_model(
+    dist_caller: Distribution | Callable[..., Distribution], **kwargs: Any
+) -> Tuple[
+    Dict[str, int | float | None],
+    Dict[str, Distribution],
+    Dict[str, str],
+    Callable[..., Distribution],
+]:
+    """Baking the model by separating constants and variables.
+
+    Parameters
+    ----------
+    dist_caller : Distribution | Callable[..., Distribution]
+        The distribution class or a callable that returns a distribution.
+
+    Returns
+    -------
+    Tuple[ Dict[str, int | float | None], Dict[str, Distribution], Dict[str, str], Callable[..., Distribution], ]
+        A tuple containing the constants, variables, duplicates, and a callable that
+        returns the distribution with constants baked in.
+
+    Raises
+    ------
+    ValueError
+        If a parameter has an invalid type.
+    """
+    constants: Dict[str, int | float | None] = dict()
+    variables: Dict[str, Distribution] = dict()
+    duplicates: Dict[str, str] = dict()
+    for key, value in kwargs.items():
+        if value is None:
+            constants[key] = None
+        elif isinstance(value, Distribution):
+            variables[key] = value
+        elif isinstance(value, (int, float)):
+            constants[key] = lax.stop_gradient(value)
+        elif isinstance(value, str):
+            continue
+        else:
+            error_if(
+                True, msg=f"Parameter {key} has an invalid type {type(value)}: {value}"
+            )
+    for key, value in kwargs.items():
+        if isinstance(value, str):
+            if value in constants:
+                constants[key] = constants[value]
+            elif value in variables:
+                duplicates[key] = value
+
+    return (
+        constants,
+        variables,
+        duplicates,
+        jax.tree_util.Partial(dist_caller, **constants),
+    )
 
 
 class Guru:
@@ -33,7 +90,7 @@ class Guru:
         analysis_name: str,
         check_leaks: bool,
         debug_nans: bool,
-        model: Union[DistributionLike, Callable[..., DistributionLike]],
+        model: Union[DistributionT, Callable[..., DistributionT]],
         poisson_mean_filename: str,
         prior_filename: str,
         profile_memory: bool,
@@ -84,7 +141,7 @@ class Guru:
         self,
     ) -> Tuple[
         Dict[str, Union[int, float, bool, None]],
-        Callable[..., DistributionLike],
+        Callable[..., DistributionT],
         JointDistribution,
         Dict[str, int],
         Dict[str, int],
@@ -93,7 +150,7 @@ class Guru:
 
         Returns
         -------
-        Tuple[ Dict[str, Union[int, float, bool, None]], Callable[..., DistributionLike], JointDistribution, Dict[str, int], ]
+        Tuple[ Dict[str, Union[int, float, bool, None]], Callable[..., DistributionT], JointDistribution, Dict[str, int], ]
             A tuple containing the constants, the distribution function, the prior
             distribution, and the variables index.
         """
@@ -101,9 +158,10 @@ class Guru:
         model_prior_param = get_processed_priors(self.model_parameters, prior_dict)
 
         logger.debug("Baking the model")
-        baked_model = Bake(self.model)(**self.constants, **model_prior_param)
+        constants, variables, duplicates, dist_fn = _bake_model(
+            self.model, **self.constants, **model_prior_param
+        )  # type: ignore
 
-        constants, variables, duplicates, dist_fn = baked_model.get_dist()  # type: ignore
         variables_index: dict[str, int] = {
             key: i for i, key in enumerate(sorted(variables.keys()))
         }
