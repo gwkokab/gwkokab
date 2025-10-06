@@ -7,9 +7,7 @@ from typing import Dict, List, Tuple, Union
 
 import gwkokab
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.npowerlawmgaussian._ncombination import (
-    create_truncated_normal_distributions,
-)
+from gwkokab.models.hybrids._ncombination import create_truncated_normal_distributions
 from gwkokab.parameters import Parameters as P
 from kokab.core.monk import Monk, monk_arg_parser
 from kokab.utils.common import expand_arguments
@@ -52,7 +50,7 @@ class NPowerlawMGaussianMonk(Monk):
         self.has_beta_spin = has_beta_spin
         self.has_truncated_normal_spin = has_truncated_normal_spin
         if self.has_truncated_normal_spin:
-            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+            gwkokab.models.hybrids._npowerlawmgaussian.build_spin_distributions = (
                 create_truncated_normal_distributions
             )
         self.has_tilt = has_tilt

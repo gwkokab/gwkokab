@@ -13,7 +13,7 @@ from numpyro import distributions as dist
 import gwkokab
 from gwkokab.errors import banana_error_m1_m2, truncated_normal_error
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.npowerlawmgaussian._ncombination import (
+from gwkokab.models.hybrids._ncombination import (
     create_truncated_normal_distributions,
 )
 from gwkokab.parameters import Parameters as P
@@ -312,7 +312,7 @@ def main() -> None:
             P.SECONDARY_SPIN_MAGNITUDE.value,
         )
         if args.add_truncated_normal_spin:
-            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+            gwkokab.models.hybrids._npowerlawmgaussian.build_spin_distributions = (
                 create_truncated_normal_distributions
             )
             all_params.extend(
