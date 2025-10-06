@@ -7,9 +7,7 @@ from typing import Dict, List, Tuple, Union
 
 import gwkokab
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.npowerlawmgaussian._ncombination import (
-    create_truncated_normal_distributions,
-)
+from gwkokab.models.hybrids._ncombination import create_truncated_normal_distributions
 from gwkokab.parameters import Parameters as P
 from kokab.core.monk import Monk, monk_arg_parser
 from kokab.utils.common import expand_arguments
@@ -38,11 +36,11 @@ class NPowerlawMGaussianMonk(Monk):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        max_iter_mean: int,
-        max_iter_cov: int,
         n_vi_steps: int,
         learning_rate: float,
-        batch_size: int,
+        minimum_mc_error: float,
+        n_checkpoints: int,
+        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -52,7 +50,7 @@ class NPowerlawMGaussianMonk(Monk):
         self.has_beta_spin = has_beta_spin
         self.has_truncated_normal_spin = has_truncated_normal_spin
         if self.has_truncated_normal_spin:
-            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+            gwkokab.models.hybrids._npowerlawmgaussian.build_spin_distributions = (
                 create_truncated_normal_distributions
             )
         self.has_tilt = has_tilt
@@ -77,11 +75,11 @@ class NPowerlawMGaussianMonk(Monk):
             check_leaks=check_leaks,
             analysis_name="n_pls_m_gs",
             n_samples=n_samples,
-            max_iter_mean=max_iter_mean,
-            max_iter_cov=max_iter_cov,
             n_vi_steps=n_vi_steps,
             learning_rate=learning_rate,
-            batch_size=batch_size,
+            minimum_mc_error=minimum_mc_error,
+            n_checkpoints=n_checkpoints,
+            n_max_steps=n_max_steps,
         )
 
     @property
@@ -400,11 +398,11 @@ def main() -> None:
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         n_samples=args.n_samples,
-        max_iter_mean=args.max_iter_mean,
-        max_iter_cov=args.max_iter_cov,
         n_vi_steps=args.n_vi_steps,
         learning_rate=args.learning_rate,
-        batch_size=args.batch_size,
+        minimum_mc_error=args.minimum_mc_error,
+        n_checkpoints=args.n_checkpoints,
+        n_max_steps=args.n_max_steps,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,

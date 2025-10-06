@@ -43,8 +43,7 @@ dependencies = [
     "flowMC==0.4.5",
     "glasbey>=0.3.0",
     "h5py>=3.12.1",
-    "jax>=0.4.30,<=0.5.3",
-    "jaxlib>=0.4.30,<=0.5.3",
+    "jax[cuda12]>=0.4.30,<=0.5.3",
     "jaxtyping>=0.2.36",
     "jenkspy==0.4.1",
     "loguru>=0.7.0",
@@ -81,7 +80,6 @@ docs = [
     "sphinx_design",
 ]
 test = ["pytest>=8.3.0", "tensorflow_probability>=0.18", "astropy>=6.0.0"]
-cuda12 = ["jax[cuda12]>=0.4.30"]
 # tpu = ["jax[tpu]>=0.4.30"]
 
 [[tool.uv.index]]
@@ -123,8 +121,8 @@ n_sage_ecc_matters = "kokab.ecc_matters.sage:n_main"
 n_sage_n_pls_m_gs = "kokab.n_pls_m_gs.sage:n_main"
 n_sage_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.sage:n_main"
 ## Monk scripts
-f_monk_ecc_matters = "kokab.ecc_matters.f_monk:main"
-f_monk_n_pls_m_gs = "kokab.n_pls_m_gs.f_monk:main"
+f_monk_ecc_matters = "kokab.ecc_matters.monk:main"
+f_monk_n_pls_m_gs = "kokab.n_pls_m_gs.monk:main"
 ## PPD scripts
 ppd_ecc_matters = "kokab.ecc_matters.ppd:main"
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"

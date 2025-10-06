@@ -12,13 +12,15 @@ from . import (
     transformations as transformations,
     utils as utils,
 )
-from ._models import (
+from .hybrids import (
+    NPowerlawMGaussian as NPowerlawMGaussian,
     PowerlawPeak as PowerlawPeak,
+)
+from .mass import (
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
-from .npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
 from .redshift import PowerlawRedshift as PowerlawRedshift
 from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,

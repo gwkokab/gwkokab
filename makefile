@@ -1,13 +1,19 @@
 PIP=pip
 UV=uv
-PIP_FLAGS=
+PIP_FLAGS?=
 TARGET?=gwkokab
-PLATFORM?=
+EXTRA?=
 
-ifeq ($(PLATFORM),)
-	_PLATFORM=.
+ifeq ($(EXTRA),)
+	_EXTRA=.
 else
-	_PLATFORM=.[$(PLATFORM)]
+	_EXTRA=.[$(EXTRA)]
+endif
+
+ifeq ($(PIP_FLAGS),)
+	_PIP_FLAGS=
+else
+	_PIP_FLAGS=$(PIP_FLAGS)
 endif
 
 .PHONY: install uninstall cache_clean help
@@ -20,13 +26,13 @@ endif
 
 help:
 	@echo "Available targets:"
-	@echo "  install PLATFORM=... - Install package"
-	@echo "  uninstall            - Remove package"
-	@echo "  cache_clean          - Clean pip and uv cache"
-	@echo "  docs		          - Generate documentation"
+	@echo "  install EXTRA=... - Install package"
+	@echo "  uninstall         - Remove package"
+	@echo "  cache_clean       - Clean pip and uv cache"
+	@echo "  docs		       - Generate documentation"
 
 install: uninstall
-	$(UV) $(PIP) install $(PIP_FLAGS) $(_PLATFORM)
+	$(UV) $(PIP) install $(_PIP_FLAGS) $(_EXTRA)
 
 
 uninstall:
