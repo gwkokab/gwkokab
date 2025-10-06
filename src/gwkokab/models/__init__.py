@@ -13,6 +13,7 @@ from . import (
     utils as utils,
 )
 from .hybrids import (
+    BrokenPowerlawTwoPeakFull as BrokenPowerlawTwoPeakFull,
     NPowerlawMGaussian as NPowerlawMGaussian,
     PowerlawPeak as PowerlawPeak,
 )
