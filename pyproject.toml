@@ -43,8 +43,7 @@ dependencies = [
     "flowMC==0.4.5",
     "glasbey>=0.3.0",
     "h5py>=3.12.1",
-    "jax>=0.4.30,<=0.5.3",
-    "jaxlib>=0.4.30,<=0.5.3",
+    "jax[cuda12]>=0.4.30,<=0.5.3",
     "jaxtyping>=0.2.36",
     "jenkspy==0.4.1",
     "loguru>=0.7.0",
@@ -81,7 +80,6 @@ docs = [
     "sphinx_design",
 ]
 test = ["pytest>=8.3.0", "tensorflow_probability>=0.18", "astropy>=6.0.0"]
-cuda12 = ["jax[cuda12]>=0.4.30"]
 # tpu = ["jax[tpu]>=0.4.30"]
 
 [[tool.uv.index]]
