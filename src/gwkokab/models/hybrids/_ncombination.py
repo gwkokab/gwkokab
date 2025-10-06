@@ -16,7 +16,7 @@ from numpyro.distributions import (
 )
 
 from ...utils.tools import fetch_first_matching_value
-from .._models import PowerlawPrimaryMassRatio
+from ..mass import PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
@@ -26,10 +26,12 @@ from ..utils import ExtendedSupportTransformedDistribution
 __all__ = [
     "combine_distributions",
     "create_beta_distributions",
+    "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_redshift",
     "create_powerlaws",
     "create_truncated_normal_distributions_for_cos_tilt",
     "create_truncated_normal_distributions",
+    "create_uniform_distributions",
 ]
 
 
