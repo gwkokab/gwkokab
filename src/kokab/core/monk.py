@@ -8,6 +8,7 @@ from typing import List, Tuple, Union
 
 import h5py
 import jax
+import numpy as np
 from jax import numpy as jnp
 from jaxtyping import Array
 from loguru import logger
@@ -23,14 +24,14 @@ from .flowMC_based import FlowMCBased
 from .guru import guru_arg_parser as guru_parser
 
 
-def _read_mean_covariances(filename: str) -> Tuple[List[Array], List[Array]]:
+def _read_mean_covariances(filename: str) -> Tuple[List[np.ndarray], List[np.ndarray]]:
     """Reads means and covariances from a file.
 
     Args:
         filename (str): The path to the file containing means and covariances.
 
     Returns:
-        Tuple[List[Array], List[Array]]: A tuple containing two lists:
+        Tuple[List[np.ndarray], List[np.ndarray]]: A tuple containing two lists:
             - list_of_means: List of mean arrays.
             - list_of_covariances: List of covariance arrays.
     """
@@ -84,11 +85,11 @@ class Monk(FlowMCBased):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        max_iter_mean: int,
-        max_iter_cov: int,
         n_vi_steps: int,
         learning_rate: float,
-        batch_size: int,
+        minimum_mc_error: float,
+        n_checkpoints: int,
+        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -129,11 +130,11 @@ class Monk(FlowMCBased):
         )
         self.data_filename = data_filename
         self.n_samples = n_samples
-        self.max_iter_mean = max_iter_mean
-        self.max_iter_cov = max_iter_cov
         self.n_vi_steps = n_vi_steps
         self.learning_rate = learning_rate
-        self.batch_size = batch_size
+        self.minimum_mc_error = minimum_mc_error
+        self.n_checkpoints = n_checkpoints
+        self.n_max_steps = n_max_steps
         self.set_rng_key(seed=seed)
 
         super().__init__(
@@ -157,12 +158,14 @@ class Monk(FlowMCBased):
         mean_stack: Array = jax.block_until_ready(
             jax.device_put(jnp.stack(list_of_means, axis=0), may_alias=True)
         )
-        cov_stack: Array = jax.block_until_ready(
-            jax.device_put(jnp.stack(list_of_covariances, axis=0), may_alias=True)
+        cov_stack = np.stack(list_of_covariances, axis=0)
+        scale_tril_stack: Array = jax.device_put(
+            jnp.linalg.cholesky(cov_stack), may_alias=True
         )
+        del cov_stack  # We don't need the covariance matrices anymore
 
         logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
-        logger.debug("cov_stack.shape: {shape}", shape=cov_stack.shape)
+        logger.debug("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
 
         pmean_config = read_json(self.poisson_mean_filename)
         _, poisson_mean_estimator, T_obs = get_selection_fn_and_poisson_mean_estimator(
@@ -177,17 +180,21 @@ class Monk(FlowMCBased):
             self.rng_key,
             n_events=n_events,
             n_samples=self.n_samples,
-            max_iter_mean=self.max_iter_mean,
-            max_iter_cov=self.max_iter_cov,
             n_vi_steps=self.n_vi_steps,
             learning_rate=self.learning_rate,
-            batch_size=self.batch_size,
+            minimum_mc_error=self.minimum_mc_error,
+            n_checkpoints=self.n_checkpoints,
+            n_max_steps=self.n_max_steps,
         )
 
         self.driver(
             logpdf=logpdf,
             priors=priors,
-            data={"mean_stack": mean_stack, "cov_stack": cov_stack},
+            data={
+                "mean_stack": mean_stack,
+                "scale_tril_stack": scale_tril_stack,
+                "T_obs": T_obs,
+            },
             labels=sorted(variables.keys()),
         )
 
@@ -223,20 +230,8 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     likelihood_group.add_argument(
         "--n-samples",
         help="Number of samples to draw from the multivariate normal distribution for each "
-        "event to compute the likelihood, by default 10_000",
+        "event to compute the likelihood",
         default=10_000,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--max-iter-mean",
-        help="Maximum number of iterations for the fitting process of the mean, by default 10",
-        default=10,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--max-iter-cov",
-        help="Maximum number of iterations for the fitting process of the covariance, by default 3",
-        default=3,
         type=int,
     )
     likelihood_group.add_argument(
@@ -247,14 +242,26 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     likelihood_group.add_argument(
         "--learning-rate",
-        help="Learning rate for the variational inference, by default 0.01",
+        help="Learning rate for the variational inference",
         default=0.01,
         type=float,
     )
     likelihood_group.add_argument(
-        "--batch-size",
-        help="Batch size for the `jax.lax.map` used in the likelihood computation, by default 1000",
-        default=1_000,
+        "--minimum-mc-error",
+        help="Minimum Monte Carlo error for the likelihood computation.",
+        default=0.01,
+        type=float,
+    )
+    likelihood_group.add_argument(
+        "--n-checkpoints",
+        help="Number of checkpoints to save during the optimization process.",
+        default=5,
+        type=int,
+    )
+    likelihood_group.add_argument(
+        "--n-max-steps",
+        help="Maximum number of steps until minimum Monte Carlo error is reached.",
+        default=10,
         type=int,
     )
 
