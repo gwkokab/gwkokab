@@ -7,6 +7,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
 from jax import numpy as jnp, random as jrd
+from loguru import logger
 from numpyro import distributions as dist
 
 from gwkokab.errors import banana_error_m1_m2
@@ -114,6 +115,7 @@ def main() -> None:
         P.ECCENTRICITY.value,
     ]
 
+    logger.info(f"Setting the random number generator key with seed {args.seed}.")
     pmean_key, factory_key = jrd.split(jrd.PRNGKey(args.seed), 2)
 
     pmean_config = read_json(args.pmean_json)
