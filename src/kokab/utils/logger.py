@@ -38,9 +38,8 @@ def set_log_level() -> None:
     current_time = time_now()
 
     GWKOKAB_LOG_DIR = os.getenv("GWKOKAB_LOG_DIR", "./logs")
-
-    log_filename = f"gwkokab_{current_time}.log"
-    log_filename = os.path.join(GWKOKAB_LOG_DIR, log_filename)
+    GWKOKAB_LOG_FILE = os.getenv("GWKOKAB_LOG_FILE", f"gwkokab_{current_time}.log")
+    log_filename = os.path.join(GWKOKAB_LOG_DIR, GWKOKAB_LOG_FILE)
 
     os.makedirs(GWKOKAB_LOG_DIR, exist_ok=True)
 
