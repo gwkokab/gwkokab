@@ -5,9 +5,6 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
-from gwkokab.models.npowerlawmgaussian._ncombination import (
-    create_truncated_normal_distributions,
-)
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
@@ -16,6 +13,7 @@ from numpyro.distributions.distribution import enable_validation
 import gwkokab
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import NPowerlawMGaussian
+from gwkokab.models.hybrids._ncombination import create_truncated_normal_distributions
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
