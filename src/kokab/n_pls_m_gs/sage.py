@@ -118,7 +118,7 @@ class NPowerlawMGaussianCore(Sage):
         self.has_beta_spin = has_beta_spin
         self.has_truncated_normal_spin = has_truncated_normal_spin
         if self.has_truncated_normal_spin:
-            gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+            gwkokab.models.hybrids._npowerlawmgaussian.build_spin_distributions = (
                 create_truncated_normal_distributions
             )
         self.has_tilt = has_tilt
