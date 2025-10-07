@@ -120,6 +120,46 @@ class BrokenPowerlawTwoPeak(Distribution):
     :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
     """
 
+    arg_constraints = {
+        "alpha1": constraints.real,
+        "alpha2": constraints.real,
+        "beta": constraints.real,
+        "delta_m1": constraints.positive,
+        "delta_m2": constraints.positive,
+        "lambda_0": constraints.unit_interval,
+        "lambda_1": constraints.unit_interval,
+        "loc1": constraints.positive,
+        "loc2": constraints.positive,
+        "m1min": constraints.real,
+        "m2min": constraints.real,
+        "mbreak": constraints.real,
+        "mmax": constraints.real,
+        "scale1": constraints.positive,
+        "scale2": constraints.positive,
+    }
+
+    pytree_data_fields = (
+        "_logZ",
+        "_m1s",
+        "_support",
+        "_Z_q_given_m1",
+        "alpha1",
+        "alpha2",
+        "beta",
+        "delta_m1",
+        "delta_m2",
+        "lambda_0",
+        "lambda_1",
+        "loc1",
+        "loc2",
+        "m1min",
+        "m2min",
+        "mbreak",
+        "mmax",
+        "scale1",
+        "scale2",
+    )
+
     def __init__(
         self,
         alpha1: ArrayLike,
@@ -195,20 +235,21 @@ class BrokenPowerlawTwoPeak(Distribution):
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
-        mmin = jnp.broadcast_to(m2min, batch_shape)
+        m1min = jnp.broadcast_to(m1min, batch_shape)
+        m2min = jnp.broadcast_to(m2min, batch_shape)
         mmax = jnp.broadcast_to(mmax, batch_shape)
 
-        self._m1s = jnp.linspace(mmin, mmax, 1000)
-        _qs = jnp.linspace(0.005, 1.0, 500)
-
+        m1s = jnp.linspace(m1min, mmax, 1000)
         self._logZ = jnp.log(
             jnp.trapezoid(
-                jnp.exp(self._log_prob_m1_unnorm(self._m1s)),
-                self._m1s,
+                jnp.exp(self._log_prob_m1_unnorm(m1s)),
+                m1s,
                 axis=0,
             )
         )
 
+        self._m1s = jnp.linspace(m2min, mmax, 1000)
+        _qs = jnp.linspace(0.005, 1.0, 500)
         _m1qs_grid = jnp.stack(jnp.meshgrid(self._m1s, _qs, indexing="ij"), axis=-1)
 
         _prob_q = jnp.exp(self._log_prob_q_unnorm(_m1qs_grid))
@@ -238,7 +279,9 @@ class BrokenPowerlawTwoPeak(Distribution):
             + log_smoothing_m1
         )
 
-        return jnp.where(self.delta_m1 <= 0.0, -jnp.inf, log_prob_m1)
+        return jnp.where(
+            (self.delta_m1 <= 0.0) | (m1 < self.m1min), -jnp.inf, log_prob_m1
+        )
 
     @validate_sample
     def _log_prob_q_unnorm(self, value: Array) -> Array:
@@ -248,7 +291,9 @@ class BrokenPowerlawTwoPeak(Distribution):
         log_smoothing_q = log_planck_taper_window((m2 - self.m2min) / safe_delta)
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
 
-        return jnp.where(self.delta_m2 <= 0.0, -jnp.inf, log_prob_q)
+        return jnp.where(
+            (self.delta_m2 <= 0.0) | (m2 < self.m2min), -jnp.inf, log_prob_q
+        )
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
