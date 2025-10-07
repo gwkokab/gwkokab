@@ -85,7 +85,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.spin_truncated_normal:
-        gwkokab.models.npowerlawmgaussian._model.build_spin_distributions = (
+        gwkokab.models.hybrids._npowerlawmgaussian.build_spin_distributions = (
             create_truncated_normal_distributions
         )
 
