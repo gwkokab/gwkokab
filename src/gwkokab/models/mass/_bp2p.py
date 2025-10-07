@@ -30,10 +30,12 @@ def _broken_powerlaw_prob(
     The broken powerlaw two peak distribution is defined as
 
     .. math::
-        p(m_1\mid \alpha_1, \alpha_2, m_{\min}, m_{\max}, m_{\mathrm{break}}) \propto
+        p(m_1\mid \alpha_1, \alpha_2, m_{\mathrm{min}}, m_{\mathrm{max}}, m_{\mathrm{break}}) \propto
         \begin{cases}
-            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_1} & m_{\min} \leq m_1 < m_{\text{break}} \\
-            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_2} & m_{\text{break}} \leq m_1 \leq m_{\max} \\
+            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_1}
+            & m_{\mathrm{min}} \leq m_1 < m_{\text{break}} \\
+            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_2}
+            & m_{\text{break}} \leq m_1 \leq m_{\mathrm{max}} \\
             0 & \text{otherwise}
         \end{cases}
     """
@@ -75,38 +77,42 @@ class BrokenPowerlawTwoPeak(Distribution):
 
     .. math::
 
-        p_{\mathrm{BP}}(m_1 \mid \alpha_1, \alpha_2, m_{\min}, m_{\max},
+        p_{\mathrm{BP}}(m_1 \mid \alpha_1, \alpha_2, m_{1,\mathrm{min}}, m_{\mathrm{max}},
         m_{\mathrm{break}}) \propto
         \begin{cases}
-            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_1} & m_{\min} \leq m_1 < m_{\text{break}} \\
-            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_2} & m_{\text{break}} \leq m_1 \leq m_{\max} \\
+            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_1}
+            & m_{1,\mathrm{min}} \leq m_1 < m_{\text{break}}  \\
+            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_2}
+            & m_{\text{break}} \leq m_1 \leq m_{\mathrm{max}} \\
             0 & \text{otherwise}
         \end{cases}
 
     .. math::
 
-        p(m_1 \mid \alpha_1, \alpha_2, m_{\min}, m_{\max}, m_{\mathrm{break}}, \lambda_0,
-        \lambda_1, \mu_1, \sigma_1, \mu_2, \sigma_2) \propto
+        p(m_1 \mid \alpha_1, \alpha_2, m_{1,\mathrm{min}}, m_{\mathrm{max}},
+        m_{\mathrm{break}}, \lambda_0, \lambda_1, \mu_1, \sigma_1, \mu_2, \sigma_2)
+        \propto
         \left(
-        \lambda_0 p_{\mathrm{BP}}(m_1 \mid \alpha_1, \alpha_2, m_{\min}, m_{\max}, m_{\mathrm{break}}) +
-        \lambda_1 \mathcal{N}_{[m_{\min}, \infty)}(m_1 \mid \mu_1, \sigma_1) +
-        (1 - \lambda_0 - \lambda_1) \mathcal{N}_{[m_{\min}, \infty)}(m_1 \mid \mu_2, \sigma_2)
+        \lambda_0 p_{\mathrm{BP}}(m_1 \mid \alpha_1, \alpha_2, m_{1,\mathrm{min}}, m_{\mathrm{max}}, m_{\mathrm{break}}) +
+        \lambda_1 \mathcal{N}_{[m_{1,\mathrm{min}}, \infty)}(m_1 \mid \mu_1, \sigma_1) +
+        (1 - \lambda_0 - \lambda_1) \mathcal{N}_{[m_{1,\mathrm{min}}, \infty)}(m_1 \mid \mu_2, \sigma_2)
         \right)
-        S\left(\frac{m_1 - m_{\min}}{\delta_{m_1}}\right)
+        S\left(\frac{m_1 - m_{1,\mathrm{min}}}{\delta_{m_1}}\right)
 
     .. math::
 
-        p(q \mid \beta, m_1, m_{\min}, \delta_{m_2}) \propto
-        q^{\beta} S\left(\frac{m_1 q - m_{\min}}{\delta_{m_2}}\right)
+        p(q \mid \beta, m_1, m_{2,\mathrm{min}}, \delta_{m_2}) \propto
+        q^{\beta} S\left(\frac{m_1 q - m_{2,\mathrm{min}}}{\delta_{m_2}}\right)
 
     .. math::
-        p(m_1, q \mid \alpha_1, \alpha_2, m_{\min}, m_{\max}, m_{\mathrm{break}}, \lambda_0,
-        \lambda_1, \mu_1, \sigma_1, \mu_2, \sigma_2, \beta, \delta_{m_1}, \delta_{m_2}) =
-        p(m_1 \mid \alpha_1, \alpha_2, m_{\min}, m_{\max}, m_{\mathrm{break}}, \lambda_0,
+        p(m_1, q \mid \alpha_1, \alpha_2, m_{1,\mathrm{min}}, m_{2,\mathrm{min}},
+        m_{\mathrm{max}}, m_{\mathrm{break}}, \lambda_0, \lambda_1, \mu_1, \sigma_1,
+        \mu_2, \sigma_2, \beta, \delta_{m_1}, \delta_{m_2}) =
+        p(m_1 \mid \alpha_1, \alpha_2, m_{1,\mathrm{min}}, m_{\mathrm{max}}, m_{\mathrm{break}}, \lambda_0,
         \lambda_1, \mu_1, \sigma_1, \mu_2, \sigma_2)
-        p(q \mid \beta, m_1, m_{\min}, \delta_{m_2})
+        p(q \mid \beta, m_1, m_{2,\mathrm{min}}, \delta_{m_2})
 
-    where :math:`\mathcal{N}_{[m_{\min}, \infty)}(m \mid \mu, \sigma)` is a left
+    where :math:`\mathcal{N}_{[m_{1,\mathrm{min}}, \infty)}(m \mid \mu, \sigma)` is a left
     truncated normal distribution with mean :math:`\mu` and standard deviation
     :math:`\sigma`, :math:`\lambda_0` and :math:`\lambda_1` are the mixing fractions of
     the broken powerlaw and first Gaussian component respectively, :math:`\delta_{m_1}`
@@ -127,7 +133,8 @@ class BrokenPowerlawTwoPeak(Distribution):
         delta_m2: ArrayLike,
         lambda_0: ArrayLike,
         lambda_1: ArrayLike,
-        mmin: ArrayLike,
+        m1min: ArrayLike,
+        m2min: ArrayLike,
         mmax: ArrayLike,
         mbreak: ArrayLike,
         validate_args: Optional[bool] = None,
@@ -144,7 +151,8 @@ class BrokenPowerlawTwoPeak(Distribution):
             self.delta_m2,
             self.lambda_0,
             self.lambda_1,
-            self.mmin,
+            self.m1min,
+            self.m2min,
             self.mmax,
             self.mbreak,
         ) = promote_shapes(
@@ -159,7 +167,8 @@ class BrokenPowerlawTwoPeak(Distribution):
             delta_m2,
             lambda_0,
             lambda_1,
-            mmin,
+            m1min,
+            m2min,
             mmax,
             mbreak,
         )
@@ -175,17 +184,18 @@ class BrokenPowerlawTwoPeak(Distribution):
             jnp.shape(delta_m2),
             jnp.shape(lambda_0),
             jnp.shape(lambda_1),
-            jnp.shape(mmin),
+            jnp.shape(m1min),
+            jnp.shape(m2min),
             jnp.shape(mmax),
             jnp.shape(mbreak),
         )
 
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = mass_ratio_mass_sandwich(m2min, mmax)
         super(BrokenPowerlawTwoPeak, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
-        mmin = jnp.broadcast_to(mmin, batch_shape)
+        mmin = jnp.broadcast_to(m2min, batch_shape)
         mmax = jnp.broadcast_to(mmax, batch_shape)
 
         self._m1s = jnp.linspace(mmin, mmax, 1000)
@@ -211,12 +221,12 @@ class BrokenPowerlawTwoPeak(Distribution):
 
     def _log_prob_m1_unnorm(self, m1: Array) -> Array:
         safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
-        log_smoothing_m1 = log_planck_taper_window((m1 - self.mmin) / safe_delta)
+        log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
         broken_powerlaw_prob = _broken_powerlaw_prob(
-            m1, self.alpha1, self.alpha2, self.mmin, self.mmax, self.mbreak
+            m1, self.alpha1, self.alpha2, self.m1min, self.mmax, self.mbreak
         )
-        prob_norm_0 = _left_trunc_norm_prob(m1, self.loc1, self.scale1, self.mmin)
-        prob_norm_1 = _left_trunc_norm_prob(m1, self.loc2, self.scale2, self.mmin)
+        prob_norm_0 = _left_trunc_norm_prob(m1, self.loc1, self.scale1, self.m1min)
+        prob_norm_1 = _left_trunc_norm_prob(m1, self.loc2, self.scale2, self.m1min)
         lambda_2 = 1.0 - self.lambda_0 - self.lambda_1
 
         log_prob_m1 = (
@@ -235,7 +245,7 @@ class BrokenPowerlawTwoPeak(Distribution):
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
         safe_delta = jnp.where(self.delta_m2 <= 0.0, 1.0, self.delta_m2)
-        log_smoothing_q = log_planck_taper_window((m2 - self.mmin) / safe_delta)
+        log_smoothing_q = log_planck_taper_window((m2 - self.m2min) / safe_delta)
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
 
         return jnp.where(self.delta_m2 <= 0.0, -jnp.inf, log_prob_q)
