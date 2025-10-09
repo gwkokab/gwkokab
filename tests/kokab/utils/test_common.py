@@ -16,11 +16,9 @@ def test_get_posterior_data():
 @pytest.mark.parametrize(
     "dist_name",
     [
-        "Uniform",
-        "Normal",
         "HalfNormal",
-        "Uniform",
         "Normal",
+        "Uniform",
         pytest.param(
             "InvalidDist", marks=pytest.mark.xfail(strict=True)
         ),  # Invalid distribution
