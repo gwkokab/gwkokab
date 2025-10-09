@@ -201,7 +201,11 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
         if not isinstance(value, dict):
             continue
         value_cpy = value.copy()
-        dist_type = value_cpy.pop("dist")
+        dist_type = value_cpy.pop("dist", None)
+        error_if(
+            not isinstance(dist_type, str) or dist_type == "",
+            msg=f"Prior for '{key}' must specify a 'dist' string field.",
+        )
         prior = _available_prior(dist_type)
 
         # if there are no lazy variables, instantiate the prior
