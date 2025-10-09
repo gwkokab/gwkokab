@@ -39,6 +39,43 @@ def _topological_sort(graph: Dict[str, Set[str]]) -> List[str]:
     return result
 
 
+def _check_cycles(graph: Dict[str, Set[str]]) -> bool:
+    """Checks if a directed graph has cycles using Depth-First Search (DFS).
+
+    Parameters
+    ----------
+    graph : Dict[str, Set[str]]
+        A directed graph represented as an adjacency list.
+
+    Returns
+    -------
+    bool
+        True if the graph has cycles, False otherwise.
+    """
+    visited = set()
+    rec_stack = set()
+
+    def dfs(node: str) -> bool:
+        visited.add(node)
+        rec_stack.add(node)
+
+        for neighbor in graph.get(node, set()):
+            if neighbor not in visited:
+                if dfs(neighbor):
+                    return True
+            elif neighbor in rec_stack:
+                return True
+
+        rec_stack.remove(node)
+        return False
+
+    for node in graph:
+        if node not in visited:
+            if dfs(node):
+                return True
+    return False
+
+
 def _bake_model(
     dist_factory: Distribution | Callable[..., Distribution], **params: Any
 ) -> Tuple[
@@ -137,6 +174,14 @@ def _bake_model(
 
     # Compute lazy evaluation order
     if lazy_dependencies:
+        import pprint
+
+        error_if(
+            _check_cycles(dependency_graph),
+            msg="Cyclic dependencies detected among lazy variables. Dependency graph:\n"
+            + pprint.pformat(dependency_graph),
+        )
+
         lazy_order = [
             var
             for var in _topological_sort(dependency_graph)
