@@ -166,8 +166,10 @@ class LazyJointDistribution(Distribution):
         #     marginal_distributions, flatten_method
         # )
         marginal_flatten = marginal_distributions
-        self.marginal_distributions: Sequence[Distribution] = tuple(marginal_flatten)
-        self.shaped_values: Sequence[int | Tuple[int, int]] = tuple()
+        self.marginal_distributions: Sequence[
+            Union[DistributionT, jax.tree_util.Partial]
+        ] = tuple(marginal_flatten)
+        self.shaped_values: Sequence[Union[int, Tuple[int, int]]] = tuple()
         dependencies = dependencies or {}  # for type checker
         k = 0
         for i, d in enumerate(marginal_flatten):
