@@ -41,7 +41,7 @@ class _LazyConstraint(constraints.Constraint):
         mdist = marginal_dists[i]
         marginal_dists[i] = mdist.func(*mdist.args, **mdist.keywords, **kwargs)  # type: ignore
         mask = None
-        for mdist, event_slice in zip(marginal_dists, self.event_slices):
+        for mdist, event_slice in zip(marginal_dists, self.event_slices, strict=True):
             constraint: ConstraintT = mdist.support  # type: ignore
             if isinstance(event_slice, int):
                 x_slice = lax.dynamic_index_in_dim(
@@ -73,7 +73,9 @@ class _LazyConstraint(constraints.Constraint):
             all(
                 constraint == other_constraint
                 for constraint, other_constraint in zip(
-                    self.marginal_distributions, other.marginal_distributions
+                    self.marginal_distributions,
+                    other.marginal_distributions,
+                    strict=True,
                 )
             )
             and self.dependencies == other.dependencies
@@ -226,7 +228,7 @@ class LazyJointDistribution(Distribution):
             mdist: jax.tree_util.Partial = marginal_dists[i]
             marginal_dists[i] = mdist.func(*mdist.args, **mdist.keywords, **kwargs)  # type: ignore
         log_prob_val = jnp.zeros(value.shape[:-1], dtype=value.dtype)
-        for m_dist, event_slice in zip(marginal_dists, self.shaped_values):
+        for m_dist, event_slice in zip(marginal_dists, self.shaped_values, strict=True):
             if isinstance(event_slice, int):
                 value_slice = lax.dynamic_index_in_dim(
                     value, event_slice, axis=-1, keepdims=False
