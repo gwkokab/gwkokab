@@ -219,7 +219,7 @@ class LazyJointDistribution(Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
-        marginal_dists = list(self.marginal_distributions)
+        marginal_dists: List[DistributionT] = list(self.marginal_distributions)  # type: ignore
         for i, dep in self.dependencies.items():
             kwargs = {
                 k: jax.lax.dynamic_index_in_dim(value, v, axis=-1, keepdims=False)
@@ -251,19 +251,13 @@ class LazyJointDistribution(Distribution):
         samples = [jnp.empty((*sample_shape, 1)) for _ in range(n_total)]
 
         for i in independent:
+            mdist: DistributionT = self.marginal_distributions[i]  # type: ignore
             key, subkey = jrd.split(key)
-            samples[i] = (
-                self.marginal_distributions[i]
-                .sample(subkey, sample_shape)
-                .reshape(*sample_shape, -1)
-            )
+            samples[i] = mdist.sample(subkey, sample_shape).reshape(*sample_shape, -1)
 
         for i in self.partial_order:
             key, subkey = jrd.split(key)
-            kwargs = {
-                k: samples[v] if samples[v] is not None else jnp.nan
-                for k, v in self.dependencies[i].items()
-            }
+            kwargs = {k: samples[v] for k, v in self.dependencies[i].items()}
             dist = self.marginal_distributions[i]
             if isinstance(dist, jax.tree_util.Partial):
                 dist = dist.func(*dist.args, **dist.keywords, **kwargs)  # type: ignore
