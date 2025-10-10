@@ -125,6 +125,7 @@ n_sage_bp2p = "kokab.bp2p.sage:n_main"
 ## Monk scripts
 f_monk_ecc_matters = "kokab.ecc_matters.monk:main"
 f_monk_n_pls_m_gs = "kokab.n_pls_m_gs.monk:main"
+f_monk_bp2p = "kokab.bp2p.monk:main"
 ## PPD scripts
 ppd_ecc_matters = "kokab.ecc_matters.ppd:main"
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
