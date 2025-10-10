@@ -6,7 +6,7 @@ from typing import Optional
 
 from jax import numpy as jnp
 from jaxtyping import Array
-from numpyro.distributions import Independent
+from numpyro.distributions import HalfNormal, Independent
 
 from ..mass import SmoothedTwoComponentPrimaryMassRatio
 from ..redshift import PowerlawRedshift
@@ -23,6 +23,7 @@ def PowerlawPeak(
     use_spin: bool = False,
     use_redshift: bool = False,
     use_tilt: bool = False,
+    use_eccentricity: bool = False,
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
@@ -69,6 +70,13 @@ def PowerlawPeak(
         )
 
         component_distributions.append(tilt_dist)
+
+    if use_eccentricity:
+        ecc_dist = HalfNormal(
+            scale=params["eccentricity_scale"],
+            validate_args=validate_args,
+        )
+        component_distributions.append(ecc_dist)
 
     if use_redshift:
         z_max = params["z_max"]
