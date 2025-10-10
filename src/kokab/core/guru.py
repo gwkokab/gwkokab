@@ -4,8 +4,9 @@
 
 from abc import abstractmethod
 from argparse import ArgumentParser
+from collections import defaultdict
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import jax
 from jax import lax, random as jrd
@@ -15,65 +16,189 @@ from numpyro._typing import DistributionT
 from numpyro.distributions.distribution import Distribution
 from numpyro.util import is_prng_key
 
-from gwkokab.models.utils import JointDistribution
+from gwkokab.models.utils import JointDistribution, LazyJointDistribution
 from gwkokab.utils.tools import error_if
 from kokab.utils.common import get_processed_priors, read_json, write_json
 
 
+def _topological_sort(graph: Dict[str, Set[str]]) -> List[str]:
+    visited = set()
+    result = []
+
+    def dfs(node: str) -> None:
+        visited.add(node)
+        for neighbor in graph.get(node, set()):
+            if neighbor not in visited:
+                dfs(neighbor)
+        result.append(node)
+
+    for node in graph:
+        if node not in visited:
+            dfs(node)
+    result.reverse()
+    return result
+
+
+def _check_cycles(graph: Dict[str, Set[str]]) -> bool:
+    """Checks if a directed graph has cycles using Depth-First Search (DFS).
+
+    Parameters
+    ----------
+    graph : Dict[str, Set[str]]
+        A directed graph represented as an adjacency list.
+
+    Returns
+    -------
+    bool
+        True if the graph has cycles, False otherwise.
+    """
+    visited = set()
+    rec_stack = set()
+
+    def dfs(node: str) -> bool:
+        visited.add(node)
+        rec_stack.add(node)
+
+        for neighbor in graph.get(node, set()):
+            if neighbor not in visited:
+                if dfs(neighbor):
+                    return True
+            elif neighbor in rec_stack:
+                return True
+
+        rec_stack.remove(node)
+        return False
+
+    for node in graph:
+        if node not in visited:
+            if dfs(node):
+                return True
+    return False
+
+
 def _bake_model(
-    dist_caller: Distribution | Callable[..., Distribution], **kwargs: Any
+    dist_factory: Distribution | Callable[..., Distribution], **params: Any
 ) -> Tuple[
     Dict[str, int | float | None],
     Dict[str, Distribution],
     Dict[str, str],
     Callable[..., Distribution],
+    Dict[str, Dict[str, str]],
+    List[str],
 ]:
-    """Baking the model by separating constants and variables.
+    """Separate constants, random variables, and lazy variables from model parameters.
 
     Parameters
     ----------
-    dist_caller : Distribution | Callable[..., Distribution]
-        The distribution class or a callable that returns a distribution.
+    dist_factory : Distribution | Callable[..., Distribution]
+        A distribution class or a callable that constructs a distribution.
 
     Returns
     -------
-    Tuple[ Dict[str, int | float | None], Dict[str, Distribution], Dict[str, str], Callable[..., Distribution], ]
-        A tuple containing the constants, variables, duplicates, and a callable that
-        returns the distribution with constants baked in.
+    Tuple[
+        Dict[str, int | float | None],
+        Dict[str, Distribution],
+        Dict[str, str],
+        Callable[..., Distribution],
+        Dict[str, Dict[str, str]],
+        List[str],
+    ]
+        A tuple containing:
+        - constants: fixed numeric or None values
+        - variables: distribution instances or lazy callables
+        - aliases: mapping of parameter aliases to their original names
+        - baked_factory: callable with constants pre-applied
+        - lazy_dependencies: mapping of lazy variable definitions
+        - lazy_order: topological order of dependent lazy variables
 
     Raises
     ------
     ValueError
         If a parameter has an invalid type.
     """
-    constants: Dict[str, int | float | None] = dict()
-    variables: Dict[str, Distribution] = dict()
-    duplicates: Dict[str, str] = dict()
-    for key, value in kwargs.items():
+
+    constants: Dict[str, int | float | None] = {}
+    variables: Dict[str, Distribution] = {}
+    aliases: Dict[str, str] = {}
+    lazy_dependencies: Dict[str, Dict[str, str]] = {}
+
+    dependency_graph: Dict[str, Set[str]] = defaultdict(set)
+    variable_roots: List[str] = []
+
+    # Pass 1: classify parameters
+    for name, value in params.items():
         if value is None:
-            constants[key] = None
+            constants[name] = None
+
         elif isinstance(value, Distribution):
-            variables[key] = value
+            variables[name] = value
+            variable_roots.append(name)
+
+        elif isinstance(value, tuple):
+            lazy_fn, lazy_args = value
+            error_if(
+                not isinstance(lazy_fn, jax.tree_util.Partial),
+                msg=f"Lazy distribution '{name}' must be a `jax.tree_util.Partial`.",
+            )
+            error_if(
+                not isinstance(lazy_args, dict),
+                msg=f"Lazy distribution '{name}' must have a dictionary of dependencies.",
+            )
+
+            variables[name] = lazy_fn
+            lazy_dependencies[name] = lazy_args
+
+            for _, dep_name in lazy_args.items():
+                dependency_graph[dep_name].add(name)
+
         elif isinstance(value, (int, float)):
-            constants[key] = lax.stop_gradient(value)
+            constants[name] = lax.stop_gradient(value)
+
         elif isinstance(value, str):
+            # string aliases handled later
             continue
+
         else:
             error_if(
-                True, msg=f"Parameter {key} has an invalid type {type(value)}: {value}"
+                True,
+                msg=f"Invalid parameter '{name}' with type {type(value)} and value {value}",
             )
-    for key, value in kwargs.items():
+
+    # Pass 2: resolve string aliases
+    for name, value in params.items():
         if isinstance(value, str):
             if value in constants:
-                constants[key] = constants[value]
+                constants[name] = constants[value]
             elif value in variables:
-                duplicates[key] = value
+                aliases[name] = value
+
+    # Compute lazy evaluation order
+    if lazy_dependencies:
+        import pprint
+
+        error_if(
+            _check_cycles(dependency_graph),
+            msg="Cyclic dependencies detected among lazy variables. Dependency graph:\n"
+            + pprint.pformat(dependency_graph),
+        )
+
+        lazy_order = [
+            var
+            for var in _topological_sort(dependency_graph)
+            if var not in variable_roots
+        ]
+    else:
+        lazy_order = []
+
+    baked_factory = jax.tree_util.Partial(dist_factory, **constants)
 
     return (
         constants,
         variables,
-        duplicates,
-        jax.tree_util.Partial(dist_caller, **constants),
+        aliases,
+        baked_factory,
+        lazy_dependencies,
+        lazy_order,
     )
 
 
@@ -158,7 +283,7 @@ class Guru:
         model_prior_param = get_processed_priors(self.model_parameters, prior_dict)
 
         logger.debug("Baking the model")
-        constants, variables, duplicates, dist_fn = _bake_model(
+        constants, variables, duplicates, dist_fn, lazy_deps, lazy_order = _bake_model(
             self.model, **self.constants, **model_prior_param
         )  # type: ignore
 
@@ -187,9 +312,25 @@ class Guru:
         write_json("constants.json", constants)
         write_json("nf_samples_mapping.json", variables_index)
 
-        priors = JointDistribution(
-            *[variables[key] for key in sorted(variables.keys())], validate_args=True
-        )
+        sorted_variables = sorted(variables.keys())
+        if len(lazy_order) == 0:
+            priors = JointDistribution(
+                *[variables[key] for key in sorted_variables],
+                validate_args=True,
+            )
+        else:
+            lazy_deps_new = {
+                sorted_variables.index(k): {
+                    k_: sorted_variables.index(v) for k_, v in deps.items()
+                }
+                for k, deps in lazy_deps.items()
+            }
+            priors = LazyJointDistribution(
+                *[variables[key] for key in sorted_variables],
+                dependencies=lazy_deps_new,
+                partial_order=[sorted_variables.index(k) for k in lazy_order],
+                validate_args=True,
+            )
 
         return constants, dist_fn, priors, variables, variables_index
 

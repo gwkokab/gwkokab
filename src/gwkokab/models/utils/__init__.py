@@ -12,4 +12,5 @@ from ._extendedsupporttransformeddistribution import (
     ExtendedSupportTransformedDistribution as ExtendedSupportTransformedDistribution,
 )
 from ._joindistribution import JointDistribution as JointDistribution
+from ._lazyjointdistribution import LazyJointDistribution as LazyJointDistribution
 from ._scaledmixture import ScaledMixture as ScaledMixture

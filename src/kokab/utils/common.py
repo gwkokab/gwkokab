@@ -5,12 +5,13 @@
 import json
 from typing import Dict, List, Tuple, Union
 
+import jax
 import numpy as np
 import pandas as pd
 from numpyro import distributions as dist
-from numpyro._typing import DistributionLike
+from numpyro._typing import DistributionT
 
-from kokab.utils.priors import available as available_priors
+from gwkokab.utils.tools import error_if
 from kokab.utils.regex import match_all
 
 
@@ -124,8 +125,55 @@ def get_posterior_data(
     return data_list
 
 
+def _available_prior(name: str) -> DistributionT:
+    """Get the available prior from numpyro distributions.
+
+    Parameters
+    ----------
+    name : str
+        name of the prior
+
+    Returns
+    -------
+    DistributionT
+        prior distribution
+
+    Raises
+    ------
+    AttributeError
+        If the prior is not found in numpyro distributions
+    """
+    error_if(
+        name not in dist.__all__,
+        AttributeError,
+        f"Prior {name} not found. Available priors are: " + ", ".join(dist.__all__),
+    )
+    return getattr(dist, name)
+
+
+def _is_lazy_prior(prior_dict: dict[str, Union[str, float]]) -> bool:
+    """Check if the prior is a lazy prior.
+
+    Parameters
+    ----------
+    prior_dict : dict[str, Union[str, float]]
+        dictionary of prior
+
+    Returns
+    -------
+    bool
+        True if the prior is a lazy prior, False otherwise
+    """
+    for value in prior_dict.values():
+        if isinstance(value, str):
+            return True
+    return False
+
+
 def get_processed_priors(params: List[str], priors: dict) -> dict:
-    """Get the processed priors from a list of parameters.
+    """Get the processed priors from a list of parameters. A processed prior is either
+    an instantiated prior or a tuple of :code:`(jax.tree_util.Partial, lazy_vars)` where
+    :code:`lazy_vars` is a dictionary of lazy variables.
 
     Parameters
     ----------
@@ -145,44 +193,34 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
         if the prior value is invalid
     """
     matched_prior_params = match_all(params, priors)
-    for key, value in matched_prior_params.items():
-        if isinstance(value, dict):
-            value_cpy = value.copy()
-            dist_type = value_cpy.pop("dist")
-            matched_prior_params[key] = available_priors[dist_type](
-                **value_cpy, validate_args=True
-            )
     for param in params:
-        if param not in matched_prior_params:
-            raise ValueError(f"Missing prior for {param}")
+        error_if(param not in matched_prior_params, msg=f"Missing prior for {param}")
+
+    for key, value in matched_prior_params.items():
+        # if the value is not a dict, means its a constant/duplicate value
+        if not isinstance(value, dict):
+            continue
+        value_cpy = value.copy()
+        dist_type = value_cpy.pop("dist", None)
+        error_if(
+            not isinstance(dist_type, str) or dist_type == "",
+            msg=f"Prior for '{key}' must specify a 'dist' string field.",
+        )
+        prior = _available_prior(dist_type)
+
+        # if there are no lazy variables, instantiate the prior
+        if not _is_lazy_prior(value_cpy):
+            matched_prior_params[key] = prior(**value_cpy, validate_args=True)
+            continue
+
+        # separate the lazy variables and the non-lazy variables
+        lazy_vars = {k: v for k, v in value_cpy.items() if isinstance(v, str)}
+        non_lazy_vars = {k: v for k, v in value_cpy.items() if not isinstance(v, str)}
+        matched_prior_params[key] = (
+            jax.tree_util.Partial(prior, **non_lazy_vars, validate_args=True),
+            lazy_vars,
+        )
     return matched_prior_params
-
-
-def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:
-    """Get the distribution from the dictionary. It expects the dictionary to have the
-    key 'dist' which is the name of the distribution and the rest of the keys to be the
-    parameters of the distribution.
-
-    Example
-    -------
-    >>> std_normal = get_dist({"dist": "Normal", "loc": 0.0, "scale": 1.0})
-    >>> std_normal.loc
-    0.0
-    >>> std_normal.scale
-    1.0
-
-    Parameters
-    ----------
-    meta_dict : dict[str, Union[str, float]]
-        Dictionary containing the distribution name and its parameters
-
-    Returns
-    -------
-    DistributionLike
-        The distribution object
-    """
-    dist_name = meta_dict.pop("dist")
-    return getattr(dist, dist_name)(**meta_dict)
 
 
 def ppd_ranges(
