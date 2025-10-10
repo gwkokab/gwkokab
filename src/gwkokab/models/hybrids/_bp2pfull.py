@@ -27,7 +27,7 @@ def BrokenPowerlawTwoPeakFull(
     **params: Array,
 ) -> ScaledMixture:
     # NOTE: If you change something here, please also change in
-    # kokab/one_powerlaw_one_peak/ppd.py
+    # kokab/bp2pfull/ppd.py
     smoothing_model = ExtendedSupportTransformedDistribution(
         BrokenPowerlawTwoPeak(
             alpha1=params["alpha1"],
@@ -41,7 +41,8 @@ def BrokenPowerlawTwoPeakFull(
             delta_m2=params["delta_m2"],
             lambda_0=params["lambda_0"],
             lambda_1=params["lambda_1"],
-            mmin=params["mmin"],
+            m1min=params["m1min"],
+            m2min=params["m2min"],
             mmax=params["mmax"],
             mbreak=params["mbreak"],
             validate_args=validate_args,
