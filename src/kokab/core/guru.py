@@ -18,7 +18,8 @@ from numpyro.util import is_prng_key
 
 from gwkokab.models.utils import JointDistribution, LazyJointDistribution
 from gwkokab.utils.tools import error_if
-from kokab.utils.common import get_processed_priors, read_json, write_json
+from kokab.utils.common import read_json, write_json
+from kokab.utils.priors import get_processed_priors
 
 
 def _topological_sort(graph: Dict[str, Set[str]]) -> List[str]:
