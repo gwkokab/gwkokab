@@ -10,7 +10,7 @@ from numpyro.distributions import HalfNormal, Independent, TruncatedNormal
 
 from ..mass import BrokenPowerlawTwoPeak
 from ..redshift import PowerlawRedshift
-from ..spin import IndependentSpinOrientationGaussianIsotropic
+from ..spin import MinimumTiltModel
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import (
     ExtendedSupportTransformedDistribution,
@@ -69,10 +69,11 @@ def BrokenPowerlawTwoPeakFull(
         component_distributions.append(chi_dist)
 
     if use_tilt:
-        tilt_dist = IndependentSpinOrientationGaussianIsotropic(
+        tilt_dist = MinimumTiltModel(
             zeta=params["cos_tilt_zeta"],
-            scale1=params["cos_tilt_scale"],
-            scale2=params["cos_tilt_scale"],
+            loc=params["cos_tilt_loc"],
+            scale=params["cos_tilt_scale"],
+            minimum=params.get("cos_tilt_minimum", -1.0),
             validate_args=validate_args,
         )
         component_distributions.append(tilt_dist)

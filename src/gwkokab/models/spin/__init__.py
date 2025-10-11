@@ -6,4 +6,5 @@ from ._models import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
+    MinimumTiltModel as MinimumTiltModel,
 )

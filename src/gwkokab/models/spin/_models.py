@@ -174,3 +174,68 @@ def BetaFromMeanVar(
     alpha = (jnp.square(mean) * (1 - mean) - mean * variance) / variance
     beta = (mean * jnp.square(1 - mean) - (1 - mean) * variance) / variance
     return Beta(alpha, beta, validate_args=validate_args)
+
+
+def MinimumTiltModel(
+    zeta: ArrayLike,
+    loc: ArrayLike,
+    scale: ArrayLike,
+    minimum: ArrayLike = -1.0,
+    *,
+    validate_args: Optional[bool] = None,
+) -> MixtureGeneral:
+    r"""Minimum tilt model introduced in
+    `GWTC-4.0: Population Properties of Merging Compact Binaries <https://arxiv.org/abs/2508.18083>`_.
+    A mixture model of spin orientations with isotropic and normally
+    distributed components, with a minimum tilt constraint.
+
+    Parameters
+    ----------
+    zeta : ArrayLike
+        Weight of the Gaussian component.
+    loc : ArrayLike
+        Location parameter of the Gaussian component.
+    scale : ArrayLike
+        Scale parameter of the Gaussian component.
+    minimum : ArrayLike, optional
+        Minimum cosine tilt angle, by default -1.0
+    validate_args : Optional[bool], optional
+        Whether to validate the arguments, by default None
+
+    Returns
+    -------
+    MixtureGeneral
+        Mixture model of spin orientations.
+    """
+    mixing_probs = jnp.stack([1.0 - zeta, zeta], axis=-1)
+    low = jnp.full((2,), minimum)
+    high = jnp.ones((2,))
+    batch_dim = 1
+    isotropic_component = Independent(
+        Uniform(
+            low=low,
+            high=high,
+            validate_args=validate_args,
+        ),
+        batch_dim,
+        validate_args=validate_args,
+    )
+    gaussian_component = Independent(
+        TruncatedNormal(
+            loc=loc,
+            scale=jnp.stack([scale, scale], axis=-1),
+            low=low,
+            high=high,
+            validate_args=validate_args,
+        ),
+        batch_dim,
+        validate_args=validate_args,
+    )
+    return MixtureGeneral(
+        mixing_distribution=CategoricalProbs(
+            probs=mixing_probs, validate_args=validate_args
+        ),
+        component_distributions=[isotropic_component, gaussian_component],
+        support=constraints.independent(constraints.interval(minimum, 1.0), batch_dim),
+        validate_args=validate_args,
+    )
