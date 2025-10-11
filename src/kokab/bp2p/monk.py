@@ -104,7 +104,7 @@ class BrokenPowerlawTwoPeakFullMonk(Monk):
             all_params.extend(["chi_loc", "chi_scale"])
 
         if self.has_tilt:
-            all_params.extend(["cos_tilt_zeta", "cos_tilt_scale", "cos_tilt_scale"])
+            all_params.extend(["cos_tilt_zeta", "cos_tilt_scale"])
 
         if self.has_eccentricity:
             all_params.append("eccentricity_scale")
