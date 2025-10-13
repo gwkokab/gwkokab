@@ -148,7 +148,7 @@ def _available_prior(name: str) -> DistributionT:
     """
     gwkokab_priors = {"DirichletElement": DirichletElement}
     error_if(
-        name not in dist.__all__,
+        name not in dist.__all__ + list(gwkokab_priors.keys()),
         AttributeError,
         f"Prior {name} not found. Available priors are: "
         + ", ".join(dist.__all__ + list(gwkokab_priors.keys())),
