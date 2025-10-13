@@ -744,5 +744,6 @@ def main() -> None:
         poisson_mean_estimator=erate_estimator,
         num_realizations=args.num_realizations,
         error_size=args.error_size,
+        tile_covariance=args.tile_covariance,
     )
     popfactory.produce(factory_key)

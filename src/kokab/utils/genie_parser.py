@@ -54,4 +54,17 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         default="pmean.json",
     )
 
+    gaussian_group = parser.add_argument_group("Gaussian Error Options")
+    gaussian_group.add_argument(
+        "--tile-covariance",
+        help="Tile the covariance of the parameters specified. Each tile will have its own "
+        "covariance matrix estimated from the data. This is useful for large parameter "
+        "spaces where the full covariance matrix is too large to estimate accurately. "
+        "Each tile should be a list of parameters. Example: --tile-covariance mass1 "
+        "mass2 --tile-covariance spin1z spin2z",
+        nargs="+",
+        action="append",
+        default=None,
+    )
+
     return parser
