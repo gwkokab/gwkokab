@@ -38,8 +38,8 @@ class _LazyConstraint(constraints.Constraint):
                 k: jax.lax.dynamic_index_in_dim(x, v, axis=-1, keepdims=False)
                 for k, v in dep.items()
             }
-        mdist = marginal_dists[i]
-        marginal_dists[i] = mdist.func(*mdist.args, **mdist.keywords, **kwargs)  # type: ignore
+            mdist = marginal_dists[i]
+            marginal_dists[i] = mdist.func(*mdist.args, **mdist.keywords, **kwargs)  # type: ignore
         mask = None
         for mdist, event_slice in zip(marginal_dists, self.event_slices, strict=True):
             constraint: ConstraintT = mdist.support  # type: ignore
