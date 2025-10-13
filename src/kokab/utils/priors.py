@@ -28,13 +28,12 @@ class _DirichletElement(Distribution):
         "order": constraints.nonnegative_integer,
         "n_dimensions": constraints.positive_integer,
     }
-    pytree_aux_fields = ("order", "n_dimensions")
-    pytree_data_fields = ("sum_of_concentrations",)
+    pytree_data_fields = ("order", "n_dimensions", "sum_of_concentrations")
 
     def __init__(
         self,
-        order: int,
-        n_dimensions: int,
+        order: float,
+        n_dimensions: float,
         sum_of_concentrations: ArrayLike,
         validate_args: Optional[bool] = None,
     ):
@@ -106,6 +105,15 @@ def DirichletElement(
     KeyError
         Missing concentration parameters for `DirichletElement` of order {order}
     """
+    error_if(
+        isinstance(order, int) is False or order < 0,
+        msg="`order` must be a non-negative integer.",
+    )
+    error_if(
+        isinstance(n_dimensions, int) is False or n_dimensions < 2,
+        msg="`n_dimensions` must be an integer greater than 1. "
+        "If your problem is 1D, use a Uniform prior instead.",
+    )
     try:
         concentrations = [kwargs["concentration" + str(i)] for i in range(order)]
     except KeyError as e:
@@ -121,8 +129,8 @@ def DirichletElement(
         return Uniform(low=low, high=high, validate_args=validate_args)
 
     return _DirichletElement(
-        order=order,
-        n_dimensions=n_dimensions,
+        order=float(order),
+        n_dimensions=float(n_dimensions),
         sum_of_concentrations=sum_of_concentrations,
         validate_args=validate_args,
     )
