@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable, Sequence
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import equinox as eqx
 import h5py
@@ -16,7 +16,7 @@ from loguru import logger
 from ..constants import SECONDS_PER_YEAR
 from ..models.utils import ScaledMixture
 from ..parameters import Parameters as P
-from ..utils.tools import batch_and_remainder
+from ..utils.tools import batch_and_remainder, error_if
 
 
 _PARAM_MAPPING = {
@@ -134,6 +134,116 @@ def load_o1o2o3_or_endO_injection_data(
     return injections, sampling_log_prob, analysis_time_years, total_injections
 
 
+def load_o1o2o3o4a_injection_data(
+    filename: str,
+    parameters: Sequence[str],
+    far_cut: float = 1.0,
+    snr_cut: float = 10.0,
+):
+    expected_params = {
+        P.COS_TILT_1.value,
+        P.COS_TILT_2.value,
+        P.PRIMARY_MASS_SOURCE.value,
+        P.PRIMARY_SPIN_MAGNITUDE.value,
+        P.REDSHIFT.value,
+        P.SECONDARY_MASS_SOURCE.value,
+        P.SECONDARY_SPIN_MAGNITUDE.value,
+    }
+    error_if(
+        set(parameters) != expected_params,
+        msg=(
+            "For O1, O2, O3, and O4a injections, the following parameters must be used: "
+            + ", ".join(_PARAM_MAPPING.keys())
+        ),
+    )
+
+    with h5py.File(filename, "r") as f:
+        raw_events = f["events"]
+        keys: List[str] = list(raw_events.dtype.names)
+
+        analysis_time_years = float(f.attrs["total_analysis_time"]) / SECONDS_PER_YEAR
+        logger.debug("Analysis time: {:.2f} years", analysis_time_years)
+
+        total_injections = int(f.attrs["total_generated"])
+        logger.debug("Total injections: {}", total_injections)
+
+        far_pipelines = [
+            k
+            for k in keys
+            if any([k.startswith("far_"), k.endswith("_far"), "_far_" in k])
+        ]
+
+        ifar_pipelines = [
+            k
+            for k in keys
+            if any([k.startswith("ifar_"), k.endswith("_ifar"), "_ifar_" in k])
+        ]
+
+        if len(far_pipelines) > 0:
+            logger.debug("Selecting far from pipelines: {}", ", ".join(far_pipelines))
+        if len(ifar_pipelines) > 0:
+            logger.debug("Selecting ifar from pipelines: {}", ", ".join(ifar_pipelines))
+
+        ifar = np.max(
+            [1.0 / raw_events[k][:] for k in far_pipelines]
+            + [raw_events[k][:] for k in ifar_pipelines],
+            axis=0,
+        )
+        snr = raw_events["semianalytic_observed_phase_maximized_snr_net"][:]
+
+        found = (snr > snr_cut) | (ifar > 1 / far_cut)
+
+        n_total = int(f.attrs["num_accepted"])
+        n_found = np.sum(found)
+        logger.debug(
+            "Found {} out of {} injections with FAR < {} and SNR > {}",
+            n_found,
+            n_total,
+            far_cut,
+            snr_cut,
+        )
+
+        χ_1x = raw_events["spin1x"][found][:]
+        χ_1y = raw_events["spin1y"][found][:]
+        χ_1z = raw_events["spin1z"][found][:]
+        χ_2x = raw_events["spin2x"][found][:]
+        χ_2y = raw_events["spin2y"][found][:]
+        χ_2z = raw_events["spin2z"][found][:]
+        a1 = np.sqrt(np.square(χ_1x) + np.square(χ_1y) + np.square(χ_1z))
+        a2 = np.sqrt(np.square(χ_2x) + np.square(χ_2y) + np.square(χ_2z))
+
+        sampling_log_prob = (
+            raw_events[
+                "lnpdraw_mass1_source_mass2_source_redshift_spin1x_spin1y_spin1z_spin2x_spin2y_spin2z"
+            ][found][:]
+            - np.log(raw_events["weights"][found][:])
+            # We parameterize spins in spherical coordinates, neglecting azimuthal
+            # P. The injections are parameterized in terms of cartesian
+            # spins. The Jacobian is `1 / (2 pi magnitude ** 2)`.
+            + 2.0 * (np.log(2.0 * np.pi) + np.log(a1) + np.log(a2))
+        )
+
+        injs = []
+        for p in parameters:
+            if p == P.COS_TILT_1.value:
+                _inj = χ_1z / a1
+            elif p == P.COS_TILT_2.value:
+                _inj = χ_2z / a2
+            elif p == P.PRIMARY_SPIN_MAGNITUDE.value:
+                _inj = a1
+            elif p == P.SECONDARY_SPIN_MAGNITUDE.value:
+                _inj = a2
+            else:
+                _inj = raw_events[_PARAM_MAPPING[p]][found][:]
+            injs.append(_inj)
+
+        events = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
+
+        sampling_log_prob = jax.device_put(sampling_log_prob, may_alias=True)
+
+    return events, sampling_log_prob, analysis_time_years, total_injections
+
+
 def poisson_mean_from_sensitivity_injections(
     key: PRNGKeyArray,
     parameters: Sequence[str],
@@ -146,16 +256,32 @@ def poisson_mean_from_sensitivity_injections(
     Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
 ]:
     del key  # Unused.
-    # θ_i, log w_i, T, N_total
-    samples, log_weights, analysis_time_years, total_injections = (
-        load_o1o2o3_or_endO_injection_data(
-            filename,
-            parameters,
-            far_cut,
-            snr_cut,
-            ifar_pipelines,
+
+    with h5py.File(filename, "r") as f:
+        is_o1o2o3o4a = "events" in f
+
+    if is_o1o2o3o4a:
+        del ifar_pipelines  # Unused.
+        # θ_i, log w_i, T, N_total
+        samples, log_weights, analysis_time_years, total_injections = (
+            load_o1o2o3o4a_injection_data(
+                filename,
+                parameters,
+                far_cut,
+                snr_cut,
+            )
         )
-    )
+    else:
+        # θ_i, log w_i, T, N_total
+        samples, log_weights, analysis_time_years, total_injections = (
+            load_o1o2o3_or_endO_injection_data(
+                filename,
+                parameters,
+                far_cut,
+                snr_cut,
+                ifar_pipelines,
+            )
+        )
 
     n_accepted = log_weights.shape[0]
 
