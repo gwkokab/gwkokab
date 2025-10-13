@@ -104,6 +104,7 @@ class BrokenPowerlawTwoPeakFullCore(Sage):
             "lambda_1",
             "loc1",
             "loc2",
+            "log_rate",
             "m1min",
             "m2min",
             "mbreak",
