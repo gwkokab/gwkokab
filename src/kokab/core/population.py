@@ -55,62 +55,38 @@ def ensure_dat_extension(filename: str) -> str:
 
 
 def add_mean_and_covariance(
-    n_injections: int,
     noisy_data: np.ndarray,
-    realization_number: int,
-    realizations_path: str,
     parameters: List[str],
-    mean_covs_filename: str,
     tile_covariance: Optional[List[List[str]]] = None,
-) -> None:
+) -> Tuple[np.ndarray, np.ndarray]:
     n_dim = len(parameters)
-    means: List[Optional[np.ndarray]] = [
-        np.empty((n_dim,)) for _ in range(n_injections)
-    ]
-    covs: List[Optional[np.ndarray]] = [
-        np.zeros((n_dim, n_dim)) for _ in range(n_injections)
-    ]
+    means = np.empty((n_dim,))
+    covs = np.zeros((n_dim, n_dim))
 
-    for index in range(n_injections):
-        mean = np.mean(noisy_data, axis=0)
-        error_if(
-            np.isnan(mean).any(),
-            msg=f"Mean for realization {realization_number} contains NaN values.",
-        )
-        means[index] = mean
+    mean = np.mean(noisy_data, axis=0)
+    error_if(np.isnan(mean).any(), msg="Mean contains NaN values.")
+    means = mean
 
-        if tile_covariance is not None:
-            for tile in tile_covariance:
-                indices = [parameters.index(param) for param in tile]
-                noisy_data_tile = noisy_data[:, indices]
-                cov_tile = np.cov(noisy_data_tile.T)
-                error_if(
-                    np.isnan(cov_tile).any(),
-                    msg=(
-                        f"Covariance for realization {realization_number} and tile {tile} "
-                        "contains NaN values."
-                    ),
-                )
-                if cov_tile.shape == ():
-                    cov_tile = cov_tile.reshape(1, 1)
-                for i, idx_i in enumerate(indices):
-                    for j, idx_j in enumerate(indices):
-                        covs[index][idx_i, idx_j] = cov_tile[i, j]
-        else:
-            cov = np.cov(noisy_data.T)
+    if tile_covariance is not None:
+        for tile in tile_covariance:
+            indices = [parameters.index(param) for param in tile]
+            noisy_data_tile = noisy_data[:, indices]
+            cov_tile = np.cov(noisy_data_tile.T)
             error_if(
-                np.isnan(cov).any(),
-                msg=f"Covariance for realization {realization_number} contains NaN values.",
+                np.isnan(cov_tile).any(),
+                msg=("Covariance contains NaN values for tile {}".format(tile)),
             )
-            covs[index] = cov
+            if cov_tile.shape == ():
+                cov_tile = cov_tile.reshape(1, 1)
+            for i, idx_i in enumerate(indices):
+                for j, idx_j in enumerate(indices):
+                    covs[idx_i, idx_j] = cov_tile[i, j]
+    else:
+        cov = np.cov(noisy_data.T)
+        error_if(np.isnan(cov).any(), msg="Covariance contains NaN values.")
+        covs = cov
 
-    with h5py.File(os.path.join(realizations_path, mean_covs_filename), "w") as f:
-        for i, (mean, cov) in enumerate(zip(means, covs)):
-            if mean is not None and cov is not None:
-                event_name = "event_{}".format(i)
-                event_group = f.create_group(event_name)
-                event_group.create_dataset("mean", data=mean)
-                event_group.create_dataset("cov", data=cov)
+    return means, covs
 
 
 class PopulationFactory:
@@ -331,7 +307,8 @@ class PopulationFactory:
         n_injections = data_inj.shape[0]
 
         keys = jrd.split(key, n_injections * (len(heads) + 1))
-
+        means: List[Optional[np.ndarray]] = [None for _ in range(n_injections)]
+        covs: List[Optional[np.ndarray]] = [None for _ in range(n_injections)]
         for index in range(n_injections):
             noisy_data = np.empty((self.error_size, len(self.parameters)))
             data = data_inj[index]
@@ -360,15 +337,22 @@ class PopulationFactory:
                 comments="",  # To remove the default comment character '#'
             )
 
-        add_mean_and_covariance(
-            n_injections,
-            noisy_data,
-            realization_number,
-            realizations_path,
-            self.parameters,
-            self.mean_covs_filename,
-            tile_covariance=self.tile_covariance,
-        )
+            mean, cov = add_mean_and_covariance(
+                noisy_data,
+                self.parameters,
+                tile_covariance=self.tile_covariance,
+            )
+            means[index] = mean
+            covs[index] = cov
+        with h5py.File(
+            os.path.join(realizations_path, self.mean_covs_filename), "w"
+        ) as f:
+            for i, (mean, cov) in enumerate(zip(means, covs)):
+                if mean is not None and cov is not None:
+                    event_name = "event_{}".format(i)
+                    event_group = f.create_group(event_name)
+                    event_group.create_dataset("mean", data=mean)
+                    event_group.create_dataset("cov", data=cov)
 
     def produce(self, key: PRNGKeyArray) -> None:
         """Generate realizations and add errors to the populations.
