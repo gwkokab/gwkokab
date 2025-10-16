@@ -7,6 +7,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from functools import partial
 from typing import List, Tuple
 
+import numpy as np
 from jax import numpy as jnp, random as jrd
 from loguru import logger
 from numpyro import distributions as dist
@@ -530,7 +531,7 @@ def main() -> None:
                 low=err_params_value.get("mean_anomaly_low"),
                 high=err_params_value.get("mean_anomaly_high"),
                 cut_low=0.0,
-                cut_high=1.0,
+                cut_high=2.0 * np.pi,
             ),
         )
 
