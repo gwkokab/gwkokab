@@ -10,11 +10,7 @@ from jax.scipy.special import xlog1py
 from jaxtyping import Array, ArrayLike, PRNGKeyArray
 from numpyro import distributions as dist
 from numpyro._typing import DistributionT
-from numpyro.distributions import (
-    constraints,
-    Distribution,
-    Uniform,
-)
+from numpyro.distributions import constraints, Delta, Distribution
 from numpyro.distributions.util import validate_sample
 
 from gwkokab.utils.tools import error_if
@@ -121,12 +117,11 @@ def DirichletElement(
             f"Missing concentration parameters for `DirichletElement` of order {order}"
         ) from e
 
-    low = 0.0
     sum_of_concentrations = sum(concentrations, start=0.0)
     high = 1.0 - sum_of_concentrations
 
     if order == n_dimensions - 1:
-        return Uniform(low=low, high=high, validate_args=validate_args)
+        return Delta(v=high, log_density=0.0, validate_args=validate_args)
 
     return _DirichletElement(
         order=float(order),
