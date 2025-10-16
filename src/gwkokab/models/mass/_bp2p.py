@@ -48,9 +48,9 @@ def _broken_powerlaw_prob(
     )
     log_norm = jnp.logaddexp(
         alpha1 * log_mbreak
-        + doubly_truncated_power_law_log_norm_constant(alpha1, mmin, mbreak),
+        + doubly_truncated_power_law_log_norm_constant(-alpha1, mmin, mbreak),
         alpha2 * log_mbreak
-        + doubly_truncated_power_law_log_norm_constant(alpha2, mbreak, mmax),
+        + doubly_truncated_power_law_log_norm_constant(-alpha2, mbreak, mmax),
     )
     return jnp.exp(log_unnormalized - log_norm)
 
