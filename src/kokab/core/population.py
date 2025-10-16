@@ -71,7 +71,7 @@ def add_mean_and_covariance(
         for tile in tile_covariance:
             indices = [parameters.index(param) for param in tile]
             noisy_data_tile = noisy_data[:, indices]
-            cov_tile = np.cov(noisy_data_tile.T)
+            cov_tile = np.cov(noisy_data_tile, rowvar=False)
             error_if(
                 np.isnan(cov_tile).any(),
                 msg=("Covariance contains NaN values for tile {}".format(tile)),
@@ -82,7 +82,7 @@ def add_mean_and_covariance(
                 for j, idx_j in enumerate(indices):
                     covs[idx_i, idx_j] = cov_tile[i, j]
     else:
-        cov = np.cov(noisy_data.T)
+        cov = np.cov(noisy_data, rowvar=False)
         error_if(np.isnan(cov).any(), msg="Covariance contains NaN values.")
         covs = cov
 
