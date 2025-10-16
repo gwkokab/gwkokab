@@ -119,7 +119,7 @@ def _build_non_mass_distributions(
         (use_phi_1, "phi_1", build_phi_1_distribution),
         (use_phi_2, "phi_2", build_phi_2_distribution),
         (use_phi_12, "phi_12", build_phi_12_distribution),
-        (use_eccentricity, "ecc", build_eccentricity_distributions),
+        (use_eccentricity, "eccentricity", build_eccentricity_distributions),
         (use_mean_anomaly, "mean_anomaly", build_mean_anomaly_distribution),
         (use_redshift, "redshift", build_redshift_distributions),
         (use_right_ascension, "ra", build_right_ascension_distribution),

@@ -502,9 +502,9 @@ def main() -> None:
             P.ECCENTRICITY.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value["ecc_scale"],
-                low=err_params_value.get("ecc_low"),
-                high=err_params_value.get("ecc_high"),
+                scale=err_params_value[P.ECCENTRICITY.value + "_scale"],
+                low=err_params_value.get(P.ECCENTRICITY.value + "_low"),
+                high=err_params_value.get(P.ECCENTRICITY.value + "_high"),
                 cut_low=0.0,
                 cut_high=1.0,
             ),
