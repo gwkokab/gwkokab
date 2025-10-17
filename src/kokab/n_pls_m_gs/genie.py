@@ -54,7 +54,7 @@ def make_parser() -> ArgumentParser:
     model_group.add_argument(
         "--add-tilt",
         action="store_true",
-        help="Include spin–orbit tilt cosines cos_tilt1, cos_tilt2 (cosines of angles between each spin and orbital angular momentum; physical range −1 to 1).",
+        help="Include spin-orbit tilt cosines cos_tilt1, cos_tilt2 (cosines of angles between each spin and orbital angular momentum; physical range -1 to 1).",
     )
     model_group.add_argument(
         "--add-truncated-normal-eccentricity",
@@ -69,12 +69,12 @@ def make_parser() -> ArgumentParser:
     model_group.add_argument(
         "--add-redshift",
         action="store_true",
-        help="Include cosmological redshift z (dimensionless; relates source-frame to detector-frame masses via m_det=(1+z) m_src).",
+        help="Include cosmological redshift z (dimensionless).",
     )
     model_group.add_argument(
         "--add-cos-iota",
         action="store_true",
-        help="Include inclination cosine cos(iota) (cosine of angle between orbital angular momentum and line of sight; isotropy ⇒ Uniform[−1,1]).",
+        help="Include inclination cosine cos(iota) (cosine of angle between orbital angular momentum and line of sight; isotropy ⇒ Uniform[-1,1]).",
     )
     model_group.add_argument(
         "--add-polarization-angle",
@@ -89,7 +89,7 @@ def make_parser() -> ArgumentParser:
     model_group.add_argument(
         "--add-sin-declination",
         action="store_true",
-        help="Include sin(declination) (store sine of declination to ensure uniform sky prior; domain [−1,1]).",
+        help="Include sin(declination) (store sine of declination to ensure uniform sky prior; domain [-1,1]).",
     )
     model_group.add_argument(
         "--add-detection-time",
