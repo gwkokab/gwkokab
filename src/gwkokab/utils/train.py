@@ -1,6 +1,5 @@
-# Copyright 2023 The GWKokab Authors
+# Copyright 2023–2025 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
-
 
 from collections.abc import Sequence
 from typing import Callable, List, Optional, Tuple
@@ -19,73 +18,53 @@ from loguru import logger
 from numpyro.util import is_prng_key
 
 
+# ==============================
+# Losses & Prediction
+# ==============================
+
+
 @eqx.filter_value_and_grad
 @eqx.filter_jit
 def mse_loss_fn(
     model: PyTree, x: Array, y: Array, batch_size: Optional[int] = 256
 ) -> Array:
-    """Mean squared error loss function.
-
-    Parameters
-    ----------
-    model : PyTree
-        Model to approximate the log of the VT function
-    x : Array
-        input data
-    y : Array
-        output data
-    batch_size : Optional[int], optional
-        batch size for training, by default 256. This is used to avoid OOM errors when
-        training large datasets. If None, the entire dataset will be trained
-        sequentially. This is not recommended for large datasets.
-
-    Returns
-    -------
-    Array
-        mean squared error
-    """
+    """Mean squared error loss."""
     y_pred = jax.lax.map(model, x, batch_size=batch_size)
-    return jnp.mean(jnp.square(y - y_pred))  # mean squared error
+    return jnp.mean(jnp.square(y - y_pred))
+
+
+@eqx.filter_value_and_grad
+@eqx.filter_jit
+def bce_logits_loss_fn(
+    model: PyTree,
+    x: Array,
+    y: Array,
+    batch_size: Optional[int] = 256,
+    eps: float = 1e-6,
+) -> Array:
+    """Binary cross-entropy with logits (numerically stable).
+
+    Expects targets in [0,1]; clips to [eps, 1-eps].
+    """
+    logits = jax.lax.map(model, x, batch_size=batch_size)
+    y = jnp.clip(y, eps, 1.0 - eps)
+    loss = optax.sigmoid_binary_cross_entropy(logits=logits, labels=y)
+    return jnp.mean(loss)
 
 
 @eqx.filter_jit
 def predict(model: PyTree, x: Array, batch_size: Optional[int] = 256) -> Array:
-    """Predict the output of the model given the input data.
-
-    Parameters
-    ----------
-    model : PyTree
-        Model to approximate the log of the VT function
-    x : Array
-        input data
-    batch_size : Optional[int], optional
-        batch size for prediction, by default 256. This is used to avoid OOM errors when
-        predicting large datasets. If None, the entire dataset will be predicted
-        sequentially. This is not recommended for large datasets.
-
-    Returns
-    -------
-    Array
-        predicted output
-    """
+    """Predict outputs for inputs x."""
     return jax.lax.map(model, x, batch_size=batch_size)
 
 
+# ==============================
+# IO Helpers
+# ==============================
+
+
 def read_data(data_path: str, keys: Sequence[str]) -> pd.DataFrame:
-    """Read the data from the given path.
-
-    Parameters
-    ----------
-    data_path : str
-        path to the data
-    keys : Sequence[str]
-        keys to read from the data file
-
-    Returns
-    -------
-    pd.DataFrame
-        data in a DataFrame
-    """
+    """Read dataset (HDF5) into a DataFrame with columns = keys."""
     with h5py.File(data_path, "r") as vt_file:
         df = pd.DataFrame(data={key: np.array(vt_file[key]).flatten() for key in keys})
     return df
@@ -99,29 +78,9 @@ def make_model(
     width_size: int,
     depth: int,
 ) -> eqx.nn.MLP:
-    """Make a neural network model to approximate the log of the VT function.
-
-    Parameters
-    ----------
-    key : PRNGKeyArray
-        jax random key
-    input_layer : int
-        input layer of the model
-    output_layer : int
-        output layer of the model
-    width_size : int
-        width size of the model
-    depth : int
-        depth of the model
-
-    Returns
-    -------
-    eqx.nn.MLP
-        neural network model
-    """
+    """Build an MLP with ReLU activations."""
     assert is_prng_key(key)
-
-    model = eqx.nn.MLP(
+    return eqx.nn.MLP(
         in_size=input_layer,
         out_size=output_layer,
         width_size=width_size,
@@ -129,7 +88,6 @@ def make_model(
         activation=jnn.relu,
         key=key,
     )
-    return model
 
 
 def save_model(
@@ -140,31 +98,18 @@ def save_model(
     names: Optional[Sequence[str]] = None,
     is_log: bool = False,
 ) -> None:
-    """Save the model to the given file.
-
-    Parameters
-    ----------
-    filepath : str
-        Name of the file to save the model
-    datafilepath : str
-        Path to the data file, used to save the names of the parameters
-    model : eqx.nn.MLP
-        Model to approximate the log of the VT function
-    names : Optional[Sequence[str]], optional
-        names of the parameters, by default None
-    is_log : bool, optional
-        Whether the model was trained on log-transformed data, by default False
-    """
+    """Persist model weights and metadata to HDF5 (backward-compatible format)."""
     if not filepath.endswith(".hdf5"):
         raise ValueError("Model save path must end with .hdf5")
 
     with h5py.File(datafilepath, "r") as f:
-        # read all attributes from the data file
         attr = dict(f.attrs)
+
     model: eqx.nn.MLP = model._fun  # type: ignore
+
     with h5py.File(filepath, "w") as f:
         for key, value in attr.items():
-            f.attrs[key] = value  # copy attributes from the data file
+            f.attrs[key] = value
         if names is not None:
             f.create_dataset("names", data=np.array(names, dtype="S"))
         f.create_dataset("in_size", data=model.in_size)  # type: ignore
@@ -180,25 +125,14 @@ def save_model(
 
 
 def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:
-    """Load the model from the given file.
-
-    Parameters
-    ----------
-    filename : str
-        Name of the file to load the model
-
-    Returns
-    -------
-    Tuple[List[str], eqx.nn.MLP]
-        names of the parameters and the model
-    """
+    """Load model and names from HDF5 (backward-compatible)."""
     with h5py.File(filename, "r") as f:
-        names = f["names"][:]
-        names = names.astype(str).tolist()
+        names = f["names"][:].astype(str).tolist()
         in_size = int(f["in_size"][()])
         out_size = int(f["out_size"][()])
         width_size = int(f["width_size"][()])
         depth = int(f["depth"][()])
+
         new_model = eqx.nn.MLP(
             in_size=in_size,
             out_size=out_size,
@@ -207,52 +141,59 @@ def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:
             activation=jnn.relu,
             key=jrd.PRNGKey(0),
         )
+
         i = 0
         while f.get(f"layer_{i}"):
             layer_i = f[f"layer_{i}"]
             weight_i = jax.device_put(np.asarray(layer_i[f"weight_{i}"][:]))
             bias_i = jax.device_put(np.asarray(layer_i[f"bias_{i}"][:]))
-            new_model = eqx.tree_at(lambda m: m.layers[i].weight, new_model, weight_i)
-            new_model = eqx.tree_at(lambda m: m.layers[i].bias, new_model, bias_i)
+            new_model = eqx.tree_at(
+                lambda m, ii=i: m.layers[ii].weight, new_model, weight_i
+            )
+            new_model = eqx.tree_at(
+                lambda m, ii=i: m.layers[ii].bias, new_model, bias_i
+            )
             i += 1
 
     return names, new_model
 
 
+# ==============================
+# Train/Validation Split
+# ==============================
+
+
 def _train_test_data_split(
-    X: Array, Y: Array, batch_size: int, test_size: float = 0.2
+    X: Array,
+    Y: Array,
+    batch_size: int,
+    test_size: float = 0.2,
+    seed: Optional[int] = None,
 ) -> tuple[Array, Array, Array, Array]:
-    """Split the data into training and testing sets.
-
-    Parameters
-    ----------
-    X : Array
-        Input data
-    Y : Array
-        Output data
-    batch_size : int
-        batch size for training
-    test_size : float, optional
-        fraction of the data to use for testing, by default 0.2
-
-    Returns
-    -------
-    tuple[Array, Array, Array, Array]
-        training and testing sets
-    """
+    """Seeded split aligned to batch_size for stable validation curves."""
     n = len(X)
-    indices = np.random.permutation(n)
+    if seed is not None:
+        rng = np.random.default_rng(seed)
+        indices = rng.permutation(n)
+    else:
+        indices = np.random.permutation(n)
+
     split = int(n * (1 - test_size))
-    split = (split // batch_size) * batch_size
+    split = (
+        max(split, batch_size) // batch_size
+    ) * batch_size  # keep multiple of batch_size
+    split = (
+        min(split, n - batch_size) if n >= 2 * batch_size else max(batch_size, split)
+    )
+
     train_indices = indices[:split]
     test_indices = indices[split:]
+    return X[train_indices], X[test_indices], Y[train_indices], Y[test_indices]
 
-    train_X = X[train_indices]
-    train_Y = Y[train_indices]
-    test_X = X[test_indices]
-    test_Y = Y[test_indices]
 
-    return train_X, test_X, train_Y, test_Y
+# ==============================
+# Trainer
+# ==============================
 
 
 def train_regressor(
@@ -268,132 +209,74 @@ def train_regressor(
     validation_split: float = 0.2,
     learning_rate: float = 1e-3,
     train_in_log: bool = False,
+    # New, optional stabilizers (keep old calls working):
+    loss_type: str = "mse",  # "mse" or "bce_logits"
+    grad_clip_norm: float = 1.0,
+    weight_decay: float = 1e-4,
+    use_cosine_decay: bool = True,
+    min_lr: float = 1e-6,
+    warmup_epochs: int = 3,
+    seed: Optional[int] = 42,
 ) -> None:
-    """Train the model to approximate the log of the VT function.
+    """Train an MLP regressor with stable optimization and smooth loss curves.
 
-    input_keys : list[str]
-        list of input keys
-    output_keys : list[str]
-        list of output keys
-    width_size : int
-        width size of the model
-    depth : int
-        depth of the model
-    batch_size : int
-        batch size for training
-    data_path : str
-        path to the data
-    checkpoint_path : Optional[str]
-        path to save the model, by default None
-    epochs : int
-        number of epochs to train the model
-    validation_split : float
-        fraction of the data to use for validation, by default 0.2
-    learning_rate : float
-        learning rate for the optimizer, by default 1e-3
-    train_in_log : bool
-        whether to train the model in log space, by default False
-
-    Raises
-    ------
-    ValueError
-        if checkpoint path does not end with :code:`.hdf5`
+    Notes
+    -----
+    - For detection probabilities in [0,1], prefer `loss_type="bce_logits"` and do NOT set
+      `train_in_log=True` (BCE expects probability targets, not log-values).
+    - `seed` fixes the validation split for a less jittery val-loss.
     """
     if checkpoint_path is None:
         raise ValueError("No checkpoint path provided, model will not be saved.")
     if not checkpoint_path.endswith(".hdf5"):
         raise ValueError("Checkpoint path must end with .hdf5")
 
-    optimizer = optax.adam(learning_rate=learning_rate)
-
-    @eqx.filter_jit
-    def make_step(
-        model: eqx.nn.MLP,
-        x: Array,
-        y: Array,
-        opt_state: optax.OptState,
-    ) -> tuple[eqx.nn.MLP, optax.OptState, Array]:
-        """Make a step in the optimization process.
-
-        Parameters
-        ----------
-        model : eqx.nn.MLP
-            Model to approximate the log of the VT function
-        x : Array
-            input data
-        y : Array
-            output data
-        opt_state : optax.OptState
-            optimizer state
-
-        Returns
-        -------
-        tuple[eqx.nn.MLP, optax.OptState, Array]
-            optimizer state
-        """
-        loss, grads = mse_loss_fn(model, x, y)
-        updates, opt_state = optimizer.update(grads, opt_state)
-        model = eqx.apply_updates(model, updates)
-        return model, opt_state, loss
-
-    def train_step(
-        model: eqx.nn.MLP,
-        x: Array,
-        y: Array,
-        opt_state: optax.OptState,
-    ) -> tuple[eqx.nn.MLP, optax.OptState, Array]:
-        """Train the model for one epoch.
-
-        Parameters
-        ----------
-        model : eqx.nn.MLP
-            Model to approximate the log of the VT function
-        x : Array
-            input data
-        y : Array
-            output data
-        opt_state : optax.OptState
-            optimizer state
-
-        Returns
-        -------
-        tuple[eqx.nn.MLP, optax.OptState, Array]
-            optimizer state
-        """
-        model, opt_state, loss = make_step(model, x, y, opt_state)
-        return model, opt_state, loss
-
+    # --------------------------
+    # Read & prepare data
+    # --------------------------
     df = read_data(data_path, keys=input_keys + output_keys)
 
     data_X = jax.device_put(df[input_keys].to_numpy(), may_alias=True)
     data_Y = jax.device_put(df[output_keys].to_numpy(), may_alias=True)
 
     if train_in_log:
+        # Only for regression on log(y). Avoid for BCE loss.
         data_Y = jnp.log(data_Y)
         data_Y = jnp.where(
-            jnp.isneginf(data_Y), -jnp.finfo(jnp.result_type(float)).tiny, data_Y
+            jnp.isneginf(data_Y),
+            -jnp.finfo(jnp.result_type(float)).tiny,
+            data_Y,
         )
 
     train_X, test_X, train_Y, test_Y = _train_test_data_split(
-        data_X,
-        data_Y,
-        batch_size,
-        test_size=validation_split,
+        data_X, data_Y, batch_size, test_size=validation_split, seed=seed
     )
 
     logger.info("Input Keys: " + ", ".join(input_keys))
     logger.info("Output Keys: " + ", ".join(output_keys))
-    logger.info("Width Size: " + str(width_size))
-    logger.info("Depth: " + str(depth))
-    logger.info("Data Path: " + data_path)
-    logger.info("Checkpoint Path: " + checkpoint_path)
-    logger.info("Train Size: " + str(len(train_X)))
-    logger.info("Test Size: " + str(len(test_X)))
-    logger.info("Validation Split: " + str(validation_split))
-    logger.info("Batch Size: " + str(batch_size))
-    logger.info("Epochs: " + str(epochs))
-    logger.info("Learning Rate: " + str(learning_rate))
+    logger.info(f"Width Size: {width_size}")
+    logger.info(f"Depth: {depth}")
+    logger.info(f"Data Path: {data_path}")
+    logger.info(f"Checkpoint Path: {checkpoint_path}")
+    logger.info(f"Train Size: {len(train_X)}")
+    logger.info(f"Test Size: {len(test_X)}")
+    logger.info(f"Validation Split: {validation_split}")
+    logger.info(f"Batch Size: {batch_size}")
+    logger.info(f"Epochs: {epochs}")
+    logger.info(f"Learning Rate (peak): {learning_rate}")
+    logger.info(f"Loss Type: {loss_type}")
+    logger.info(f"Scheduler: {'cosine+warmup' if use_cosine_decay else 'constant'}")
+    logger.info(
+        f"Weight Decay: {weight_decay}, Grad Clip: {grad_clip_norm}, Seed: {seed}"
+    )
+    if train_in_log and loss_type.lower() == "bce_logits":
+        logger.warning(
+            "train_in_log=True with BCE is not recommended; BCE expects probabilities."
+        )
 
+    # --------------------------
+    # Model & Optimizer
+    # --------------------------
     model = make_model(
         key=jrd.PRNGKey(np.random.randint(0, 2**32 - 1)),
         input_layer=len(input_keys),
@@ -401,71 +284,142 @@ def train_regressor(
         width_size=width_size,
         depth=depth,
     )
-
     model: Callable = eqx.filter_checkpoint(model)  # type: ignore
+
+    steps_per_epoch = max(1, len(train_X) // batch_size)
+    total_steps = max(1, steps_per_epoch * epochs)
+    warmup_steps = min(total_steps, max(0, warmup_epochs) * steps_per_epoch)
+
+    if use_cosine_decay:
+        schedule = optax.warmup_cosine_decay_schedule(
+            init_value=0.0,
+            peak_value=learning_rate,
+            warmup_steps=warmup_steps,
+            decay_steps=max(1, total_steps - warmup_steps),
+            end_value=min_lr,
+        )
+    else:
+        schedule = learning_rate
+
+    optimizer = optax.chain(
+        optax.clip_by_global_norm(grad_clip_norm),
+        optax.adamw(learning_rate=schedule, weight_decay=weight_decay),
+    )
 
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
 
-    loss_vals = []
-    val_loss_vals = []
+    # Choose loss function
+    loss_fn: Callable[..., Array]
+    if loss_type.lower() == "mse":
+        loss_fn = mse_loss_fn
+    elif loss_type.lower() in ("bce", "bce_logits", "bcelogits"):
+        loss_fn = bce_logits_loss_fn
+    else:
+        raise ValueError("loss_type must be 'mse' or 'bce_logits'")
+
+    @eqx.filter_jit
+    def make_step(
+        model: eqx.nn.MLP, x: Array, y: Array, opt_state: optax.OptState
+    ) -> tuple[eqx.nn.MLP, optax.OptState, Array]:
+        loss, grads = loss_fn(model, x, y)
+        updates, opt_state = optimizer.update(
+            grads, opt_state, params=eqx.filter(model, eqx.is_inexact_array)
+        )
+        model = eqx.apply_updates(model, updates)
+        return model, opt_state, loss
+
+    # --------------------------
+    # Training Loop
+    # --------------------------
+    loss_vals: list[float] = []
+    val_loss_vals: list[float] = []
 
     with tqdm.tqdm(range(epochs), unit="epochs") as pbar:
         for epoch in pbar:
             epoch_loss = jnp.zeros(())
+            # mini-batch iterate
             for i in range(0, len(train_X), batch_size):
                 x = train_X[i : i + batch_size]
                 y = train_Y[i : i + batch_size]
-
-                model, opt_state, loss = train_step(model, x, y, opt_state)
-                epoch_loss += loss
+                model, opt_state, loss = make_step(model, x, y, opt_state)
+                epoch_loss = epoch_loss + loss
                 pbar.set_postfix({"epoch": epoch + 1, "loss": f"{loss:.5E}"})
 
-            loss = epoch_loss / (len(train_X) // batch_size)
-            loss_vals.append(loss)
+            # epoch metrics
+            loss_epoch = epoch_loss / max(1, (len(train_X) // batch_size))
+            loss_vals.append(float(loss_epoch))
 
-            val_loss, _ = mse_loss_fn(model, test_X, test_Y)
-            val_loss_vals.append(val_loss)
+            val_loss, _ = loss_fn(model, test_X, test_Y)
+            val_loss_vals.append(float(val_loss))
+
             pbar.set_description(
-                f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.5E}, Val Loss: {val_loss:.5E}"
+                f"Epoch {epoch + 1}/{epochs}, Loss: {loss_epoch:.5E}, Val Loss: {val_loss:.5E}"
             )
             if epoch % 10 == 0 or epoch == epochs - 1:
                 logger.info(
-                    f"Epoch {epoch + 1}/{epochs}, Loss: {loss:.5E}, Val Loss: {val_loss:.5E}"
+                    f"Epoch {epoch + 1}/{epochs}, Loss: {loss_epoch:.5E}, Val Loss: {val_loss:.5E}"
                 )
 
-    if checkpoint_path is not None:
-        save_model(
-            filepath=checkpoint_path,
-            datafilepath=data_path,
-            model=model,
-            names=input_keys,
-            is_log=train_in_log,
-        )  # type: ignore
-        plt.plot(loss_vals, label="loss")
-        plt.plot(val_loss_vals, label="val loss")
-        plt.yscale("log")
-        plt.xlabel("Epoch")
-        plt.ylabel("Average loss per epoch")
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(checkpoint_path + "_loss.png")
-        plt.close("all")
+    # --------------------------
+    # Save & Diagnostics
+    # --------------------------
+    save_model(
+        filepath=checkpoint_path,
+        datafilepath=data_path,
+        model=model,
+        names=input_keys,
+        is_log=train_in_log,
+    )  # type: ignore
 
-        Y_hat = predict(model, data_X)
-        total_loss = jnp.square(data_Y - Y_hat)
-        total_loss = np.asarray(total_loss)  # type: ignore
-        quantiles = np.quantile(total_loss, [0.05, 0.5, 0.95])
-        total_loss = total_loss.tolist()  # type: ignore
-        total_loss = sorted(total_loss)  # type: ignore
+    # Loss curves
+    plt.plot(loss_vals, label="loss")
+    plt.plot(val_loss_vals, label="val loss")
+    plt.yscale("log")
+    plt.xlabel("Epoch")
+    plt.ylabel("Average loss per epoch")
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(checkpoint_path + "_loss.png")
+    plt.close("all")
 
-        plt.plot(total_loss, label="loss per data instance")
-        plt.axhline(quantiles[0], color="red", linestyle="--", label="5% quantile")
-        plt.axhline(quantiles[1], color="green", linestyle="--", label="50% quantile")
-        plt.axhline(quantiles[2], color="blue", linestyle="--", label="95% quantile")
-        plt.yscale("log")
-        plt.xlabel("data instance")
-        plt.ylabel("Loss per data instance")
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(checkpoint_path + "_total_loss.png")
-        plt.close("all")
+    # Per-instance loss distribution
+    Y_hat = predict(model, data_X)
+    if loss_type.lower() == "mse":
+        per_instance = jnp.square(data_Y - Y_hat).squeeze(-1)
+        ylabel = "MSE per data instance"
+    else:
+        y_all = jnp.clip(data_Y, 1e-6, 1 - 1e-6)
+        per_instance = optax.sigmoid_binary_cross_entropy(
+            logits=Y_hat, labels=y_all
+        ).squeeze(-1)
+        ylabel = "BCE (logits) per data instance"
+
+    per_instance_np = np.asarray(per_instance)
+    q05, q50, q95 = np.quantile(per_instance_np, [0.05, 0.5, 0.95])
+    ordered = np.sort(per_instance_np)
+
+    plt.plot(ordered, label="loss per data instance")
+    plt.axhline(q05, linestyle="--", label="5% quantile")
+    plt.axhline(q50, linestyle="--", label="50% quantile")
+    plt.axhline(q95, linestyle="--", label="95% quantile")
+    plt.yscale("log")
+    plt.xlabel("data instance")
+    plt.ylabel(ylabel)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(checkpoint_path + "_total_loss.png")
+    # -------------------------------------
+    # Extra evaluation metrics for clarity
+    # -------------------------------------
+    # Compute probabilities after sigmoid
+    probs = jnn.sigmoid(Y_hat).squeeze(-1)
+    y_true = jnp.clip(data_Y.squeeze(-1), 1e-6, 1 - 1e-6)
+
+    rmse = jnp.sqrt(jnp.mean((probs - y_true) ** 2))
+    mae = jnp.mean(jnp.abs(probs - y_true))
+    r2 = 1 - jnp.sum((probs - y_true) ** 2) / jnp.sum((y_true - jnp.mean(y_true)) ** 2)
+
+    logger.info(f"RMSE (prob): {float(rmse):.6f}")
+    logger.info(f"MAE  (prob): {float(mae):.6f}")
+    logger.info(f"R²   (prob): {float(r2):.6f}")
+    plt.close("all")
