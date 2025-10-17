@@ -302,7 +302,9 @@ class PopulationFactory:
         os.makedirs(os.path.join(realizations_path, self.error_dir), exist_ok=True)
 
         injections_file_path = os.path.join(realizations_path, self.injection_filename)
-        data_inj = np.loadtxt(injections_file_path, skiprows=1)
+        data_inj = np.loadtxt(injections_file_path, skiprows=1).reshape(
+            -1, len(self.parameters)
+        )
 
         n_injections = data_inj.shape[0]
 
