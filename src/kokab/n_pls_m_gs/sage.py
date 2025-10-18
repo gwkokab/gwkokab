@@ -10,10 +10,8 @@ from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import enable_validation
 
-import gwkokab
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.hybrids._ncombination import create_truncated_normal_distributions
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
@@ -115,10 +113,6 @@ class NPowerlawMGaussianCore(Sage):
         self.N_g = N_g
         self.has_beta_spin = has_beta_spin
         self.has_truncated_normal_spin = has_truncated_normal_spin
-        if self.has_truncated_normal_spin:
-            gwkokab.models.hybrids._npowerlawmgaussian.build_spin_distributions = (
-                create_truncated_normal_distributions
-            )
         self.has_tilt = has_tilt
         self.has_eccentricity = has_eccentricity
         self.has_redshift = has_redshift
@@ -152,7 +146,8 @@ class NPowerlawMGaussianCore(Sage):
         return {
             "N_pl": self.N_pl,
             "N_g": self.N_g,
-            "use_spin": self.has_beta_spin or self.has_truncated_normal_spin,
+            "use_beta_spin": self.has_beta_spin,
+            "use_truncated_normal_spin": self.has_truncated_normal_spin,
             "use_tilt": self.has_tilt,
             "use_eccentricity": self.has_eccentricity,
             "use_redshift": self.has_redshift,
@@ -211,35 +206,35 @@ class NPowerlawMGaussianCore(Sage):
         if self.has_truncated_normal_spin:
             all_params.extend(
                 [
-                    ("chi1_high_g", self.N_g),
-                    ("chi1_high_pl", self.N_pl),
-                    ("chi1_loc_g", self.N_g),
-                    ("chi1_loc_pl", self.N_pl),
-                    ("chi1_low_g", self.N_g),
-                    ("chi1_low_pl", self.N_pl),
-                    ("chi1_scale_g", self.N_g),
-                    ("chi1_scale_pl", self.N_pl),
-                    ("chi2_high_g", self.N_g),
-                    ("chi2_high_pl", self.N_pl),
-                    ("chi2_loc_g", self.N_g),
-                    ("chi2_loc_pl", self.N_pl),
-                    ("chi2_low_g", self.N_g),
-                    ("chi2_low_pl", self.N_pl),
-                    ("chi2_scale_g", self.N_g),
-                    ("chi2_scale_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
                 ]
             )
         if self.has_beta_spin:
             all_params.extend(
                 [
-                    ("chi1_mean_g", self.N_g),
-                    ("chi1_mean_pl", self.N_pl),
-                    ("chi1_variance_g", self.N_g),
-                    ("chi1_variance_pl", self.N_pl),
-                    ("chi2_mean_g", self.N_g),
-                    ("chi2_mean_pl", self.N_pl),
-                    ("chi2_variance_g", self.N_g),
-                    ("chi2_variance_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
                 ]
             )
 
@@ -248,10 +243,10 @@ class NPowerlawMGaussianCore(Sage):
                 [
                     ("cos_tilt_zeta_g", self.N_g),
                     ("cos_tilt_zeta_pl", self.N_pl),
-                    ("cos_tilt1_scale_g", self.N_g),
-                    ("cos_tilt1_scale_pl", self.N_pl),
-                    ("cos_tilt2_scale_g", self.N_g),
-                    ("cos_tilt2_scale_pl", self.N_pl),
+                    (P.COS_TILT_1.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_1.value + "_scale_pl", self.N_pl),
+                    (P.COS_TILT_2.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_2.value + "_scale_pl", self.N_pl),
                 ]
             )
 
