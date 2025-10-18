@@ -147,12 +147,8 @@ def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:
             layer_i = f[f"layer_{i}"]
             weight_i = jax.device_put(np.asarray(layer_i[f"weight_{i}"][:]))
             bias_i = jax.device_put(np.asarray(layer_i[f"bias_{i}"][:]))
-            new_model = eqx.tree_at(
-                lambda m, ii=i: m.layers[ii].weight, new_model, weight_i
-            )
-            new_model = eqx.tree_at(
-                lambda m, ii=i: m.layers[ii].bias, new_model, bias_i
-            )
+            new_model = eqx.tree_at(lambda m: m.layers[i].weight, new_model, weight_i)
+            new_model = eqx.tree_at(lambda m: m.layers[i].bias, new_model, bias_i)
             i += 1
 
     return names, new_model
@@ -210,7 +206,7 @@ def train_regressor(
     learning_rate: float = 1e-3,
     train_in_log: bool = False,
     # New, optional stabilizers (keep old calls working):
-    loss_type: str = "mse",  # "mse" or "bce_logits"
+    loss_type: str = "mse",  # "mse" (Mean Squared Error) or "bce_logits" (Binary Cross-Entropy with logits)
     grad_clip_norm: float = 1.0,
     weight_decay: float = 1e-4,
     use_cosine_decay: bool = True,
@@ -392,7 +388,7 @@ def train_regressor(
         per_instance = optax.sigmoid_binary_cross_entropy(
             logits=Y_hat, labels=y_all
         ).squeeze(-1)
-        ylabel = "BCE (logits) per data instance"
+        ylabel = "Binary Cross-Entropy (logits) per data instance"
 
     per_instance_np = np.asarray(per_instance)
     q05, q50, q95 = np.quantile(per_instance_np, [0.05, 0.5, 0.95])
@@ -419,7 +415,7 @@ def train_regressor(
     mae = jnp.mean(jnp.abs(probs - y_true))
     r2 = 1 - jnp.sum((probs - y_true) ** 2) / jnp.sum((y_true - jnp.mean(y_true)) ** 2)
 
-    logger.info(f"RMSE (prob): {float(rmse):.6f}")
-    logger.info(f"MAE  (prob): {float(mae):.6f}")
-    logger.info(f"R²   (prob): {float(r2):.6f}")
+    logger.info(f"Root Mean Square Error (prob): {float(rmse):.6f}")
+    logger.info(f"Mean Absolute Error      (prob): {float(mae):.6f}")
+    logger.info(f"R^2                      (prob): {float(r2):.6f}")
     plt.close("all")
