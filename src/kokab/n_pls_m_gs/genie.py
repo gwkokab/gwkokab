@@ -35,14 +35,14 @@ def make_parser() -> ArgumentParser:
         required=True,
     )
 
-    spin_group = model_group.add_mutually_exclusive_group()
-    spin_group.add_argument(
-        "--add-beta-spin",
+    spin_magnitude_group = model_group.add_mutually_exclusive_group()
+    spin_magnitude_group.add_argument(
+        "--add-beta-spin-magnitude",
         action="store_true",
         help="Include beta-distributed spin magnitudes a1,a2 (dimensionless Kerr spins; 0≤a<1).",
     )
-    spin_group.add_argument(
-        "--add-truncated-normal-spin",
+    spin_magnitude_group.add_argument(
+        "--add-truncated-normal-spin-magnitude",
         action="store_true",
         help="Include truncated-normal spin magnitudes a1,a2 (dimensionless Kerr spins; 0≤a<1).",
     )
@@ -140,8 +140,8 @@ def main() -> None:
     N_pl = model_json["N_pl"]
     N_g = model_json["N_g"]
 
-    has_beta_spin = args.add_beta_spin
-    has_truncated_normal_spin = args.add_truncated_normal_spin
+    has_beta_spin_magnitude = args.add_beta_spin_magnitude
+    has_truncated_normal_spin_magnitude = args.add_truncated_normal_spin_magnitude
     has_tilt = args.add_tilt
     has_eccentricity = args.add_truncated_normal_eccentricity
     has_mean_anomaly = args.add_mean_anomaly
@@ -157,7 +157,7 @@ def main() -> None:
     has_phi_orb = args.add_phi_orb
 
     err_params_name = ["scale_eta", "scale_Mc"]
-    if has_beta_spin or has_truncated_normal_spin:
+    if has_beta_spin_magnitude or has_truncated_normal_spin_magnitude:
         err_params_name.extend(
             [
                 P.PRIMARY_SPIN_MAGNITUDE.value + "_high",
@@ -304,7 +304,7 @@ def main() -> None:
         ),
     )
 
-    if has_beta_spin:
+    if has_beta_spin_magnitude:
         parameters_name += (
             P.PRIMARY_SPIN_MAGNITUDE.value,
             P.SECONDARY_SPIN_MAGNITUDE.value,
@@ -322,7 +322,7 @@ def main() -> None:
             ]
         )
 
-    if has_truncated_normal_spin:
+    if has_truncated_normal_spin_magnitude:
         parameters_name += (
             P.PRIMARY_SPIN_MAGNITUDE.value,
             P.SECONDARY_SPIN_MAGNITUDE.value,
@@ -348,7 +348,7 @@ def main() -> None:
             ]
         )
 
-    if has_beta_spin or has_truncated_normal_spin:
+    if has_beta_spin_magnitude or has_truncated_normal_spin_magnitude:
         error_magazine.register(
             P.PRIMARY_SPIN_MAGNITUDE.value,
             partial(
@@ -717,8 +717,8 @@ def main() -> None:
         {
             "N_pl": N_pl,
             "N_g": N_g,
-            "use_beta_spin": has_beta_spin,
-            "use_truncated_normal_spin": has_truncated_normal_spin,
+            "use_beta_spin_magnitude": has_beta_spin_magnitude,
+            "use_truncated_normal_spin_magnitude": has_truncated_normal_spin_magnitude,
             "use_tilt": has_tilt,
             "use_eccentricity": has_eccentricity,
             "use_mean_anomaly": has_mean_anomaly,

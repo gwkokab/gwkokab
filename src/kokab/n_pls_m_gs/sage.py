@@ -22,10 +22,12 @@ from kokab.utils.common import expand_arguments
 from kokab.utils.logger import log_info
 
 
-def where_fns_list(has_beta_spin: bool) -> Optional[List[Callable[..., Array]]]:
+def where_fns_list(
+    has_beta_spin_magnitude: bool,
+) -> Optional[List[Callable[..., Array]]]:
     where_fns = []
 
-    if has_beta_spin:
+    if has_beta_spin_magnitude:
 
         def mean_variance_check(N_pl: int, N_g: int, **kwargs) -> Array:
             if N_pl > 0:
@@ -73,8 +75,8 @@ class NPowerlawMGaussianCore(Sage):
         self,
         N_pl: int,
         N_g: int,
-        has_beta_spin: bool,
-        has_truncated_normal_spin: bool,
+        has_beta_spin_magnitude: bool,
+        has_truncated_normal_spin_magnitude: bool,
         has_tilt: bool,
         has_eccentricity: bool,
         has_redshift: bool,
@@ -111,8 +113,8 @@ class NPowerlawMGaussianCore(Sage):
     ) -> None:
         self.N_pl = N_pl
         self.N_g = N_g
-        self.has_beta_spin = has_beta_spin
-        self.has_truncated_normal_spin = has_truncated_normal_spin
+        self.has_beta_spin_magnitude = has_beta_spin_magnitude
+        self.has_truncated_normal_spin_magnitude = has_truncated_normal_spin_magnitude
         self.has_tilt = has_tilt
         self.has_eccentricity = has_eccentricity
         self.has_redshift = has_redshift
@@ -138,7 +140,7 @@ class NPowerlawMGaussianCore(Sage):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            where_fns=where_fns_list(has_beta_spin=has_beta_spin),
+            where_fns=where_fns_list(has_beta_spin_magnitude=has_beta_spin_magnitude),
         )
 
     @property
@@ -146,8 +148,8 @@ class NPowerlawMGaussianCore(Sage):
         return {
             "N_pl": self.N_pl,
             "N_g": self.N_g,
-            "use_beta_spin": self.has_beta_spin,
-            "use_truncated_normal_spin": self.has_truncated_normal_spin,
+            "use_beta_spin_magnitude": self.has_beta_spin_magnitude,
+            "use_truncated_normal_spin_magnitude": self.has_truncated_normal_spin_magnitude,
             "use_tilt": self.has_tilt,
             "use_eccentricity": self.has_eccentricity,
             "use_redshift": self.has_redshift,
@@ -162,7 +164,7 @@ class NPowerlawMGaussianCore(Sage):
     @property
     def parameters(self) -> List[str]:
         names = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
-        if self.has_beta_spin or self.has_truncated_normal_spin:
+        if self.has_beta_spin_magnitude or self.has_truncated_normal_spin_magnitude:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.has_tilt:
@@ -203,7 +205,7 @@ class NPowerlawMGaussianCore(Sage):
             ("mmin_pl", self.N_pl),
         ]
 
-        if self.has_truncated_normal_spin:
+        if self.has_truncated_normal_spin_magnitude:
             all_params.extend(
                 [
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
@@ -224,7 +226,7 @@ class NPowerlawMGaussianCore(Sage):
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
                 ]
             )
-        if self.has_beta_spin:
+        if self.has_beta_spin_magnitude:
             all_params.extend(
                 [
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
@@ -383,12 +385,12 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
     spin_group = model_group.add_mutually_exclusive_group()
     spin_group.add_argument(
-        "--add-beta-spin",
+        "--add-beta-spin-magnitude",
         action="store_true",
         help="Include beta spin parameters in the model.",
     )
     spin_group.add_argument(
-        "--add-truncated-normal-spin",
+        "--add-truncated-normal-spin-magnitude",
         action="store_true",
         help="Include truncated normal spin parameters in the model.",
     )
@@ -456,8 +458,8 @@ def f_main() -> None:
     NPowerlawMGaussianFSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
-        has_beta_spin=args.add_beta_spin,
-        has_truncated_normal_spin=args.add_truncated_normal_spin,
+        has_beta_spin_magnitude=args.add_beta_spin,
+        has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin,
         has_tilt=args.add_tilt,
         has_eccentricity=args.add_truncated_normal_eccentricity,
         has_redshift=args.add_redshift,
@@ -495,8 +497,8 @@ def n_main() -> None:
     NPowerlawMGaussianNSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
-        has_beta_spin=args.add_beta_spin,
-        has_truncated_normal_spin=args.add_truncated_normal_spin,
+        has_beta_spin_magnitude=args.add_beta_spin_magnitude,
+        has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
         has_tilt=args.add_tilt,
         has_eccentricity=args.add_truncated_normal_eccentricity,
         has_redshift=args.add_redshift,

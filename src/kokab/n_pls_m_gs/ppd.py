@@ -6,9 +6,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 import pandas as pd
 
-import gwkokab
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.hybrids._ncombination import create_truncated_normal_distributions
 from gwkokab.parameters import Parameters as P
 from gwkokab.utils.tools import error_if
 from kokab.utils import ppd, ppd_parser
@@ -18,13 +16,6 @@ from kokab.utils.common import ppd_ranges, read_json
 def make_parser() -> ArgumentParser:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = ppd_parser.get_parser(parser)
-
-    model_group = parser.add_argument_group("Model Options")
-    model_group.add_argument(
-        "--spin-truncated-normal",
-        action="store_true",
-        help="Use truncated normal distributions for spin parameters.",
-    )
 
     msm_group = parser.add_argument_group("Multi Source Model Options")
     msm_group.add_argument(
@@ -82,11 +73,6 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
-    if args.spin_truncated_normal:
-        gwkokab.models.hybrids._npowerlawmgaussian.build_spin_distributions = (
-            create_truncated_normal_distributions
-        )
-
     error_if(
         not str(args.filename).endswith(".hdf5"),
         msg="Output file must be an HDF5 file.",
@@ -97,7 +83,9 @@ def main() -> None:
 
     N_pl = constants["N_pl"]
     N_g = constants["N_g"]
-    has_spin = constants.get("use_spin", False)
+    has_spin_magnitude = constants.get(
+        "use_beta_spin_magnitude", False
+    ) or constants.get("use_truncated_normal_spin_magnitude", False)
     has_tilt = constants.get("use_tilt", False)
     has_eccentricity = constants.get("use_eccentricity", False)
     has_redshift = constants.get("use_redshift", False)
@@ -110,7 +98,7 @@ def main() -> None:
 
     parameters = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
 
-    if has_spin:
+    if has_spin_magnitude:
         parameters.extend(
             [P.PRIMARY_SPIN_MAGNITUDE.value, P.SECONDARY_SPIN_MAGNITUDE.value]
         )
