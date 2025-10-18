@@ -48,6 +48,21 @@ def make_parser() -> ArgumentParser:
     )
 
     model_group.add_argument(
+        "--add-truncated-normal-spin-x",
+        action="store_true",
+        help="Include truncated-normal spin x components.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin-y",
+        action="store_true",
+        help="Include truncated-normal spin y components.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin-z",
+        action="store_true",
+        help="Include truncated-normal spin z components.",
+    )
+    model_group.add_argument(
         "--add-tilt",
         action="store_true",
         help="Include spin-orbit tilt cosines cos_tilt1, cos_tilt2 (cosines of angles between each spin and orbital angular momentum; physical range -1 to 1).",
@@ -142,6 +157,9 @@ def main() -> None:
 
     has_beta_spin_magnitude = args.add_beta_spin_magnitude
     has_truncated_normal_spin_magnitude = args.add_truncated_normal_spin_magnitude
+    has_truncated_normal_spin_x = args.add_truncated_normal_spin_x
+    has_truncated_normal_spin_y = args.add_truncated_normal_spin_y
+    has_truncated_normal_spin_z = args.add_truncated_normal_spin_z
     has_tilt = args.add_tilt
     has_eccentricity = args.add_truncated_normal_eccentricity
     has_mean_anomaly = args.add_mean_anomaly
@@ -166,6 +184,39 @@ def main() -> None:
                 P.SECONDARY_SPIN_MAGNITUDE.value + "_high",
                 P.SECONDARY_SPIN_MAGNITUDE.value + "_low",
                 P.SECONDARY_SPIN_MAGNITUDE.value + "_scale",
+            ]
+        )
+    if has_truncated_normal_spin_x:
+        err_params_name.extend(
+            [
+                P.PRIMARY_SPIN_X.value + "_high",
+                P.PRIMARY_SPIN_X.value + "_low",
+                P.PRIMARY_SPIN_X.value + "_scale",
+                P.SECONDARY_SPIN_X.value + "_high",
+                P.SECONDARY_SPIN_X.value + "_low",
+                P.SECONDARY_SPIN_X.value + "_scale",
+            ]
+        )
+    if has_truncated_normal_spin_y:
+        err_params_name.extend(
+            [
+                P.PRIMARY_SPIN_Y.value + "_high",
+                P.PRIMARY_SPIN_Y.value + "_low",
+                P.PRIMARY_SPIN_Y.value + "_scale",
+                P.SECONDARY_SPIN_Y.value + "_high",
+                P.SECONDARY_SPIN_Y.value + "_low",
+                P.SECONDARY_SPIN_Y.value + "_scale",
+            ]
+        )
+    if has_truncated_normal_spin_z:
+        err_params_name.extend(
+            [
+                P.PRIMARY_SPIN_Z.value + "_high",
+                P.PRIMARY_SPIN_Z.value + "_low",
+                P.PRIMARY_SPIN_Z.value + "_scale",
+                P.SECONDARY_SPIN_Z.value + "_high",
+                P.SECONDARY_SPIN_Z.value + "_low",
+                P.SECONDARY_SPIN_Z.value + "_scale",
             ]
         )
     if has_tilt:
@@ -369,6 +420,135 @@ def main() -> None:
                 low=err_params_value.get(P.SECONDARY_SPIN_MAGNITUDE.value + "_low"),
                 high=err_params_value.get(P.SECONDARY_SPIN_MAGNITUDE.value + "_high"),
                 cut_low=0.0,
+                cut_high=1.0,
+            ),
+        )
+
+    if has_truncated_normal_spin_x:
+        parameters_name += (P.PRIMARY_SPIN_X.value, P.SECONDARY_SPIN_X.value)
+        all_params.extend(
+            [
+                (P.PRIMARY_SPIN_X.value + "_high_g", N_g),
+                (P.PRIMARY_SPIN_X.value + "_high_pl", N_pl),
+                (P.PRIMARY_SPIN_X.value + "_low_g", N_g),
+                (P.PRIMARY_SPIN_X.value + "_low_pl", N_pl),
+                (P.PRIMARY_SPIN_X.value + "_scale_g", N_g),
+                (P.PRIMARY_SPIN_X.value + "_scale_pl", N_pl),
+                (P.SECONDARY_SPIN_X.value + "_high_g", N_g),
+                (P.SECONDARY_SPIN_X.value + "_high_pl", N_pl),
+                (P.SECONDARY_SPIN_X.value + "_low_g", N_g),
+                (P.SECONDARY_SPIN_X.value + "_low_pl", N_pl),
+                (P.SECONDARY_SPIN_X.value + "_scale_g", N_g),
+                (P.SECONDARY_SPIN_X.value + "_scale_pl", N_pl),
+            ]
+        )
+
+        error_magazine.register(
+            P.PRIMARY_SPIN_X.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.PRIMARY_SPIN_X.value + "_scale"],
+                low=err_params_value.get(P.PRIMARY_SPIN_X.value + "_low"),
+                high=err_params_value.get(P.PRIMARY_SPIN_X.value + "_high"),
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
+
+        error_magazine.register(
+            P.SECONDARY_SPIN_X.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.SECONDARY_SPIN_X.value + "_scale"],
+                low=err_params_value.get(P.SECONDARY_SPIN_X.value + "_low"),
+                high=err_params_value.get(P.SECONDARY_SPIN_X.value + "_high"),
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
+
+    if has_truncated_normal_spin_y:
+        parameters_name += (P.PRIMARY_SPIN_Y.value, P.SECONDARY_SPIN_Y.value)
+        all_params.extend(
+            [
+                (P.PRIMARY_SPIN_Y.value + "_high_g", N_g),
+                (P.PRIMARY_SPIN_Y.value + "_high_pl", N_pl),
+                (P.PRIMARY_SPIN_Y.value + "_low_g", N_g),
+                (P.PRIMARY_SPIN_Y.value + "_low_pl", N_pl),
+                (P.PRIMARY_SPIN_Y.value + "_scale_g", N_g),
+                (P.PRIMARY_SPIN_Y.value + "_scale_pl", N_pl),
+                (P.SECONDARY_SPIN_Y.value + "_high_g", N_g),
+                (P.SECONDARY_SPIN_Y.value + "_high_pl", N_pl),
+                (P.SECONDARY_SPIN_Y.value + "_low_g", N_g),
+                (P.SECONDARY_SPIN_Y.value + "_low_pl", N_pl),
+                (P.SECONDARY_SPIN_Y.value + "_scale_g", N_g),
+                (P.SECONDARY_SPIN_Y.value + "_scale_pl", N_pl),
+            ]
+        )
+
+        error_magazine.register(
+            P.PRIMARY_SPIN_Y.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.PRIMARY_SPIN_Y.value + "_scale"],
+                low=err_params_value.get(P.PRIMARY_SPIN_Y.value + "_low"),
+                high=err_params_value.get(P.PRIMARY_SPIN_Y.value + "_high"),
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
+
+        error_magazine.register(
+            P.SECONDARY_SPIN_Y.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.SECONDARY_SPIN_Y.value + "_scale"],
+                low=err_params_value.get(P.SECONDARY_SPIN_Y.value + "_low"),
+                high=err_params_value.get(P.SECONDARY_SPIN_Y.value + "_high"),
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
+
+    if has_truncated_normal_spin_z:
+        parameters_name += (P.PRIMARY_SPIN_Z.value, P.SECONDARY_SPIN_Z.value)
+        all_params.extend(
+            [
+                (P.PRIMARY_SPIN_Z.value + "_high_g", N_g),
+                (P.PRIMARY_SPIN_Z.value + "_high_pl", N_pl),
+                (P.PRIMARY_SPIN_Z.value + "_low_g", N_g),
+                (P.PRIMARY_SPIN_Z.value + "_low_pl", N_pl),
+                (P.PRIMARY_SPIN_Z.value + "_scale_g", N_g),
+                (P.PRIMARY_SPIN_Z.value + "_scale_pl", N_pl),
+                (P.SECONDARY_SPIN_Z.value + "_high_g", N_g),
+                (P.SECONDARY_SPIN_Z.value + "_high_pl", N_pl),
+                (P.SECONDARY_SPIN_Z.value + "_low_g", N_g),
+                (P.SECONDARY_SPIN_Z.value + "_low_pl", N_pl),
+                (P.SECONDARY_SPIN_Z.value + "_scale_g", N_g),
+                (P.SECONDARY_SPIN_Z.value + "_scale_pl", N_pl),
+            ]
+        )
+
+        error_magazine.register(
+            P.PRIMARY_SPIN_Z.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.PRIMARY_SPIN_Z.value + "_scale"],
+                low=err_params_value.get(P.PRIMARY_SPIN_Z.value + "_low"),
+                high=err_params_value.get(P.PRIMARY_SPIN_Z.value + "_high"),
+                cut_low=-1.0,
+                cut_high=1.0,
+            ),
+        )
+
+        error_magazine.register(
+            P.SECONDARY_SPIN_Z.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.SECONDARY_SPIN_Z.value + "_scale"],
+                low=err_params_value.get(P.SECONDARY_SPIN_Z.value + "_low"),
+                high=err_params_value.get(P.SECONDARY_SPIN_Z.value + "_high"),
+                cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
@@ -719,6 +899,9 @@ def main() -> None:
             "N_g": N_g,
             "use_beta_spin_magnitude": has_beta_spin_magnitude,
             "use_truncated_normal_spin_magnitude": has_truncated_normal_spin_magnitude,
+            "use_truncated_normal_spin_x": has_truncated_normal_spin_x,
+            "use_truncated_normal_spin_y": has_truncated_normal_spin_y,
+            "use_truncated_normal_spin_z": has_truncated_normal_spin_z,
             "use_tilt": has_tilt,
             "use_eccentricity": has_eccentricity,
             "use_mean_anomaly": has_mean_anomaly,

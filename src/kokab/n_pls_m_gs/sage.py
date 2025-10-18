@@ -77,6 +77,9 @@ class NPowerlawMGaussianCore(Sage):
         N_g: int,
         has_beta_spin_magnitude: bool,
         has_truncated_normal_spin_magnitude: bool,
+        has_truncated_normal_spin_x: bool,
+        has_truncated_normal_spin_y: bool,
+        has_truncated_normal_spin_z: bool,
         has_tilt: bool,
         has_eccentricity: bool,
         has_redshift: bool,
@@ -115,6 +118,9 @@ class NPowerlawMGaussianCore(Sage):
         self.N_g = N_g
         self.has_beta_spin_magnitude = has_beta_spin_magnitude
         self.has_truncated_normal_spin_magnitude = has_truncated_normal_spin_magnitude
+        self.has_truncated_normal_spin_x = has_truncated_normal_spin_x
+        self.has_truncated_normal_spin_y = has_truncated_normal_spin_y
+        self.has_truncated_normal_spin_z = has_truncated_normal_spin_z
         self.has_tilt = has_tilt
         self.has_eccentricity = has_eccentricity
         self.has_redshift = has_redshift
@@ -150,6 +156,9 @@ class NPowerlawMGaussianCore(Sage):
             "N_g": self.N_g,
             "use_beta_spin_magnitude": self.has_beta_spin_magnitude,
             "use_truncated_normal_spin_magnitude": self.has_truncated_normal_spin_magnitude,
+            "use_truncated_normal_spin_x": self.has_truncated_normal_spin_x,
+            "use_truncated_normal_spin_y": self.has_truncated_normal_spin_y,
+            "use_truncated_normal_spin_z": self.has_truncated_normal_spin_z,
             "use_tilt": self.has_tilt,
             "use_eccentricity": self.has_eccentricity,
             "use_redshift": self.has_redshift,
@@ -167,6 +176,15 @@ class NPowerlawMGaussianCore(Sage):
         if self.has_beta_spin_magnitude or self.has_truncated_normal_spin_magnitude:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
+        if self.has_truncated_normal_spin_x:
+            names.append(P.PRIMARY_SPIN_X.value)
+            names.append(P.SECONDARY_SPIN_X.value)
+        if self.has_truncated_normal_spin_y:
+            names.append(P.PRIMARY_SPIN_Y.value)
+            names.append(P.SECONDARY_SPIN_Y.value)
+        if self.has_truncated_normal_spin_z:
+            names.append(P.PRIMARY_SPIN_Z.value)
+            names.append(P.SECONDARY_SPIN_Z.value)
         if self.has_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.has_phi_12:
@@ -237,6 +255,72 @@ class NPowerlawMGaussianCore(Sage):
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_truncated_normal_spin_x:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_X.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_X.value + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_X.value + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_X.value + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_X.value + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_X.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_X.value + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_X.value + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_X.value + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_truncated_normal_spin_y:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_Y.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y.value + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y.value + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y.value + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y.value + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y.value + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y.value + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y.value + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_truncated_normal_spin_z:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_Z.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z.value + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z.value + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z.value + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z.value + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z.value + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z.value + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -396,6 +480,21 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
 
     model_group.add_argument(
+        "--add-truncated-normal-spin-x",
+        action="store_true",
+        help="Include truncated normal spin x parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin-y",
+        action="store_true",
+        help="Include truncated normal spin y parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin-z",
+        action="store_true",
+        help="Include truncated normal spin z parameters in the model.",
+    )
+    model_group.add_argument(
         "--add-tilt",
         action="store_true",
         help="Include tilt parameters in the model.",
@@ -460,6 +559,9 @@ def f_main() -> None:
         N_g=args.n_g,
         has_beta_spin_magnitude=args.add_beta_spin,
         has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin,
+        has_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
+        has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
+        has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         has_tilt=args.add_tilt,
         has_eccentricity=args.add_truncated_normal_eccentricity,
         has_redshift=args.add_redshift,
@@ -499,6 +601,9 @@ def n_main() -> None:
         N_g=args.n_g,
         has_beta_spin_magnitude=args.add_beta_spin_magnitude,
         has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
+        has_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
+        has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
+        has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         has_tilt=args.add_tilt,
         has_eccentricity=args.add_truncated_normal_eccentricity,
         has_redshift=args.add_redshift,
