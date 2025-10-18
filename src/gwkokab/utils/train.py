@@ -1,4 +1,4 @@
-# Copyright 2023–2025 The GWKokab Authors
+# Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
 from collections.abc import Sequence
