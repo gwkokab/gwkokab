@@ -26,22 +26,6 @@ from ._ncombination import (
 )
 
 
-build_spin_distributions = create_beta_distributions
-build_tilt_distributions = create_independent_spin_orientation_gaussian_isotropic
-build_eccentricity_distributions = create_truncated_normal_distributions
-build_redshift_distributions = create_powerlaw_redshift
-build_cos_iota_distribution = create_uniform_distributions
-build_phi_12_distribution = create_uniform_distributions
-build_polarization_angle_distribution = create_uniform_distributions
-build_right_ascension_distribution = create_uniform_distributions
-build_sin_declination_distribution = create_uniform_distributions
-build_mean_anomaly_distribution = create_uniform_distributions
-build_detection_time_distribution = create_uniform_distributions
-build_phi_1_distribution = create_uniform_distributions
-build_phi_2_distribution = create_uniform_distributions
-build_phi_orb_distribution = create_uniform_distributions
-
-
 def _build_non_mass_distributions(
     N: int,
     component_type: Literal["pl", "g"],
@@ -115,24 +99,24 @@ def _build_non_mass_distributions(
     build_distributions = mass_distributions
     # fmt: off
     _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
-        (use_beta_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, build_spin_distributions),
-        (use_beta_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, build_spin_distributions),
+        (use_beta_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_beta_distributions),
+        (use_beta_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_beta_distributions),
         (use_truncated_normal_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
         (use_truncated_normal_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
         # combined tilt distribution
-        (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, build_tilt_distributions),
-        (use_phi_1, P.PHI_1.value, build_phi_1_distribution),
-        (use_phi_2, P.PHI_2.value, build_phi_2_distribution),
-        (use_phi_12, P.PHI_12.value, build_phi_12_distribution),
-        (use_eccentricity, P.ECCENTRICITY.value, build_eccentricity_distributions),
-        (use_mean_anomaly, P.MEAN_ANOMALY.value, build_mean_anomaly_distribution),
-        (use_redshift, P.REDSHIFT.value, build_redshift_distributions),
-        (use_right_ascension, P.RIGHT_ASCENSION.value, build_right_ascension_distribution),
-        (use_sin_declination, P.SIN_DECLINATION.value, build_sin_declination_distribution),
-        (use_detection_time, P.DETECTION_TIME.value, build_detection_time_distribution),
-        (use_cos_iota, P.COS_IOTA.value, build_cos_iota_distribution),
-        (use_polarization_angle, P.POLARIZATION_ANGLE.value, build_polarization_angle_distribution),
-        (use_phi_orb, P.PHI_ORB.value, build_phi_orb_distribution),
+        (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_independent_spin_orientation_gaussian_isotropic),
+        (use_phi_1, P.PHI_1.value, create_uniform_distributions),
+        (use_phi_2, P.PHI_2.value, create_uniform_distributions),
+        (use_phi_12, P.PHI_12.value, create_uniform_distributions),
+        (use_eccentricity, P.ECCENTRICITY.value, create_truncated_normal_distributions),
+        (use_mean_anomaly, P.MEAN_ANOMALY.value, create_uniform_distributions),
+        (use_redshift, P.REDSHIFT.value, create_powerlaw_redshift),
+        (use_right_ascension, P.RIGHT_ASCENSION.value, create_uniform_distributions),
+        (use_sin_declination, P.SIN_DECLINATION.value, create_uniform_distributions),
+        (use_detection_time, P.DETECTION_TIME.value, create_uniform_distributions),
+        (use_cos_iota, P.COS_IOTA.value, create_uniform_distributions),
+        (use_polarization_angle, P.POLARIZATION_ANGLE.value, create_uniform_distributions),
+        (use_phi_orb, P.PHI_ORB.value, create_uniform_distributions),
     ]
     # fmt: on
 
