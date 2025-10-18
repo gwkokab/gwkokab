@@ -8,6 +8,7 @@ from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
 from numpyro.distributions import Distribution
 
+from ...parameters import Parameters as P
 from ..constraints import any_constraint
 from ..utils import (
     ExtendedSupportTransformedDistribution,
@@ -25,27 +26,15 @@ from ._ncombination import (
 )
 
 
-build_spin_distributions = create_beta_distributions
-build_tilt_distributions = create_independent_spin_orientation_gaussian_isotropic
-build_eccentricity_distributions = create_truncated_normal_distributions
-build_redshift_distributions = create_powerlaw_redshift
-build_cos_iota_distribution = create_uniform_distributions
-build_phi_12_distribution = create_uniform_distributions
-build_polarization_angle_distribution = create_uniform_distributions
-build_right_ascension_distribution = create_uniform_distributions
-build_sin_declination_distribution = create_uniform_distributions
-build_mean_anomaly_distribution = create_uniform_distributions
-build_detection_time_distribution = create_uniform_distributions
-build_phi_1_distribution = create_uniform_distributions
-build_phi_2_distribution = create_uniform_distributions
-build_phi_orb_distribution = create_uniform_distributions
-
-
 def _build_non_mass_distributions(
     N: int,
     component_type: Literal["pl", "g"],
     mass_distributions: List[Distribution],
-    use_spin: bool,
+    use_beta_spin_magnitude: bool,
+    use_truncated_normal_spin_magnitude: bool,
+    use_truncated_normal_spin_x: bool,
+    use_truncated_normal_spin_y: bool,
+    use_truncated_normal_spin_z: bool,
     use_tilt: bool,
     use_eccentricity: bool,
     use_mean_anomaly: bool,
@@ -111,24 +100,34 @@ def _build_non_mass_distributions(
         list of distributions
     """
     build_distributions = mass_distributions
+    # fmt: off
     _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
-        (use_spin, "chi1", build_spin_distributions),
-        (use_spin, "chi2", build_spin_distributions),
+        (use_beta_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_beta_distributions),
+        (use_beta_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_beta_distributions),
+        (use_truncated_normal_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
+        (use_truncated_normal_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
+        (use_truncated_normal_spin_x, P.PRIMARY_SPIN_X.value, create_truncated_normal_distributions),
+        (use_truncated_normal_spin_x, P.SECONDARY_SPIN_X.value, create_truncated_normal_distributions),
+        (use_truncated_normal_spin_y, P.PRIMARY_SPIN_Y.value, create_truncated_normal_distributions),
+        (use_truncated_normal_spin_y, P.SECONDARY_SPIN_Y.value, create_truncated_normal_distributions),
+        (use_truncated_normal_spin_z, P.PRIMARY_SPIN_Z.value, create_truncated_normal_distributions),
+        (use_truncated_normal_spin_z, P.SECONDARY_SPIN_Z.value, create_truncated_normal_distributions),
         # combined tilt distribution
-        (use_tilt, "cos_tilt1_cos_tilt2", build_tilt_distributions),
-        (use_phi_1, "phi_1", build_phi_1_distribution),
-        (use_phi_2, "phi_2", build_phi_2_distribution),
-        (use_phi_12, "phi_12", build_phi_12_distribution),
-        (use_eccentricity, "eccentricity", build_eccentricity_distributions),
-        (use_mean_anomaly, "mean_anomaly", build_mean_anomaly_distribution),
-        (use_redshift, "redshift", build_redshift_distributions),
-        (use_right_ascension, "ra", build_right_ascension_distribution),
-        (use_sin_declination, "dec", build_sin_declination_distribution),
-        (use_detection_time, "detection_time", build_detection_time_distribution),
-        (use_cos_iota, "cos_iota", build_cos_iota_distribution),
-        (use_polarization_angle, "psi", build_polarization_angle_distribution),
-        (use_phi_orb, "phi_orb", build_phi_orb_distribution),
+        (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_independent_spin_orientation_gaussian_isotropic),
+        (use_phi_1, P.PHI_1.value, create_uniform_distributions),
+        (use_phi_2, P.PHI_2.value, create_uniform_distributions),
+        (use_phi_12, P.PHI_12.value, create_uniform_distributions),
+        (use_eccentricity, P.ECCENTRICITY.value, create_truncated_normal_distributions),
+        (use_mean_anomaly, P.MEAN_ANOMALY.value, create_uniform_distributions),
+        (use_redshift, P.REDSHIFT.value, create_powerlaw_redshift),
+        (use_right_ascension, P.RIGHT_ASCENSION.value, create_uniform_distributions),
+        (use_sin_declination, P.SIN_DECLINATION.value, create_uniform_distributions),
+        (use_detection_time, P.DETECTION_TIME.value, create_uniform_distributions),
+        (use_cos_iota, P.COS_IOTA.value, create_uniform_distributions),
+        (use_polarization_angle, P.POLARIZATION_ANGLE.value, create_uniform_distributions),
+        (use_phi_orb, P.PHI_ORB.value, create_uniform_distributions),
     ]
+    # fmt: on
 
     # Iterate over the list of tuples and build distributions
     for use, param_name, build_func in _info_collection:
@@ -149,7 +148,11 @@ def _build_non_mass_distributions(
 
 def _build_pl_component_distributions(
     N: int,
-    use_spin: bool,
+    use_beta_spin_magnitude: bool,
+    use_truncated_normal_spin_magnitude: bool,
+    use_truncated_normal_spin_x: bool,
+    use_truncated_normal_spin_y: bool,
+    use_truncated_normal_spin_z: bool,
     use_tilt: bool,
     use_eccentricity: bool,
     use_mean_anomaly: bool,
@@ -222,7 +225,11 @@ def _build_pl_component_distributions(
         N=N,
         component_type="pl",
         mass_distributions=mass_distributions,
-        use_spin=use_spin,
+        use_beta_spin_magnitude=use_beta_spin_magnitude,
+        use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
+        use_truncated_normal_spin_x=use_truncated_normal_spin_x,
+        use_truncated_normal_spin_y=use_truncated_normal_spin_y,
+        use_truncated_normal_spin_z=use_truncated_normal_spin_z,
         use_tilt=use_tilt,
         use_eccentricity=use_eccentricity,
         use_redshift=use_redshift,
@@ -248,7 +255,11 @@ def _build_pl_component_distributions(
 
 def _build_g_component_distributions(
     N: int,
-    use_spin: bool,
+    use_beta_spin_magnitude: bool,
+    use_truncated_normal_spin_magnitude: bool,
+    use_truncated_normal_spin_x: bool,
+    use_truncated_normal_spin_y: bool,
+    use_truncated_normal_spin_z: bool,
     use_tilt: bool,
     use_eccentricity: bool,
     use_mean_anomaly: bool,
@@ -335,7 +346,11 @@ def _build_g_component_distributions(
         N=N,
         component_type="g",
         mass_distributions=mass_distributions,
-        use_spin=use_spin,
+        use_beta_spin_magnitude=use_beta_spin_magnitude,
+        use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
+        use_truncated_normal_spin_x=use_truncated_normal_spin_x,
+        use_truncated_normal_spin_y=use_truncated_normal_spin_y,
+        use_truncated_normal_spin_z=use_truncated_normal_spin_z,
         use_tilt=use_tilt,
         use_eccentricity=use_eccentricity,
         use_redshift=use_redshift,
@@ -362,7 +377,11 @@ def _build_g_component_distributions(
 def NPowerlawMGaussian(
     N_pl: int,
     N_g: int,
-    use_spin: bool = False,
+    use_beta_spin_magnitude: bool = False,
+    use_truncated_normal_spin_magnitude: bool = False,
+    use_truncated_normal_spin_x: bool = False,
+    use_truncated_normal_spin_y: bool = False,
+    use_truncated_normal_spin_z: bool = False,
     use_tilt: bool = False,
     use_eccentricity: bool = False,
     use_redshift: bool = False,
@@ -502,7 +521,11 @@ def NPowerlawMGaussian(
     if N_pl > 0:
         pl_component_dist = _build_pl_component_distributions(
             N=N_pl,
-            use_spin=use_spin,
+            use_beta_spin_magnitude=use_beta_spin_magnitude,
+            use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
+            use_truncated_normal_spin_x=use_truncated_normal_spin_x,
+            use_truncated_normal_spin_y=use_truncated_normal_spin_y,
+            use_truncated_normal_spin_z=use_truncated_normal_spin_z,
             use_tilt=use_tilt,
             use_eccentricity=use_eccentricity,
             use_redshift=use_redshift,
@@ -523,7 +546,11 @@ def NPowerlawMGaussian(
     if N_g > 0:
         g_component_dist = _build_g_component_distributions(
             N=N_g,
-            use_spin=use_spin,
+            use_beta_spin_magnitude=use_beta_spin_magnitude,
+            use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
+            use_truncated_normal_spin_x=use_truncated_normal_spin_x,
+            use_truncated_normal_spin_y=use_truncated_normal_spin_y,
+            use_truncated_normal_spin_z=use_truncated_normal_spin_z,
             use_tilt=use_tilt,
             use_eccentricity=use_eccentricity,
             use_redshift=use_redshift,
