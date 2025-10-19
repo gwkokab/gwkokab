@@ -66,19 +66,38 @@ def get_selection_fn_and_poisson_mean_estimator(
         )
     elif estimator_type == "custom":
         error_if(
-            not filename.endswith(".py"),
-            msg="For custom estimator_type, filename must be a .py file containing the "
-            "custom function by the name 'custom_poisson_mean_estimator'",
+            kwargs.get("python_module_path", None) is None,
+            msg="For custom estimator_type, 'python_module_path' must be provided.",
+        )
+
+        python_module_path: str = kwargs.pop("python_module_path")
+        error_if(
+            not isinstance(python_module_path, str),
+            msg="'python_module_path' must be a string, got "
+            + str(type(python_module_path)),
+        )
+        error_if(
+            not python_module_path.endswith(".py"),
+            msg="'python_module_path' must point to a .py file, got '"
+            + python_module_path
+            + "'.",
         )
 
         import importlib.util
 
-        spec = importlib.util.spec_from_file_location("custom_module", filename)
+        spec = importlib.util.spec_from_file_location(
+            "custom_module", python_module_path
+        )  # type: ignore
         custom_module = importlib.util.module_from_spec(spec)  # type: ignore
         spec.loader.exec_module(custom_module)  # type: ignore
 
+        error_if(
+            not hasattr(custom_module, "custom_poisson_mean_estimator"),
+            msg="The custom module must have a 'custom_poisson_mean_estimator' function.",
+        )
+
         return custom_module.custom_poisson_mean_estimator(
-            key, parameters, batch_size=batch_size, **kwargs
+            key, parameters, filename, batch_size=batch_size, **kwargs
         )
 
     else:
