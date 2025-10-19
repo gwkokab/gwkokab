@@ -13,7 +13,7 @@ from jaxtyping import ArrayLike
 from numpyro._typing import DistributionT
 from numpyro.distributions import Distribution
 
-from ..models.utils import JointDistribution, ScaledMixture
+from ..models.utils import JointDistribution, LazyJointDistribution, ScaledMixture
 
 
 __all__ = ["numpyro_poisson_likelihood"]
@@ -60,6 +60,10 @@ def numpyro_poisson_likelihood(
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
 ) -> Callable[[List[Array], List[Array], List[Array]], Array]:
+    is_lazy_prior = isinstance(priors, LazyJointDistribution)
+    if is_lazy_prior:
+        dependencies = priors.dependencies
+        partial_order = priors.partial_order
     del priors
 
     def log_likelihood_fn(
@@ -67,12 +71,35 @@ def numpyro_poisson_likelihood(
         log_ref_priors_group: List[Array],
         masks_group: List[Array],
     ):
-        variables_samples = [
-            numpyro.sample(parameter_name, prior_dist)
-            for parameter_name, prior_dist in sorted(
-                variables.items(), key=lambda x: x[0]
-            )
-        ]
+        if is_lazy_prior:
+            partial_variables_samples = [
+                numpyro.sample(parameter_name, prior_dist)
+                if isinstance(prior_dist, Distribution)
+                else (parameter_name, prior_dist)
+                for parameter_name, prior_dist in sorted(
+                    variables.items(), key=lambda x: x[0]
+                )
+            ]
+            for i in partial_order:
+                kwargs = {
+                    k: partial_variables_samples[v] for k, v in dependencies[i].items()
+                }
+                parameter_name, prior_dist_fn = partial_variables_samples[i]
+                if isinstance(prior_dist_fn, jax.tree_util.Partial):
+                    prior_dist = prior_dist_fn.func(
+                        *prior_dist_fn.args, **prior_dist_fn.keywords, **kwargs
+                    )  # type: ignore
+                partial_variables_samples[i] = numpyro.sample(
+                    parameter_name, prior_dist
+                )
+            variables_samples = partial_variables_samples  # type: ignore
+        else:
+            variables_samples = [
+                numpyro.sample(parameter_name, prior_dist)
+                for parameter_name, prior_dist in sorted(
+                    variables.items(), key=lambda x: x[0]
+                )
+            ]
         mapped_params = {
             name: variables_samples[i] for name, i in variables_index.items()
         }
