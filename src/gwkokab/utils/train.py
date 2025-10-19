@@ -305,7 +305,7 @@ def train_regressor(
     opt_state = optimizer.init(eqx.filter(model, eqx.is_inexact_array))
 
     # Choose loss function
-    loss_fn: Callable[..., Array]
+    loss_fn: Callable[..., PyTree]
     if loss_type.lower() == "mse":
         loss_fn = mse_loss_fn
     elif loss_type.lower() in ("bce", "bce_logits", "bcelogits"):
@@ -380,42 +380,20 @@ def train_regressor(
 
     # Per-instance loss distribution
     Y_hat = predict(model, data_X)
-    if loss_type.lower() == "mse":
-        per_instance = jnp.square(data_Y - Y_hat).squeeze(-1)
-        ylabel = "MSE per data instance"
-    else:
-        y_all = jnp.clip(data_Y, 1e-6, 1 - 1e-6)
-        per_instance = optax.sigmoid_binary_cross_entropy(
-            logits=Y_hat, labels=y_all
-        ).squeeze(-1)
-        ylabel = "Binary Cross-Entropy (logits) per data instance"
-
+    per_instance = jnp.square(data_Y - Y_hat).squeeze(axis=-1)
     per_instance_np = np.asarray(per_instance)
     q05, q50, q95 = np.quantile(per_instance_np, [0.05, 0.5, 0.95])
     ordered = np.sort(per_instance_np)
 
+    plt.rcParams.update({"text.usetex": True})
     plt.plot(ordered, label="loss per data instance")
-    plt.axhline(q05, linestyle="--", label="5% quantile")
-    plt.axhline(q50, linestyle="--", label="50% quantile")
-    plt.axhline(q95, linestyle="--", label="95% quantile")
+    plt.axhline(q05, linestyle="--", label="5% quantile", color="green")
+    plt.axhline(q50, linestyle="--", label="50% quantile", color="orange")
+    plt.axhline(q95, linestyle="--", label="95% quantile", color="red")
     plt.yscale("log")
-    plt.xlabel("data instance")
-    plt.ylabel(ylabel)
+    plt.xlabel(r"$x_i$")
+    plt.ylabel(r"$\left(y(x_i) - \hat{y}(x_i)\right)^2$")
     plt.legend()
     plt.tight_layout()
     plt.savefig(checkpoint_path + "_total_loss.png")
-    # -------------------------------------
-    # Extra evaluation metrics for clarity
-    # -------------------------------------
-    # Compute probabilities after sigmoid
-    probs = jnn.sigmoid(Y_hat).squeeze(-1)
-    y_true = jnp.clip(data_Y.squeeze(-1), 1e-6, 1 - 1e-6)
-
-    rmse = jnp.sqrt(jnp.mean((probs - y_true) ** 2))
-    mae = jnp.mean(jnp.abs(probs - y_true))
-    r2 = 1 - jnp.sum((probs - y_true) ** 2) / jnp.sum((y_true - jnp.mean(y_true)) ** 2)
-
-    logger.info(f"Root Mean Square Error (prob): {float(rmse):.6f}")
-    logger.info(f"Mean Absolute Error      (prob): {float(mae):.6f}")
-    logger.info(f"R^2                      (prob): {float(r2):.6f}")
     plt.close("all")
