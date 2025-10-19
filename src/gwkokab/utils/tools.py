@@ -3,37 +3,11 @@
 
 
 import warnings
-from typing import Dict, Optional, Tuple, TypeVar
+from typing import Tuple
 
 import jax
 from jaxtyping import Array
 from loguru import logger
-
-
-_KT = TypeVar("_KT")
-_VT = TypeVar("_VT")
-
-
-def fetch_first_matching_value(dictionary: Dict[_KT, _VT], *keys: _KT) -> Optional[_VT]:
-    """Get the first value in the dictionary that matches one of the keys.
-
-    Parameters
-    ----------
-    dictionary : Dict[_KT, _VT]
-        The dictionary to search.
-    keys : _KT
-        The keys to search for.
-
-    Returns
-    -------
-    Optional[_VT]
-        The value of the first key that is found in the dictionary, or None if no key is
-        found.
-    """
-    for key in keys:
-        if key in dictionary:
-            return dictionary[key]
-    return None
 
 
 def error_if(cond: bool, err: type[Exception] = ValueError, msg: str = "") -> None:
