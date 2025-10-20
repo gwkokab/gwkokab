@@ -557,8 +557,8 @@ def f_main() -> None:
     NPowerlawMGaussianFSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
-        has_beta_spin_magnitude=args.add_beta_spin,
-        has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin,
+        has_beta_spin_magnitude=args.add_beta_spin_magnitude,
+        has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
         has_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
         has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
         has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
