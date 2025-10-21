@@ -368,12 +368,37 @@ def train_regressor(
     )  # type: ignore
 
     # Loss curves
-    plt.plot(loss_vals, label="loss")
-    plt.plot(val_loss_vals, label="val loss")
-    plt.yscale("log")
-    plt.xlabel("Epoch")
-    plt.ylabel("Average loss per epoch")
-    plt.legend()
+
+    # Create subplots with shared x and y axes
+
+    plt.rcParams.update({"text.usetex": True, "font.size": 18})
+    _, axes = plt.subplots(3, 1, figsize=(15, 15), dpi=300, sharex=True, sharey=True)
+
+    import glasbey
+
+    colors = glasbey.create_palette(palette_size=2)
+
+    # Plot 1: Training loss
+    axes[0].plot(loss_vals, label="loss", color=colors[0])
+    axes[0].set_yscale("log")
+    axes[0].legend()
+    axes[0].set_ylabel("Loss")
+
+    # Plot 2: Validation loss
+    axes[1].plot(val_loss_vals, label="val loss", color=colors[1])
+    axes[1].set_yscale("log")
+    axes[1].legend()
+    axes[1].set_ylabel("Validation Loss")
+
+    # Plot 3: Combined
+    axes[2].plot(loss_vals, label="loss", alpha=0.7, color=colors[0])
+    axes[2].plot(val_loss_vals, label="val loss", alpha=0.7, color=colors[1])
+    axes[2].set_yscale("log")
+    axes[2].set_xlabel("Epoch")
+    axes[2].set_ylabel("Average loss per epoch")
+    axes[2].legend()
+
+    # Adjust layout and save
     plt.tight_layout()
     plt.savefig(checkpoint_path + "_loss.png")
     plt.close("all")
@@ -385,11 +410,13 @@ def train_regressor(
     q05, q50, q95 = np.quantile(per_instance_np, [0.05, 0.5, 0.95])
     ordered = np.sort(per_instance_np)
 
-    plt.rcParams.update({"text.usetex": True})
-    plt.plot(ordered, label="loss per data instance")
-    plt.axhline(q05, linestyle="--", label="5% quantile", color="green")
-    plt.axhline(q50, linestyle="--", label="50% quantile", color="orange")
-    plt.axhline(q95, linestyle="--", label="95% quantile", color="red")
+    plt.rcParams.update({"text.usetex": True, "font.size": 16})
+    plt.figure(figsize=(10, 6), dpi=300)
+    colors = glasbey.create_palette(palette_size=4)
+    plt.plot(ordered, label="loss per data instance", color=colors[0])
+    plt.axhline(q05, linestyle="--", label="5% quantile", color=colors[1])
+    plt.axhline(q50, linestyle="--", label="50% quantile", color=colors[2])
+    plt.axhline(q95, linestyle="--", label="95% quantile", color=colors[3])
     plt.yscale("log")
     plt.xlabel(r"$x_i$")
     plt.ylabel(r"$\left(y(x_i) - \hat{y}(x_i)\right)^2$")
