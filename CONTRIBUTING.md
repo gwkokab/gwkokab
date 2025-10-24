@@ -26,11 +26,7 @@ We do all of our development using git, so basic knowledge is assumed.
 
 Follow these steps to contribute code:
 
-1. Fork the GWKokab repository by clicking the Fork button on the
-   [repository page](https://github.com/gwkokab/gwkokab). This creates a copy of the
-   GWKokab repository in your account.
-
-2. Install `uv` package manager if you don't have it already.
+1. Install `uv` package manager if you don't have it already.
 
    ```bash
    curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -38,11 +34,15 @@ Follow these steps to contribute code:
 
    See details at [uv installation guidelines](https://docs.astral.sh/uv/getting-started/installation/).
 
-3. Install `make` if you don't have it already. On Ubuntu/Debian, you can install it via:
+2. Install `make` if you don't have it already. On Ubuntu/Debian, you can install it via:
 
    ```bash
    sudo apt-get install make
    ```
+
+3. Fork the GWKokab repository by clicking the Fork button on the
+   [repository page](https://github.com/gwkokab/gwkokab). This creates a copy of the
+   GWKokab repository in your account.
 
 4. Clone your forked repository,
 
@@ -64,7 +64,7 @@ Follow these steps to contribute code:
    make install --PIP_FLAGS=--upgrade EXTRA=dev,test,docs
    ```
 
-   This allows you to modify the code and immediately test it out:
+   This allows you to modify the code and immediately test it out.
 
 6. Add the GWKokab repo as an upstream remote, so you can use it to sync your changes.
 
