@@ -26,7 +26,9 @@ We do all of our development using git, so basic knowledge is assumed.
 
 Follow these steps to contribute code:
 
-1. Fork the GWKokab repository by clicking the Fork button on the [repository page](https://github.com/gwkokab/gwkokab). This creates a copy of the GWKokab repository in your account.
+1. Fork the GWKokab repository by clicking the Fork button on the
+   [repository page](https://github.com/gwkokab/gwkokab). This creates a copy of the
+   GWKokab repository in your account.
 
 2. Install `uv` package manager if you don't have it already.
 
@@ -84,8 +86,7 @@ Follow these steps to contribute code:
    pre-commit run --all
    ```
 
-9. Make sure the tests pass by running the following command from the top of the
-   repository:
+9. Make sure the tests pass by running the following command from the top of the repository:
 
    ```bash
    pytest -n auto tests/
@@ -103,7 +104,8 @@ Follow these steps to contribute code:
    pytest -n auto tests/test_model_transformations.py -k test_bijective_transforms
    ```
 
-10. Once you are satisfied with your change, create a commit as follows ([how to write a commit message](https://cbea.ms/git-commit/)):
+0. Once you are satisfied with your change, create a commit as follows
+   ([how to write a commit message](https://cbea.ms/git-commit/)).
 
    ```bash
    git add file1.py file2.py ...
@@ -124,8 +126,9 @@ Follow these steps to contribute code:
    git push --set-upstream origin name-of-change
    ```
 
-11. Create a pull request from the GWKokab repository and send it for review. When
-   preparing your PR consult [GitHub Help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) if you need
+1. Create a pull request from the GWKokab repository and send it for review. When
+   preparing your PR consult
+   [GitHub Help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) if you need
    more information on using pull requests.
 
 ## Full GitHub test suite
