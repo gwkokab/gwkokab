@@ -277,8 +277,10 @@ def analytical_likelihood(
         fit_precision_matrix = precision_matrix(scale_tril_stack) - hessian_log_prob(
             mean_stack
         )
-        fit_mean = mean_stack + jnp.linalg.inv(fit_precision_matrix) @ grad_log_prob(
-            mean_stack
+        fit_mean = mean_stack + jnp.squeeze(
+            jnp.linalg.inv(fit_precision_matrix)
+            @ jnp.expand_dims(grad_log_prob(mean_stack), axis=-1),
+            axis=-1,
         )
         fit_scale_tril = cholesky_of_inverse(fit_precision_matrix)
 
