@@ -27,28 +27,56 @@ We do all of our development using git, so basic knowledge is assumed.
 Follow these steps to contribute code:
 
 1. Fork the GWKokab repository by clicking the Fork button on the [repository page](https://github.com/gwkokab/gwkokab). This creates a copy of the GWKokab repository in your account.
-2. Install Python=3.11 locally to run tests.
-3. `pip` installing your fork from the source. This allows you to modify the code and immediately test it out:
+
+2. Install `uv` package manager if you don't have it already.
+
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+   See details at [uv installation guidelines](https://docs.astral.sh/uv/getting-started/installation/).
+
+3. Install `make` if you don't have it already. On Ubuntu/Debian, you can install it via:
+
+   ```bash
+   sudo apt-get install make
+   ```
+
+4. Clone your forked repository,
 
    ```bash
    git clone https://github.com/YOUR_USERNAME/gwkokab
    cd gwkokab
-   pip install -e .
    ```
 
-4. Add the GWKokab repo as an upstream remote, so you can use it to sync your changes.
+5. Create a new virtual environment using `uv` with any python>=3.11,
+
+   ```bash
+   uv venv -p 3.12
+   source .venv/bin/activate
+   ```
+
+   Then install the development dependencies:
+
+   ```bash
+   make install --PIP_FLAGS=--upgrade EXTRA=dev,test,docs
+   ```
+
+   This allows you to modify the code and immediately test it out:
+
+6. Add the GWKokab repo as an upstream remote, so you can use it to sync your changes.
 
       ```bash
       git remote add upstream https://www.github.com/gwkokab/gwkokab
       ```
 
-5. Create a new branch for your changes:
+7. Create a new branch for your changes:
 
    ```bash
    git checkout -b name-of-change
    ```
 
-6. Make sure your code passes GWKokab’s lint and type checks, by running the following
+8. Make sure your code passes GWKokab’s lint and type checks, by running the following
    from the top of the repository:
 
    ```bash
@@ -56,7 +84,7 @@ Follow these steps to contribute code:
    pre-commit run --all
    ```
 
-7. Make sure the tests pass by running the following command from the top of the
+9. Make sure the tests pass by running the following command from the top of the
    repository:
 
    ```bash
@@ -75,8 +103,7 @@ Follow these steps to contribute code:
    pytest -n auto tests/test_model_transformations.py -k test_bijective_transforms
    ```
 
-8. Once you are satisfied with your change, create a commit as follows
-   ([how to write a commit message](https://cbea.ms/git-commit/)):
+10. Once you are satisfied with your change, create a commit as follows ([how to write a commit message](https://cbea.ms/git-commit/)):
 
    ```bash
    git add file1.py file2.py ...
@@ -97,7 +124,7 @@ Follow these steps to contribute code:
    git push --set-upstream origin name-of-change
    ```
 
-9. Create a pull request from the GWKokab repository and send it for review. When
+11. Create a pull request from the GWKokab repository and send it for review. When
    preparing your PR consult [GitHub Help](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/about-pull-requests) if you need
    more information on using pull requests.
 
