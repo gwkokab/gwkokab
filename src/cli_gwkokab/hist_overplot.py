@@ -3,10 +3,6 @@
 
 
 import argparse
-import os
-
-import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -120,6 +116,12 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    import os
+
+    import pandas as pd
+    from matplotlib import pyplot as plt
+
     if args.labels is None:
         labels = args.column_names
     else:

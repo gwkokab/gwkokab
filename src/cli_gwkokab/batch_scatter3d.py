@@ -3,12 +3,6 @@
 
 
 import argparse
-import glob
-import os
-
-import mplcursors
-import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -154,6 +148,13 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    import glob
+    import os
+
+    import mplcursors
+    import pandas as pd
+    from matplotlib import pyplot as plt
 
     file_list = glob.glob(args.data_regex)
 

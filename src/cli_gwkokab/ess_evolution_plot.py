@@ -3,14 +3,6 @@
 
 
 import argparse
-import os
-from glob import glob
-
-import arviz as az
-import glasbey
-import numpy as np
-from arviz.utils import _var_names, get_coords
-from matplotlib import pyplot as plt
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -114,6 +106,15 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    import os
+    from glob import glob
+
+    import arviz as az
+    import glasbey
+    import numpy as np
+    from arviz.utils import _var_names, get_coords
+    from matplotlib import pyplot as plt
 
     plt.rcParams.update({"text.usetex": args.use_latex})
     if args.font_family is not None:

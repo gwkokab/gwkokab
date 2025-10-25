@@ -5,13 +5,7 @@
 import argparse
 from typing import Any, List, Tuple
 
-import h5py
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib.axes import Axes
-from matplotlib.figure import Figure
-
-from kokab.utils.ppd import get_all_marginals
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -254,6 +248,13 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    import h5py
+    from matplotlib import pyplot as plt
+    from matplotlib.axes import Axes
+    from matplotlib.figure import Figure
+
+    from kokab.utils.ppd import get_all_marginals
 
     plt.rcParams.update({"text.usetex": args.use_latex})
     if args.font_family is not None:
