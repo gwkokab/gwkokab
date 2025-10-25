@@ -3,12 +3,6 @@
 
 
 import argparse
-import os
-
-import matplotlib.colors as mcolors
-import numpy as np
-import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -135,6 +129,13 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
+    import os
+
+    import glasbey
+    import numpy as np
+    import pandas as pd
+    from matplotlib import pyplot as plt
+
     plt.rcParams.update({"text.usetex": args.use_latex})
     if args.font_family is not None:
         plt.rcParams.update({"font.family": args.font_family})
@@ -149,16 +150,11 @@ def main() -> None:
     if not args.color:
         plt.scatter(x, y, s=args.pointer_size)
     else:
+        unique_colors = np.unique(color)
         if args.override_color:
             ALL_COLORS = args.override_color
         else:
-            ALL_COLORS = (
-                list(mcolors.TABLEAU_COLORS.values())
-                + list(mcolors.XKCD_COLORS.values())
-                + list(mcolors.CSS4_COLORS.values())
-                + list(mcolors.BASE_COLORS.values())
-            )
-        unique_colors = np.unique(color)
+            ALL_COLORS = glasbey.create_palette(palette_size=unique_colors.shape[0])
         for i, unique_color in enumerate(unique_colors):
             mask = color == unique_color
             plt.scatter(

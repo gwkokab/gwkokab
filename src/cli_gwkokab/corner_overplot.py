@@ -4,10 +4,6 @@
 
 import argparse
 
-import corner
-import pandas as pd
-from matplotlib import pyplot as plt
-
 
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -144,18 +140,18 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
+    import corner
+    import glasbey
+    import pandas as pd
+    from matplotlib import pyplot as plt
+
     plt.rcParams.update({"text.usetex": args.use_latex})
     if args.font_family is not None:
         plt.rcParams.update({"font.family": args.font_family})
 
     N = len(args.data)
     if args.colors is None:
-        colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-        assert len(colors) >= N, (
-            f"We could only get {len(colors)} default colors from matplotlib, but {N} "
-            "data files were provided. Consider providing a list of colors."
-        )
-        colors = colors[:N]
+        colors = glasbey.create_palette(palette_size=N)
     else:
         assert len(args.colors) == N, (
             "Number of colors must match number of data files."

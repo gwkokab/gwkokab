@@ -3,11 +3,6 @@
 
 
 import argparse
-import os
-
-import corner
-import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -136,6 +131,12 @@ def main() -> None:
     """Main function of the script."""
     parser = make_parser()
     args = parser.parse_args()
+
+    import os
+
+    import corner
+    import pandas as pd
+    from matplotlib import pyplot as plt
 
     plt.rcParams.update({"text.usetex": args.use_latex})
     if args.font_family is not None:

@@ -3,11 +3,6 @@
 
 
 import argparse
-import glob
-import os
-
-import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -121,11 +116,26 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
+    import glob
+    import os
+
+    import glasbey
+    import pandas as pd
+    from matplotlib import pyplot as plt
+
     plt.rcParams.update({"text.usetex": args.use_latex})
     if args.font_family is not None:
         plt.rcParams.update({"font.family": args.font_family})
 
     file_list = glob.glob(args.data_regex)
+
+    plt.rcParams.update(
+        {
+            "axes.prop_cycle": plt.cycler(
+                color=glasbey.create_palette(palette_size=len(file_list))
+            )
+        }
+    )
 
     for file_path in file_list:
         data = pd.read_csv(file_path, delimiter=" ")

@@ -3,12 +3,6 @@
 
 
 import argparse
-import glob
-import os
-
-import mplcursors
-import pandas as pd
-from matplotlib import pyplot as plt
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -155,9 +149,24 @@ def main() -> None:
     parser = make_parser()
     args = parser.parse_args()
 
+    import glob
+    import os
+
+    import glasbey
+    import mplcursors
+    import pandas as pd
+    from matplotlib import pyplot as plt
+
     file_list = glob.glob(args.data_regex)
 
-    plt.rcParams.update({"text.usetex": args.use_latex})
+    plt.rcParams.update(
+        {
+            "text.usetex": args.use_latex,
+            "axes.prop_cycle": plt.cycler(
+                color=glasbey.create_palette(palette_size=len(file_list))
+            ),
+        }
+    )
     if args.font_family is not None:
         plt.rcParams.update({"font.family": args.font_family})
 
