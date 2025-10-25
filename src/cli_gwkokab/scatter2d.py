@@ -131,7 +131,7 @@ def main() -> None:
 
     import os
 
-    import matplotlib.colors as mcolors
+    import glasbey
     import numpy as np
     import pandas as pd
     from matplotlib import pyplot as plt
@@ -150,16 +150,11 @@ def main() -> None:
     if not args.color:
         plt.scatter(x, y, s=args.pointer_size)
     else:
+        unique_colors = np.unique(color)
         if args.override_color:
             ALL_COLORS = args.override_color
         else:
-            ALL_COLORS = (
-                list(mcolors.TABLEAU_COLORS.values())
-                + list(mcolors.XKCD_COLORS.values())
-                + list(mcolors.CSS4_COLORS.values())
-                + list(mcolors.BASE_COLORS.values())
-            )
-        unique_colors = np.unique(color)
+            ALL_COLORS = glasbey.create_palette(palette_size=unique_colors.shape[0])
         for i, unique_color in enumerate(unique_colors):
             mask = color == unique_color
             plt.scatter(

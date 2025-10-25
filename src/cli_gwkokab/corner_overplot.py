@@ -141,6 +141,7 @@ def main() -> None:
     args = parser.parse_args()
 
     import corner
+    import glasbey
     import pandas as pd
     from matplotlib import pyplot as plt
 
@@ -150,12 +151,7 @@ def main() -> None:
 
     N = len(args.data)
     if args.colors is None:
-        colors = plt.rcParams["axes.prop_cycle"].by_key()["color"]
-        assert len(colors) >= N, (
-            f"We could only get {len(colors)} default colors from matplotlib, but {N} "
-            "data files were provided. Consider providing a list of colors."
-        )
-        colors = colors[:N]
+        colors = glasbey.create_palette(palette_size=N)
     else:
         assert len(args.colors) == N, (
             "Number of colors must match number of data files."

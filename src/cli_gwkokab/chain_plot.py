@@ -111,6 +111,7 @@ def main() -> None:
     import glob
     import os
 
+    import glasbey
     import numpy as np
     import pandas as pd
     from matplotlib import pyplot as plt
@@ -120,6 +121,13 @@ def main() -> None:
         plt.rcParams.update({"font.family": args.font_family})
 
     files = glob.glob(args.data_regex)
+    plt.rcParams.update(
+        {
+            "axes.prop_cycle": plt.cycler(
+                color=glasbey.create_palette(palette_size=len(files))
+            )
+        }
+    )
 
     n_dim = pd.read_csv(files[0], delimiter=" ", skiprows=1).to_numpy().shape[1]
 
