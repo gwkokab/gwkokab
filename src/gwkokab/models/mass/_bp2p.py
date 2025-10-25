@@ -6,7 +6,7 @@ from typing import Optional
 
 import jax
 from jax import lax, numpy as jnp
-from jax.scipy.stats import norm
+from jax.scipy.stats import truncnorm
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
@@ -53,19 +53,6 @@ def _broken_powerlaw_prob(
         + doubly_truncated_power_law_log_norm_constant(-alpha2, mbreak, mmax),
     )
     return jnp.exp(log_unnormalized - log_norm)
-
-
-@jax.jit
-def _left_trunc_norm_prob(
-    x: Array,
-    loc: Array,
-    scale: Array,
-    low: Array,
-) -> Array:
-    """Calculate the probability of a left truncated normal distribution."""
-    unnormalized_prob = norm.pdf(x, loc=loc, scale=scale)
-    norm_constant = 1 - norm.cdf(low, loc=loc, scale=scale)
-    return unnormalized_prob / norm_constant
 
 
 class BrokenPowerlawTwoPeak(Distribution):
@@ -266,8 +253,20 @@ class BrokenPowerlawTwoPeak(Distribution):
         broken_powerlaw_prob = _broken_powerlaw_prob(
             m1, self.alpha1, self.alpha2, self.m1min, self.mmax, self.mbreak
         )
-        prob_norm_0 = _left_trunc_norm_prob(m1, self.loc1, self.scale1, self.m1min)
-        prob_norm_1 = _left_trunc_norm_prob(m1, self.loc2, self.scale2, self.m1min)
+        prob_norm_0 = truncnorm.pdf(
+            m1,
+            a=(self.m1min - self.loc1) / self.scale1,
+            b=(self.mmax - self.loc1) / self.scale1,
+            loc=self.loc1,
+            scale=self.scale1,
+        )
+        prob_norm_1 = truncnorm.pdf(
+            m1,
+            a=(self.m1min - self.loc2) / self.scale2,
+            b=(self.mmax - self.loc2) / self.scale2,
+            loc=self.loc2,
+            scale=self.scale2,
+        )
         lambda_2 = 1.0 - self.lambda_0 - self.lambda_1
 
         log_prob_m1 = (
