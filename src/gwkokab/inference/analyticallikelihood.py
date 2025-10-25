@@ -164,17 +164,41 @@ def mvn_samples(
 
 
 @jax.jit
-def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
+def mvn_log_prob_scaled(loc: Array, scale_tril: Array, value: Array) -> Array:
+    # removing the constant term -0.5 * D * log(2pi), where D is the dimension,
+    # because it is being cancelled out in the importance sampling weights
     M = _batch_mahalanobis(scale_tril, value - loc)
-    half_log_det = tri_logabsdet(scale_tril)
-    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * jnp.log(2 * jnp.pi)
-    return -0.5 * M - normalize_term
+    return -0.5 * M - tri_logabsdet(scale_tril)
+
+
+@jax.jit
+def covariance_matrix(scale_tril: Array) -> Array:
+    return jnp.matmul(scale_tril, jnp.swapaxes(scale_tril, -1, -2))
 
 
 @jax.jit
 def precision_matrix(scale_tril: Array) -> Array:
     identity = jnp.broadcast_to(jnp.eye(scale_tril.shape[-1]), scale_tril.shape)
     return cho_solve((scale_tril, True), identity)
+
+
+@jax.jit
+def is_positive_semi_definite(matrix: Array) -> Array:
+    """Check if a matrix is positive semi-definite, by verifying that all its
+    eigenvalues are non-negative.
+
+    Parameters
+    ----------
+    matrix : Array
+        The matrix of shape (..., N, N) to be checked.
+
+    Returns
+    -------
+    Array
+        Boolean array of shape (...) indicating whether each matrix is positive
+        semi-definite.
+    """
+    return jnp.all(jnp.linalg.eigvals(matrix) >= 0, axis=-1)
 
 
 def analytical_likelihood(
@@ -277,14 +301,26 @@ def analytical_likelihood(
         fit_precision_matrix = precision_matrix(scale_tril_stack) - hessian_log_prob(
             mean_stack
         )
+        fit_covariance_matrix = jnp.linalg.inv(fit_precision_matrix)
+
+        is_psd = jnp.expand_dims(
+            is_positive_semi_definite(fit_covariance_matrix), axis=(-2, -1)
+        )
+        fit_covariance_matrix = jnp.where(
+            is_psd, fit_covariance_matrix, covariance_matrix(scale_tril_stack)
+        )
+
         fit_mean = mean_stack + jnp.squeeze(
-            jnp.linalg.inv(fit_precision_matrix)
-            @ jnp.expand_dims(grad_log_prob(mean_stack), axis=-1),
+            fit_covariance_matrix @ jnp.expand_dims(grad_log_prob(mean_stack), axis=-1),
             axis=-1,
         )
-        fit_scale_tril = cholesky_of_inverse(fit_precision_matrix)
+        fit_scale_tril = jnp.where(
+            is_psd,
+            cholesky_of_inverse(fit_precision_matrix),
+            scale_tril_stack,
+        )
 
-        mvn_log_prob_while_body = jax.vmap(mvn_log_prob, in_axes=(None, None, 0))
+        mvn_log_prob_while_body = jax.vmap(mvn_log_prob_scaled, in_axes=(None, None, 0))
 
         def scan_fn(
             carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]
