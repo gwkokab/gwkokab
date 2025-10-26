@@ -571,10 +571,10 @@ def main() -> None:
             [
                 ("cos_tilt_zeta_g", N_g),
                 ("cos_tilt_zeta_pl", N_pl),
-                ("cos_tilt1_scale_g", N_g),
-                ("cos_tilt1_scale_pl", N_pl),
-                ("cos_tilt2_scale_g", N_g),
-                ("cos_tilt2_scale_pl", N_pl),
+                (P.COS_TILT_1.value + "_scale_g", N_g),
+                (P.COS_TILT_1.value + "_scale_pl", N_pl),
+                (P.COS_TILT_2.value + "_scale_g", N_g),
+                (P.COS_TILT_2.value + "_scale_pl", N_pl),
             ]
         )
 
@@ -719,9 +719,9 @@ def main() -> None:
         def mean_anomaly_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value["mean_anomaly_scale"],
-                low=err_params_value.get("mean_anomaly_low", 0.0),
-                high=err_params_value.get("mean_anomaly_high", 2.0 * jnp.pi),
+                scale=err_params_value[P.MEAN_ANOMALY.value + "_scale"],
+                low=err_params_value.get(P.MEAN_ANOMALY.value + "_low", 0.0),
+                high=err_params_value.get(P.MEAN_ANOMALY.value + "_high", 2.0 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
             err_x = jnp.mod(err_x, 2.0 * jnp.pi)
             return err_x
