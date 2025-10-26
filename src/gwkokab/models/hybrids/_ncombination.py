@@ -222,7 +222,7 @@ def create_truncated_normal_distributions(
 
 def create_independent_spin_orientation_gaussian_isotropic(
     N: int,
-    parameter_name: Literal["cos_tilt1", "cos_tilt2"],
+    parameter_name: Literal["cos_tilt_1", "cos_tilt_2"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
@@ -234,7 +234,7 @@ def create_independent_spin_orientation_gaussian_isotropic(
     ----------
     N : int
         Number of components
-    parameter_name : Literal[&quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;]
+    parameter_name : Literal[&quot;cos_tilt_1&quot;, &quot;cos_tilt_2&quot;]
         name of the parameter to create distributions for
     component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
         type of component, either "pl" or "g"
@@ -255,8 +255,8 @@ def create_independent_spin_orientation_gaussian_isotropic(
     """
     dist_collection = []
     zeta_name = f"cos_tilt_zeta_{component_type}"
-    scale1_name = f"cos_tilt1_scale_{component_type}"
-    scale2_name = f"cos_tilt2_scale_{component_type}"
+    scale1_name = f"cos_tilt_1_scale_{component_type}"
+    scale2_name = f"cos_tilt_2_scale_{component_type}"
 
     for i in range(N):
         zeta = _fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
