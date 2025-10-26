@@ -1,1 +1,1 @@
-.[doc, dev, test]
+.[cpu, doc, dev, test]
