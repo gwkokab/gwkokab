@@ -303,19 +303,28 @@ def analytical_likelihood(
         )
         fit_covariance_matrix = jnp.linalg.inv(fit_precision_matrix)
 
-        is_psd = jnp.expand_dims(
-            is_positive_semi_definite(fit_covariance_matrix), axis=(-2, -1)
-        )
-        fit_covariance_matrix = jnp.where(
-            is_psd, fit_covariance_matrix, covariance_matrix(scale_tril_stack)
+        is_psd = is_positive_semi_definite(fit_covariance_matrix)
+
+        safe_fit_covariance_matrix = jnp.where(
+            is_psd[..., jnp.newaxis, jnp.newaxis],
+            fit_covariance_matrix,
+            jnp.broadcast_to(
+                jnp.eye(scale_tril_stack.shape[-1]),
+                scale_tril_stack.shape,
+            ),
         )
 
-        fit_mean = mean_stack + jnp.squeeze(
-            fit_covariance_matrix @ jnp.expand_dims(grad_log_prob(mean_stack), axis=-1),
-            axis=-1,
+        fit_mean = mean_stack + jnp.where(
+            is_psd[..., jnp.newaxis],
+            jnp.squeeze(
+                safe_fit_covariance_matrix
+                @ jnp.expand_dims(grad_log_prob(mean_stack), axis=-1),
+                axis=-1,
+            ),
+            jnp.zeros_like(mean_stack),
         )
         fit_scale_tril = jnp.where(
-            is_psd,
+            is_psd[..., jnp.newaxis, jnp.newaxis],
             cholesky_of_inverse(fit_precision_matrix),
             scale_tril_stack,
         )
