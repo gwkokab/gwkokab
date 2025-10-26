@@ -23,7 +23,7 @@ python:
       path: .
       extra_requirements:
         - dev
-        - docs
+        - doc
         - test
 
 formats: []

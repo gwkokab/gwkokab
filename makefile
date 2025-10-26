@@ -42,6 +42,6 @@ cache_clean: uninstall
 	$(PIP) cache purge
 	$(UV) cache clean
 
-docs: install
+doc: install
 	cd docs && make html
 	cd ..
