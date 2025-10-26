@@ -22,8 +22,9 @@ python:
     - method: pip
       path: .
       extra_requirements:
+        - cpu
         - dev
-        - docs
+        - doc
         - test
 
 formats: []
