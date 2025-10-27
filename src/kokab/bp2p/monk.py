@@ -50,8 +50,6 @@ class BrokenPowerlawTwoPeakFullMonk(Monk):
             check_leaks=check_leaks,
             analysis_name="bp2pfull",
             n_samples=n_samples,
-            n_vi_steps=n_vi_steps,
-            learning_rate=learning_rate,
             minimum_mc_error=minimum_mc_error,
             n_checkpoints=n_checkpoints,
             n_max_steps=n_max_steps,
@@ -142,6 +140,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = model_arg_parser(parser)
     parser = monk_arg_parser(parser)
 
     args = parser.parse_args()

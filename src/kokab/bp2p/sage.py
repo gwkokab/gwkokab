@@ -24,6 +24,7 @@ class BrokenPowerlawTwoPeakFullCore(Sage):
         self,
         has_spin: bool,
         has_tilt: bool,
+        has_eccentricity: bool,
         has_redshift: bool,
         likelihood_fn: Callable[
             [
@@ -52,6 +53,7 @@ class BrokenPowerlawTwoPeakFullCore(Sage):
     ) -> None:
         self.has_spin = has_spin
         self.has_tilt = has_tilt
+        self.has_eccentricity = has_eccentricity
         self.has_redshift = has_redshift
 
         super().__init__(
@@ -77,6 +79,7 @@ class BrokenPowerlawTwoPeakFullCore(Sage):
         return {
             "use_spin": self.has_spin,
             "use_tilt": self.has_tilt,
+            "use_eccentricity": self.has_eccentricity,
             "use_redshift": self.has_redshift,
         }
 
@@ -88,6 +91,8 @@ class BrokenPowerlawTwoPeakFullCore(Sage):
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.has_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
+        if self.has_eccentricity:
+            names.append(P.ECCENTRICITY.value)
         if self.has_redshift:
             names.append(P.REDSHIFT.value)
         return names
@@ -146,6 +151,11 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include tilt parameters in the model.",
     )
     model_group.add_argument(
+        "--add-eccentricity",
+        action="store_true",
+        help="Include eccentricity parameter in the model",
+    )
+    model_group.add_argument(
         "--add-redshift",
         action="store_true",
         help="Include redshift parameter in the model",
@@ -168,6 +178,7 @@ def f_main() -> None:
     BrokenPowerlawTwoPeakFullFSage(
         has_spin=args.add_spin,
         has_tilt=args.add_tilt,
+        has_eccentricity=args.add_eccentricity,
         has_redshift=args.add_redshift,
         likelihood_fn=poisson_likelihood,
         posterior_regex=args.posterior_regex,
@@ -197,6 +208,7 @@ def n_main() -> None:
     BrokenPowerlawTwoPeakFullNSage(
         has_spin=args.add_spin,
         has_tilt=args.add_tilt,
+        has_eccentricity=args.add_eccentricity,
         has_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
         posterior_regex=args.posterior_regex,
