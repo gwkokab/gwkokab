@@ -169,7 +169,6 @@ def main() -> None:
     plt.title(args.title)
     plt.xscale(args.x_scale)
     plt.yscale(args.y_scale)
-    plt.legend()
     plt.tight_layout()
     # Determine output file type and save accordingly
     output_ext = os.path.splitext(args.output.name)[1].lower()
