@@ -124,6 +124,9 @@ class BrokenPowerlawTwoPeakFullCore(Sage):
         if self.has_tilt:
             model_parameters.extend(["cos_tilt_zeta", "cos_tilt_loc", "cos_tilt_scale"])
 
+        if self.has_eccentricity:
+            model_parameters.append("eccentricity_scale")
+
         if self.has_redshift:
             model_parameters.extend(["kappa", "z_max"])
 

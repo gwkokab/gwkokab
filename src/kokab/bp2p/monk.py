@@ -24,8 +24,6 @@ class BrokenPowerlawTwoPeakFullMonk(Monk):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        n_vi_steps: int,
-        learning_rate: float,
         minimum_mc_error: float,
         n_checkpoints: int,
         n_max_steps: int,
@@ -60,6 +58,7 @@ class BrokenPowerlawTwoPeakFullMonk(Monk):
         return {
             "use_spin": self.has_spin,
             "use_tilt": self.has_tilt,
+            "use_eccentricity": self.has_eccentricity,
             "use_redshift": self.has_redshift,
         }
 
@@ -158,8 +157,6 @@ def main() -> None:
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         n_samples=args.n_samples,
-        n_vi_steps=args.n_vi_steps,
-        learning_rate=args.learning_rate,
         minimum_mc_error=args.minimum_mc_error,
         n_checkpoints=args.n_checkpoints,
         n_max_steps=args.n_max_steps,
