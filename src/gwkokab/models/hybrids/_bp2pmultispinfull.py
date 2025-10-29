@@ -390,8 +390,6 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
 
 
 def BrokenPowerlawTwoPeakMultiSpinFull(
-    use_redshift: bool = False,
-    use_tilt: bool = False,
     use_eccentricity: bool = False,
     validate_args: Optional[bool] = None,
     **params: Array,
@@ -429,15 +427,14 @@ def BrokenPowerlawTwoPeakMultiSpinFull(
 
     component_distributions = [smoothing_model]
 
-    if use_tilt:
-        tilt_dist = MinimumTiltModel(
-            zeta=params["cos_tilt_zeta"],
-            loc=params["cos_tilt_loc"],
-            scale=params["cos_tilt_scale"],
-            minimum=params.get("cos_tilt_minimum", -1.0),
-            validate_args=validate_args,
-        )
-        component_distributions.append(tilt_dist)
+    tilt_dist = MinimumTiltModel(
+        zeta=params["cos_tilt_zeta"],
+        loc=params["cos_tilt_loc"],
+        scale=params["cos_tilt_scale"],
+        minimum=params.get("cos_tilt_minimum", -1.0),
+        validate_args=validate_args,
+    )
+    component_distributions.append(tilt_dist)
 
     if use_eccentricity:
         ecc_dist = HalfNormal(
@@ -445,13 +442,10 @@ def BrokenPowerlawTwoPeakMultiSpinFull(
         )
         component_distributions.append(ecc_dist)
 
-    if use_redshift:
-        z_max = params["z_max"]
-        kappa = params["kappa"]
-        powerlaw_z = PowerlawRedshift(
-            z_max=z_max, kappa=kappa, validate_args=validate_args
-        )
-        component_distributions.append(powerlaw_z)
+    z_max = params["z_max"]
+    kappa = params["kappa"]
+    powerlaw_z = PowerlawRedshift(z_max=z_max, kappa=kappa, validate_args=validate_args)
+    component_distributions.append(powerlaw_z)
 
     if len(component_distributions) > 1:
         component_distributions = [
