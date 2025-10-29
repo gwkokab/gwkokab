@@ -20,6 +20,7 @@ from ..utils.tools import batch_and_remainder, error_if
 
 
 _PARAM_MAPPING = {
+    P.ECCENTRICITY.value: P.ECCENTRICITY.value,
     P.PRIMARY_MASS_SOURCE.value: "mass1_source",
     P.PRIMARY_SPIN_X.value: "spin1x",
     P.PRIMARY_SPIN_Y.value: "spin1y",
