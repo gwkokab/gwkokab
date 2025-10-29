@@ -215,8 +215,8 @@ def main() -> None:
         legend_handles,
         args.data_labels,
         loc="upper right",
-        # fontsize=15,
+        frameon=False,
     )
-
+    plt.tight_layout()
     plt.savefig(args.output, bbox_inches="tight")
     plt.close("all")
