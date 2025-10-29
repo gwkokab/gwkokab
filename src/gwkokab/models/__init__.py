@@ -14,6 +14,8 @@ from . import (
 )
 from .hybrids import (
     BrokenPowerlawTwoPeakFull as BrokenPowerlawTwoPeakFull,
+    BrokenPowerlawTwoPeakMultiSpin as BrokenPowerlawTwoPeakMultiSpin,
+    BrokenPowerlawTwoPeakMultiSpinFull as BrokenPowerlawTwoPeakMultiSpinFull,
     NPowerlawMGaussian as NPowerlawMGaussian,
     PowerlawPeak as PowerlawPeak,
 )
