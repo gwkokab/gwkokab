@@ -78,9 +78,8 @@ def _run_mcmc(
 ) -> az.InferenceData:
     n_devices = jax.device_count()
     if (
-        n_devices > 1
-        and (chain_method := mcmc_kwargs.pop("chain_method")) != "parallel"
-    ):
+        chain_method := mcmc_kwargs.pop("chain_method")
+    ) != "parallel" and n_devices > 1:
         warn_if(
             True,
             msg=f"Multiple devices detected ({n_devices}), but chain_method is set to "
