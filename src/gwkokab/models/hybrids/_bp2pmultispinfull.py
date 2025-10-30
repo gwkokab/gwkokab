@@ -116,16 +116,20 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         "mmax",
         "scale1",
         "scale2",
-        "loc_a1_bpl",
+        "loc_a1_bpl1",
+        "loc_a1_bpl2",
         "loc_a1_n1",
         "loc_a1_n2",
-        "loc_a2_bpl",
+        "loc_a2_bpl1",
+        "loc_a2_bpl2",
         "loc_a2_n1",
         "loc_a2_n2",
-        "scale_a1_bpl",
+        "scale_a1_bpl1",
+        "scale_a1_bpl2",
         "scale_a1_n1",
         "scale_a1_n2",
-        "scale_a2_bpl",
+        "scale_a2_bpl1",
+        "scale_a2_bpl2",
         "scale_a2_n1",
         "scale_a2_n2",
     )
@@ -147,16 +151,20 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         m2min: ArrayLike,
         mmax: ArrayLike,
         mbreak: ArrayLike,
-        loc_a1_bpl: ArrayLike,
+        loc_a1_bpl1: ArrayLike,
+        loc_a1_bpl2: ArrayLike,
         loc_a1_n1: ArrayLike,
         loc_a1_n2: ArrayLike,
-        loc_a2_bpl: ArrayLike,
+        loc_a2_bpl1: ArrayLike,
+        loc_a2_bpl2: ArrayLike,
         loc_a2_n1: ArrayLike,
         loc_a2_n2: ArrayLike,
-        scale_a1_bpl: ArrayLike,
+        scale_a1_bpl1: ArrayLike,
+        scale_a1_bpl2: ArrayLike,
         scale_a1_n1: ArrayLike,
         scale_a1_n2: ArrayLike,
-        scale_a2_bpl: ArrayLike,
+        scale_a2_bpl1: ArrayLike,
+        scale_a2_bpl2: ArrayLike,
         scale_a2_n1: ArrayLike,
         scale_a2_n2: ArrayLike,
         validate_args: Optional[bool] = None,
@@ -177,16 +185,20 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             self.m2min,
             self.mmax,
             self.mbreak,
-            self.loc_a1_bpl,
+            self.loc_a1_bpl1,
+            self.loc_a1_bpl2,
             self.loc_a1_n1,
             self.loc_a1_n2,
-            self.loc_a2_bpl,
+            self.loc_a2_bpl1,
+            self.loc_a2_bpl2,
             self.loc_a2_n1,
             self.loc_a2_n2,
-            self.scale_a1_bpl,
+            self.scale_a1_bpl1,
+            self.scale_a1_bpl2,
             self.scale_a1_n1,
             self.scale_a1_n2,
-            self.scale_a2_bpl,
+            self.scale_a2_bpl1,
+            self.scale_a2_bpl2,
             self.scale_a2_n1,
             self.scale_a2_n2,
         ) = promote_shapes(
@@ -205,16 +217,20 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             m2min,
             mmax,
             mbreak,
-            loc_a1_bpl,
+            loc_a1_bpl1,
+            loc_a1_bpl2,
             loc_a1_n1,
             loc_a1_n2,
-            loc_a2_bpl,
+            loc_a2_bpl1,
+            loc_a2_bpl2,
             loc_a2_n1,
             loc_a2_n2,
-            scale_a1_bpl,
+            scale_a1_bpl1,
+            scale_a1_bpl2,
             scale_a1_n1,
             scale_a1_n2,
-            scale_a2_bpl,
+            scale_a2_bpl1,
+            scale_a2_bpl2,
             scale_a2_n1,
             scale_a2_n2,
         )
@@ -234,16 +250,20 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             jnp.shape(m2min),
             jnp.shape(mmax),
             jnp.shape(mbreak),
-            jnp.shape(loc_a1_bpl),
+            jnp.shape(loc_a1_bpl1),
+            jnp.shape(loc_a1_bpl2),
             jnp.shape(loc_a1_n1),
             jnp.shape(loc_a1_n2),
-            jnp.shape(loc_a2_bpl),
+            jnp.shape(loc_a2_bpl1),
+            jnp.shape(loc_a2_bpl2),
             jnp.shape(loc_a2_n1),
             jnp.shape(loc_a2_n2),
-            jnp.shape(scale_a1_bpl),
+            jnp.shape(scale_a1_bpl1),
+            jnp.shape(scale_a1_bpl2),
             jnp.shape(scale_a1_n1),
             jnp.shape(scale_a1_n2),
-            jnp.shape(scale_a2_bpl),
+            jnp.shape(scale_a2_bpl1),
+            jnp.shape(scale_a2_bpl2),
             jnp.shape(scale_a2_n1),
             jnp.shape(scale_a2_n2),
         )
@@ -284,8 +304,24 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
     def _prob_m1_unnorm_component(self, m1: Array) -> Array:
         safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
         smoothing_m1 = jnp.exp(log_planck_taper_window((m1 - self.m1min) / safe_delta))
-        broken_powerlaw_prob = _broken_powerlaw_prob(
-            m1, self.alpha1, self.alpha2, self.m1min, self.mmax, self.mbreak
+        log_mbreak = jnp.log(self.mbreak)
+        norm = jnp.exp(
+            jnp.logaddexp(
+                self.alpha1 * log_mbreak
+                + doubly_truncated_power_law_log_norm_constant(
+                    -self.alpha1, self.m1min, self.mbreak
+                ),
+                self.alpha2 * log_mbreak
+                + doubly_truncated_power_law_log_norm_constant(
+                    -self.alpha2, self.mbreak, self.mmax
+                ),
+            )
+        )
+        prob_bpl_1 = jnp.where(
+            m1 < self.mbreak, jnp.power(m1 / self.mbreak, -self.alpha1) / norm, 0.0
+        )
+        prob_bpl_2 = jnp.where(
+            m1 < self.mbreak, 0.0, jnp.power(m1 / self.mbreak, -self.alpha2) / norm
         )
         prob_norm_0 = truncnorm.pdf(
             m1,
@@ -305,7 +341,8 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
 
         log_prob_m1_component = jnp.asarray(
             [
-                self.lambda_0 * broken_powerlaw_prob * smoothing_m1,
+                self.lambda_0 * prob_bpl_1 * smoothing_m1,
+                self.lambda_0 * prob_bpl_2 * smoothing_m1,
                 self.lambda_1 * prob_norm_0 * smoothing_m1,
                 lambda_2 * prob_norm_1 * smoothing_m1,
             ]
@@ -323,12 +360,19 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         )
 
     def _prob_a_1_components(self, a_1: ArrayLike) -> ArrayLike:
-        comp_bpl = truncnorm.pdf(
+        comp_bpl1 = truncnorm.pdf(
             a_1,
-            a=(0.0 - self.loc_a1_bpl) / self.scale_a1_bpl,
-            b=(1.0 - self.loc_a1_bpl) / self.scale_a1_bpl,
-            loc=self.loc_a1_bpl,
-            scale=self.scale_a1_bpl,
+            a=(0.0 - self.loc_a1_bpl1) / self.scale_a1_bpl1,
+            b=(1.0 - self.loc_a1_bpl1) / self.scale_a1_bpl1,
+            loc=self.loc_a1_bpl1,
+            scale=self.scale_a1_bpl1,
+        )
+        comp_bpl2 = truncnorm.pdf(
+            a_1,
+            a=(0.0 - self.loc_a1_bpl2) / self.scale_a1_bpl2,
+            b=(1.0 - self.loc_a1_bpl2) / self.scale_a1_bpl2,
+            loc=self.loc_a1_bpl2,
+            scale=self.scale_a1_bpl2,
         )
         comp_n1 = truncnorm.pdf(
             a_1,
@@ -344,15 +388,22 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             loc=self.loc_a1_n2,
             scale=self.scale_a1_n2,
         )
-        return jnp.asarray([comp_bpl, comp_n1, comp_n2])
+        return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
 
     def _prob_a_2_components(self, a_2: ArrayLike) -> ArrayLike:
-        comp_bpl = truncnorm.pdf(
+        comp_bpl1 = truncnorm.pdf(
             a_2,
-            a=(0.0 - self.loc_a2_bpl) / self.scale_a2_bpl,
-            b=(1.0 - self.loc_a2_bpl) / self.scale_a2_bpl,
-            loc=self.loc_a2_bpl,
-            scale=self.scale_a2_bpl,
+            a=(0.0 - self.loc_a2_bpl1) / self.scale_a2_bpl1,
+            b=(1.0 - self.loc_a2_bpl1) / self.scale_a2_bpl1,
+            loc=self.loc_a2_bpl1,
+            scale=self.scale_a2_bpl1,
+        )
+        comp_bpl2 = truncnorm.pdf(
+            a_2,
+            a=(0.0 - self.loc_a2_bpl2) / self.scale_a2_bpl2,
+            b=(1.0 - self.loc_a2_bpl2) / self.scale_a2_bpl2,
+            loc=self.loc_a2_bpl2,
+            scale=self.scale_a2_bpl2,
         )
         comp_n1 = truncnorm.pdf(
             a_2,
@@ -368,7 +419,7 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             loc=self.loc_a2_n2,
             scale=self.scale_a2_n2,
         )
-        return jnp.asarray([comp_bpl, comp_n1, comp_n2])
+        return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
 
     @validate_sample
     def log_prob(self, value: Array) -> ArrayLike:
@@ -410,16 +461,20 @@ def BrokenPowerlawTwoPeakMultiSpinFull(
         m2min=params["m2min"],
         mmax=params["mmax"],
         mbreak=params["mbreak"],
-        loc_a1_bpl=params["loc_a1_bpl"],
+        loc_a1_bpl1=params["loc_a1_bpl1"],
+        loc_a1_bpl2=params["loc_a1_bpl2"],
         loc_a1_n1=params["loc_a1_n1"],
         loc_a1_n2=params["loc_a1_n2"],
-        loc_a2_bpl=params["loc_a2_bpl"],
+        loc_a2_bpl1=params["loc_a2_bpl1"],
+        loc_a2_bpl2=params["loc_a2_bpl2"],
         loc_a2_n1=params["loc_a2_n1"],
         loc_a2_n2=params["loc_a2_n2"],
-        scale_a1_bpl=params["scale_a1_bpl"],
+        scale_a1_bpl1=params["scale_a1_bpl1"],
+        scale_a1_bpl2=params["scale_a1_bpl2"],
         scale_a1_n1=params["scale_a1_n1"],
         scale_a1_n2=params["scale_a1_n2"],
-        scale_a2_bpl=params["scale_a2_bpl"],
+        scale_a2_bpl1=params["scale_a2_bpl1"],
+        scale_a2_bpl2=params["scale_a2_bpl2"],
         scale_a2_n1=params["scale_a2_n1"],
         scale_a2_n2=params["scale_a2_n2"],
         validate_args=validate_args,
