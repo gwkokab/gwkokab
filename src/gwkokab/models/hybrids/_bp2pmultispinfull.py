@@ -354,13 +354,12 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
 
         return log_prob_m1_component
 
-    def _log_prob_q_unnorm(self, m1: Array, m2: Array) -> ArrayLike:
+    def _log_prob_q_unnorm(self, m1: Array, q: Array) -> ArrayLike:
         safe_delta = jnp.where(self.delta_m2 <= 0.0, 1.0, self.delta_m2)
-        log_smoothing_q = log_planck_taper_window((m2 - self.m2min) / safe_delta)
-        log_prob_q = self.beta * (jnp.log(m2) - jnp.log(m1)) + log_smoothing_q
-
+        log_smoothing_q = log_planck_taper_window((m1 * q - self.m2min) / safe_delta)
+        log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
         return jnp.where(
-            (self.delta_m2 <= 0.0) | (m2 < self.m2min), -jnp.inf, log_prob_q
+            (self.delta_m2 <= 0.0) | (m1 * q < self.m2min), -jnp.inf, log_prob_q
         )
 
     def _prob_a_1_components(self, a_1: ArrayLike) -> ArrayLike:
@@ -439,7 +438,7 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=1.0, right=1.0)
         safe_Z_q = jnp.where(_Z_q <= 0, 1.0, _Z_q)
         log_Z_q = jnp.where(_Z_q <= 0, 0.0, jnp.log(safe_Z_q))
-        log_prob_q = self._log_prob_q_unnorm(m1, m2) - log_Z_q
+        log_prob_q = self._log_prob_q_unnorm(m1, m2 / m1) - log_Z_q
 
         return jnp.log(m1) + log_prob_m1_a1_a2 + log_prob_q - self._logZ
 
