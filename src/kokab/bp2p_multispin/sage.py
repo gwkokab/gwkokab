@@ -10,7 +10,7 @@ from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
-from gwkokab.models import BrokenPowerlawTwoPeakMultiSpinFull
+from gwkokab.models import BrokenPowerlawTwoPeakMultiSpinMultiTiltFull
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
@@ -52,7 +52,7 @@ class BrokenPowerlawTwoPeakMultiSpinFullCore(Sage):
 
         super().__init__(
             likelihood_fn=likelihood_fn,
-            model=BrokenPowerlawTwoPeakMultiSpinFull,
+            model=BrokenPowerlawTwoPeakMultiSpinMultiTiltFull,
             posterior_regex=posterior_regex,
             posterior_columns=posterior_columns,
             seed=seed,
@@ -122,9 +122,26 @@ class BrokenPowerlawTwoPeakMultiSpinFullCore(Sage):
             "scale_a2_bpl2",
             "scale_a2_n1",
             "scale_a2_n2",
-            "cos_tilt_zeta",
-            "cos_tilt_loc",
-            "cos_tilt_scale",
+            "cos_tilt_1_loc_bpl1",
+            "cos_tilt_1_loc_bpl2",
+            "cos_tilt_1_loc_n1",
+            "cos_tilt_1_loc_n2",
+            "cos_tilt_1_scale_bpl1",
+            "cos_tilt_1_scale_bpl2",
+            "cos_tilt_1_scale_n1",
+            "cos_tilt_1_scale_n2",
+            "cos_tilt_2_loc_bpl1",
+            "cos_tilt_2_loc_bpl2",
+            "cos_tilt_2_loc_n1",
+            "cos_tilt_2_loc_n2",
+            "cos_tilt_2_scale_bpl1",
+            "cos_tilt_2_scale_bpl2",
+            "cos_tilt_2_scale_n1",
+            "cos_tilt_2_scale_n2",
+            "cos_tilt_zeta_bpl1",
+            "cos_tilt_zeta_bpl2",
+            "cos_tilt_zeta_n1",
+            "cos_tilt_zeta_n2",
             "kappa",
             "z_max",
         ]

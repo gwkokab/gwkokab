@@ -14,7 +14,6 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from ...utils.kernel import log_planck_taper_window
 from ..constraints import all_constraint, mass_sandwich
 from ..redshift import PowerlawRedshift
-from ..spin import MinimumTiltModel
 from ..utils import (
     doubly_truncated_power_law_log_norm_constant,
     JointDistribution,
@@ -22,7 +21,7 @@ from ..utils import (
 )
 
 
-class BrokenPowerlawTwoPeakMultiSpin(Distribution):
+class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
     arg_constraints = {
         "alpha1": constraints.real,
         "alpha2": constraints.real,
@@ -55,6 +54,26 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         "scale_a2_bpl2": constraints.positive,
         "scale_a2_n1": constraints.positive,
         "scale_a2_n2": constraints.positive,
+        "cos_tilt_1_loc_bpl1": constraints.interval(-1.0, 1.0),
+        "cos_tilt_1_loc_bpl2": constraints.interval(-1.0, 1.0),
+        "cos_tilt_1_loc_n1": constraints.interval(-1.0, 1.0),
+        "cos_tilt_1_loc_n2": constraints.interval(-1.0, 1.0),
+        "cos_tilt_1_scale_bpl1": constraints.positive,
+        "cos_tilt_1_scale_bpl2": constraints.positive,
+        "cos_tilt_1_scale_n1": constraints.positive,
+        "cos_tilt_1_scale_n2": constraints.positive,
+        "cos_tilt_2_loc_bpl1": constraints.interval(-1.0, 1.0),
+        "cos_tilt_2_loc_bpl2": constraints.interval(-1.0, 1.0),
+        "cos_tilt_2_loc_n1": constraints.interval(-1.0, 1.0),
+        "cos_tilt_2_loc_n2": constraints.interval(-1.0, 1.0),
+        "cos_tilt_2_scale_bpl1": constraints.positive,
+        "cos_tilt_2_scale_bpl2": constraints.positive,
+        "cos_tilt_2_scale_n1": constraints.positive,
+        "cos_tilt_2_scale_n2": constraints.positive,
+        "cos_tilt_zeta_bpl1": constraints.unit_interval,
+        "cos_tilt_zeta_bpl2": constraints.unit_interval,
+        "cos_tilt_zeta_n1": constraints.unit_interval,
+        "cos_tilt_zeta_n2": constraints.unit_interval,
     }
 
     pytree_data_fields = (
@@ -93,6 +112,26 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         "scale_a2_bpl2",
         "scale_a2_n1",
         "scale_a2_n2",
+        "cos_tilt_1_loc_bpl1",
+        "cos_tilt_1_loc_bpl2",
+        "cos_tilt_1_loc_n1",
+        "cos_tilt_1_loc_n2",
+        "cos_tilt_1_scale_bpl1",
+        "cos_tilt_1_scale_bpl2",
+        "cos_tilt_1_scale_n1",
+        "cos_tilt_1_scale_n2",
+        "cos_tilt_2_loc_bpl1",
+        "cos_tilt_2_loc_bpl2",
+        "cos_tilt_2_loc_n1",
+        "cos_tilt_2_loc_n2",
+        "cos_tilt_2_scale_bpl1",
+        "cos_tilt_2_scale_bpl2",
+        "cos_tilt_2_scale_n1",
+        "cos_tilt_2_scale_n2",
+        "cos_tilt_zeta_bpl1",
+        "cos_tilt_zeta_bpl2",
+        "cos_tilt_zeta_n1",
+        "cos_tilt_zeta_n2",
     )
 
     def __init__(
@@ -128,6 +167,26 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         scale_a2_bpl2: ArrayLike,
         scale_a2_n1: ArrayLike,
         scale_a2_n2: ArrayLike,
+        cos_tilt_1_loc_bpl1: ArrayLike,
+        cos_tilt_1_loc_bpl2: ArrayLike,
+        cos_tilt_1_loc_n1: ArrayLike,
+        cos_tilt_1_loc_n2: ArrayLike,
+        cos_tilt_1_scale_bpl1: ArrayLike,
+        cos_tilt_1_scale_bpl2: ArrayLike,
+        cos_tilt_1_scale_n1: ArrayLike,
+        cos_tilt_1_scale_n2: ArrayLike,
+        cos_tilt_2_loc_bpl1: ArrayLike,
+        cos_tilt_2_loc_bpl2: ArrayLike,
+        cos_tilt_2_loc_n1: ArrayLike,
+        cos_tilt_2_loc_n2: ArrayLike,
+        cos_tilt_2_scale_bpl1: ArrayLike,
+        cos_tilt_2_scale_bpl2: ArrayLike,
+        cos_tilt_2_scale_n1: ArrayLike,
+        cos_tilt_2_scale_n2: ArrayLike,
+        cos_tilt_zeta_bpl1: ArrayLike,
+        cos_tilt_zeta_bpl2: ArrayLike,
+        cos_tilt_zeta_n1: ArrayLike,
+        cos_tilt_zeta_n2: ArrayLike,
         validate_args: Optional[bool] = None,
     ) -> None:
         (
@@ -162,6 +221,26 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             self.scale_a2_bpl2,
             self.scale_a2_n1,
             self.scale_a2_n2,
+            self.cos_tilt_1_loc_bpl1,
+            self.cos_tilt_1_loc_bpl2,
+            self.cos_tilt_1_loc_n1,
+            self.cos_tilt_1_loc_n2,
+            self.cos_tilt_1_scale_bpl1,
+            self.cos_tilt_1_scale_bpl2,
+            self.cos_tilt_1_scale_n1,
+            self.cos_tilt_1_scale_n2,
+            self.cos_tilt_2_loc_bpl1,
+            self.cos_tilt_2_loc_bpl2,
+            self.cos_tilt_2_loc_n1,
+            self.cos_tilt_2_loc_n2,
+            self.cos_tilt_2_scale_bpl1,
+            self.cos_tilt_2_scale_bpl2,
+            self.cos_tilt_2_scale_n1,
+            self.cos_tilt_2_scale_n2,
+            self.cos_tilt_zeta_bpl1,
+            self.cos_tilt_zeta_bpl2,
+            self.cos_tilt_zeta_n1,
+            self.cos_tilt_zeta_n2,
         ) = promote_shapes(
             alpha1,
             alpha2,
@@ -194,6 +273,26 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             scale_a2_bpl2,
             scale_a2_n1,
             scale_a2_n2,
+            cos_tilt_1_loc_bpl1,
+            cos_tilt_1_loc_bpl2,
+            cos_tilt_1_loc_n1,
+            cos_tilt_1_loc_n2,
+            cos_tilt_1_scale_bpl1,
+            cos_tilt_1_scale_bpl2,
+            cos_tilt_1_scale_n1,
+            cos_tilt_1_scale_n2,
+            cos_tilt_2_loc_bpl1,
+            cos_tilt_2_loc_bpl2,
+            cos_tilt_2_loc_n1,
+            cos_tilt_2_loc_n2,
+            cos_tilt_2_scale_bpl1,
+            cos_tilt_2_scale_bpl2,
+            cos_tilt_2_scale_n1,
+            cos_tilt_2_scale_n2,
+            cos_tilt_zeta_bpl1,
+            cos_tilt_zeta_bpl2,
+            cos_tilt_zeta_n1,
+            cos_tilt_zeta_n2,
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha1),
@@ -227,6 +326,26 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             jnp.shape(scale_a2_bpl2),
             jnp.shape(scale_a2_n1),
             jnp.shape(scale_a2_n2),
+            jnp.shape(cos_tilt_1_loc_bpl1),
+            jnp.shape(cos_tilt_1_loc_bpl2),
+            jnp.shape(cos_tilt_1_loc_n1),
+            jnp.shape(cos_tilt_1_loc_n2),
+            jnp.shape(cos_tilt_1_scale_bpl1),
+            jnp.shape(cos_tilt_1_scale_bpl2),
+            jnp.shape(cos_tilt_1_scale_n1),
+            jnp.shape(cos_tilt_1_scale_n2),
+            jnp.shape(cos_tilt_2_loc_bpl1),
+            jnp.shape(cos_tilt_2_loc_bpl2),
+            jnp.shape(cos_tilt_2_loc_n1),
+            jnp.shape(cos_tilt_2_loc_n2),
+            jnp.shape(cos_tilt_2_scale_bpl1),
+            jnp.shape(cos_tilt_2_scale_bpl2),
+            jnp.shape(cos_tilt_2_scale_n1),
+            jnp.shape(cos_tilt_2_scale_n2),
+            jnp.shape(cos_tilt_zeta_bpl1),
+            jnp.shape(cos_tilt_zeta_bpl2),
+            jnp.shape(cos_tilt_zeta_n1),
+            jnp.shape(cos_tilt_zeta_n2),
         )
 
         self._support = all_constraint(
@@ -234,11 +353,13 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
                 mass_sandwich(m2min, mmax),
                 constraints.unit_interval,
                 constraints.unit_interval,
+                constraints.interval(-1.0, 1.0),
+                constraints.interval(-1.0, 1.0),
             ],
-            [(0, 2), 2, 3],
+            [(0, 2), 2, 3, 4, 5],
         )
-        super(BrokenPowerlawTwoPeakMultiSpin, self).__init__(
-            batch_shape=batch_shape, event_shape=(4,), validate_args=validate_args
+        super(BrokenPowerlawTwoPeakMultiSpinMultiTilt, self).__init__(
+            batch_shape=batch_shape, event_shape=(6,), validate_args=validate_args
         )
 
         m1min = jnp.broadcast_to(m1min, batch_shape)
@@ -394,20 +515,82 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         )
         return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
 
+    def _log_prob_t1_t2_components(self, t1: ArrayLike, t2: ArrayLike) -> ArrayLike:
+        hyper_params = [
+            (
+                self.cos_tilt_zeta_bpl1,
+                self.cos_tilt_1_loc_bpl1,
+                self.cos_tilt_1_scale_bpl1,
+                self.cos_tilt_2_loc_bpl1,
+                self.cos_tilt_2_scale_bpl1,
+            ),
+            (
+                self.cos_tilt_zeta_bpl2,
+                self.cos_tilt_1_loc_bpl2,
+                self.cos_tilt_1_scale_bpl2,
+                self.cos_tilt_2_loc_bpl2,
+                self.cos_tilt_2_scale_bpl2,
+            ),
+            (
+                self.cos_tilt_zeta_n1,
+                self.cos_tilt_1_loc_n1,
+                self.cos_tilt_1_scale_n1,
+                self.cos_tilt_2_loc_n1,
+                self.cos_tilt_2_scale_n1,
+            ),
+            (
+                self.cos_tilt_zeta_n2,
+                self.cos_tilt_1_loc_n2,
+                self.cos_tilt_1_scale_n2,
+                self.cos_tilt_2_loc_n2,
+                self.cos_tilt_2_scale_n2,
+            ),
+        ]
+
+        comp_log_probs = []
+
+        for zeta, loc1, scale1, loc2, scale2 in hyper_params:
+            comp_gaussian = (
+                jnp.log(zeta)
+                + truncnorm.logpdf(
+                    t1,
+                    a=(-1.0 - loc1) / scale1,
+                    b=(1.0 - loc1) / scale1,
+                    loc=loc1,
+                    scale=scale1,
+                )
+                + truncnorm.logpdf(
+                    t2,
+                    a=(-1.0 - loc2) / scale2,
+                    b=(1.0 - loc2) / scale2,
+                    loc=loc2,
+                    scale=scale2,
+                )
+            )
+            comp_uniform = jnp.log1p(-zeta) + jnp.log(0.25)
+            comp_log_prob = jnp.logaddexp(comp_gaussian, comp_uniform)
+            comp_log_probs.append(comp_log_prob)
+
+        return jnp.asarray(comp_log_probs)
+
     @validate_sample
     def log_prob(self, value: Array) -> ArrayLike:
-        m1, m2, a_1, a_2 = jnp.unstack(value, axis=-1)
+        m1, m2, a_1, a_2, t1, t2 = jnp.unstack(value, axis=-1)
         log_prob_m1_component = self._log_prob_m1_unnorm_component(m1)
         log_prob_a1_component = self._log_prob_a_1_components(a_1)
         log_prob_a2_component = self._log_prob_a_2_components(a_2)
+        log_prob_t1_t2_component = self._log_prob_t1_t2_components(t1, t2)
 
-        log_prob_m1_a1_a2_component = (
-            log_prob_m1_component + log_prob_a1_component + log_prob_a2_component
+        log_prob_m1_a1_a2_t1_t2_component = (
+            log_prob_m1_component
+            + log_prob_a1_component
+            + log_prob_a2_component
+            + log_prob_t1_t2_component
         )
 
         log_prob_m1_a1_a2 = jax.nn.logsumexp(
-            log_prob_m1_a1_a2_component,
-            where=~jnp.isneginf(log_prob_m1_a1_a2_component),
+            log_prob_m1_a1_a2_t1_t2_component,
+            where=~jnp.isneginf(log_prob_m1_a1_a2_t1_t2_component),
             axis=0,
         )
 
@@ -419,12 +602,12 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         return jnp.log(m1) + log_prob_m1_a1_a2 + log_prob_q - self._logZ
 
 
-def BrokenPowerlawTwoPeakMultiSpinFull(
+def BrokenPowerlawTwoPeakMultiSpinMultiTiltFull(
     use_eccentricity: bool = False,
     validate_args: Optional[bool] = None,
     **params: Array,
 ) -> ScaledMixture:
-    smoothing_model = BrokenPowerlawTwoPeakMultiSpin(
+    smoothing_model = BrokenPowerlawTwoPeakMultiSpinMultiTilt(
         alpha1=params["alpha1"],
         alpha2=params["alpha2"],
         beta=params["beta"],
@@ -456,17 +639,30 @@ def BrokenPowerlawTwoPeakMultiSpinFull(
         scale_a2_bpl2=params["scale_a2_bpl2"],
         scale_a2_n1=params["scale_a2_n1"],
         scale_a2_n2=params["scale_a2_n2"],
+        cos_tilt_1_loc_bpl1=params["cos_tilt_1_loc_bpl1"],
+        cos_tilt_1_loc_bpl2=params["cos_tilt_1_loc_bpl2"],
+        cos_tilt_1_loc_n1=params["cos_tilt_1_loc_n1"],
+        cos_tilt_1_loc_n2=params["cos_tilt_1_loc_n2"],
+        cos_tilt_1_scale_bpl1=params["cos_tilt_1_scale_bpl1"],
+        cos_tilt_1_scale_bpl2=params["cos_tilt_1_scale_bpl2"],
+        cos_tilt_1_scale_n1=params["cos_tilt_1_scale_n1"],
+        cos_tilt_1_scale_n2=params["cos_tilt_1_scale_n2"],
+        cos_tilt_2_loc_bpl1=params["cos_tilt_2_loc_bpl1"],
+        cos_tilt_2_loc_bpl2=params["cos_tilt_2_loc_bpl2"],
+        cos_tilt_2_loc_n1=params["cos_tilt_2_loc_n1"],
+        cos_tilt_2_loc_n2=params["cos_tilt_2_loc_n2"],
+        cos_tilt_2_scale_bpl1=params["cos_tilt_2_scale_bpl1"],
+        cos_tilt_2_scale_bpl2=params["cos_tilt_2_scale_bpl2"],
+        cos_tilt_2_scale_n1=params["cos_tilt_2_scale_n1"],
+        cos_tilt_2_scale_n2=params["cos_tilt_2_scale_n2"],
+        cos_tilt_zeta_bpl1=params["cos_tilt_zeta_bpl1"],
+        cos_tilt_zeta_bpl2=params["cos_tilt_zeta_bpl2"],
+        cos_tilt_zeta_n1=params["cos_tilt_zeta_n1"],
+        cos_tilt_zeta_n2=params["cos_tilt_zeta_n2"],
         validate_args=validate_args,
     )
 
-    tilt_dist = MinimumTiltModel(
-        zeta=params["cos_tilt_zeta"],
-        loc=params["cos_tilt_loc"],
-        scale=params["cos_tilt_scale"],
-        minimum=params.get("cos_tilt_minimum", -1.0),
-        validate_args=validate_args,
-    )
-    component_distributions = [smoothing_model, tilt_dist]
+    component_distributions = [smoothing_model]
 
     if use_eccentricity:
         ecc_dist = HalfNormal(

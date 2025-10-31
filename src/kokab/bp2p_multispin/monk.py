@@ -5,7 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Dict, List, Union
 
-from gwkokab.models import BrokenPowerlawTwoPeakMultiSpinFull
+from gwkokab.models import BrokenPowerlawTwoPeakMultiSpinMultiTiltFull
 from gwkokab.parameters import Parameters as P
 from kokab.core.monk import Monk, monk_arg_parser
 from kokab.utils.logger import log_info
@@ -31,7 +31,7 @@ class BrokenPowerlawTwoPeakMultiSpinFullMonk(Monk):
         self.has_eccentricity = has_eccentricity
 
         super().__init__(
-            BrokenPowerlawTwoPeakMultiSpinFull,
+            BrokenPowerlawTwoPeakMultiSpinMultiTiltFull,
             data_filename,
             seed,
             prior_filename,
@@ -101,9 +101,26 @@ class BrokenPowerlawTwoPeakMultiSpinFullMonk(Monk):
             "scale_a2_bpl2",
             "scale_a2_n1",
             "scale_a2_n2",
-            "cos_tilt_zeta",
-            "cos_tilt_loc",
-            "cos_tilt_scale",
+            "cos_tilt_1_loc_bpl1",
+            "cos_tilt_1_loc_bpl2",
+            "cos_tilt_1_loc_n1",
+            "cos_tilt_1_loc_n2",
+            "cos_tilt_1_scale_bpl1",
+            "cos_tilt_1_scale_bpl2",
+            "cos_tilt_1_scale_n1",
+            "cos_tilt_1_scale_n2",
+            "cos_tilt_2_loc_bpl1",
+            "cos_tilt_2_loc_bpl2",
+            "cos_tilt_2_loc_n1",
+            "cos_tilt_2_loc_n2",
+            "cos_tilt_2_scale_bpl1",
+            "cos_tilt_2_scale_bpl2",
+            "cos_tilt_2_scale_n1",
+            "cos_tilt_2_scale_n2",
+            "cos_tilt_zeta_bpl1",
+            "cos_tilt_zeta_bpl2",
+            "cos_tilt_zeta_n1",
+            "cos_tilt_zeta_n2",
             "z_max",
             "kappa",
         ]
