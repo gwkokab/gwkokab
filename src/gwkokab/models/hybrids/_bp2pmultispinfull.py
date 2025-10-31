@@ -8,11 +8,7 @@ import jax
 from jax import lax, numpy as jnp
 from jax.scipy.stats import truncnorm
 from jaxtyping import Array, ArrayLike
-from numpyro.distributions import (
-    constraints,
-    Distribution,
-    HalfNormal,
-)
+from numpyro.distributions import constraints, Distribution, HalfNormal
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ...utils.kernel import log_planck_taper_window
@@ -24,45 +20,6 @@ from ..utils import (
     JointDistribution,
     ScaledMixture,
 )
-
-
-@jax.jit
-def _broken_powerlaw_prob(
-    m1: Array,
-    alpha1: Array,
-    alpha2: Array,
-    mmin: Array,
-    mmax: Array,
-    mbreak: Array,
-) -> Array:
-    r"""Calculate the log probability of the broken powerlaw two peak distribution.
-
-    The broken powerlaw two peak distribution is defined as
-
-    .. math::
-        p(m_1\mid \alpha_1, \alpha_2, m_{\mathrm{min}}, m_{\mathrm{max}}, m_{\mathrm{break}}) \propto
-        \begin{cases}
-            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_1}
-            & m_{\mathrm{min}} \leq m_1 < m_{\text{break}} \\
-            \left(\frac{m_1}{m_{\mathrm{break}}}\right)^{-\alpha_2}
-            & m_{\text{break}} \leq m_1 \leq m_{\mathrm{max}} \\
-            0 & \text{otherwise}
-        \end{cases}
-    """
-    log_mbreak = jnp.log(mbreak)
-    log_m1 = jnp.log(m1)
-    log_unnormalized = jnp.where(
-        m1 < mbreak,
-        -alpha1 * (log_m1 - log_mbreak),
-        -alpha2 * (log_m1 - log_mbreak),
-    )
-    log_norm = jnp.logaddexp(
-        alpha1 * log_mbreak
-        + doubly_truncated_power_law_log_norm_constant(-alpha1, mmin, mbreak),
-        alpha2 * log_mbreak
-        + doubly_truncated_power_law_log_norm_constant(-alpha2, mbreak, mmax),
-    )
-    return jnp.exp(log_unnormalized - log_norm)
 
 
 class BrokenPowerlawTwoPeakMultiSpin(Distribution):
@@ -361,7 +318,11 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
             ]
         )
 
-        return log_prob_m1_component
+        return jnp.where(
+            (self.delta_m1 <= 0.0) | (m1 < self.m1min),
+            -jnp.inf,
+            log_prob_m1_component,
+        )
 
     def _log_prob_q_unnorm(self, m1: Array, q: Array) -> ArrayLike:
         safe_delta = jnp.where(self.delta_m2 <= 0.0, 1.0, self.delta_m2)
@@ -440,8 +401,13 @@ class BrokenPowerlawTwoPeakMultiSpin(Distribution):
         log_prob_a1_component = self._log_prob_a_1_components(a_1)
         log_prob_a2_component = self._log_prob_a_2_components(a_2)
 
+        log_prob_m1_a1_a2_component = (
+            log_prob_m1_component + log_prob_a1_component + log_prob_a2_component
+        )
+
         log_prob_m1_a1_a2 = jax.nn.logsumexp(
-            log_prob_m1_component + log_prob_a1_component + log_prob_a2_component,
+            log_prob_m1_a1_a2_component,
+            where=~jnp.isneginf(log_prob_m1_a1_a2_component),
             axis=0,
         )
 
@@ -493,8 +459,6 @@ def BrokenPowerlawTwoPeakMultiSpinFull(
         validate_args=validate_args,
     )
 
-    component_distributions = [smoothing_model]
-
     tilt_dist = MinimumTiltModel(
         zeta=params["cos_tilt_zeta"],
         loc=params["cos_tilt_loc"],
@@ -502,7 +466,7 @@ def BrokenPowerlawTwoPeakMultiSpinFull(
         minimum=params.get("cos_tilt_minimum", -1.0),
         validate_args=validate_args,
     )
-    component_distributions.append(tilt_dist)
+    component_distributions = [smoothing_model, tilt_dist]
 
     if use_eccentricity:
         ecc_dist = HalfNormal(
@@ -515,10 +479,9 @@ def BrokenPowerlawTwoPeakMultiSpinFull(
     powerlaw_z = PowerlawRedshift(z_max=z_max, kappa=kappa, validate_args=validate_args)
     component_distributions.append(powerlaw_z)
 
-    if len(component_distributions) > 1:
-        component_distributions = [
-            JointDistribution(*component_distributions, validate_args=validate_args)
-        ]
+    component_distributions = [
+        JointDistribution(*component_distributions, validate_args=validate_args)
+    ]
 
     return ScaledMixture(
         log_scales=jnp.asarray([params["log_rate"]]),
