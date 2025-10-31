@@ -3,7 +3,7 @@
 ```{toctree}
 {maxdepth:1}
 
-examples/fake_pe_generation
+examples/generating_mock_posterior_estimates
 examples/analysis_by_gwkokab
 examples/nvt_training
 ```
