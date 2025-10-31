@@ -19,7 +19,7 @@ from kokab.core.sage import Sage, sage_arg_parser
 from kokab.utils.logger import log_info
 
 
-class BrokenPowerlawTwoPeakMultiSpinFullCore(Sage):
+class BrokenPowerlawTwoPeakMultiSpinMultiTiltFullCore(Sage):
     def __init__(
         self,
         has_eccentricity: bool,
@@ -152,14 +152,14 @@ class BrokenPowerlawTwoPeakMultiSpinFullCore(Sage):
         return model_parameters
 
 
-class BrokenPowerlawTwoPeakMultiSpinFullFSage(
-    BrokenPowerlawTwoPeakMultiSpinFullCore, FlowMCBased
+class BrokenPowerlawTwoPeakMultiSpinMultiTiltFullFSage(
+    BrokenPowerlawTwoPeakMultiSpinMultiTiltFullCore, FlowMCBased
 ):
     pass
 
 
-class BrokenPowerlawTwoPeakMultiSpinFullNSage(
-    BrokenPowerlawTwoPeakMultiSpinFullCore, NumpyroBased
+class BrokenPowerlawTwoPeakMultiSpinMultiTiltFullNSage(
+    BrokenPowerlawTwoPeakMultiSpinMultiTiltFullCore, NumpyroBased
 ):
     pass
 
@@ -187,7 +187,7 @@ def f_main() -> None:
 
     log_info(start=True)
 
-    BrokenPowerlawTwoPeakMultiSpinFullFSage(
+    BrokenPowerlawTwoPeakMultiSpinMultiTiltFullFSage(
         has_eccentricity=args.add_eccentricity,
         likelihood_fn=poisson_likelihood,
         posterior_regex=args.posterior_regex,
@@ -214,7 +214,7 @@ def n_main() -> None:
 
     log_info(start=True)
 
-    BrokenPowerlawTwoPeakMultiSpinFullNSage(
+    BrokenPowerlawTwoPeakMultiSpinMultiTiltFullNSage(
         has_eccentricity=args.add_eccentricity,
         likelihood_fn=numpyro_poisson_likelihood,
         posterior_regex=args.posterior_regex,
