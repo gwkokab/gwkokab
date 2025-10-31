@@ -158,6 +158,7 @@ def load_o1o2o3o4a_injection_data(
         P.SECONDARY_SPIN_MAGNITUDE.value,
     }
     if P.ECCENTRICITY.value in parameters:
+        _PARAM_MAPPING[P.ECCENTRICITY.value] = P.ECCENTRICITY.value
         expected_params.add(P.ECCENTRICITY.value)
         warn_if(
             True,
