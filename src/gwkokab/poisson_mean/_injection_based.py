@@ -16,11 +16,10 @@ from loguru import logger
 from ..constants import SECONDS_PER_YEAR
 from ..models.utils import ScaledMixture
 from ..parameters import Parameters as P
-from ..utils.tools import batch_and_remainder, error_if
+from ..utils.tools import batch_and_remainder, error_if, warn_if
 
 
 _PARAM_MAPPING = {
-    P.ECCENTRICITY.value: P.ECCENTRICITY.value,
     P.PRIMARY_MASS_SOURCE.value: "mass1_source",
     P.PRIMARY_SPIN_X.value: "spin1x",
     P.PRIMARY_SPIN_Y.value: "spin1y",
@@ -40,6 +39,14 @@ def load_o1o2o3_or_endO_injection_data(
     snr_cut: float = 10.0,
     ifar_pipelines: Sequence[str] | None = None,
 ):
+    if P.ECCENTRICITY.value in parameters:
+        _PARAM_MAPPING[P.ECCENTRICITY.value] = P.ECCENTRICITY.value
+        warn_if(
+            True,
+            msg="Eccentricity injections are not part of O1, O2 or O3 injections. "
+            f"Make sure you have altered the injection set with {P.ECCENTRICITY.value} "
+            "key accordingly.",
+        )
     with h5py.File(filename, "r") as f:
         analysis_time_years = float(f.attrs["analysis_time_s"]) / SECONDS_PER_YEAR
         logger.debug("Analysis time: {:.2f} years", analysis_time_years)
@@ -150,6 +157,15 @@ def load_o1o2o3o4a_injection_data(
         P.SECONDARY_MASS_SOURCE.value,
         P.SECONDARY_SPIN_MAGNITUDE.value,
     }
+    if P.ECCENTRICITY.value in parameters:
+        expected_params.add(P.ECCENTRICITY.value)
+        warn_if(
+            True,
+            msg="Eccentricity injections are not part of O1, O2, O3, or O4a injections. "
+            f"Make sure you have altered the injection set with {P.ECCENTRICITY.value} "
+            "key accordingly.",
+        )
+
     error_if(
         set(parameters) != expected_params,
         msg=(
