@@ -72,7 +72,7 @@ tpu = ["jax[tpu]>=0.4.30,<=0.5.3"]
 dev = ["pre-commit>=4.0.0", "ruff>=0.8.0", "setuptools>=75.6.0"]
 test = ["pytest>=8.3.0", "tensorflow_probability>=0.18", "astropy>=6.0.0"]
 doc = [
-    "astroid<4",
+    "astroid<5",
     "furo",
     "ipython!=8.7.0",
     "myst-nb",
