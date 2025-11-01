@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath("./_pygments"))
 
 
 project = "GWKokab"
-copyright = "2024, Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
+copyright = "2023, Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
 author = "Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
 
 
