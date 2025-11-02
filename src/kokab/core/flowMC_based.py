@@ -791,7 +791,7 @@ class FlowMCBased(Guru):
             (local_thinning, "local_thinning", int),
             (local_sampler_name, "local_sampler_name", str),
             (step_size, "step_size", (int, float)),
-            (condition_matrix, "condition_matrix", (float, Sequence)),
+            (condition_matrix, "condition_matrix", (int, float, Sequence)),
             (n_leapfrog, "n_leapfrog", int),
             (n_chains, "n_chains", int),
             (n_epochs, "n_epochs", int),
@@ -829,9 +829,32 @@ class FlowMCBased(Guru):
 
         n_dims = initial_position.shape[1]
 
+        if isinstance(condition_matrix, float) or isinstance(condition_matrix, int):
+            error_if(condition_matrix <= 0.0, msg="condition_matrix must be positive")
+            condition_matrix = jnp.eye(n_dims) * float(condition_matrix)
+
         if isinstance(condition_matrix, list):
             condition_matrix = jnp.array(condition_matrix)
-            assert condition_matrix.shape == (n_dims, n_dims)
+            error_if(
+                condition_matrix.ndim > 2, msg="condition_matrix must be 1D or 2D array"
+            )
+            _shape = condition_matrix.shape
+            error_if(
+                _shape != (n_dims, n_dims) or _shape != (n_dims,),
+                msg=f"condition_matrix must be of shape ({n_dims}, {n_dims}) or ({n_dims},), got {_shape}",
+            )
+            if _shape == (n_dims,):
+                condition_matrix = jnp.diag(condition_matrix)
+                error_if(
+                    jnp.any(jnp.diag(condition_matrix) <= 0),
+                    msg="condition_matrix diagonal elements must be positive",
+                )
+            else:
+                eigvals = jnp.linalg.eigvalsh(condition_matrix)
+                error_if(
+                    jnp.any(eigvals <= 0),
+                    msg="condition_matrix must be positive definite",
+                )
 
         bundle = Local_Global_Sampler_Bundle(
             rng_key=self.rng_key,
