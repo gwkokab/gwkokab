@@ -36,15 +36,16 @@ except ImportError:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "myst_nb",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.extlinks",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.linkcode",
-    "sphinx_copybutton",
     "autoapi.extension",
-    "sphinxcontrib.bibtex",
+    "myst_nb",
+    "sphinx_copybutton",
     "sphinx_design",
+    "sphinx_togglebutton",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.linkcode",
+    "sphinx.ext.napoleon",
+    "sphinxcontrib.bibtex",
 ]
 
 bibtex_encoding = "latin"
