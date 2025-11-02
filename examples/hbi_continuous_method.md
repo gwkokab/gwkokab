@@ -1,4 +1,4 @@
-# Hierarchical Bayesian Inference (Discrete Method)
+# Hierarchical Bayesian Inference (Continuous Method)
 
 [![Open in GitHub](https://img.shields.io/badge/Open-GitHub-black?logo=github)][REPRODUCIBILITY_LINK]
 
@@ -9,9 +9,9 @@ It is recommended to read [Introduction](./generating_mock_posterior_estimates.i
 
 ## MCMC Sampler Configurations
 
-Hierarchical Bayesian Inference can only be performed on flowMC at the moment. The
-configuration for FlowMC is also provided through a json file and saved in
-[`flowMC_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/flowMC_config.json). We will talk about the various configurations in detail in another
+Hierarchical Bayesian Inference with continuous method can only be performed on flowMC
+at the moment. The configuration for FlowMC is also provided through a json file and saved in
+[`flowMC_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_continuous_method/flowMC_config.json). We will talk about the various configurations in detail in another
 tutorial.
 
 ```json
