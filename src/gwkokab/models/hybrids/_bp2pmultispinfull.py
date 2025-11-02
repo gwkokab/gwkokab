@@ -434,7 +434,9 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
                 - log_norm_bpl
                 + log_smoothing_m1,
                 jnp.log(self.lambda_1) + log_prob_norm_0 + log_smoothing_m1,
-                jnp.log1p(-self.lambda_0 - self.lambda_1) + log_prob_norm_1 + log_smoothing_m1,
+                jnp.log1p(-self.lambda_0 - self.lambda_1)
+                + log_prob_norm_1
+                + log_smoothing_m1,
             ]
         )
 
