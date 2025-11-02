@@ -8,11 +8,6 @@ It is recommended to read [Introduction](./generating_mock_posterior_estimates.i
 [Generating Mock Posterior Estimates](./generating_mock_posterior_estimates.ipynb) tutorial to get familiar
 with the model and the data used in this tutorial.
 
-## Sensitivity of Detectors
-
-Sensitivity of detectors is provided in the same way as described in
-[Generating Mock Posterior Estimates/Sensitivity of Detectors](./generating_mock_posterior_estimates.ipynb#sensitivity-of-detectors).
-
 ## Priors
 
 Priors are also NumPyro distributions. They are provided through a json file. Each key
@@ -91,19 +86,19 @@ The configuration for the sampler is also provided through a json file. Configur
 has two sub-configurations, one for the NUTS kernel and another for the MCMC sampler.
 MCMC configuration are provided under the key `mcmc` while NUTS kernel configurations
 are provided under the key `kernel`. For example, if we want to set the maximum tree
-depth of the NUTS kernel to 7 and number of warmup steps to 2000, number of samples
-to 1000, number of chains to 5, thinning to 1, chain method to "parallel", enable
+depth of the NUTS kernel to 6 and number of warmup steps to 3000, number of samples
+to 1000, number of chains to 10, thinning to 1, chain method to "parallel", enable
 progress bar and JIT model args, then the json file will look like below.
 
 ```json
 {
     "kernel": {
-        "max_tree_depth": 7
+        "max_tree_depth": 6
     },
     "mcmc": {
-        "num_warmup": 2000,
+        "num_warmup": 3000,
         "num_samples": 1000,
-        "num_chains": 5,
+        "num_chains": 10,
         "thinning": 1,
         "chain_method": "parallel",
         "progress_bar": true,
@@ -125,16 +120,15 @@ NumPyro NUTS sampler.
 
 ```bash
 n_sage_n_pls_m_gs \
- --seed 37 \
- --n-pl 1 \
- --n-g 0 \
- --add-truncated-normal-eccentricity \
- --posterior-regex "../generating_mock_posterior_estimates/data/realization_0/posteriors/event_*.dat" \
- --posterior-columns mass_1_source mass_2_source eccentricity \
- --pmean-json pmean.json \
- --prior-json prior.json \
- --sampler-config numpyro_config.json \
- --n-buckets 10
+    --seed 37 \
+    --n-pl 1 \
+    --n-g 0 \
+    --posterior-regex "../generating_mock_posterior_estimates/data/realization_0/posteriors/event_*.dat" \
+    --posterior-columns mass_1_source mass_2_source \
+    --pmean-json pmean.json \
+    --prior-json prior.json \
+    --sampler-config numpyro_config.json \
+    --n-buckets 10
 ```
 
 - `seed` is the random seed for reproducibility.
@@ -160,7 +154,6 @@ We will talk about the various configurations in detail in another tutorial.
         "n_samples": 10000
     },
     "bundle_config": {
-        "local_sampler_name": "hmc",
         "chain_batch_size": 0,
         "n_chains": 100,
         "batch_size": 10000,
@@ -174,19 +167,14 @@ We will talk about the various configurations in detail in another tutorial.
         "n_training_loops": 10,
         "global_thinning": 4,
         "local_thinning": 4,
+        "local_sampler_name": "hmc",
         "step_size": 0.01,
         "condition_matrix": 1.0,
         "n_leapfrog": 5,
-        "rq_spline_hidden_units": [
-            64,
-            64
-        ],
+        "rq_spline_hidden_units": [64, 64],
         "rq_spline_n_bins": 10,
         "rq_spline_n_layers": 8,
-        "rq_spline_range": [
-            -10.0,
-            10.0
-        ],
+        "rq_spline_range": [-10.0, 10.0],
         "learning_rate": 0.001,
         "verbose": false
     }
@@ -198,16 +186,15 @@ FlowMC sampler.
 
 ```bash
 f_sage_n_pls_m_gs \
- --seed 37 \
- --n-pl 1 \
- --n-g 0 \
- --add-truncated-normal-eccentricity \
- --posterior-regex "../generating_mock_posterior_estimates/data/realization_0/posteriors/event_*.dat" \
- --posterior-columns mass_1_source mass_2_source eccentricity \
- --pmean-json pmean.json \
- --prior-json prior.json \
- --sampler-config flowMC_config.json \
- --n-buckets 10
+    --seed 37 \
+    --n-pl 1 \
+    --n-g 0 \
+    --posterior-regex "../generating_mock_posterior_estimates/data/realization_0/posteriors/event_*.dat" \
+    --posterior-columns mass_1_source mass_2_source \
+    --pmean-json pmean.json \
+    --prior-json prior.json \
+    --sampler-config flowMC_config.json \
+    --n-buckets 10
 ```
 
 ## Analysis of Results
