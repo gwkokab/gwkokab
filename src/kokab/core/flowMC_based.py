@@ -761,7 +761,7 @@ class FlowMCBased(Guru):
         global_thinning = bundle_config["global_thinning"]
         learning_rate = bundle_config["learning_rate"]
         local_thinning = bundle_config["local_thinning"]
-        local_sampler_name = bundle_config.get("local_sampler_name", "mala")
+        local_sampler_name: str = bundle_config.get("local_sampler_name", "mala")
         step_size = bundle_config["step_size"]
         condition_matrix = bundle_config.get("condition_matrix", 1.0)
         n_leapfrog = bundle_config.get("n_leapfrog", 10)
@@ -823,6 +823,12 @@ class FlowMCBased(Guru):
         error_if(
             not all(isinstance(x, int) and x > 0 for x in rq_spline_hidden_units),
             msg=f"expected a list of positive integers, got {rq_spline_hidden_units} for rq_spline_hidden_units",
+        )
+
+        valid_local_samplers = ("mala", "hmc")
+        error_if(
+            local_sampler_name.strip().lower() not in valid_local_samplers,
+            msg="local_sampler_name must be one of " + ", ".join(valid_local_samplers),
         )
 
         initial_position = priors.sample(self.rng_key, (n_chains,))
