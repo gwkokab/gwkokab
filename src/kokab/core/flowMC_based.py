@@ -6,7 +6,7 @@ import functools as ft
 import gc
 import os
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional, Sequence
 
 import equinox as eqx
 import jax
@@ -14,6 +14,7 @@ import numpy as np
 import tqdm
 from flowMC.resource.base import Resource
 from flowMC.resource.buffers import Buffer
+from flowMC.resource.local_kernel.HMC import HMC
 from flowMC.resource.local_kernel.MALA import MALA
 from flowMC.resource.logPDF import LogPDF
 from flowMC.resource.nf_model.NF_proposal import NFProposal
@@ -49,7 +50,7 @@ from kokab.utils.literals import INFERENCE_DIRECTORY
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-class RQSpline_MALA_Bundle(ResourceStrategyBundle):
+class Local_Global_Sampler_Bundle(ResourceStrategyBundle):
     """A bundle that uses a Rational Quadratic Spline as a normalizing flow model and
     the Metropolis Adjusted Langevin Algorithm as a local sampler.
 
@@ -71,7 +72,10 @@ class RQSpline_MALA_Bundle(ResourceStrategyBundle):
         n_training_loops: int,
         n_production_loops: int,
         n_epochs: int,
-        mala_step_size: float = 1e-1,
+        local_sampler_name: Literal["mala", "hmc"] = "mala",
+        step_size: float = 1e-1,
+        condition_matrix: Array = 1.0,  # type: ignore
+        n_leapfrog: int = 10,
         chain_batch_size: int = 0,
         rq_spline_hidden_units: list[int] = [32, 32],
         rq_spline_n_bins: int = 8,
@@ -121,7 +125,14 @@ class RQSpline_MALA_Bundle(ResourceStrategyBundle):
             "global_accs_production", (n_chains, n_production_steps), 1
         )
 
-        local_sampler = MALA(step_size=mala_step_size)
+        if local_sampler_name.strip().lower() == "mala":
+            local_sampler = MALA(step_size=step_size)
+        else:
+            local_sampler = HMC(
+                condition_matrix=condition_matrix,
+                step_size=step_size,
+                n_leapfrog=n_leapfrog,
+            )
         rng_key, subkey = jax.random.split(rng_key)
         model = MaskedCouplingRQSpline(
             n_dims,
@@ -743,33 +754,32 @@ class FlowMCBased(Guru):
     ) -> None:
         sampler_config = read_json(self.sampler_settings_filename)
 
-        RQSpline_MALA_Bundle_value: dict = sampler_config.pop(
-            "RQSpline_MALA_Bundle", {}
-        )
+        bundle_config: dict = sampler_config.pop("bundle_config", {})
 
-        batch_size = RQSpline_MALA_Bundle_value["batch_size"]
-        chain_batch_size = RQSpline_MALA_Bundle_value["chain_batch_size"]
-        global_thinning = RQSpline_MALA_Bundle_value["global_thinning"]
-        learning_rate = RQSpline_MALA_Bundle_value["learning_rate"]
-        local_thinning = RQSpline_MALA_Bundle_value["local_thinning"]
-        mala_step_size = RQSpline_MALA_Bundle_value["mala_step_size"]
-        n_chains = RQSpline_MALA_Bundle_value["n_chains"]
-        n_epochs = RQSpline_MALA_Bundle_value["n_epochs"]
-        n_global_steps = RQSpline_MALA_Bundle_value["n_global_steps"]
-        n_local_steps = RQSpline_MALA_Bundle_value["n_local_steps"]
-        n_max_examples = RQSpline_MALA_Bundle_value["n_max_examples"]
-        history_window = RQSpline_MALA_Bundle_value.get("history_window", 100)
-        n_NFproposal_batch_size = RQSpline_MALA_Bundle_value["n_NFproposal_batch_size"]
-        n_production_loops = RQSpline_MALA_Bundle_value["n_production_loops"]
-        n_training_loops = RQSpline_MALA_Bundle_value["n_training_loops"]
-        rq_spline_hidden_units = RQSpline_MALA_Bundle_value["rq_spline_hidden_units"]
-        rq_spline_n_bins = RQSpline_MALA_Bundle_value["rq_spline_n_bins"]
-        rq_spline_n_layers = RQSpline_MALA_Bundle_value["rq_spline_n_layers"]
-        rq_spline_range = RQSpline_MALA_Bundle_value.get(
-            "rq_spline_range", (-10.0, 10.0)
-        )
+        batch_size = bundle_config["batch_size"]
+        chain_batch_size = bundle_config["chain_batch_size"]
+        global_thinning = bundle_config["global_thinning"]
+        learning_rate = bundle_config["learning_rate"]
+        local_thinning = bundle_config["local_thinning"]
+        local_sampler_name = bundle_config.get("local_sampler_name", "mala")
+        step_size = bundle_config["step_size"]
+        condition_matrix = bundle_config.get("condition_matrix", 1.0)
+        n_leapfrog = bundle_config.get("n_leapfrog", 10)
+        n_chains = bundle_config["n_chains"]
+        n_epochs = bundle_config["n_epochs"]
+        n_global_steps = bundle_config["n_global_steps"]
+        n_local_steps = bundle_config["n_local_steps"]
+        n_max_examples = bundle_config["n_max_examples"]
+        history_window = bundle_config.get("history_window", 100)
+        n_NFproposal_batch_size = bundle_config["n_NFproposal_batch_size"]
+        n_production_loops = bundle_config["n_production_loops"]
+        n_training_loops = bundle_config["n_training_loops"]
+        rq_spline_hidden_units = bundle_config["rq_spline_hidden_units"]
+        rq_spline_n_bins = bundle_config["rq_spline_n_bins"]
+        rq_spline_n_layers = bundle_config["rq_spline_n_layers"]
+        rq_spline_range = bundle_config.get("rq_spline_range", (-10.0, 10.0))
         rq_spline_range = tuple(rq_spline_range)
-        verbose = RQSpline_MALA_Bundle_value["verbose"]
+        verbose = bundle_config["verbose"]
 
         logger.debug("Validation for Sampler parameters starting")
 
@@ -779,7 +789,10 @@ class FlowMCBased(Guru):
             (global_thinning, "global_thinning", int),
             (learning_rate, "learning_rate", (int, float)),
             (local_thinning, "local_thinning", int),
-            (mala_step_size, "mala_step_size", (int, float)),
+            (local_sampler_name, "local_sampler_name", str),
+            (step_size, "step_size", (int, float)),
+            (condition_matrix, "condition_matrix", (float, Sequence)),
+            (n_leapfrog, "n_leapfrog", int),
             (n_chains, "n_chains", int),
             (n_epochs, "n_epochs", int),
             (n_global_steps, "n_global_steps", int),
@@ -816,7 +829,11 @@ class FlowMCBased(Guru):
 
         n_dims = initial_position.shape[1]
 
-        bundle = RQSpline_MALA_Bundle(
+        if isinstance(condition_matrix, list):
+            condition_matrix = jnp.array(condition_matrix)
+            assert condition_matrix.shape == (n_dims, n_dims)
+
+        bundle = Local_Global_Sampler_Bundle(
             rng_key=self.rng_key,
             n_chains=n_chains,
             n_dims=n_dims,
@@ -826,7 +843,10 @@ class FlowMCBased(Guru):
             n_training_loops=n_training_loops,
             n_production_loops=n_production_loops,
             n_epochs=n_epochs,
-            mala_step_size=mala_step_size,
+            local_sampler_name=local_sampler_name,
+            step_size=step_size,
+            condition_matrix=condition_matrix,
+            n_leapfrog=n_leapfrog,
             chain_batch_size=chain_batch_size,
             rq_spline_hidden_units=rq_spline_hidden_units,
             rq_spline_n_bins=rq_spline_n_bins,
@@ -841,7 +861,7 @@ class FlowMCBased(Guru):
             n_NFproposal_batch_size=n_NFproposal_batch_size,
             verbose=verbose,
         )
-        logger.info("RQSpline_MALA_Bundle created successfully.")
+        logger.info("Local_Global_Sampler_Bundle created successfully.")
 
         sampler = Sampler(
             n_dims,
