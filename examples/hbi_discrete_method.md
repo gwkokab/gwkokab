@@ -213,7 +213,7 @@ f_sage_n_pls_m_gs \
 
 ## Analysis of Results
 
-```{toggle} GPU Status
+```{toggle}
 ```md
 Sat Nov  1 16:23:27 2025
 +-----------------------------------------------------------------------------------------+
@@ -244,8 +244,3 @@ All the code and files used in this tutorial can be found in
 [hello-gwkokab/hbi_discrete_method][REPRODUCIBILITY_LINK].
 
 [REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/tree/main/hbi_discrete_method
-
-## References
-
-```{bibliography} refs.bib
-```

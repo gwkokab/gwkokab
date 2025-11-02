@@ -6,5 +6,5 @@
 examples/generating_mock_posterior_estimates
 examples/hbi_discrete_method
 examples/sensitivity
-examples/mlp_training
+examples/training_mlp
 ```
