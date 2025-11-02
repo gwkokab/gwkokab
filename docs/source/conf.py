@@ -85,7 +85,10 @@ html_theme_options = {
 html_static_path = ["_static"]
 
 html_css_files = ["style.css"]
-html_logo = "_static/logo.png"
+html_theme_options = {
+    "light_logo": "noBgBlack.png",
+    "dark_logo": "noBgWhite.png",
+}
 html_favicon = "_static/favicon.png"
 
 pygments_style = "_pygments_light.MarianaLight"
