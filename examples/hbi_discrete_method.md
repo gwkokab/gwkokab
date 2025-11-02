@@ -40,49 +40,45 @@ Prior distributions and constants for the model parameters used in this tutorial
 
 $$
 \begin{align*}
-    \ln{\mathcal{R}_0}    &\sim \mathrm{Unif}(-11.5, 11.5) \\
-    \alpha_{0}            &\sim \mathrm{Unif}(-5.0, 5.0) \\
-    \beta_{0}             &=0                             \\
-    m_{\mathrm{min,pl},0} &\sim \mathrm{Unif}(1.0, 10.0)  \\
-    m_{\mathrm{max,pl},0} &\sim \mathrm{Unif}(30.0, 80.0) \\
-    \sigma_\epsilon       &\sim \mathrm{Unif}(0.0, 4.0)
+    \ln\mathcal{R}_0 &\sim \text{Unif}(-11.5, 11.5) \\
+    \alpha_{\text{pl}, 0} &\sim \text{Unif}(-5.0, 5.0) \\
+    \beta_{\text{pl}, 0} &\sim \text{Unif}(-5.0, 5.0) \\
+    m_{\text{min, pl}, 0} &\sim \text{Unif}(1.0, 20.0) \\
+    m_{\text{max, pl}, 0} &\sim \text{Unif}(30.0, 100.0)
 \end{align*}
 $$
 
 User can provide any NumPyro distribution which takes only scalar parameters. Their json
 representation is saved in
-[`priors.json`](https://github.com/gwkokab/hello-gwkokab/tree/main/hbi_discrete_method/priors.json),
+[`priors.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/prior.json),
 
 ```json
 {
     "log_rate_0": {
         "dist": "Uniform",
-        "low": -6.0,
-        "high": 10.0
+        "low": -11.5,
+        "high": 11.5
     },
     "alpha_pl_0": {
         "dist": "Uniform",
-        "low": -4.0,
-        "high": 12.0
+        "low": -5.0,
+        "high": 5.0
     },
-    "beta_pl_0": 0.0,
+    "beta_pl_0": {
+        "dist": "Uniform",
+        "low": -5.0,
+        "high": 5.0
+    },
     "mmin_pl_0": {
         "dist": "Uniform",
         "low": 1.0,
-        "high": 10.0
+        "high": 20.0
     },
     "mmax_pl_0": {
         "dist": "Uniform",
         "low": 30.0,
-        "high": 80.0
-    },
-    "eccentricity_scale_pl_0": {
-        "dist": "Uniform",
-        "low": 0.0,
-        "high": 4.0
-    },
-    "eccentricity_loc_pl_0": 0.0,
-    "eccentricity_low_pl_0": 0.0
+        "high": 100.0
+    }
 }
 ```
 
@@ -123,7 +119,7 @@ and
 for more details on the available configurations.
 
 These configurations are saved in
-[`numpyro_config.json`](https://github.com/gwkokab/hello-gwkokab/tree/main/hbi_discrete_method/sampler_config.json).
+[`numpyro_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/numpyro_config.json).
 Then you can run the following command to perform Hierarchical Bayesian Inference using
 NumPyro NUTS sampler.
 
@@ -155,29 +151,32 @@ n_sage_n_pls_m_gs \
 
 Similarly, we can use Normalizing flows enhanced MALA (FlowMC) as the MCMC sampler.
 The configuration for FlowMC is also provided through a json file and saved in
-[`flowMC_config.json`](https://github.com/gwkokab/hello-gwkokab/tree/main/hbi_discrete_method/flowMC_config.json).
+[`flowMC_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/flowMC_config.json).
 We will talk about the various configurations in detail in another tutorial.
 
 ```json
 {
     "data_dump": {
-        "n_samples": 5000
+        "n_samples": 10000
     },
-    "RQSpline_MALA_Bundle": {
+    "bundle_config": {
+        "local_sampler_name": "hmc",
         "chain_batch_size": 0,
         "n_chains": 100,
         "batch_size": 10000,
-        "n_epochs": 5,
+        "n_epochs": 4,
         "n_max_examples": 200000,
         "history_window": 2000,
         "n_NFproposal_batch_size": 50,
         "n_global_steps": 100,
         "n_local_steps": 100,
-        "n_production_loops": 20,
-        "n_training_loops": 20,
+        "n_production_loops": 10,
+        "n_training_loops": 10,
         "global_thinning": 4,
         "local_thinning": 4,
-        "mala_step_size": 0.01,
+        "step_size": 0.01,
+        "condition_matrix": 1.0,
+        "n_leapfrog": 5,
         "rq_spline_hidden_units": [
             64,
             64
@@ -238,9 +237,17 @@ Sat Nov  1 16:23:27 2025
 +-----------------------------------------------------------------------------------------+
 ```
 
+### FlowMC Results
+
+<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_flowMC/nf_samples_unweighted.png"/>
+
+### NumPyro Results
+
+<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_numpyro/samples.png"/>
+
 ---
 
 All the code and files used in this tutorial can be found in
 [hello-gwkokab/hbi_discrete_method][REPRODUCIBILITY_LINK].
 
-[REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/tree/main/hbi_discrete_method
+[REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method

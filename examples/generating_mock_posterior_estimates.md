@@ -9,25 +9,17 @@ In this tutorial, we will generate mock posterior estimates similar to those use
 and mass ratio of BBH are jointly parameterized by Powerlaw Primary Mass Ratio.
 
 $$
-p(m_1, q\mid \alpha,\beta) \propto
+p(m_1, q\mid \alpha,\beta,m_\mathrm{min},m_\mathrm{max}) \propto
 m_1^{-\alpha} q^{\beta} \quad \text{where} \quad
 (m_1,q) \in [m_\mathrm{min}, m_\mathrm{max}]\times [m_\mathrm{min}/m_1, 1]
 $$
 
-and eccentricity of their orbits is parameterized by a Normal distribution located at
-$0$ and truncated to $[0, 1]$.
+For simplicity, we are only considering component masses in this tutorial. The joint
+distribution of $(m_1, q)$ scaled by the merger rate is given by:
 
 $$
-p(\epsilon \mid \sigma) =
-\mathcal{N}_{[0,1]}(\epsilon \mid \mu=0, \sigma)
-\quad \text{where} \quad \epsilon \in [0, 1]
-$$
-
-The joint distribution of $(m_1, q, \epsilon)$ scaled by the merger rate is given by:
-
-$$
-\rho(m_1, q, \epsilon \mid \mathcal{R}, \alpha, \beta, \sigma) =
-\mathcal{R} \cdot p(m_1, q\mid \alpha,\beta) \cdot p(\epsilon \mid \sigma)
+\rho(m_1, q \mid \mathcal{R}, \alpha, \beta, m_\mathrm{min}, m_\mathrm{max}) =
+\mathcal{R} \cdot p(m_1, q\mid \alpha,\beta,m_\mathrm{min},m_\mathrm{max})
 $$
 
 ````{admonition} Note
@@ -150,29 +142,29 @@ A peek into each file shows,
 
 ```
 $ head data/realization_0/injections.dat -n 5
-mass_1_source mass_2_source eccentricity
-1.582525634765625000e+01 1.211350154876708984e+01 1.333083678036928177e-02
-2.813809776306152344e+01 1.973993301391601562e+01 2.429485321044921875e-02
-1.920602798461914062e+01 1.582667064666748047e+01 5.360946059226989746e-02
-1.299305725097656250e+01 8.506275177001953125e+00 8.243023417890071869e-03
+mass_1_source mass_2_source
+1.582525634765625000e+01 1.211350154876708984e+01
+2.813809776306152344e+01 1.973993301391601562e+01
+1.920602798461914062e+01 1.582667064666748047e+01
+1.299305725097656250e+01 8.506275177001953125e+00
 ```
 
 ```
 $ head data/realization_0/raw_injections.dat -n 5
-mass_1_source mass_2_source eccentricity
-6.057229518890380859e+00 5.316216945648193359e+00 4.142199084162712097e-02
-6.311927318572998047e+00 5.126795768737792969e+00 1.041059270501136780e-01
-8.150541305541992188e+00 8.072440147399902344e+00 6.612396985292434692e-02
-1.301545238494873047e+01 1.287599658966064453e+01 1.073014573194086552e-03
+mass_1_source mass_2_source
+6.057229518890380859e+00 5.316216945648193359e+00
+6.311927318572998047e+00 5.126795768737792969e+00
+8.150541305541992188e+00 8.072440147399902344e+00
+1.301545238494873047e+01 1.287599658966064453e+01
 ```
 
 ```
 $ head data/realization_0/posteriors/event_0.dat -n 5
-mass_1_source mass_2_source eccentricity
-1.565965175628662109e+01 1.120151329040527344e+01 4.000317305326461792e-02
-1.629046249389648438e+01 1.068410491943359375e+01 1.384858191013336182e-01
-1.673245811462402344e+01 1.088646125793457031e+01 1.342954784631729126e-01
-1.680053520202636719e+01 1.106582164764404297e+01 1.797602921724319458e-01
+mass_1_source mass_2_source
+1.565965175628662109e+01 1.120151329040527344e+01
+1.629046249389648438e+01 1.068410491943359375e+01
+1.673245811462402344e+01 1.088646125793457031e+01
+1.680053520202636719e+01 1.106582164764404297e+01
 ```
 
 We can also visualize the injections and posterior samples. Below are two plots showing
