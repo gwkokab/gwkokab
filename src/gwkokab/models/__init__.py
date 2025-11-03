@@ -13,10 +13,14 @@ from . import (
     utils as utils,
 )
 from .hybrids import (
+    BrokenPowerlawTwoPeakFull as BrokenPowerlawTwoPeakFull,
+    BrokenPowerlawTwoPeakMultiSpinMultiTilt as BrokenPowerlawTwoPeakMultiSpinMultiTilt,
+    BrokenPowerlawTwoPeakMultiSpinMultiTiltFull as BrokenPowerlawTwoPeakMultiSpinMultiTiltFull,
     NPowerlawMGaussian as NPowerlawMGaussian,
     PowerlawPeak as PowerlawPeak,
 )
 from .mass import (
+    BrokenPowerlawTwoPeak as BrokenPowerlawTwoPeak,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,

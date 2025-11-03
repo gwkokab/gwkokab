@@ -13,6 +13,7 @@ docs/source/_autosummary
 *realization*
 *.dat
 **/*.eqx
+*.hdf5
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

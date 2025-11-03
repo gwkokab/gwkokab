@@ -2,16 +2,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Callable, Dict, Optional, Tuple, TypeAlias
+from typing import Callable, Dict, Tuple, TypeAlias
 
 import equinox as eqx
 import jax
-import optax
 from jax import nn as jnn, numpy as jnp, random as jrd
+from jax.scipy.linalg import cho_solve
 from jaxtyping import Array, PRNGKeyArray
 from numpyro._typing import DistributionT
 from numpyro.distributions import Distribution
 from numpyro.distributions.continuous import _batch_mahalanobis, tri_logabsdet
+from numpyro.distributions.util import cholesky_of_inverse
 
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
@@ -163,72 +164,41 @@ def mvn_samples(
 
 
 @jax.jit
-def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
+def mvn_log_prob_scaled(loc: Array, scale_tril: Array, value: Array) -> Array:
+    # removing the constant term -0.5 * D * log(2pi), where D is the dimension,
+    # because it is being cancelled out in the importance sampling weights
     M = _batch_mahalanobis(scale_tril, value - loc)
-    half_log_det = tri_logabsdet(scale_tril)
-    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * jnp.log(2 * jnp.pi)
-    return -0.5 * M - normalize_term
+    return -0.5 * M - tri_logabsdet(scale_tril)
 
 
-def find_mean_by_variational_inference(
-    rng_key: PRNGKeyArray,
-    event_mean: Array,
-    mean: Array,
-    event_scale_tril: Array,
-    model: DistributionT,
-    learning_rate: float,
-    steps: int,
-    n_samples: int,
-) -> Array:
-    n_events = mean.shape[0]
+@jax.jit
+def covariance_matrix(scale_tril: Array) -> Array:
+    return jnp.matmul(scale_tril, jnp.swapaxes(scale_tril, -1, -2))
 
-    def variational_inference_fn(
-        event_mean_i: Array,
-        event_scale_tril_i: Array,
-        key: PRNGKeyArray,
-    ) -> Array:
-        def loss_fn(mean_i: Array, key: PRNGKeyArray) -> Array:
-            model_samples = model.sample(key, sample_shape=(n_samples,))
-            log_p = model.log_prob(model_samples)
 
-            fit_dist_log_prob = mvn_log_prob(mean_i, event_scale_tril_i, model_samples)
-            event_dist_log_prob = mvn_log_prob(
-                event_mean_i, event_scale_tril_i, model_samples
-            )
+@jax.jit
+def precision_matrix(scale_tril: Array) -> Array:
+    identity = jnp.broadcast_to(jnp.eye(scale_tril.shape[-1]), scale_tril.shape)
+    return cho_solve((scale_tril, True), identity)
 
-            return jnp.mean(
-                (jnp.exp(fit_dist_log_prob - log_p) - jnp.exp(event_dist_log_prob))
-                * (fit_dist_log_prob - log_p - event_dist_log_prob),
-                axis=-1,
-            )
 
-        def step_fn(
-            carry: Tuple[Array, optax.OptState, Array], _: Optional[Array]
-        ) -> Tuple[Tuple[Array, optax.OptState, Array], None]:
-            _mean_i, opt_state, rng_key = carry
-            rng_key, subkey = jrd.split(rng_key)
-            # Perform a single optimization step to update the mean vector to minimize the
-            # loss function.
-            _, grads = jax.value_and_grad(loss_fn)(_mean_i, subkey)
-            updates, opt_state = opt.update(grads, opt_state)
-            _mean_i = optax.apply_updates(_mean_i, updates)
-            return (_mean_i, opt_state, rng_key), None
+@jax.jit
+def is_positive_semi_definite(matrix: Array) -> Array:
+    """Check if a matrix is positive semi-definite, by verifying that all its
+    eigenvalues are non-negative.
 
-        opt = optax.adam(learning_rate=learning_rate)
-        opt_state = opt.init(event_mean_i)
+    Parameters
+    ----------
+    matrix : Array
+        The matrix of shape (..., N, N) to be checked.
 
-        (vi_mean, *_), _ = jax.lax.scan(
-            step_fn,
-            (event_mean_i, opt_state, key),
-            length=steps,
-        )
-        return vi_mean
-
-    keys = jrd.split(rng_key, n_events)
-    vi_mean = jax.vmap(variational_inference_fn, in_axes=(0, 0, 0))(
-        event_mean, event_scale_tril, keys
-    )
-    return vi_mean
+    Returns
+    -------
+    Array
+        Boolean array of shape (...) indicating whether each matrix is positive
+        semi-definite.
+    """
+    return jnp.all(jnp.linalg.eigvals(matrix) >= 0, axis=-1)
 
 
 def analytical_likelihood(
@@ -240,8 +210,6 @@ def analytical_likelihood(
     n_events: int,
     minimum_mc_error: float = 1e-2,
     n_samples: int = 100,
-    n_vi_steps: int = 5,
-    learning_rate: float = 1e-2,
     n_checkpoints: int = 10,
     n_max_steps: int = 20,
 ) -> Callable[[Array, Dict[str, Array]], Array]:
@@ -326,27 +294,42 @@ def analytical_likelihood(
         expected_rates = poisson_mean_estimator(model_instance)
 
         rng_key = key
-        moment_matching_mean = mean_stack
-        moment_matching_scale_tril = scale_tril_stack
 
-        fit_mean = moment_matching_mean
-        if n_vi_steps > 0:
-            rng_key, subkey = jrd.split(rng_key)
-            vi_mean = find_mean_by_variational_inference(
-                subkey,
-                mean_stack,
-                moment_matching_mean,
-                moment_matching_scale_tril,
-                model_instance,
-                learning_rate,
-                n_vi_steps,
-                100,
-            )
-            fit_mean = jnp.where(jnp.isnan(vi_mean), moment_matching_mean, vi_mean)
+        hessian_log_prob = jax.jit(jax.vmap(jax.hessian(model_instance.log_prob)))
+        grad_log_prob = jax.jit(jax.vmap(jax.grad(model_instance.log_prob)))
 
-        fit_scale_tril = moment_matching_scale_tril
+        fit_precision_matrix = precision_matrix(scale_tril_stack) - hessian_log_prob(
+            mean_stack
+        )
+        fit_covariance_matrix = jnp.linalg.inv(fit_precision_matrix)
 
-        mvn_log_prob_while_body = jax.vmap(mvn_log_prob, in_axes=(None, None, 0))
+        is_psd = is_positive_semi_definite(fit_covariance_matrix)
+
+        safe_fit_covariance_matrix = jnp.where(
+            is_psd[..., jnp.newaxis, jnp.newaxis],
+            fit_covariance_matrix,
+            jnp.broadcast_to(
+                jnp.eye(scale_tril_stack.shape[-1]),
+                scale_tril_stack.shape,
+            ),
+        )
+
+        fit_mean = mean_stack + jnp.where(
+            is_psd[..., jnp.newaxis],
+            jnp.squeeze(
+                safe_fit_covariance_matrix
+                @ jnp.expand_dims(grad_log_prob(mean_stack), axis=-1),
+                axis=-1,
+            ),
+            jnp.zeros_like(mean_stack),
+        )
+        fit_scale_tril = jnp.where(
+            is_psd[..., jnp.newaxis, jnp.newaxis],
+            cholesky_of_inverse(fit_precision_matrix),
+            scale_tril_stack,
+        )
+
+        mvn_log_prob_while_body = jax.vmap(mvn_log_prob_scaled, in_axes=(None, None, 0))
 
         def scan_fn(
             carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]

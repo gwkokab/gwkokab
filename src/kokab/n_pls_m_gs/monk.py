@@ -5,9 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Dict, List, Tuple, Union
 
-import gwkokab
 from gwkokab.models import NPowerlawMGaussian
-from gwkokab.models.hybrids._ncombination import create_truncated_normal_distributions
 from gwkokab.parameters import Parameters as P
 from kokab.core.monk import Monk, monk_arg_parser
 from kokab.utils.common import expand_arguments
@@ -19,8 +17,11 @@ class NPowerlawMGaussianMonk(Monk):
         self,
         N_pl: int,
         N_g: int,
-        has_beta_spin: bool,
-        has_truncated_normal_spin: bool,
+        has_beta_spin_magnitude: bool,
+        has_truncated_normal_spin_magnitude: bool,
+        has_truncated_normal_spin_x: bool,
+        has_truncated_normal_spin_y: bool,
+        has_truncated_normal_spin_z: bool,
         has_tilt: bool,
         has_eccentricity: bool,
         has_redshift: bool,
@@ -36,8 +37,6 @@ class NPowerlawMGaussianMonk(Monk):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        n_vi_steps: int,
-        learning_rate: float,
         minimum_mc_error: float,
         n_checkpoints: int,
         n_max_steps: int,
@@ -47,12 +46,11 @@ class NPowerlawMGaussianMonk(Monk):
     ) -> None:
         self.N_pl = N_pl
         self.N_g = N_g
-        self.has_beta_spin = has_beta_spin
-        self.has_truncated_normal_spin = has_truncated_normal_spin
-        if self.has_truncated_normal_spin:
-            gwkokab.models.hybrids._npowerlawmgaussian.build_spin_distributions = (
-                create_truncated_normal_distributions
-            )
+        self.has_beta_spin_magnitude = has_beta_spin_magnitude
+        self.has_truncated_normal_spin_magnitude = has_truncated_normal_spin_magnitude
+        self.has_truncated_normal_spin_x = has_truncated_normal_spin_x
+        self.has_truncated_normal_spin_y = has_truncated_normal_spin_y
+        self.has_truncated_normal_spin_z = has_truncated_normal_spin_z
         self.has_tilt = has_tilt
         self.has_eccentricity = has_eccentricity
         self.has_redshift = has_redshift
@@ -75,8 +73,6 @@ class NPowerlawMGaussianMonk(Monk):
             check_leaks=check_leaks,
             analysis_name="n_pls_m_gs",
             n_samples=n_samples,
-            n_vi_steps=n_vi_steps,
-            learning_rate=learning_rate,
             minimum_mc_error=minimum_mc_error,
             n_checkpoints=n_checkpoints,
             n_max_steps=n_max_steps,
@@ -87,7 +83,11 @@ class NPowerlawMGaussianMonk(Monk):
         return {
             "N_pl": self.N_pl,
             "N_g": self.N_g,
-            "use_spin": self.has_beta_spin or self.has_truncated_normal_spin,
+            "use_beta_spin_magnitude": self.has_beta_spin_magnitude,
+            "use_truncated_normal_spin_magnitude": self.has_truncated_normal_spin_magnitude,
+            "use_truncated_normal_spin_x": self.has_truncated_normal_spin_x,
+            "use_truncated_normal_spin_y": self.has_truncated_normal_spin_y,
+            "use_truncated_normal_spin_z": self.has_truncated_normal_spin_z,
             "use_tilt": self.has_tilt,
             "use_eccentricity": self.has_eccentricity,
             "use_redshift": self.has_redshift,
@@ -102,9 +102,18 @@ class NPowerlawMGaussianMonk(Monk):
     @property
     def parameters(self) -> List[str]:
         names = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
-        if self.has_beta_spin or self.has_truncated_normal_spin:
+        if self.has_beta_spin_magnitude or self.has_truncated_normal_spin_magnitude:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
+        if self.has_truncated_normal_spin_x:
+            names.append(P.PRIMARY_SPIN_X.value)
+            names.append(P.SECONDARY_SPIN_X.value)
+        if self.has_truncated_normal_spin_y:
+            names.append(P.PRIMARY_SPIN_Y.value)
+            names.append(P.SECONDARY_SPIN_Y.value)
+        if self.has_truncated_normal_spin_z:
+            names.append(P.PRIMARY_SPIN_Z.value)
+            names.append(P.SECONDARY_SPIN_Z.value)
         if self.has_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.has_phi_12:
@@ -143,38 +152,104 @@ class NPowerlawMGaussianMonk(Monk):
             ("mmin_pl", self.N_pl),
         ]
 
-        if self.has_truncated_normal_spin:
+        if self.has_truncated_normal_spin_magnitude:
             all_params.extend(
                 [
-                    ("chi1_high_g", self.N_g),
-                    ("chi1_high_pl", self.N_pl),
-                    ("chi1_loc_g", self.N_g),
-                    ("chi1_loc_pl", self.N_pl),
-                    ("chi1_low_g", self.N_g),
-                    ("chi1_low_pl", self.N_pl),
-                    ("chi1_scale_g", self.N_g),
-                    ("chi1_scale_pl", self.N_pl),
-                    ("chi2_high_g", self.N_g),
-                    ("chi2_high_pl", self.N_pl),
-                    ("chi2_loc_g", self.N_g),
-                    ("chi2_loc_pl", self.N_pl),
-                    ("chi2_low_g", self.N_g),
-                    ("chi2_low_pl", self.N_pl),
-                    ("chi2_scale_g", self.N_g),
-                    ("chi2_scale_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
                 ]
             )
-        if self.has_beta_spin:
+        if self.has_beta_spin_magnitude:
             all_params.extend(
                 [
-                    ("chi1_mean_g", self.N_g),
-                    ("chi1_mean_pl", self.N_pl),
-                    ("chi1_variance_g", self.N_g),
-                    ("chi1_variance_pl", self.N_pl),
-                    ("chi2_mean_g", self.N_g),
-                    ("chi2_mean_pl", self.N_pl),
-                    ("chi2_variance_g", self.N_g),
-                    ("chi2_variance_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_truncated_normal_spin_x:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_X.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_X.value + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_X.value + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_X.value + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_X.value + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_X.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_X.value + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_X.value + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_X.value + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_truncated_normal_spin_y:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_Y.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y.value + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y.value + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y.value + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y.value + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y.value + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y.value + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y.value + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.has_truncated_normal_spin_z:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_Z.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z.value + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z.value + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z.value + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z.value + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z.value + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z.value + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -183,10 +258,10 @@ class NPowerlawMGaussianMonk(Monk):
                 [
                     ("cos_tilt_zeta_g", self.N_g),
                     ("cos_tilt_zeta_pl", self.N_pl),
-                    ("cos_tilt1_scale_g", self.N_g),
-                    ("cos_tilt1_scale_pl", self.N_pl),
-                    ("cos_tilt2_scale_g", self.N_g),
-                    ("cos_tilt2_scale_pl", self.N_pl),
+                    (P.COS_TILT_1.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_1.value + "_scale_pl", self.N_pl),
+                    (P.COS_TILT_2.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_2.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -318,16 +393,31 @@ def main() -> None:
 
     spin_group = model_group.add_mutually_exclusive_group()
     spin_group.add_argument(
-        "--add-beta-spin",
+        "--add-beta-spin-magnitude",
         action="store_true",
         help="Include beta spin parameters in the model.",
     )
     spin_group.add_argument(
-        "--add-truncated-normal-spin",
+        "--add-truncated-normal-spin-magnitude",
         action="store_true",
         help="Include truncated normal spin parameters in the model.",
     )
 
+    model_group.add_argument(
+        "--add-truncated-normal-spin-x",
+        action="store_true",
+        help="Include truncated normal spin x parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin-y",
+        action="store_true",
+        help="Include truncated normal spin y parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin-z",
+        action="store_true",
+        help="Include truncated normal spin z parameters in the model.",
+    )
     model_group.add_argument(
         "--add-tilt",
         action="store_true",
@@ -381,8 +471,11 @@ def main() -> None:
     NPowerlawMGaussianMonk(
         N_pl=args.n_pl,
         N_g=args.n_g,
-        has_beta_spin=args.add_beta_spin,
-        has_truncated_normal_spin=args.add_truncated_normal_spin,
+        has_beta_spin_magnitude=args.add_beta_spin_magnitude,
+        has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
+        has_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
+        has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
+        has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         has_tilt=args.add_tilt,
         has_eccentricity=args.add_truncated_normal_eccentricity,
         has_redshift=args.add_redshift,
@@ -398,8 +491,6 @@ def main() -> None:
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
         n_samples=args.n_samples,
-        n_vi_steps=args.n_vi_steps,
-        learning_rate=args.learning_rate,
         minimum_mc_error=args.minimum_mc_error,
         n_checkpoints=args.n_checkpoints,
         n_max_steps=args.n_max_steps,

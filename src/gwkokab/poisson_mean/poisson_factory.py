@@ -30,7 +30,7 @@ def get_selection_fn_and_poisson_mean_estimator(
 ) -> Tuple[
     Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
 ]:
-    valid_estimator_types = ("injection", "neural_vt", "neural_pdet")
+    valid_estimator_types = ("injection", "neural_vt", "neural_pdet", "custom")
     error_if(
         estimator_type not in valid_estimator_types,
         msg="estimator_type must be one of " + ", ".join(valid_estimator_types),
@@ -64,5 +64,41 @@ def get_selection_fn_and_poisson_mean_estimator(
             num_samples=kwargs.pop("num_samples", 1_000),
             time_scale=kwargs.pop("time_scale", 1.0),
         )
+    elif estimator_type == "custom":
+        error_if(
+            kwargs.get("python_module_path", None) is None,
+            msg="For custom estimator_type, 'python_module_path' must be provided.",
+        )
+
+        python_module_path: str = kwargs.pop("python_module_path")
+        error_if(
+            not isinstance(python_module_path, str),
+            msg="'python_module_path' must be a string, got "
+            + str(type(python_module_path)),
+        )
+        error_if(
+            not python_module_path.endswith(".py"),
+            msg="'python_module_path' must point to a .py file, got '"
+            + python_module_path
+            + "'.",
+        )
+
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "custom_module", python_module_path
+        )  # type: ignore
+        custom_module = importlib.util.module_from_spec(spec)  # type: ignore
+        spec.loader.exec_module(custom_module)  # type: ignore
+
+        error_if(
+            not hasattr(custom_module, "custom_poisson_mean_estimator"),
+            msg="The custom module must have a 'custom_poisson_mean_estimator' function.",
+        )
+
+        return custom_module.custom_poisson_mean_estimator(
+            key, parameters, filename, batch_size=batch_size, **kwargs
+        )
+
     else:
         raise ValueError(f"Unknown estimator_type: {estimator_type}")

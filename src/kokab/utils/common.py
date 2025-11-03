@@ -3,15 +3,10 @@
 
 
 import json
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 
 import numpy as np
 import pandas as pd
-from numpyro import distributions as dist
-from numpyro._typing import DistributionLike
-
-from kokab.utils.priors import available as available_priors
-from kokab.utils.regex import match_all
 
 
 def read_json(json_file: str) -> Dict:
@@ -122,67 +117,6 @@ def get_posterior_data(
         data = df[posterior_columns].to_numpy()
         data_list.append(data)
     return data_list
-
-
-def get_processed_priors(params: List[str], priors: dict) -> dict:
-    """Get the processed priors from a list of parameters.
-
-    Parameters
-    ----------
-    params : List[str]
-        list of parameters
-    priors : dict
-        dictionary of priors
-
-    Returns
-    -------
-    dict
-        dictionary of processed priors
-
-    Raises
-    ------
-    ValueError
-        if the prior value is invalid
-    """
-    matched_prior_params = match_all(params, priors)
-    for key, value in matched_prior_params.items():
-        if isinstance(value, dict):
-            value_cpy = value.copy()
-            dist_type = value_cpy.pop("dist")
-            matched_prior_params[key] = available_priors[dist_type](
-                **value_cpy, validate_args=True
-            )
-    for param in params:
-        if param not in matched_prior_params:
-            raise ValueError(f"Missing prior for {param}")
-    return matched_prior_params
-
-
-def get_dist(meta_dict: dict[str, Union[str, float]]) -> DistributionLike:
-    """Get the distribution from the dictionary. It expects the dictionary to have the
-    key 'dist' which is the name of the distribution and the rest of the keys to be the
-    parameters of the distribution.
-
-    Example
-    -------
-    >>> std_normal = get_dist({"dist": "Normal", "loc": 0.0, "scale": 1.0})
-    >>> std_normal.loc
-    0.0
-    >>> std_normal.scale
-    1.0
-
-    Parameters
-    ----------
-    meta_dict : dict[str, Union[str, float]]
-        Dictionary containing the distribution name and its parameters
-
-    Returns
-    -------
-    DistributionLike
-        The distribution object
-    """
-    dist_name = meta_dict.pop("dist")
-    return getattr(dist, dist_name)(**meta_dict)
 
 
 def ppd_ranges(

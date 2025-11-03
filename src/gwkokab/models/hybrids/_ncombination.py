@@ -2,20 +2,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, TypeVar
 
 from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
     Distribution,
     MixtureGeneral,
-    Normal,
     TruncatedNormal,
-    TwoSidedTruncatedDistribution,
     Uniform,
 )
 
-from ...utils.tools import fetch_first_matching_value
 from ..mass import PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
@@ -29,10 +26,37 @@ __all__ = [
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_redshift",
     "create_powerlaws",
-    "create_truncated_normal_distributions_for_cos_tilt",
     "create_truncated_normal_distributions",
     "create_uniform_distributions",
 ]
+
+
+_KT = TypeVar("_KT")
+_VT = TypeVar("_VT")
+
+
+def _fetch_first_matching_value(
+    dictionary: Dict[_KT, _VT], *keys: _KT
+) -> Optional[_VT]:
+    """Get the first value in the dictionary that matches one of the keys.
+
+    Parameters
+    ----------
+    dictionary : Dict[_KT, _VT]
+        The dictionary to search.
+    keys : _KT
+        The keys to search for.
+
+    Returns
+    -------
+    Optional[_VT]
+        The value of the first key that is found in the dictionary, or None if no key is
+        found.
+    """
+    for key in keys:
+        if key in dictionary:
+            return dictionary[key]
+    return None
 
 
 def combine_distributions(
@@ -46,7 +70,7 @@ def combine_distributions(
 
 def create_beta_distributions(
     N: int,
-    parameter_name: Literal["chi1", "chi2"],
+    parameter_name: Literal["a_1", "a_2"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
@@ -57,7 +81,7 @@ def create_beta_distributions(
     ----------
     N : int
         Number of components
-    parameter_name : Literal[&quot;chi1&quot;, &quot;chi2&quot;]
+    parameter_name : Literal[&quot;a_1&quot;, &quot;a_2&quot;]
         name of the parameter to create distributions for
     component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
         type of component, either "pl" or "g"
@@ -81,10 +105,10 @@ def create_beta_distributions(
     mean_name = f"{parameter_name}_mean_{component_type}"
     variance_name = f"{parameter_name}_variance_{component_type}"
     for i in range(N):
-        mean = fetch_first_matching_value(params, f"{mean_name}_{i}", mean_name)
+        mean = _fetch_first_matching_value(params, f"{mean_name}_{i}", mean_name)
         if mean is None:
             raise ValueError(f"Missing parameter {mean_name}_{i}")
-        variance = fetch_first_matching_value(
+        variance = _fetch_first_matching_value(
             params, f"{variance_name}_{i}", variance_name
         )
         if variance is None:
@@ -103,18 +127,24 @@ def create_beta_distributions(
 def create_truncated_normal_distributions(
     N: int,
     parameter_name: Literal[
-        "m1",
-        "m2",
-        "chi1",
-        "chi2",
+        "a_1",
+        "a_2",
+        "cos_iota",
         "cos_tilt1",
         "cos_tilt2",
-        "ecc",
-        "cos_iota",
+        "eccentricity",
+        "m1",
+        "m2",
         "phi_12",
         "polarization_angle",
         "right_ascension",
         "sin_declination",
+        "spin_1x",
+        "spin_1y",
+        "spin_1z",
+        "spin_2x",
+        "spin_2y",
+        "spin_2z",
     ],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
@@ -126,7 +156,26 @@ def create_truncated_normal_distributions(
     ----------
     N : int
         Number of components
-    parameter_name : Literal[ &quot;m1&quot;, &quot;m2&quot;, &quot;chi1&quot;, &quot;chi2&quot;, &quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;, &quot;ecc&quot;, &quot;cos_iota&quot;, &quot;phi_12&quot;, &quot;polarization_angle&quot;, &quot;right_ascension&quot;, &quot;sin_declination&quot;, ]
+    parameter_name : Literal[
+        &quot;chi1&quot;,
+        &quot;chi2&quot;,
+        &quot;cos_iota&quot;,
+        &quot;cos_tilt1&quot;,
+        &quot;cos_tilt2&quot;,
+        &quot;eccentricity&quot;,
+        &quot;m1&quot;,
+        &quot;m2&quot;,
+        &quot;phi_12&quot;,
+        &quot;polarization_angle&quot;,
+        &quot;right_ascension&quot;,
+        &quot;sin_declination&quot;,
+        &quot;spin_1x&quot;,
+        &quot;spin_1y&quot;,
+        &quot;spin_1z&quot;,
+        &quot;spin_2x&quot;,
+        &quot;spin_2y&quot;,
+        &quot;spin_2z&quot;,
+    ]
         name of the parameter to create distributions for
     component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
         type of component, either "pl" or "g"
@@ -151,16 +200,16 @@ def create_truncated_normal_distributions(
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
     for i in range(N):
-        loc = fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
+        loc = _fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
         if loc is None:
             raise ValueError(f"Missing parameter {loc_name}_{i}")
 
-        scale = fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
+        scale = _fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
         if scale is None:
             raise ValueError(f"Missing parameter {scale_name}_{i}")
 
-        low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
-        high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
+        low = _fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
+        high = _fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
 
         truncated_normal_collection.append(
             TruncatedNormal(
@@ -171,60 +220,9 @@ def create_truncated_normal_distributions(
     return truncated_normal_collection
 
 
-def create_truncated_normal_distributions_for_cos_tilt(
-    N: int,
-    parameter_name: Literal["cos_tilt1", "cos_tilt2"],
-    component_type: Literal["pl", "g"],
-    params: Dict[str, Array],
-    validate_args: Optional[bool] = None,
-) -> List[TwoSidedTruncatedDistribution]:
-    """Create a list of TwoSidedTruncatedDistribution distributions for tilt.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[&quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[TwoSidedTruncatedDistribution]
-        list of TwoSidedTruncatedDistribution distributions
-
-    Raises
-    ------
-    ValueError
-        if scale is missing
-    """
-    truncated_normal_for_tilt_collection = []
-    scale_name = f"{parameter_name}_scale_{component_type}"
-    for i in range(N):
-        scale = fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
-        if scale is None:
-            raise ValueError(f"Missing parameter {scale_name}_{i}")
-
-        truncated_normal_for_tilt_collection.append(
-            TwoSidedTruncatedDistribution(
-                Normal(loc=1.0, scale=scale, validate_args=validate_args),
-                low=-1,
-                high=1,
-                validate_args=validate_args,
-            )
-        )
-
-    return truncated_normal_for_tilt_collection
-
-
 def create_independent_spin_orientation_gaussian_isotropic(
     N: int,
-    parameter_name: Literal["cos_tilt1", "cos_tilt2"],
+    parameter_name: Literal["cos_tilt_1", "cos_tilt_2"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
@@ -236,7 +234,7 @@ def create_independent_spin_orientation_gaussian_isotropic(
     ----------
     N : int
         Number of components
-    parameter_name : Literal[&quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;]
+    parameter_name : Literal[&quot;cos_tilt_1&quot;, &quot;cos_tilt_2&quot;]
         name of the parameter to create distributions for
     component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
         type of component, either "pl" or "g"
@@ -257,19 +255,19 @@ def create_independent_spin_orientation_gaussian_isotropic(
     """
     dist_collection = []
     zeta_name = f"cos_tilt_zeta_{component_type}"
-    scale1_name = f"cos_tilt1_scale_{component_type}"
-    scale2_name = f"cos_tilt2_scale_{component_type}"
+    scale1_name = f"cos_tilt_1_scale_{component_type}"
+    scale2_name = f"cos_tilt_2_scale_{component_type}"
 
     for i in range(N):
-        zeta = fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
+        zeta = _fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
         if zeta is None:
             raise ValueError(f"Missing parameter {zeta_name}_{i}")
 
-        scale1 = fetch_first_matching_value(params, f"{scale1_name}_{i}", scale1_name)
+        scale1 = _fetch_first_matching_value(params, f"{scale1_name}_{i}", scale1_name)
         if scale1 is None:
             raise ValueError(f"Missing parameter {scale1_name}_{i}")
 
-        scale2 = fetch_first_matching_value(params, f"{scale2_name}_{i}", scale2_name)
+        scale2 = _fetch_first_matching_value(params, f"{scale2_name}_{i}", scale2_name)
         if scale2 is None:
             raise ValueError(f"Missing parameter {scale2_name}_{i}")
 
@@ -317,19 +315,19 @@ def create_powerlaws(
     mmin_name = "mmin_pl"
     mmax_name = "mmax_pl"
     for i in range(N):
-        alpha = fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
+        alpha = _fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
         if alpha is None:
             raise ValueError(f"Missing parameter {alpha_name}_{i}")
 
-        beta = fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
+        beta = _fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
         if beta is None:
             raise ValueError(f"Missing parameter {beta_name}_{i}")
 
-        mmin = fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
+        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
         if mmin is None:
             raise ValueError(f"Missing parameter {mmin_name}_{i}")
 
-        mmax = fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
+        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
         if mmax is None:
             raise ValueError(f"Missing parameter {mmax_name}_{i}")
 
@@ -382,11 +380,11 @@ def create_powerlaw_redshift(
     z_max_name = f"{parameter_name}_z_max_{component_type}"
 
     for i in range(N):
-        kappa = fetch_first_matching_value(params, f"{kappa_name}_{i}", kappa_name)
+        kappa = _fetch_first_matching_value(params, f"{kappa_name}_{i}", kappa_name)
         if kappa is None:
             raise ValueError(f"Missing parameter {kappa_name}_{i}")
 
-        z_max = fetch_first_matching_value(params, f"{z_max_name}_{i}", z_max_name)
+        z_max = _fetch_first_matching_value(params, f"{z_max_name}_{i}", z_max_name)
         if z_max is None:
             raise ValueError(f"Missing parameter {z_max_name}_{i}")
 
@@ -447,11 +445,11 @@ def create_uniform_distributions(
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
     for i in range(N):
-        low = fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
+        low = _fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
         if low is None:
             raise ValueError(f"Missing parameter {low_name}_{i}")
 
-        high = fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
+        high = _fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
         if high is None:
             raise ValueError(f"Missing parameter {high_name}_{i}")
 
