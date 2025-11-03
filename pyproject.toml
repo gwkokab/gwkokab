@@ -80,7 +80,9 @@ doc = [
     "sphinx_design",
     "sphinx-autoapi",
     "sphinx-copybutton",
+    "sphinx-togglebutton",
     "sphinx>=2.0",
+    "sphinxcontrib-bibtex",
 ]
 
 [[tool.uv.index]]

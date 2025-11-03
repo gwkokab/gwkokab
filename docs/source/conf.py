@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath("./_pygments"))
 
 
 project = "GWKokab"
-copyright = "2024, Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
+copyright = "2023, Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
 author = "Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
 
 
@@ -36,17 +36,21 @@ except ImportError:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    "myst_nb",
-    "sphinx.ext.intersphinx",
-    "sphinx.ext.extlinks",
-    "sphinx.ext.napoleon",
-    "sphinx.ext.linkcode",
-    "sphinx_copybutton",
     "autoapi.extension",
-    # "myst_parser",
+    "myst_nb",
+    "sphinx_copybutton",
     "sphinx_design",
+    "sphinx_togglebutton",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.linkcode",
+    "sphinx.ext.napoleon",
+    "sphinxcontrib.bibtex",
 ]
 
+bibtex_encoding = "latin"
+bibtex_default_style = "unsrt"
+bibtex_bibfiles = ["examples/refs.bib"]
 
 nb_execution_mode = "off"
 myst_heading_anchors = 4
