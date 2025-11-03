@@ -33,7 +33,7 @@ def _batch_log_prob(
     )
     safe_log_ref_prior = jnp.where(batched_masks, batched_log_ref_priors, 0.0)
 
-    batched_model_log_prob = jax.vmap(jax.vmap(model_instance.log_prob))(safe_data)  # type: ignore
+    batched_model_log_prob = jax.vmap(model_instance.log_prob)(safe_data)  # type: ignore
     safe_model_log_prob = jnp.where(batched_masks, batched_model_log_prob, -jnp.inf)
     batched_log_prob: Array = safe_model_log_prob - safe_log_ref_prior
     batched_log_prob = jnp.where(
