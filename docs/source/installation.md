@@ -36,17 +36,21 @@ This option is mainly intended for development purposes. See [JAX's official doc
 :::{tab-item} Nvidia-GPU 🚀
 :sync: gpu
 
-We highly recommend using [GWKokab][GWKokab] with GPU support for better performance. Before installation, appropriate Nvidia drivers and CUDA-toolkit 12 must be ensured on your system.
+We highly recommend using [GWKokab][GWKokab] with GPU support for better performance. Before installation, appropriate Nvidia drivers and CUDA-toolkit must be ensured on your system.
+
+For CUDA-toolkit 12:
 
 ```{code-block} bash
-uv pip install -U "gwkokab[gpu]"
+uv pip install -U "gwkokab[cuda12]"
+```
+
+or for CUDA-toolkit 13:
+
+```{code-block} bash
+uv pip install -U "gwkokab[cuda13]"
 ```
 
 See [JAX's official documentation](https://docs.jax.dev/en/latest/installation.html#nvidia-gpu) for more details on supported Nvidia GPUs and drivers.
-
-```{warning}
-We do not support CUDA-toolkit 13 at the moment.
-```
 
 :::
 
@@ -98,17 +102,21 @@ See [JAX's official documentation](https://docs.jax.dev/en/latest/installation.h
 :::{tab-item} Nvidia-GPU 🚀
 :sync: gpu
 
-Linux with x86_64 and CUDA-toolkit 12 is the sweet spot for Nvidia-GPU support with JAX.
+Linux with x86_64 is the sweet spot for Nvidia-GPU support with JAX.
+
+For CUDA-toolkit 12:
 
 ```{code-block} bash
-make install PIP_FLAGS=--upgrade EXTRA=gpu
+make install PIP_FLAGS=--upgrade EXTRA=cuda12
+```
+
+or for CUDA-toolkit 13:
+
+```{code-block} bash
+make install PIP_FLAGS=--upgrade EXTRA=cuda13
 ```
 
 See [JAX's official documentation](https://docs.jax.dev/en/latest/installation.html#nvidia-gpu) for more details on supported Nvidia GPUs and drivers.
-
-```{warning}
-We do not support CUDA-toolkit 13 at the moment.
-```
 
 :::
 
