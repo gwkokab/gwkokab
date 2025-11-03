@@ -66,9 +66,10 @@ keywords = [
 ]
 
 [project.optional-dependencies]
-cpu = ["jax>=0.4.30,<=0.5.3"]
-gpu = ["jax[cuda12]>=0.4.30,<=0.5.3"]
-tpu = ["jax[tpu]>=0.4.30,<=0.5.3"]
+cpu = ["jax>=0.4.30,<9.0.0"]
+cuda12 = ["jax[cuda12]>=0.4.30,<9.0.0"]
+cuda13 = ["jax[cuda13]>=0.4.30,<9.0.0"]
+tpu = ["jax[tpu]>=0.4.30,<9.0.0"]
 dev = ["pre-commit>=4.0.0", "ruff>=0.8.0", "setuptools>=75.6.0"]
 test = ["pytest>=8.3.0", "tensorflow_probability>=0.18", "astropy>=6.0.0"]
 doc = [
