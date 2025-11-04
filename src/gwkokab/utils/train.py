@@ -232,8 +232,8 @@ def train_regressor(
     # --------------------------
     df = read_data(data_path, keys=input_keys + output_keys)
 
-    data_X = jax.device_put(df[input_keys].to_numpy(), may_alias=True)
-    data_Y = jax.device_put(df[output_keys].to_numpy(), may_alias=True)
+    data_X = jax.device_put(df[input_keys].to_numpy())
+    data_Y = jax.device_put(df[output_keys].to_numpy())
 
     if train_in_log:
         # Only for regression on log(y). Avoid for BCE loss.

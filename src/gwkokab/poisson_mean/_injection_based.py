@@ -135,9 +135,9 @@ def load_o1o2o3_or_endO_injection_data(
             )
             sampling_prob *= np.square(4.0 * np.pi * a1 * a2)
 
-        injections = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
+        injections = jax.device_put(np.stack(injs, axis=-1))
 
-        sampling_log_prob = jax.device_put(np.log(sampling_prob), may_alias=True)
+        sampling_log_prob = jax.device_put(np.log(sampling_prob))
 
     return injections, sampling_log_prob, analysis_time_years, total_injections
 
@@ -255,9 +255,9 @@ def load_o1o2o3o4a_injection_data(
                 _inj = raw_events[_PARAM_MAPPING[p]][found][:]
             injs.append(_inj)
 
-        events = jax.device_put(np.stack(injs, axis=-1), may_alias=True)
+        events = jax.device_put(np.stack(injs, axis=-1))
 
-        sampling_log_prob = jax.device_put(sampling_log_prob, may_alias=True)
+        sampling_log_prob = jax.device_put(sampling_log_prob)
 
     return events, sampling_log_prob, analysis_time_years, total_injections
 

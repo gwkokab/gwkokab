@@ -396,7 +396,7 @@ class Guru:
         *,
         logpdf: Callable[[Array, Dict[str, Any]], Array],
         priors: JointDistribution,
-        data: Dict[str, Any],
+        data: Any,
         labels: List[str],
     ) -> None:
         raise NotImplementedError()
