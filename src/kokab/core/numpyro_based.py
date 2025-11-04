@@ -4,7 +4,7 @@
 
 import os
 from collections.abc import Callable
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import arviz as az
 import jax
@@ -75,7 +75,7 @@ def _run_mcmc(
     kernel: numpyro.infer.NUTS,
     mcmc_kwargs: Dict[str, Any],
     data: Tuple[Any, ...],
-) -> az.InferenceData:
+):
     n_devices = jax.device_count()
     if (
         chain_method := mcmc_kwargs.pop("chain_method")
