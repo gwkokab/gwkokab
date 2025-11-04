@@ -96,7 +96,7 @@ def _run_mcmc(
     chain_idx: int = 0
     for _ in range(n_batches):
         key, subkey = jrd.split(key)
-        mcmc.run(subkey, **data)
+        mcmc.run(subkey, *data)
         inference_data = az.from_numpyro(mcmc)
         _save_inference_data(inference_data, start_chain_idx=chain_idx)
         chain_idx += batch_size
@@ -104,7 +104,7 @@ def _run_mcmc(
     if n_batches * batch_size < n_chains:
         mcmc.num_chains = n_chains - n_batches * batch_size
         key, subkey = jrd.split(key)
-        mcmc.run(subkey, **data)
+        mcmc.run(subkey, *data)
         inference_data = az.from_numpyro(mcmc)
         _save_inference_data(inference_data, start_chain_idx=chain_idx)
 
