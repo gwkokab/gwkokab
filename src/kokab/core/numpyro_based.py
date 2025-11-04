@@ -4,7 +4,7 @@
 
 import os
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import arviz as az
 import jax
@@ -23,7 +23,9 @@ from kokab.utils.common import read_json
 from kokab.utils.literals import INFERENCE_DIRECTORY
 
 
-def _save_inference_data(inference_data: az.InferenceData) -> None:
+def _save_inference_data(
+    inference_data: az.InferenceData, start_chain_idx: int = 0
+) -> None:
     os.makedirs(INFERENCE_DIRECTORY, exist_ok=True)
 
     header = list(inference_data.posterior.data_vars.keys())  # type: ignore
@@ -31,11 +33,19 @@ def _save_inference_data(inference_data: az.InferenceData) -> None:
     posterior_samples = inference_data.posterior.stack(  # type: ignore
         sample=("chain", "draw")
     ).to_dataframe()
-    np.savetxt(
-        INFERENCE_DIRECTORY + "/samples.dat",
-        np.column_stack([posterior_samples[key] for key in header]),
-        header=" ".join(header),
-    )
+
+    if start_chain_idx == 0:
+        np.savetxt(
+            INFERENCE_DIRECTORY + "/samples.dat",
+            np.column_stack([posterior_samples[key] for key in header]),
+            header=" ".join(header),
+        )
+    else:
+        with open(INFERENCE_DIRECTORY + "/samples.dat", "a") as f:
+            np.savetxt(
+                f,
+                np.column_stack([posterior_samples[key] for key in header]),
+            )
 
     summary = az.summary(inference_data)
 
@@ -50,7 +60,7 @@ def _save_inference_data(inference_data: az.InferenceData) -> None:
 
     n_chains = posterior_data.shape[0]
 
-    for i in range(n_chains):
+    for i in range(start_chain_idx, n_chains + start_chain_idx):
         np.savetxt(
             INFERENCE_DIRECTORY + f"/chain_{i}.dat",
             posterior_data[i],
@@ -60,22 +70,12 @@ def _save_inference_data(inference_data: az.InferenceData) -> None:
         )
 
 
-def _combine_inference_data(
-    inference_data: Optional[az.InferenceData],
-    mcmc: numpyro.infer.MCMC,
-) -> az.InferenceData:
-    new_data = az.from_numpyro(mcmc)
-    if inference_data is None:
-        return new_data
-    return az.concat(inference_data, new_data, dim="chain")  # type: ignore
-
-
 def _run_mcmc(
     key: PRNGKeyArray,
     kernel: numpyro.infer.NUTS,
     mcmc_kwargs: Dict[str, Any],
     data: Dict[str, Any],
-) -> az.InferenceData:
+):
     n_devices = jax.device_count()
     if (
         chain_method := mcmc_kwargs.pop("chain_method")
@@ -87,22 +87,26 @@ def _run_mcmc(
         )
         chain_method = "parallel"
 
-    inference_data = None
     n_chains = mcmc_kwargs.pop("num_chains", 1)
-    batch_size = min(n_chains, n_devices)
+    batch_size: int = 1 if chain_method == "sequential" else min(n_chains, n_devices)
     n_batches = n_chains // batch_size
+
     mcmc = MCMC(kernel, num_chains=batch_size, chain_method=chain_method, **mcmc_kwargs)
 
+    chain_idx: int = 0
     for _ in range(n_batches):
         key, subkey = jrd.split(key)
         mcmc.run(subkey, **data)
-        inference_data = _combine_inference_data(inference_data, mcmc)
+        inference_data = az.from_numpyro(mcmc)
+        _save_inference_data(inference_data, start_chain_idx=chain_idx)
+        chain_idx += batch_size
+
     if n_batches * batch_size < n_chains:
         mcmc.num_chains = n_chains - n_batches * batch_size
         key, subkey = jrd.split(key)
         mcmc.run(subkey, **data)
-        inference_data = _combine_inference_data(inference_data, mcmc)
-    return inference_data  # type: ignore
+        inference_data = az.from_numpyro(mcmc)
+        _save_inference_data(inference_data, start_chain_idx=chain_idx)
 
 
 class NumpyroBased(Guru):
@@ -123,13 +127,9 @@ class NumpyroBased(Guru):
 
         if self.debug_nans:
             with jax.debug_nans(True):
-                inference_data = _run_mcmc(
-                    self.rng_key, kernel, sampler_config["mcmc"], data
-                )
+                _run_mcmc(self.rng_key, kernel, sampler_config["mcmc"], data)
         elif self.profile_memory:
-            inference_data = _run_mcmc(
-                self.rng_key, kernel, sampler_config["mcmc"], data
-            )
+            _run_mcmc(self.rng_key, kernel, sampler_config["mcmc"], data)
 
             import datetime
 
@@ -138,15 +138,9 @@ class NumpyroBased(Guru):
             jax.profiler.save_device_memory_profile(filename)
         elif self.check_leaks:
             with jax.checking_leaks():
-                inference_data = _run_mcmc(
-                    self.rng_key, kernel, sampler_config["mcmc"], data
-                )
+                _run_mcmc(self.rng_key, kernel, sampler_config["mcmc"], data)
         else:
-            inference_data = _run_mcmc(
-                self.rng_key, kernel, sampler_config["mcmc"], data
-            )
-
-        _save_inference_data(inference_data)
+            _run_mcmc(self.rng_key, kernel, sampler_config["mcmc"], data)
 
         logger.info("Sampling and data saving complete.")
 
