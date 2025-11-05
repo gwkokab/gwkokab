@@ -215,6 +215,8 @@ class Sage(Guru):
                 delimiter=" ",
             )
             mask = np.ones(samples.shape[0], dtype=bool)
+            max_variance = 0.0
+            min_variance = float("inf")
             for i in range(samples.shape[0]):
                 sample = samples[i]
                 scaled_mixture = dist_fn(
@@ -225,18 +227,24 @@ class Sage(Guru):
                     args=(*data_group, *log_ref_priors_group, *masks_group),
                 ) + variance_of_poisson_mean_estimator(scaled_mixture)
                 mask[i] = variance < self.variance_cut_threshold
+                max_variance = max(max_variance, variance)  # type: ignore
+                min_variance = min(min_variance, variance)  # type: ignore
+            logger.info(
+                "Variance of single event likelihood ranges from {min_variance} to {max_variance}.",
+                min_variance=min_variance,
+                max_variance=max_variance,
+            )
             n_removed = np.sum(~mask)
-            if n_removed > 0:
-                logger.info(
-                    "Removing {n_removed} samples with variance above the threshold of {threshold}.",
-                    n_removed=n_removed,
-                    threshold=self.variance_cut_threshold,
-                )
-                np.savetxt(
-                    f"{INFERENCE_DIRECTORY}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}",
-                    samples[mask],
-                    header=" ".join(self.posterior_columns),
-                )
+            logger.info(
+                "Removing {n_removed} samples with variance above the threshold of {threshold}.",
+                n_removed=n_removed,
+                threshold=self.variance_cut_threshold,
+            )
+            np.savetxt(
+                f"{INFERENCE_DIRECTORY}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}",
+                samples[mask],
+                header=" ".join(self.posterior_columns),
+            )
 
 
 def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
