@@ -38,6 +38,9 @@ from kokab.utils.common import read_json
 from kokab.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 
 
+_INFERENCE_DIRECTORY = "flowMC_" + INFERENCE_DIRECTORY
+
+
 # WARNING: do not change anything in this class
 
 
@@ -507,7 +510,6 @@ def _save_data_from_sampler(
     sampler: Sampler,
     *,
     rng_key: PRNGKeyArray,
-    out_dir: str,
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
     logpdf: Optional[Callable] = None,
@@ -521,8 +523,6 @@ def _save_data_from_sampler(
     ----------
     sampler : Sampler
         The sampler object.
-    out_dir : str
-        The output directory.
     labels : Optional[list[str]], optional
         list of labels for the samples, by default None
     n_samples : int, optional
@@ -532,13 +532,16 @@ def _save_data_from_sampler(
     save_weighted_samples : bool, optional
         Whether to save weighted samples, by default False
     """
-    logger.info("Saving data from sampler to directory: {out_dir}", out_dir=out_dir)
+    logger.info(
+        "Saving data from sampler to directory: {_INFERENCE_DIRECTORY}",
+        _INFERENCE_DIRECTORY=_INFERENCE_DIRECTORY,
+    )
     if labels is None:
         labels = [f"x{i}" for i in range(sampler.n_dim)]
     if logpdf is None:
         raise ValueError("logpdf must be provided")
 
-    os.makedirs(out_dir, exist_ok=True)
+    os.makedirs(_INFERENCE_DIRECTORY, exist_ok=True)
 
     header = " ".join(labels)
 
@@ -558,7 +561,7 @@ def _save_data_from_sampler(
     n_chains = sampler.n_chains
 
     np.savetxt(
-        rf"{out_dir}/global_accs.dat",
+        rf"{_INFERENCE_DIRECTORY}/global_accs.dat",
         np.column_stack(
             _same_length_arrays(
                 max(train_global_accs.shape[1], prod_global_accs.shape[1]),
@@ -570,11 +573,12 @@ def _save_data_from_sampler(
         comments="#",
     )
     logger.info(
-        "Global acceptance rates saved to {out_dir}/global_accs.dat", out_dir=out_dir
+        "Global acceptance rates saved to {_INFERENCE_DIRECTORY}/global_accs.dat",
+        _INFERENCE_DIRECTORY=_INFERENCE_DIRECTORY,
     )
 
     np.savetxt(
-        rf"{out_dir}/local_accs.dat",
+        rf"{_INFERENCE_DIRECTORY}/local_accs.dat",
         np.column_stack(
             _same_length_arrays(
                 max(train_local_accs.shape[1], prod_local_accs.shape[1]),
@@ -586,17 +590,23 @@ def _save_data_from_sampler(
         comments="#",
     )
     logger.info(
-        "Local acceptance rates saved to {out_dir}/local_accs.dat", out_dir=out_dir
+        "Local acceptance rates saved to {_INFERENCE_DIRECTORY}/local_accs.dat",
+        _INFERENCE_DIRECTORY=_INFERENCE_DIRECTORY,
     )
 
-    np.savetxt(rf"{out_dir}/loss.dat", train_loss_vals.reshape(-1), header="loss")
-    logger.info("Loss values saved to {out_dir}/loss.dat", out_dir=out_dir)
+    np.savetxt(
+        rf"{_INFERENCE_DIRECTORY}/loss.dat", train_loss_vals.reshape(-1), header="loss"
+    )
+    logger.info(
+        "Loss values saved to {_INFERENCE_DIRECTORY}/loss.dat",
+        _INFERENCE_DIRECTORY=_INFERENCE_DIRECTORY,
+    )
 
     for n_chain in tqdm.trange(
         n_chains, total=n_chains, unit="chain", desc="Saving data from chains"
     ):
         np.savetxt(
-            rf"{out_dir}/global_accs_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/global_accs_{n_chain}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -612,7 +622,7 @@ def _save_data_from_sampler(
         )
 
         np.savetxt(
-            rf"{out_dir}/local_accs_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/local_accs_{n_chain}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -628,17 +638,17 @@ def _save_data_from_sampler(
         )
 
         np.savetxt(
-            rf"{out_dir}/train_chains_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/train_chains_{n_chain}.dat",
             train_chains[n_chain, :, :],
             header=header,
         )
         np.savetxt(
-            rf"{out_dir}/prod_chains_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/prod_chains_{n_chain}.dat",
             prod_chains[n_chain, :, :],
             header=header,
         )
         np.savetxt(
-            rf"{out_dir}/log_prob_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/log_prob_{n_chain}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -664,11 +674,13 @@ def _save_data_from_sampler(
         jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
     )
     np.savetxt(
-        rf"{out_dir}/{POSTERIOR_SAMPLES_FILENAME}", unweighted_samples, header=header
+        rf"{_INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
+        unweighted_samples,
+        header=header,
     )
     logger.info(
-        "Unweighted samples saved to {out_dir}/{POSTERIOR_SAMPLES_FILENAME}",
-        out_dir=out_dir,
+        "Unweighted samples saved to {_INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
+        _INFERENCE_DIRECTORY=_INFERENCE_DIRECTORY,
         POSTERIOR_SAMPLES_FILENAME=POSTERIOR_SAMPLES_FILENAME,
     )
 
@@ -733,13 +745,13 @@ def _save_data_from_sampler(
         np.random.choice(n_samples, size=ess, p=weights)
     ]
     np.savetxt(
-        rf"{out_dir}/weighted_{POSTERIOR_SAMPLES_FILENAME}",
+        rf"{_INFERENCE_DIRECTORY}/weighted_{POSTERIOR_SAMPLES_FILENAME}",
         weighted_samples,
         header=header,
     )
     logger.info(
-        "Weighted samples saved to {out_dir}/weighted_{POSTERIOR_SAMPLES_FILENAME}",
-        out_dir=out_dir,
+        "Weighted samples saved to {_INFERENCE_DIRECTORY}/weighted_{POSTERIOR_SAMPLES_FILENAME}",
+        _INFERENCE_DIRECTORY=_INFERENCE_DIRECTORY,
         POSTERIOR_SAMPLES_FILENAME=POSTERIOR_SAMPLES_FILENAME,
     )
 
@@ -926,7 +938,6 @@ class FlowMCBased(Guru):
             sampler,
             rng_key=self.rng_key,
             logpdf=ft.partial(logpdf, data=data),  # type: ignore
-            out_dir=INFERENCE_DIRECTORY,
             labels=labels,
             n_samples=sampler_config["data_dump"]["n_samples"],
             save_weighted_samples=sampler_config["data_dump"].get(
