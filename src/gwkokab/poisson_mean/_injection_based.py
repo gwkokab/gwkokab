@@ -359,7 +359,7 @@ def poisson_mean_from_sensitivity_injections(
 
     @eqx.filter_jit
     def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
-        """See equation 11 of https://arxiv.org/abs/2406.16813."""
+        """See equation 9 and 11 of https://arxiv.org/abs/2406.16813."""
         log_prob_fn = eqx.filter_jit(eqx.filter_vmap(scaled_mixture.log_prob))
 
         def _f(

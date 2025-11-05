@@ -17,6 +17,8 @@ def variance_of_single_event_likelihood(
     log_ref_priors_group: Tuple[Array, ...],
     masks_group: Tuple[Array, ...],
 ) -> Array:
+    """See equation 9 and 10 in https://arxiv.org/abs/2406.16813."""
+
     @jax.jit
     def _variance_of_single_event_likelihood(*args: Array):
         data_group = args[0:n_buckets]
