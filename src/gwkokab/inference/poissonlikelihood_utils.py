@@ -64,9 +64,8 @@ def variance_of_single_event_likelihood(
             )
 
             N_pe = jnp.count_nonzero(batched_masks, axis=-1)
-            N_pe_sq = jnp.square(N_pe)
 
-            variance += ((safe_prob_sum_2 / safe_prob_sum**2 - 1.0) / N_pe_sq).sum()
+            variance += ((safe_prob_sum_2 / safe_prob_sum**2 - 1.0) / N_pe).sum()
 
         return variance
 
