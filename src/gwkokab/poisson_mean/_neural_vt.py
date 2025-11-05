@@ -5,6 +5,7 @@
 from collections.abc import Callable, Sequence
 from typing import Optional, Tuple, Union
 
+import equinox as eqx
 import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
@@ -74,22 +75,23 @@ def poisson_mean_from_neural_vt(
         )
         return (time_scale / num_samples) * jnp.sum(mean_per_component, axis=-1)
 
+    @eqx.filter_jit
     def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
         component_sample = scaled_mixture.component_sample(key, (num_samples,))
         # vmapping over components
         log_vt_values = jax.vmap(log_vt, in_axes=1)(component_sample)
-        mean_per_component = jnp.exp(
-            scaled_mixture.log_scales + jax.nn.logsumexp(log_vt_values, axis=-1)
+        term2 = jnp.exp(
+            2.0 * jnp.log(time_scale)
+            - 3.0 * jnp.log(num_samples)
+            + 2.0 * scaled_mixture.log_scales
+            + 2.0 * jax.nn.logsumexp(log_vt_values, axis=-1)
         )
-        squared_mean_per_component = jnp.exp(
-            2.0 * scaled_mixture.log_scales
+        term1 = jnp.exp(
+            2.0 * jnp.log(time_scale)
+            - 2.0 * jnp.log(num_samples)
+            + 2.0 * scaled_mixture.log_scales
             + jax.nn.logsumexp(2.0 * log_vt_values, axis=-1)
         )
-        variance_per_component = (
-            squared_mean_per_component - mean_per_component**2 / num_samples
-        )
-        return (time_scale / num_samples) ** 2 * jnp.sum(
-            variance_per_component, axis=-1
-        )
+        return jnp.sum(term1 - term2, axis=-1)
 
     return log_vt, _poisson_mean, time_scale, _variance_of_estimator

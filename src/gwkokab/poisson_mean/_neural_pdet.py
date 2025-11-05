@@ -5,6 +5,7 @@
 from collections.abc import Callable, Sequence
 from typing import Optional, Tuple, Union
 
+import equinox as eqx
 import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
@@ -93,6 +94,7 @@ def poisson_mean_from_neural_pdet(
         )
         return (time_scale / num_samples) * jnp.sum(mean_per_component, axis=-1)
 
+    @eqx.filter_jit
     def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
         component_sample = scaled_mixture.component_sample(key, (num_samples,))
         # vmapping over components
@@ -110,21 +112,21 @@ def poisson_mean_from_neural_pdet(
             else:
                 redshift_log_norm.append(jnp.zeros(()))
 
-        mean_per_component = jnp.exp(
-            scaled_mixture.log_scales
-            + jnp.stack(redshift_log_norm, axis=-1)
-            + jax.nn.logsumexp(log_pdet_values, axis=-1)
+        term2 = jnp.exp(
+            2.0 * jnp.log(time_scale)
+            - 3.0 * jnp.log(num_samples)
+            + 2.0 * scaled_mixture.log_scales
+            + 2.0 * jnp.stack(redshift_log_norm, axis=-1)
+            + 2.0 * jax.nn.logsumexp(log_pdet_values, axis=-1)
         )
-        squared_mean_per_component = jnp.exp(
-            2.0 * scaled_mixture.log_scales
+        term1 = jnp.exp(
+            2.0 * jnp.log(time_scale)
+            - 2.0 * jnp.log(num_samples)
+            + 2.0 * scaled_mixture.log_scales
             + 2.0 * jnp.stack(redshift_log_norm, axis=-1)
             + jax.nn.logsumexp(2.0 * log_pdet_values, axis=-1)
         )
-        variance_per_component = (
-            squared_mean_per_component - mean_per_component**2 / num_samples
-        )
-        return (time_scale / num_samples) ** 2 * jnp.sum(
-            variance_per_component, axis=-1
-        )
+        variance_per_component = term1 - term2
+        return jnp.sum(variance_per_component, axis=-1)
 
     return log_pdet, _poisson_mean, time_scale, _variance_of_estimator
