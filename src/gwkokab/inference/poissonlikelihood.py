@@ -61,10 +61,10 @@ def poisson_likelihood(
     """
     del variables
 
-    def likelihood_fn(x: Array, data: Dict[str, Tuple[Array]]) -> Array:
-        data_group: Tuple[Array] = data["data_group"]
-        log_ref_priors_group: Tuple[Array] = data["log_ref_priors_group"]
-        masks_group: Tuple[Array] = data["masks_group"]
+    def likelihood_fn(x: Array, data: Dict[str, Tuple[Array, ...]]) -> Array:
+        data_group: Tuple[Array, ...] = data["data_group"]
+        log_ref_priors_group: Tuple[Array, ...] = data["log_ref_priors_group"]
+        masks_group: Tuple[Array, ...] = data["masks_group"]
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
@@ -134,7 +134,9 @@ def poisson_likelihood(
     if where_fns is None:
         return eqx.filter_jit(likelihood_fn)
 
-    def likelihood_fn_with_checks(x: Array, data: Dict[str, Tuple[Array]]) -> Array:
+    def likelihood_fn_with_checks(
+        x: Array, data: Dict[str, Tuple[Array, ...]]
+    ) -> Array:
         mapped_params = {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()

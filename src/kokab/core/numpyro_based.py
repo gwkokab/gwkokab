@@ -4,7 +4,7 @@
 
 import os
 from collections.abc import Callable
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import arviz as az
 import jax
@@ -74,7 +74,7 @@ def _run_mcmc(
     key: PRNGKeyArray,
     kernel: numpyro.infer.NUTS,
     mcmc_kwargs: Dict[str, Any],
-    data: Tuple[Any, ...],
+    data: Dict[str, Any],
 ):
     n_devices = jax.device_count()
     if (
@@ -96,7 +96,7 @@ def _run_mcmc(
     chain_idx: int = 0
     for _ in range(n_batches):
         key, subkey = jrd.split(key)
-        mcmc.run(subkey, *data)
+        mcmc.run(subkey, **data)
         inference_data = az.from_numpyro(mcmc)
         _save_inference_data(inference_data, start_chain_idx=chain_idx)
         chain_idx += batch_size
@@ -104,7 +104,7 @@ def _run_mcmc(
     if n_batches * batch_size < n_chains:
         mcmc.num_chains = n_chains - n_batches * batch_size
         key, subkey = jrd.split(key)
-        mcmc.run(subkey, *data)
+        mcmc.run(subkey, **data)
         inference_data = az.from_numpyro(mcmc)
         _save_inference_data(inference_data, start_chain_idx=chain_idx)
 
@@ -115,7 +115,7 @@ class NumpyroBased(Guru):
         *,
         logpdf: Callable[[Array, Dict[str, Any]], Array],
         priors: JointDistribution,
-        data: Tuple[Any, ...],
+        data: Dict[str, Any],
         labels: List[str],
     ) -> None:
         del priors

@@ -193,7 +193,11 @@ class Sage(Guru):
         self.driver(
             logpdf=logpdf,
             priors=priors,
-            data=(*data_group, *log_ref_priors_group, *masks_group),
+            data={
+                "data_group": data_group,
+                "log_ref_priors_group": log_ref_priors_group,
+                "masks_group": masks_group,
+            },
             labels=sorted(variables.keys()),
         )
 
