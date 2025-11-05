@@ -760,6 +760,8 @@ def _save_data_from_sampler(
 
 
 class FlowMCBased(Guru):
+    output_directory: str = _INFERENCE_DIRECTORY
+
     def driver(
         self,
         *,

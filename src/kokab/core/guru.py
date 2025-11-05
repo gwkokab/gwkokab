@@ -209,6 +209,7 @@ class Guru:
     """
 
     _rng_key: PRNGKeyArray
+    output_directory: str
 
     def __init__(
         self,

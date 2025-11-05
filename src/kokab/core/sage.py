@@ -22,11 +22,7 @@ from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 from gwkokab.utils.tools import batch_and_remainder, warn_if
 from kokab.utils.common import get_posterior_data, read_json
-from kokab.utils.literals import (
-    INFERENCE_DIRECTORY,
-    LOG_REF_PRIOR_NAME,
-    POSTERIOR_SAMPLES_FILENAME,
-)
+from kokab.utils.literals import LOG_REF_PRIOR_NAME, POSTERIOR_SAMPLES_FILENAME
 
 from ..utils.jenks import pad_and_stack
 from .guru import Guru
@@ -217,7 +213,7 @@ class Sage(Guru):
             samples: Array = jax.block_until_ready(
                 jax.device_put(
                     np.loadtxt(
-                        f"{INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
+                        f"{self.output_directory}/{POSTERIOR_SAMPLES_FILENAME}",
                         skiprows=1,
                         delimiter=" ",
                     )
@@ -280,7 +276,7 @@ class Sage(Guru):
                 threshold=self.variance_cut_threshold,
             )
             np.savetxt(
-                f"{INFERENCE_DIRECTORY}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}",
+                f"{self.output_directory}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}",
                 samples[mask],
                 header=" ".join(self.posterior_columns),
             )

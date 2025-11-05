@@ -113,6 +113,8 @@ def _run_mcmc(
 
 
 class NumpyroBased(Guru):
+    output_directory: str = _INFERENCE_DIRECTORY
+
     def driver(
         self,
         *,
