@@ -237,7 +237,7 @@ class Sage(Guru):
                 ) + variance_of_poisson_mean_estimator(scaled_mixture)
                 return variance
 
-            mask = np.ones((), dtype=bool)
+            mask = None
             max_variance = 0.0
             min_variance = float("inf")
 
@@ -249,16 +249,22 @@ class Sage(Guru):
                 range(n_batches), desc="Computing variance of likelihood estimator"
             ):
                 variance = jax.vmap(compute_variance)(batched_samples[i])
-                mask = np.concatenate(
-                    (mask, variance < self.variance_cut_threshold), axis=0
-                )
+                if mask is None:
+                    mask = variance < self.variance_cut_threshold
+                else:
+                    mask = np.concatenate(
+                        (mask, variance < self.variance_cut_threshold), axis=0
+                    )
                 max_variance = np.max(max_variance, variance)  # type: ignore
                 min_variance = np.min(min_variance, variance)  # type: ignore
             if remainder_samples.shape[0] > 0:
                 variance = jax.vmap(compute_variance)(remainder_samples)
-                mask = np.concatenate(
-                    (mask, variance < self.variance_cut_threshold), axis=0
-                )
+                if mask is None:
+                    mask = variance < self.variance_cut_threshold
+                else:
+                    mask = np.concatenate(
+                        (mask, variance < self.variance_cut_threshold), axis=0
+                    )
                 max_variance = np.max(max_variance, variance)  # type: ignore
                 min_variance = np.min(min_variance, variance)  # type: ignore
             logger.info(
@@ -266,6 +272,7 @@ class Sage(Guru):
                 min_variance=min_variance,
                 max_variance=max_variance,
             )
+            assert mask is not None, "Mask should not be None here."
             n_removed = np.sum(~mask)
             logger.info(
                 "Removing {n_removed} samples with variance above the threshold of {threshold}.",
