@@ -20,13 +20,16 @@ from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import warn_if
 from kokab.core.guru import Guru, guru_arg_parser
 from kokab.utils.common import read_json
-from kokab.utils.literals import INFERENCE_DIRECTORY
+from kokab.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
+
+
+_INFERENCE_DIRECTORY = "numpyro_" + INFERENCE_DIRECTORY
 
 
 def _save_inference_data(
     inference_data: az.InferenceData, start_chain_idx: int = 0
 ) -> None:
-    os.makedirs(INFERENCE_DIRECTORY, exist_ok=True)
+    os.makedirs(_INFERENCE_DIRECTORY, exist_ok=True)
 
     header = list(inference_data.posterior.data_vars.keys())  # type: ignore
 
@@ -36,12 +39,12 @@ def _save_inference_data(
 
     if start_chain_idx == 0:
         np.savetxt(
-            INFERENCE_DIRECTORY + "/samples.dat",
+            _INFERENCE_DIRECTORY + "/" + POSTERIOR_SAMPLES_FILENAME,
             np.column_stack([posterior_samples[key] for key in header]),
             header=" ".join(header),
         )
     else:
-        with open(INFERENCE_DIRECTORY + "/samples.dat", "a") as f:
+        with open(_INFERENCE_DIRECTORY + "/" + POSTERIOR_SAMPLES_FILENAME, "a") as f:
             np.savetxt(
                 f,
                 np.column_stack([posterior_samples[key] for key in header]),
@@ -50,7 +53,7 @@ def _save_inference_data(
     summary = az.summary(inference_data)
 
     pd.DataFrame(summary).to_json(
-        INFERENCE_DIRECTORY + "/posterior_summary.json", indent=4
+        _INFERENCE_DIRECTORY + "/posterior_summary.json", indent=4
     )
 
     posterior_data = np.permute_dims(
@@ -62,7 +65,7 @@ def _save_inference_data(
 
     for i in range(n_chains):
         np.savetxt(
-            INFERENCE_DIRECTORY + f"/chain_{start_chain_idx + i}.dat",
+            _INFERENCE_DIRECTORY + f"/chain_{start_chain_idx + i}.dat",
             posterior_data[i],
             header=" ".join(header),
             comments="#",

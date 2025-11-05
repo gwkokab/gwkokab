@@ -5,6 +5,7 @@
 from collections.abc import Callable, Sequence
 from typing import Optional, Tuple, Union
 
+import equinox as eqx
 import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
@@ -22,7 +23,10 @@ def poisson_mean_from_neural_vt(
     num_samples: int = 1_000,
     time_scale: Union[int, float, Array] = 1.0,
 ) -> Tuple[
-    Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
+    Optional[Callable[[Array], Array]],
+    Callable[[ScaledMixture], Array],
+    float | Array,
+    Callable[[ScaledMixture], Array],
 ]:
     error_if(not parameters, msg="parameters sequence cannot be empty")
     error_if(
@@ -71,4 +75,23 @@ def poisson_mean_from_neural_vt(
         )
         return (time_scale / num_samples) * jnp.sum(mean_per_component, axis=-1)
 
-    return log_vt, _poisson_mean, time_scale
+    @eqx.filter_jit
+    def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
+        component_sample = scaled_mixture.component_sample(key, (num_samples,))
+        # vmapping over components
+        log_vt_values = jax.vmap(log_vt, in_axes=1)(component_sample)
+        term2 = jnp.exp(
+            2.0 * jnp.log(time_scale)
+            - 3.0 * jnp.log(num_samples)
+            + 2.0 * scaled_mixture.log_scales
+            + 2.0 * jax.nn.logsumexp(log_vt_values, axis=-1)
+        )
+        term1 = jnp.exp(
+            2.0 * jnp.log(time_scale)
+            - 2.0 * jnp.log(num_samples)
+            + 2.0 * scaled_mixture.log_scales
+            + jax.nn.logsumexp(2.0 * log_vt_values, axis=-1)
+        )
+        return jnp.sum(term1 - term2, axis=-1)
+
+    return log_vt, _poisson_mean, time_scale, _variance_of_estimator

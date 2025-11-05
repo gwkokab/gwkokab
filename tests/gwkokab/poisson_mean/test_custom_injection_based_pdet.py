@@ -30,7 +30,10 @@ def custom_poisson_mean_estimator(
     snr_cut: float = 10.0,
     ifar_pipelines: Sequence[str] | None = None,
 ) -> Tuple[
-    Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
+    Optional[Callable[[Array], Array]],
+    Callable[[ScaledMixture], Array],
+    float | Array,
+    Callable[[ScaledMixture], Array],
 ]:
     """Custom injection-based Poisson mean estimator which ignores eccentricity."""
     del key  # Unused.
@@ -136,4 +139,7 @@ def custom_poisson_mean_estimator(
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
         return (analysis_time_years / total_injections) * jnp.exp(log_prob)
 
-    return None, _poisson_mean, analysis_time_years
+    def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:  # place holder
+        return jnp.array(0.0)
+
+    return None, _poisson_mean, analysis_time_years, _variance_of_estimator

@@ -9,7 +9,7 @@ from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
+from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
 from gwkokab.models import PowerlawPeak
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
@@ -59,6 +59,7 @@ class PowerlawPeakCore(Sage):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
+        variance_cut_threshold: Optional[float],
         n_buckets: int,
         threshold: float,
         debug_nans: bool = False,
@@ -79,6 +80,7 @@ class PowerlawPeakCore(Sage):
             prior_filename=prior_filename,
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
+            variance_cut_threshold=variance_cut_threshold,
             analysis_name="one_powerlaw_one_peak",
             n_buckets=n_buckets,
             threshold=threshold,
@@ -190,13 +192,14 @@ def f_main() -> None:
         has_tilt=args.add_tilt,
         has_redshift=args.add_redshift,
         has_eccentricity=args.add_eccentricity,
-        likelihood_fn=poisson_likelihood,
+        likelihood_fn=flowMC_poisson_likelihood,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
+        variance_cut_threshold=args.variance_cut_threshold,
         n_buckets=args.n_buckets,
         threshold=args.threshold,
         debug_nans=args.debug_nans,
@@ -227,6 +230,7 @@ def n_main() -> None:
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
+        variance_cut_threshold=args.variance_cut_threshold,
         n_buckets=args.n_buckets,
         threshold=args.threshold,
         debug_nans=args.debug_nans,

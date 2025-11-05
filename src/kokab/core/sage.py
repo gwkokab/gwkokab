@@ -9,16 +9,24 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import jax
 import numpy as np
+import tqdm
 from jaxtyping import Array, ArrayLike
 from loguru import logger
 from numpyro._typing import DistributionLike
 from numpyro.distributions import Distribution
 
+from gwkokab.inference.poissonlikelihood_utils import (
+    variance_of_single_event_likelihood,
+)
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
-from gwkokab.utils.tools import warn_if
+from gwkokab.utils.tools import batch_and_remainder, warn_if
 from kokab.utils.common import get_posterior_data, read_json
-from kokab.utils.literals import LOG_REF_PRIOR_NAME
+from kokab.utils.literals import (
+    INFERENCE_DIRECTORY,
+    LOG_REF_PRIOR_NAME,
+    POSTERIOR_SAMPLES_FILENAME,
+)
 
 from ..utils.jenks import pad_and_stack
 from .guru import Guru
@@ -48,6 +56,7 @@ class Sage(Guru):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
+        variance_cut_threshold: Optional[float],
         n_buckets: int,
         threshold: float,
         debug_nans: bool = False,
@@ -112,6 +121,7 @@ class Sage(Guru):
             prior_filename=prior_filename,
             profile_memory=profile_memory,
             sampler_settings_filename=sampler_settings_filename,
+            variance_cut_threshold=variance_cut_threshold,
         )
 
     def read_data(
@@ -173,8 +183,10 @@ class Sage(Guru):
         )
 
         pmean_config = read_json(self.poisson_mean_filename)
-        _, poisson_mean_estimator, T_obs = get_selection_fn_and_poisson_mean_estimator(
-            key=self.rng_key, parameters=self.parameters, **pmean_config
+        _, poisson_mean_estimator, T_obs, variance_of_poisson_mean_estimator = (
+            get_selection_fn_and_poisson_mean_estimator(
+                key=self.rng_key, parameters=self.parameters, **pmean_config
+            )
         )
 
         log_constants += n_events * np.log(T_obs)  # type: ignore
@@ -200,6 +212,78 @@ class Sage(Guru):
             },
             labels=sorted(variables.keys()),
         )
+
+        if self.variance_cut_threshold is not None:
+            samples: Array = jax.block_until_ready(
+                jax.device_put(
+                    np.loadtxt(
+                        f"{INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
+                        skiprows=1,
+                        delimiter=" ",
+                    )
+                )
+            )
+
+            def compute_variance(sample: Array) -> Array:
+                scaled_mixture = dist_fn(
+                    **{var: sample[variables_index[var]] for var in variables_index}
+                )
+                variance = variance_of_single_event_likelihood(
+                    scaled_mixture,
+                    self.n_buckets,
+                    data_group,
+                    log_ref_priors_group,
+                    masks_group,
+                ) + variance_of_poisson_mean_estimator(scaled_mixture)
+                return variance
+
+            mask = None
+            max_variance = 0.0
+            min_variance = float("inf")
+
+            batched_samples, remainder_samples = batch_and_remainder(
+                samples, batch_size=100
+            )
+            n_batches = batched_samples.shape[0]
+            for i in tqdm.tqdm(
+                range(n_batches), desc="Computing variance of likelihood estimator"
+            ):
+                variance = jax.vmap(compute_variance)(batched_samples[i])
+                if mask is None:
+                    mask = variance < self.variance_cut_threshold
+                else:
+                    mask = np.concatenate(
+                        (mask, variance < self.variance_cut_threshold), axis=0
+                    )  # type: ignore
+                max_variance = max(max_variance, np.max(variance))  # type: ignore
+                min_variance = min(min_variance, np.min(variance))  # type: ignore
+            if remainder_samples.shape[0] > 0:
+                variance = jax.vmap(compute_variance)(remainder_samples)
+                if mask is None:
+                    mask = variance < self.variance_cut_threshold
+                else:
+                    mask = np.concatenate(
+                        (mask, variance < self.variance_cut_threshold), axis=0
+                    )  # type: ignore
+                max_variance = max(max_variance, np.max(variance))  # type: ignore
+                min_variance = min(min_variance, np.min(variance))  # type: ignore
+            logger.info(
+                "Variance of the likelihood estimator ranges from {min_variance} to {max_variance}.",
+                min_variance=min_variance,
+                max_variance=max_variance,
+            )
+            assert mask is not None, "Mask should not be None here."
+            n_removed = np.sum(~mask)
+            logger.info(
+                "Removing {n_removed} samples with variance above the threshold of {threshold}.",
+                n_removed=n_removed,
+                threshold=self.variance_cut_threshold,
+            )
+            np.savetxt(
+                f"{INFERENCE_DIRECTORY}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}",
+                samples[mask],
+                header=" ".join(self.posterior_columns),
+            )
 
 
 def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:

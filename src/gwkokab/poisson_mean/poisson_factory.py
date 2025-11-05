@@ -28,7 +28,10 @@ def get_selection_fn_and_poisson_mean_estimator(
     batch_size: Optional[int] = None,
     **kwargs,
 ) -> Tuple[
-    Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
+    Optional[Callable[[Array], Array]],
+    Callable[[ScaledMixture], Array],
+    float | Array,
+    Callable[[ScaledMixture], Array],
 ]:
     valid_estimator_types = ("injection", "neural_vt", "neural_pdet", "custom")
     error_if(
