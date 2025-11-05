@@ -20,7 +20,7 @@ from gwkokab.inference.poissonlikelihood_utils import (
 )
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
-from gwkokab.utils.tools import warn_if
+from gwkokab.utils.tools import batch_and_remainder, warn_if
 from kokab.utils.common import get_posterior_data, read_json
 from kokab.utils.literals import (
     INFERENCE_DIRECTORY,
@@ -214,18 +214,17 @@ class Sage(Guru):
         )
 
         if self.variance_cut_threshold is not None:
-            samples = np.loadtxt(
-                f"{INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
-                skiprows=1,
-                delimiter=" ",
+            samples: Array = jax.block_until_ready(
+                jax.device_put(
+                    np.loadtxt(
+                        f"{INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
+                        skiprows=1,
+                        delimiter=" ",
+                    )
+                )
             )
-            mask = np.ones(samples.shape[0], dtype=bool)
-            max_variance = 0.0
-            min_variance = float("inf")
-            for i in tqdm.tqdm(
-                range(samples.shape[0]), desc="Filtering samples by variance"
-            ):
-                sample = samples[i]
+
+            def compute_variance(sample: Array) -> Array:
                 scaled_mixture = dist_fn(
                     **{var: sample[variables_index[var]] for var in variables_index}
                 )
@@ -236,9 +235,28 @@ class Sage(Guru):
                     log_ref_priors_group,
                     masks_group,
                 ) + variance_of_poisson_mean_estimator(scaled_mixture)
-                mask[i] = variance < self.variance_cut_threshold
-                max_variance = max(max_variance, variance)  # type: ignore
-                min_variance = min(min_variance, variance)  # type: ignore
+                return variance
+
+            mask = np.ones((), dtype=bool)
+            max_variance = 0.0
+            min_variance = float("inf")
+
+            batched_samples, remainder_samples = batch_and_remainder(
+                samples, batch_size=100
+            )
+            n_batches = batched_samples.shape[0]
+            for i in tqdm.tqdm(
+                range(n_batches), desc="Computing variance of likelihood estimator"
+            ):
+                variance = jax.vmap(compute_variance)(batched_samples[i])
+                mask = np.concatenate(mask, variance < self.variance_cut_threshold)
+                max_variance = np.max(max_variance, variance)  # type: ignore
+                min_variance = np.min(min_variance, variance)  # type: ignore
+            if remainder_samples.shape[0] > 0:
+                variance = jax.vmap(compute_variance)(remainder_samples)
+                mask = np.concatenate(mask, variance < self.variance_cut_threshold)
+                max_variance = np.max(max_variance, variance)  # type: ignore
+                min_variance = np.min(min_variance, variance)  # type: ignore
             logger.info(
                 "Variance of the likelihood estimator ranges from {min_variance} to {max_variance}.",
                 min_variance=min_variance,
