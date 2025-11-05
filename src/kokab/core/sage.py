@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import jax
 import numpy as np
+import tqdm
 from jaxtyping import Array, ArrayLike
 from loguru import logger
 from numpyro._typing import DistributionLike
@@ -217,7 +218,9 @@ class Sage(Guru):
             mask = np.ones(samples.shape[0], dtype=bool)
             max_variance = 0.0
             min_variance = float("inf")
-            for i in range(samples.shape[0]):
+            for i in tqdm.tqdm(
+                range(samples.shape[0]), desc="Filtering samples by variance"
+            ):
                 sample = samples[i]
                 scaled_mixture = dist_fn(
                     **{var: sample[variables_index[var]] for var in variables_index}
@@ -233,7 +236,7 @@ class Sage(Guru):
                 max_variance = max(max_variance, variance)  # type: ignore
                 min_variance = min(min_variance, variance)  # type: ignore
             logger.info(
-                "Variance of single event likelihood ranges from {min_variance} to {max_variance}.",
+                "Variance of the likelihood estimator ranges from {min_variance} to {max_variance}.",
                 min_variance=min_variance,
                 max_variance=max_variance,
             )
