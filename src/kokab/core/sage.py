@@ -254,7 +254,7 @@ class Sage(Guru):
                 else:
                     mask = np.concatenate(
                         (mask, variance < self.variance_cut_threshold), axis=0
-                    )
+                    )  # type: ignore
                 max_variance = np.max(max_variance, variance)  # type: ignore
                 min_variance = np.min(min_variance, variance)  # type: ignore
             if remainder_samples.shape[0] > 0:
@@ -264,9 +264,9 @@ class Sage(Guru):
                 else:
                     mask = np.concatenate(
                         (mask, variance < self.variance_cut_threshold), axis=0
-                    )
-                max_variance = np.max(max_variance, variance)  # type: ignore
-                min_variance = np.min(min_variance, variance)  # type: ignore
+                    )  # type: ignore
+                max_variance = max(max_variance, np.max(variance))  # type: ignore
+                min_variance = min(min_variance, np.min(variance))  # type: ignore
             logger.info(
                 "Variance of the likelihood estimator ranges from {min_variance} to {max_variance}.",
                 min_variance=min_variance,
