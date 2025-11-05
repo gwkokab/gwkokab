@@ -295,8 +295,12 @@ def analytical_likelihood(
 
         rng_key = key
 
-        hessian_log_prob = jax.jit(jax.vmap(jax.hessian(model_instance.log_prob)))
-        grad_log_prob = jax.jit(jax.vmap(jax.grad(model_instance.log_prob)))
+        hessian_log_prob = jax.jit(
+            jax.vmap(jax.hessian(model_instance.log_prob), axis_size=n_events)
+        )
+        grad_log_prob = jax.jit(
+            jax.vmap(jax.grad(model_instance.log_prob), axis_size=n_events)
+        )
 
         fit_precision_matrix = precision_matrix(scale_tril_stack) - hessian_log_prob(
             mean_stack
@@ -329,7 +333,9 @@ def analytical_likelihood(
             scale_tril_stack,
         )
 
-        mvn_log_prob_while_body = jax.vmap(mvn_log_prob_scaled, in_axes=(None, None, 0))
+        mvn_log_prob_while_body = jax.vmap(
+            mvn_log_prob_scaled, in_axes=(None, None, 0), axis_size=n_samples
+        )
 
         def scan_fn(
             carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]
@@ -350,7 +356,9 @@ def analytical_likelihood(
                 )
 
                 # log ρ(data | Λ, κ)
-                model_instance_log_prob = jax.vmap(model_instance.log_prob)(data)
+                model_instance_log_prob = jax.vmap(
+                    model_instance.log_prob, axis_size=N_2
+                )(data)
 
                 # log G(θ, z | μ_i, Σ_i)
                 event_mvn_log_prob = mvn_log_prob_while_body(mean, scale_tril, data)

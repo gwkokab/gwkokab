@@ -140,15 +140,11 @@ class Sage(Guru):
         _log_ref_priors_group = tuple(_log_ref_priors_group)
         _masks_group = tuple(_masks_group)
 
-        data_group: Tuple[Array] = jax.block_until_ready(
-            jax.device_put(_data_group, may_alias=True)
-        )
+        data_group: Tuple[Array] = jax.block_until_ready(jax.device_put(_data_group))
         log_ref_priors_group: Tuple[Array] = jax.block_until_ready(
-            jax.device_put(_log_ref_priors_group, may_alias=True)
+            jax.device_put(_log_ref_priors_group)
         )
-        masks_group: Tuple[Array] = jax.block_until_ready(
-            jax.device_put(_masks_group, may_alias=True)
-        )
+        masks_group: Tuple[Array] = jax.block_until_ready(jax.device_put(_masks_group))
 
         logger.debug(
             "data_group.shape: {shape}",
@@ -197,11 +193,7 @@ class Sage(Guru):
         self.driver(
             logpdf=logpdf,
             priors=priors,
-            data={
-                "data_group": data_group,
-                "log_ref_priors_group": log_ref_priors_group,
-                "masks_group": masks_group,
-            },
+            data=(*data_group, *log_ref_priors_group, *masks_group),
             labels=sorted(variables.keys()),
         )
 

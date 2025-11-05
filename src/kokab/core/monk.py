@@ -152,12 +152,10 @@ class Monk(FlowMCBased):
 
         n_events = len(list_of_means)
         mean_stack: Array = jax.block_until_ready(
-            jax.device_put(jnp.stack(list_of_means, axis=0), may_alias=True)
+            jax.device_put(jnp.stack(list_of_means, axis=0))
         )
         cov_stack = np.stack(list_of_covariances, axis=0)
-        scale_tril_stack: Array = jax.device_put(
-            jnp.linalg.cholesky(cov_stack), may_alias=True
-        )
+        scale_tril_stack: Array = jax.device_put(jnp.linalg.cholesky(cov_stack))
         del cov_stack  # We don't need the covariance matrices anymore
 
         logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
