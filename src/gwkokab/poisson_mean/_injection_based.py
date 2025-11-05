@@ -428,9 +428,9 @@ def poisson_mean_from_sensitivity_injections(
             )
 
         # N_exp = (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        N_exp = analysis_time_years * jnp.exp(log_prob)
+        N_exp = (analysis_time_years / total_injections) * jnp.exp(log_prob)
         # N_exp2 = (T^2 / n_total) * exp(log Σ exp(2 log p(θ_i|λ) - 2 log w_i))
-        N_exp2 = analysis_time_years**2 * jnp.exp(log_prob2)
-        return (N_exp2 - N_exp**2) / total_injections**2
+        N_exp2 = (analysis_time_years / total_injections) ** 2 * jnp.exp(log_prob2)
+        return N_exp2 - N_exp**2
 
     return None, _poisson_mean, analysis_time_years, _variance_of_estimator
