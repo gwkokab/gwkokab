@@ -14,11 +14,18 @@ from loguru import logger
 from numpyro._typing import DistributionLike
 from numpyro.distributions import Distribution
 
+from gwkokab.inference.poissonlikelihood_utils import (
+    variance_of_single_event_likelihood,
+)
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 from gwkokab.utils.tools import warn_if
 from kokab.utils.common import get_posterior_data, read_json
-from kokab.utils.literals import LOG_REF_PRIOR_NAME
+from kokab.utils.literals import (
+    INFERENCE_DIRECTORY,
+    LOG_REF_PRIOR_NAME,
+    POSTERIOR_SAMPLES_FILENAME,
+)
 
 from ..utils.jenks import pad_and_stack
 from .guru import Guru
@@ -48,6 +55,7 @@ class Sage(Guru):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
+        variance_cut_threshold: Optional[float],
         n_buckets: int,
         threshold: float,
         debug_nans: bool = False,
@@ -112,6 +120,7 @@ class Sage(Guru):
             prior_filename=prior_filename,
             profile_memory=profile_memory,
             sampler_settings_filename=sampler_settings_filename,
+            variance_cut_threshold=variance_cut_threshold,
         )
 
     def read_data(
@@ -173,8 +182,10 @@ class Sage(Guru):
         )
 
         pmean_config = read_json(self.poisson_mean_filename)
-        _, poisson_mean_estimator, T_obs = get_selection_fn_and_poisson_mean_estimator(
-            key=self.rng_key, parameters=self.parameters, **pmean_config
+        _, poisson_mean_estimator, T_obs, variance_of_poisson_mean_estimator = (
+            get_selection_fn_and_poisson_mean_estimator(
+                key=self.rng_key, parameters=self.parameters, **pmean_config
+            )
         )
 
         log_constants += n_events * np.log(T_obs)  # type: ignore
@@ -196,6 +207,36 @@ class Sage(Guru):
             data=(*data_group, *log_ref_priors_group, *masks_group),
             labels=sorted(variables.keys()),
         )
+
+        if self.variance_cut_threshold is not None:
+            samples = np.loadtxt(
+                f"{INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
+                skiprows=1,
+                delimiter=" ",
+            )
+            mask = np.ones(samples.shape[0], dtype=bool)
+            for i in range(samples.shape[0]):
+                sample = samples[i]
+                scaled_mixture = dist_fn(
+                    **{var: sample[variables_index[var]] for var in variables_index}
+                )
+                variance = variance_of_single_event_likelihood(
+                    scaled_mixture,
+                    args=(*data_group, *log_ref_priors_group, *masks_group),
+                ) + variance_of_poisson_mean_estimator(scaled_mixture)
+                mask[i] = variance < self.variance_cut_threshold
+            n_removed = np.sum(~mask)
+            if n_removed > 0:
+                logger.info(
+                    "Removing {n_removed} samples with variance above the threshold of {threshold}.",
+                    n_removed=n_removed,
+                    threshold=self.variance_cut_threshold,
+                )
+                np.savetxt(
+                    f"{INFERENCE_DIRECTORY}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}",
+                    samples[mask],
+                    header=" ".join(self.posterior_columns),
+                )
 
 
 def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:

@@ -7,7 +7,7 @@ from typing import List
 
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
+from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
 from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
@@ -47,7 +47,7 @@ def f_main() -> None:
     args = parser.parse_args()
 
     EccentricityMattersFSage(
-        likelihood_fn=poisson_likelihood,
+        likelihood_fn=flowMC_poisson_likelihood,
         model=EccentricityMattersModel,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
@@ -55,6 +55,7 @@ def f_main() -> None:
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
+        variance_cut_threshold=args.variance_cut_threshold,
         analysis_name="f_sage_ecc_matters",
         n_buckets=args.n_buckets,
         threshold=args.threshold,
@@ -81,6 +82,7 @@ def n_main() -> None:
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
         sampler_settings_filename=args.sampler_config,
+        variance_cut_threshold=args.variance_cut_threshold,
         analysis_name="n_sage_ecc_matters",
         n_buckets=args.n_buckets,
         threshold=args.threshold,

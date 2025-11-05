@@ -35,7 +35,7 @@ from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.tools import error_if
 from kokab.core.guru import Guru, guru_arg_parser
 from kokab.utils.common import read_json
-from kokab.utils.literals import INFERENCE_DIRECTORY
+from kokab.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 
 
 # WARNING: do not change anything in this class
@@ -57,9 +57,6 @@ class Local_Global_Sampler_Bundle(ResourceStrategyBundle):
     This is the base algorithm described in
     https://www.pnas.org/doi/full/10.1073/pnas.2109420119
     """
-
-    def __repr__(self):
-        return "RQSpline_MALA Bundle"
 
     def __init__(
         self,
@@ -667,11 +664,12 @@ def _save_data_from_sampler(
         jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
     )
     np.savetxt(
-        rf"{out_dir}/nf_samples_unweighted.dat", unweighted_samples, header=header
+        rf"{out_dir}/{POSTERIOR_SAMPLES_FILENAME}", unweighted_samples, header=header
     )
     logger.info(
-        "Unweighted samples saved to {out_dir}/nf_samples_unweighted.dat",
+        "Unweighted samples saved to {out_dir}/{POSTERIOR_SAMPLES_FILENAME}",
         out_dir=out_dir,
+        POSTERIOR_SAMPLES_FILENAME=POSTERIOR_SAMPLES_FILENAME,
     )
 
     gc.collect()
@@ -734,9 +732,15 @@ def _save_data_from_sampler(
     weighted_samples = unweighted_samples[
         np.random.choice(n_samples, size=ess, p=weights)
     ]
-    np.savetxt(rf"{out_dir}/nf_samples_weighted.dat", weighted_samples, header=header)
+    np.savetxt(
+        rf"{out_dir}/weighted_{POSTERIOR_SAMPLES_FILENAME}",
+        weighted_samples,
+        header=header,
+    )
     logger.info(
-        "Weighted samples saved to {out_dir}/nf_samples_weighted.dat", out_dir=out_dir
+        "Weighted samples saved to {out_dir}/weighted_{POSTERIOR_SAMPLES_FILENAME}",
+        out_dir=out_dir,
+        POSTERIOR_SAMPLES_FILENAME=POSTERIOR_SAMPLES_FILENAME,
     )
 
     gc.collect()

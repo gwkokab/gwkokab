@@ -271,7 +271,10 @@ def poisson_mean_from_sensitivity_injections(
     snr_cut: float = 10.0,
     ifar_pipelines: Sequence[str] | None = None,
 ) -> Tuple[
-    Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
+    Optional[Callable[[Array], Array]],
+    Callable[[ScaledMixture], Array],
+    float | Array,
+    Callable[[ScaledMixture], Array],
 ]:
     del key  # Unused.
 
@@ -354,4 +357,80 @@ def poisson_mean_from_sensitivity_injections(
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
         return (analysis_time_years / total_injections) * jnp.exp(log_prob)
 
-    return None, _poisson_mean, analysis_time_years
+    def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
+        """See equation 11 of https://arxiv.org/abs/2406.16813."""
+        log_prob_fn = eqx.filter_jit(eqx.filter_vmap(scaled_mixture.log_prob))
+
+        def _f(
+            carry: Tuple[Array, Array], data: Tuple[Array, Array]
+        ) -> Tuple[Tuple[Array, Array], None]:
+            carry_logsumexp, carry_logsumexp2 = carry
+            log_weights, samples = data
+            # log p(θ_i|λ)
+            model_log_prob = log_prob_fn(samples).reshape(log_weights.shape[0])
+            # log p(θ_i|λ) - log w_i
+            log_prob = model_log_prob - log_weights
+            safe_log_prob = jnp.where(
+                jnp.isneginf(log_prob) | jnp.isnan(log_prob),
+                -jnp.inf,
+                log_prob,
+            )
+
+            partial_logsumexp = jnn.logsumexp(
+                safe_log_prob,
+                where=~jnp.isneginf(safe_log_prob),
+                axis=-1,
+            )
+            partial_logsumexp2 = jnn.logsumexp(
+                2.0 * safe_log_prob,
+                where=~jnp.isneginf(safe_log_prob),
+                axis=-1,
+            )
+
+            safe_carry_logsumexp = jnp.where(
+                jnp.isneginf(carry_logsumexp) | jnp.isnan(carry_logsumexp),
+                -jnp.inf,
+                carry_logsumexp,
+            )
+            safe_carry_logsumexp2 = jnp.where(
+                jnp.isneginf(carry_logsumexp2) | jnp.isnan(carry_logsumexp2),
+                -jnp.inf,
+                carry_logsumexp2,
+            )
+
+            return (
+                jnp.logaddexp(safe_carry_logsumexp, partial_logsumexp),
+                jnp.logaddexp(safe_carry_logsumexp2, partial_logsumexp2),
+            ), None
+
+        initial_logprob = jnp.asarray(-jnp.inf)
+        if batch_size is None or n_accepted <= batch_size:
+            # If the number of accepted injections is less than or equal to the batch size,
+            # we can process them all at once.
+            (log_prob, log_prob2), _ = _f(
+                (initial_logprob, initial_logprob), (log_weights, samples)
+            )
+        else:
+            batched_log_weights, remainder_log_weights = batch_and_remainder(
+                log_weights, batch_size
+            )
+            batched_samples, remainder_samples = batch_and_remainder(
+                samples, batch_size
+            )
+            (batched_logprob, batched_logprob2), _ = jax.lax.scan(
+                _f,
+                (initial_logprob, initial_logprob),
+                (batched_log_weights, batched_samples),
+            )
+            (log_prob, log_prob2), _ = _f(
+                (batched_logprob, batched_logprob2),
+                (remainder_log_weights, remainder_samples),
+            )
+
+        # N_exp = (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
+        N_exp = analysis_time_years * jnp.exp(log_prob)
+        # N_exp2 = (T^2 / n_total) * exp(log Σ exp(2 log p(θ_i|λ) - 2 log w_i))
+        N_exp2 = analysis_time_years**2 * jnp.exp(log_prob2)
+        return (N_exp2 - N_exp**2) / total_injections**2
+
+    return None, _poisson_mean, analysis_time_years, _variance_of_estimator

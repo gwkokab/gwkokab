@@ -22,7 +22,10 @@ def poisson_mean_from_neural_vt(
     num_samples: int = 1_000,
     time_scale: Union[int, float, Array] = 1.0,
 ) -> Tuple[
-    Optional[Callable[[Array], Array]], Callable[[ScaledMixture], Array], float | Array
+    Optional[Callable[[Array], Array]],
+    Callable[[ScaledMixture], Array],
+    float | Array,
+    Callable[[ScaledMixture], Array],
 ]:
     error_if(not parameters, msg="parameters sequence cannot be empty")
     error_if(
@@ -71,4 +74,20 @@ def poisson_mean_from_neural_vt(
         )
         return (time_scale / num_samples) * jnp.sum(mean_per_component, axis=-1)
 
-    return log_vt, _poisson_mean, time_scale
+    def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
+        component_sample = scaled_mixture.component_sample(key, (num_samples,))
+        # vmapping over components
+        log_vt_values = jax.vmap(log_vt, in_axes=1)(component_sample)
+        mean_per_component = jnp.exp(
+            scaled_mixture.log_scales + jax.nn.logsumexp(log_vt_values, axis=-1)
+        )
+        squared_mean_per_component = jnp.exp(
+            2.0 * scaled_mixture.log_scales
+            + jax.nn.logsumexp(2.0 * log_vt_values, axis=-1)
+        )
+        variance_per_component = squared_mean_per_component - mean_per_component**2
+        return (time_scale / num_samples) ** 2 * jnp.sum(
+            variance_per_component, axis=-1
+        )
+
+    return log_vt, _poisson_mean, time_scale, _variance_of_estimator

@@ -14,10 +14,10 @@ from numpyro._typing import DistributionLike
 from ..models.utils import JointDistribution, ScaledMixture
 
 
-__all__ = ["poisson_likelihood"]
+__all__ = ["flowMC_poisson_likelihood"]
 
 
-def poisson_likelihood(
+def flowMC_poisson_likelihood(
     dist_fn: Callable[..., DistributionLike],
     priors: JointDistribution,
     variables: Dict[str, DistributionLike],

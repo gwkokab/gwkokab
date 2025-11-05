@@ -9,7 +9,7 @@ from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.inference import numpyro_poisson_likelihood, poisson_likelihood
+from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
 from gwkokab.models import BrokenPowerlawTwoPeakFull
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
@@ -183,7 +183,7 @@ def f_main() -> None:
         has_tilt=args.add_tilt,
         has_eccentricity=args.add_eccentricity,
         has_redshift=args.add_redshift,
-        likelihood_fn=poisson_likelihood,
+        likelihood_fn=flowMC_poisson_likelihood,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
         seed=args.seed,

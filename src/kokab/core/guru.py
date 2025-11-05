@@ -221,6 +221,7 @@ class Guru:
         prior_filename: str,
         profile_memory: bool,
         sampler_settings_filename: str,
+        variance_cut_threshold: Optional[float] = None,
     ) -> None:
         self.analysis_name = analysis_name
         self.prior_filename = prior_filename
@@ -230,6 +231,7 @@ class Guru:
         self.profile_memory = profile_memory
         self.check_leaks = check_leaks
         self.poisson_mean_filename = poisson_mean_filename
+        self.variance_cut_threshold = variance_cut_threshold
 
     @property
     def rng_key(self) -> PRNGKeyArray:
@@ -437,6 +439,12 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Path to the JSON file containing the sampler configuration.",
         type=str,
         required=True,
+    )
+    sampler_group.add_argument(
+        "--variance-cut-threshold",
+        help="Threshold for variance cut in the sampler.",
+        type=float,
+        default=None,
     )
 
     prior_group = parser.add_argument_group("Prior Options")
