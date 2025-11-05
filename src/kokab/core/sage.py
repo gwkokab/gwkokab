@@ -255,8 +255,8 @@ class Sage(Guru):
                     mask = np.concatenate(
                         (mask, variance < self.variance_cut_threshold), axis=0
                     )  # type: ignore
-                max_variance = np.max(max_variance, variance)  # type: ignore
-                min_variance = np.min(min_variance, variance)  # type: ignore
+                max_variance = max(max_variance, np.max(variance))  # type: ignore
+                min_variance = min(min_variance, np.min(variance))  # type: ignore
             if remainder_samples.shape[0] > 0:
                 variance = jax.vmap(compute_variance)(remainder_samples)
                 if mask is None:
