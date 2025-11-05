@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import equinox as eqx
 import jax
@@ -35,7 +35,11 @@ def numpyro_poisson_likelihood(
         partial_order = priors.partial_order
     del priors
 
-    def log_likelihood_fn(*args: Array):
+    def log_likelihood_fn(
+        data_group: Tuple[Array, ...],
+        log_ref_priors_group: Tuple[Array, ...],
+        masks_group: Tuple[Array, ...],
+    ):
         if is_lazy_prior:
             partial_variables_samples = [
                 numpyro.sample(parameter_name, prior_dist)
@@ -74,7 +78,7 @@ def numpyro_poisson_likelihood(
         # μ = E_{θ|Λ}[VT(θ)]
         expected_rates = eqx.filter_jit(poisson_mean_estimator)(model_instance)
 
-        n_buckets = len(args) // 3
+        n_buckets = len(masks_group)
 
         @jax.jit
         def _total_log_likelihood_fn(*args: Array):
@@ -134,7 +138,12 @@ def numpyro_poisson_likelihood(
         # - μ + Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
         numpyro.factor(
             "log_likelihood",
-            _total_log_likelihood_fn(*args) - expected_rates,
+            _total_log_likelihood_fn(
+                *data_group,
+                *log_ref_priors_group,
+                *masks_group,
+            )
+            - expected_rates,
         )
 
     return log_likelihood_fn  # type: ignore
