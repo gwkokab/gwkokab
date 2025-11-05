@@ -357,6 +357,7 @@ def poisson_mean_from_sensitivity_injections(
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
         return (analysis_time_years / total_injections) * jnp.exp(log_prob)
 
+    @eqx.filter_jit
     def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
         """See equation 11 of https://arxiv.org/abs/2406.16813."""
         log_prob_fn = eqx.filter_jit(eqx.filter_vmap(scaled_mixture.log_prob))
@@ -428,9 +429,15 @@ def poisson_mean_from_sensitivity_injections(
             )
 
         # N_exp = (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        N_exp = (analysis_time_years / total_injections) * jnp.exp(log_prob)
+        N_exp = jnp.exp(
+            jnp.log(analysis_time_years) - jnp.log(total_injections) + log_prob
+        )
         # N_exp2 = (T^2 / n_total) * exp(log Σ exp(2 log p(θ_i|λ) - 2 log w_i))
-        N_exp2 = (analysis_time_years / total_injections) ** 2 * jnp.exp(log_prob2)
+        N_exp2 = jnp.exp(
+            2.0 * jnp.log(analysis_time_years)
+            - 2.0 * jnp.log(total_injections)
+            + log_prob2
+        )
         return N_exp2 - N_exp**2
 
     return None, _poisson_mean, analysis_time_years, _variance_of_estimator

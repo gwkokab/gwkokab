@@ -224,7 +224,10 @@ class Sage(Guru):
                 )
                 variance = variance_of_single_event_likelihood(
                     scaled_mixture,
-                    args=(*data_group, *log_ref_priors_group, *masks_group),
+                    self.n_buckets,
+                    data_group,
+                    log_ref_priors_group,
+                    masks_group,
                 ) + variance_of_poisson_mean_estimator(scaled_mixture)
                 mask[i] = variance < self.variance_cut_threshold
                 max_variance = max(max_variance, variance)  # type: ignore

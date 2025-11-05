@@ -11,10 +11,13 @@ from numpyro._typing import DistributionT
 
 
 def variance_of_single_event_likelihood(
-    model_instance: DistributionT, args: Tuple[Array, ...]
+    model_instance: DistributionT,
+    n_buckets: int,
+    data_group: Tuple[Array, ...],
+    log_ref_priors_group: Tuple[Array, ...],
+    masks_group: Tuple[Array, ...],
 ) -> ArrayLike:
-    n_buckets = len(args) // 3
-
+    @jax.jit
     def _variance_of_single_event_likelihood(*args: Array):
         data_group = args[0:n_buckets]
         log_ref_priors_group = args[n_buckets : 2 * n_buckets]
@@ -69,4 +72,6 @@ def variance_of_single_event_likelihood(
 
         return variance
 
-    return _variance_of_single_event_likelihood(*args)
+    return _variance_of_single_event_likelihood(
+        *data_group, *log_ref_priors_group, *masks_group
+    )
