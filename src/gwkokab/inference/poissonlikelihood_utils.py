@@ -5,8 +5,8 @@
 from typing import Tuple
 
 import jax
-from jax import Array, numpy as jnp
-from jaxtyping import ArrayLike
+from jax import numpy as jnp
+from jaxtyping import Array
 from numpyro._typing import DistributionT
 
 
@@ -16,7 +16,7 @@ def variance_of_single_event_likelihood(
     data_group: Tuple[Array, ...],
     log_ref_priors_group: Tuple[Array, ...],
     masks_group: Tuple[Array, ...],
-) -> ArrayLike:
+) -> Array:
     @jax.jit
     def _variance_of_single_event_likelihood(*args: Array):
         data_group = args[0:n_buckets]
