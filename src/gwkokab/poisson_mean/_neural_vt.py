@@ -85,7 +85,9 @@ def poisson_mean_from_neural_vt(
             2.0 * scaled_mixture.log_scales
             + jax.nn.logsumexp(2.0 * log_vt_values, axis=-1)
         )
-        variance_per_component = squared_mean_per_component - mean_per_component**2
+        variance_per_component = (
+            squared_mean_per_component - mean_per_component**2 / num_samples
+        )
         return (time_scale / num_samples) ** 2 * jnp.sum(
             variance_per_component, axis=-1
         )
