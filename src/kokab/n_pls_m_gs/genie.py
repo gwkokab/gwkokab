@@ -934,8 +934,10 @@ def main() -> None:
     pmean_key, factory_key = jrd.split(jrd.PRNGKey(args.seed), 2)
 
     pmean_config = read_json(args.pmean_json)
-    log_selection_fn, erate_estimator, _ = get_selection_fn_and_poisson_mean_estimator(
-        key=pmean_key, parameters=parameters_name, **pmean_config
+    log_selection_fn, erate_estimator, _, _ = (
+        get_selection_fn_and_poisson_mean_estimator(
+            key=pmean_key, parameters=parameters_name, **pmean_config
+        )
     )
 
     popfactory = PopulationFactory(
