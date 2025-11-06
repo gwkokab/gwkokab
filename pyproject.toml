@@ -59,10 +59,12 @@ dependencies = [
 ]
 keywords = [
     "astrophysics",
+    "gravitational-waves",
+    "population-inference",
+    "compact-binaries",
+    "BBH-BNS-NSBH",
     "bayesian-inference",
     "jax",
-    "neutron-stars",
-    "gravitational-waves",
 ]
 
 [project.optional-dependencies]
