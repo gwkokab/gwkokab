@@ -60,12 +60,15 @@ dependencies = [
 keywords = [
     "astrophysics",
     "bayesian-inference",
+    "bbh",
     "binary-black-holes",
     "binary-neutron-stars",
+    "bns",
     "compact-binaries",
     "gravitational-waves",
     "jax",
     "neutron-star-black-hole",
+    "nsbh",
     "population-inference",
 ]
 
