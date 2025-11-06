@@ -162,8 +162,10 @@ class Monk(FlowMCBased):
         logger.debug("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
 
         pmean_config = read_json(self.poisson_mean_filename)
-        _, poisson_mean_estimator, T_obs = get_selection_fn_and_poisson_mean_estimator(
-            key=self.rng_key, parameters=self.parameters, **pmean_config
+        _, poisson_mean_estimator, T_obs, _ = (
+            get_selection_fn_and_poisson_mean_estimator(
+                key=self.rng_key, parameters=self.parameters, **pmean_config
+            )
         )
 
         logpdf = analytical_likelihood(
