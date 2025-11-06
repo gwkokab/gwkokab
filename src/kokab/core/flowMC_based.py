@@ -39,6 +39,9 @@ from kokab.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 
 
 _INFERENCE_DIRECTORY = "flowMC_" + INFERENCE_DIRECTORY
+_SAVE_CHAINS_EVERY_STEP: bool = False
+_SUPPORT_CHECK_FN: Callable[[Array], bool] = lambda x: True
+_N_SAMPLES_TO_SAVE: int = 5000
 
 
 # WARNING: do not change anything in this class
@@ -455,6 +458,15 @@ class Sampler:
                 self.resources,
                 last_step,
             ) = self.strategies[strategy](rng_key, self.resources, last_step, data)
+            if _SAVE_CHAINS_EVERY_STEP:
+                rng_key, subkey = jax.random.split(rng_key)
+                _save_chains_from_sampler(
+                    self,
+                    rng_key=rng_key,
+                    step=i,
+                    n_samples=_N_SAMPLES_TO_SAVE,
+                    is_training=True,
+                )
 
         with tqdm.tqdm(range(n_local_steps), total=n_local_steps) as pbar:
             pbar.set_description("Global Sampling")
@@ -470,6 +482,15 @@ class Sampler:
                     ) = self.strategies[strategy](
                         rng_key, self.resources, last_step, data
                     )
+                    if _SAVE_CHAINS_EVERY_STEP:
+                        rng_key, subkey = jax.random.split(rng_key)
+                        _save_chains_from_sampler(
+                            self,
+                            rng_key=subkey,
+                            step=i,
+                            n_samples=_N_SAMPLES_TO_SAVE,
+                            is_training=False,
+                        )
 
     # TODO: Implement quick access and summary functions that operates on buffer
 
@@ -510,9 +531,7 @@ def _save_data_from_sampler(
     sampler: Sampler,
     *,
     rng_key: PRNGKeyArray,
-    support_check: Callable[[Array], bool],
     labels: Optional[list[str]] = None,
-    n_samples: int = 5000,
     logpdf: Optional[Callable] = None,
     save_weighted_samples: bool = False,
 ) -> None:
@@ -541,9 +560,6 @@ def _save_data_from_sampler(
         labels = [f"x{i}" for i in range(sampler.n_dim)]
     if logpdf is None:
         raise ValueError("logpdf must be provided")
-
-    if support_check is None:
-        support_check = lambda x: True
 
     os.makedirs(_INFERENCE_DIRECTORY, exist_ok=True)
 
@@ -675,16 +691,18 @@ def _save_data_from_sampler(
     nf_model = sampler_resources["model"]
     _, subkey = jrd.split(rng_key)
     unweighted_samples = np.asarray(
-        jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
+        jax.block_until_ready(
+            nf_model.sample(n_samples=_N_SAMPLES_TO_SAVE, rng_key=subkey)
+        )
     )
 
-    mask = support_check(unweighted_samples)  # type: ignore
+    mask = _SUPPORT_CHECK_FN(unweighted_samples)  # type: ignore
     unweighted_samples = unweighted_samples[mask]
 
     logger.debug(
         "Number of samples within support: {n_valid} out of {n_samples}",
         n_valid=unweighted_samples.shape[0],
-        n_samples=n_samples,
+        n_samples=_N_SAMPLES_TO_SAVE,
     )
 
     np.savetxt(
@@ -750,13 +768,15 @@ def _save_data_from_sampler(
 
     weights = np.asarray(weights)  # type: ignore
     ess = int(1.0 / np.sum(np.square(weights)))
-    logger.debug("Effective sample size is {} out of {}".format(ess, n_samples))
+    logger.debug(
+        "Effective sample size is {} out of {}".format(ess, _N_SAMPLES_TO_SAVE)
+    )
     if ess == 0:
         logger.warning("Effective sample size is zero, cannot proceed with sampling.")
         return
 
     weighted_samples = unweighted_samples[
-        np.random.choice(n_samples, size=ess, p=weights)
+        np.random.choice(_N_SAMPLES_TO_SAVE, size=ess, p=weights)
     ]
     np.savetxt(
         rf"{_INFERENCE_DIRECTORY}/weighted_{POSTERIOR_SAMPLES_FILENAME}",
@@ -771,6 +791,146 @@ def _save_data_from_sampler(
 
     gc.collect()
     logger.debug("Garbage collection completed after weighted samples.")
+
+
+def _save_chains_from_sampler(
+    sampler: Sampler,
+    *,
+    rng_key: PRNGKeyArray,
+    step: int = 0,
+    labels: Optional[list[str]] = None,
+    n_samples: int = 5000,
+    is_training: bool = False,
+) -> None:
+    if labels is None:
+        labels = [f"x{i}" for i in range(sampler.n_dim)]
+
+    os.makedirs(_INFERENCE_DIRECTORY, exist_ok=True)
+
+    header = " ".join(labels)
+
+    sampler_resources = sampler.resources
+
+    train_chains = np.array(sampler_resources["positions_training"].data)
+    train_global_accs = np.array(sampler_resources["global_accs_training"].data)
+    train_local_accs = np.array(sampler_resources["local_accs_training"].data)
+    train_loss_vals = np.array(sampler_resources["loss_buffer"].data)
+    train_log_prob = np.array(sampler_resources["log_prob_training"].data)
+
+    prod_chains = np.array(sampler_resources["positions_production"].data)
+    prod_global_accs = np.array(sampler_resources["global_accs_production"].data)
+    prod_local_accs = np.array(sampler_resources["local_accs_production"].data)
+    prod_log_prob = np.array(sampler_resources["log_prob_production"].data)
+
+    n_chains = sampler.n_chains
+
+    np.savetxt(
+        rf"{_INFERENCE_DIRECTORY}/global_accs.dat",
+        np.column_stack(
+            _same_length_arrays(
+                max(train_global_accs.shape[1], prod_global_accs.shape[1]),
+                train_global_accs.mean(0),
+                prod_global_accs.mean(0),
+            )
+        ),
+        header="train prod",
+        comments="#",
+    )
+
+    np.savetxt(
+        rf"{_INFERENCE_DIRECTORY}/local_accs.dat",
+        np.column_stack(
+            _same_length_arrays(
+                max(train_local_accs.shape[1], prod_local_accs.shape[1]),
+                train_local_accs.mean(0),
+                prod_local_accs.mean(0),
+            )
+        ),
+        header="train prod",
+        comments="#",
+    )
+
+    np.savetxt(
+        rf"{_INFERENCE_DIRECTORY}/loss.dat", train_loss_vals.reshape(-1), header="loss"
+    )
+
+    for n_chain in range(n_chains):
+        np.savetxt(
+            rf"{_INFERENCE_DIRECTORY}/global_accs_{n_chain}.dat",
+            np.column_stack(
+                _same_length_arrays(
+                    max(
+                        train_global_accs[n_chain, :].shape[0],
+                        prod_global_accs[n_chain, :].shape[0],
+                    ),
+                    train_global_accs[n_chain, :],
+                    prod_global_accs[n_chain, :],
+                )
+            ),
+            header="train prod",
+            comments="#",
+        )
+
+        np.savetxt(
+            rf"{_INFERENCE_DIRECTORY}/local_accs_{n_chain}.dat",
+            np.column_stack(
+                _same_length_arrays(
+                    max(
+                        train_local_accs[n_chain, :].shape[0],
+                        prod_local_accs[n_chain, :].shape[0],
+                    ),
+                    train_local_accs[n_chain, :],
+                    prod_local_accs[n_chain, :],
+                )
+            ),
+            header="train prod",
+            comments="#",
+        )
+
+        np.savetxt(
+            rf"{_INFERENCE_DIRECTORY}/train_chains_{n_chain}.dat",
+            train_chains[n_chain, :, :],
+            header=header,
+        )
+        np.savetxt(
+            rf"{_INFERENCE_DIRECTORY}/prod_chains_{n_chain}.dat",
+            prod_chains[n_chain, :, :],
+            header=header,
+        )
+        np.savetxt(
+            rf"{_INFERENCE_DIRECTORY}/log_prob_{n_chain}.dat",
+            np.column_stack(
+                _same_length_arrays(
+                    max(
+                        train_log_prob[n_chain].shape[0],
+                        prod_log_prob[n_chain].shape[0],
+                    ),
+                    train_log_prob[n_chain],
+                    prod_log_prob[n_chain],
+                )
+            ),
+            header="train prod",
+            comments="#",
+        )
+
+    nf_model = sampler_resources["model"]
+    _, subkey = jrd.split(rng_key)
+    unweighted_samples = np.asarray(
+        jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
+    )
+
+    mask = _SUPPORT_CHECK_FN(unweighted_samples)  # type: ignore
+    unweighted_samples = unweighted_samples[mask]
+
+    posterior_samples_filename = (
+        ("train" if is_training else "prod") + f"_{step}_" + POSTERIOR_SAMPLES_FILENAME
+    )
+
+    np.savetxt(
+        rf"{_INFERENCE_DIRECTORY}/{posterior_samples_filename}",
+        unweighted_samples,
+        header=header,
+    )
 
 
 class FlowMCBased(Guru):
@@ -894,6 +1054,19 @@ class FlowMCBased(Guru):
                     msg="condition_matrix must be positive definite",
                 )
 
+        global _SUPPORT_CHECK_FN
+        _SUPPORT_CHECK_FN = priors.support  # type: ignore
+
+        global _N_SAMPLES_TO_SAVE
+        _N_SAMPLES_TO_SAVE = sampler_config["data_dump"].get(
+            "n_samples", _N_SAMPLES_TO_SAVE
+        )
+
+        global _SAVE_CHAINS_EVERY_STEP
+        _SAVE_CHAINS_EVERY_STEP = sampler_config["data_dump"].get(
+            "save_chains_every_step", _SAVE_CHAINS_EVERY_STEP
+        )
+
         bundle = Local_Global_Sampler_Bundle(
             rng_key=self.rng_key,
             n_chains=n_chains,
@@ -954,9 +1127,7 @@ class FlowMCBased(Guru):
             sampler,
             rng_key=self.rng_key,
             logpdf=ft.partial(logpdf, data=data),  # type: ignore
-            support_check=priors.support,  # type: ignore
             labels=labels,
-            n_samples=sampler_config["data_dump"]["n_samples"],
             save_weighted_samples=sampler_config["data_dump"].get(
                 "save_weighted_samples", False
             ),
