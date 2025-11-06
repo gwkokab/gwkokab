@@ -510,6 +510,7 @@ def _save_data_from_sampler(
     sampler: Sampler,
     *,
     rng_key: PRNGKeyArray,
+    support_check: Callable[[Array], bool],
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
     logpdf: Optional[Callable] = None,
@@ -540,6 +541,9 @@ def _save_data_from_sampler(
         labels = [f"x{i}" for i in range(sampler.n_dim)]
     if logpdf is None:
         raise ValueError("logpdf must be provided")
+
+    if support_check is None:
+        support_check = lambda x: True
 
     os.makedirs(_INFERENCE_DIRECTORY, exist_ok=True)
 
@@ -673,6 +677,16 @@ def _save_data_from_sampler(
     unweighted_samples = np.asarray(
         jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
     )
+
+    mask = support_check(unweighted_samples)  # type: ignore
+    unweighted_samples = unweighted_samples[mask]
+
+    logger.debug(
+        "Number of samples within support: {n_valid} out of {n_samples}",
+        n_valid=unweighted_samples.shape[0],
+        n_samples=n_samples,
+    )
+
     np.savetxt(
         rf"{_INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
         unweighted_samples,
@@ -940,6 +954,7 @@ class FlowMCBased(Guru):
             sampler,
             rng_key=self.rng_key,
             logpdf=ft.partial(logpdf, data=data),  # type: ignore
+            support_check=priors.support,  # type: ignore
             labels=labels,
             n_samples=sampler_config["data_dump"]["n_samples"],
             save_weighted_samples=sampler_config["data_dump"].get(
