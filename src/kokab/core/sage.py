@@ -245,6 +245,7 @@ class Sage(Guru):
                 range(n_batches), desc="Computing variance of likelihood estimator"
             ):
                 variance = jax.vmap(compute_variance)(batched_samples[i])
+                variance = np.nan_to_num(variance, nan=float("inf"))  # type: ignore
                 if mask is None:
                     mask = variance < self.variance_cut_threshold
                 else:
@@ -255,6 +256,7 @@ class Sage(Guru):
                 min_variance = min(min_variance, np.min(variance))  # type: ignore
             if remainder_samples.shape[0] > 0:
                 variance = jax.vmap(compute_variance)(remainder_samples)
+                variance = np.nan_to_num(variance, nan=float("inf"))  # type: ignore
                 if mask is None:
                     mask = variance < self.variance_cut_threshold
                 else:
