@@ -462,7 +462,7 @@ class Sampler:
                 rng_key, subkey = jax.random.split(rng_key)
                 _save_chains_from_sampler(
                     self,
-                    rng_key=rng_key,
+                    rng_key=subkey,
                     step=i,
                     n_samples=_N_SAMPLES_TO_SAVE,
                     is_training=True,
