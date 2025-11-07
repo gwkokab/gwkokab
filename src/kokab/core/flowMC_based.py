@@ -39,9 +39,6 @@ from kokab.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 
 
 _INFERENCE_DIRECTORY = "flowMC_" + INFERENCE_DIRECTORY
-_SAVE_CHAINS_EVERY_STEP: bool = False
-_SUPPORT_CHECK_FN: Callable[[Array], bool] = lambda x: True
-_N_SAMPLES_TO_SAVE: int = 5000
 
 
 # WARNING: do not change anything in this class
@@ -414,7 +411,14 @@ class Sampler:
                 if not key.startswith("__"):
                     setattr(self, key, value)
 
-    def sample(self, initial_position: Float[Array, "n_chains n_dim"], data: dict):
+    def sample(
+        self,
+        initial_position: Float[Array, "n_chains n_dim"],
+        data: dict,
+        support_check: Callable[[Array], Array],
+        n_samples: int = 5000,
+        save_chains_every_step: bool = False,
+    ):
         """Sample from the posterior using the local sampler.
 
         Args:
@@ -448,6 +452,16 @@ class Sampler:
                     ) = self.strategies[strategy](
                         rng_key, self.resources, last_step, data
                     )
+                    if save_chains_every_step:
+                        rng_key, subkey = jax.random.split(rng_key)
+                        _save_chains_from_sampler(
+                            self,
+                            rng_key=subkey,
+                            step=i,
+                            support_check=support_check,
+                            n_samples=n_samples,
+                            is_training=True,
+                        )
 
         print("Resetting steppers and updating state")
         for strategy in self.strategy_order[
@@ -458,15 +472,6 @@ class Sampler:
                 self.resources,
                 last_step,
             ) = self.strategies[strategy](rng_key, self.resources, last_step, data)
-            if _SAVE_CHAINS_EVERY_STEP:
-                rng_key, subkey = jax.random.split(rng_key)
-                _save_chains_from_sampler(
-                    self,
-                    rng_key=subkey,
-                    step=i,
-                    n_samples=_N_SAMPLES_TO_SAVE,
-                    is_training=True,
-                )
 
         with tqdm.tqdm(range(n_local_steps), total=n_local_steps) as pbar:
             pbar.set_description("Global Sampling")
@@ -482,13 +487,14 @@ class Sampler:
                     ) = self.strategies[strategy](
                         rng_key, self.resources, last_step, data
                     )
-                    if _SAVE_CHAINS_EVERY_STEP:
+                    if save_chains_every_step:
                         rng_key, subkey = jax.random.split(rng_key)
                         _save_chains_from_sampler(
                             self,
                             rng_key=subkey,
                             step=i,
-                            n_samples=_N_SAMPLES_TO_SAVE,
+                            support_check=support_check,
+                            n_samples=n_samples,
                             is_training=False,
                         )
 
@@ -531,6 +537,8 @@ def _save_data_from_sampler(
     sampler: Sampler,
     *,
     rng_key: PRNGKeyArray,
+    support_check,
+    n_samples,
     labels: Optional[list[str]] = None,
     logpdf: Optional[Callable] = None,
     save_weighted_samples: bool = False,
@@ -625,8 +633,9 @@ def _save_data_from_sampler(
     for n_chain in tqdm.trange(
         n_chains, total=n_chains, unit="chain", desc="Saving data from chains"
     ):
+        n_chain_tag: str = str(n_chain).zfill(len(str(n_chains - 1)))
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/global_accs_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/global_accs_{n_chain_tag}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -642,7 +651,7 @@ def _save_data_from_sampler(
         )
 
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/local_accs_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/local_accs_{n_chain_tag}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -658,17 +667,17 @@ def _save_data_from_sampler(
         )
 
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/train_chains_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/train_chains_{n_chain_tag}.dat",
             train_chains[n_chain, :, :],
             header=header,
         )
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/prod_chains_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/prod_chains_{n_chain_tag}.dat",
             prod_chains[n_chain, :, :],
             header=header,
         )
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/log_prob_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/log_prob_{n_chain_tag}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -691,18 +700,16 @@ def _save_data_from_sampler(
     nf_model = sampler_resources["model"]
     _, subkey = jrd.split(rng_key)
     unweighted_samples = np.asarray(
-        jax.block_until_ready(
-            nf_model.sample(n_samples=_N_SAMPLES_TO_SAVE, rng_key=subkey)
-        )
+        jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
     )
 
-    mask = _SUPPORT_CHECK_FN(unweighted_samples)  # type: ignore
+    mask = support_check(unweighted_samples)  # type: ignore
     unweighted_samples = unweighted_samples[mask]
 
     logger.debug(
         "Number of samples within support: {n_valid} out of {n_samples}",
         n_valid=unweighted_samples.shape[0],
-        n_samples=_N_SAMPLES_TO_SAVE,
+        n_samples=n_samples,
     )
 
     np.savetxt(
@@ -768,15 +775,13 @@ def _save_data_from_sampler(
 
     weights = np.asarray(weights)  # type: ignore
     ess = int(1.0 / np.sum(np.square(weights)))
-    logger.debug(
-        "Effective sample size is {} out of {}".format(ess, _N_SAMPLES_TO_SAVE)
-    )
+    logger.debug("Effective sample size is {} out of {}".format(ess, n_samples))
     if ess == 0:
         logger.warning("Effective sample size is zero, cannot proceed with sampling.")
         return
 
     weighted_samples = unweighted_samples[
-        np.random.choice(_N_SAMPLES_TO_SAVE, size=ess, p=weights)
+        np.random.choice(n_samples, size=ess, p=weights)
     ]
     np.savetxt(
         rf"{_INFERENCE_DIRECTORY}/weighted_{POSTERIOR_SAMPLES_FILENAME}",
@@ -797,6 +802,7 @@ def _save_chains_from_sampler(
     sampler: Sampler,
     *,
     rng_key: PRNGKeyArray,
+    support_check: Callable[[Array], Array],
     step: int = 0,
     labels: Optional[list[str]] = None,
     n_samples: int = 5000,
@@ -855,8 +861,9 @@ def _save_chains_from_sampler(
     )
 
     for n_chain in range(n_chains):
+        n_chain_tag: str = str(n_chain).zfill(len(str(n_chains - 1)))
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/global_accs_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/global_accs_{n_chain_tag}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -872,7 +879,7 @@ def _save_chains_from_sampler(
         )
 
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/local_accs_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/local_accs_{n_chain_tag}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -888,17 +895,17 @@ def _save_chains_from_sampler(
         )
 
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/train_chains_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/train_chains_{n_chain_tag}.dat",
             train_chains[n_chain, :, :],
             header=header,
         )
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/prod_chains_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/prod_chains_{n_chain_tag}.dat",
             prod_chains[n_chain, :, :],
             header=header,
         )
         np.savetxt(
-            rf"{_INFERENCE_DIRECTORY}/log_prob_{n_chain}.dat",
+            rf"{_INFERENCE_DIRECTORY}/log_prob_{n_chain_tag}.dat",
             np.column_stack(
                 _same_length_arrays(
                     max(
@@ -919,7 +926,7 @@ def _save_chains_from_sampler(
         jax.block_until_ready(nf_model.sample(n_samples=n_samples, rng_key=subkey))
     )
 
-    mask = _SUPPORT_CHECK_FN(unweighted_samples)  # type: ignore
+    mask = support_check(unweighted_samples)  # type: ignore
     unweighted_samples = unweighted_samples[mask]
 
     posterior_samples_filename = (
@@ -1054,19 +1061,6 @@ class FlowMCBased(Guru):
                     msg="condition_matrix must be positive definite",
                 )
 
-        global _SUPPORT_CHECK_FN
-        _SUPPORT_CHECK_FN = priors.support  # type: ignore
-
-        global _N_SAMPLES_TO_SAVE
-        _N_SAMPLES_TO_SAVE = sampler_config["data_dump"].get(
-            "n_samples", _N_SAMPLES_TO_SAVE
-        )
-
-        global _SAVE_CHAINS_EVERY_STEP
-        _SAVE_CHAINS_EVERY_STEP = sampler_config["data_dump"].get(
-            "save_chains_every_step", _SAVE_CHAINS_EVERY_STEP
-        )
-
         bundle = Local_Global_Sampler_Bundle(
             rng_key=self.rng_key,
             n_chains=n_chains,
@@ -1106,11 +1100,29 @@ class FlowMCBased(Guru):
 
         logger.debug("Sampler initialized, starting sampling.")
 
+        support_check = priors.support
+        n_samples = sampler_config["data_dump"]["n_samples"]
+        save_chains_every_step = sampler_config["data_dump"].get(
+            "save_chains_every_step", False
+        )
+
         if self.debug_nans:
             with jax.debug_nans(True):
-                sampler.sample(initial_position, data)
+                sampler.sample(
+                    initial_position,
+                    data,
+                    support_check=support_check,
+                    n_samples=n_samples,
+                    save_chains_every_step=save_chains_every_step,
+                )
         elif self.profile_memory:
-            sampler.sample(initial_position, data)
+            sampler.sample(
+                initial_position,
+                data,
+                support_check=support_check,
+                n_samples=n_samples,
+                save_chains_every_step=save_chains_every_step,
+            )
             import datetime
 
             time = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -1119,15 +1131,29 @@ class FlowMCBased(Guru):
             logger.debug("Memory profile saved as {filename}", filename=filename)
         elif self.check_leaks:
             with jax.checking_leaks():
-                sampler.sample(initial_position, data)
+                sampler.sample(
+                    initial_position,
+                    data,
+                    support_check=support_check,
+                    n_samples=n_samples,
+                    save_chains_every_step=save_chains_every_step,
+                )
         else:
-            sampler.sample(initial_position, data)
+            sampler.sample(
+                initial_position,
+                data,
+                support_check=support_check,
+                n_samples=n_samples,
+                save_chains_every_step=save_chains_every_step,
+            )
 
         _save_data_from_sampler(
             sampler,
             rng_key=self.rng_key,
             logpdf=ft.partial(logpdf, data=data),  # type: ignore
+            support_check=support_check,
             labels=labels,
+            n_samples=n_samples,
             save_weighted_samples=sampler_config["data_dump"].get(
                 "save_weighted_samples", False
             ),
