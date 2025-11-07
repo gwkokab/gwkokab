@@ -418,6 +418,7 @@ class Sampler:
         support_check: Callable[[Array], Array],
         n_samples: int = 5000,
         save_chains_every_step: bool = False,
+        labels: Optional[list[str]] = None,
     ):
         """Sample from the posterior using the local sampler.
 
@@ -461,6 +462,7 @@ class Sampler:
                             support_check=support_check,
                             n_samples=n_samples,
                             is_training=True,
+                            labels=labels,
                         )
 
         print("Resetting steppers and updating state")
@@ -496,6 +498,7 @@ class Sampler:
                             support_check=support_check,
                             n_samples=n_samples,
                             is_training=False,
+                            labels=labels,
                         )
 
     # TODO: Implement quick access and summary functions that operates on buffer
@@ -860,8 +863,10 @@ def _save_chains_from_sampler(
         rf"{_INFERENCE_DIRECTORY}/loss.dat", train_loss_vals.reshape(-1), header="loss"
     )
 
+    width = len(str(n_chains - 1))
+
     for n_chain in range(n_chains):
-        n_chain_tag: str = str(n_chain).zfill(len(str(n_chains - 1)))
+        n_chain_tag: str = str(n_chain).zfill(width)
         np.savetxt(
             rf"{_INFERENCE_DIRECTORY}/global_accs_{n_chain_tag}.dat",
             np.column_stack(
@@ -930,7 +935,9 @@ def _save_chains_from_sampler(
     unweighted_samples = unweighted_samples[mask]
 
     posterior_samples_filename = (
-        ("train" if is_training else "prod") + f"_{step}_" + POSTERIOR_SAMPLES_FILENAME
+        ("train" if is_training else "prod")
+        + f"_{str(step).zfill(width)}_"
+        + POSTERIOR_SAMPLES_FILENAME
     )
 
     np.savetxt(
@@ -1116,6 +1123,7 @@ class FlowMCBased(Guru):
                     support_check=support_check,
                     n_samples=n_samples,
                     save_chains_every_step=save_chains_every_step,
+                    labels=labels,
                 )
         elif self.profile_memory:
             sampler.sample(
@@ -1124,6 +1132,7 @@ class FlowMCBased(Guru):
                 support_check=support_check,
                 n_samples=n_samples,
                 save_chains_every_step=save_chains_every_step,
+                labels=labels,
             )
             import datetime
 
@@ -1139,6 +1148,7 @@ class FlowMCBased(Guru):
                     support_check=support_check,
                     n_samples=n_samples,
                     save_chains_every_step=save_chains_every_step,
+                    labels=labels,
                 )
         else:
             sampler.sample(
@@ -1147,6 +1157,7 @@ class FlowMCBased(Guru):
                 support_check=support_check,
                 n_samples=n_samples,
                 save_chains_every_step=save_chains_every_step,
+                labels=labels,
             )
 
         _save_data_from_sampler(
