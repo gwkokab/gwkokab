@@ -979,10 +979,16 @@ class FlowMCBased(Guru):
         rq_spline_range = bundle_config.get("rq_spline_range", (-10.0, 10.0))
         rq_spline_range = tuple(rq_spline_range)
         verbose = bundle_config["verbose"]
+        n_samples = sampler_config["data_dump"]["n_samples"]
+        save_chains_every_step = sampler_config["data_dump"].get(
+            "save_chains_every_step", True
+        )
 
         logger.debug("Validation for Sampler parameters starting")
 
         for var, var_name, expected_type in (
+            (n_samples, "n_samples", int),
+            (save_chains_every_step, "save_chains_every_step", bool),
             (batch_size, "batch_size", int),
             (chain_batch_size, "chain_batch_size", int),
             (global_thinning, "global_thinning", int),
@@ -1101,10 +1107,6 @@ class FlowMCBased(Guru):
         logger.debug("Sampler initialized, starting sampling.")
 
         support_check = priors.support
-        n_samples = sampler_config["data_dump"]["n_samples"]
-        save_chains_every_step = sampler_config["data_dump"].get(
-            "save_chains_every_step", False
-        )
 
         if self.debug_nans:
             with jax.debug_nans(True):
