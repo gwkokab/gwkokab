@@ -280,7 +280,7 @@ class Sage(Guru):
             np.savetxt(
                 f"{self.output_directory}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}",
                 samples[mask],
-                header=" ".join(self.posterior_columns),
+                header=" ".join(sorted(variables.keys())),
             )
 
 
