@@ -91,7 +91,9 @@ def _run_mcmc(
         chain_method = "parallel"
 
     n_chains = mcmc_kwargs.pop("num_chains", 1)
-    batch_size: int = min(n_chains, n_devices)
+    batch_size: int = (
+        n_chains if chain_method == "vectorized" else min(n_chains, n_devices)
+    )
     n_batches = n_chains // batch_size
 
     mcmc = MCMC(kernel, num_chains=batch_size, chain_method=chain_method, **mcmc_kwargs)
