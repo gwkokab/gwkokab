@@ -14,11 +14,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from ...utils.kernel import log_planck_taper_window
 from ..constraints import all_constraint, mass_sandwich
 from ..redshift import PowerlawRedshift
-from ..utils import (
-    doubly_truncated_power_law_log_norm_constant,
-    JointDistribution,
-    ScaledMixture,
-)
+from ..utils import JointDistribution, ScaledMixture
 
 
 class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
@@ -32,10 +28,10 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         "lambda_1": constraints.unit_interval,
         "loc1": constraints.positive,
         "loc2": constraints.positive,
-        "m1min": constraints.real,
-        "m2min": constraints.real,
-        "mbreak": constraints.real,
-        "mmax": constraints.real,
+        "m1min": constraints.positive,
+        "m2min": constraints.positive,
+        "mbreak": constraints.positive,
+        "mmax": constraints.positive,
         "scale1": constraints.positive,
         "scale2": constraints.positive,
         "a_1_loc_bpl1": constraints.unit_interval,
@@ -392,15 +388,15 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
         log_mbreak = jnp.log(self.mbreak)
         log_m1 = jnp.log(m1)
-        log_norm_bpl = jnp.logaddexp(
-            self.alpha1 * log_mbreak
-            + doubly_truncated_power_law_log_norm_constant(
-                -self.alpha1, self.m1min, self.mbreak
-            ),
-            self.alpha2 * log_mbreak
-            + doubly_truncated_power_law_log_norm_constant(
-                -self.alpha2, self.mbreak, self.mmax
-            ),
+        log_norm_bpl = log_mbreak + jnp.log(
+            (
+                (1 - jnp.power(self.m1min / self.mbreak, 1 - self.alpha1))
+                / (1 - self.alpha1)
+            )
+            + (
+                (jnp.power(self.mmax / self.mbreak, 1 - self.alpha2) - 1)
+                / (1 - self.alpha2)
+            )
         )
         log_prob_bpl_1 = jnp.where(
             m1 < self.mbreak, self.alpha1 * (log_mbreak - log_m1), -jnp.inf

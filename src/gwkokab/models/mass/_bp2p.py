@@ -13,7 +13,6 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ...utils.kernel import log_planck_taper_window
 from ..constraints import mass_ratio_mass_sandwich
-from ..utils import doubly_truncated_power_law_log_norm_constant
 
 
 @jax.jit
@@ -39,20 +38,12 @@ def _broken_powerlaw_prob(
             0 & \text{otherwise}
         \end{cases}
     """
-    log_mbreak = jnp.log(mbreak)
-    log_m1 = jnp.log(m1)
-    log_unnormalized = jnp.where(
-        m1 < mbreak,
-        -alpha1 * (log_m1 - log_mbreak),
-        -alpha2 * (log_m1 - log_mbreak),
+    unnormalized_prob = jnp.power(mbreak / m1, jnp.where(m1 < mbreak, alpha1, alpha2))
+    norm = mbreak * (
+        ((1 - jnp.power(mmin / mbreak, 1 - alpha1)) / (1 - alpha1))
+        + ((jnp.power(mmax / mbreak, 1 - alpha2) - 1) / (1 - alpha2))
     )
-    log_norm = jnp.logaddexp(
-        alpha1 * log_mbreak
-        + doubly_truncated_power_law_log_norm_constant(-alpha1, mmin, mbreak),
-        alpha2 * log_mbreak
-        + doubly_truncated_power_law_log_norm_constant(-alpha2, mbreak, mmax),
-    )
-    return jnp.exp(log_unnormalized - log_norm)
+    return unnormalized_prob / norm
 
 
 class BrokenPowerlawTwoPeak(Distribution):
@@ -117,10 +108,10 @@ class BrokenPowerlawTwoPeak(Distribution):
         "lambda_1": constraints.unit_interval,
         "loc1": constraints.positive,
         "loc2": constraints.positive,
-        "m1min": constraints.real,
-        "m2min": constraints.real,
-        "mbreak": constraints.real,
-        "mmax": constraints.real,
+        "m1min": constraints.positive,
+        "m2min": constraints.positive,
+        "mbreak": constraints.positive,
+        "mmax": constraints.positive,
         "scale1": constraints.positive,
         "scale2": constraints.positive,
     }
