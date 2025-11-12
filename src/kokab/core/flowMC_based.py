@@ -820,32 +820,19 @@ def _save_chains_from_sampler(
 
     sampler_resources = sampler.resources
 
-    train_chains = np.array(
-        jax.device_get(sampler_resources["positions_training"].data)
-    )
-    train_global_accs = np.array(
-        jax.device_get(sampler_resources["global_accs_training"].data)
-    )
-    train_local_accs = np.array(
-        jax.device_get(sampler_resources["local_accs_training"].data)
-    )
-    train_loss_vals = np.array(jax.device_get(sampler_resources["loss_buffer"].data))
-    train_log_prob = np.array(
-        jax.device_get(sampler_resources["log_prob_training"].data)
-    )
+    def _get(key: str) -> np.ndarray:
+        return np.array(jax.device_get(sampler_resources[key].data))
 
-    prod_chains = np.array(
-        jax.device_get(sampler_resources["positions_production"].data)
-    )
-    prod_global_accs = np.array(
-        jax.device_get(sampler_resources["global_accs_production"].data)
-    )
-    prod_local_accs = np.array(
-        jax.device_get(sampler_resources["local_accs_production"].data)
-    )
-    prod_log_prob = np.array(
-        jax.device_get(sampler_resources["log_prob_production"].data)
-    )
+    train_chains = _get("positions_training")
+    train_global_accs = _get("global_accs_training")
+    train_local_accs = _get("local_accs_training")
+    train_loss_vals = _get("loss_buffer")
+    train_log_prob = _get("log_prob_training")
+
+    prod_chains = _get("positions_production")
+    prod_global_accs = _get("global_accs_production")
+    prod_local_accs = _get("local_accs_production")
+    prod_log_prob = _get("log_prob_production")
 
     n_chains = sampler.n_chains
 
