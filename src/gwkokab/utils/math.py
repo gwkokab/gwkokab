@@ -123,7 +123,7 @@ def cumtrapz(y: Array, x: Array) -> Array:
 
 @jax.jit
 def logsubexp(a: ArrayLike, b: ArrayLike) -> ArrayLike:
-    """Compute :math:`\log(\exp(a) - \exp(b))` in a numerically stable way.
+    r"""Compute :math:`\log(\exp(a) - \exp(b))` in a numerically stable way.
 
     Parameters
     ----------
