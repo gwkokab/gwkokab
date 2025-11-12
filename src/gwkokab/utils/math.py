@@ -4,7 +4,12 @@
 
 from typing import Tuple
 
+import jax
+import numpy as np
 from jax import numpy as jnp
+from jax._src.lax import lax
+from jax._src.numpy.util import promote_args_inexact
+from jax.scipy import special as scs
 from jaxtyping import Array, ArrayLike
 from quadax import cumulative_trapezoid
 
@@ -114,3 +119,78 @@ def cumtrapz(y: Array, x: Array) -> Array:
     for index in range(x.shape[-1]):
         y_cum = cumulative_trapezoid(y=y_cum, x=x[..., index], axis=index, initial=0.0)
     return y_cum
+
+
+@jax.jit
+def logsubexp(a: ArrayLike, b: ArrayLike) -> ArrayLike:
+    """Compute :math:`\log(\exp(a) - \exp(b))` in a numerically stable way.
+
+    Parameters
+    ----------
+    a : ArrayLike
+        input array
+    b : ArrayLike
+        input array
+
+    Returns
+    -------
+    ArrayLike
+        The value of :math:`\log(\exp(a) - \exp(b))`.
+    """
+    a, b = promote_args_inexact("logsubexp", a, b)
+    return lax.add(a, lax.log1p(lax.neg(lax.exp(lax.sub(b, a)))))
+
+
+@jax.jit
+def truncnorm_logpdf(
+    xx: ArrayLike,
+    loc: ArrayLike,
+    scale: ArrayLike,
+    low: ArrayLike,
+    high: ArrayLike,
+) -> ArrayLike:
+    """Compute the log probability density function of a truncated normal distribution.
+
+    Parameters
+    ----------
+    xx : ArrayLike
+        The input array.
+    loc : ArrayLike
+        The mean of the distribution.
+    scale : ArrayLike
+        The standard deviation of the distribution.
+    low : ArrayLike
+        The lower bound of the distribution.
+    high : ArrayLike
+        The upper bound of the distribution.
+
+    Returns
+    -------
+    ArrayLike
+        The log probability density function of the truncated normal distribution.
+    """
+    xx, loc, scale, low, high = promote_args_inexact(
+        "truncnorm_logpdf", xx, loc, scale, low, high
+    )
+    safe_scale = jnp.where(scale <= 0, 1.0, scale)
+    zz = lax.div(lax.sub(xx, loc), safe_scale)
+    aa = lax.div(lax.sub(low, loc), safe_scale)
+    bb = lax.div(lax.sub(high, loc), safe_scale)
+    constant = lax._const(xx, np.log(2.0 * np.pi))
+    neg_half = lax._const(xx, -0.5)
+    log_pdf = lax.sub(
+        lax.mul(neg_half, lax.add(lax.square(zz), constant)), lax.log(safe_scale)
+    )
+
+    # cf https://github.com/scipy/scipy/blob/v1.15.1/scipy/stats/_continuous_distns.py#L10189
+    log_norm = jnp.select(
+        [bb <= 0, aa > 0, bb > 0],
+        [
+            logsubexp(scs.log_ndtr(bb), scs.log_ndtr(aa)),
+            logsubexp(scs.log_ndtr(-aa), scs.log_ndtr(-bb)),
+            lax.log1p(-scs.ndtr(aa) - scs.ndtr(-bb)),
+        ],
+        np.nan,
+    )
+    log_pdf -= log_norm
+    return jnp.where((xx < low) | (xx > high) | (scale <= 0), -np.inf, log_pdf)
