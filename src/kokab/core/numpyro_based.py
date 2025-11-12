@@ -98,20 +98,23 @@ def _run_mcmc(
 
     mcmc = MCMC(kernel, num_chains=batch_size, chain_method=chain_method, **mcmc_kwargs)
 
+    def _run_batch_and_save(key: PRNGKeyArray, chain_idx: int) -> PRNGKeyArray:
+        """Runs a batch of MCMC chains, prints summary, and saves the data."""
+        key, subkey = jrd.split(key)
+        mcmc.run(subkey, **data)
+        mcmc.print_summary()
+        inference_data = az.from_numpyro(mcmc)
+        _save_inference_data(inference_data, start_chain_idx=chain_idx)
+        return key
+
     chain_idx: int = 0
     for _ in range(n_batches):
-        key, subkey = jrd.split(key)
-        mcmc.run(subkey, **data)
-        inference_data = az.from_numpyro(mcmc)
-        _save_inference_data(inference_data, start_chain_idx=chain_idx)
+        key = _run_batch_and_save(key, chain_idx)
         chain_idx += batch_size
 
-    if n_batches * batch_size < n_chains:
-        mcmc.num_chains = n_chains - n_batches * batch_size
-        key, subkey = jrd.split(key)
-        mcmc.run(subkey, **data)
-        inference_data = az.from_numpyro(mcmc)
-        _save_inference_data(inference_data, start_chain_idx=chain_idx)
+    if (remaining_chains := n_chains - n_batches * batch_size) > 0:
+        mcmc.num_chains = remaining_chains
+        _run_batch_and_save(key, chain_idx)
 
 
 class NumpyroBased(Guru):
