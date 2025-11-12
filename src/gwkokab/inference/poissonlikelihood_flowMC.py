@@ -72,54 +72,35 @@ def flowMC_poisson_likelihood(
 
         model_instance = dist_fn(**mapped_params)
 
-        # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = poisson_mean_estimator(model_instance)
-
-        log_prob_fn = eqx.filter_jit(eqx.filter_vmap(model_instance.log_prob))
-
-        def single_event_fn(
-            carry: Array, input: Tuple[Array, Array, Array]
-        ) -> Tuple[Array, None]:
-            data, log_ref_prior, mask = input
-
-            safe_data = jnp.where(
-                jnp.expand_dims(mask, axis=-1),
-                data,
-                model_instance.support.feasible_like(data),
-            )
-            safe_log_ref_prior = jnp.where(mask, log_ref_prior, 0.0)
-
-            # log p(ω|data_n)
-            model_log_prob = log_prob_fn(safe_data)
-            safe_model_log_prob = jnp.where(mask, model_log_prob, -jnp.inf)
-
-            # log p(ω|data_n) - log π_n
-            log_prob: Array = safe_model_log_prob - safe_log_ref_prior
-            log_prob = jnp.where(mask & (~jnp.isnan(log_prob)), log_prob, -jnp.inf)
-
-            # log Σ exp (log p(ω|data_n) - log π_n)
-            log_prob_sum = jax.nn.logsumexp(
-                log_prob,
-                axis=-1,
-                where=(~jnp.isneginf(log_prob)) & mask,
-            )
-            return carry + log_prob_sum, None
-
         total_log_likelihood = log_constants  # - Σ log(M_i)
         # Σ log Σ exp (log p(ω|data_n) - log π_n)
         for batched_data, batched_log_ref_priors, batched_mask in zip(
             data_group, log_ref_priors_group, masks_group
         ):
-            total_log_likelihood, _ = jax.lax.scan(
-                single_event_fn,  # type: ignore
-                total_log_likelihood,
-                (batched_data, batched_log_ref_priors, batched_mask),
+            safe_data = jnp.where(
+                batched_mask[..., jnp.newaxis],
+                batched_data,
+                model_instance.support.feasible_like(batched_data),
             )
 
-        log_prior = priors.log_prob(x)
+            # log p(ω|data_n)
+            model_log_prob: Array = jax.lax.map(model_instance.log_prob, safe_data)
+
+            # log p(ω|data_n) - log π_n
+            log_prob: Array = model_log_prob - batched_log_ref_priors
+            log_prob = jnp.where(batched_mask, log_prob, -jnp.inf)
+
+            # log Σ exp (log p(ω|data_n) - log π_n)
+            total_log_likelihood += jax.nn.logsumexp(log_prob, axis=-1).sum(
+                axis=0, initial=0.0
+            )
+
+        # μ = E_{Ω|Λ}[VT(ω)]
+        expected_rates = poisson_mean_estimator(model_instance)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
         log_likelihood = total_log_likelihood - expected_rates
         # log p(ω|data) = log π(ω) + log L(ω)
+        log_prior = priors.log_prob(x)
         log_posterior = log_prior + log_likelihood
 
         log_posterior = jnp.nan_to_num(

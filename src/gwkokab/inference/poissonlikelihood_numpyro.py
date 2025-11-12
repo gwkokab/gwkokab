@@ -5,7 +5,6 @@
 from collections.abc import Callable
 from typing import Dict, List, Optional, Tuple
 
-import equinox as eqx
 import jax
 import numpyro
 from jax import Array, numpy as jnp
@@ -35,6 +34,8 @@ def numpyro_poisson_likelihood(
         partial_order = priors.partial_order
     del priors
 
+    sorted_variables = sorted(variables.items(), key=lambda x: x[0])
+
     def log_likelihood_fn(
         data_group: Tuple[Array, ...],
         log_ref_priors_group: Tuple[Array, ...],
@@ -45,9 +46,7 @@ def numpyro_poisson_likelihood(
                 numpyro.sample(parameter_name, prior_dist)
                 if isinstance(prior_dist, Distribution)
                 else (parameter_name, prior_dist)
-                for parameter_name, prior_dist in sorted(
-                    variables.items(), key=lambda x: x[0]
-                )
+                for parameter_name, prior_dist in sorted_variables
             ]
             for i in partial_order:
                 kwargs = {
@@ -65,53 +64,38 @@ def numpyro_poisson_likelihood(
         else:
             variables_samples = [
                 numpyro.sample(parameter_name, prior_dist)
-                for parameter_name, prior_dist in sorted(
-                    variables.items(), key=lambda x: x[0]
-                )
+                for parameter_name, prior_dist in sorted_variables
             ]
-        mapped_params = {
-            name: variables_samples[i] for name, i in variables_index.items()
-        }
-
-        model_instance: DistributionT = dist_fn(**mapped_params, validate_args=True)
-
-        # μ = E_{θ|Λ}[VT(θ)]
-        expected_rates = eqx.filter_jit(poisson_mean_estimator)(model_instance)
-
-        n_buckets = len(masks_group)
 
         @jax.jit
-        def _total_log_likelihood_fn(*args: Array):
-            data_group = args[0:n_buckets]
-            log_ref_priors_group = args[n_buckets : 2 * n_buckets]
-            masks_group = args[2 * n_buckets : 3 * n_buckets]
-
+        def _log_likelihood_fn(
+            data_group: List[Array],
+            log_ref_priors_group: List[Array],
+            masks_group: List[Array],
+            variables_samples: List[Array],
+        ):
+            mapped_params = {
+                name: variables_samples[i] for name, i in variables_index.items()
+            }
+            model_instance: DistributionT = dist_fn(**mapped_params, validate_args=True)
             total_log_likelihood = log_constants  # - Σ log(M_i)
             # Σ log Σ exp (log p(θ|data_n) - log π_n)
             for batched_data, batched_log_ref_priors, batched_masks in zip(
                 data_group, log_ref_priors_group, masks_group
             ):
                 safe_data = jnp.where(
-                    jnp.expand_dims(batched_masks, axis=-1),
+                    batched_masks[..., jnp.newaxis],
                     batched_data,
                     model_instance.support.feasible_like(batched_data),
                 )
-                safe_log_ref_prior = jnp.where(
-                    batched_masks, batched_log_ref_priors, 0.0
-                )
 
-                n_events_per_bucket, n_samples, _ = batched_data.shape
-                batched_model_log_prob = jax.vmap(
-                    jax.vmap(model_instance.log_prob, axis_size=n_samples),
-                    axis_size=n_events_per_bucket,
-                )(safe_data)  # type: ignore
-                safe_model_log_prob = jnp.where(
-                    batched_masks, batched_model_log_prob, -jnp.inf
-                )
-                batched_log_prob: Array = safe_model_log_prob - safe_log_ref_prior
+                n_events_per_bucket, _, _ = batched_data.shape
+                batched_model_log_prob = jax.jit(
+                    jax.vmap(model_instance.log_prob, axis_size=n_events_per_bucket)
+                )(safe_data)
                 batched_log_prob = jnp.where(
-                    batched_masks & (~jnp.isnan(batched_log_prob)),
-                    batched_log_prob,
+                    batched_masks,
+                    batched_model_log_prob - batched_log_ref_priors,
                     -jnp.inf,
                 )
                 log_prob_sum = jax.nn.logsumexp(
@@ -119,31 +103,41 @@ def numpyro_poisson_likelihood(
                     axis=-1,
                     where=~jnp.isneginf(batched_log_prob),
                 )
-                safe_log_prob_sum = jnp.where(
-                    jnp.isneginf(log_prob_sum), -jnp.inf, log_prob_sum
-                )
-                total_log_likelihood += jnp.sum(safe_log_prob_sum, axis=-1)
+                total_log_likelihood += log_prob_sum.sum(axis=-1, initial=0.0)
 
-            if where_fns is not None and len(where_fns) > 0:
-                mask = where_fns[0](**constants, **mapped_params)
-                for where_fn in where_fns[1:]:
-                    mask = mask & where_fn(**constants, **mapped_params)
-                total_log_likelihood = jnp.where(
-                    mask,
-                    total_log_likelihood,
-                    -jnp.inf,  # type: ignore
-                )
-            return total_log_likelihood
+            # μ = E_{θ|Λ}[VT(θ)]
+            expected_rates = poisson_mean_estimator(model_instance)
 
-        # - μ + Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
-        numpyro.factor(
-            "log_likelihood",
-            _total_log_likelihood_fn(
-                *data_group,
-                *log_ref_priors_group,
-                *masks_group,
+            # - μ + Σ log Σ exp (log p(θ|data_n) - log π_n) - Σ log(M_i)
+            log_likelihood = total_log_likelihood - expected_rates
+
+            return jnp.nan_to_num(
+                log_likelihood,
+                nan=-jnp.inf,
+                posinf=-jnp.inf,
+                neginf=-jnp.inf,
             )
-            - expected_rates,
+
+        log_likelihood = _log_likelihood_fn(
+            data_group,
+            log_ref_priors_group,
+            masks_group,
+            variables_samples,
         )
+
+        if where_fns is not None and len(where_fns) > 0:
+            mapped_params = {
+                name: variables_samples[i] for name, i in variables_index.items()
+            }
+            mask = where_fns[0](**constants, **mapped_params)
+            for where_fn in where_fns[1:]:
+                mask = mask & where_fn(**constants, **mapped_params)
+            log_likelihood = jnp.where(
+                mask,
+                log_likelihood,
+                -jnp.inf,  # type: ignore
+            )
+
+        numpyro.factor("log_likelihood", log_likelihood)
 
     return log_likelihood_fn  # type: ignore
