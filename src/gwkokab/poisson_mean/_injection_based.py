@@ -16,7 +16,7 @@ from loguru import logger
 from ..constants import SECONDS_PER_YEAR
 from ..models.utils import ScaledMixture
 from ..parameters import Parameters as P
-from ..utils.tools import batch_and_remainder, error_if, warn_if
+from ..utils.tools import error_if, warn_if
 
 
 _PARAM_MAPPING = {
@@ -304,139 +304,67 @@ def poisson_mean_from_sensitivity_injections(
             )
         )
 
-    n_accepted = log_weights.shape[0]
-
     def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
-        log_prob_fn = eqx.filter_jit(eqx.filter_vmap(scaled_mixture.log_prob))
+        model_log_prob = jax.lax.map(
+            scaled_mixture.log_prob,
+            samples,
+            batch_size=batch_size,
+        )
 
-        def _f(carry_logsumexp: Array, data: Tuple[Array, Array]) -> Tuple[Array, None]:
-            log_weights, samples = data
-            # log p(θ_i|λ)
-            model_log_prob = log_prob_fn(samples).reshape(log_weights.shape[0])
-            # log p(θ_i|λ) - log w_i
-            log_prob = model_log_prob - log_weights
-            safe_log_prob = jnp.where(
-                jnp.isneginf(log_prob) | jnp.isnan(log_prob),
-                -jnp.inf,
-                log_prob,
-            )
+        log_prob = model_log_prob - log_weights
 
-            partial_logsumexp = jnn.logsumexp(
-                safe_log_prob,
-                where=~jnp.isneginf(safe_log_prob),
-                axis=-1,
-            )
-            safe_carry_logsumexp = jnp.where(
-                jnp.isneginf(carry_logsumexp) | jnp.isnan(carry_logsumexp),
-                -jnp.inf,
-                carry_logsumexp,
-            )
-            return jnp.logaddexp(safe_carry_logsumexp, partial_logsumexp), None
+        safe_log_prob = jnp.where(
+            jnp.isneginf(log_prob) | jnp.isnan(log_prob),
+            -jnp.inf,
+            log_prob,
+        )
 
-        initial_logprob = jnp.asarray(-jnp.inf)
-        if batch_size is None or n_accepted <= batch_size:
-            # If the number of accepted injections is less than or equal to the batch size,
-            # we can process them all at once.
-            log_prob, _ = _f(initial_logprob, (log_weights, samples))
-        else:
-            batched_log_weights, remainder_log_weights = batch_and_remainder(
-                log_weights, batch_size
-            )
-            batched_samples, remainder_samples = batch_and_remainder(
-                samples, batch_size
-            )
-            batched_logprob, _ = jax.lax.scan(
-                _f,
-                initial_logprob,
-                (batched_log_weights, batched_samples),
-            )
-            log_prob, _ = _f(
-                batched_logprob, (remainder_log_weights, remainder_samples)
-            )
+        logsumexp_log_prob = jnn.logsumexp(
+            safe_log_prob,
+            where=~jnp.isneginf(safe_log_prob),
+            axis=-1,
+        )
 
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (analysis_time_years / total_injections) * jnp.exp(log_prob)
+        return (analysis_time_years * jnp.exp(logsumexp_log_prob)) / total_injections
 
     @eqx.filter_jit
     def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
         """See equation 9 and 11 of https://arxiv.org/abs/2406.16813."""
-        log_prob_fn = eqx.filter_jit(eqx.filter_vmap(scaled_mixture.log_prob))
+        model_log_prob = jax.lax.map(
+            scaled_mixture.log_prob,
+            samples,
+            batch_size=batch_size,
+        )
 
-        def _f(
-            carry: Tuple[Array, Array], data: Tuple[Array, Array]
-        ) -> Tuple[Tuple[Array, Array], None]:
-            carry_logsumexp, carry_logsumexp2 = carry
-            log_weights, samples = data
-            # log p(θ_i|λ)
-            model_log_prob = log_prob_fn(samples).reshape(log_weights.shape[0])
-            # log p(θ_i|λ) - log w_i
-            log_prob = model_log_prob - log_weights
-            safe_log_prob = jnp.where(
-                jnp.isneginf(log_prob) | jnp.isnan(log_prob),
-                -jnp.inf,
-                log_prob,
-            )
+        log_prob = model_log_prob - log_weights
 
-            partial_logsumexp = jnn.logsumexp(
-                safe_log_prob,
-                where=~jnp.isneginf(safe_log_prob),
-                axis=-1,
-            )
-            partial_logsumexp2 = jnn.logsumexp(
-                2.0 * safe_log_prob,
-                where=~jnp.isneginf(safe_log_prob),
-                axis=-1,
-            )
+        safe_log_prob = jnp.where(
+            jnp.isneginf(log_prob) | jnp.isnan(log_prob),
+            -jnp.inf,
+            log_prob,
+        )
 
-            safe_carry_logsumexp = jnp.where(
-                jnp.isneginf(carry_logsumexp) | jnp.isnan(carry_logsumexp),
-                -jnp.inf,
-                carry_logsumexp,
-            )
-            safe_carry_logsumexp2 = jnp.where(
-                jnp.isneginf(carry_logsumexp2) | jnp.isnan(carry_logsumexp2),
-                -jnp.inf,
-                carry_logsumexp2,
-            )
-
-            return (
-                jnp.logaddexp(safe_carry_logsumexp, partial_logsumexp),
-                jnp.logaddexp(safe_carry_logsumexp2, partial_logsumexp2),
-            ), None
-
-        initial_logprob = jnp.asarray(-jnp.inf)
-        if batch_size is None or n_accepted <= batch_size:
-            # If the number of accepted injections is less than or equal to the batch size,
-            # we can process them all at once.
-            (log_prob, log_prob2), _ = _f(
-                (initial_logprob, initial_logprob), (log_weights, samples)
-            )
-        else:
-            batched_log_weights, remainder_log_weights = batch_and_remainder(
-                log_weights, batch_size
-            )
-            batched_samples, remainder_samples = batch_and_remainder(
-                samples, batch_size
-            )
-            (batched_logprob, batched_logprob2), _ = jax.lax.scan(
-                _f,
-                (initial_logprob, initial_logprob),
-                (batched_log_weights, batched_samples),
-            )
-            (log_prob, log_prob2), _ = _f(
-                (batched_logprob, batched_logprob2),
-                (remainder_log_weights, remainder_samples),
-            )
+        logsumexp_log_prob = jnn.logsumexp(
+            safe_log_prob,
+            where=~jnp.isneginf(safe_log_prob),
+            axis=-1,
+        )
+        logsumexp_log_prob2 = jnn.logsumexp(
+            2.0 * safe_log_prob,
+            where=~jnp.isneginf(safe_log_prob),
+            axis=-1,
+        )
 
         term2 = jnp.exp(
             2.0 * jnp.log(analysis_time_years)
             - 3.0 * jnp.log(total_injections)
-            + 2.0 * log_prob
+            + 2.0 * logsumexp_log_prob
         )
         term1 = jnp.exp(
             2.0 * jnp.log(analysis_time_years)
             - 2.0 * jnp.log(total_injections)
-            + log_prob2
+            + logsumexp_log_prob2
         )
         return term1 - term2
 
