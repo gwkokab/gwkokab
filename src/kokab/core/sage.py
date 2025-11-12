@@ -142,15 +142,24 @@ class Sage(Guru):
             data, log_ref_priors, n_buckets=self.n_buckets, threshold=self.threshold
         )
 
+        for i in range(self.n_buckets):
+            _log_ref_priors_group[i] = np.where(  # type: ignore
+                _masks_group[i], _log_ref_priors_group[i], 0.0
+            )
+
         _data_group = tuple(_data_group)
         _log_ref_priors_group = tuple(_log_ref_priors_group)
         _masks_group = tuple(_masks_group)
 
-        data_group: Tuple[Array] = jax.block_until_ready(jax.device_put(_data_group))
-        log_ref_priors_group: Tuple[Array] = jax.block_until_ready(
+        data_group: Tuple[Array, ...] = jax.block_until_ready(
+            jax.device_put(_data_group)
+        )
+        log_ref_priors_group: Tuple[Array, ...] = jax.block_until_ready(
             jax.device_put(_log_ref_priors_group)
         )
-        masks_group: Tuple[Array] = jax.block_until_ready(jax.device_put(_masks_group))
+        masks_group: Tuple[Array, ...] = jax.block_until_ready(
+            jax.device_put(_masks_group)
+        )
 
         logger.debug(
             "data_group.shape: {shape}",

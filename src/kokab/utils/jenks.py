@@ -12,7 +12,7 @@ processing large datasets.
 """
 
 from collections.abc import Sequence
-from typing import Optional, TypeVar, Union
+from typing import Optional, Tuple, TypeVar, Union
 
 import jenkspy
 import numpy as np
@@ -293,7 +293,7 @@ def pad_and_stack(
     *arrays: Sequence[Union[Array, np.ndarray]],
     n_buckets: Optional[int],
     threshold: float,
-) -> Sequence[Sequence[Array]]:
+) -> Tuple[Sequence[Array], ...]:
     """Pad and stack multiple arrays into buckets.
 
     Parameters
@@ -310,7 +310,7 @@ def pad_and_stack(
 
     Returns
     -------
-    Sequence[Sequence[Array]]
+    Tuple[Sequence[Array], ...]
         A sequence of padded arrays, where each array corresponds to a bucket.
         The last element of the sequence is a mask indicating which elements are valid
         and which are padded.
@@ -338,4 +338,4 @@ def pad_and_stack(
     ]
     masks = [_bucket_mask(s) for s in subsets_arrays[0]]
 
-    return padded_subsets + [masks]
+    return tuple(padded_subsets + [masks])
