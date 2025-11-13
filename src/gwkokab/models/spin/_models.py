@@ -223,7 +223,7 @@ def MinimumTiltModel(
     gaussian_component = Independent(
         TruncatedNormal(
             loc=loc,
-            scale=jnp.stack([scale, scale], axis=-1),
+            scale=scale,
             low=low,
             high=high,
             validate_args=validate_args,

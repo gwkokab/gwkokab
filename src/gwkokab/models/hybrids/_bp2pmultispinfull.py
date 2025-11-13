@@ -6,15 +6,19 @@ from typing import Optional
 
 import jax
 from jax import lax, numpy as jnp
-from jax.scipy.stats import truncnorm
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import constraints, Distribution, HalfNormal
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ...utils.kernel import log_planck_taper_window
+from ...utils.math import truncnorm_logpdf
 from ..constraints import all_constraint, mass_sandwich
 from ..redshift import PowerlawRedshift
-from ..utils import JointDistribution, ScaledMixture
+from ..utils import (
+    doubly_truncated_power_law_log_prob,
+    JointDistribution,
+    ScaledMixture,
+)
 
 
 class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
@@ -388,15 +392,13 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
         log_mbreak = jnp.log(self.mbreak)
         log_m1 = jnp.log(m1)
-        log_norm_bpl = log_mbreak + jnp.log(
-            (
-                (1 - jnp.power(self.m1min / self.mbreak, 1 - self.alpha1))
-                / (1 - self.alpha1)
-            )
-            + (
-                (jnp.power(self.mmax / self.mbreak, 1 - self.alpha2) - 1)
-                / (1 - self.alpha2)
-            )
+        log_norm_bpl = jnp.logaddexp(
+            -doubly_truncated_power_law_log_prob(
+                self.mbreak, alpha=-self.alpha1, low=self.m1min, high=self.mbreak
+            ),
+            -doubly_truncated_power_law_log_prob(
+                self.mbreak, alpha=-self.alpha2, low=self.mbreak, high=self.mmax
+            ),
         )
         log_prob_bpl_1 = jnp.where(
             m1 < self.mbreak, self.alpha1 * (log_mbreak - log_m1), -jnp.inf
@@ -404,19 +406,19 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         log_prob_bpl_2 = jnp.where(
             m1 < self.mbreak, -jnp.inf, self.alpha2 * (log_mbreak - log_m1)
         )
-        log_prob_norm_0 = truncnorm.logpdf(
+        log_prob_norm_0 = truncnorm_logpdf(
             m1,
-            a=(self.m1min - self.loc1) / self.scale1,
-            b=(self.mmax - self.loc1) / self.scale1,
             loc=self.loc1,
             scale=self.scale1,
+            low=self.m1min,
+            high=self.mmax,
         )
-        log_prob_norm_1 = truncnorm.logpdf(
+        log_prob_norm_1 = truncnorm_logpdf(
             m1,
-            a=(self.m1min - self.loc2) / self.scale2,
-            b=(self.mmax - self.loc2) / self.scale2,
             loc=self.loc2,
             scale=self.scale2,
+            low=self.m1min,
+            high=self.mmax,
         )
 
         log_prob_m1_component = jnp.asarray(
@@ -430,7 +432,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
                 - log_norm_bpl
                 + log_smoothing_m1,
                 jnp.log(self.lambda_1) + log_prob_norm_0 + log_smoothing_m1,
-                jnp.log1p(-self.lambda_0 - self.lambda_1)
+                jnp.log1p(-(self.lambda_0 + self.lambda_1))
                 + log_prob_norm_1
                 + log_smoothing_m1,
             ]
@@ -451,64 +453,64 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         )
 
     def _log_prob_a1_components(self, a1: ArrayLike) -> ArrayLike:
-        comp_bpl1 = truncnorm.logpdf(
+        comp_bpl1 = truncnorm_logpdf(
             a1,
-            a=(0.0 - self.a_1_loc_bpl1) / self.a_1_scale_bpl1,
-            b=(1.0 - self.a_1_loc_bpl1) / self.a_1_scale_bpl1,
             loc=self.a_1_loc_bpl1,
             scale=self.a_1_scale_bpl1,
+            low=0.0,
+            high=1.0,
         )
-        comp_bpl2 = truncnorm.logpdf(
+        comp_bpl2 = truncnorm_logpdf(
             a1,
-            a=(0.0 - self.a_1_loc_bpl2) / self.a_1_scale_bpl2,
-            b=(1.0 - self.a_1_loc_bpl2) / self.a_1_scale_bpl2,
             loc=self.a_1_loc_bpl2,
             scale=self.a_1_scale_bpl2,
+            low=0.0,
+            high=1.0,
         )
-        comp_n1 = truncnorm.logpdf(
+        comp_n1 = truncnorm_logpdf(
             a1,
-            a=(0.0 - self.a_1_loc_n1) / self.a_1_scale_n1,
-            b=(1.0 - self.a_1_loc_n1) / self.a_1_scale_n1,
             loc=self.a_1_loc_n1,
             scale=self.a_1_scale_n1,
+            low=0.0,
+            high=1.0,
         )
-        comp_n2 = truncnorm.logpdf(
+        comp_n2 = truncnorm_logpdf(
             a1,
-            a=(0.0 - self.a_1_loc_n2) / self.a_1_scale_n2,
-            b=(1.0 - self.a_1_loc_n2) / self.a_1_scale_n2,
             loc=self.a_1_loc_n2,
             scale=self.a_1_scale_n2,
+            low=0.0,
+            high=1.0,
         )
         return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
 
     def _log_prob_a2_components(self, a2: ArrayLike) -> ArrayLike:
-        comp_bpl1 = truncnorm.logpdf(
+        comp_bpl1 = truncnorm_logpdf(
             a2,
-            a=(0.0 - self.a_2_loc_bpl1) / self.a_2_scale_bpl1,
-            b=(1.0 - self.a_2_loc_bpl1) / self.a_2_scale_bpl1,
             loc=self.a_2_loc_bpl1,
             scale=self.a_2_scale_bpl1,
+            low=0.0,
+            high=1.0,
         )
-        comp_bpl2 = truncnorm.logpdf(
+        comp_bpl2 = truncnorm_logpdf(
             a2,
-            a=(0.0 - self.a_2_loc_bpl2) / self.a_2_scale_bpl2,
-            b=(1.0 - self.a_2_loc_bpl2) / self.a_2_scale_bpl2,
             loc=self.a_2_loc_bpl2,
             scale=self.a_2_scale_bpl2,
+            low=0.0,
+            high=1.0,
         )
-        comp_n1 = truncnorm.logpdf(
+        comp_n1 = truncnorm_logpdf(
             a2,
-            a=(0.0 - self.a_2_loc_n1) / self.a_2_scale_n1,
-            b=(1.0 - self.a_2_loc_n1) / self.a_2_scale_n1,
             loc=self.a_2_loc_n1,
             scale=self.a_2_scale_n1,
+            low=0.0,
+            high=1.0,
         )
-        comp_n2 = truncnorm.logpdf(
+        comp_n2 = truncnorm_logpdf(
             a2,
-            a=(0.0 - self.a_2_loc_n2) / self.a_2_scale_n2,
-            b=(1.0 - self.a_2_loc_n2) / self.a_2_scale_n2,
             loc=self.a_2_loc_n2,
             scale=self.a_2_scale_n2,
+            low=0.0,
+            high=1.0,
         )
         return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
 
@@ -549,19 +551,19 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         for zeta, loc1, scale1, loc2, scale2 in hyper_params:
             comp_gaussian = (
                 jnp.log(zeta)
-                + truncnorm.logpdf(
+                + truncnorm_logpdf(
                     t1,
-                    a=(-1.0 - loc1) / scale1,
-                    b=(1.0 - loc1) / scale1,
                     loc=loc1,
                     scale=scale1,
+                    low=-1.0,
+                    high=1.0,
                 )
-                + truncnorm.logpdf(
+                + truncnorm_logpdf(
                     t2,
-                    a=(-1.0 - loc2) / scale2,
-                    b=(1.0 - loc2) / scale2,
                     loc=loc2,
                     scale=scale2,
+                    low=-1.0,
+                    high=1.0,
                 )
             )
             comp_uniform = jnp.log1p(-zeta) + jnp.log(0.25)

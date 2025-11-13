@@ -5,18 +5,20 @@
 from typing import Optional
 
 import jax
-from jax import lax, numpy as jnp
-from jax.scipy.stats import truncnorm
+from jax import numpy as jnp
+from jax._src.lax import lax
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ...utils.kernel import log_planck_taper_window
+from ...utils.math import truncnorm_logpdf
 from ..constraints import mass_ratio_mass_sandwich
+from ..utils import doubly_truncated_power_law_log_prob
 
 
 @jax.jit
-def _broken_powerlaw_prob(
+def _broken_powerlaw_log_prob(
     m1: Array,
     alpha1: Array,
     alpha2: Array,
@@ -38,12 +40,16 @@ def _broken_powerlaw_prob(
             0 & \text{otherwise}
         \end{cases}
     """
-    unnormalized_prob = jnp.power(mbreak / m1, jnp.where(m1 < mbreak, alpha1, alpha2))
-    norm = mbreak * (
-        ((1 - jnp.power(mmin / mbreak, 1 - alpha1)) / (1 - alpha1))
-        + ((jnp.power(mmax / mbreak, 1 - alpha2) - 1) / (1 - alpha2))
+    log_norm = jnp.logaddexp(
+        -doubly_truncated_power_law_log_prob(
+            mbreak, alpha=-alpha1, low=mmin, high=mbreak
+        ),
+        -doubly_truncated_power_law_log_prob(
+            mbreak, alpha=-alpha2, low=mbreak, high=mmax
+        ),
     )
-    return unnormalized_prob / norm
+    log_prob = jnp.where(m1 < mbreak, alpha1, alpha2) * jnp.log(mbreak / m1)
+    return log_prob - log_norm
 
 
 class BrokenPowerlawTwoPeak(Distribution):
@@ -241,32 +247,28 @@ class BrokenPowerlawTwoPeak(Distribution):
     def _log_prob_m1_unnorm(self, m1: Array) -> Array:
         safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
-        broken_powerlaw_prob = _broken_powerlaw_prob(
+        broken_powerlaw_log_prob = _broken_powerlaw_log_prob(
             m1, self.alpha1, self.alpha2, self.m1min, self.mmax, self.mbreak
         )
-        prob_norm_0 = truncnorm.pdf(
-            m1,
-            a=(self.m1min - self.loc1) / self.scale1,
-            b=(self.mmax - self.loc1) / self.scale1,
+        log_prob_norm_0 = truncnorm_logpdf(
+            xx=m1,
             loc=self.loc1,
             scale=self.scale1,
+            low=self.m1min,
+            high=self.mmax,
         )
-        prob_norm_1 = truncnorm.pdf(
-            m1,
-            a=(self.m1min - self.loc2) / self.scale2,
-            b=(self.mmax - self.loc2) / self.scale2,
+        log_prob_norm_1 = truncnorm_logpdf(
+            xx=m1,
             loc=self.loc2,
             scale=self.scale2,
+            low=self.m1min,
+            high=self.mmax,
         )
-        lambda_2 = 1.0 - self.lambda_0 - self.lambda_1
 
-        log_prob_m1 = (
-            jnp.log(
-                self.lambda_0 * broken_powerlaw_prob
-                + self.lambda_1 * prob_norm_0
-                + lambda_2 * prob_norm_1
-            )
-            + log_smoothing_m1
+        log_prob_m1 = log_smoothing_m1 + jnp.log(
+            self.lambda_0 * jnp.exp(broken_powerlaw_log_prob)
+            + self.lambda_1 * jnp.exp(log_prob_norm_0)
+            + (1 - (self.lambda_0 + self.lambda_1)) * jnp.exp(log_prob_norm_1)
         )
 
         return jnp.where(
