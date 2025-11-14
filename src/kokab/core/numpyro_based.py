@@ -4,7 +4,7 @@
 
 import os
 from collections.abc import Callable
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple, Union
 
 import arviz as az
 import jax
@@ -17,7 +17,7 @@ from loguru import logger
 from numpyro.infer import MCMC, NUTS
 
 from gwkokab.models.utils import JointDistribution
-from gwkokab.utils.tools import warn_if
+from gwkokab.utils.tools import error_if, warn_if
 from kokab.core.guru import Guru, guru_arg_parser
 from kokab.utils.common import read_json
 from kokab.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
@@ -136,7 +136,21 @@ class NumpyroBased(Guru):
 
         sampler_config = read_json(self.sampler_settings_filename)
 
-        kernel = NUTS(logpdf, **sampler_config["kernel"])
+        kernel_config: Dict = sampler_config.pop("kernel", None)
+        error_if(
+            kernel_config is None,
+            msg="Kernel configuration not found in sampler settings.",
+        )
+
+        dense_mass: Union[List[Tuple[str, ...]], bool] = kernel_config.pop(
+            "dense_mass", False
+        )
+
+        if isinstance(dense_mass, list):
+            for i in range(len(dense_mass)):
+                dense_mass[i] = tuple(dense_mass[i])
+
+        kernel = NUTS(logpdf, dense_mass=dense_mass, **kernel_config)
 
         if self.debug_nans:
             with jax.debug_nans(True):
