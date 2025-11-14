@@ -96,6 +96,9 @@ def _run_mcmc(
     )
     n_batches = n_chains // batch_size
 
+    if batch_size == 1:
+        chain_method = "sequential"
+
     mcmc = MCMC(kernel, num_chains=batch_size, chain_method=chain_method, **mcmc_kwargs)
 
     def _run_batch_and_save(key: PRNGKeyArray, chain_idx: int) -> PRNGKeyArray:
