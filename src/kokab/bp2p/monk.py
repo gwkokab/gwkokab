@@ -104,7 +104,14 @@ class BrokenPowerlawTwoPeakFullMonk(Monk):
             all_params.extend(["cos_tilt_zeta", "cos_tilt_loc", "cos_tilt_scale"])
 
         if self.has_eccentricity:
-            all_params.append("eccentricity_scale")
+            all_params.extend(
+                [
+                    "eccentricity_loc",
+                    "eccentricity_scale",
+                    "eccentricity_low",
+                    "eccentricity_high",
+                ]
+            )
 
         if self.has_redshift:
             all_params.extend(["z_max", "kappa"])

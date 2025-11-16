@@ -6,7 +6,7 @@ from typing import Optional
 
 from jax import numpy as jnp
 from jaxtyping import Array
-from numpyro.distributions import HalfNormal, Independent, TruncatedNormal
+from numpyro.distributions import Independent, TruncatedNormal
 
 from ..mass import BrokenPowerlawTwoPeak
 from ..redshift import PowerlawRedshift
@@ -79,8 +79,12 @@ def BrokenPowerlawTwoPeakFull(
         component_distributions.append(tilt_dist)
 
     if use_eccentricity:
-        ecc_dist = HalfNormal(
-            scale=params["eccentricity_scale"], validate_args=validate_args
+        ecc_dist = TruncatedNormal(
+            loc=params["eccentricity_loc"],
+            scale=params["eccentricity_scale"],
+            low=params.get("eccentricity_low", 0.0),
+            high=params.get("eccentricity_high", 1.0),
+            validate_args=validate_args,
         )
         component_distributions.append(ecc_dist)
 
