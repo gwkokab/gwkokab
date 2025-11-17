@@ -28,6 +28,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         "beta": constraints.real,
         "delta_m1": constraints.positive,
         "delta_m2": constraints.positive,
+        # NOTE: lambda_0 and lambda_1 are now direct simplex components (DirichletElement semantics)
         "lambda_0": constraints.unit_interval,
         "lambda_1": constraints.unit_interval,
         "loc1": constraints.positive,
@@ -86,8 +87,13 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         "beta",
         "delta_m1",
         "delta_m2",
+        # raw Dirichlet-style mixture weights
         "lambda_0",
         "lambda_1",
+        # transformed simplex weights
+        "_lambda_bpl",
+        "_lambda_peak1",
+        "_lambda_peak2",
         "loc1",
         "loc2",
         "m1min",
@@ -294,6 +300,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             cos_tilt_zeta_n1,
             cos_tilt_zeta_n2,
         )
+
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha1),
             jnp.shape(alpha2),
@@ -348,6 +355,9 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             jnp.shape(cos_tilt_zeta_n2),
         )
 
+        # ------------------------------------------------------------------
+        # Support: (m1, m2) + spins + tilts
+        # ------------------------------------------------------------------
         self._support = all_constraint(
             [
                 mass_sandwich(m2min, mmax),
@@ -358,29 +368,63 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             ],
             [(0, 2), 2, 3, 4, 5],
         )
-        super(BrokenPowerlawTwoPeakMultiSpinMultiTilt, self).__init__(
+        super().__init__(
             batch_shape=batch_shape, event_shape=(6,), validate_args=validate_args
         )
 
+        # Broadcast mass bounds
         m1min = jnp.broadcast_to(m1min, batch_shape)
         m2min = jnp.broadcast_to(m2min, batch_shape)
         mmax = jnp.broadcast_to(mmax, batch_shape)
 
-        m1s = jnp.linspace(m1min, mmax, 1000)
-        self._logZ = jnp.log(
-            jnp.trapezoid(
-                jnp.exp(self._log_prob_m1_unnorm_component(m1s)).sum(axis=0),
-                m1s,
-                axis=0,
-            )
-        )
+        # ------------------------------------------------------------------
+        # Dirichlet-style mixture weights: (lambda_0, lambda_1, lambda_2_raw)
+        # lambda_0 and lambda_1 are interpreted as first two simplex components.
+        # lambda_2_raw = 1 - lambda_0 - lambda_1
+        # All weights clipped to [eps, 1.0], then renormalized to sum to 1.
+        # ------------------------------------------------------------------
+        lambda_0_raw = jnp.clip(self.lambda_0, 0.0, 1.0)
+        lambda_1_raw = jnp.clip(self.lambda_1, 0.0, 1.0)
+        lambda_2_raw = 1.0 - lambda_0_raw - lambda_1_raw
 
+        eps = 1e-12
+        lambda_vec = jnp.stack(
+            [
+                jnp.clip(lambda_0_raw, eps, 1.0),
+                jnp.clip(lambda_1_raw, eps, 1.0),
+                jnp.clip(lambda_2_raw, eps, 1.0),
+            ],
+            axis=0,
+        )
+        norm = jnp.sum(lambda_vec, axis=0)
+        lambda_vec = lambda_vec / norm
+
+        self._lambda_bpl = lambda_vec[0]
+        self._lambda_peak1 = lambda_vec[1]
+        self._lambda_peak2 = lambda_vec[2]
+
+        # ------------------------------------------------------------------
+        # Precompute normalization for m1 and q|m1
+        # ------------------------------------------------------------------
+        # m1 grid for integral over the full mixture
+        m1s = jnp.linspace(m1min, mmax, 1000)
+        # Shape: (4, 1000, batch...) from _log_prob_m1_unnorm_component
+        log_prob_m1_components = self._log_prob_m1_unnorm_component(m1s)
+        # log-sum-exp over mixture components for stability
+        log_integrand = jax.nn.logsumexp(
+            log_prob_m1_components, axis=0, where=~jnp.isneginf(log_prob_m1_components)
+        )
+        # log-trapezoid integration for better numerical stability
+        max_log = jnp.max(log_integrand, axis=0)
+        Z = jnp.trapezoid(jnp.exp(log_integrand - max_log), m1s, axis=0)
+        self._logZ = max_log + jnp.log(Z)
+
+        # m1 grid for q|m1 normalization
         self._m1s = jnp.linspace(m2min, mmax, 1000)
         _qs = jnp.linspace(0.005, 1.0, 500)
         _m1_grid, qs_grid = jnp.meshgrid(self._m1s, _qs, indexing="ij")
 
         _prob_q = jnp.exp(self._log_prob_q_unnorm(_m1_grid, qs_grid))
-
         self._Z_q_given_m1 = jnp.trapezoid(_prob_q, _qs, axis=1)
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
@@ -392,6 +436,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
         log_mbreak = jnp.log(self.mbreak)
         log_m1 = jnp.log(m1)
+
         log_norm_bpl = jnp.logaddexp(
             -doubly_truncated_power_law_log_prob(
                 self.mbreak, alpha=-self.alpha1, low=self.m1min, high=self.mbreak
@@ -400,12 +445,14 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
                 self.mbreak, alpha=-self.alpha2, low=self.mbreak, high=self.mmax
             ),
         )
+
         log_prob_bpl_1 = jnp.where(
             m1 < self.mbreak, self.alpha1 * (log_mbreak - log_m1), -jnp.inf
         )
         log_prob_bpl_2 = jnp.where(
             m1 < self.mbreak, -jnp.inf, self.alpha2 * (log_mbreak - log_m1)
         )
+
         log_prob_norm_0 = truncnorm_logpdf(
             m1,
             loc=self.loc1,
@@ -421,20 +468,19 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             high=self.mmax,
         )
 
+        # Use transformed mixture weights that *sum to 1* and are strictly positive
         log_prob_m1_component = jnp.asarray(
             [
-                jnp.log(self.lambda_0)
+                jnp.log(self._lambda_bpl)
                 + log_prob_bpl_1
                 - log_norm_bpl
                 + log_smoothing_m1,
-                jnp.log(self.lambda_0)
+                jnp.log(self._lambda_bpl)
                 + log_prob_bpl_2
                 - log_norm_bpl
                 + log_smoothing_m1,
-                jnp.log(self.lambda_1) + log_prob_norm_0 + log_smoothing_m1,
-                jnp.log1p(-(self.lambda_0 + self.lambda_1))
-                + log_prob_norm_1
-                + log_smoothing_m1,
+                jnp.log(self._lambda_peak1) + log_prob_norm_0 + log_smoothing_m1,
+                jnp.log(self._lambda_peak2) + log_prob_norm_1 + log_smoothing_m1,
             ]
         )
 

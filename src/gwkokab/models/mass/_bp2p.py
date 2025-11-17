@@ -265,10 +265,21 @@ class BrokenPowerlawTwoPeak(Distribution):
             high=self.mmax,
         )
 
+        lambda0 = jnp.clip(self.lambda_0, 1e-12, 1.0 - 1e-12)
+        lambda1 = jnp.clip(self.lambda_1, 1e-12, 1.0 - 1e-12)
+        lambda2 = jnp.clip(1.0 - (lambda0 + lambda1), 1e-12, 1.0 - 1e-12)
+
+        # If lambda0 + lambda1 > 1, lambda2 becomes 0 and the first two
+        # components are renormalized; if all three are ~0, fall back to equal weights.
+        norm = lambda0 + lambda1 + lambda2
+        lambda0 = jnp.where(norm > 0.0, lambda0 / norm, 1.0 / 3.0)
+        lambda1 = jnp.where(norm > 0.0, lambda1 / norm, 1.0 / 3.0)
+        lambda2 = jnp.where(norm > 0.0, lambda2 / norm, 1.0 / 3.0)
+
         log_prob_m1 = log_smoothing_m1 + jnp.log(
-            self.lambda_0 * jnp.exp(broken_powerlaw_log_prob)
-            + self.lambda_1 * jnp.exp(log_prob_norm_0)
-            + (1 - (self.lambda_0 + self.lambda_1)) * jnp.exp(log_prob_norm_1)
+            lambda0 * jnp.exp(broken_powerlaw_log_prob)
+            + lambda1 * jnp.exp(log_prob_norm_0)
+            + lambda2 * jnp.exp(log_prob_norm_1)
         )
 
         return jnp.where(
