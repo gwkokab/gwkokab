@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 import equinox as eqx
 import jax
@@ -24,8 +24,6 @@ def flowMC_poisson_likelihood(
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
-    where_fns: Optional[List[Callable[..., Array]]],
-    constants: Dict[str, Array],
 ) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
@@ -61,6 +59,9 @@ def flowMC_poisson_likelihood(
     """
     del variables
 
+    # Equivalent to `jnp.nan_to_num(-jnp.inf)`.
+    MIN_FLOAT = jnp.finfo(jnp.result_type(float)).min
+
     def likelihood_fn(x: Array, data: Dict[str, Tuple[Array, ...]]) -> Array:
         data_group: Tuple[Array, ...] = data["data_group"]
         log_ref_priors_group: Tuple[Array, ...] = data["log_ref_priors_group"]
@@ -87,8 +88,10 @@ def flowMC_poisson_likelihood(
             model_log_prob: Array = jax.lax.map(model_instance.log_prob, safe_data)
 
             # log p(ω|data_n) - log π_n
-            log_prob: Array = model_log_prob - batched_log_ref_priors
-            log_prob = jnp.where(batched_mask, log_prob, -jnp.inf)
+            log_prob: Array = (
+                jnp.nan_to_num(model_log_prob, nan=MIN_FLOAT) - batched_log_ref_priors
+            )
+            log_prob = jnp.where(batched_mask, log_prob, MIN_FLOAT)
 
             # log Σ exp (log p(ω|data_n) - log π_n)
             total_log_likelihood += jax.nn.logsumexp(log_prob, axis=-1).sum(
@@ -100,34 +103,9 @@ def flowMC_poisson_likelihood(
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
         log_likelihood = total_log_likelihood - expected_rates
         # log p(ω|data) = log π(ω) + log L(ω)
-        log_prior = priors.log_prob(x)
+        log_prior = jnp.nan_to_num(priors.log_prob(x))
         log_posterior = log_prior + log_likelihood
-
-        log_posterior = jnp.nan_to_num(
-            log_posterior,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
-        )
 
         return log_posterior
 
-    if where_fns is None:
-        return eqx.filter_jit(likelihood_fn)
-
-    def likelihood_fn_with_checks(
-        x: Array, data: Dict[str, Tuple[Array, ...]]
-    ) -> Array:
-        mapped_params = {
-            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
-            for name, i in variables_index.items()
-        }
-        predicate = priors.support.check(x)
-        for where_fn in where_fns:  # type: ignore
-            predicate = jnp.logical_and(
-                predicate, where_fn(**constants, **mapped_params)
-            )
-        predicate = jnp.logical_and(jnp.all(jnp.isfinite(x)), predicate)
-        return jnp.where(predicate, likelihood_fn(x, data), -jnp.inf)
-
-    return eqx.filter_jit(likelihood_fn_with_checks)
+    return eqx.filter_jit(likelihood_fn)

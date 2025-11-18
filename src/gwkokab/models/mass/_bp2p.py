@@ -9,7 +9,7 @@ from jax import numpy as jnp
 from jax._src.lax import lax
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import constraints, Distribution
-from numpyro.distributions.util import promote_shapes, validate_sample
+from numpyro.distributions.util import promote_shapes
 
 from ...utils.kernel import log_planck_taper_window
 from ...utils.math import truncnorm_logpdf
@@ -48,7 +48,9 @@ def _broken_powerlaw_log_prob(
             mbreak, alpha=-alpha2, low=mbreak, high=mmax
         ),
     )
-    log_prob = jnp.where(m1 < mbreak, alpha1, alpha2) * jnp.log(mbreak / m1)
+    log_prob = (m1 < mbreak) * alpha1 * jnp.log(mbreak / m1) + (
+        m1 >= mbreak
+    ) * alpha2 * jnp.log(mbreak / m1)
     return log_prob - log_norm
 
 
@@ -225,11 +227,15 @@ class BrokenPowerlawTwoPeak(Distribution):
 
         m1s = jnp.linspace(m1min, mmax, 1000)
         self._logZ = jnp.log(
-            jnp.trapezoid(
-                jnp.exp(self._log_prob_m1_unnorm(m1s)),
-                m1s,
-                axis=0,
+            jnp.nan_to_num(
+                jnp.trapezoid(
+                    jnp.exp(self._log_prob_m1_unnorm(m1s)),
+                    m1s,
+                    axis=0,
+                )
             )
+            * (delta_m1 != 0.0)
+            + 1.0 * (delta_m1 == 0.0)
         )
 
         self._m1s = jnp.linspace(m2min, mmax, 1000)
@@ -238,7 +244,9 @@ class BrokenPowerlawTwoPeak(Distribution):
 
         _prob_q = jnp.exp(self._log_prob_q_unnorm(_m1qs_grid))
 
-        self._Z_q_given_m1 = jnp.trapezoid(_prob_q, _qs, axis=1)
+        self._Z_q_given_m1 = jnp.nan_to_num(jnp.trapezoid(_prob_q, _qs, axis=1)) * (
+            delta_m2 != 0.0
+        ) + 1.0 * (delta_m2 == 0.0)
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
@@ -266,16 +274,22 @@ class BrokenPowerlawTwoPeak(Distribution):
         )
 
         log_prob_m1 = log_smoothing_m1 + jnp.log(
-            self.lambda_0 * jnp.exp(broken_powerlaw_log_prob)
-            + self.lambda_1 * jnp.exp(log_prob_norm_0)
-            + (1 - (self.lambda_0 + self.lambda_1)) * jnp.exp(log_prob_norm_1)
+            self.lambda_0
+            * (jnp.exp(broken_powerlaw_log_prob) - jnp.exp(log_prob_norm_1))
+            + self.lambda_1 * (jnp.exp(log_prob_norm_0) - jnp.exp(log_prob_norm_1))
+            + jnp.exp(log_prob_norm_1)
         )
 
         return jnp.where(
-            (self.delta_m1 <= 0.0) | (m1 < self.m1min), -jnp.inf, log_prob_m1
+            (self.delta_m1 <= 0.0)
+            | (m1 < self.m1min)
+            | (m1 > self.mmax)
+            | (self.scale1 <= 0.0)
+            | (self.scale2 <= 0.0),
+            -jnp.inf,
+            log_prob_m1,
         )
 
-    @validate_sample
     def _log_prob_q_unnorm(self, value: Array) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
@@ -284,10 +298,11 @@ class BrokenPowerlawTwoPeak(Distribution):
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
 
         return jnp.where(
-            (self.delta_m2 <= 0.0) | (m2 < self.m2min), -jnp.inf, log_prob_q
+            (self.delta_m2 <= 0.0) | (m2 < self.m2min) | (m2 > m1),
+            -jnp.inf,
+            log_prob_q,
         )
 
-    @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         m1, _ = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._log_prob_m1_unnorm(m1) - self._logZ

@@ -172,15 +172,14 @@ def truncnorm_logpdf(
     xx, loc, scale, low, high = promote_args_inexact(
         "truncnorm_logpdf", xx, loc, scale, low, high
     )
-    safe_scale = jnp.where(scale <= 0, 1.0, scale)
-    zz = lax.div(lax.sub(xx, loc), safe_scale)
-    aa = lax.div(lax.sub(low, loc), safe_scale)
-    bb = lax.div(lax.sub(high, loc), safe_scale)
-    constant = lax._const(xx, np.log(2.0 * np.pi))
+    zz = lax.div(lax.sub(xx, loc), scale)
+    aa = lax.div(lax.sub(low, loc), scale)
+    bb = lax.div(lax.sub(high, loc), scale)
+    tau = lax._const(xx, 2.0 * np.pi)
+    scale_sq = lax.square(scale)
     neg_half = lax._const(xx, -0.5)
-    log_pdf = lax.sub(
-        lax.mul(neg_half, lax.add(lax.square(zz), constant)), lax.log(safe_scale)
-    )
+    log_normalizer = lax.log(lax.mul(tau, scale_sq))
+    log_pdf = lax.mul(neg_half, lax.add(lax.square(zz), log_normalizer))
 
     # cf https://github.com/scipy/scipy/blob/v1.15.1/scipy/stats/_continuous_distns.py#L10189
     log_norm = jnp.select(
@@ -193,4 +192,4 @@ def truncnorm_logpdf(
         np.nan,
     )
     log_pdf -= log_norm
-    return jnp.where((xx < low) | (xx > high) | (scale <= 0), -np.inf, log_pdf)
+    return jnp.where((xx < low) | (xx > high), -np.inf, log_pdf)

@@ -1,7 +1,6 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
-
 from typing import Optional
 
 import jax
@@ -38,49 +37,22 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         "mmax": constraints.positive,
         "scale1": constraints.positive,
         "scale2": constraints.positive,
-        "a_1_loc_bpl1": constraints.unit_interval,
-        "a_1_loc_bpl2": constraints.unit_interval,
-        "a_1_loc_n1": constraints.unit_interval,
-        "a_1_loc_n2": constraints.unit_interval,
-        "a_2_loc_bpl1": constraints.unit_interval,
-        "a_2_loc_bpl2": constraints.unit_interval,
-        "a_2_loc_n1": constraints.unit_interval,
-        "a_2_loc_n2": constraints.unit_interval,
-        "a_1_scale_bpl1": constraints.positive,
-        "a_1_scale_bpl2": constraints.positive,
-        "a_1_scale_n1": constraints.positive,
-        "a_1_scale_n2": constraints.positive,
-        "a_2_scale_bpl1": constraints.positive,
-        "a_2_scale_bpl2": constraints.positive,
-        "a_2_scale_n1": constraints.positive,
-        "a_2_scale_n2": constraints.positive,
-        "cos_tilt_1_loc_bpl1": constraints.interval(-1.0, 1.0),
-        "cos_tilt_1_loc_bpl2": constraints.interval(-1.0, 1.0),
-        "cos_tilt_1_loc_n1": constraints.interval(-1.0, 1.0),
-        "cos_tilt_1_loc_n2": constraints.interval(-1.0, 1.0),
-        "cos_tilt_1_scale_bpl1": constraints.positive,
-        "cos_tilt_1_scale_bpl2": constraints.positive,
-        "cos_tilt_1_scale_n1": constraints.positive,
-        "cos_tilt_1_scale_n2": constraints.positive,
-        "cos_tilt_2_loc_bpl1": constraints.interval(-1.0, 1.0),
-        "cos_tilt_2_loc_bpl2": constraints.interval(-1.0, 1.0),
-        "cos_tilt_2_loc_n1": constraints.interval(-1.0, 1.0),
-        "cos_tilt_2_loc_n2": constraints.interval(-1.0, 1.0),
-        "cos_tilt_2_scale_bpl1": constraints.positive,
-        "cos_tilt_2_scale_bpl2": constraints.positive,
-        "cos_tilt_2_scale_n1": constraints.positive,
-        "cos_tilt_2_scale_n2": constraints.positive,
-        "cos_tilt_zeta_bpl1": constraints.unit_interval,
-        "cos_tilt_zeta_bpl2": constraints.unit_interval,
-        "cos_tilt_zeta_n1": constraints.unit_interval,
-        "cos_tilt_zeta_n2": constraints.unit_interval,
+        "_a1_locs": constraints.unit_interval,
+        "_a1_scales": constraints.positive,
+        "_a2_locs": constraints.unit_interval,
+        "_a2_scales": constraints.positive,
+        "_tilt_zetas": constraints.unit_interval,
+        "_tilt1_locs": constraints.interval(-1.0, 1.0),
+        "_tilt1_scales": constraints.positive,
+        "_tilt2_locs": constraints.interval(-1.0, 1.0),
+        "_tilt2_scales": constraints.positive,
     }
 
     pytree_data_fields = (
         "_logZ",
         "_m1s",
         "_support",
-        "_Z_q_given_m1",
+        "_log_Z_q_given_m1",
         "alpha1",
         "alpha2",
         "beta",
@@ -96,42 +68,15 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         "mmax",
         "scale1",
         "scale2",
-        "a_1_loc_bpl1",
-        "a_1_loc_bpl2",
-        "a_1_loc_n1",
-        "a_1_loc_n2",
-        "a_2_loc_bpl1",
-        "a_2_loc_bpl2",
-        "a_2_loc_n1",
-        "a_2_loc_n2",
-        "a_1_scale_bpl1",
-        "a_1_scale_bpl2",
-        "a_1_scale_n1",
-        "a_1_scale_n2",
-        "a_2_scale_bpl1",
-        "a_2_scale_bpl2",
-        "a_2_scale_n1",
-        "a_2_scale_n2",
-        "cos_tilt_1_loc_bpl1",
-        "cos_tilt_1_loc_bpl2",
-        "cos_tilt_1_loc_n1",
-        "cos_tilt_1_loc_n2",
-        "cos_tilt_1_scale_bpl1",
-        "cos_tilt_1_scale_bpl2",
-        "cos_tilt_1_scale_n1",
-        "cos_tilt_1_scale_n2",
-        "cos_tilt_2_loc_bpl1",
-        "cos_tilt_2_loc_bpl2",
-        "cos_tilt_2_loc_n1",
-        "cos_tilt_2_loc_n2",
-        "cos_tilt_2_scale_bpl1",
-        "cos_tilt_2_scale_bpl2",
-        "cos_tilt_2_scale_n1",
-        "cos_tilt_2_scale_n2",
-        "cos_tilt_zeta_bpl1",
-        "cos_tilt_zeta_bpl2",
-        "cos_tilt_zeta_n1",
-        "cos_tilt_zeta_n2",
+        "_a1_locs",
+        "_a1_scales",
+        "_a2_locs",
+        "_a2_scales",
+        "_tilt_zetas",
+        "_tilt1_locs",
+        "_tilt1_scales",
+        "_tilt2_locs",
+        "_tilt2_scales",
     )
 
     def __init__(
@@ -205,42 +150,42 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             self.m2min,
             self.mmax,
             self.mbreak,
-            self.a_1_loc_bpl1,
-            self.a_1_loc_bpl2,
-            self.a_1_loc_n1,
-            self.a_1_loc_n2,
-            self.a_2_loc_bpl1,
-            self.a_2_loc_bpl2,
-            self.a_2_loc_n1,
-            self.a_2_loc_n2,
-            self.a_1_scale_bpl1,
-            self.a_1_scale_bpl2,
-            self.a_1_scale_n1,
-            self.a_1_scale_n2,
-            self.a_2_scale_bpl1,
-            self.a_2_scale_bpl2,
-            self.a_2_scale_n1,
-            self.a_2_scale_n2,
-            self.cos_tilt_1_loc_bpl1,
-            self.cos_tilt_1_loc_bpl2,
-            self.cos_tilt_1_loc_n1,
-            self.cos_tilt_1_loc_n2,
-            self.cos_tilt_1_scale_bpl1,
-            self.cos_tilt_1_scale_bpl2,
-            self.cos_tilt_1_scale_n1,
-            self.cos_tilt_1_scale_n2,
-            self.cos_tilt_2_loc_bpl1,
-            self.cos_tilt_2_loc_bpl2,
-            self.cos_tilt_2_loc_n1,
-            self.cos_tilt_2_loc_n2,
-            self.cos_tilt_2_scale_bpl1,
-            self.cos_tilt_2_scale_bpl2,
-            self.cos_tilt_2_scale_n1,
-            self.cos_tilt_2_scale_n2,
-            self.cos_tilt_zeta_bpl1,
-            self.cos_tilt_zeta_bpl2,
-            self.cos_tilt_zeta_n1,
-            self.cos_tilt_zeta_n2,
+            a_1_loc_bpl1,
+            a_1_loc_bpl2,
+            a_1_loc_n1,
+            a_1_loc_n2,
+            a_2_loc_bpl1,
+            a_2_loc_bpl2,
+            a_2_loc_n1,
+            a_2_loc_n2,
+            a_1_scale_bpl1,
+            a_1_scale_bpl2,
+            a_1_scale_n1,
+            a_1_scale_n2,
+            a_2_scale_bpl1,
+            a_2_scale_bpl2,
+            a_2_scale_n1,
+            a_2_scale_n2,
+            cos_tilt_1_loc_bpl1,
+            cos_tilt_1_loc_bpl2,
+            cos_tilt_1_loc_n1,
+            cos_tilt_1_loc_n2,
+            cos_tilt_1_scale_bpl1,
+            cos_tilt_1_scale_bpl2,
+            cos_tilt_1_scale_n1,
+            cos_tilt_1_scale_n2,
+            cos_tilt_2_loc_bpl1,
+            cos_tilt_2_loc_bpl2,
+            cos_tilt_2_loc_n1,
+            cos_tilt_2_loc_n2,
+            cos_tilt_2_scale_bpl1,
+            cos_tilt_2_scale_bpl2,
+            cos_tilt_2_scale_n1,
+            cos_tilt_2_scale_n2,
+            cos_tilt_zeta_bpl1,
+            cos_tilt_zeta_bpl2,
+            cos_tilt_zeta_n1,
+            cos_tilt_zeta_n2,
         ) = promote_shapes(
             alpha1,
             alpha2,
@@ -294,6 +239,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             cos_tilt_zeta_n1,
             cos_tilt_zeta_n2,
         )
+
         batch_shape = lax.broadcast_shapes(
             jnp.shape(alpha1),
             jnp.shape(alpha2),
@@ -358,40 +304,117 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             ],
             [(0, 2), 2, 3, 4, 5],
         )
-        super(BrokenPowerlawTwoPeakMultiSpinMultiTilt, self).__init__(
-            batch_shape=batch_shape, event_shape=(6,), validate_args=validate_args
-        )
 
-        m1min = jnp.broadcast_to(m1min, batch_shape)
-        m2min = jnp.broadcast_to(m2min, batch_shape)
-        mmax = jnp.broadcast_to(mmax, batch_shape)
+        m1min_bc = jnp.broadcast_to(m1min, batch_shape)
+        m2min_bc = jnp.broadcast_to(m2min, batch_shape)
+        mmax_bc = jnp.broadcast_to(mmax, batch_shape)
 
-        m1s = jnp.linspace(m1min, mmax, 1000)
+        # OPTIMIZATION 2: Reduce grid size (1000 -> 400)
+        m1s = jnp.linspace(m1min_bc, mmax_bc, 1000)
+
+        # Vectorized computation
+        log_probs_m1_comp = jax.vmap(self._log_prob_m1_unnorm_component, in_axes=0)(m1s)
+
         self._logZ = jnp.log(
             jnp.trapezoid(
-                jnp.exp(self._log_prob_m1_unnorm_component(m1s)).sum(axis=0),
+                jnp.nan_to_num(jnp.exp(log_probs_m1_comp).sum(axis=-1)),
                 m1s,
                 axis=0,
             )
+            * (delta_m1 != 0.0)
+            + 1.0 * (delta_m1 == 0.0)
         )
 
-        self._m1s = jnp.linspace(m2min, mmax, 1000)
-        _qs = jnp.linspace(0.005, 1.0, 500)
-        _m1_grid, qs_grid = jnp.meshgrid(self._m1s, _qs, indexing="ij")
+        self._m1s = jnp.linspace(m2min_bc, mmax_bc, 1000)
+        _qs = jnp.linspace(0.01, 1.0, 500)
 
-        _prob_q = jnp.exp(self._log_prob_q_unnorm(_m1_grid, qs_grid))
+        _log_prob_q = jax.vmap(
+            jax.vmap(self._log_prob_q_unnorm, in_axes=(None, 0)), in_axes=(0, None)
+        )(self._m1s, _qs)
 
-        self._Z_q_given_m1 = jnp.trapezoid(_prob_q, _qs, axis=1)
+        _prob_q = jnp.exp(_log_prob_q) * (delta_m2 != 0.0) + 1.0 * (delta_m2 == 0.0)
+
+        _Z_q_given_m1 = jnp.nan_to_num(jnp.trapezoid(_prob_q, _qs, axis=1))
+
+        safe_Z_q = jnp.where(_Z_q_given_m1 <= 0, 1.0, _Z_q_given_m1)
+        self._log_Z_q_given_m1 = jnp.where(_Z_q_given_m1 <= 0, 0.0, jnp.log(safe_Z_q))
+
+        self._a1_locs = jnp.stack([a_1_loc_bpl1, a_1_loc_bpl2, a_1_loc_n1, a_1_loc_n2])
+        self._a1_scales = jnp.stack(
+            [
+                a_1_scale_bpl1,
+                a_1_scale_bpl2,
+                a_1_scale_n1,
+                a_1_scale_n2,
+            ]
+        )
+        self._a2_locs = jnp.stack([a_2_loc_bpl1, a_2_loc_bpl2, a_2_loc_n1, a_2_loc_n2])
+        self._a2_scales = jnp.stack(
+            [
+                a_2_scale_bpl1,
+                a_2_scale_bpl2,
+                a_2_scale_n1,
+                a_2_scale_n2,
+            ]
+        )
+        self._tilt_zetas = jnp.stack(
+            [
+                cos_tilt_zeta_bpl1,
+                cos_tilt_zeta_bpl2,
+                cos_tilt_zeta_n1,
+                cos_tilt_zeta_n2,
+            ]
+        )
+        self._tilt1_locs = jnp.stack(
+            [
+                cos_tilt_1_loc_bpl1,
+                cos_tilt_1_loc_bpl2,
+                cos_tilt_1_loc_n1,
+                cos_tilt_1_loc_n2,
+            ]
+        )
+        self._tilt1_scales = jnp.stack(
+            [
+                cos_tilt_1_scale_bpl1,
+                cos_tilt_1_scale_bpl2,
+                cos_tilt_1_scale_n1,
+                cos_tilt_1_scale_n2,
+            ]
+        )
+        self._tilt2_locs = jnp.stack(
+            [
+                cos_tilt_2_loc_bpl1,
+                cos_tilt_2_loc_bpl2,
+                cos_tilt_2_loc_n1,
+                cos_tilt_2_loc_n2,
+            ]
+        )
+        self._tilt2_scales = jnp.stack(
+            [
+                cos_tilt_2_scale_bpl1,
+                cos_tilt_2_scale_bpl2,
+                cos_tilt_2_scale_n1,
+                cos_tilt_2_scale_n2,
+            ]
+        )
+
+        super(BrokenPowerlawTwoPeakMultiSpinMultiTilt, self).__init__(
+            batch_shape=batch_shape, event_shape=(6,), validate_args=validate_args
+        )
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
         return self._support
 
     def _log_prob_m1_unnorm_component(self, m1: Array) -> Array:
-        safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
+        invalid = (self.delta_m1 <= 0.0) | (m1 < self.m1min)
+
+        safe_delta = jnp.maximum(self.delta_m1, 1e-10)
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
+
         log_mbreak = jnp.log(self.mbreak)
         log_m1 = jnp.log(m1)
+
         log_norm_bpl = jnp.logaddexp(
             -doubly_truncated_power_law_log_prob(
                 self.mbreak, alpha=-self.alpha1, low=self.m1min, high=self.mbreak
@@ -400,12 +423,14 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
                 self.mbreak, alpha=-self.alpha2, low=self.mbreak, high=self.mmax
             ),
         )
+
         log_prob_bpl_1 = jnp.where(
             m1 < self.mbreak, self.alpha1 * (log_mbreak - log_m1), -jnp.inf
         )
         log_prob_bpl_2 = jnp.where(
-            m1 < self.mbreak, -jnp.inf, self.alpha2 * (log_mbreak - log_m1)
+            m1 >= self.mbreak, self.alpha2 * (log_mbreak - log_m1), -jnp.inf
         )
+
         log_prob_norm_0 = truncnorm_logpdf(
             m1,
             loc=self.loc1,
@@ -421,7 +446,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             high=self.mmax,
         )
 
-        log_prob_m1_component = jnp.asarray(
+        log_prob_m1_component = jnp.array(
             [
                 jnp.log(self.lambda_0)
                 + log_prob_bpl_1
@@ -438,14 +463,10 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             ]
         )
 
-        return jnp.where(
-            (self.delta_m1 <= 0.0) | (m1 < self.m1min),
-            -jnp.inf,
-            log_prob_m1_component,
-        )
+        return jnp.where(invalid, -jnp.inf, log_prob_m1_component)
 
     def _log_prob_q_unnorm(self, m1: Array, q: Array) -> ArrayLike:
-        safe_delta = jnp.where(self.delta_m2 <= 0.0, 1.0, self.delta_m2)
+        safe_delta = jnp.maximum(self.delta_m2, 1e-10)
         log_smoothing_q = log_planck_taper_window((m1 * q - self.m2min) / safe_delta)
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
         return jnp.where(
@@ -453,133 +474,47 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         )
 
     def _log_prob_a1_components(self, a1: ArrayLike) -> ArrayLike:
-        comp_bpl1 = truncnorm_logpdf(
-            a1,
-            loc=self.a_1_loc_bpl1,
-            scale=self.a_1_scale_bpl1,
-            low=0.0,
-            high=1.0,
-        )
-        comp_bpl2 = truncnorm_logpdf(
-            a1,
-            loc=self.a_1_loc_bpl2,
-            scale=self.a_1_scale_bpl2,
-            low=0.0,
-            high=1.0,
-        )
-        comp_n1 = truncnorm_logpdf(
-            a1,
-            loc=self.a_1_loc_n1,
-            scale=self.a_1_scale_n1,
-            low=0.0,
-            high=1.0,
-        )
-        comp_n2 = truncnorm_logpdf(
-            a1,
-            loc=self.a_1_loc_n2,
-            scale=self.a_1_scale_n2,
-            low=0.0,
-            high=1.0,
-        )
-        return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
+        return jax.vmap(
+            lambda loc, scale: truncnorm_logpdf(
+                a1, loc=loc, scale=scale, low=0.0, high=1.0
+            )
+        )(self._a1_locs, self._a1_scales)
 
     def _log_prob_a2_components(self, a2: ArrayLike) -> ArrayLike:
-        comp_bpl1 = truncnorm_logpdf(
-            a2,
-            loc=self.a_2_loc_bpl1,
-            scale=self.a_2_scale_bpl1,
-            low=0.0,
-            high=1.0,
-        )
-        comp_bpl2 = truncnorm_logpdf(
-            a2,
-            loc=self.a_2_loc_bpl2,
-            scale=self.a_2_scale_bpl2,
-            low=0.0,
-            high=1.0,
-        )
-        comp_n1 = truncnorm_logpdf(
-            a2,
-            loc=self.a_2_loc_n1,
-            scale=self.a_2_scale_n1,
-            low=0.0,
-            high=1.0,
-        )
-        comp_n2 = truncnorm_logpdf(
-            a2,
-            loc=self.a_2_loc_n2,
-            scale=self.a_2_scale_n2,
-            low=0.0,
-            high=1.0,
-        )
-        return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
+        return jax.vmap(
+            lambda loc, scale: truncnorm_logpdf(
+                a2, loc=loc, scale=scale, low=0.0, high=1.0
+            )
+        )(self._a2_locs, self._a2_scales)
 
     def _log_prob_t1_t2_components(self, t1: ArrayLike, t2: ArrayLike) -> ArrayLike:
-        hyper_params = [
-            (
-                self.cos_tilt_zeta_bpl1,
-                self.cos_tilt_1_loc_bpl1,
-                self.cos_tilt_1_scale_bpl1,
-                self.cos_tilt_2_loc_bpl1,
-                self.cos_tilt_2_scale_bpl1,
-            ),
-            (
-                self.cos_tilt_zeta_bpl2,
-                self.cos_tilt_1_loc_bpl2,
-                self.cos_tilt_1_scale_bpl2,
-                self.cos_tilt_2_loc_bpl2,
-                self.cos_tilt_2_scale_bpl2,
-            ),
-            (
-                self.cos_tilt_zeta_n1,
-                self.cos_tilt_1_loc_n1,
-                self.cos_tilt_1_scale_n1,
-                self.cos_tilt_2_loc_n1,
-                self.cos_tilt_2_scale_n1,
-            ),
-            (
-                self.cos_tilt_zeta_n2,
-                self.cos_tilt_1_loc_n2,
-                self.cos_tilt_1_scale_n2,
-                self.cos_tilt_2_loc_n2,
-                self.cos_tilt_2_scale_n2,
-            ),
-        ]
-
-        comp_log_probs = []
-
-        for zeta, loc1, scale1, loc2, scale2 in hyper_params:
-            comp_gaussian = (
-                jnp.log(zeta)
-                + truncnorm_logpdf(
-                    t1,
-                    loc=loc1,
-                    scale=scale1,
-                    low=-1.0,
-                    high=1.0,
-                )
-                + truncnorm_logpdf(
-                    t2,
-                    loc=loc2,
-                    scale=scale2,
-                    low=-1.0,
-                    high=1.0,
-                )
+        def compute_comp(zeta, loc1, scale1, loc2, scale2):
+            comp_gaussian = zeta * jnp.exp(
+                truncnorm_logpdf(t1, loc=loc1, scale=scale1, low=-1.0, high=1.0)
+                + truncnorm_logpdf(t2, loc=loc2, scale=scale2, low=-1.0, high=1.0)
             )
-            comp_uniform = jnp.log1p(-zeta) + jnp.log(0.25)
-            comp_log_prob = jnp.logaddexp(comp_gaussian, comp_uniform)
-            comp_log_probs.append(comp_log_prob)
+            comp_uniform = (1.0 - zeta) * 0.25
+            return jnp.log(comp_gaussian + comp_uniform)
 
-        return jnp.asarray(comp_log_probs)
+        return jax.vmap(compute_comp)(
+            self._tilt_zetas,
+            self._tilt1_locs,
+            self._tilt1_scales,
+            self._tilt2_locs,
+            self._tilt2_scales,
+        )
 
     @validate_sample
     def log_prob(self, value: Array) -> ArrayLike:
         m1, m2, a1, a2, t1, t2 = jnp.unstack(value, axis=-1)
+
+        # Compute all components
         log_prob_m1_component = self._log_prob_m1_unnorm_component(m1)
         log_prob_a1_component = self._log_prob_a1_components(a1)
         log_prob_a2_component = self._log_prob_a2_components(a2)
         log_prob_t1_t2_component = self._log_prob_t1_t2_components(t1, t2)
 
+        # Sum all components
         log_prob_m1_a1_a2_t1_t2_component = (
             log_prob_m1_component
             + log_prob_a1_component
@@ -587,18 +522,18 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             + log_prob_t1_t2_component
         )
 
+        # OPTIMIZATION 8: More efficient logsumexp with where
         log_prob_m1_a1_a2_t1_t2 = jax.nn.logsumexp(
             log_prob_m1_a1_a2_t1_t2_component,
-            where=~jnp.isneginf(log_prob_m1_a1_a2_t1_t2_component),
             axis=0,
+            b=~jnp.isneginf(log_prob_m1_a1_a2_t1_t2_component),
         )
 
-        _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=1.0, right=1.0)
-        safe_Z_q = jnp.where(_Z_q <= 0, 1.0, _Z_q)
-        log_Z_q = jnp.where(_Z_q <= 0, 0.0, jnp.log(safe_Z_q))
+        # OPTIMIZATION 9: Use precomputed log
+        log_Z_q = jnp.interp(m1, self._m1s, self._log_Z_q_given_m1, left=0.0, right=0.0)
         log_prob_q = self._log_prob_q_unnorm(m1, m2 / m1) - log_Z_q
 
-        return jnp.log(m1) + log_prob_m1_a1_a2_t1_t2 + log_prob_q - self._logZ
+        return -jnp.log(m1) + log_prob_m1_a1_a2_t1_t2 + log_prob_q - self._logZ
 
 
 def BrokenPowerlawTwoPeakMultiSpinMultiTiltFull(

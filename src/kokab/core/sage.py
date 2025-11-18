@@ -39,8 +39,6 @@ class Sage(Guru):
                 Dict[str, int],
                 ArrayLike,
                 Callable[[ScaledMixture], Array],
-                Optional[List[Callable[..., Array]]],
-                Dict[str, Array],
             ],
             Callable,
         ],
@@ -203,8 +201,6 @@ class Sage(Guru):
             variables_index=variables_index,
             log_constants=log_constants,
             poisson_mean_estimator=poisson_mean_estimator,
-            where_fns=self.where_fns,
-            constants=constants,  # type: ignore
         )
 
         self.driver(

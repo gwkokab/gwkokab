@@ -305,28 +305,10 @@ def poisson_mean_from_sensitivity_injections(
         )
 
     def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
-        model_log_prob = jax.lax.map(
-            scaled_mixture.log_prob,
-            samples,
-            batch_size=batch_size,
-        )
-
+        model_log_prob = jax.vmap(scaled_mixture.log_prob)(samples)
         log_prob = model_log_prob - log_weights
-
-        safe_log_prob = jnp.where(
-            jnp.isneginf(log_prob) | jnp.isnan(log_prob),
-            -jnp.inf,
-            log_prob,
-        )
-
-        logsumexp_log_prob = jnn.logsumexp(
-            safe_log_prob,
-            where=~jnp.isneginf(safe_log_prob),
-            axis=-1,
-        )
-
-        # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (analysis_time_years * jnp.exp(logsumexp_log_prob)) / total_injections
+        log_sum = jax.scipy.special.logsumexp(log_prob, axis=-1)
+        return (analysis_time_years * jnp.exp(log_sum)) / total_injections
 
     @eqx.filter_jit
     def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
