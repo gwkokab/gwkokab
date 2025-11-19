@@ -598,7 +598,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         log_Z_q = jnp.where(_Z_q <= 0, 0.0, jnp.log(safe_Z_q))
         log_prob_q = self._log_prob_q_unnorm(m1, m2 / m1) - log_Z_q
 
-        return jnp.log(m1) + log_prob_m1_a1_a2_t1_t2 + log_prob_q - self._logZ
+        return -jnp.log(m1) + log_prob_m1_a1_a2_t1_t2 + log_prob_q - self._logZ
 
 
 def BrokenPowerlawTwoPeakMultiSpinMultiTiltFull(
