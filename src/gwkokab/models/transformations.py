@@ -7,6 +7,9 @@
 :class:`~numpyro.distributions.transforms.Transform`.
 """
 
+from typing import Sequence, Tuple, Union
+
+import jax
 from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import constraints
@@ -33,6 +36,7 @@ from ..utils.transformations import (
     total_mass,
 )
 from .constraints import (
+    all_constraint,
     decreasing_vector,
     increasing_vector,
     mass_ratio_mass_sandwich,
@@ -45,6 +49,7 @@ from .constraints import (
 
 
 __all__ = [
+    "BlockTransform",
     "ComponentMassesAndRedshiftToDetectedMassAndRedshift",
     "ComponentMassesToChirpMassAndDelta",
     "ComponentMassesToChirpMassAndSymmetricMassRatio",
@@ -55,6 +60,181 @@ __all__ = [
     "PrimaryMassAndMassRatioToComponentMassesTransform",
     "SourceMassAndRedshiftToDetectedMassAndRedshift",
 ]
+
+
+class BlockTransform(Transform):
+    r"""A transform that applies multiple sub-transforms to disjoint slices of the event
+    dimension.
+
+    This class implements a block-separable transformation of the form
+
+    .. math::
+
+        T(x)
+        = \big( T_1(x_{S_1}), \; T_2(x_{S_2}), \; \dots, \; T_K(x_{S_K}) \big),
+
+    where each :math:`T_i` is a ``Transform`` and :math:`S_i` is a slice of the
+    event dimension specified by ``event_slices``.  The slices must be
+    pairwise disjoint so that no parameters or coordinates are shared between
+    sub-transforms.
+
+    Because each sub-transform acts independently on its own coordinate block,
+    the Jacobian matrix has block-diagonal structure:
+
+    .. math::
+
+        J_T(x)
+        =
+        \begin{pmatrix}
+            J_{T_1}(x_{S_1}) & 0 & \cdots & 0 \\
+            0 & J_{T_2}(x_{S_2}) & \cdots & 0 \\
+            \vdots & \vdots & \ddots & \vdots \\
+            0 & 0 & \cdots & J_{T_K}(x_{S_K})
+        \end{pmatrix}.
+
+    Consequently, the log absolute determinant of the Jacobian factorizes:
+
+    .. math::
+
+        \log \left| \det J_T(x) \right|
+        =
+        \sum_{i=1}^K
+        \log \left| \det J_{T_i}(x_{S_i}) \right|.
+
+    Parameters
+    ----------
+    *transforms : Transform
+        A sequence of sub-transforms :math:`T_1, \dots, T_K`. Each transform is
+        applied independently to its corresponding slice of the input.
+    event_slices : Sequence[Union[int, Tuple[int, int]]]
+        A sequence specifying the slices :math:`S_i` of the event dimension.
+        Each entry is either:
+        - an integer ``j`` (interpreted as selecting ``x[..., j]``), or
+        - a tuple ``(start, end)`` denoting the half-open interval
+        :math:`[\mathrm{start}, \mathrm{end})`.
+
+    Notes
+    -----
+    - The overall transformation is equivalent to a product of independent
+      transforms acting on different subspaces.
+    - No checks are performed to ensure that slices fully cover the event
+      dimension or that the resulting concatenation is contiguous.
+
+    Warning
+    -------
+    - ``event_slices`` **must be non-overlapping**. Overlapping slices violate
+      the independence assumption and produce incorrect Jacobians.
+    - Each sub-transform must be dimensionally compatible with the slice it
+      receives.
+    - If a slice misses part of the event dimension or overlaps with another,
+      the forward and inverse mappings may not be valid.
+
+    Examples
+    --------
+    >>> t1 = AffineTransform(loc=0.0, scale=1.0)
+    >>> t2 = ExpTransform()
+    >>> bt = BlockTransform(t1, t2, event_slices=[(0, 3), (3, 4)])
+    >>> x = jnp.array([1.0, 2.0, 3.0, 0.5])
+    >>> y = bt(x)
+    >>> x_recovered = bt.inv(y)
+    """
+
+    def __init__(
+        self,
+        *transforms: Transform,
+        event_slices: Sequence[Union[int, Tuple[int, int]]],
+    ):
+        self.event_slices = tuple(event_slices)
+        self.transforms = transforms
+        assert len(self.event_slices) == len(self.transforms), (
+            "Number of event slices must match number of transforms."
+            f"Got {len(self.event_slices)} slices and {len(self.transforms)} transforms."
+        )
+        self.domain = all_constraint(
+            [t.domain for t in self.transforms], self.event_slices
+        )
+        self.codomain = all_constraint(
+            [t.codomain for t in self.transforms], self.event_slices
+        )
+
+    def __call__(self, x: Array) -> Array:
+        y_slices = []
+        for transform, event_slice in zip(self.transforms, self.event_slices):
+            if isinstance(event_slice, int):
+                x_slice = jax.lax.dynamic_index_in_dim(
+                    x, event_slice, axis=-1, keepdims=False
+                )
+            else:
+                x_slice = jax.lax.dynamic_slice_in_dim(
+                    x,
+                    event_slice[0],
+                    event_slice[1] - event_slice[0],
+                    axis=-1,
+                )
+            y_slice = transform(x_slice)
+            y_slices.append(y_slice)
+        return jnp.column_stack(y_slices)
+
+    def _inverse(self, y: Array) -> Array:
+        x_slices = []
+        for transform, event_slice in zip(self.transforms, self.event_slices):
+            if isinstance(event_slice, int):
+                y_slice = jax.lax.dynamic_index_in_dim(
+                    y, event_slice, axis=-1, keepdims=False
+                )
+            else:
+                y_slice = jax.lax.dynamic_slice_in_dim(
+                    y,
+                    event_slice[0],
+                    event_slice[1] - event_slice[0],
+                    axis=-1,
+                )
+            x_slice = transform.inv(y_slice)
+            x_slices.append(x_slice)
+        return jnp.column_stack(x_slices)
+
+    def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
+        log_detJ = 0.0
+        for transform, event_slice in zip(self.transforms, self.event_slices):
+            if isinstance(event_slice, int):
+                x_slice = jax.lax.dynamic_index_in_dim(
+                    x, event_slice, axis=-1, keepdims=False
+                )
+                y_slice = jax.lax.dynamic_index_in_dim(
+                    y, event_slice, axis=-1, keepdims=False
+                )
+            else:
+                start_idx, end_idx = event_slice
+                x_slice = jax.lax.dynamic_slice_in_dim(
+                    x,
+                    start_idx,
+                    end_idx - start_idx,
+                    axis=-1,
+                )
+                y_slice = jax.lax.dynamic_slice_in_dim(
+                    y,
+                    start_idx,
+                    end_idx - start_idx,
+                    axis=-1,
+                )
+            log_detJ_slice = transform.log_abs_det_jacobian(
+                x_slice, y_slice, intermediates
+            )
+            log_detJ += log_detJ_slice
+        return log_detJ
+
+    def tree_flatten(self):
+        return (self.transforms,), (
+            ("transforms",),
+            {"event_slices": self.event_slices},
+        )
+
+    def __eq__(self, value):
+        if not isinstance(value, BlockTransform):
+            return False
+        return self.event_slices == value.event_slices and all(
+            t1 == t2 for t1, t2 in zip(self.transforms, value.transforms)
+        )
 
 
 class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
