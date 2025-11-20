@@ -24,6 +24,7 @@ from numpyro.distributions.transforms import (
     Transform,
 )
 
+from ..cosmology import Cosmology
 from ..utils.transformations import (
     chirp_mass,
     delta_m,
@@ -58,6 +59,8 @@ __all__ = [
     "ComponentMassesToTotalMassAndMassRatio",
     "DeltaToSymmetricMassRatio",
     "PrimaryMassAndMassRatioToComponentMassesTransform",
+    "RedshiftToInverseLuminosityDistance",
+    "RedshiftToLuminosityDistance",
     "SourceMassAndRedshiftToDetectedMassAndRedshift",
 ]
 
@@ -620,6 +623,82 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
 
     def __eq__(self, other):
         return isinstance(other, type(self))
+
+
+class RedshiftToLuminosityDistance(Transform):
+    r"""Transforms redshift to luminosity distance.
+
+    .. math::
+        f: z \to D_L
+
+    .. math::
+        f^{-1}: D_L \to z
+
+    .. math::
+        \ln\left(|\mathrm{det}(J_f)|\right) = \ln\left(D_c + \frac{c(1+z)}{H_0 E(z)}\right)
+    """
+
+    domain = constraints.positive
+    r""":math:`\mathcal{D}(f) = \mathbb{R}_+`"""
+    codomain = constraints.positive
+    r""":math:`\mathcal{C}(f) = \mathbb{R}_+`"""
+
+    def __init__(self, cosmology: Cosmology) -> None:
+        self.cosmology = cosmology
+
+    def __call__(self, x):
+        dL = self.cosmology.z_to_DL(x)
+        return dL
+
+    def _inverse(self, y):
+        z = self.cosmology.DL_to_z(y)
+        return z
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        Dc = self.cosmology.z_to_Dc(x)
+        dDcdz = self.cosmology.dDcdz(x)
+        return jnp.log(Dc + (1.0 + x) * dDcdz)
+
+    def tree_flatten(self):
+        return (self.cosmology,), (("cosmology",), {})
+
+
+class RedshiftToInverseLuminosityDistance(Transform):
+    r"""Transforms redshift to luminosity distance.
+
+    .. math::
+        f: z \to D_L^{-1}
+
+    .. math::
+        f^{-1}: D_L^{-1} \to z
+
+    .. math::
+        \ln\left(|\mathrm{det}(J_f)|\right) = -2\ln(D_L) + \ln\left(D_c + \frac{c(1+z)}{H_0 E(z)}\right)
+    """
+
+    domain = constraints.positive
+    r""":math:`\mathcal{D}(f) = \mathbb{R}_+`"""
+    codomain = constraints.positive
+    r""":math:`\mathcal{C}(f) = \mathbb{R}_+`"""
+
+    def __init__(self, cosmology: Cosmology) -> None:
+        self.cosmology = cosmology
+
+    def __call__(self, x):
+        dL = self.cosmology.z_to_DL(x)
+        return 1.0 / dL
+
+    def _inverse(self, y):
+        z = self.cosmology.DL_to_z(1.0 / y)
+        return z
+
+    def log_abs_det_jacobian(self, x, y, intermediates=None):
+        Dc = self.cosmology.z_to_Dc(x)
+        dDcdz = self.cosmology.dDcdz(x)
+        return 2.0 * jnp.log(y) + jnp.log(Dc + (1.0 + x) * dDcdz)
+
+    def tree_flatten(self):
+        return (self.cosmology,), (("cosmology",), {})
 
 
 @biject_to.register(type(positive_decreasing_vector))
