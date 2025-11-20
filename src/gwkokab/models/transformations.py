@@ -111,14 +111,6 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
 
     .. math::
         f: (m_1, m_2)\to \left(\frac{(m_1m_2)^{3/5}}{(m_1+m_2)^{1/5}}, \frac{m_1m_2}{(m_1+m_2)^{2}}\right)
-
-    .. seealso::
-
-        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        - :class:`ComponentMassesToChirpMassAndDelta`
-        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
-        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -145,13 +137,10 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     def log_abs_det_jacobian(self, x, y, intermediates=None):
         r"""
         .. math::
-            \ln\left(|\mathrm{det}(J_f)|\right)=\ln(M_c)+\ln(\eta)+\ln(m_1-m_2)-\ln(m_1+m_2)-\ln(m_1)-\ln(m_2)"""
-        m1, m2 = jnp.unstack(x, axis=-1)
+            \ln\left(|\mathrm{det}(J_f)|\right)=\frac{6}{5}\ln(\eta)+\frac{1}{2}\ln(1-4\eta)-\ln(M_c)
+        """
         Mc, eta = jnp.unstack(y, axis=-1)
-        # The factor of 2 is omitted to align with empirical results from test cases.
-        # Further investigation may be required to reconcile theory with implementation.
-        log_detJ = jnp.log(Mc) + jnp.log(eta) + jnp.log(m1 - m2)
-        log_detJ -= jnp.log(m1 + m2) + jnp.log(m1) + jnp.log(m2)
+        log_detJ = 1.2 * jnp.log(eta) + 0.5 * jnp.log1p(-4.0 * eta) - jnp.log(Mc)
         return log_detJ
 
     def tree_flatten(self):
@@ -205,14 +194,6 @@ class ComponentMassesToChirpMassAndDelta(Transform):
 
     .. math::
         f: (m_1, m_2) \to (M_c, \delta)
-
-    .. seealso::
-
-        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
-        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -300,14 +281,6 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
 
     .. math::
         f: (m_1, m_2, z) \to (m_{1, \text{detected}}, m_{2, \text{detected}}, z)
-
-    .. seealso::
-
-        - :class:`ComponentMassesToChirpMassAndDelta`
-        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
-        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = constraints.independent(constraints.positive, 1)
@@ -350,14 +323,6 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
 
     .. math::
         f^{-1}: (m_1, q) \to (m_1, m_2)
-
-    .. seealso::
-
-        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        - :class:`ComponentMassesToChirpMassAndDelta`
-        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -399,14 +364,6 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
 
     .. math::
         f^{-1}: (q, m_2) \to (m_1, m_2)
-
-    .. seealso::
-
-        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        - :class:`ComponentMassesToChirpMassAndDelta`
-        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
-        - :class:`ComponentMassesToTotalMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
@@ -450,14 +407,6 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
 
     .. math::
         f: (m_1, m_2) \to (M, q)
-
-    .. seealso::
-
-        - :class:`ComponentMassesAndRedshiftToDetectedMassAndRedshift`
-        - :class:`ComponentMassesToChirpMassAndDelta`
-        - :class:`ComponentMassesToChirpMassAndSymmetricMassRatio`
-        - :class:`ComponentMassesToMassRatioAndSecondaryMass`
-        - :class:`ComponentMassesToPrimaryMassAndMassRatio`
     """
 
     domain = positive_decreasing_vector
