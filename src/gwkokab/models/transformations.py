@@ -664,7 +664,7 @@ class RedshiftToLuminosityDistance(Transform):
 
 
 class RedshiftToInverseLuminosityDistance(Transform):
-    r"""Transforms redshift to luminosity distance.
+    r"""Transforms redshift to inverse luminosity distance.
 
     .. math::
         f: z \to D_L^{-1}
