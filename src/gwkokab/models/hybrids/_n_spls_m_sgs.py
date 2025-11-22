@@ -1,0 +1,364 @@
+# Copyright 2023 The GWKokab Authors
+# SPDX-License-Identifier: Apache-2.0
+
+
+from typing import Optional
+
+import jax
+from jax import numpy as jnp
+from jaxtyping import Array, ArrayLike
+from numpyro.distributions import constraints, Distribution
+from numpyro.distributions.util import validate_sample
+
+from ...cosmology import PLANCK_2015_Cosmology
+from ...utils.kernel import log_planck_taper_window
+from ...utils.math import truncnorm_logpdf
+from ..constraints import all_constraint, mass_sandwich
+from ..utils import doubly_truncated_power_law_log_prob
+
+
+def _n_spls_m_sgs_component_log_prob(
+    N_pl: int,
+    N_g: int,
+    mm: Array,
+    delta: Array,
+    delta_mmin: Array,
+    **params: Array,
+) -> Array:
+    _lambdas = [params[f"lambda_{i}"] for i in range(N_pl + N_g - 1)]
+    _lambdas.append(jnp.asarray(1.0) - sum(_lambdas, start=jnp.asarray(0.0)))
+    lambdas = jnp.stack(_lambdas, axis=-1)
+
+    alphas = [params[f"alpha_{i}"] for i in range(N_pl)]
+    mmins_pl = [params[f"mmin_pl_{i}"] for i in range(N_pl)]
+    mmaxs_pl = [params[f"mmax_pl_{i}"] for i in range(N_pl)]
+
+    locs = [params[f"loc_{i}"] for i in range(N_g)]
+    scales = [params[f"scale_{i}"] for i in range(N_g)]
+    mmins_g = [params[f"mmin_g_{i}"] for i in range(N_g)]
+    mmaxs_g = [params[f"mmax_g_{i}"] for i in range(N_g)]
+
+    log_smoothing = log_planck_taper_window((mm - delta_mmin) / delta)
+    powerlaws_log_prob = [
+        log_smoothing + doubly_truncated_power_law_log_prob(mm, -alpha, mmin, mmax)
+        for alpha, mmin, mmax in zip(alphas, mmins_pl, mmaxs_pl)
+    ]
+
+    gaussians_log_prob = [
+        log_smoothing
+        + truncnorm_logpdf(
+            mm,
+            loc,
+            scale,
+            mmin,
+            mmax,
+        )
+        for loc, scale, mmin, mmax in zip(locs, scales, mmins_g, mmaxs_g)
+    ]
+
+    components_log_prob = jnp.stack(
+        powerlaws_log_prob + gaussians_log_prob, axis=-1
+    ) + jnp.log(lambdas)
+
+    return components_log_prob
+
+
+def NSmoothingPowerlawMGaussian(
+    N_pl: int,
+    N_g: int,
+    beta: Array,
+    delta_m1: Array,
+    delta_m2: Array,
+    kappa: Array,
+    log_rate: Array,
+    m2min: Array,
+    z_max: Array,
+    validate_args: Optional[bool] = None,
+    **params: Array,
+) -> Distribution:
+    _mmin = jnp.min(
+        jnp.asarray(
+            [params[f"mmin_pl_{i}"] for i in range(N_pl)]
+            + [params[f"mmin_g_{i}"] for i in range(N_g)]
+        )
+    )
+    _mmax = jnp.max(
+        jnp.asarray(
+            [params[f"mmax_pl_{i}"] for i in range(N_pl)]
+            + [params[f"mmax_g_{i}"] for i in range(N_g)]
+        )
+    )
+    mm = jnp.linspace(_mmin, _mmax, 1000)
+    _n_spls_m_sgs_log_prob = _n_spls_m_sgs_component_log_prob(
+        N_pl,
+        N_g,
+        mm,
+        delta=delta_m1,
+        delta_mmin=_mmin,
+        **{
+            k: v
+            for k, v in params.items()
+            if any(
+                (
+                    k.startswith(name)
+                    for name in (
+                        "alpha",
+                        "lambda",
+                        "loc",
+                        "mmax_g",
+                        "mmax_pl",
+                        "mmin_g",
+                        "mmin_pl",
+                        "scale",
+                    )
+                )
+            )
+        },
+    ).sum(axis=-1)
+
+    Z = jnp.trapezoid(jnp.exp(_n_spls_m_sgs_log_prob), mm, axis=0)
+    logZ = jnp.log(Z)
+
+    qq = jnp.linspace(0.001, 1.0, 500)
+    mm_grid, qq_grid = jnp.meshgrid(mm, qq, indexing="ij")
+
+    m2 = mm_grid * qq_grid
+    safe_delta = jnp.where(delta_m2 <= 0.0, 1.0, delta_m2)
+    log_smoothing_q = log_planck_taper_window((m2 - m2min) / safe_delta)
+    log_prob_q = beta * jnp.log(qq) + log_smoothing_q
+    prob_q = jnp.where((delta_m2 <= 0.0) | (m2 < m2min), 0.0, jnp.exp(log_prob_q))
+    _Z_q_given_m1 = jnp.trapezoid(prob_q, qq, axis=1)
+
+    class _NSmoothingPowerlawMGaussian(Distribution):
+        arg_constraints = (
+            {
+                "beta": constraints.real,
+                "delta_m1": constraints.positive,
+                "delta_m2": constraints.positive,
+                "log_rate": constraints.real,
+                "m2min": constraints.positive,
+                "_Z_q_given_m1": constraints.real_vector,
+                "logZ": constraints.real,
+                "kappa": constraints.real,
+                "z_max": constraints.positive,
+            }
+            | {f"alpha_{i}": constraints.real for i in range(N_pl)}
+            | {f"loc_{i}": constraints.real for i in range(N_g)}
+            | {f"mmax_g_{i}": constraints.positive for i in range(N_g)}
+            | {f"mmax_pl_{i}": constraints.positive for i in range(N_pl)}
+            | {f"mmin_g_{i}": constraints.positive for i in range(N_g)}
+            | {f"mmin_pl_{i}": constraints.positive for i in range(N_pl)}
+            | {f"scale_{i}": constraints.positive for i in range(N_g)}
+            | {f"lambda_{i}": constraints.unit_interval for i in range(N_pl + N_g - 1)}
+            | {f"a1_loc_pl_{i}": constraints.unit_interval for i in range(N_pl)}
+            | {f"a1_scale_pl_{i}": constraints.positive for i in range(N_pl)}
+            | {f"a2_loc_pl_{i}": constraints.unit_interval for i in range(N_pl)}
+            | {f"a2_scale_pl_{i}": constraints.positive for i in range(N_pl)}
+            | {f"t1_loc_pl_{i}": constraints.interval(-1.0, 1.0) for i in range(N_pl)}
+            | {f"t1_scale_pl_{i}": constraints.positive for i in range(N_pl)}
+            | {f"t2_loc_pl_{i}": constraints.interval(-1.0, 1.0) for i in range(N_pl)}
+            | {f"t2_scale_pl_{i}": constraints.positive for i in range(N_pl)}
+            | {f"a1_loc_g_{i}": constraints.unit_interval for i in range(N_g)}
+            | {f"a1_scale_g_{i}": constraints.positive for i in range(N_g)}
+            | {f"a2_loc_g_{i}": constraints.unit_interval for i in range(N_g)}
+            | {f"a2_scale_g_{i}": constraints.positive for i in range(N_g)}
+            | {f"t1_loc_g_{i}": constraints.interval(-1.0, 1.0) for i in range(N_g)}
+            | {f"t1_scale_g_{i}": constraints.positive for i in range(N_g)}
+            | {f"t2_loc_g_{i}": constraints.interval(-1.0, 1.0) for i in range(N_g)}
+            | {f"t2_scale_g_{i}": constraints.positive for i in range(N_g)}
+        )
+        pytree_aux_fields = ("N_pl", "N_g")
+        pytree_data_fields = (
+            (
+                "_Z_q_given_m1",
+                "beta",
+                "delta_m1",
+                "delta_m2",
+                "kappa",
+                "log_rate",
+                "logZ",
+                "m2min",
+                "z_max",
+            )
+            + tuple(f"alpha_{i}" for i in range(N_pl))
+            + tuple(f"mmin_pl_{i}" for i in range(N_pl))
+            + tuple(f"mmax_pl_{i}" for i in range(N_pl))
+            + tuple(f"loc_{i}" for i in range(N_g))
+            + tuple(f"scale_{i}" for i in range(N_g))
+            + tuple(f"mmin_g_{i}" for i in range(N_g))
+            + tuple(f"mmax_g_{i}" for i in range(N_g))
+        )
+
+        def __init__(
+            self,
+            N_pl: int,
+            N_g: int,
+            _Z_q_given_m1: Array,
+            beta: Array,
+            delta_m1: Array,
+            delta_m2: Array,
+            kappa: Array,
+            log_rate: Array,
+            logZ: Array,
+            m2min: Array,
+            z_max: Array,
+            validate_args: Optional[bool] = None,
+            **kwargs: ArrayLike,
+        ) -> None:
+            self.N_pl = N_pl
+            self.N_g = N_g
+            self.log_rate = log_rate
+            self.delta_m1 = delta_m1
+            self.delta_m2 = delta_m2
+            self.beta = beta
+            self.m2min = m2min
+            self.logZ = logZ
+            self.kappa = kappa
+            self.z_max = z_max
+            self._Z_q_given_m1 = _Z_q_given_m1
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+            self._support = all_constraint(
+                [
+                    mass_sandwich(_mmin, _mmax),  # type: ignore
+                    constraints.unit_interval,
+                    constraints.unit_interval,
+                    constraints.interval(-1.0, 1.0),
+                    constraints.interval(-1.0, 1.0),
+                    constraints.positive,
+                ],
+                ((0, 2), 2, 3, 4, 5, 6),
+            )
+            super(_NSmoothingPowerlawMGaussian, self).__init__(
+                batch_shape=(), event_shape=(7,), validate_args=validate_args
+            )
+
+        @constraints.dependent_property(event_dim=-1, is_discrete=False)
+        def support(self):
+            return self._support
+
+        @validate_sample
+        def log_prob(self, value):
+            m1, m2, a1, a2, t1, t2, z = jnp.unstack(value, axis=-1)
+            log_pdf_val = _n_spls_m_sgs_component_log_prob(
+                self.N_pl,
+                self.N_g,
+                m1,
+                delta=self.delta_m1,
+                delta_mmin=_mmin,
+                **{
+                    k: getattr(self, k)
+                    for k in self.pytree_data_fields
+                    if any(
+                        (
+                            k.startswith(name)
+                            for name in (
+                                "alpha",
+                                "lambda",
+                                "loc",
+                                "mmax_g",
+                                "mmax_pl",
+                                "mmin_g",
+                                "mmin_pl",
+                                "scale",
+                            )
+                        )
+                    )
+                },
+            )
+
+            safe_delta = jnp.where(self.delta_m2 <= 0.0, 1.0, self.delta_m2)
+            log_smoothing_q = log_planck_taper_window((m2 - self.m2min) / safe_delta)
+            log_prob_q = self.beta * jnp.log(m2 / m1) + log_smoothing_q
+            log_prob_q = jnp.where(
+                (delta_m2 <= 0.0) | (m2 < m2min), -jnp.inf, log_prob_q
+            )
+
+            aa_log_prob = []
+            tt_log_prob = []
+
+            for n_pl in range(self.N_pl):
+                a1_loc = getattr(self, f"a1_loc_pl_{n_pl}")
+                a1_scale = getattr(self, f"a1_scale_pl_{n_pl}")
+                a2_loc = getattr(self, f"a2_loc_pl_{n_pl}")
+                a2_scale = getattr(self, f"a2_scale_pl_{n_pl}")
+
+                aa_log_prob.append(
+                    truncnorm_logpdf(a1, a1_loc, a1_scale, 0.0, 1.0)
+                    + truncnorm_logpdf(a2, a2_loc, a2_scale, 0.0, 1.0)
+                )
+
+                t1_loc = getattr(self, f"t1_loc_pl_{n_pl}")
+                t1_scale = getattr(self, f"t1_scale_pl_{n_pl}")
+                t2_loc = getattr(self, f"t2_loc_pl_{n_pl}")
+                t2_scale = getattr(self, f"t2_scale_pl_{n_pl}")
+                zeta_pl = getattr(self, f"zeta_pl_{n_pl}")
+
+                tt_log_prob.append(
+                    jnp.logaddexp(
+                        jnp.log(zeta_pl)
+                        + truncnorm_logpdf(t1, t1_loc, t1_scale, -1.0, 1.0)
+                        + truncnorm_logpdf(t2, t2_loc, t2_scale, -1.0, 1.0),
+                        jnp.log1p(-zeta_pl) + jnp.log(0.25),
+                    )
+                )
+
+            for n_g in range(self.N_g):
+                a1_loc = getattr(self, f"a1_loc_g_{n_g}")
+                a1_scale = getattr(self, f"a1_scale_g_{n_g}")
+                a2_loc = getattr(self, f"a2_loc_g_{n_g}")
+                a2_scale = getattr(self, f"a2_scale_g_{n_g}")
+
+                aa_log_prob.append(
+                    truncnorm_logpdf(a1, a1_loc, a1_scale, 0.0, 1.0)
+                    + truncnorm_logpdf(a2, a2_loc, a2_scale, 0.0, 1.0)
+                )
+
+                t1_loc = getattr(self, f"t1_loc_g_{n_g}")
+                t1_scale = getattr(self, f"t1_scale_g_{n_g}")
+                t2_loc = getattr(self, f"t2_loc_g_{n_g}")
+                t2_scale = getattr(self, f"t2_scale_g_{n_g}")
+                zeta_g = getattr(self, f"zeta_g_{n_g}")
+
+                tt_log_prob.append(
+                    jnp.logaddexp(
+                        jnp.log(zeta_g)
+                        + truncnorm_logpdf(t1, t1_loc, t1_scale, -1.0, 1.0)
+                        + truncnorm_logpdf(t2, t2_loc, t2_scale, -1.0, 1.0),
+                        jnp.log1p(-zeta_g) + jnp.log(0.25),
+                    )
+                )
+
+            aa_log_prob = jnp.stack(aa_log_prob, axis=-1)
+            tt_log_prob = jnp.stack(tt_log_prob, axis=-1)
+
+            logdVcdz = PLANCK_2015_Cosmology.logdVcdz(z)
+            log_time_dilation = -jnp.log1p(z)
+            log_differential_spacetime_volume_val = (
+                log_time_dilation + logdVcdz + self.kappa * jnp.log1p(z)
+            )
+
+            return (
+                log_rate
+                + log_differential_spacetime_volume_val
+                + log_prob_q
+                + jax.nn.logsumexp(log_pdf_val + aa_log_prob + tt_log_prob, axis=-1)
+                - self.logZ
+                - jnp.interp(m1, mm, jnp.log(self._Z_q_given_m1), left=1.0, right=1.0)
+            )
+
+    return _NSmoothingPowerlawMGaussian(
+        N_pl=N_pl,
+        N_g=N_g,
+        log_rate=log_rate,
+        delta_m1=delta_m1,
+        delta_m2=delta_m2,
+        beta=beta,
+        m2min=m2min,
+        logZ=logZ,
+        z_max=z_max,
+        kappa=kappa,
+        _Z_q_given_m1=_Z_q_given_m1,
+        **params,
+        validate_args=validate_args,
+    )
