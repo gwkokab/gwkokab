@@ -11,6 +11,7 @@ from jax._src.lax import lax
 from jax._src.numpy.util import promote_args_inexact
 from jax.scipy import special as scs
 from jaxtyping import Array, ArrayLike
+from numpyro.distributions.util import logdiffexp
 from quadax import cumulative_trapezoid
 
 
@@ -122,26 +123,6 @@ def cumtrapz(y: Array, x: Array) -> Array:
 
 
 @jax.jit
-def logsubexp(a: ArrayLike, b: ArrayLike) -> ArrayLike:
-    r"""Compute :math:`\log(\exp(a) - \exp(b))` in a numerically stable way.
-
-    Parameters
-    ----------
-    a : ArrayLike
-        input array
-    b : ArrayLike
-        input array
-
-    Returns
-    -------
-    ArrayLike
-        The value of :math:`\log(\exp(a) - \exp(b))`.
-    """
-    a, b = promote_args_inexact("logsubexp", a, b)
-    return lax.add(a, lax.log1p(lax.neg(lax.exp(lax.sub(b, a)))))
-
-
-@jax.jit
 def truncnorm_logpdf(
     xx: ArrayLike,
     loc: ArrayLike,
@@ -172,25 +153,24 @@ def truncnorm_logpdf(
     xx, loc, scale, low, high = promote_args_inexact(
         "truncnorm_logpdf", xx, loc, scale, low, high
     )
-    safe_scale = jnp.where(scale <= 0, 1.0, scale)
-    zz = lax.div(lax.sub(xx, loc), safe_scale)
-    aa = lax.div(lax.sub(low, loc), safe_scale)
-    bb = lax.div(lax.sub(high, loc), safe_scale)
-    constant = lax._const(xx, np.log(2.0 * np.pi))
+    zz = lax.div(lax.sub(xx, loc), scale)
+    aa = lax.div(lax.sub(low, loc), scale)
+    bb = lax.div(lax.sub(high, loc), scale)
+    tau = lax._const(xx, 2.0 * np.pi)
+    scale_sq = lax.square(scale)
     neg_half = lax._const(xx, -0.5)
-    log_pdf = lax.sub(
-        lax.mul(neg_half, lax.add(lax.square(zz), constant)), lax.log(safe_scale)
-    )
+    log_normalizer = lax.log(lax.mul(tau, scale_sq))
+    log_pdf = lax.mul(neg_half, lax.add(lax.square(zz), log_normalizer))
 
     # cf https://github.com/scipy/scipy/blob/v1.15.1/scipy/stats/_continuous_distns.py#L10189
     log_norm = jnp.select(
         [bb <= 0, aa > 0, bb > 0],
         [
-            logsubexp(scs.log_ndtr(bb), scs.log_ndtr(aa)),
-            logsubexp(scs.log_ndtr(-aa), scs.log_ndtr(-bb)),
+            logdiffexp(scs.log_ndtr(bb), scs.log_ndtr(aa)),
+            logdiffexp(scs.log_ndtr(-aa), scs.log_ndtr(-bb)),
             lax.log1p(-scs.ndtr(aa) - scs.ndtr(-bb)),
         ],
         np.nan,
     )
     log_pdf -= log_norm
-    return jnp.where((xx < low) | (xx > high) | (scale <= 0), -np.inf, log_pdf)
+    return jnp.where((xx < low) | (xx > high), -np.inf, log_pdf)
