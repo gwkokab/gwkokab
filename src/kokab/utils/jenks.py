@@ -416,7 +416,6 @@ def pad_and_stack(
         (i, sum(arr[i].size for arr in arrays)) for i in range(n_total_elements)
     ]
     index_and_size = sorted(index_and_size, key=lambda x: x[1])
-    print(index_and_size)
     sizes = [size for _, size in index_and_size]
     shuffle_indices = [i for i, _ in index_and_size]
 
