@@ -25,7 +25,10 @@ from .mass import (
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
-from .redshift import PowerlawRedshift as PowerlawRedshift
+from .redshift import (
+    MadauDickinsonRedshift as MadauDickinsonRedshift,
+    PowerlawRedshift as PowerlawRedshift,
+)
 from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
