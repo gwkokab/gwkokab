@@ -17,8 +17,8 @@ PATCH_VERSION: Final[int] = 1
 
 
 def get_git_commit_hash() -> Optional[str]:
-    """Attempts to get the commit hash from the git repository. Uses
-    :code:`git rev-parse HEAD` to retrieve the current commit hash if possible.
+    """Attempts to get the commit hash from the git repository. Uses :code:`git rev-
+    parse HEAD` to retrieve the current commit hash if possible.
 
     Returns
     -------
