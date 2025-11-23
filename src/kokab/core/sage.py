@@ -53,7 +53,7 @@ class Sage(Guru):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         variance_cut_threshold: Optional[float],
-        n_buckets: int,
+        n_buckets: Optional[int],
         threshold: float,
         debug_nans: bool = False,
         profile_memory: bool = False,
@@ -141,6 +141,12 @@ class Sage(Guru):
         _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
             data, log_ref_priors, n_buckets=self.n_buckets, threshold=self.threshold
         )
+        if self.n_buckets is None:
+            self.n_buckets = len(_data_group)
+            logger.info(
+                "Number of buckets not specified. Using the best number of buckets: {n_buckets}.",
+                n_buckets=self.n_buckets,
+            )
 
         for i in range(self.n_buckets):
             _log_ref_priors_group[i] = np.where(  # type: ignore
