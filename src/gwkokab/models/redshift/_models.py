@@ -61,7 +61,7 @@ class PowerlawRedshift(Distribution):
 
     def log_differential_spacetime_volume(self, z: Array) -> Array:
         """Placeholder method for computing the differential spacetime volume."""
-        logdVcdz = PLANCK_2015_Cosmology.logdVcdz(z)
+        logdVcdz = PLANCK_2015_Cosmology().logdVcdz(z)
         log_time_dilation = -jnp.log1p(z)
         log_differential_spacetime_volume_val = (
             log_time_dilation + logdVcdz + self.log_psi_of_z(z)

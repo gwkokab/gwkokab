@@ -20,8 +20,8 @@ class TestCosmology(parameterized.TestCase):
         with_pmap=True,
     )
     @parameterized.named_parameters(
-        ("PLANCK_2015_Cosmology", PLANCK_2015_Cosmology),
-        ("PLANCK_2018_Cosmology", PLANCK_2018_Cosmology),
+        ("PLANCK_2015_Cosmology", PLANCK_2015_Cosmology()),
+        ("PLANCK_2018_Cosmology", PLANCK_2018_Cosmology()),
     )
     def test_z_to_z(self, cosmo: Cosmology):
         @self.variant
@@ -42,8 +42,8 @@ class TestCosmology(parameterized.TestCase):
         with_pmap=True,
     )
     @parameterized.named_parameters(
-        ("PLANCK_2015_Cosmology", PLANCK_2015_Cosmology),
-        ("PLANCK_2018_Cosmology", PLANCK_2018_Cosmology),
+        ("PLANCK_2015_Cosmology", PLANCK_2015_Cosmology()),
+        ("PLANCK_2018_Cosmology", PLANCK_2018_Cosmology()),
     )
     def test_DL_to_DL(self, cosmo: Cosmology):
         @self.variant
@@ -65,12 +65,12 @@ def test_luminosity_distance_with_astropy():
 
     np.testing.assert_allclose(
         planck15.luminosity_distance(z).value,
-        PLANCK_2015_Cosmology.z_to_DL(z),
+        PLANCK_2015_Cosmology().z_to_DL(z),
         rtol=1e-3,
     )
     np.testing.assert_allclose(
         planck18.luminosity_distance(z).value,
-        PLANCK_2018_Cosmology.z_to_DL(z),
+        PLANCK_2018_Cosmology().z_to_DL(z),
         rtol=1e-2,
     )
 

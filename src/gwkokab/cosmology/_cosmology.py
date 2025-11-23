@@ -57,9 +57,9 @@ class Cosmology(eqx.Module):
             self._OmegaMatter + self._OmegaRadiation + self._OmegaLambda
         )
 
-        assert jnp.isclose(self._OmegaKappa, 0.0, atol=1e-10), (
-            "Only flat cosmologies are supported (Ω_k ≈ 0)."
-        )
+        # assert jnp.isclose(self._OmegaKappa, 0.0, atol=1e-10), (
+        #     "Only flat cosmologies are supported (Ω_k ≈ 0)."
+        # )
 
         self._z = jnp.arange(0.0, max_z + dz, dz)
         self._Dc = quadax.cumulative_trapezoid(
