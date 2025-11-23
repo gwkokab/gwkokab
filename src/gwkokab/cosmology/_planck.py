@@ -17,7 +17,7 @@ from ._cosmology import Cosmology
 
 
 def PLANCK_2015_Cosmology() -> Cosmology:
-    "Cosmology : See Table4 in arXiv:1502.01589, OmegaMatter from astropy Planck 2015"
+    """Cosmology : See Table4 in arXiv:1502.01589, OmegaMatter from astropy Planck 2015"""
     PLANCK_2015_Ho = 67.74 * 1e3
     PLANCK_2015_OmegaMatter = 0.3089
     PLANCK_2015_OmegaLambda = 1.0 - PLANCK_2015_OmegaMatter
