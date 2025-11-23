@@ -32,7 +32,7 @@ def PLANCK_2015_Cosmology() -> Cosmology:
 
 
 def PLANCK_2018_Cosmology() -> Cosmology:
-    "Cosmology : See Table1 in arXiv:1807.06209"
+    """Cosmology : See Table1 in arXiv:1807.06209"""
     PLANCK_2018_Ho = 67.32 * 1e3
     PLANCK_2018_OmegaMatter = 0.3158
     PLANCK_2018_OmegaLambda = 1.0 - PLANCK_2018_OmegaMatter
