@@ -7,6 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 
+import datetime
 import os
 import sys
 
@@ -16,7 +17,7 @@ sys.path.append(os.path.abspath("./_pygments"))
 
 
 project = "GWKokab"
-copyright = "2023, Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
+copyright = f"2023-{datetime.date.today().year}, Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
 author = "Meesum Qazalbash, Muhammad Zeeshan, Richard O'Shaughnessy"
 
 
@@ -82,14 +83,12 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**.ipynb_checkpoints"]
 
 html_theme = "furo"
 
-html_theme_options = {
-    "sidebar_hide_name": True,
-}
 
 html_static_path = ["_static"]
 
 html_css_files = ["style.css"]
 html_theme_options = {
+    "sidebar_hide_name": True,
     "light_logo": "noBgBlack.png",
     "dark_logo": "noBgWhite.png",
 }
@@ -177,9 +176,6 @@ def skip_util_classes(app, what, name: str, obj, skip, options):
         skip = True
         return skip
     if what == "module" and "cli_gwkokab" in name:
-        skip = True
-        return skip
-    if name == "kokab.utils":
         skip = True
         return skip
     if (
