@@ -32,7 +32,7 @@ help:
 	@echo "  docs		       - Generate documentation"
 
 install: uninstall
-	$(UV) $(PIP) install $(_PIP_FLAGS) $(_EXTRA)
+	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(_PIP_FLAGS) $(_EXTRA)
 
 
 uninstall:

@@ -2,13 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import importlib.metadata
-from typing import Final
-
-
-__version__: Final[str] = importlib.metadata.version("gwkokab")
-
-
 from . import (
     constants as constants,
     cosmology as cosmology,
@@ -19,3 +12,4 @@ from . import (
     poisson_mean as poisson_mean,
     utils as utils,
 )
+from .version import __version__ as __version__
