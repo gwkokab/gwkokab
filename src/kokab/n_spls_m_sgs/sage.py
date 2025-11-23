@@ -103,7 +103,7 @@ class NPowerlawMGaussianCore(Sage):
             ("a2_scale_g", self.N_g),
             ("a2_scale_pl", self.N_pl),
             ("alpha", self.N_pl),
-            ("lambda", self.N_g + self.N_pl),
+            ("lambda", self.N_g + self.N_pl - 1),
             ("loc_g", self.N_g),
             ("mmax_g", self.N_g),
             ("mmax_pl", self.N_pl),
