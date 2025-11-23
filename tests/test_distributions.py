@@ -25,6 +25,7 @@ from scipy.sparse import csr_matrix
 
 from gwkokab.models import (
     BetaFromMeanVar,
+    MadauDickinsonRedshift,
     NPowerlawMGaussian,
     PowerlawPrimaryMassRatio,
     PowerlawRedshift,
@@ -322,6 +323,10 @@ CONTINUOUS = [
     (PowerlawRedshift, {"kappa": 1.0, "z_max": 2.3}),
     (PowerlawRedshift, {"kappa": 2.7, "z_max": 1.0}),
     (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
+    (MadauDickinsonRedshift, {"kappa": 0.0, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0}),
+    (MadauDickinsonRedshift, {"kappa": 1.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0}),
+    (MadauDickinsonRedshift, {"kappa": 2.7, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0}),
+    (MadauDickinsonRedshift, {"kappa": 0.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0}),
     (BetaFromMeanVar, {"mean": 0.4, "variance": 0.02}),
     (BetaFromMeanVar, {"mean": 0.5, "variance": 0.05}),
 ]
@@ -708,7 +713,7 @@ def test_gof(jax_dist, params):
         pytest.skip("Failure rate is lower than expected.")
     if isinstance(jax_dist, ScaledMixture):
         pytest.skip("skip testing for ScaledMixture")
-    if jax_dist.__name__ in ("PowerlawRedshift",):
+    if jax_dist.__name__ in ("PowerlawRedshift", "MadauDickinsonRedshift"):
         pytest.skip(f"{jax_dist.__name__} is not a valid probability distribution")
     num_samples = 10000
     rng_key = jrd.PRNGKey(0)
