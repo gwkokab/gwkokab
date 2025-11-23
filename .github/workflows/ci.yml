@@ -56,7 +56,7 @@ jobs:
         run: |
           uv run pytest tests
       - name: Run build
-        run: uv build
+        run: GWKOKAB_NIGHTLY_BUILD=0 uv build
 
   documentation:
     name: Documentation

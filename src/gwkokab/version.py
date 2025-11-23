@@ -53,8 +53,18 @@ def get_version() -> str:
     """
     NIGHTLY_ENV_VAR = "GWKOKAB_NIGHTLY_BUILD"
     version = f"{MAJOR_VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
+    NIGHTLY_ENV_VAR_VAL = os.environ.get(NIGHTLY_ENV_VAR)
 
-    if os.environ.get(NIGHTLY_ENV_VAR) is None:
+    if NIGHTLY_ENV_VAR_VAL is not None:
+        valid_values = ("1", "0", "true", "false")
+        assert NIGHTLY_ENV_VAR_VAL.lower() in valid_values, (
+            f"Environment variable {NIGHTLY_ENV_VAR} must be set to one of "
+            f"{valid_values}, but got '{NIGHTLY_ENV_VAR_VAL}'."
+        )
+        if NIGHTLY_ENV_VAR_VAL.lower() in ("0", "false"):
+            # Explicitly disabled nightly build
+            return version
+    else:
         # Return the clean base version for standard release builds.
         return version
 
