@@ -22,6 +22,7 @@ class _RedshiftModel(Distribution):
         validate_args: Optional[bool] = None,
     ):
         self.z_max = z_max
+        batch_shape = lax.broadcast_shapes(jnp.shape(z_max), batch_shape)
         self._support = constraints.interval(0.0, z_max)
         super(_RedshiftModel, self).__init__(
             batch_shape=batch_shape,
@@ -195,7 +196,6 @@ class MadauDickinsonRedshift(_RedshiftModel):
             z_max, kappa, gamma, z_peak
         )
         batch_shape = lax.broadcast_shapes(
-            jnp.shape(z_max),
             jnp.shape(kappa),
             jnp.shape(gamma),
             jnp.shape(z_peak),
