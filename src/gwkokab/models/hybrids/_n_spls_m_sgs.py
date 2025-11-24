@@ -362,7 +362,8 @@ def NSmoothingPowerlawMGaussian(
             )
 
             return (
-                log_rate
+                -jnp.log(m1)
+                + log_rate
                 + safe_log_prob_z
                 + log_prob_q
                 + jax.nn.logsumexp(log_pdf_val + aa_log_prob + tt_log_prob, axis=-1)
