@@ -128,6 +128,10 @@ def NSmoothingPowerlawMGaussian(
     log_prob_q = beta * jnp.log(qq) + log_smoothing_q
     prob_q = jnp.where((delta_m2 <= 0.0) | (m2 < m2min), 0.0, jnp.exp(log_prob_q))
     _Z_q_given_m1 = jnp.trapezoid(prob_q, qq, axis=1)
+    safe_Z_q_given_m1 = jnp.where(_Z_q_given_m1 <= 0, 1.0, _Z_q_given_m1)
+    _log_Z_q = jnp.where(
+        _Z_q_given_m1 <= 0, jnp.nan_to_num(-jnp.inf), jnp.log(safe_Z_q_given_m1)
+    )
 
     class _NSmoothingPowerlawMGaussian(Distribution):
         arg_constraints = (
@@ -137,7 +141,7 @@ def NSmoothingPowerlawMGaussian(
                 "delta_m2": constraints.positive,
                 "log_rate": constraints.real,
                 "m2min": constraints.positive,
-                "_Z_q_given_m1": constraints.real_vector,
+                "_log_Z_q": constraints.real_vector,
                 "logZ": constraints.real,
                 "kappa": constraints.real,
                 "z_max": constraints.positive,
@@ -170,7 +174,7 @@ def NSmoothingPowerlawMGaussian(
         pytree_aux_fields = ("N_pl", "N_g")
         pytree_data_fields = (
             (
-                "_Z_q_given_m1",
+                "_log_Z_q",
                 "beta",
                 "delta_m1",
                 "delta_m2",
@@ -210,7 +214,7 @@ def NSmoothingPowerlawMGaussian(
             self,
             N_pl: int,
             N_g: int,
-            _Z_q_given_m1: Array,
+            _log_Z_q: Array,
             beta: Array,
             delta_m1: Array,
             delta_m2: Array,
@@ -232,7 +236,7 @@ def NSmoothingPowerlawMGaussian(
             self.logZ = logZ
             self.kappa = kappa
             self.z_max = z_max
-            self._Z_q_given_m1 = _Z_q_given_m1
+            self._log_Z_q = _log_Z_q
             for k, v in kwargs.items():
                 setattr(self, k, v)
             self._support = all_constraint(
@@ -288,7 +292,7 @@ def NSmoothingPowerlawMGaussian(
             log_smoothing_q = log_planck_taper_window((m2 - self.m2min) / safe_delta)
             log_prob_q = self.beta * jnp.log(m2 / m1) + log_smoothing_q
             log_prob_q = jnp.where(
-                (delta_m2 <= 0.0) | (m2 < m2min), -jnp.inf, log_prob_q
+                (delta_m2 <= 0.0) | (m2 < m2min), jnp.nan_to_num(-jnp.inf), log_prob_q
             )
 
             aa_log_prob = []
@@ -349,19 +353,21 @@ def NSmoothingPowerlawMGaussian(
             aa_log_prob = jnp.stack(aa_log_prob, axis=-1)
             tt_log_prob = jnp.stack(tt_log_prob, axis=-1)
 
-            logdVcdz = PLANCK_2015_Cosmology().logdVcdz(z)
-            log_time_dilation = -jnp.log1p(z)
-            log_differential_spacetime_volume_val = (
-                log_time_dilation + logdVcdz + self.kappa * jnp.log1p(z)
+            log_prob_z = PLANCK_2015_Cosmology().logdVcdz(z) + (
+                self.kappa - 1
+            ) * jnp.log1p(z)
+
+            safe_log_prob_z = jnp.where(
+                (z < 0.0) | (z > self.z_max), -jnp.inf, log_prob_z
             )
 
             return (
                 log_rate
-                + log_differential_spacetime_volume_val
+                + safe_log_prob_z
                 + log_prob_q
                 + jax.nn.logsumexp(log_pdf_val + aa_log_prob + tt_log_prob, axis=-1)
                 - self.logZ
-                - jnp.interp(m1, mm, jnp.log(self._Z_q_given_m1), left=1.0, right=1.0)
+                - jnp.interp(m1, mm, self._log_Z_q, left=0.0, right=0.0)
             )
 
     return _NSmoothingPowerlawMGaussian(
@@ -375,7 +381,7 @@ def NSmoothingPowerlawMGaussian(
         logZ=logZ,
         z_max=z_max,
         kappa=kappa,
-        _Z_q_given_m1=_Z_q_given_m1,
+        _log_Z_q=_log_Z_q,
         **params,
         validate_args=validate_args,
     )
