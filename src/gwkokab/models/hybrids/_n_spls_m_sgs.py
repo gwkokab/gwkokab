@@ -89,34 +89,36 @@ def NSmoothingPowerlawMGaussian(
         )
     )
     mm = jnp.linspace(_mmin, _mmax, 1000)
-    _n_spls_m_sgs_log_prob = _n_spls_m_sgs_component_log_prob(
-        N_pl,
-        N_g,
-        mm,
-        delta=delta_m1,
-        delta_mmin=_mmin,
-        **{
-            k: v
-            for k, v in params.items()
-            if any(
-                (
-                    k.startswith(name)
-                    for name in (
-                        "alpha",
-                        "lambda",
-                        "loc",
-                        "mmax_g",
-                        "mmax_pl",
-                        "mmin_g",
-                        "mmin_pl",
-                        "scale",
+    _n_spls_m_sgs_prob = jnp.exp(
+        _n_spls_m_sgs_component_log_prob(
+            N_pl,
+            N_g,
+            mm,
+            delta=delta_m1,
+            delta_mmin=_mmin,
+            **{
+                k: v
+                for k, v in params.items()
+                if any(
+                    (
+                        k.startswith(name)
+                        for name in (
+                            "alpha",
+                            "lambda",
+                            "loc",
+                            "mmax_g",
+                            "mmax_pl",
+                            "mmin_g",
+                            "mmin_pl",
+                            "scale",
+                        )
                     )
                 )
-            )
-        },
+            },
+        )
     ).sum(axis=-1)
 
-    Z = jnp.trapezoid(jnp.exp(_n_spls_m_sgs_log_prob), mm, axis=0)
+    Z = jnp.trapezoid(_n_spls_m_sgs_prob, mm, axis=0)
     logZ = jnp.log(Z)
 
     qq = jnp.linspace(0.001, 1.0, 500)
@@ -261,7 +263,7 @@ def NSmoothingPowerlawMGaussian(
         @validate_sample
         def log_prob(self, value):
             m1, m2, a1, a2, t1, t2, z = jnp.unstack(value, axis=-1)
-            log_pdf_val = _n_spls_m_sgs_component_log_prob(
+            m1_log_prob = _n_spls_m_sgs_component_log_prob(
                 self.N_pl,
                 self.N_g,
                 m1,
@@ -361,15 +363,34 @@ def NSmoothingPowerlawMGaussian(
                 (z < 0.0) | (z > self.z_max), -jnp.inf, log_prob_z
             )
 
-            return (
+            m1_aa_tt_log_prob = m1_log_prob + aa_log_prob + tt_log_prob
+
+            log_prob_val = (
                 -jnp.log(m1)
                 + log_rate
                 + safe_log_prob_z
                 + log_prob_q
-                + jax.nn.logsumexp(log_pdf_val + aa_log_prob + tt_log_prob, axis=-1)
+                + jax.nn.logsumexp(
+                    m1_aa_tt_log_prob,
+                    where=~jnp.isneginf(m1_aa_tt_log_prob),
+                    axis=-1,
+                )
                 - self.logZ
                 - jnp.interp(m1, mm, self._log_Z_q, left=0.0, right=0.0)
             )
+
+            safe_log_prob_val = jnp.where(
+                jnp.isnan(log_prob_val)
+                | (self.delta_m1 <= 0.0)
+                | (self.delta_m2 <= 0.0)
+                | jnp.isneginf(log_prob_val)
+                | (z < 0.0)
+                | (z > self.z_max),
+                -jnp.inf,
+                log_prob_val,
+            )
+
+            return safe_log_prob_val
 
     return _NSmoothingPowerlawMGaussian(
         N_pl=N_pl,
