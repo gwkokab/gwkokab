@@ -349,7 +349,7 @@ def NSmoothingPowerlawMGaussian(
             aa_log_prob = jnp.stack(aa_log_prob, axis=-1)
             tt_log_prob = jnp.stack(tt_log_prob, axis=-1)
 
-            logdVcdz = PLANCK_2015_Cosmology.logdVcdz(z)
+            logdVcdz = PLANCK_2015_Cosmology().logdVcdz(z)
             log_time_dilation = -jnp.log1p(z)
             log_differential_spacetime_volume_val = (
                 log_time_dilation + logdVcdz + self.kappa * jnp.log1p(z)
