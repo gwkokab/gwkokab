@@ -294,7 +294,9 @@ def NSmoothingPowerlawMGaussian(
             log_smoothing_q = log_planck_taper_window((m2 - self.m2min) / safe_delta)
             log_prob_q = self.beta * jnp.log(m2 / m1) + log_smoothing_q
             log_prob_q = jnp.where(
-                (delta_m2 <= 0.0) | (m2 < m2min), jnp.nan_to_num(-jnp.inf), log_prob_q
+                (self.delta_m2 <= 0.0) | (m2 < self.m2min) | (m2 > m1),
+                -jnp.inf,
+                log_prob_q,
             )
 
             aa_log_prob = []
