@@ -440,7 +440,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         )
 
         return jnp.where(
-            (self.delta_m1 <= 0.0) | (m1 < self.m1min),
+            ((self.delta_m1 <= 0.0) | (m1 < self.m1min))[..., jnp.newaxis],
             -jnp.inf,
             log_prob_m1_component,
         )
@@ -450,7 +450,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         log_smoothing_q = log_planck_taper_window((m1 * q - self.m2min) / safe_delta)
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
         return jnp.where(
-            (self.delta_m2 <= 0.0) | (m1 * q < self.m2min) | (m1 * q > m1),
+            ((self.delta_m2 <= 0.0) | (m1 * q < self.m2min) | (m1 * q > m1)),
             -jnp.inf,
             log_prob_q,
         )
