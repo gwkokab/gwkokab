@@ -369,7 +369,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         m1s = jnp.linspace(m1min, mmax, 1000)
         self._logZ = jnp.log(
             jnp.trapezoid(
-                jnp.exp(self._log_prob_m1_unnorm_component(m1s)).sum(axis=0),
+                jnp.exp(self._log_prob_m1_unnorm_component(m1s)).sum(axis=-1),
                 m1s,
                 axis=0,
             )
@@ -383,7 +383,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
 
         self._Z_q_given_m1 = jnp.trapezoid(_prob_q, _qs, axis=1)
 
-    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    @constraints.dependent_property(is_discrete=False, event_dim=-1)
     def support(self) -> constraints.Constraint:
         return self._support
 
@@ -421,7 +421,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             high=self.mmax,
         )
 
-        log_prob_m1_component = jnp.asarray(
+        log_prob_m1_component = jnp.stack(
             [
                 jnp.log(self.lambda_0)
                 + log_prob_bpl_1
@@ -435,7 +435,8 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
                 jnp.log1p(-(self.lambda_0 + self.lambda_1))
                 + log_prob_norm_1
                 + log_smoothing_m1,
-            ]
+            ],
+            axis=-1,
         )
 
         return jnp.where(
@@ -449,7 +450,9 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         log_smoothing_q = log_planck_taper_window((m1 * q - self.m2min) / safe_delta)
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
         return jnp.where(
-            (self.delta_m2 <= 0.0) | (m1 * q < self.m2min), -jnp.inf, log_prob_q
+            (self.delta_m2 <= 0.0) | (m1 * q < self.m2min) | (m1 * q > m1),
+            -jnp.inf,
+            log_prob_q,
         )
 
     def _log_prob_a1_components(self, a1: ArrayLike) -> ArrayLike:
@@ -481,7 +484,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             low=0.0,
             high=1.0,
         )
-        return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
+        return jnp.stack([comp_bpl1, comp_bpl2, comp_n1, comp_n2], axis=-1)
 
     def _log_prob_a2_components(self, a2: ArrayLike) -> ArrayLike:
         comp_bpl1 = truncnorm_logpdf(
@@ -512,7 +515,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             low=0.0,
             high=1.0,
         )
-        return jnp.asarray([comp_bpl1, comp_bpl2, comp_n1, comp_n2])
+        return jnp.stack([comp_bpl1, comp_bpl2, comp_n1, comp_n2], axis=-1)
 
     def _log_prob_t1_t2_components(self, t1: ArrayLike, t2: ArrayLike) -> ArrayLike:
         hyper_params = [
@@ -570,7 +573,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             comp_log_prob = jnp.logaddexp(comp_gaussian, comp_uniform)
             comp_log_probs.append(comp_log_prob)
 
-        return jnp.asarray(comp_log_probs)
+        return jnp.stack(comp_log_probs, axis=-1)
 
     @validate_sample
     def log_prob(self, value: Array) -> ArrayLike:
@@ -590,7 +593,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         log_prob_m1_a1_a2_t1_t2 = jax.nn.logsumexp(
             log_prob_m1_a1_a2_t1_t2_component,
             where=~jnp.isneginf(log_prob_m1_a1_a2_t1_t2_component),
-            axis=0,
+            axis=-1,
         )
 
         _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=1.0, right=1.0)
