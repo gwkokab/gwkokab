@@ -5,7 +5,6 @@
 from collections.abc import Callable, Sequence
 from typing import List, Optional, Tuple
 
-import equinox as eqx
 import h5py
 import jax
 import numpy as np
@@ -328,7 +327,6 @@ def poisson_mean_from_sensitivity_injections(
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
         return (analysis_time_years * jnp.exp(logsumexp_log_prob)) / total_injections
 
-    @eqx.filter_jit
     def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
         """See equation 9 and 11 of https://arxiv.org/abs/2406.16813."""
         model_log_prob = jax.lax.map(
