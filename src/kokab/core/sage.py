@@ -256,28 +256,25 @@ class Sage(Guru):
                 samples, batch_size=1000
             )
             n_batches = batched_samples.shape[0]
+            compute_variance_jit = jax.jit(jax.vmap(compute_variance))
             for i in tqdm.tqdm(
-                range(n_batches), desc="Computing variance of likelihood estimator"
+                range(n_batches + int(remainder_samples.shape[0] > 0)),
+                desc="Computing variance of likelihood estimator",
             ):
-                variance = jax.jit(jax.vmap(compute_variance))(batched_samples[i])
+                if i == n_batches:  # process remainder samples
+                    variance = jax.vmap(compute_variance)(remainder_samples)
+                else:  # process full batch
+                    variance = compute_variance_jit(batched_samples[i])
+
                 variance = np.nan_to_num(variance, nan=float("inf"))  # type: ignore
+
                 if mask is None:
                     mask = variance < self.variance_cut_threshold
                 else:
                     mask = np.concatenate(
                         (mask, variance < self.variance_cut_threshold), axis=0
                     )  # type: ignore
-                max_variance = max(max_variance, np.max(variance))  # type: ignore
-                min_variance = min(min_variance, np.min(variance))  # type: ignore
-            if remainder_samples.shape[0] > 0:
-                variance = jax.vmap(compute_variance)(remainder_samples)
-                variance = np.nan_to_num(variance, nan=float("inf"))  # type: ignore
-                if mask is None:
-                    mask = variance < self.variance_cut_threshold
-                else:
-                    mask = np.concatenate(
-                        (mask, variance < self.variance_cut_threshold), axis=0
-                    )  # type: ignore
+
                 max_variance = max(max_variance, np.max(variance))  # type: ignore
                 min_variance = min(min_variance, np.min(variance))  # type: ignore
             logger.info(
@@ -288,8 +285,9 @@ class Sage(Guru):
             assert mask is not None, "Mask should not be None here."
             n_removed = np.sum(~mask)
             logger.info(
-                "Removing {n_removed} samples with variance above the threshold of {threshold}.",
+                "Removing {n_removed} samples our of {total_samples} with variance above the threshold of {threshold}.",
                 n_removed=n_removed,
+                total_samples=samples.shape[0],
                 threshold=self.variance_cut_threshold,
             )
             np.savetxt(
