@@ -253,13 +253,13 @@ class Sage(Guru):
             min_variance = float("inf")
 
             batched_samples, remainder_samples = batch_and_remainder(
-                samples, batch_size=100
+                samples, batch_size=1000
             )
             n_batches = batched_samples.shape[0]
             for i in tqdm.tqdm(
                 range(n_batches), desc="Computing variance of likelihood estimator"
             ):
-                variance = jax.vmap(compute_variance)(batched_samples[i])
+                variance = jax.jit(jax.vmap(compute_variance))(batched_samples[i])
                 variance = np.nan_to_num(variance, nan=float("inf"))  # type: ignore
                 if mask is None:
                     mask = variance < self.variance_cut_threshold
