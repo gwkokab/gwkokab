@@ -43,6 +43,7 @@ installation
 FAQs
 cite
 examples
+adv_tutorials/index
 ```
 
 ```{toctree}
