@@ -29,7 +29,7 @@ help:
 	@echo "  install EXTRA=... - Install package"
 	@echo "  uninstall         - Remove package"
 	@echo "  cache_clean       - Clean pip and uv cache"
-	@echo "  docs		       - Generate documentation"
+	@echo "  docs		   - Generate documentation"
 
 install: uninstall
 	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(_PIP_FLAGS) $(_EXTRA)
