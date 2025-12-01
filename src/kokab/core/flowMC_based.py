@@ -180,6 +180,18 @@ class _HMC(ProposalBase):
 
         return position, log_prob, do_accept
 
+    def print_parameters(self):
+        print("HMC parameters:")
+        print(f"step_size: {self.step_size}")
+        print(f"n_leapfrog: {self.n_leapfrog}")
+        print(f"condition_matrix shape: {self.condition_matrix.shape}")
+
+    def save_resource(self, path):
+        raise NotImplementedError
+
+    def load_resource(self, path):
+        raise NotImplementedError
+
 
 # WARNING: do not change anything in this class
 
