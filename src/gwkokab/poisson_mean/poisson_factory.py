@@ -57,6 +57,7 @@ def get_selection_fn_and_poisson_mean_estimator(
             batch_size=batch_size,
             num_samples=kwargs.pop("num_samples", 1_000),
             time_scale=kwargs.pop("time_scale", 1.0),
+            proposal_dists=kwargs.pop("proposal_dists", None),
         )
     elif estimator_type == "neural_pdet":
         return _poisson_mean_from_neural_pdet(
@@ -66,6 +67,7 @@ def get_selection_fn_and_poisson_mean_estimator(
             batch_size=batch_size,
             num_samples=kwargs.pop("num_samples", 1_000),
             time_scale=kwargs.pop("time_scale", 1.0),
+            proposal_dists=kwargs.pop("proposal_dists", None),
         )
     elif estimator_type == "custom":
         error_if(
