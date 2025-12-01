@@ -52,7 +52,7 @@ _INFERENCE_DIRECTORY = "flowMC_" + INFERENCE_DIRECTORY
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-class HMC(ProposalBase):
+class _HMC(ProposalBase):
     """Hamiltonian Monte Carlo sampler class building the hmc_sampler method from target
     logpdf.
 
@@ -63,27 +63,18 @@ class HMC(ProposalBase):
     """
 
     condition_matrix: Float[Array, " n_dim n_dim"]
-    step_size: Float
+    step_size: float
     leapfrog_coefs: Float[Array, " n_leapfrog n_dim"]
 
     @property
-    def n_leapfrog(self) -> Int:
+    def n_leapfrog(self) -> int:
         return self.leapfrog_coefs.shape[0] - 2
-
-    def __repr__(self):
-        return (
-            "HMC with step size "
-            + str(self.step_size)
-            + " and "
-            + str(self.n_leapfrog)
-            + " leapfrog steps"
-        )
 
     def __init__(
         self,
         condition_matrix: Float[Array, " n_dim n_dim"],
-        step_size: Float = 0.1,
-        n_leapfrog: Int = 10,
+        step_size: float = 0.1,
+        n_leapfrog: int = 10,
     ):
         self.condition_matrix = condition_matrix
         self.step_size = step_size
@@ -103,12 +94,6 @@ class HMC(ProposalBase):
         position: Float[Array, " n_dim"],
         data: PyTree,
     ):
-        """Compute the value of the Hamiltonian from positions with initial momentum
-        draw at random from the standard normal distribution.
-        """
-
-        # CHANGED: Use Cholesky decomposition for multivariate normal sampling
-        # Momentum p ~ N(0, M) where M is condition_matrix
         L = jnp.linalg.cholesky(self.condition_matrix)
         momentum = L @ jax.random.normal(rng_key, shape=position.shape)
 
@@ -138,8 +123,7 @@ class HMC(ProposalBase):
         data: PyTree,
         metric: Float[Array, " n_dim n_dim"],
     ) -> tuple[Float[Array, " n_dim"], Float[Array, " n_dim"]]:
-        print("Compiling leapfrog step")
-        (position, momentum, data, metric, index), _ = jax.lax.scan(
+        (position, momentum, data, metric, _), _ = jax.lax.scan(
             leapfrog_kernel,
             (position, momentum, data, metric, 0),
             jnp.arange(self.n_leapfrog + 2),
@@ -154,13 +138,6 @@ class HMC(ProposalBase):
         logpdf: LogPDF | Callable[[Float[Array, " n_dim"], PyTree], Float[Array, "1"]],
         data: PyTree,
     ) -> tuple[Float[Array, " n_dim"], Float[Array, "1"], Int[Array, "1"]]:
-        """
-        Args:
-            rng_key (n_chains, 2): random key
-            position (n_chains,  n_dim): current position
-            PE (n_chains, ): Potential energy of the current position
-        """
-
         def potential(x: Float[Array, " n_dim"], data: PyTree) -> Float[Array, "1"]:
             return -logpdf(x, data)
 
@@ -202,18 +179,6 @@ class HMC(ProposalBase):
         log_prob = jnp.where(do_accept, -proposed_PE, log_prob)  # type: ignore
 
         return position, log_prob, do_accept
-
-    def print_parameters(self):
-        print("HMC parameters:")
-        print(f"step_size: {self.step_size}")
-        print(f"n_leapfrog: {self.n_leapfrog}")
-        print(f"condition_matrix shape: {self.condition_matrix.shape}")
-
-    def save_resource(self, path):
-        raise NotImplementedError
-
-    def load_resource(self, path):
-        raise NotImplementedError
 
 
 # WARNING: do not change anything in this class
@@ -303,7 +268,7 @@ class Local_Global_Sampler_Bundle(ResourceStrategyBundle):
         if local_sampler_name.strip().lower() == "mala":
             local_sampler = MALA(step_size=step_size)
         else:
-            local_sampler = HMC(
+            local_sampler = _HMC(
                 condition_matrix=condition_matrix,
                 step_size=step_size,
                 n_leapfrog=n_leapfrog,
@@ -1228,8 +1193,7 @@ class FlowMCBased(Guru):
         if isinstance(condition_matrix, float) or isinstance(condition_matrix, int):
             error_if(condition_matrix <= 0.0, msg="condition_matrix must be positive")
             condition_matrix = jnp.eye(n_dims) * float(condition_matrix)
-
-        if isinstance(condition_matrix, list):
+        elif isinstance(condition_matrix, list):
             condition_matrix = jnp.array(condition_matrix)
             error_if(
                 condition_matrix.ndim > 2, msg="condition_matrix must be 1D or 2D array"
@@ -1240,11 +1204,11 @@ class FlowMCBased(Guru):
                 msg=f"condition_matrix must be of shape ({n_dims}, {n_dims}) or ({n_dims},), got {_shape}",
             )
             if _shape == (n_dims,):
-                condition_matrix = jnp.diag(condition_matrix)
                 error_if(
-                    jnp.any(jnp.diag(condition_matrix) <= 0),
+                    jnp.any(condition_matrix <= 0),
                     msg="condition_matrix diagonal elements must be positive",
                 )
+                condition_matrix = jnp.diag(condition_matrix)
             else:
                 eigvals = jnp.linalg.eigvalsh(condition_matrix)
                 error_if(
