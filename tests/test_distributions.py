@@ -25,6 +25,7 @@ from scipy.sparse import csr_matrix
 
 from gwkokab.models import (
     BetaFromMeanVar,
+    BrokenPowerlaw,
     MadauDickinsonRedshift,
     NPowerlawMGaussian,
     PowerlawPrimaryMassRatio,
@@ -329,6 +330,22 @@ CONTINUOUS = [
     (MadauDickinsonRedshift, {"kappa": 0.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0}),
     (BetaFromMeanVar, {"mean": 0.4, "variance": 0.02}),
     (BetaFromMeanVar, {"mean": 0.5, "variance": 0.05}),
+    (
+        BrokenPowerlaw,
+        {"alpha1": -1.0, "alpha2": 2.0, "mbreak": 30.0, "mmin": 10.0, "mmax": 50.0},
+    ),
+    (
+        BrokenPowerlaw,
+        {"alpha1": 0.5, "alpha2": 3.5, "mbreak": 70.0, "mmin": 50.0, "mmax": 100.0},
+    ),
+    (
+        BrokenPowerlaw,
+        {"alpha1": -2.0, "alpha2": 1.0, "mbreak": 20.0, "mmin": 5.0, "mmax": 100.0},
+    ),
+    (
+        BrokenPowerlaw,
+        {"alpha1": 2.5, "alpha2": -0.5, "mbreak": 60.0, "mmin": 40.0, "mmax": 80.0},
+    ),
 ]
 
 
@@ -530,7 +547,7 @@ def gen_values_outside_bounds(constraint, size, key=jrd.PRNGKey(11)):
 @pytest.mark.parametrize("jax_dist_cls, params", CONTINUOUS)
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
 def test_dist_shape(jax_dist_cls, params, prepend_shape):
-    if jax_dist_cls.__name__ in ("PowerlawPeak",):
+    if jax_dist_cls.__name__ in ("PowerlawPeak", "BrokenPowerlaw"):
         pytest.skip(reason=f"{jax_dist_cls.__name__} does not provide sample method")
     if isinstance(jax_dist_cls, types.FunctionType):
         if jax_dist_cls.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
@@ -628,7 +645,7 @@ def test_jit_log_likelihood(jax_dist, params):
     ):
         pytest.xfail(reason="non-jittable params")
 
-    if jax_dist.__name__ in ("PowerlawPeak",):
+    if jax_dist.__name__ in ("PowerlawPeak", "BrokenPowerlaw"):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
@@ -678,7 +695,10 @@ def test_cdf_and_icdf(jax_dist, params):
     if d.event_dim > 0:
         pytest.skip("skip testing cdf/icdf methods of multivariate distributions")
     key1, key2 = jrd.split(jrd.PRNGKey(0))
-    samples = d.sample(key=key1, sample_shape=(100,))
+    try:
+        samples = d.sample(key=key1, sample_shape=(100,))
+    except NotImplementedError:
+        pytest.skip("sample method not implemented")
     quantiles = jrd.uniform(key2, (100,) + d.shape())
     try:
         atol = 1e-5
@@ -740,7 +760,7 @@ def test_gof(jax_dist, params):
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_log_prob_gradient(jax_dist, params):
-    if jax_dist.__name__ in ("PowerlawPeak",):
+    if jax_dist.__name__ in ("PowerlawPeak", "BrokenPowerlaw"):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
@@ -856,7 +876,7 @@ def test_distribution_constraints(jax_dist, params, prepend_shape):
 @pytest.mark.parametrize("prepend_shape", [(), (2,), (2, 3)])
 @pytest.mark.parametrize("sample_shape", [(), (4,)])
 def test_expand(jax_dist, params, prepend_shape, sample_shape):
-    if jax_dist.__name__ in ("PowerlawPeak",):
+    if jax_dist.__name__ in ("PowerlawPeak", "BrokenPowerlaw"):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
 
     if isinstance(jax_dist, types.FunctionType):

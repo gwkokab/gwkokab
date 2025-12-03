@@ -2,7 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from ._bp2p import BrokenPowerlawTwoPeak as BrokenPowerlawTwoPeak
+from ._bpls import (
+    BrokenPowerlaw as BrokenPowerlaw,
+    BrokenPowerlawTwoPeak as BrokenPowerlawTwoPeak,
+)
 from ._models import (
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
