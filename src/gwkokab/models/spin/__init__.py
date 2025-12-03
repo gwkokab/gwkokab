@@ -7,4 +7,5 @@ from ._models import (
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
     MinimumTiltModel as MinimumTiltModel,
+    MinimumTiltModelExtended as MinimumTiltModelExtended,
 )
