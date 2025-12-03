@@ -74,7 +74,7 @@ def _build_bpl_component_distributions(
     use_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> Tuple[List[JointDistribution], List[JointDistribution]]:
+) -> Tuple[List[Distribution], List[JointDistribution]]:
     mass_distributions = create_broken_powerlaws(
         N=N, params=params, validate_args=validate_args
     )
@@ -103,7 +103,7 @@ def _build_g_component_distributions(
     use_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> Tuple[List[JointDistribution], List[JointDistribution]]:
+) -> Tuple[List[Distribution], List[JointDistribution]]:
     mass_distributions = create_truncated_normal_distributions(
         N=N,
         parameter_name="m1",
