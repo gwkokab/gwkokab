@@ -291,7 +291,7 @@ def NBrokenPowerlawMGaussian(
 
     mass_dist_mixture = MixtureGeneral(
         CategoricalProbs(probs=lambdas, validate_args=validate_args),
-        [mass_dist],
+        mass_dist,
         support=mass_dist[0].support,
         validate_args=validate_args,
     )
