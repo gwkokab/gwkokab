@@ -18,11 +18,11 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from ...parameters import Parameters as P
 from ...utils.kernel import log_planck_taper_window
 from ..constraints import all_constraint, any_constraint
-from ..utils import JointDistribution, ScaledMixture
+from ..utils import JointDistribution
 from ._ncombination import (
     combine_distributions,
     create_broken_powerlaws,
-    create_independent_spin_orientation_gaussian_isotropic,
+    create_minimum_tilt_model,
     create_powerlaw_redshift,
     create_truncated_normal_distributions,
 )
@@ -44,7 +44,7 @@ def _build_non_mass_distributions(
         (use_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
         (use_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
         # combined tilt distribution
-        (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_independent_spin_orientation_gaussian_isotropic),
+        (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_minimum_tilt_model),
         (use_redshift, P.REDSHIFT.value, create_powerlaw_redshift),
 
     ]
@@ -134,16 +134,20 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         "beta": constraints.real,
         "delta_m1": constraints.positive,
         "delta_m2": constraints.positive,
+        "log_rate": constraints.real,
+        "logZ": constraints.real,
         "m1min": constraints.positive,
         "m2min": constraints.positive,
     }
     pytree_data_fields = (
-        "_support",
         "_log_Z_q",
         "_m1s",
+        "_support",
         "beta",
         "delta_m1",
         "delta_m2",
+        "log_rate",
+        "logZ",
         "m1min",
         "m2min",
         "rest_dist",
@@ -158,6 +162,8 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         m1max: ArrayLike,
         m1min: ArrayLike,
         m2min: ArrayLike,
+        log_rate: ArrayLike,
+        logZ: ArrayLike,
         *,
         validate_args: Optional[bool] = None,
     ):
@@ -168,12 +174,16 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
             self.delta_m2,
             self.m1min,
             self.m2min,
+            self.log_rate,
+            self.logZ,
         ) = promote_shapes(
             beta,
             delta_m1,
             delta_m2,
             m1min,
             m2min,
+            log_rate,
+            logZ,
         )
         batch_shape = jax.lax.broadcast_shapes(
             jnp.shape(beta),
@@ -185,7 +195,7 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         )
         n_dim_rest_dist = rest_dist.event_shape[0]
         self._support = all_constraint(
-            [rest_dist.support, constraints.interval(m2min, m1min)],
+            [rest_dist._support, constraints.interval(m2min, m1max)],
             [(0, n_dim_rest_dist), n_dim_rest_dist],
         )
         super(_SmoothedPowerlawMassRatioAndRest, self).__init__(
@@ -195,12 +205,12 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         )
 
         self._m1s = jnp.linspace(m1min, m1max, 1000)
-        m2s = jnp.linspace(m2min, m1min, 500)
-        m1s_grid, m2s_grid = jnp.meshgrid(self._m1s, m2s, indexing="ij")
+        qs = jnp.linspace(0.005, 1.0, 500)
+        m1s_grid, qs_grid = jnp.meshgrid(self._m1s, qs, indexing="ij")
 
-        log_prob_q_unnorm = self._log_prob_q_unnorm(m1s_grid, m2s_grid)
+        log_prob_q_unnorm = self._log_prob_q_unnorm(m1s_grid, qs_grid)
         prob_q_unnorm = jnp.exp(log_prob_q_unnorm)
-        _Z_q_given_m1 = jnp.trapezoid(prob_q_unnorm, m2s, axis=1)
+        _Z_q_given_m1 = jnp.trapezoid(prob_q_unnorm, qs, axis=1)
         safe_Z_q_given_m1 = jnp.where(_Z_q_given_m1 <= 0, 1.0, _Z_q_given_m1)
         self._log_Z_q = jnp.where(
             _Z_q_given_m1 <= 0, jnp.nan_to_num(-jnp.inf), jnp.log(safe_Z_q_given_m1)
@@ -210,12 +220,17 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
     def support(self) -> constraints.Constraint:
         return self._support
 
-    def _log_prob_q_unnorm(self, m1: Array, m2: Array) -> Array:
+    def _log_prob_q_unnorm(self, m1: Array, q: Array) -> Array:
+        m2 = m1 * q
         safe_delta = jnp.where(self.delta_m2 <= 0.0, 1.0, self.delta_m2)
-        log_smoothing_q = log_planck_taper_window((m2 - self.m2min) / safe_delta)
-        log_prob_q = self.beta * jnp.log(m2 / m1) + log_smoothing_q
+        log_smoothing_m2 = log_planck_taper_window((m2 - self.m2min) / safe_delta)
+        log_prob_q = self.beta * jnp.log(q) + log_smoothing_m2
         return jnp.where(
-            (self.delta_m2 <= 0.0) | (m2 < self.m2min) | (m2 > m1) | (m1 < self.m1min),
+            (self.delta_m2 <= 0.0)
+            | (m2 < self.m2min)
+            | (m2 > m1)
+            | jnp.isneginf(log_smoothing_m2)
+            | jnp.isneginf(log_prob_q),
             -jnp.inf,
             log_prob_q,
         )
@@ -226,17 +241,25 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         m2 = jax.lax.dynamic_index_in_dim(value, -1, axis=-1, keepdims=False)
         rest = jax.lax.dynamic_slice_in_dim(value, 0, value.shape[-1] - 1, axis=-1)
 
-        log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / self.delta_m1)
-        rest_log_prob = self.rest_dist.log_prob(rest) + log_smoothing_m1
+        safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
+        log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
+        rest_log_prob = jnp.where(
+            self.delta_m1 <= 0.0,
+            -jnp.inf,
+            self.rest_dist.log_prob(rest) + log_smoothing_m1 - self.logZ,
+        )
 
-        log_prob_q_unnorm = self._log_prob_q_unnorm(m1, m2)
+        log_prob_q_unnorm = self._log_prob_q_unnorm(m1, m2 / m1)
 
-        return (
-            -jnp.log(m1)  # Jacobian
+        log_prob_val = (
+            self.log_rate
+            - jnp.log(m1)  # Jacobian
             + rest_log_prob
             + log_prob_q_unnorm
             - jnp.interp(m1, self._m1s, self._log_Z_q, left=0.0, right=0.0)
         )
+
+        return jnp.where(jnp.isneginf(log_prob_val), -jnp.inf, log_prob_val)
 
 
 def NBrokenPowerlawMGaussian(
@@ -258,7 +281,7 @@ def NBrokenPowerlawMGaussian(
     m2min = params.pop("m2min")
 
     _lambdas = [params.pop(f"lambda_{i}") for i in range(N_bpl + N_g - 1)]
-    _lambdas.append(jnp.asarray(1.0) - sum(_lambdas, start=jnp.asarray(0.0)))
+    _lambdas.append(1.0 - sum(_lambdas))
     lambdas = jnp.stack(_lambdas, axis=-1)
 
     pl_component_dist: List[JointDistribution] = []
@@ -295,30 +318,28 @@ def NBrokenPowerlawMGaussian(
         component_dists = pl_component_dist + g_component_dist
         mass_dist = broken_powerlaws + mass_gaussians
 
+    mixing_distribution = CategoricalProbs(probs=lambdas, validate_args=validate_args)
     mass_dist_mixture = MixtureGeneral(
-        CategoricalProbs(probs=lambdas, validate_args=validate_args),
+        mixing_distribution,
         mass_dist,
-        support=any_constraint([mass_dist.support for mass_dist in mass_dist]),
+        support=constraints.interval(m1min, m1max),
         validate_args=validate_args,
     )
 
     mm = jnp.linspace(m1min, m1max, 1000)
-
-    Z = jnp.trapezoid(
-        jnp.exp(
-            mass_dist_mixture.log_prob(mm)
-            + log_planck_taper_window((mm - m1min) / delta_m1)
-        ),
-        mm,
-        axis=0,
+    safe_delta_m1 = jnp.where(delta_m1 <= 0.0, 1.0, delta_m1)
+    _log_prob_m1 = mass_dist_mixture.log_prob(mm) + log_planck_taper_window(
+        (mm - m1min) / safe_delta_m1
     )
+    _prob_m1 = jnp.where(delta_m1 <= 0.0, 0.0, jnp.exp(_log_prob_m1))
+    Z = jnp.trapezoid(_prob_m1, mm, axis=0)
     logZ = jnp.log(Z)
 
-    dist_m1_and_rest = ScaledMixture(
-        log_rate + jnp.log(lambdas) - logZ,
+    dist_m1_and_rest = MixtureGeneral(
+        mixing_distribution,
         component_dists,
         support=any_constraint(
-            [component_dist.support for component_dist in component_dists]
+            [component_dist._support for component_dist in component_dists]
         ),
         validate_args=validate_args,
     )
@@ -331,5 +352,7 @@ def NBrokenPowerlawMGaussian(
         m1max=m1max,
         m1min=m1min,
         m2min=m2min,
+        log_rate=log_rate,
+        logZ=logZ,
         validate_args=validate_args,
     )

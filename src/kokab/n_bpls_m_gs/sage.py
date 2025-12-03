@@ -144,10 +144,18 @@ class NBrokenPowerlawMGaussianCore(Sage):
                 [
                     ("cos_tilt_zeta_g", self.N_g),
                     ("cos_tilt_zeta_bpl", self.N_bpl),
-                    (P.COS_TILT_1.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_1.value + "_loc_bpl", self.N_bpl),
+                    (P.COS_TILT_1.value + "_loc_g", self.N_g),
+                    (P.COS_TILT_1.value + "_minimum_bpl", self.N_bpl),
+                    (P.COS_TILT_1.value + "_minimum_g", self.N_g),
                     (P.COS_TILT_1.value + "_scale_bpl", self.N_bpl),
-                    (P.COS_TILT_2.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_1.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_2.value + "_loc_bpl", self.N_bpl),
+                    (P.COS_TILT_2.value + "_loc_g", self.N_g),
+                    (P.COS_TILT_2.value + "_minimum_bpl", self.N_bpl),
+                    (P.COS_TILT_2.value + "_minimum_g", self.N_g),
                     (P.COS_TILT_2.value + "_scale_bpl", self.N_bpl),
+                    (P.COS_TILT_2.value + "_scale_g", self.N_g),
                 ]
             )
 
