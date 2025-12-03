@@ -138,6 +138,7 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         "m2min": constraints.positive,
     }
     pytree_data_fields = (
+        "_support",
         "_log_Z_q",
         "_m1s",
         "beta",
@@ -182,13 +183,14 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
             jnp.shape(m2min),
             rest_dist.batch_shape,
         )
+        n_dim_rest_dist = rest_dist.event_shape[0]
         self._support = all_constraint(
             [rest_dist.support, constraints.interval(m2min, m1min)],
-            [(0, len(rest_dist.event_shape)), len(rest_dist.event_shape)],
+            [(0, n_dim_rest_dist), n_dim_rest_dist],
         )
         super(_SmoothedPowerlawMassRatioAndRest, self).__init__(
             batch_shape=batch_shape,
-            event_shape=(rest_dist.event_shape[0] + 1,),
+            event_shape=(n_dim_rest_dist + 1,),
             validate_args=validate_args,
         )
 
@@ -204,7 +206,7 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
             _Z_q_given_m1 <= 0, jnp.nan_to_num(-jnp.inf), jnp.log(safe_Z_q_given_m1)
         )
 
-    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
         return self._support
 
@@ -312,7 +314,7 @@ def NBrokenPowerlawMGaussian(
         log_rate + jnp.log(lambdas) - logZ,
         component_dists,
         support=any_constraint(
-            [component_dists.support for component_dists in component_dists]
+            [component_dist.support for component_dist in component_dists]
         ),
         validate_args=validate_args,
     )
