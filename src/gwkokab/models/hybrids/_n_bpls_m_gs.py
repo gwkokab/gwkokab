@@ -85,7 +85,7 @@ def _build_bpl_component_distributions(
     build_distributions = _build_non_mass_distributions(
         N=N,
         component_type="bpl",
-        mass_distributions=mass_distributions,
+        mass_distributions=[[d] for d in mass_distributions],
         params=params,
         use_spin_magnitude=use_spin_magnitude,
         use_tilt=use_tilt,
@@ -118,7 +118,7 @@ def _build_g_component_distributions(
     build_distributions = _build_non_mass_distributions(
         N=N,
         component_type="g",
-        mass_distributions=mass_distributions,
+        mass_distributions=[[d] for d in mass_distributions],
         use_spin_magnitude=use_spin_magnitude,
         use_tilt=use_tilt,
         use_redshift=use_redshift,
