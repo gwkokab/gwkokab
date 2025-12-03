@@ -13,7 +13,7 @@ from numpyro.distributions import (
     Uniform,
 )
 
-from ..mass import PowerlawPrimaryMassRatio
+from ..mass import BrokenPowerlaw, PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
@@ -23,6 +23,7 @@ from ..utils import ExtendedSupportTransformedDistribution
 __all__ = [
     "combine_distributions",
     "create_beta_distributions",
+    "create_broken_powerlaws",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_redshift",
     "create_powerlaws",
@@ -458,3 +459,68 @@ def create_uniform_distributions(
         )
 
     return uniform_collection
+
+
+def create_broken_powerlaws(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of Distribution for broken powerlaws.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of Distribution for broken powerlaws
+
+    Raises
+    ------
+    ValueError
+        if alpha, beta, mmin, or mmax is missing
+    """
+    broken_powerlaws_collection = []
+    alpha1_name = "alpha1_bpl"
+    alpha2_name = "alpha2_bpl"
+    mbreak_name = "m1break_bpl"
+    mmax_name = "m1max_bpl"
+    mmin_name = "m1min_bpl"
+    for i in range(N):
+        alpha1 = _fetch_first_matching_value(params, f"{alpha1_name}_{i}", alpha1_name)
+        if alpha1 is None:
+            raise ValueError(f"Missing parameter {alpha1_name}_{i}")
+        alpha2 = _fetch_first_matching_value(params, f"{alpha2_name}_{i}", alpha2_name)
+        if alpha2 is None:
+            raise ValueError(f"Missing parameter {alpha2_name}_{i}")
+
+        mbreak = _fetch_first_matching_value(params, f"{mbreak_name}_{i}", mbreak_name)
+        if mbreak is None:
+            raise ValueError(f"Missing parameter {mbreak_name}_{i}")
+
+        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
+        if mmin is None:
+            raise ValueError(f"Missing parameter {mmin_name}_{i}")
+
+        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
+        if mmax is None:
+            raise ValueError(f"Missing parameter {mmax_name}_{i}")
+
+        broken_powerlaw = BrokenPowerlaw(
+            alpha1=alpha1,
+            alpha2=alpha2,
+            mbreak=mbreak,
+            mmax=mmax,
+            mmin=mmin,
+            validate_args=validate_args,
+        )
+
+        broken_powerlaws_collection.append(broken_powerlaw)
+    return broken_powerlaws_collection

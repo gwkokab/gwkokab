@@ -25,6 +25,9 @@ class NBrokenPowerlawMGaussianCore(Sage):
         self,
         N_bpl: int,
         N_g: int,
+        use_spin_magnitude: bool,
+        use_tilt: bool,
+        use_redshift: bool,
         likelihood_fn: Callable[
             [
                 Callable[..., DistributionLike],
@@ -53,6 +56,9 @@ class NBrokenPowerlawMGaussianCore(Sage):
     ) -> None:
         self.N_bpl = N_bpl
         self.N_g = N_g
+        self.use_spin_magnitude = use_spin_magnitude
+        self.use_tilt = use_tilt
+        self.use_redshift = use_redshift
 
         super().__init__(
             likelihood_fn=likelihood_fn,
@@ -75,77 +81,98 @@ class NBrokenPowerlawMGaussianCore(Sage):
 
     @property
     def constants(self) -> Dict[str, Union[int, float, bool]]:
-        return {"N_bpl": self.N_bpl, "N_g": self.N_g}
+        return {
+            "N_bpl": self.N_bpl,
+            "N_g": self.N_g,
+            "use_spin_magnitude": self.use_spin_magnitude,
+            "use_tilt": self.use_tilt,
+            "use_redshift": self.use_redshift,
+        }
 
     @property
     def parameters(self) -> List[str]:
-        names = [
-            P.PRIMARY_MASS_SOURCE.value,
-            P.SECONDARY_MASS_SOURCE.value,
-            P.PRIMARY_SPIN_MAGNITUDE.value,
-            P.SECONDARY_SPIN_MAGNITUDE.value,
-            P.COS_TILT_1.value,
-            P.COS_TILT_2.value,
-            P.REDSHIFT.value,
-        ]
-
+        names = [P.PRIMARY_MASS_SOURCE.value]
+        if self.use_spin_magnitude:
+            names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
+            names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
+        if self.use_tilt:
+            names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
+        if self.use_redshift:
+            names.append(P.REDSHIFT.value)
+        names.append(P.SECONDARY_MASS_SOURCE.value)
         return names
 
     @property
     def model_parameters(self) -> List[str]:
         all_params: List[Tuple[str, int]] = [
-            ("a1_loc_bpl", self.N_bpl),
-            ("a1_loc_g", self.N_g),
-            ("a1_scale_bpl", self.N_bpl),
-            ("a1_scale_g", self.N_g),
-            ("a2_loc_bpl", self.N_bpl),
-            ("a2_loc_g", self.N_g),
-            ("a2_scale_bpl", self.N_bpl),
-            ("a2_scale_g", self.N_g),
             ("alpha1_bpl", self.N_bpl),
             ("alpha2_bpl", self.N_bpl),
-            ("lambda", self.N_g + self.N_bpl - 1),
-            ("loc_g", self.N_g),
+            ("lambda", self.N_bpl + self.N_g - 1),
+            ("m1_high_g", self.N_g),
+            ("m1_loc_g", self.N_g),
+            ("m1_low_g", self.N_g),
+            ("m1_scale_g", self.N_g),
             ("m1break_bpl", self.N_bpl),
             ("m1max_bpl", self.N_bpl),
-            ("m1max_g", self.N_g),
             ("m1min_bpl", self.N_bpl),
-            ("m1min_g", self.N_g),
-            ("scale_g", self.N_g),
-            ("t1_loc_bpl", self.N_bpl),
-            ("t1_loc_g", self.N_g),
-            ("t1_scale_bpl", self.N_bpl),
-            ("t1_scale_g", self.N_g),
-            ("t2_loc_bpl", self.N_bpl),
-            ("t2_loc_g", self.N_g),
-            ("t2_scale_bpl", self.N_bpl),
-            ("t2_scale_g", self.N_g),
-            ("zeta_bpl", self.N_bpl),
-            ("zeta_g", self.N_g),
         ]
+
+        if self.use_spin_magnitude:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_bpl", self.N_bpl),
+                ]
+            )
+
+        if self.use_tilt:
+            all_params.extend(
+                [
+                    ("cos_tilt_zeta_g", self.N_g),
+                    ("cos_tilt_zeta_bpl", self.N_bpl),
+                    (P.COS_TILT_1.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_1.value + "_scale_bpl", self.N_bpl),
+                    (P.COS_TILT_2.value + "_scale_g", self.N_g),
+                    (P.COS_TILT_2.value + "_scale_bpl", self.N_bpl),
+                ]
+            )
+
+        if self.use_redshift:
+            all_params.extend(
+                [
+                    (P.REDSHIFT.value + "_kappa_g", self.N_g),
+                    (P.REDSHIFT.value + "_kappa_bpl", self.N_bpl),
+                    (P.REDSHIFT.value + "_z_max_g", self.N_g),
+                    (P.REDSHIFT.value + "_z_max_bpl", self.N_bpl),
+                ]
+            )
 
         extended_params = [
             "beta",
             "delta_m1",
             "delta_m2",
-            "kappa",
             "log_rate",
             "m1max",
             "m1min",
             "m2min",
-            "z_max",
         ]
         for params in all_params:
             extended_params.extend(expand_arguments(*params))
         return extended_params
-
-
-class NBrokenPowerlawMGaussianFSage(NBrokenPowerlawMGaussianCore, FlowMCBased):
-    pass
-
-
-class NBrokenPowerlawMGaussianNSage(NBrokenPowerlawMGaussianCore, NumpyroBased):
-    pass
 
 
 def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
@@ -153,12 +180,28 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     model_group.add_argument(
         "--n-bpl",
         type=int,
-        help="Number of Broken Powerlaw components in the mass model.",
+        help="Number of broken power-law components in the mass model.",
     )
     model_group.add_argument(
         "--n-g",
         type=int,
         help="Number of Gaussian components in the mass model.",
+    )
+
+    model_group.add_argument(
+        "--add-spin-magnitude",
+        action="store_true",
+        help="Include spin magnitude parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-tilt",
+        action="store_true",
+        help="Include tilt parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-redshift",
+        action="store_true",
+        help="Include redshift parameter in the model",
     )
 
     return parser
@@ -176,9 +219,15 @@ def f_main() -> None:
 
     log_info(start=True)
 
+    class NBrokenPowerlawMGaussianFSage(NBrokenPowerlawMGaussianCore, FlowMCBased):
+        pass
+
     NBrokenPowerlawMGaussianFSage(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
+        use_spin_magnitude=args.add_spin_magnitude,
+        use_tilt=args.add_tilt,
+        use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,
@@ -205,9 +254,15 @@ def n_main() -> None:
 
     log_info(start=True)
 
+    class NBrokenPowerlawMGaussianNSage(NBrokenPowerlawMGaussianCore, NumpyroBased):
+        pass
+
     NBrokenPowerlawMGaussianNSage(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
+        use_spin_magnitude=args.add_spin_magnitude,
+        use_tilt=args.add_tilt,
+        use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
         posterior_regex=args.posterior_regex,
         posterior_columns=args.posterior_columns,

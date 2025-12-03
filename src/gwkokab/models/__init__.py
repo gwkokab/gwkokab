@@ -21,6 +21,7 @@ from .hybrids import (
     PowerlawPeak as PowerlawPeak,
 )
 from .mass import (
+    BrokenPowerlaw as BrokenPowerlaw,
     BrokenPowerlawTwoPeak as BrokenPowerlawTwoPeak,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
