@@ -233,7 +233,8 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         log_prob_q_unnorm = self._log_prob_q_unnorm(m1, m2)
 
         return (
-            rest_log_prob
+            -jnp.log(m1)  # Jacobian
+            + rest_log_prob
             + log_prob_q_unnorm
             - jnp.interp(m1, self._m1s, self._log_Z_q, left=0.0, right=0.0)
         )
