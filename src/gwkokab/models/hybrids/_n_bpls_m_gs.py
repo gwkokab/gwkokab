@@ -310,7 +310,7 @@ def NBrokenPowerlawMGaussian(
     logZ = jnp.log(Z)
 
     dist_m1_and_rest = ScaledMixture(
-        log_rate + lambdas - logZ,
+        log_rate + jnp.log(lambdas) - logZ,
         component_dists,
         support=any_constraint(
             [component_dists.support for component_dists in component_dists]
