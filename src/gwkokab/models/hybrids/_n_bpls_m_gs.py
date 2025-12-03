@@ -199,8 +199,8 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         m1s_grid, m2s_grid = jnp.meshgrid(self._m1s, m2s, indexing="ij")
 
         log_prob_q_unnorm = self._log_prob_q_unnorm(m1s_grid, m2s_grid)
-        prob_q = jnp.exp(log_prob_q_unnorm)
-        _Z_q_given_m1 = jnp.trapezoid(prob_q, m2s, axis=1)
+        prob_q_unnorm = jnp.exp(log_prob_q_unnorm)
+        _Z_q_given_m1 = jnp.trapezoid(prob_q_unnorm, m2s, axis=1)
         safe_Z_q_given_m1 = jnp.where(_Z_q_given_m1 <= 0, 1.0, _Z_q_given_m1)
         self._log_Z_q = jnp.where(
             _Z_q_given_m1 <= 0, jnp.nan_to_num(-jnp.inf), jnp.log(safe_Z_q_given_m1)
@@ -261,6 +261,8 @@ def NBrokenPowerlawMGaussian(
     _lambdas.append(jnp.asarray(1.0) - sum(_lambdas, start=jnp.asarray(0.0)))
     lambdas = jnp.stack(_lambdas, axis=-1)
 
+    pl_component_dist: List[JointDistribution] = []
+    broken_powerlaws: List[JointDistribution] = []
     if N_bpl > 0:
         broken_powerlaws, pl_component_dist = _build_bpl_component_distributions(
             N=N_bpl,
@@ -271,6 +273,8 @@ def NBrokenPowerlawMGaussian(
             validate_args=validate_args,
         )
 
+    g_component_dist: List[JointDistribution] = []
+    mass_gaussians: List[JointDistribution] = []
     if N_g > 0:
         mass_gaussians, g_component_dist = _build_g_component_distributions(
             N=N_g,
