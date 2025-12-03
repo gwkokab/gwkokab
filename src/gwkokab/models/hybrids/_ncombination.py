@@ -485,7 +485,7 @@ def create_broken_powerlaws(
     Raises
     ------
     ValueError
-        if alpha, beta, mmin, or mmax is missing
+        if alpha1, alpha2, mbreak, mmin, or mmax is missing
     """
     broken_powerlaws_collection = []
     alpha1_name = "alpha1_bpl"
