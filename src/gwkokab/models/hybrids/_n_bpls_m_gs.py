@@ -43,9 +43,6 @@ def _build_non_mass_distributions(
     _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
         (use_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
         (use_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
-        (use_spin_magnitude, P.SECONDARY_SPIN_Y.value, create_truncated_normal_distributions),
-        (use_spin_magnitude, P.PRIMARY_SPIN_Z.value, create_truncated_normal_distributions),
-        (use_spin_magnitude, P.SECONDARY_SPIN_Z.value, create_truncated_normal_distributions),
         # combined tilt distribution
         (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_independent_spin_orientation_gaussian_isotropic),
         (use_redshift, P.REDSHIFT.value, create_powerlaw_redshift),
