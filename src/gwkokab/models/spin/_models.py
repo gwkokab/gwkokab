@@ -239,3 +239,75 @@ def MinimumTiltModel(
         support=constraints.independent(constraints.interval(minimum, 1.0), batch_dim),
         validate_args=validate_args,
     )
+
+
+def MinimumTiltModelExtended(
+    zeta: ArrayLike,
+    loc1: ArrayLike,
+    loc2: ArrayLike,
+    scale1: ArrayLike,
+    scale2: ArrayLike,
+    minimum1: ArrayLike = -1.0,
+    minimum2: ArrayLike = -1.0,
+    *,
+    validate_args: Optional[bool] = None,
+) -> MixtureGeneral:
+    """A mixture model of spin orientations with isotropic and normally distributed
+    components, with a minimum tilt constraint for each spin.
+
+    Parameters
+    ----------
+    zeta : ArrayLike
+        Weight of the Gaussian component.
+    loc1 : ArrayLike
+        Location parameter of the first Gaussian component.
+    loc2 : ArrayLike
+        Location parameter of the second Gaussian component.
+    scale1 : ArrayLike
+        Scale parameter of the first Gaussian component.
+    scale2 : ArrayLike
+        Scale parameter of the second Gaussian component.
+    minimum1 : ArrayLike, optional
+        Minimum cosine tilt angle of the first component, by default -1.0
+    minimum2 : ArrayLike, optional
+        Minimum cosine tilt angle of the second component, by default -1.0
+    validate_args : Optional[bool], optional
+        Whether to validate the arguments, by default None
+
+    Returns
+    -------
+    MixtureGeneral
+        Mixture model of spin orientations with minimum tilt constraints for each spin.
+    """
+    mixing_probs = jnp.stack([1.0 - zeta, zeta], axis=-1)
+    low = jnp.stack([minimum1, minimum2], axis=-1)
+    high = jnp.ones((2,))
+    batch_dim = 1
+    isotropic_component = Independent(
+        Uniform(
+            low=low,
+            high=high,
+            validate_args=validate_args,
+        ),
+        batch_dim,
+        validate_args=validate_args,
+    )
+    gaussian_component = Independent(
+        TruncatedNormal(
+            loc=jnp.stack([loc1, loc2], axis=-1),
+            scale=jnp.stack([scale1, scale2], axis=-1),
+            low=low,
+            high=high,
+            validate_args=validate_args,
+        ),
+        batch_dim,
+        validate_args=validate_args,
+    )
+    return MixtureGeneral(
+        mixing_distribution=CategoricalProbs(
+            probs=mixing_probs, validate_args=validate_args
+        ),
+        component_distributions=[isotropic_component, gaussian_component],
+        support=constraints.independent(constraints.interval(low, 1.0), batch_dim),
+        validate_args=validate_args,
+    )

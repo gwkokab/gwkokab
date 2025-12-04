@@ -4,6 +4,7 @@
 
 from typing import Dict, List, Literal, Optional, TypeVar
 
+from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
@@ -13,9 +14,13 @@ from numpyro.distributions import (
     Uniform,
 )
 
-from ..mass import PowerlawPrimaryMassRatio
+from ..mass import BrokenPowerlaw, PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
-from ..spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
+from ..spin import (
+    BetaFromMeanVar,
+    IndependentSpinOrientationGaussianIsotropic,
+    MinimumTiltModelExtended,
+)
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import ExtendedSupportTransformedDistribution
 
@@ -23,6 +28,7 @@ from ..utils import ExtendedSupportTransformedDistribution
 __all__ = [
     "combine_distributions",
     "create_beta_distributions",
+    "create_broken_powerlaws",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_redshift",
     "create_powerlaws",
@@ -458,3 +464,158 @@ def create_uniform_distributions(
         )
 
     return uniform_collection
+
+
+def create_broken_powerlaws(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of Distribution for broken powerlaws.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of Distribution for broken powerlaws
+
+    Raises
+    ------
+    ValueError
+        if alpha1, alpha2, mbreak, mmin, or mmax is missing
+    """
+    broken_powerlaws_collection = []
+    alpha1_name = "alpha1_bpl"
+    alpha2_name = "alpha2_bpl"
+    mbreak_name = "m1break_bpl"
+    mmax_name = "m1max_bpl"
+    mmin_name = "m1min_bpl"
+    for i in range(N):
+        alpha1 = _fetch_first_matching_value(params, f"{alpha1_name}_{i}", alpha1_name)
+        if alpha1 is None:
+            raise ValueError(f"Missing parameter {alpha1_name}_{i}")
+        alpha2 = _fetch_first_matching_value(params, f"{alpha2_name}_{i}", alpha2_name)
+        if alpha2 is None:
+            raise ValueError(f"Missing parameter {alpha2_name}_{i}")
+
+        mbreak = _fetch_first_matching_value(params, f"{mbreak_name}_{i}", mbreak_name)
+        if mbreak is None:
+            raise ValueError(f"Missing parameter {mbreak_name}_{i}")
+
+        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
+        if mmin is None:
+            raise ValueError(f"Missing parameter {mmin_name}_{i}")
+
+        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
+        if mmax is None:
+            raise ValueError(f"Missing parameter {mmax_name}_{i}")
+
+        broken_powerlaw = BrokenPowerlaw(
+            alpha1=alpha1,
+            alpha2=alpha2,
+            mbreak=mbreak,
+            mmax=mmax,
+            mmin=mmin,
+            validate_args=validate_args,
+        )
+
+        broken_powerlaws_collection.append(broken_powerlaw)
+    return broken_powerlaws_collection
+
+
+def create_minimum_tilt_model(
+    N: int,
+    parameter_name: Literal["cos_tilt_1", "cos_tilt_2"],
+    component_type: Literal["pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[MixtureGeneral]:
+    """Create a list of :func:`MinimumTiltModelExtended` distributions for tilt.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[&quot;cos_tilt_1&quot;, &quot;cos_tilt_2&quot;]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        list of :func:`MinimumTiltModelExtended` distributions
+
+    Raises
+    ------
+    ValueError
+        if zeta, loc1, loc2, scale1, or scale2 is missing
+    """
+    dist_collection = []
+    zeta_name = f"cos_tilt_zeta_{component_type}"
+    loc1_name = f"cos_tilt_1_loc_{component_type}"
+    loc2_name = f"cos_tilt_2_loc_{component_type}"
+    scale1_name = f"cos_tilt_1_scale_{component_type}"
+    scale2_name = f"cos_tilt_2_scale_{component_type}"
+    minimum1_name = f"cos_tilt_1_minimum_{component_type}"
+    minimum2_name = f"cos_tilt_2_minimum_{component_type}"
+
+    for i in range(N):
+        zeta = _fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
+        if zeta is None:
+            raise ValueError(f"Missing parameter {zeta_name}_{i}")
+
+        loc1 = _fetch_first_matching_value(params, f"{loc1_name}_{i}", loc1_name)
+        if loc1 is None:
+            raise ValueError(f"Missing parameter {loc1_name}_{i}")
+
+        loc2 = _fetch_first_matching_value(params, f"{loc2_name}_{i}", loc2_name)
+        if loc2 is None:
+            raise ValueError(f"Missing parameter {loc2_name}_{i}")
+
+        scale1 = _fetch_first_matching_value(params, f"{scale1_name}_{i}", scale1_name)
+        if scale1 is None:
+            raise ValueError(f"Missing parameter {scale1_name}_{i}")
+
+        scale2 = _fetch_first_matching_value(params, f"{scale2_name}_{i}", scale2_name)
+        if scale2 is None:
+            raise ValueError(f"Missing parameter {scale2_name}_{i}")
+
+        minimum1 = _fetch_first_matching_value(
+            params, f"{minimum1_name}_{i}", minimum1_name
+        )
+        if minimum1 is None:
+            minimum1 = jnp.asarray(-1.0)
+
+        minimum2 = _fetch_first_matching_value(
+            params, f"{minimum2_name}_{i}", minimum2_name
+        )
+        if minimum2 is None:
+            minimum2 = jnp.asarray(-1.0)
+
+        dist_collection.append(
+            MinimumTiltModelExtended(
+                zeta=zeta,
+                loc1=loc1,
+                loc2=loc2,
+                scale1=scale1,
+                scale2=scale2,
+                minimum1=minimum1,
+                minimum2=minimum2,
+                validate_args=validate_args,
+            )
+        )
+
+    return dist_collection

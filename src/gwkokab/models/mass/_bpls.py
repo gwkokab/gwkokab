@@ -52,6 +52,52 @@ def _broken_powerlaw_log_prob(
     return log_prob - log_norm
 
 
+class BrokenPowerlaw(Distribution):
+    arg_constraints = {
+        "alpha1": constraints.real,
+        "alpha2": constraints.real,
+        "mbreak": constraints.positive,
+        "mmax": constraints.positive,
+        "mmin": constraints.positive,
+    }
+    pytree_data_fields = ("_support", "alpha1", "alpha2", "mbreak", "mmax", "mmin")
+
+    def __init__(
+        self,
+        alpha1: ArrayLike,
+        alpha2: ArrayLike,
+        mbreak: ArrayLike,
+        mmax: ArrayLike,
+        mmin: ArrayLike,
+        validate_args: Optional[bool] = None,
+    ) -> None:
+        (self.alpha1, self.alpha2, self.mbreak, self.mmax, self.mmin) = promote_shapes(
+            alpha1, alpha2, mbreak, mmax, mmin
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(alpha1),
+            jnp.shape(alpha2),
+            jnp.shape(mbreak),
+            jnp.shape(mmax),
+            jnp.shape(mmin),
+        )
+
+        self._support = constraints.interval(mmin, mmax)
+        super(BrokenPowerlaw, self).__init__(
+            batch_shape=batch_shape, validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value: ArrayLike) -> ArrayLike:
+        return _broken_powerlaw_log_prob(
+            value, self.alpha1, self.alpha2, self.mmin, self.mmax, self.mbreak
+        )
+
+
 class BrokenPowerlawTwoPeak(Distribution):
     r"""Broken Powerlaw + 2 Peak is defined as a mixture of one Broken Powerlaw and two
     left truncated Normal distributions. For more details, see appendix B.3 of
