@@ -253,7 +253,7 @@ class Sage(Guru):
             min_variance = float("inf")
 
             batched_samples, remainder_samples = batch_and_remainder(
-                samples, batch_size=1000
+                samples, batch_size=500
             )
             n_batches = batched_samples.shape[0]
             compute_variance_jit = jax.jit(jax.vmap(compute_variance))
@@ -261,11 +261,11 @@ class Sage(Guru):
                 range(n_batches + int(remainder_samples.shape[0] > 0)),
                 desc="Computing variance of likelihood estimator",
             ):
-                if i == n_batches:  # process remainder samples
-                    variance = jax.vmap(compute_variance)(remainder_samples)
-                else:  # process full batch
-                    variance = compute_variance_jit(batched_samples[i])
+                batch_sample = (
+                    remainder_samples if i == n_batches else batched_samples[i]
+                )
 
+                variance = jax.device_get(compute_variance_jit(batch_sample))
                 variance = np.nan_to_num(variance, nan=float("inf"))  # type: ignore
 
                 if mask is None:
@@ -283,10 +283,10 @@ class Sage(Guru):
                 max_variance=max_variance,
             )
             assert mask is not None, "Mask should not be None here."
-            n_removed = np.sum(~mask)
+            n_saved = np.sum(mask)
             logger.info(
-                "Removing {n_removed} samples our of {total_samples} with variance above the threshold of {threshold}.",
-                n_removed=n_removed,
+                "{n_saved} samples filtered out of {total_samples} with variance above the threshold of {threshold}.",
+                n_saved=n_saved,
                 total_samples=samples.shape[0],
                 threshold=self.variance_cut_threshold,
             )
