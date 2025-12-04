@@ -119,7 +119,6 @@ gwk_hist_overplot = "cli_gwkokab.hist_overplot:main"
 gwk_joint_plot = "cli_gwkokab.joint_plot:main"
 gwk_ppd_plot = "cli_gwkokab.ppd_plot:main"
 gwk_r_hat_plot = "cli_gwkokab.r_hat_plot:main"
-gwk_samples_from_vt = "cli_gwkokab.samples_from_vt:main"
 gwk_scatter2d = "cli_gwkokab.scatter2d:main"
 gwk_scatter3d = "cli_gwkokab.scatter3d:main"
 # Kokab scripts
