@@ -119,7 +119,6 @@ gwk_hist_overplot = "cli_gwkokab.hist_overplot:main"
 gwk_joint_plot = "cli_gwkokab.joint_plot:main"
 gwk_ppd_plot = "cli_gwkokab.ppd_plot:main"
 gwk_r_hat_plot = "cli_gwkokab.r_hat_plot:main"
-gwk_samples_from_vt = "cli_gwkokab.samples_from_vt:main"
 gwk_scatter2d = "cli_gwkokab.scatter2d:main"
 gwk_scatter3d = "cli_gwkokab.scatter3d:main"
 # Kokab scripts
@@ -150,6 +149,9 @@ ppd_ecc_matters = "kokab.ecc_matters.ppd:main"
 ppd_n_pls_m_gs = "kokab.n_pls_m_gs.ppd:main"
 ppd_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.ppd:main"
 ppd_bp2p = "kokab.bp2p.ppd:main"
+# These scripts are for developer/user experience.
+gwk_diag_mass_matrix = "scripts.gwk_diag_mass_matrix:main"
+
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]
