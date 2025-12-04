@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Callable, Dict, List, Literal, Optional, Tuple
+from typing import Callable, Dict, Final, List, Literal, Optional, Tuple
 
 import jax
 from jax import numpy as jnp
@@ -26,6 +26,10 @@ from ._ncombination import (
     create_powerlaw_redshift,
     create_truncated_normal_distributions,
 )
+
+
+_M1_GRID_SIZE: Final[int] = 1000
+_Q_GRID_SIZE: Final[int] = 500
 
 
 def _build_non_mass_distributions(
@@ -204,8 +208,8 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
             validate_args=validate_args,
         )
 
-        self._m1s = jnp.linspace(m1min, m1max, 1000)
-        qs = jnp.linspace(0.005, 1.0, 500)
+        self._m1s = jnp.linspace(m1min, m1max, _M1_GRID_SIZE)
+        qs = jnp.linspace(0.005, 1.0, _Q_GRID_SIZE)
         m1s_grid, qs_grid = jnp.meshgrid(self._m1s, qs, indexing="ij")
 
         log_prob_q_unnorm = self._log_prob_q_unnorm(m1s_grid, qs_grid)
@@ -326,7 +330,7 @@ def NBrokenPowerlawMGaussian(
         validate_args=validate_args,
     )
 
-    mm = jnp.linspace(m1min, m1max, 1000)
+    mm = jnp.linspace(m1min, m1max, _M1_GRID_SIZE)
     safe_delta_m1 = jnp.where(delta_m1 <= 0.0, 1.0, delta_m1)
     _log_prob_m1 = mass_dist_mixture.log_prob(mm) + log_planck_taper_window(
         (mm - m1min) / safe_delta_m1
