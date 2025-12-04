@@ -3,6 +3,7 @@
 
 
 def main():
+    """Compute diagonal mass matrix from pilot-run samples."""
     import argparse
 
     parser = argparse.ArgumentParser(
