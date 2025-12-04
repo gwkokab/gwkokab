@@ -40,8 +40,10 @@ def main():
     )
     samples = np.atleast_2d(samples)
 
-    if samples.ndim != 2:
-        raise RuntimeError(f"Expected 2D samples array, got shape {samples.shape}")
+    if samples.shape[0] < 2:
+        raise RuntimeError(
+            "At least 2 samples are required to compute standard deviation."
+        )
 
     # Compute per-dimension std
     sigma = np.std(samples, axis=0, ddof=1)
