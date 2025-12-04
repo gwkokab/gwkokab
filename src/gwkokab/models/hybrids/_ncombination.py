@@ -538,8 +538,7 @@ def create_minimum_tilt_model(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[MixtureGeneral]:
-    """Create a list of :func:`IndependentSpinOrientationGaussianIsotropic`
-    distributions for tilt.
+    """Create a list of :func:`MinimumTiltModelExtended` distributions for tilt.
 
     Parameters
     ----------
@@ -557,12 +556,12 @@ def create_minimum_tilt_model(
     Returns
     -------
     List[MixtureGeneral]
-        list of :func:`IndependentSpinOrientationGaussianIsotropic` distributions
+        list of :func:`MinimumTiltModelExtended` distributions
 
     Raises
     ------
     ValueError
-        if scale is missing
+        if zeta, loc1, loc2, scale1, or scale2 is missing
     """
     dist_collection = []
     zeta_name = f"cos_tilt_zeta_{component_type}"
