@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import jax
 import numpyro
@@ -21,6 +21,7 @@ __all__ = ["numpyro_poisson_likelihood"]
 def numpyro_poisson_likelihood(
     dist_fn: Callable[..., DistributionT],
     priors: JointDistribution,
+    constant_params: Dict[str, Any],
     variables: Dict[str, DistributionT],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
@@ -77,7 +78,11 @@ def numpyro_poisson_likelihood(
             mapped_params = {
                 name: variables_samples[i] for name, i in variables_index.items()
             }
-            model_instance: DistributionT = dist_fn(**mapped_params, validate_args=True)
+            model_instance: DistributionT = dist_fn(
+                **constant_params,
+                **mapped_params,
+                validate_args=True,
+            )
             total_log_likelihood = log_constants  # - Σ log(M_i)
             # Σ log Σ exp (log p(θ|data_n) - log π_n)
             for batched_data, batched_log_ref_priors, batched_masks in zip(

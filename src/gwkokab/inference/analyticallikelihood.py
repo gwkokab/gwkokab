@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Callable, Dict, Tuple, TypeAlias
+from typing import Any, Callable, Dict, Tuple, TypeAlias
 
 import equinox as eqx
 import jax
@@ -204,6 +204,7 @@ def is_positive_semi_definite(matrix: Array) -> Array:
 def analytical_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
+    constant_params: Dict[str, Any],
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     key: PRNGKeyArray,
@@ -288,7 +289,7 @@ def analytical_likelihood(
             for name, i in variables_index.items()
         }
 
-        model_instance: DistributionT = dist_fn(**mapped_params)
+        model_instance: DistributionT = dist_fn(**constant_params, **mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = poisson_mean_estimator(model_instance)
