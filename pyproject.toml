@@ -55,6 +55,7 @@ dependencies = [
     "numpyro>=0.19.0",
     "pandas>=2.2.0",
     "quadax>=0.2.5",
+    "rich>=14.0.0",
     "RIFT>=0.0.15.11",
     "scipy>=1.12",
     "seaborn>=0.13.0",
@@ -151,6 +152,7 @@ ppd_one_powerlaw_one_peak = "kokab.one_powerlaw_one_peak.ppd:main"
 ppd_bp2p = "kokab.bp2p.ppd:main"
 # These scripts are for developer/user experience.
 gwk_diag_mass_matrix = "scripts.gwk_diag_mass_matrix:main"
+gwk_flowMC_info = "scripts.gwk_flowMC_info:main"
 
 
 [tool.pytest.ini_options]
