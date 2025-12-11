@@ -146,7 +146,7 @@ class Monk(FlowMCBased):
 
     def run(self) -> None:
         """Runs the Monk analysis."""
-        _, dist_fn, priors, variables, variables_index = self.bake_model()
+        constants, priors, variables, variables_index = self.classify_model_parameters()
 
         list_of_means, list_of_covariances = _read_mean_covariances(self.data_filename)
 
@@ -169,8 +169,9 @@ class Monk(FlowMCBased):
         )
 
         logpdf = analytical_likelihood(
-            dist_fn,
+            self.model,
             priors,
+            constants,
             variables_index,
             poisson_mean_estimator,
             self.rng_key,

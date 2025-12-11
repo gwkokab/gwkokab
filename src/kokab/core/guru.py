@@ -77,13 +77,12 @@ def _check_cycles(graph: Dict[str, Set[str]]) -> bool:
     return False
 
 
-def _bake_model(
-    dist_factory: Distribution | Callable[..., Distribution], **params: Any
+def _classify_model_parameters(
+    **params: Any,
 ) -> Tuple[
     Dict[str, int | float | None],
     Dict[str, Distribution],
     Dict[str, str],
-    Callable[..., Distribution],
     Dict[str, Dict[str, str]],
     List[str],
 ]:
@@ -100,7 +99,6 @@ def _bake_model(
         Dict[str, int | float | None],
         Dict[str, Distribution],
         Dict[str, str],
-        Callable[..., Distribution],
         Dict[str, Dict[str, str]],
         List[str],
     ]
@@ -108,7 +106,6 @@ def _bake_model(
         - constants: fixed numeric or None values
         - variables: distribution instances or lazy callables
         - aliases: mapping of parameter aliases to their original names
-        - baked_factory: callable with constants pre-applied
         - lazy_dependencies: mapping of lazy variable definitions
         - lazy_order: topological order of dependent lazy variables
 
@@ -191,13 +188,10 @@ def _bake_model(
     else:
         lazy_order = []
 
-    baked_factory = jax.tree_util.Partial(dist_factory, **constants)
-
     return (
         constants,
         variables,
         aliases,
-        baked_factory,
         lazy_dependencies,
         lazy_order,
     )
@@ -266,16 +260,15 @@ class Guru:
             key = jrd.PRNGKey(seed)
             self._rng_key = key
 
-    def bake_model(
+    def classify_model_parameters(
         self,
     ) -> Tuple[
         Dict[str, Union[int, float, bool, None]],
-        Callable[..., DistributionT],
         JointDistribution,
         Dict[str, int],
         Dict[str, int],
     ]:
-        """Returns a Bake object for the model.
+        """Classify model parameters into constants, priors, and variables index.
 
         Returns
         -------
@@ -286,10 +279,12 @@ class Guru:
         prior_dict = read_json(self.prior_filename)
         model_prior_param = get_processed_priors(self.model_parameters, prior_dict)
 
-        logger.debug("Baking the model")
-        constants, variables, duplicates, dist_fn, lazy_deps, lazy_order = _bake_model(
-            self.model, **self.constants, **model_prior_param
+        logger.debug("Classifying model parameters into constants and variables.")
+        constants, variables, duplicates, lazy_deps, lazy_order = (
+            _classify_model_parameters(**model_prior_param)
         )  # type: ignore
+
+        constants |= self.constants
 
         variables_index: dict[str, int] = {
             key: i for i, key in enumerate(sorted(variables.keys()))
@@ -336,7 +331,7 @@ class Guru:
                 validate_args=True,
             )
 
-        return constants, dist_fn, priors, variables, variables_index
+        return constants, priors, variables, variables_index
 
     @property
     def parameters(self) -> List[str]:

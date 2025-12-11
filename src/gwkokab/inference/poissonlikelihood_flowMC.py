@@ -20,6 +20,7 @@ __all__ = ["flowMC_poisson_likelihood"]
 def flowMC_poisson_likelihood(
     dist_fn: Callable[..., DistributionLike],
     priors: JointDistribution,
+    constant_params: Dict[str, Any],
     variables: Dict[str, DistributionLike],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
@@ -70,7 +71,7 @@ def flowMC_poisson_likelihood(
             for name, i in variables_index.items()
         }
 
-        model_instance = dist_fn(**mapped_params)
+        model_instance = dist_fn(**constant_params, **mapped_params)
 
         total_log_likelihood = log_constants  # - Σ log(M_i)
         # Σ log Σ exp (log p(ω|data_n) - log π_n)

@@ -5,7 +5,7 @@
 from argparse import ArgumentParser
 from collections.abc import Callable
 from glob import glob
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import jax
 import numpy as np
@@ -35,6 +35,7 @@ class Sage(Guru):
             [
                 Callable[..., DistributionLike],
                 JointDistribution,
+                Dict[str, Any],
                 Dict[str, DistributionLike],
                 Dict[str, int],
                 ArrayLike,
@@ -187,7 +188,7 @@ class Sage(Guru):
         return n_events, log_constants, data_group, log_ref_priors_group, masks_group
 
     def run(self) -> None:
-        constants, dist_fn, priors, variables, variables_index = self.bake_model()
+        constants, priors, variables, variables_index = self.classify_model_parameters()
 
         n_events, log_constants, data_group, log_ref_priors_group, masks_group = (
             self.read_data()
@@ -203,8 +204,9 @@ class Sage(Guru):
         log_constants += n_events * np.log(T_obs)  # type: ignore
 
         logpdf = self.likelihood_fn(
-            dist_fn=dist_fn,
+            dist_fn=self.model,
             priors=priors,
+            constant_params=constants,
             variables=variables,
             variables_index=variables_index,
             log_constants=log_constants,
@@ -236,8 +238,9 @@ class Sage(Guru):
             )
 
             def compute_variance(sample: Array) -> Array:
-                scaled_mixture = dist_fn(
-                    **{var: sample[variables_index[var]] for var in variables_index}
+                scaled_mixture = self.model(
+                    **constants,
+                    **{var: sample[variables_index[var]] for var in variables_index},
                 )
                 variance = variance_of_single_event_likelihood(
                     scaled_mixture,
