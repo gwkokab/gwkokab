@@ -99,8 +99,7 @@ def flowMC_poisson_likelihood(
             log_prob = jnp.where(batched_mask, log_prob, -jnp.inf)
 
             # log Σ exp (log p(ω|data_n) - log π_n)
-            group_contrib = jax.nn.logsumexp(log_prob, axis=-1).sum(axis=0)
-            total_log_likelihood = total_log_likelihood + group_contrib
+            total_log_likelihood += jax.nn.logsumexp(log_prob, axis=-1).sum(axis=0, initial=0.0)
 
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = poisson_mean_estimator(model_instance)
