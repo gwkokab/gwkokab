@@ -19,8 +19,8 @@ from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
     create_independent_spin_orientation_gaussian_isotropic,
+    create_powerlaw_primary_mass_ratios,
     create_powerlaw_redshift,
-    create_powerlaws,
     create_truncated_normal_distributions,
     create_uniform_distributions,
 )
@@ -213,7 +213,9 @@ def _build_pl_component_distributions(
     List[JointDistribution]
         list of JointDistribution
     """
-    powerlaws = create_powerlaws(N=N, params=params, validate_args=validate_args)
+    powerlaws = create_powerlaw_primary_mass_ratios(
+        N=N, params=params, validate_args=validate_args
+    )
 
     mass_distributions = jtr.map(
         lambda powerlaw: [powerlaw],

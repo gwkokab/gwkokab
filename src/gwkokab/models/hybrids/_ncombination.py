@@ -31,7 +31,7 @@ __all__ = [
     "create_broken_powerlaws",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_redshift",
-    "create_powerlaws",
+    "create_powerlaw_primary_mass_ratios",
     "create_truncated_normal_distributions",
     "create_uniform_distributions",
 ]
@@ -289,7 +289,7 @@ def create_independent_spin_orientation_gaussian_isotropic(
     return dist_collection
 
 
-def create_powerlaws(
+def create_powerlaw_primary_mass_ratios(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
