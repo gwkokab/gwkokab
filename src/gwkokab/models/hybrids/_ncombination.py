@@ -22,7 +22,7 @@ from ..spin import (
     MinimumTiltModelExtended,
 )
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
-from ..utils import ExtendedSupportTransformedDistribution
+from ..utils import DoublyTruncatedPowerLaw, ExtendedSupportTransformedDistribution
 
 
 __all__ = [
@@ -30,8 +30,9 @@ __all__ = [
     "create_beta_distributions",
     "create_broken_powerlaws",
     "create_independent_spin_orientation_gaussian_isotropic",
-    "create_powerlaw_redshift",
     "create_powerlaw_primary_mass_ratios",
+    "create_powerlaw_redshift",
+    "create_powerlaws",
     "create_truncated_normal_distributions",
     "create_uniform_distributions",
 ]
@@ -619,3 +620,57 @@ def create_minimum_tilt_model(
         )
 
     return dist_collection
+
+
+def create_powerlaws(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of Distribution for powerlaws.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of Distribution for powerlaws
+
+    Raises
+    ------
+    ValueError
+        if alpha, mmin, or mmax is missing
+    """
+    powerlaws_collection = []
+    alpha_name = "alpha_pl"
+    mmax_name = "mmax_pl"
+    mmin_name = "mmin_pl"
+    for i in range(N):
+        alpha = _fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
+        if alpha is None:
+            raise ValueError(f"Missing parameter {alpha_name}_{i}")
+
+        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
+        if mmin is None:
+            raise ValueError(f"Missing parameter {mmin_name}_{i}")
+
+        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
+        if mmax is None:
+            raise ValueError(f"Missing parameter {mmax_name}_{i}")
+
+        powerlaw = DoublyTruncatedPowerLaw(
+            alpha=alpha,
+            low=mmin,
+            high=mmax,
+            validate_args=validate_args,
+        )
+
+        powerlaws_collection.append(powerlaw)
+    return powerlaws_collection

@@ -16,10 +16,7 @@ from numpyro.distributions import (
 from ...utils.kernel import log_planck_taper_window
 from ..constraints import any_constraint
 from ..utils import JointDistribution
-from ._ncombination import (
-    create_broken_powerlaws,
-    create_truncated_normal_distributions,
-)
+from ._ncombination import create_powerlaws, create_truncated_normal_distributions
 from ._utils import (
     _M1_GRID_SIZE,
     _SmoothedPowerlawMassRatioAndRest,
@@ -35,13 +32,13 @@ def _build_bpl_component_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> Tuple[List[Distribution], List[JointDistribution]]:
-    mass_distributions = create_broken_powerlaws(
+    mass_distributions = create_powerlaws(
         N=N, params=params, validate_args=validate_args
     )
 
     build_distributions = build_non_mass_distributions(
         N=N,
-        component_type="bpl",
+        component_type="pl",
         mass_distributions=[[d] for d in mass_distributions],
         params=params,
         use_spin_magnitude=use_spin_magnitude,
@@ -89,8 +86,8 @@ def _build_g_component_distributions(
     ]
 
 
-def NBrokenPowerlawMGaussian(
-    N_bpl: int,
+def NSmoothedPowerlawMSmoothedGaussian(
+    N_pl: int,
     N_g: int,
     use_spin_magnitude: bool,
     use_tilt: bool,
@@ -107,15 +104,15 @@ def NBrokenPowerlawMGaussian(
     m1min = params.pop("m1min")
     m2min = params.pop("m2min")
 
-    _lambdas = [params.pop(f"lambda_{i}") for i in range(N_bpl + N_g - 1)]
+    _lambdas = [params.pop(f"lambda_{i}") for i in range(N_pl + N_g - 1)]
     _lambdas.append(1.0 - sum(_lambdas))
     lambdas = jnp.stack(_lambdas, axis=-1)
 
     pl_component_dist: List[JointDistribution] = []
     broken_powerlaws: List[JointDistribution] = []
-    if N_bpl > 0:
+    if N_pl > 0:
         broken_powerlaws, pl_component_dist = _build_bpl_component_distributions(
-            N=N_bpl,
+            N=N_pl,
             use_spin_magnitude=use_spin_magnitude,
             use_tilt=use_tilt,
             use_redshift=use_redshift,
@@ -135,10 +132,10 @@ def NBrokenPowerlawMGaussian(
             validate_args=validate_args,
         )
 
-    if N_bpl == 0 and N_g != 0:
+    if N_pl == 0 and N_g != 0:
         component_dists = g_component_dist
         mass_dist = mass_gaussians
-    elif N_g == 0 and N_bpl != 0:
+    elif N_g == 0 and N_pl != 0:
         component_dists = pl_component_dist
         mass_dist = broken_powerlaws
     else:
