@@ -46,7 +46,7 @@ def numpyro_poisson_likelihood(
         mapped_params = {
             name: variables_samples_[i] for name, i in variables_index.items()
         }
-        model_instance: DistributionT = dist_fn(**mapped_params, validate_args=True)
+        model_instance: DistributionT = dist_fn(**constants, **mapped_params, validate_args=True)
 
         # Start with constant factor: - Σ log(M_i)
         total_log_likelihood = log_constants
