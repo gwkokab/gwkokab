@@ -70,7 +70,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
             variance_cut_threshold=variance_cut_threshold,
-            analysis_name="o4_n_bpls_m_gs",
+            analysis_name="ofour_n_bpls_m_gs",
             n_buckets=n_buckets,
             threshold=threshold,
             debug_nans=debug_nans,
