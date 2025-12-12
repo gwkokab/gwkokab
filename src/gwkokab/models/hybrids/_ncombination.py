@@ -4,7 +4,6 @@
 
 from typing import Dict, List, Literal, Optional, TypeVar
 
-from jax import numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import (
     Beta,
@@ -66,6 +65,21 @@ def _fetch_first_matching_value(
     return None
 
 
+def _get_parameter(
+    params: Dict[_KT, _VT],
+    *name: _KT,
+    is_necessary: bool = True,
+    default: Optional[_VT] = None,
+) -> Optional[_VT]:
+    value = _fetch_first_matching_value(params, *name)
+    if value is None:
+        if is_necessary:
+            raise ValueError(f"Missing parameter {name}")
+        else:
+            value = default
+    return value
+
+
 def combine_distributions(
     base_dists: List[List[Distribution]], add_dists: List[Distribution]
 ):
@@ -112,14 +126,8 @@ def create_beta_distributions(
     mean_name = f"{parameter_name}_mean_{component_type}"
     variance_name = f"{parameter_name}_variance_{component_type}"
     for i in range(N):
-        mean = _fetch_first_matching_value(params, f"{mean_name}_{i}", mean_name)
-        if mean is None:
-            raise ValueError(f"Missing parameter {mean_name}_{i}")
-        variance = _fetch_first_matching_value(
-            params, f"{variance_name}_{i}", variance_name
-        )
-        if variance is None:
-            raise ValueError(f"Missing parameter {variance_name}_{i}")
+        mean = _get_parameter(params, f"{mean_name}_{i}", mean_name)
+        variance = _get_parameter(params, f"{variance_name}_{i}", variance_name)
 
         beta_collection.append(
             BetaFromMeanVar(
@@ -207,16 +215,10 @@ def create_truncated_normal_distributions(
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
     for i in range(N):
-        loc = _fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
-        if loc is None:
-            raise ValueError(f"Missing parameter {loc_name}_{i}")
-
-        scale = _fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
-        if scale is None:
-            raise ValueError(f"Missing parameter {scale_name}_{i}")
-
-        low = _fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
-        high = _fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
+        loc = _get_parameter(params, f"{loc_name}_{i}", loc_name)
+        scale = _get_parameter(params, f"{scale_name}_{i}", scale_name)
+        low = _get_parameter(params, f"{low_name}_{i}", low_name, is_necessary=False)
+        high = _get_parameter(params, f"{high_name}_{i}", high_name, is_necessary=False)
 
         truncated_normal_collection.append(
             TruncatedNormal(
@@ -266,18 +268,9 @@ def create_independent_spin_orientation_gaussian_isotropic(
     scale2_name = f"cos_tilt_2_scale_{component_type}"
 
     for i in range(N):
-        zeta = _fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
-        if zeta is None:
-            raise ValueError(f"Missing parameter {zeta_name}_{i}")
-
-        scale1 = _fetch_first_matching_value(params, f"{scale1_name}_{i}", scale1_name)
-        if scale1 is None:
-            raise ValueError(f"Missing parameter {scale1_name}_{i}")
-
-        scale2 = _fetch_first_matching_value(params, f"{scale2_name}_{i}", scale2_name)
-        if scale2 is None:
-            raise ValueError(f"Missing parameter {scale2_name}_{i}")
-
+        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
+        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
+        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
         dist_collection.append(
             IndependentSpinOrientationGaussianIsotropic(
                 zeta=zeta,
@@ -322,22 +315,10 @@ def create_powerlaw_primary_mass_ratios(
     mmin_name = "mmin_pl"
     mmax_name = "mmax_pl"
     for i in range(N):
-        alpha = _fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
-        if alpha is None:
-            raise ValueError(f"Missing parameter {alpha_name}_{i}")
-
-        beta = _fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
-        if beta is None:
-            raise ValueError(f"Missing parameter {beta_name}_{i}")
-
-        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
-        if mmin is None:
-            raise ValueError(f"Missing parameter {mmin_name}_{i}")
-
-        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
-        if mmax is None:
-            raise ValueError(f"Missing parameter {mmax_name}_{i}")
-
+        alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
+        beta = _get_parameter(params, f"{beta_name}_{i}", beta_name)
+        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
+        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
         powerlaw = PowerlawPrimaryMassRatio(
             alpha=alpha, beta=beta, mmin=mmin, mmax=mmax, validate_args=validate_args
         )
@@ -387,14 +368,8 @@ def create_powerlaw_redshift(
     z_max_name = f"{parameter_name}_z_max_{component_type}"
 
     for i in range(N):
-        kappa = _fetch_first_matching_value(params, f"{kappa_name}_{i}", kappa_name)
-        if kappa is None:
-            raise ValueError(f"Missing parameter {kappa_name}_{i}")
-
-        z_max = _fetch_first_matching_value(params, f"{z_max_name}_{i}", z_max_name)
-        if z_max is None:
-            raise ValueError(f"Missing parameter {z_max_name}_{i}")
-
+        kappa = _get_parameter(params, f"{kappa_name}_{i}", kappa_name)
+        z_max = _get_parameter(params, f"{z_max_name}_{i}", z_max_name)
         powerlaw_redshift_collection.append(
             PowerlawRedshift(kappa=kappa, z_max=z_max, validate_args=validate_args)
         )
@@ -452,14 +427,8 @@ def create_uniform_distributions(
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
     for i in range(N):
-        low = _fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
-        if low is None:
-            raise ValueError(f"Missing parameter {low_name}_{i}")
-
-        high = _fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
-        if high is None:
-            raise ValueError(f"Missing parameter {high_name}_{i}")
-
+        low = _get_parameter(params, f"{low_name}_{i}", low_name)
+        high = _get_parameter(params, f"{high_name}_{i}", high_name)
         uniform_collection.append(
             Uniform(low=low, high=high, validate_args=validate_args)
         )
@@ -500,25 +469,11 @@ def create_broken_powerlaws(
     mmax_name = "m1max_bpl"
     mmin_name = "m1min_bpl"
     for i in range(N):
-        alpha1 = _fetch_first_matching_value(params, f"{alpha1_name}_{i}", alpha1_name)
-        if alpha1 is None:
-            raise ValueError(f"Missing parameter {alpha1_name}_{i}")
-        alpha2 = _fetch_first_matching_value(params, f"{alpha2_name}_{i}", alpha2_name)
-        if alpha2 is None:
-            raise ValueError(f"Missing parameter {alpha2_name}_{i}")
-
-        mbreak = _fetch_first_matching_value(params, f"{mbreak_name}_{i}", mbreak_name)
-        if mbreak is None:
-            raise ValueError(f"Missing parameter {mbreak_name}_{i}")
-
-        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
-        if mmin is None:
-            raise ValueError(f"Missing parameter {mmin_name}_{i}")
-
-        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
-        if mmax is None:
-            raise ValueError(f"Missing parameter {mmax_name}_{i}")
-
+        alpha1 = _get_parameter(params, f"{alpha1_name}_{i}", alpha1_name)
+        alpha2 = _get_parameter(params, f"{alpha2_name}_{i}", alpha2_name)
+        mbreak = _get_parameter(params, f"{mbreak_name}_{i}", mbreak_name)
+        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
+        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
         broken_powerlaw = BrokenPowerlaw(
             alpha1=alpha1,
             alpha2=alpha2,
@@ -574,38 +529,17 @@ def create_minimum_tilt_model(
     minimum2_name = f"cos_tilt_2_minimum_{component_type}"
 
     for i in range(N):
-        zeta = _fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
-        if zeta is None:
-            raise ValueError(f"Missing parameter {zeta_name}_{i}")
-
-        loc1 = _fetch_first_matching_value(params, f"{loc1_name}_{i}", loc1_name)
-        if loc1 is None:
-            raise ValueError(f"Missing parameter {loc1_name}_{i}")
-
-        loc2 = _fetch_first_matching_value(params, f"{loc2_name}_{i}", loc2_name)
-        if loc2 is None:
-            raise ValueError(f"Missing parameter {loc2_name}_{i}")
-
-        scale1 = _fetch_first_matching_value(params, f"{scale1_name}_{i}", scale1_name)
-        if scale1 is None:
-            raise ValueError(f"Missing parameter {scale1_name}_{i}")
-
-        scale2 = _fetch_first_matching_value(params, f"{scale2_name}_{i}", scale2_name)
-        if scale2 is None:
-            raise ValueError(f"Missing parameter {scale2_name}_{i}")
-
-        minimum1 = _fetch_first_matching_value(
-            params, f"{minimum1_name}_{i}", minimum1_name
+        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
+        loc1 = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)
+        loc2 = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)
+        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
+        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
+        minimum1 = _get_parameter(
+            params, f"{minimum1_name}_{i}", minimum1_name, default=-1.0
         )
-        if minimum1 is None:
-            minimum1 = jnp.asarray(-1.0)
-
-        minimum2 = _fetch_first_matching_value(
-            params, f"{minimum2_name}_{i}", minimum2_name
+        minimum2 = _get_parameter(
+            params, f"{minimum2_name}_{i}", minimum2_name, default=-1.0
         )
-        if minimum2 is None:
-            minimum2 = jnp.asarray(-1.0)
-
         dist_collection.append(
             MinimumTiltModelExtended(
                 zeta=zeta,
@@ -653,17 +587,9 @@ def create_powerlaws(
     mmax_name = "mmax_pl"
     mmin_name = "mmin_pl"
     for i in range(N):
-        alpha = _fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
-        if alpha is None:
-            raise ValueError(f"Missing parameter {alpha_name}_{i}")
-
-        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
-        if mmin is None:
-            raise ValueError(f"Missing parameter {mmin_name}_{i}")
-
-        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
-        if mmax is None:
-            raise ValueError(f"Missing parameter {mmax_name}_{i}")
+        alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
+        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
+        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
 
         powerlaw = DoublyTruncatedPowerLaw(
             alpha=alpha,
