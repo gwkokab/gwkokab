@@ -5,7 +5,7 @@
 from argparse import ArgumentParser
 from collections.abc import Callable
 from glob import glob
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import jax
 import numpy as np
@@ -35,7 +35,6 @@ class Sage(Guru):
             [
                 Callable[..., DistributionLike],
                 JointDistribution,
-                Dict[str, Any],
                 Dict[str, DistributionLike],
                 Dict[str, int],
                 ArrayLike,
@@ -206,7 +205,6 @@ class Sage(Guru):
         logpdf = self.likelihood_fn(
             dist_fn=self.model,
             priors=priors,
-            constant_params=constants,
             variables=variables,
             variables_index=variables_index,
             log_constants=log_constants,
