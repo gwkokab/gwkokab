@@ -75,7 +75,9 @@ def numpyro_poisson_likelihood(
             log_prob_sum = jax.nn.logsumexp(batched_log_prob, axis=-1)
 
             # Sum over events in this bucket and add to total
-            total_log_likelihood = total_log_likelihood + log_prob_sum.sum(axis=-1)
+            total_log_likelihood = total_log_likelihood + log_prob_sum.sum(
+                axis=-1, initial=0.0
+            )
 
         # μ(Λ) = E_{θ|Λ}[ VT(θ) ]
         expected_rates = poisson_mean_estimator(model_instance)
