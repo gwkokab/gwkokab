@@ -391,13 +391,7 @@ def main():
 
     # Constructing the note strings
     diag_notes = []
-
-    # Note 1: Saturation depth
-    diag_notes.append(
-        f"History saturation: {loops_to_fill} loop(s) (effective depth ~{effective_depth:.2f} loops)"
-    )
-
-    # Note 2: Training subset logic
+    # Note 1: Training subset logic
     if n_max > 0 and n_max < history_capacity:
         diag_notes.append(
             f"Training Subset: NF trains on a random subset of up to {n_max:,} samples from the visible history each loop."
@@ -406,6 +400,11 @@ def main():
         diag_notes.append(
             "Training Subset: NF trains on ALL visible samples each loop (n_max >= history capacity)."
         )
+
+    # Note 2: Saturation depth
+    diag_notes.append(
+        f"History saturation: {loops_to_fill} loop(s) (effective depth ~{effective_depth:.2f} loops)"
+    )
 
     # Note 3: Forgetting indices (Epochs AND Steps)
     if first_forget_loop > 0:
