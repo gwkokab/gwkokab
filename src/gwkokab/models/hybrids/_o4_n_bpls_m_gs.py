@@ -111,10 +111,10 @@ def NBrokenPowerlawMGaussian(
     _lambdas.append(1.0 - sum(_lambdas))
     lambdas = jnp.stack(_lambdas, axis=-1)
 
-    pl_component_dist: List[JointDistribution] = []
-    broken_powerlaws: List[JointDistribution] = []
+    bpl_component_dist: List[JointDistribution] = []
+    bpl_dists: List[JointDistribution] = []
     if N_bpl > 0:
-        broken_powerlaws, pl_component_dist = _build_bpl_component_distributions(
+        bpl_dists, bpl_component_dist = _build_bpl_component_distributions(
             N=N_bpl,
             use_spin_magnitude=use_spin_magnitude,
             use_tilt=use_tilt,
@@ -124,9 +124,9 @@ def NBrokenPowerlawMGaussian(
         )
 
     g_component_dist: List[JointDistribution] = []
-    mass_gaussians: List[JointDistribution] = []
+    gaussian_dists: List[JointDistribution] = []
     if N_g > 0:
-        mass_gaussians, g_component_dist = _build_g_component_distributions(
+        gaussian_dists, g_component_dist = _build_g_component_distributions(
             N=N_g,
             use_spin_magnitude=use_spin_magnitude,
             use_tilt=use_tilt,
@@ -135,15 +135,8 @@ def NBrokenPowerlawMGaussian(
             validate_args=validate_args,
         )
 
-    if N_bpl == 0 and N_g != 0:
-        component_dists = g_component_dist
-        mass_dist = mass_gaussians
-    elif N_g == 0 and N_bpl != 0:
-        component_dists = pl_component_dist
-        mass_dist = broken_powerlaws
-    else:
-        component_dists = pl_component_dist + g_component_dist
-        mass_dist = broken_powerlaws + mass_gaussians
+    component_dists = bpl_component_dist + g_component_dist
+    mass_dist = bpl_dists + gaussian_dists
 
     mixing_distribution = CategoricalProbs(probs=lambdas, validate_args=validate_args)
     mass_dist_mixture = MixtureGeneral(

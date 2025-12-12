@@ -24,7 +24,7 @@ from ._utils import (
 )
 
 
-def _build_bpl_component_distributions(
+def _build_pl_component_distributions(
     N: int,
     use_spin_magnitude: bool,
     use_tilt: bool,
@@ -109,9 +109,9 @@ def NSmoothedPowerlawMSmoothedGaussian(
     lambdas = jnp.stack(_lambdas, axis=-1)
 
     pl_component_dist: List[JointDistribution] = []
-    broken_powerlaws: List[JointDistribution] = []
+    pl_dists: List[JointDistribution] = []
     if N_pl > 0:
-        broken_powerlaws, pl_component_dist = _build_bpl_component_distributions(
+        pl_dists, pl_component_dist = _build_pl_component_distributions(
             N=N_pl,
             use_spin_magnitude=use_spin_magnitude,
             use_tilt=use_tilt,
@@ -121,9 +121,9 @@ def NSmoothedPowerlawMSmoothedGaussian(
         )
 
     g_component_dist: List[JointDistribution] = []
-    mass_gaussians: List[JointDistribution] = []
+    gaussian_dists: List[JointDistribution] = []
     if N_g > 0:
-        mass_gaussians, g_component_dist = _build_g_component_distributions(
+        gaussian_dists, g_component_dist = _build_g_component_distributions(
             N=N_g,
             use_spin_magnitude=use_spin_magnitude,
             use_tilt=use_tilt,
@@ -132,15 +132,8 @@ def NSmoothedPowerlawMSmoothedGaussian(
             validate_args=validate_args,
         )
 
-    if N_pl == 0 and N_g != 0:
-        component_dists = g_component_dist
-        mass_dist = mass_gaussians
-    elif N_g == 0 and N_pl != 0:
-        component_dists = pl_component_dist
-        mass_dist = broken_powerlaws
-    else:
-        component_dists = pl_component_dist + g_component_dist
-        mass_dist = broken_powerlaws + mass_gaussians
+    component_dists = pl_component_dist + g_component_dist
+    mass_dist = pl_dists + gaussian_dists
 
     mixing_distribution = CategoricalProbs(probs=lambdas, validate_args=validate_args)
     mass_dist_mixture = MixtureGeneral(
