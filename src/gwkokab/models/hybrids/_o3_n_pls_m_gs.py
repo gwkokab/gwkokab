@@ -102,12 +102,10 @@ def NSmoothedPowerlawMSmoothedGaussian(
     **params,
 ):
     beta = params.pop("beta")
-    delta_m1 = params.pop("delta_m1")
-    delta_m2 = params.pop("delta_m2")
+    delta_m = params.pop("delta_m")
     log_rate = params.pop("log_rate")
-    m1max = params.pop("m1max")
-    m1min = params.pop("m1min")
-    m2min = params.pop("m2min")
+    mmax = params.pop("mmax")
+    mmin = params.pop("mmin")
 
     _lambdas = [params.pop(f"lambda_{i}") for i in range(N_pl + N_g - 1)]
     _lambdas.append(1.0 - sum(_lambdas))
@@ -146,16 +144,16 @@ def NSmoothedPowerlawMSmoothedGaussian(
     mass_dist_mixture = MixtureGeneral(
         mixing_distribution,
         mass_dist,
-        support=constraints.interval(m1min, m1max),
+        support=constraints.interval(mmin, mmax),
         validate_args=validate_args,
     )
 
-    mm = jnp.linspace(m1min, m1max, _M1_GRID_SIZE)
-    safe_delta_m1 = jnp.where(delta_m1 <= 0.0, 1.0, delta_m1)
+    mm = jnp.linspace(mmin, mmax, _M1_GRID_SIZE)
+    safe_delta_m = jnp.where(delta_m <= 0.0, 1.0, delta_m)
     _log_prob_m1 = mass_dist_mixture.log_prob(mm) + log_planck_taper_window(
-        (mm - m1min) / safe_delta_m1
+        (mm - mmin) / safe_delta_m
     )
-    _prob_m1 = jnp.where(delta_m1 <= 0.0, 0.0, jnp.exp(_log_prob_m1))
+    _prob_m1 = jnp.where(delta_m <= 0.0, 0.0, jnp.exp(_log_prob_m1))
     Z = jnp.trapezoid(_prob_m1, mm, axis=0)
     logZ = jnp.log(Z)
 
@@ -171,11 +169,11 @@ def NSmoothedPowerlawMSmoothedGaussian(
     return _SmoothedPowerlawMassRatioAndRest(
         rest_dist=dist_m1_and_rest,
         beta=beta,
-        delta_m1=delta_m1,
-        delta_m2=delta_m2,
-        m1max=m1max,
-        m1min=m1min,
-        m2min=m2min,
+        delta_m1=delta_m,
+        delta_m2=delta_m,
+        m1max=mmax,
+        m1min=mmin,
+        m2min=mmin,
         log_rate=log_rate,
         logZ=logZ,
         validate_args=validate_args,

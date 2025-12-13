@@ -186,12 +186,10 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
 
         extended_params = [
             "beta",
-            "delta_m1",
-            "delta_m2",
+            "delta_m",
             "log_rate",
-            "m1max",
-            "m1min",
-            "m2min",
+            "mmax",
+            "mmin",
         ]
         for params in all_params:
             extended_params.extend(expand_arguments(*params))
