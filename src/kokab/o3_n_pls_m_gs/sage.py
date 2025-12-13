@@ -5,6 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
+from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import enable_validation
@@ -16,8 +17,43 @@ from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.core.sage import Sage, sage_arg_parser
+from kokab.utils.checks import check_min_concentration_for_beta_dist
 from kokab.utils.common import expand_arguments
 from kokab.utils.logger import log_info
+
+
+def where_fns_list(
+    use_beta_spin_magnitude: bool,
+) -> Optional[List[Callable[..., Array]]]:
+    where_fns = []
+
+    if use_beta_spin_magnitude:
+
+        def positive_concentration(**kwargs) -> Array:
+            N_pl: int = kwargs.get("N_pl")  # type: ignore
+            N_g: int = kwargs.get("N_g")  # type: ignore
+            mask = jnp.ones(())
+            for n_pl in range(N_pl):
+                chi_mean: Array = kwargs.get(
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_pl_" + str(n_pl)
+                )  # type: ignore
+                chi_variance: Array = kwargs.get(
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_pl_" + str(n_pl)
+                )  # type: ignore
+                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
+            for n_g in range(N_g):
+                chi_mean: Array = kwargs.get(
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g_" + str(n_g)
+                )  # type: ignore
+                chi_variance: Array = kwargs.get(
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g_" + str(n_g)
+                )  # type: ignore
+                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
+            return mask
+
+        where_fns.append(positive_concentration)
+
+    return where_fns if len(where_fns) > 0 else None
 
 
 class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
@@ -78,7 +114,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            where_fns=None,
+            where_fns=where_fns_list(use_beta_spin_magnitude=use_beta_spin_magnitude),
         )
 
     @property
