@@ -592,7 +592,7 @@ def create_powerlaws(
         mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
 
         powerlaw = DoublyTruncatedPowerLaw(
-            alpha=alpha,
+            alpha=-alpha,
             low=mmin,
             high=mmax,
             validate_args=validate_args,
