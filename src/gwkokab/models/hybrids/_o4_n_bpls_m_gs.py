@@ -29,7 +29,8 @@ from ._utils import (
 
 def _build_bpl_component_distributions(
     N: int,
-    use_spin_magnitude: bool,
+    use_beta_spin_magnitude: bool,
+    use_truncated_normal_spin_magnitude: bool,
     use_tilt: bool,
     use_redshift: bool,
     params: Dict[str, Array],
@@ -44,7 +45,8 @@ def _build_bpl_component_distributions(
         component_type="bpl",
         mass_distributions=[[d] for d in mass_distributions],
         params=params,
-        use_spin_magnitude=use_spin_magnitude,
+        use_beta_spin_magnitude=use_beta_spin_magnitude,
+        use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
         use_tilt=use_tilt,
         use_redshift=use_redshift,
         validate_args=validate_args,
@@ -58,7 +60,8 @@ def _build_bpl_component_distributions(
 
 def _build_g_component_distributions(
     N: int,
-    use_spin_magnitude: bool,
+    use_beta_spin_magnitude: bool,
+    use_truncated_normal_spin_magnitude: bool,
     use_tilt: bool,
     use_redshift: bool,
     params: Dict[str, Array],
@@ -76,7 +79,8 @@ def _build_g_component_distributions(
         N=N,
         component_type="g",
         mass_distributions=[[d] for d in mass_distributions],
-        use_spin_magnitude=use_spin_magnitude,
+        use_beta_spin_magnitude=use_beta_spin_magnitude,
+        use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
         use_tilt=use_tilt,
         use_redshift=use_redshift,
         params=params,
@@ -92,7 +96,8 @@ def _build_g_component_distributions(
 def NBrokenPowerlawMGaussian(
     N_bpl: int,
     N_g: int,
-    use_spin_magnitude: bool,
+    use_beta_spin_magnitude: bool,
+    use_truncated_normal_spin_magnitude: bool,
     use_tilt: bool,
     use_redshift: bool,
     *,
@@ -116,7 +121,8 @@ def NBrokenPowerlawMGaussian(
     if N_bpl > 0:
         bpl_dists, bpl_component_dist = _build_bpl_component_distributions(
             N=N_bpl,
-            use_spin_magnitude=use_spin_magnitude,
+            use_beta_spin_magnitude=use_beta_spin_magnitude,
+            use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
             use_tilt=use_tilt,
             use_redshift=use_redshift,
             params=params,
@@ -128,7 +134,8 @@ def NBrokenPowerlawMGaussian(
     if N_g > 0:
         gaussian_dists, g_component_dist = _build_g_component_distributions(
             N=N_g,
-            use_spin_magnitude=use_spin_magnitude,
+            use_beta_spin_magnitude=use_beta_spin_magnitude,
+            use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
             use_tilt=use_tilt,
             use_redshift=use_redshift,
             params=params,

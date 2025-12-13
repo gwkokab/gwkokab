@@ -25,7 +25,8 @@ class NBrokenPowerlawMGaussianCore(Sage):
         self,
         N_bpl: int,
         N_g: int,
-        use_spin_magnitude: bool,
+        use_beta_spin_magnitude: bool,
+        use_truncated_normal_spin_magnitude: bool,
         use_tilt: bool,
         use_redshift: bool,
         likelihood_fn: Callable[
@@ -56,7 +57,8 @@ class NBrokenPowerlawMGaussianCore(Sage):
     ) -> None:
         self.N_bpl = N_bpl
         self.N_g = N_g
-        self.use_spin_magnitude = use_spin_magnitude
+        self.use_beta_spin_magnitude = use_beta_spin_magnitude
+        self.use_truncated_normal_spin_magnitude = use_truncated_normal_spin_magnitude
         self.use_tilt = use_tilt
         self.use_redshift = use_redshift
 
@@ -84,7 +86,8 @@ class NBrokenPowerlawMGaussianCore(Sage):
         return {
             "N_bpl": self.N_bpl,
             "N_g": self.N_g,
-            "use_spin_magnitude": self.use_spin_magnitude,
+            "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
+            "use_truncated_normal_spin_magnitude": self.use_truncated_normal_spin_magnitude,
             "use_tilt": self.use_tilt,
             "use_redshift": self.use_redshift,
         }
@@ -92,7 +95,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
     @property
     def parameters(self) -> List[str]:
         names = [P.PRIMARY_MASS_SOURCE.value]
-        if self.use_spin_magnitude:
+        if self.use_beta_spin_magnitude or self.use_truncated_normal_spin_magnitude:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.use_tilt:
@@ -117,7 +120,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
             ("m1min_bpl", self.N_bpl),
         ]
 
-        if self.use_spin_magnitude:
+        if self.use_truncated_normal_spin_magnitude:
             all_params.extend(
                 [
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
@@ -136,6 +139,20 @@ class NBrokenPowerlawMGaussianCore(Sage):
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_bpl", self.N_bpl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_bpl", self.N_bpl),
+                ]
+            )
+
+        if self.use_beta_spin_magnitude:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_bpl", self.N_bpl),
                 ]
             )
 
@@ -196,11 +213,18 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Number of Gaussian components in the mass model.",
     )
 
-    model_group.add_argument(
-        "--add-spin-magnitude",
+    spin_group = model_group.add_mutually_exclusive_group()
+    spin_group.add_argument(
+        "--add-beta-spin-magnitude",
         action="store_true",
-        help="Include spin magnitude parameters in the model.",
+        help="Include beta spin magnitude parameters in the model.",
     )
+    spin_group.add_argument(
+        "--add-truncated-normal-spin-magnitude",
+        action="store_true",
+        help="Include truncated normal spin magnitude parameters in the model.",
+    )
+
     model_group.add_argument(
         "--add-tilt",
         action="store_true",
@@ -233,7 +257,8 @@ def f_main() -> None:
     NBrokenPowerlawMGaussianFSage(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
-        use_spin_magnitude=args.add_spin_magnitude,
+        use_beta_spin_magnitude=args.add_beta_spin_magnitude,
+        use_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
         use_tilt=args.add_tilt,
         use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
@@ -268,7 +293,8 @@ def n_main() -> None:
     NBrokenPowerlawMGaussianNSage(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
-        use_spin_magnitude=args.add_spin_magnitude,
+        use_beta_spin_magnitude=args.add_beta_spin_magnitude,
+        use_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
         use_tilt=args.add_tilt,
         use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
