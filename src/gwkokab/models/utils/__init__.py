@@ -7,6 +7,7 @@ from ._doubletruncpowerlaw import (
     doubly_truncated_power_law_icdf as doubly_truncated_power_law_icdf,
     doubly_truncated_power_law_log_norm_constant as doubly_truncated_power_law_log_norm_constant,
     doubly_truncated_power_law_log_prob as doubly_truncated_power_law_log_prob,
+    DoublyTruncatedPowerLaw as DoublyTruncatedPowerLaw,
 )
 from ._extendedsupporttransformeddistribution import (
     ExtendedSupportTransformedDistribution as ExtendedSupportTransformedDistribution,
