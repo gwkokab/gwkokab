@@ -75,18 +75,20 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         "delta_m2": constraints.positive,
         "log_rate": constraints.real,
         "logZ": constraints.real,
+        "m1max": constraints.positive,
         "m1min": constraints.positive,
         "m2min": constraints.positive,
     }
     pytree_data_fields = (
-        "_log_Z_q",
         "_m1s",
         "_support",
+        "_Z_q_given_m1",
         "beta",
         "delta_m1",
         "delta_m2",
         "log_rate",
         "logZ",
+        "m1max",
         "m1min",
         "m2min",
         "rest_dist",
@@ -98,11 +100,11 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         beta: ArrayLike,
         delta_m1: ArrayLike,
         delta_m2: ArrayLike,
+        log_rate: ArrayLike,
+        logZ: ArrayLike,
         m1max: ArrayLike,
         m1min: ArrayLike,
         m2min: ArrayLike,
-        log_rate: ArrayLike,
-        logZ: ArrayLike,
         *,
         validate_args: Optional[bool] = None,
     ):
@@ -111,23 +113,28 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
             self.beta,
             self.delta_m1,
             self.delta_m2,
-            self.m1min,
-            self.m2min,
             self.log_rate,
             self.logZ,
+            self.m1max,
+            self.m1min,
+            self.m2min,
         ) = promote_shapes(
             beta,
             delta_m1,
             delta_m2,
-            m1min,
-            m2min,
             log_rate,
             logZ,
+            m1max,
+            m1min,
+            m2min,
         )
         batch_shape = jax.lax.broadcast_shapes(
             jnp.shape(beta),
             jnp.shape(delta_m1),
             jnp.shape(delta_m2),
+            jnp.shape(log_rate),
+            jnp.shape(logZ),
+            jnp.shape(m1max),
             jnp.shape(m1min),
             jnp.shape(m2min),
             rest_dist.batch_shape,
@@ -147,13 +154,8 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         qs = jnp.linspace(0.005, 1.0, _Q_GRID_SIZE)
         m1s_grid, qs_grid = jnp.meshgrid(self._m1s, qs, indexing="ij")
 
-        log_prob_q_unnorm = self._log_prob_q_unnorm(m1s_grid, qs_grid)
-        prob_q_unnorm = jnp.exp(log_prob_q_unnorm)
-        _Z_q_given_m1 = jnp.trapezoid(prob_q_unnorm, qs, axis=1)
-        safe_Z_q_given_m1 = jnp.where(_Z_q_given_m1 <= 0, 1.0, _Z_q_given_m1)
-        self._log_Z_q = jnp.where(
-            _Z_q_given_m1 <= 0, jnp.nan_to_num(-jnp.inf), jnp.log(safe_Z_q_given_m1)
-        )
+        prob_q_unnorm = jnp.exp(self._log_prob_q_unnorm(m1s_grid, qs_grid))
+        self._Z_q_given_m1 = jnp.trapezoid(prob_q_unnorm, qs, axis=1)
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
@@ -168,8 +170,8 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
             (self.delta_m2 <= 0.0)
             | (m2 < self.m2min)
             | (m2 > m1)
-            | jnp.isneginf(log_smoothing_m2)
-            | jnp.isneginf(log_prob_q),
+            | (m1 > self.m1max)
+            | jnp.isneginf(log_smoothing_m2),
             -jnp.inf,
             log_prob_q,
         )
@@ -182,20 +184,21 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
 
         safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
-        rest_log_prob = jnp.where(
-            self.delta_m1 <= 0.0,
-            -jnp.inf,
-            self.rest_dist.log_prob(rest) + log_smoothing_m1 - self.logZ,
-        )
+        rest_log_prob = self.rest_dist.log_prob(rest) + log_smoothing_m1 - self.logZ
 
         log_prob_q_unnorm = self._log_prob_q_unnorm(m1, m2 / m1)
+        _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=0.0, right=0.0)
+        safe_Z_q = jnp.where(_Z_q <= 0, 1.0, _Z_q)
+        log_Z_q = jnp.where(_Z_q <= 0, 0.0, jnp.log(safe_Z_q))
 
         log_prob_val = (
             self.log_rate
             - jnp.log(m1)  # Jacobian
             + rest_log_prob
             + log_prob_q_unnorm
-            - jnp.interp(m1, self._m1s, self._log_Z_q, left=0.0, right=0.0)
+            - log_Z_q
         )
 
-        return jnp.where(jnp.isneginf(log_prob_val), -jnp.inf, log_prob_val)
+        return jnp.where(
+            (self.delta_m1 <= 0.0) | jnp.isneginf(log_prob_val), -jnp.inf, log_prob_val
+        )
