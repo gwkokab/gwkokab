@@ -33,6 +33,7 @@ def build_non_mass_distributions(
     use_beta_spin_magnitude: bool,
     use_truncated_normal_spin_magnitude: bool,
     use_tilt: bool,
+    use_truncated_normal_eccentricity: bool,
     use_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
@@ -46,6 +47,7 @@ def build_non_mass_distributions(
         (use_truncated_normal_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
         # combined tilt distribution
         (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_minimum_tilt_model),
+        (use_truncated_normal_eccentricity, P.ECCENTRICITY.value, create_truncated_normal_distributions),
         (use_redshift, P.REDSHIFT.value, create_powerlaw_redshift),
 
     ]

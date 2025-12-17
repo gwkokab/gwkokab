@@ -64,6 +64,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         use_beta_spin_magnitude: bool,
         use_truncated_normal_spin_magnitude: bool,
         use_tilt: bool,
+        use_truncated_normal_eccentricity: bool,
         use_redshift: bool,
         likelihood_fn: Callable[
             [
@@ -96,6 +97,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
         self.use_truncated_normal_spin_magnitude = use_truncated_normal_spin_magnitude
         self.use_tilt = use_tilt
+        self.use_truncated_normal_eccentricity = use_truncated_normal_eccentricity
         self.use_redshift = use_redshift
 
         super().__init__(
@@ -125,6 +127,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
             "use_truncated_normal_spin_magnitude": self.use_truncated_normal_spin_magnitude,
             "use_tilt": self.use_tilt,
+            "use_truncated_normal_eccentricity": self.use_truncated_normal_eccentricity,
             "use_redshift": self.use_redshift,
         }
 
@@ -136,6 +139,8 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.use_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
+        if self.use_truncated_normal_eccentricity:
+            names.append(P.ECCENTRICITY.value)
         if self.use_redshift:
             names.append(P.REDSHIFT.value)
         names.append(P.SECONDARY_MASS_SOURCE.value)
@@ -210,6 +215,20 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
                 ]
             )
 
+        if self.use_truncated_normal_eccentricity:
+            all_params.extend(
+                [
+                    (P.ECCENTRICITY.value + "_high_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_high_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_loc_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_loc_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_low_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_low_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_scale_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_scale_pl", self.N_pl),
+                ]
+            )
+
         if self.use_redshift:
             all_params.extend(
                 [
@@ -263,6 +282,11 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include tilt parameters in the model.",
     )
     model_group.add_argument(
+        "--add-truncated-normal-eccentricity",
+        action="store_true",
+        help="Include truncated normal eccentricity parameter in the model",
+    )
+    model_group.add_argument(
         "--add-redshift",
         action="store_true",
         help="Include redshift parameter in the model",
@@ -294,6 +318,7 @@ def f_main() -> None:
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
         use_tilt=args.add_tilt,
+        use_truncated_normal_eccentricity=args.add_truncated_normal_eccentricity,
         use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
         posterior_regex=args.posterior_regex,
@@ -332,6 +357,7 @@ def n_main() -> None:
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
         use_tilt=args.add_tilt,
+        use_truncated_normal_eccentricity=args.add_truncated_normal_eccentricity,
         use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
         posterior_regex=args.posterior_regex,
