@@ -221,13 +221,13 @@ class NBrokenPowerlawMGaussianCore(Sage):
             all_params.extend(
                 [
                     (P.ECCENTRICITY.value + "_high_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_high_pl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_high_bpl", self.N_bpl),
                     (P.ECCENTRICITY.value + "_loc_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_loc_pl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_loc_bpl", self.N_bpl),
                     (P.ECCENTRICITY.value + "_low_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_low_pl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_low_bpl", self.N_bpl),
                     (P.ECCENTRICITY.value + "_scale_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_scale_pl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_scale_bpl", self.N_bpl),
                 ]
             )
 
