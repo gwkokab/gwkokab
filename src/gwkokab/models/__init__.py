@@ -12,6 +12,7 @@ from . import (
     transformations as transformations,
     utils as utils,
 )
+from .eccentricity import EccentricMixtureModel as EccentricMixtureModel
 from .hybrids import (
     BrokenPowerlawTwoPeakFull as BrokenPowerlawTwoPeakFull,
     BrokenPowerlawTwoPeakMultiSpinMultiTilt as BrokenPowerlawTwoPeakMultiSpinMultiTilt,
