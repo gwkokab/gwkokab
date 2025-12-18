@@ -19,7 +19,7 @@ from ._ncombination import (
     create_eccentric_mixture_models,
     create_minimum_tilt_model,
     create_powerlaw_redshift,
-    create_truncated_normal_distributions,
+    create_spin_magnitude_mixture_models,
 )
 
 
@@ -32,7 +32,7 @@ def build_non_mass_distributions(
     component_type: Literal["pl", "bpl", "g"],
     mass_distributions: List[Distribution],
     use_beta_spin_magnitude: bool,
-    use_truncated_normal_spin_magnitude: bool,
+    use_spin_magnitude_mixture: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_redshift: bool,
@@ -44,8 +44,7 @@ def build_non_mass_distributions(
     _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
         (use_beta_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_beta_distributions),
         (use_beta_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_beta_distributions),
-        (use_truncated_normal_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
-        (use_truncated_normal_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_truncated_normal_distributions),
+        (use_spin_magnitude_mixture, P.PRIMARY_SPIN_MAGNITUDE.value + "_" + P.SECONDARY_SPIN_MAGNITUDE.value, create_spin_magnitude_mixture_models),
         # combined tilt distribution
         (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_minimum_tilt_model),
         (use_eccentricity_mixture, P.ECCENTRICITY.value, create_eccentric_mixture_models),

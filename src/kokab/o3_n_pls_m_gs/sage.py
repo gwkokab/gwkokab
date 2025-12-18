@@ -62,7 +62,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         N_pl: int,
         N_g: int,
         use_beta_spin_magnitude: bool,
-        use_truncated_normal_spin_magnitude: bool,
+        use_spin_magnitude_mixture: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_redshift: bool,
@@ -95,7 +95,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         self.N_pl = N_pl
         self.N_g = N_g
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
-        self.use_truncated_normal_spin_magnitude = use_truncated_normal_spin_magnitude
+        self.use_spin_magnitude_mixture = use_spin_magnitude_mixture
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_redshift = use_redshift
@@ -125,7 +125,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             "N_pl": self.N_pl,
             "N_g": self.N_g,
             "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
-            "use_truncated_normal_spin_magnitude": self.use_truncated_normal_spin_magnitude,
+            "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
             "use_tilt": self.use_tilt,
             "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_redshift": self.use_redshift,
@@ -134,7 +134,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
     @property
     def parameters(self) -> List[str]:
         names = [P.PRIMARY_MASS_SOURCE.value]
-        if self.use_beta_spin_magnitude or self.use_truncated_normal_spin_magnitude:
+        if self.use_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.use_tilt:
@@ -159,25 +159,35 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             ("mmin_pl", self.N_pl),
         ]
 
-        if self.use_truncated_normal_spin_magnitude:
+        if self.use_spin_magnitude_mixture:
             all_params.extend(
                 [
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
+                    ("a_zeta", self.N_g),
+                    ("a_zeta", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale", self.N_pl),
                 ]
             )
 
@@ -281,7 +291,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include beta spin magnitude parameters in the model.",
     )
     spin_group.add_argument(
-        "--add-truncated-normal-spin-magnitude",
+        "--add-spin-magnitude-mixture",
         action="store_true",
         help="Include truncated normal spin magnitude parameters in the model.",
     )
@@ -326,7 +336,7 @@ def f_main() -> None:
         N_pl=args.n_pl,
         N_g=args.n_g,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
-        use_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
+        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,
@@ -365,7 +375,7 @@ def n_main() -> None:
         N_pl=args.n_pl,
         N_g=args.n_g,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
-        use_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
+        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,

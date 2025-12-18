@@ -42,7 +42,7 @@ def make_parser() -> ArgumentParser:
         help="Include beta-distributed spin magnitudes a1,a2 (dimensionless Kerr spins; 0≤a<1).",
     )
     spin_magnitude_group.add_argument(
-        "--add-truncated-normal-spin-magnitude",
+        "--add-spin-magnitude-mixture",
         action="store_true",
         help="Include truncated-normal spin magnitudes a1,a2 (dimensionless Kerr spins; 0≤a<1).",
     )
@@ -156,7 +156,7 @@ def main() -> None:
     N_g = model_json["N_g"]
 
     has_beta_spin_magnitude = args.add_beta_spin_magnitude
-    has_truncated_normal_spin_magnitude = args.add_truncated_normal_spin_magnitude
+    has_truncated_normal_spin_magnitude = args.add_spin_magnitude_mixture
     has_truncated_normal_spin_x = args.add_truncated_normal_spin_x
     has_truncated_normal_spin_y = args.add_truncated_normal_spin_y
     has_truncated_normal_spin_z = args.add_truncated_normal_spin_z
@@ -380,22 +380,32 @@ def main() -> None:
         )
         all_params.extend(
             [
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", N_pl),
+                ("a_zeta", N_g),
+                ("a_zeta", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale", N_pl),
             ]
         )
 

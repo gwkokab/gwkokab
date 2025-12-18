@@ -18,7 +18,7 @@ class NPowerlawMGaussianMonk(Monk):
         N_pl: int,
         N_g: int,
         has_beta_spin_magnitude: bool,
-        has_truncated_normal_spin_magnitude: bool,
+        use_spin_magnitude_mixture: bool,
         has_truncated_normal_spin_x: bool,
         has_truncated_normal_spin_y: bool,
         has_truncated_normal_spin_z: bool,
@@ -47,7 +47,7 @@ class NPowerlawMGaussianMonk(Monk):
         self.N_pl = N_pl
         self.N_g = N_g
         self.has_beta_spin_magnitude = has_beta_spin_magnitude
-        self.has_truncated_normal_spin_magnitude = has_truncated_normal_spin_magnitude
+        self.use_spin_magnitude_mixture = use_spin_magnitude_mixture
         self.has_truncated_normal_spin_x = has_truncated_normal_spin_x
         self.has_truncated_normal_spin_y = has_truncated_normal_spin_y
         self.has_truncated_normal_spin_z = has_truncated_normal_spin_z
@@ -84,7 +84,7 @@ class NPowerlawMGaussianMonk(Monk):
             "N_pl": self.N_pl,
             "N_g": self.N_g,
             "use_beta_spin_magnitude": self.has_beta_spin_magnitude,
-            "use_truncated_normal_spin_magnitude": self.has_truncated_normal_spin_magnitude,
+            "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
             "use_truncated_normal_spin_x": self.has_truncated_normal_spin_x,
             "use_truncated_normal_spin_y": self.has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": self.has_truncated_normal_spin_z,
@@ -102,7 +102,7 @@ class NPowerlawMGaussianMonk(Monk):
     @property
     def parameters(self) -> List[str]:
         names = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
-        if self.has_beta_spin_magnitude or self.has_truncated_normal_spin_magnitude:
+        if self.has_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.has_truncated_normal_spin_x:
@@ -152,25 +152,35 @@ class NPowerlawMGaussianMonk(Monk):
             ("mmin_pl", self.N_pl),
         ]
 
-        if self.has_truncated_normal_spin_magnitude:
+        if self.use_spin_magnitude_mixture:
             all_params.extend(
                 [
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
+                    ("a_zeta", self.N_g),
+                    ("a_zeta", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale", self.N_pl),
                 ]
             )
         if self.has_beta_spin_magnitude:
@@ -408,9 +418,9 @@ def main() -> None:
         help="Include beta spin parameters in the model.",
     )
     spin_group.add_argument(
-        "--add-truncated-normal-spin-magnitude",
+        "--add-spin-magnitude-mixture",
         action="store_true",
-        help="Include truncated normal spin parameters in the model.",
+        help="Include spin parameters mixture in the model.",
     )
 
     model_group.add_argument(
@@ -482,7 +492,7 @@ def main() -> None:
         N_pl=args.n_pl,
         N_g=args.n_g,
         has_beta_spin_magnitude=args.add_beta_spin_magnitude,
-        has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
+        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         has_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
         has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
         has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
