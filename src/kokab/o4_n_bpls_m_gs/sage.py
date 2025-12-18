@@ -30,15 +30,15 @@ def where_fns_list(
     if use_beta_spin_magnitude:
 
         def positive_concentration(**kwargs) -> Array:
-            N_pl: int = kwargs.get("N_pl")  # type: ignore
+            N_bpl: int = kwargs.get("N_bpl")  # type: ignore
             N_g: int = kwargs.get("N_g")  # type: ignore
             mask = jnp.ones((), dtype=bool)
-            for n_pl in range(N_pl):
+            for n_bpl in range(N_bpl):
                 chi_mean: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_pl_" + str(n_pl)
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_bpl_" + str(n_bpl)
                 )  # type: ignore
                 chi_variance: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_pl_" + str(n_pl)
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_bpl_" + str(n_bpl)
                 )  # type: ignore
                 mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
             for n_g in range(N_g):
