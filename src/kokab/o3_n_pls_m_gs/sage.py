@@ -11,7 +11,7 @@ from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import enable_validation
 
 from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
-from gwkokab.models import NBrokenPowerlawMGaussian
+from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
@@ -30,15 +30,15 @@ def where_fns_list(
     if use_beta_spin_magnitude:
 
         def positive_concentration(**kwargs) -> Array:
-            N_bpl: int = kwargs.get("N_bpl")  # type: ignore
+            N_pl: int = kwargs.get("N_pl")  # type: ignore
             N_g: int = kwargs.get("N_g")  # type: ignore
             mask = jnp.ones((), dtype=bool)
-            for n_bpl in range(N_bpl):
+            for n_pl in range(N_pl):
                 chi_mean: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_bpl_" + str(n_bpl)
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_pl_" + str(n_pl)
                 )  # type: ignore
                 chi_variance: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_bpl_" + str(n_bpl)
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_pl_" + str(n_pl)
                 )  # type: ignore
                 mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
             for n_g in range(N_g):
@@ -56,10 +56,10 @@ def where_fns_list(
     return where_fns if len(where_fns) > 0 else None
 
 
-class NBrokenPowerlawMGaussianCore(Sage):
+class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
     def __init__(
         self,
-        N_bpl: int,
+        N_pl: int,
         N_g: int,
         use_beta_spin_magnitude: bool,
         use_truncated_normal_spin_magnitude: bool,
@@ -92,7 +92,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
         profile_memory: bool = False,
         check_leaks: bool = False,
     ) -> None:
-        self.N_bpl = N_bpl
+        self.N_pl = N_pl
         self.N_g = N_g
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
         self.use_truncated_normal_spin_magnitude = use_truncated_normal_spin_magnitude
@@ -102,7 +102,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
 
         super().__init__(
             likelihood_fn=likelihood_fn,
-            model=NBrokenPowerlawMGaussian,
+            model=NSmoothedPowerlawMSmoothedGaussian,
             posterior_regex=posterior_regex,
             posterior_columns=posterior_columns,
             seed=seed,
@@ -110,7 +110,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
             variance_cut_threshold=variance_cut_threshold,
-            analysis_name="ofour_n_bpls_m_gs",
+            analysis_name="othree_n_pls_m_gs",
             n_buckets=n_buckets,
             threshold=threshold,
             debug_nans=debug_nans,
@@ -122,7 +122,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
     @property
     def constants(self) -> Dict[str, Union[int, float, bool]]:
         return {
-            "N_bpl": self.N_bpl,
+            "N_pl": self.N_pl,
             "N_g": self.N_g,
             "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
             "use_truncated_normal_spin_magnitude": self.use_truncated_normal_spin_magnitude,
@@ -149,37 +149,35 @@ class NBrokenPowerlawMGaussianCore(Sage):
     @property
     def model_parameters(self) -> List[str]:
         all_params: List[Tuple[str, int]] = [
-            ("alpha1_bpl", self.N_bpl),
-            ("alpha2_bpl", self.N_bpl),
-            ("lambda", self.N_bpl + self.N_g - 1),
+            ("alpha_pl", self.N_pl),
+            ("lambda", self.N_pl + self.N_g - 1),
             ("m1_high_g", self.N_g),
             ("m1_loc_g", self.N_g),
             ("m1_low_g", self.N_g),
             ("m1_scale_g", self.N_g),
-            ("m1break_bpl", self.N_bpl),
-            ("m1max_bpl", self.N_bpl),
-            ("m1min_bpl", self.N_bpl),
+            ("mmax_pl", self.N_pl),
+            ("mmin_pl", self.N_pl),
         ]
 
         if self.use_truncated_normal_spin_magnitude:
             all_params.extend(
                 [
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -187,13 +185,13 @@ class NBrokenPowerlawMGaussianCore(Sage):
             all_params.extend(
                 [
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
                 ]
             )
 
@@ -201,18 +199,18 @@ class NBrokenPowerlawMGaussianCore(Sage):
             all_params.extend(
                 [
                     ("cos_tilt_zeta_g", self.N_g),
-                    ("cos_tilt_zeta_bpl", self.N_bpl),
-                    (P.COS_TILT_1.value + "_loc_bpl", self.N_bpl),
+                    ("cos_tilt_zeta_pl", self.N_pl),
+                    (P.COS_TILT_1.value + "_loc_pl", self.N_pl),
                     (P.COS_TILT_1.value + "_loc_g", self.N_g),
-                    (P.COS_TILT_1.value + "_minimum_bpl", self.N_bpl),
+                    (P.COS_TILT_1.value + "_minimum_pl", self.N_pl),
                     (P.COS_TILT_1.value + "_minimum_g", self.N_g),
-                    (P.COS_TILT_1.value + "_scale_bpl", self.N_bpl),
+                    (P.COS_TILT_1.value + "_scale_pl", self.N_pl),
                     (P.COS_TILT_1.value + "_scale_g", self.N_g),
-                    (P.COS_TILT_2.value + "_loc_bpl", self.N_bpl),
+                    (P.COS_TILT_2.value + "_loc_pl", self.N_pl),
                     (P.COS_TILT_2.value + "_loc_g", self.N_g),
-                    (P.COS_TILT_2.value + "_minimum_bpl", self.N_bpl),
+                    (P.COS_TILT_2.value + "_minimum_pl", self.N_pl),
                     (P.COS_TILT_2.value + "_minimum_g", self.N_g),
-                    (P.COS_TILT_2.value + "_scale_bpl", self.N_bpl),
+                    (P.COS_TILT_2.value + "_scale_pl", self.N_pl),
                     (P.COS_TILT_2.value + "_scale_g", self.N_g),
                 ]
             )
@@ -221,13 +219,13 @@ class NBrokenPowerlawMGaussianCore(Sage):
             all_params.extend(
                 [
                     (P.ECCENTRICITY.value + "_high_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_high_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_high_pl", self.N_pl),
                     (P.ECCENTRICITY.value + "_loc_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_loc_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_loc_pl", self.N_pl),
                     (P.ECCENTRICITY.value + "_low_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_low_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_low_pl", self.N_pl),
                     (P.ECCENTRICITY.value + "_scale_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_scale_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -235,20 +233,18 @@ class NBrokenPowerlawMGaussianCore(Sage):
             all_params.extend(
                 [
                     (P.REDSHIFT.value + "_kappa_g", self.N_g),
-                    (P.REDSHIFT.value + "_kappa_bpl", self.N_bpl),
+                    (P.REDSHIFT.value + "_kappa_pl", self.N_pl),
                     (P.REDSHIFT.value + "_z_max_g", self.N_g),
-                    (P.REDSHIFT.value + "_z_max_bpl", self.N_bpl),
+                    (P.REDSHIFT.value + "_z_max_pl", self.N_pl),
                 ]
             )
 
         extended_params = [
             "beta",
-            "delta_m1",
-            "delta_m2",
+            "delta_m",
             "log_rate",
-            "m1max",
-            "m1min",
-            "m2min",
+            "mmax",
+            "mmin",
         ]
         for params in all_params:
             extended_params.extend(expand_arguments(*params))
@@ -258,9 +254,9 @@ class NBrokenPowerlawMGaussianCore(Sage):
 def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(
-        "--n-bpl",
+        "--n-pl",
         type=int,
-        help="Number of broken power-law components in the mass model.",
+        help="Number of power-law components in the mass model.",
     )
     model_group.add_argument(
         "--n-g",
@@ -311,11 +307,13 @@ def f_main() -> None:
 
     log_info(start=True)
 
-    class NBrokenPowerlawMGaussianFSage(NBrokenPowerlawMGaussianCore, FlowMCBased):
+    class NSmoothedPowerlawMSmoothedGaussianFSage(
+        NSmoothedPowerlawMSmoothedGaussianCore, FlowMCBased
+    ):
         pass
 
-    NBrokenPowerlawMGaussianFSage(
-        N_bpl=args.n_bpl,
+    NSmoothedPowerlawMSmoothedGaussianFSage(
+        N_pl=args.n_pl,
         N_g=args.n_g,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
@@ -348,11 +346,13 @@ def n_main() -> None:
 
     log_info(start=True)
 
-    class NBrokenPowerlawMGaussianNSage(NBrokenPowerlawMGaussianCore, NumpyroBased):
+    class NSmoothedPowerlawMSmoothedGaussianNSage(
+        NSmoothedPowerlawMSmoothedGaussianCore, NumpyroBased
+    ):
         pass
 
-    NBrokenPowerlawMGaussianNSage(
-        N_bpl=args.n_bpl,
+    NSmoothedPowerlawMSmoothedGaussianNSage(
+        N_pl=args.n_pl,
         N_g=args.n_g,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,

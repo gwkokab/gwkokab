@@ -149,6 +149,6 @@ def numpyro_poisson_likelihood(
                 -jnp.inf,  # type: ignore[arg-type]
             )
 
-        numpyro.factor("log_likelihood", log_likelihood)
+        numpyro.factor("log_likelihood", jnp.nan_to_num(log_likelihood, nan=-jnp.inf))
 
     return log_likelihood_fn  # type: ignore[return-value]
