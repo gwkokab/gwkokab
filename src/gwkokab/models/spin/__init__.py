@@ -8,4 +8,5 @@ from ._models import (
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
     MinimumTiltModel as MinimumTiltModel,
     MinimumTiltModelExtended as MinimumTiltModelExtended,
+    NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,
 )

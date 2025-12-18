@@ -36,4 +36,5 @@ from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
+    NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,
 )
