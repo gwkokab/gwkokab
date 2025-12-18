@@ -23,7 +23,7 @@ class NPowerlawMGaussianMonk(Monk):
         has_truncated_normal_spin_y: bool,
         has_truncated_normal_spin_z: bool,
         has_tilt: bool,
-        has_eccentricity: bool,
+        use_eccentricity_mixture: bool,
         has_redshift: bool,
         has_cos_iota: bool,
         has_phi_12: bool,
@@ -52,7 +52,7 @@ class NPowerlawMGaussianMonk(Monk):
         self.has_truncated_normal_spin_y = has_truncated_normal_spin_y
         self.has_truncated_normal_spin_z = has_truncated_normal_spin_z
         self.has_tilt = has_tilt
-        self.has_eccentricity = has_eccentricity
+        self.use_eccentricity_mixture = use_eccentricity_mixture
         self.has_redshift = has_redshift
         self.has_cos_iota = has_cos_iota
         self.has_phi_12 = has_phi_12
@@ -89,7 +89,7 @@ class NPowerlawMGaussianMonk(Monk):
             "use_truncated_normal_spin_y": self.has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": self.has_truncated_normal_spin_z,
             "use_tilt": self.has_tilt,
-            "use_eccentricity": self.has_eccentricity,
+            "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_redshift": self.has_redshift,
             "use_cos_iota": self.has_cos_iota,
             "use_phi_12": self.has_phi_12,
@@ -118,7 +118,7 @@ class NPowerlawMGaussianMonk(Monk):
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.has_phi_12:
             names.append(P.PHI_12.value)
-        if self.has_eccentricity:
+        if self.use_eccentricity_mixture:
             names.append(P.ECCENTRICITY.value)
         if self.has_redshift:
             names.append(P.REDSHIFT.value)
@@ -279,17 +279,27 @@ class NPowerlawMGaussianMonk(Monk):
                 ]
             )
 
-        if self.has_eccentricity:
+        if self.use_eccentricity_mixture:
             all_params.extend(
                 [
-                    (P.ECCENTRICITY.value + "_high_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_high_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_loc_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_loc_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_low_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_low_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_scale_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_scale_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_high1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_high1_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_high2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_high2_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_loc1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_loc1_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_loc2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_loc2_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_low1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_low1_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_low2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_low2_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_scale1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_scale1_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_scale2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_scale2_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_zeta_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_zeta_pl", self.N_pl),
                 ]
             )
 
@@ -429,9 +439,9 @@ def main() -> None:
         help="Include redshift parameter in the model",
     )
     model_group.add_argument(
-        "--add-truncated-normal-eccentricity",
+        "--add-eccentricity-mixture",
         action="store_true",
-        help="Include truncated normal eccentricity in the model.",
+        help="Include eccentricity mixture in the model.",
     )
     model_group.add_argument(
         "--add-cos-iota",
@@ -477,7 +487,7 @@ def main() -> None:
         has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
         has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         has_tilt=args.add_tilt,
-        has_eccentricity=args.add_truncated_normal_eccentricity,
+        use_eccentricity_mixture=args.add_eccentricity_mixture,
         has_redshift=args.add_redshift,
         has_cos_iota=args.add_cos_iota,
         has_phi_12=args.add_phi_12,

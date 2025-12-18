@@ -16,7 +16,10 @@ from numpyro.distributions import (
 from ...utils.kernel import log_planck_taper_window
 from ..constraints import any_constraint
 from ..utils import JointDistribution
-from ._ncombination import create_powerlaws, create_truncated_normal_distributions
+from ._ncombination import (
+    create_powerlaws,
+    create_truncated_normal_distributions,
+)
 from ._utils import (
     _M1_GRID_SIZE,
     _SmoothedPowerlawMassRatioAndRest,
@@ -29,7 +32,7 @@ def _build_pl_component_distributions(
     use_beta_spin_magnitude: bool,
     use_truncated_normal_spin_magnitude: bool,
     use_tilt: bool,
-    use_truncated_normal_eccentricity: bool,
+    use_eccentricity_mixture: bool,
     use_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
@@ -46,7 +49,7 @@ def _build_pl_component_distributions(
         use_beta_spin_magnitude=use_beta_spin_magnitude,
         use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
         use_tilt=use_tilt,
-        use_truncated_normal_eccentricity=use_truncated_normal_eccentricity,
+        use_eccentricity_mixture=use_eccentricity_mixture,
         use_redshift=use_redshift,
         validate_args=validate_args,
     )
@@ -62,7 +65,7 @@ def _build_g_component_distributions(
     use_beta_spin_magnitude: bool,
     use_truncated_normal_spin_magnitude: bool,
     use_tilt: bool,
-    use_truncated_normal_eccentricity: bool,
+    use_eccentricity_mixture: bool,
     use_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
@@ -82,7 +85,7 @@ def _build_g_component_distributions(
         use_beta_spin_magnitude=use_beta_spin_magnitude,
         use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
         use_tilt=use_tilt,
-        use_truncated_normal_eccentricity=use_truncated_normal_eccentricity,
+        use_eccentricity_mixture=use_eccentricity_mixture,
         use_redshift=use_redshift,
         params=params,
         validate_args=validate_args,
@@ -100,7 +103,7 @@ def NSmoothedPowerlawMSmoothedGaussian(
     use_beta_spin_magnitude: bool,
     use_truncated_normal_spin_magnitude: bool,
     use_tilt: bool,
-    use_truncated_normal_eccentricity: bool,
+    use_eccentricity_mixture: bool,
     use_redshift: bool,
     *,
     validate_args=None,
@@ -124,7 +127,7 @@ def NSmoothedPowerlawMSmoothedGaussian(
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
             use_tilt=use_tilt,
-            use_truncated_normal_eccentricity=use_truncated_normal_eccentricity,
+            use_eccentricity_mixture=use_eccentricity_mixture,
             use_redshift=use_redshift,
             params=params,
             validate_args=validate_args,
@@ -138,7 +141,7 @@ def NSmoothedPowerlawMSmoothedGaussian(
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_truncated_normal_spin_magnitude=use_truncated_normal_spin_magnitude,
             use_tilt=use_tilt,
-            use_truncated_normal_eccentricity=use_truncated_normal_eccentricity,
+            use_eccentricity_mixture=use_eccentricity_mixture,
             use_redshift=use_redshift,
             params=params,
             validate_args=validate_args,

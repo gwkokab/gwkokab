@@ -68,7 +68,7 @@ def make_parser() -> ArgumentParser:
         help="Include spin-orbit tilt cosines cos_tilt1, cos_tilt2 (cosines of angles between each spin and orbital angular momentum; physical range -1 to 1).",
     )
     model_group.add_argument(
-        "--add-truncated-normal-eccentricity",
+        "--add-eccentricity-mixture",
         action="store_true",
         help="Include orbital eccentricity e via a truncated-normal prior (dimensionless; physical range 0≤e<1 at the reference frequency/time).",
     )
@@ -161,7 +161,7 @@ def main() -> None:
     has_truncated_normal_spin_y = args.add_truncated_normal_spin_y
     has_truncated_normal_spin_z = args.add_truncated_normal_spin_z
     has_tilt = args.add_tilt
-    has_eccentricity = args.add_truncated_normal_eccentricity
+    use_eccentricity_mixture = args.add_eccentricity_mixture
     has_mean_anomaly = args.add_mean_anomaly
     has_redshift = args.add_redshift
     has_cos_iota = args.add_cos_iota
@@ -230,7 +230,7 @@ def main() -> None:
                 P.COS_TILT_2.value + "_scale",
             ]
         )
-    if has_eccentricity:
+    if use_eccentricity_mixture:
         err_params_name.extend(
             [
                 P.ECCENTRICITY.value + "_high",
@@ -677,18 +677,28 @@ def main() -> None:
 
         error_magazine.register(P.PHI_12.value, phi_12_error)
 
-    if has_eccentricity:
+    if use_eccentricity_mixture:
         parameters_name += (P.ECCENTRICITY.value,)
         all_params.extend(
             [
-                (P.ECCENTRICITY.value + "_high_g", N_g),
-                (P.ECCENTRICITY.value + "_high_pl", N_pl),
-                (P.ECCENTRICITY.value + "_loc_g", N_g),
-                (P.ECCENTRICITY.value + "_loc_pl", N_pl),
-                (P.ECCENTRICITY.value + "_low_g", N_g),
-                (P.ECCENTRICITY.value + "_low_pl", N_pl),
-                (P.ECCENTRICITY.value + "_scale_g", N_g),
-                (P.ECCENTRICITY.value + "_scale_pl", N_pl),
+                (P.ECCENTRICITY.value + "_high1_g", N_g),
+                (P.ECCENTRICITY.value + "_high1_pl", N_pl),
+                (P.ECCENTRICITY.value + "_high2_g", N_g),
+                (P.ECCENTRICITY.value + "_high2_pl", N_pl),
+                (P.ECCENTRICITY.value + "_loc1_g", N_g),
+                (P.ECCENTRICITY.value + "_loc1_pl", N_pl),
+                (P.ECCENTRICITY.value + "_loc2_g", N_g),
+                (P.ECCENTRICITY.value + "_loc2_pl", N_pl),
+                (P.ECCENTRICITY.value + "_low1_g", N_g),
+                (P.ECCENTRICITY.value + "_low1_pl", N_pl),
+                (P.ECCENTRICITY.value + "_low2_g", N_g),
+                (P.ECCENTRICITY.value + "_low2_pl", N_pl),
+                (P.ECCENTRICITY.value + "_scale1_g", N_g),
+                (P.ECCENTRICITY.value + "_scale1_pl", N_pl),
+                (P.ECCENTRICITY.value + "_scale2_g", N_g),
+                (P.ECCENTRICITY.value + "_scale2_pl", N_pl),
+                (P.ECCENTRICITY.value + "_zeta_g", N_g),
+                (P.ECCENTRICITY.value + "_zeta_pl", N_pl),
             ]
         )
 
@@ -915,7 +925,7 @@ def main() -> None:
             "use_truncated_normal_spin_y": has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": has_truncated_normal_spin_z,
             "use_tilt": has_tilt,
-            "use_eccentricity": has_eccentricity,
+            "use_eccentricity_mixture": use_eccentricity_mixture,
             "use_mean_anomaly": has_mean_anomaly,
             "use_redshift": has_redshift,
             "use_cos_iota": has_cos_iota,
