@@ -14,15 +14,14 @@ from numpyro.distributions import (
     Uniform,
 )
 
-from ..eccentricity import EccentricMixtureModel
 from ..mass import BrokenPowerlaw, PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import (
     BetaFromMeanVar,
     IndependentSpinOrientationGaussianIsotropic,
     MinimumTiltModelExtended,
-    NDIsotropicAndTruncatedNormalMixture,
 )
+from ..sundry import NDIsotropicAndTruncatedNormalMixture, TwoTruncatedNormalMixture
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import DoublyTruncatedPowerLaw, ExtendedSupportTransformedDistribution
 
@@ -31,7 +30,7 @@ __all__ = [
     "combine_distributions",
     "create_beta_distributions",
     "create_broken_powerlaws",
-    "create_eccentric_mixture_models",
+    "create_two_truncated_normal_mixture",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_primary_mass_ratios",
     "create_powerlaw_redshift",
@@ -607,7 +606,7 @@ def create_powerlaws(
     return powerlaws_collection
 
 
-def create_eccentric_mixture_models(
+def create_two_truncated_normal_mixture(
     N: int,
     parameter_name: Literal["eccentricity"],
     component_type: Literal["bpl", "pl", "g"],
@@ -657,7 +656,7 @@ def create_eccentric_mixture_models(
         scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
         zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
 
-        eccentricity_dist = EccentricMixtureModel(
+        eccentricity_dist = TwoTruncatedNormalMixture(
             high1=high1,
             high2=high2,
             loc1=loc1,

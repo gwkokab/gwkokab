@@ -16,10 +16,10 @@ from ..constraints import all_constraint
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
-    create_eccentric_mixture_models,
     create_minimum_tilt_model,
     create_powerlaw_redshift,
     create_spin_magnitude_mixture_models,
+    create_two_truncated_normal_mixture,
 )
 
 
@@ -47,7 +47,7 @@ def build_non_mass_distributions(
         (use_spin_magnitude_mixture, P.PRIMARY_SPIN_MAGNITUDE.value + "_" + P.SECONDARY_SPIN_MAGNITUDE.value, create_spin_magnitude_mixture_models),
         # combined tilt distribution
         (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_minimum_tilt_model),
-        (use_eccentricity_mixture, P.ECCENTRICITY.value, create_eccentric_mixture_models),
+        (use_eccentricity_mixture, P.ECCENTRICITY.value, create_two_truncated_normal_mixture),
         (use_redshift, P.REDSHIFT.value, create_powerlaw_redshift),
 
     ]

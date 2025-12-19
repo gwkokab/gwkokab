@@ -12,7 +12,6 @@ from . import (
     transformations as transformations,
     utils as utils,
 )
-from .eccentricity import EccentricMixtureModel as EccentricMixtureModel
 from .hybrids import (
     BrokenPowerlawTwoPeakFull as BrokenPowerlawTwoPeakFull,
     BrokenPowerlawTwoPeakMultiSpinMultiTilt as BrokenPowerlawTwoPeakMultiSpinMultiTilt,
@@ -37,5 +36,8 @@ from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
+)
+from .sundry import (
     NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,
+    TwoTruncatedNormalMixture as TwoTruncatedNormalMixture,
 )
