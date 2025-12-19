@@ -614,6 +614,26 @@ def create_eccentric_mixture_models(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[MixtureGeneral]:
+    """Create a list of eccentric mixture models.
+
+    Parameters
+    ----------
+    N : int
+        Number of components.
+    parameter_name : Literal["eccentricity"]
+        The name of the parameter.
+    component_type : Literal["bpl", "pl", "g"]
+        The type of component.
+    params : Dict[str, Array]
+        A dictionary of parameters.
+    validate_args : Optional[bool], optional
+        Whether to validate arguments, by default None.
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        A list of eccentric mixture models.
+    """
     high1_name = parameter_name + "_high1_" + component_type
     high2_name = parameter_name + "_high2_" + component_type
     loc1_name = parameter_name + "_loc1_" + component_type
@@ -661,6 +681,31 @@ def create_spin_magnitude_mixture_models(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ):
+    """Create a list of spin magnitude mixture models.
+
+    .. note::
+        The `parameter_name` argument is ignored. This function is
+        hardcoded to create models for primary and secondary spin magnitudes
+        ('a_1' and 'a_2').
+
+    Parameters
+    ----------
+    N : int
+        Number of components.
+    parameter_name : str
+        Unused. Kept for compatibility with the calling interface.
+    component_type : Literal["bpl", "pl", "g"]
+        The type of component.
+    params : Dict[str, Array]
+        A dictionary of parameters.
+    validate_args : Optional[bool], optional
+        Whether to validate arguments, by default None.
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        A list of spin magnitude mixture models.
+    """
     zeta_name = "a_zeta_" + component_type
     loc1_name = "a_1_loc_" + component_type
     scale1_name = "a_1_scale_" + component_type
