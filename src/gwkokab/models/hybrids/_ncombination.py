@@ -20,9 +20,8 @@ from ..spin import (
     BetaFromMeanVar,
     IndependentSpinOrientationGaussianIsotropic,
     MinimumTiltModelExtended,
-    NDIsotropicAndTruncatedNormalMixture,
 )
-from ..sundry import TwoTruncatedNormalMixture
+from ..sundry import NDIsotropicAndTruncatedNormalMixture, TwoTruncatedNormalMixture
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import DoublyTruncatedPowerLaw, ExtendedSupportTransformedDistribution
 
