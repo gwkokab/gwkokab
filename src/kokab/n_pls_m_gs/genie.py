@@ -42,7 +42,7 @@ def make_parser() -> ArgumentParser:
         help="Include beta-distributed spin magnitudes a1,a2 (dimensionless Kerr spins; 0≤a<1).",
     )
     spin_magnitude_group.add_argument(
-        "--add-truncated-normal-spin-magnitude",
+        "--add-spin-magnitude-mixture",
         action="store_true",
         help="Include truncated-normal spin magnitudes a1,a2 (dimensionless Kerr spins; 0≤a<1).",
     )
@@ -68,7 +68,7 @@ def make_parser() -> ArgumentParser:
         help="Include spin-orbit tilt cosines cos_tilt1, cos_tilt2 (cosines of angles between each spin and orbital angular momentum; physical range -1 to 1).",
     )
     model_group.add_argument(
-        "--add-truncated-normal-eccentricity",
+        "--add-eccentricity-mixture",
         action="store_true",
         help="Include orbital eccentricity e via a truncated-normal prior (dimensionless; physical range 0≤e<1 at the reference frequency/time).",
     )
@@ -156,12 +156,12 @@ def main() -> None:
     N_g = model_json["N_g"]
 
     has_beta_spin_magnitude = args.add_beta_spin_magnitude
-    has_truncated_normal_spin_magnitude = args.add_truncated_normal_spin_magnitude
+    has_spin_magnitude_mixture = args.add_spin_magnitude_mixture
     has_truncated_normal_spin_x = args.add_truncated_normal_spin_x
     has_truncated_normal_spin_y = args.add_truncated_normal_spin_y
     has_truncated_normal_spin_z = args.add_truncated_normal_spin_z
     has_tilt = args.add_tilt
-    has_eccentricity = args.add_truncated_normal_eccentricity
+    use_eccentricity_mixture = args.add_eccentricity_mixture
     has_mean_anomaly = args.add_mean_anomaly
     has_redshift = args.add_redshift
     has_cos_iota = args.add_cos_iota
@@ -175,7 +175,7 @@ def main() -> None:
     has_phi_orb = args.add_phi_orb
 
     err_params_name = ["scale_eta", "scale_Mc"]
-    if has_beta_spin_magnitude or has_truncated_normal_spin_magnitude:
+    if has_beta_spin_magnitude or has_spin_magnitude_mixture:
         err_params_name.extend(
             [
                 P.PRIMARY_SPIN_MAGNITUDE.value + "_high",
@@ -230,7 +230,7 @@ def main() -> None:
                 P.COS_TILT_2.value + "_scale",
             ]
         )
-    if has_eccentricity:
+    if use_eccentricity_mixture:
         err_params_name.extend(
             [
                 P.ECCENTRICITY.value + "_high",
@@ -373,33 +373,43 @@ def main() -> None:
             ]
         )
 
-    if has_truncated_normal_spin_magnitude:
+    if has_spin_magnitude_mixture:
         parameters_name += (
             P.PRIMARY_SPIN_MAGNITUDE.value,
             P.SECONDARY_SPIN_MAGNITUDE.value,
         )
         all_params.extend(
             [
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_pl", N_pl),
+                ("a_zeta_g", N_g),
+                ("a_zeta_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low_pl", N_pl),
                 (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", N_g),
                 (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_pl", N_pl),
                 (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", N_g),
                 (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low_pl", N_pl),
                 (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", N_g),
                 (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_pl", N_pl),
                 (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", N_g),
                 (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", N_pl),
             ]
         )
 
-    if has_beta_spin_magnitude or has_truncated_normal_spin_magnitude:
+    if has_beta_spin_magnitude or has_spin_magnitude_mixture:
         error_magazine.register(
             P.PRIMARY_SPIN_MAGNITUDE.value,
             partial(
@@ -677,18 +687,28 @@ def main() -> None:
 
         error_magazine.register(P.PHI_12.value, phi_12_error)
 
-    if has_eccentricity:
+    if use_eccentricity_mixture:
         parameters_name += (P.ECCENTRICITY.value,)
         all_params.extend(
             [
-                (P.ECCENTRICITY.value + "_high_g", N_g),
-                (P.ECCENTRICITY.value + "_high_pl", N_pl),
-                (P.ECCENTRICITY.value + "_loc_g", N_g),
-                (P.ECCENTRICITY.value + "_loc_pl", N_pl),
-                (P.ECCENTRICITY.value + "_low_g", N_g),
-                (P.ECCENTRICITY.value + "_low_pl", N_pl),
-                (P.ECCENTRICITY.value + "_scale_g", N_g),
-                (P.ECCENTRICITY.value + "_scale_pl", N_pl),
+                (P.ECCENTRICITY.value + "_high1_g", N_g),
+                (P.ECCENTRICITY.value + "_high1_pl", N_pl),
+                (P.ECCENTRICITY.value + "_high2_g", N_g),
+                (P.ECCENTRICITY.value + "_high2_pl", N_pl),
+                (P.ECCENTRICITY.value + "_loc1_g", N_g),
+                (P.ECCENTRICITY.value + "_loc1_pl", N_pl),
+                (P.ECCENTRICITY.value + "_loc2_g", N_g),
+                (P.ECCENTRICITY.value + "_loc2_pl", N_pl),
+                (P.ECCENTRICITY.value + "_low1_g", N_g),
+                (P.ECCENTRICITY.value + "_low1_pl", N_pl),
+                (P.ECCENTRICITY.value + "_low2_g", N_g),
+                (P.ECCENTRICITY.value + "_low2_pl", N_pl),
+                (P.ECCENTRICITY.value + "_scale1_g", N_g),
+                (P.ECCENTRICITY.value + "_scale1_pl", N_pl),
+                (P.ECCENTRICITY.value + "_scale2_g", N_g),
+                (P.ECCENTRICITY.value + "_scale2_pl", N_pl),
+                (P.ECCENTRICITY.value + "_zeta_g", N_g),
+                (P.ECCENTRICITY.value + "_zeta_pl", N_pl),
             ]
         )
 
@@ -910,12 +930,12 @@ def main() -> None:
             "N_pl": N_pl,
             "N_g": N_g,
             "use_beta_spin_magnitude": has_beta_spin_magnitude,
-            "use_truncated_normal_spin_magnitude": has_truncated_normal_spin_magnitude,
+            "use_spin_magnitude_mixture": has_spin_magnitude_mixture,
             "use_truncated_normal_spin_x": has_truncated_normal_spin_x,
             "use_truncated_normal_spin_y": has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": has_truncated_normal_spin_z,
             "use_tilt": has_tilt,
-            "use_eccentricity": has_eccentricity,
+            "use_eccentricity_mixture": use_eccentricity_mixture,
             "use_mean_anomaly": has_mean_anomaly,
             "use_redshift": has_redshift,
             "use_cos_iota": has_cos_iota,

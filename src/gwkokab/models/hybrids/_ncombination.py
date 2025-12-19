@@ -4,7 +4,8 @@
 
 from typing import Dict, List, Literal, Optional, TypeVar
 
-from jaxtyping import Array
+from jax import numpy as jnp
+from jaxtyping import Array, ArrayLike
 from numpyro.distributions import (
     Beta,
     Distribution,
@@ -13,12 +14,14 @@ from numpyro.distributions import (
     Uniform,
 )
 
+from ..eccentricity import EccentricMixtureModel
 from ..mass import BrokenPowerlaw, PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import (
     BetaFromMeanVar,
     IndependentSpinOrientationGaussianIsotropic,
     MinimumTiltModelExtended,
+    NDIsotropicAndTruncatedNormalMixture,
 )
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import DoublyTruncatedPowerLaw, ExtendedSupportTransformedDistribution
@@ -28,10 +31,12 @@ __all__ = [
     "combine_distributions",
     "create_beta_distributions",
     "create_broken_powerlaws",
+    "create_eccentric_mixture_models",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_primary_mass_ratios",
     "create_powerlaw_redshift",
     "create_powerlaws",
+    "create_spin_magnitude_mixture_models",
     "create_truncated_normal_distributions",
     "create_uniform_distributions",
 ]
@@ -600,3 +605,165 @@ def create_powerlaws(
 
         powerlaws_collection.append(powerlaw)
     return powerlaws_collection
+
+
+def create_eccentric_mixture_models(
+    N: int,
+    parameter_name: Literal["eccentricity"],
+    component_type: Literal["bpl", "pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[MixtureGeneral]:
+    """Create a list of eccentric mixture models.
+
+    Parameters
+    ----------
+    N : int
+        Number of components.
+    parameter_name : Literal["eccentricity"]
+        The name of the parameter.
+    component_type : Literal["bpl", "pl", "g"]
+        The type of component.
+    params : Dict[str, Array]
+        A dictionary of parameters.
+    validate_args : Optional[bool], optional
+        Whether to validate arguments, by default None.
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        A list of eccentric mixture models.
+    """
+    high1_name = parameter_name + "_high1_" + component_type
+    high2_name = parameter_name + "_high2_" + component_type
+    loc1_name = parameter_name + "_loc1_" + component_type
+    loc2_name = parameter_name + "_loc2_" + component_type
+    low1_name = parameter_name + "_low1_" + component_type
+    low2_name = parameter_name + "_low2_" + component_type
+    scale1_name = parameter_name + "_scale1_" + component_type
+    scale2_name = parameter_name + "_scale2_" + component_type
+    zeta_name = parameter_name + "_zeta_" + component_type
+
+    eccentricity_collection = []
+
+    for i in range(N):
+        high1 = _get_parameter(params, f"{high1_name}_{i}", high1_name)
+        high2 = _get_parameter(params, f"{high2_name}_{i}", high2_name)
+        loc1 = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)
+        loc2 = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)
+        low1 = _get_parameter(params, f"{low1_name}_{i}", low1_name)
+        low2 = _get_parameter(params, f"{low2_name}_{i}", low2_name)
+        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
+        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
+        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
+
+        eccentricity_dist = EccentricMixtureModel(
+            high1=high1,
+            high2=high2,
+            loc1=loc1,
+            loc2=loc2,
+            low1=low1,
+            low2=low2,
+            scale1=scale1,
+            scale2=scale2,
+            zeta=zeta,
+            validate_args=validate_args,
+        )
+        eccentricity_collection.append(eccentricity_dist)
+
+    return eccentricity_collection
+
+
+def create_spin_magnitude_mixture_models(
+    N: int,
+    parameter_name,
+    component_type: Literal["bpl", "pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+):
+    """Create a list of spin magnitude mixture models.
+
+    .. note::
+        The `parameter_name` argument is ignored. This function is
+        hardcoded to create models for primary and secondary spin magnitudes
+        ('a_1' and 'a_2').
+
+    Parameters
+    ----------
+    N : int
+        Number of components.
+    parameter_name : str
+        Unused. Kept for compatibility with the calling interface.
+    component_type : Literal["bpl", "pl", "g"]
+        The type of component.
+    params : Dict[str, Array]
+        A dictionary of parameters.
+    validate_args : Optional[bool], optional
+        Whether to validate arguments, by default None.
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        A list of spin magnitude mixture models.
+    """
+    zeta_name = "a_zeta_" + component_type
+    loc1_name = "a_1_loc_" + component_type
+    scale1_name = "a_1_scale_" + component_type
+    isotropic_low1_name = "a_1_isotropic_low_" + component_type
+    isotropic_high1_name = "a_1_isotropic_high_" + component_type
+    gaussian_low1_name = "a_1_gaussian_low_" + component_type
+    gaussian_high1_name = "a_1_gaussian_high_" + component_type
+    loc2_name = "a_2_loc_" + component_type
+    scale2_name = "a_2_scale_" + component_type
+    isotropic_low2_name = "a_2_isotropic_low_" + component_type
+    isotropic_high2_name = "a_2_isotropic_high_" + component_type
+    gaussian_low2_name = "a_2_gaussian_low_" + component_type
+    gaussian_high2_name = "a_2_gaussian_high_" + component_type
+
+    spin_collection = []
+
+    for i in range(N):
+        zeta: ArrayLike = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)  # type: ignore
+        loc1: ArrayLike = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)  # type: ignore
+        scale1: ArrayLike = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)  # type: ignore
+        isotropic_low1: ArrayLike = _get_parameter(
+            params, f"{isotropic_low1_name}_{i}", isotropic_low1_name
+        )  # type: ignore
+        isotropic_high1: ArrayLike = _get_parameter(
+            params, f"{isotropic_high1_name}_{i}", isotropic_high1_name
+        )  # type: ignore
+        gaussian_low1: ArrayLike = _get_parameter(
+            params, f"{gaussian_low1_name}_{i}", gaussian_low1_name
+        )  # type: ignore
+        gaussian_high1: ArrayLike = _get_parameter(
+            params, f"{gaussian_high1_name}_{i}", gaussian_high1_name
+        )  # type: ignore
+        loc2: ArrayLike = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)  # type: ignore
+        scale2: ArrayLike = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)  # type: ignore
+        isotropic_low2: ArrayLike = _get_parameter(
+            params, f"{isotropic_low2_name}_{i}", isotropic_low2_name
+        )  # type: ignore
+        isotropic_high2: ArrayLike = _get_parameter(
+            params, f"{isotropic_high2_name}_{i}", isotropic_high2_name
+        )  # type: ignore
+        gaussian_low2: ArrayLike = _get_parameter(
+            params, f"{gaussian_low2_name}_{i}", gaussian_low2_name
+        )  # type: ignore
+        gaussian_high2: ArrayLike = _get_parameter(
+            params, f"{gaussian_high2_name}_{i}", gaussian_high2_name
+        )  # type: ignore
+
+        spin_dist = NDIsotropicAndTruncatedNormalMixture(
+            zeta=zeta,
+            loc=jnp.stack((loc1, loc2), axis=-1),
+            scale=jnp.stack((scale1, scale2), axis=-1),
+            isotropic_low=jnp.stack((isotropic_low1, isotropic_low2), axis=-1),
+            isotropic_high=jnp.stack((isotropic_high1, isotropic_high2), axis=-1),
+            gaussian_low=jnp.stack((gaussian_low1, gaussian_low2), axis=-1),
+            gaussian_high=jnp.stack((gaussian_high1, gaussian_high2), axis=-1),
+            validate_args=validate_args,
+        )
+
+        spin_collection.append(spin_dist)
+
+    return spin_collection

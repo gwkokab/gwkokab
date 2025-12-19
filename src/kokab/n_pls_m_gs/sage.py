@@ -76,12 +76,12 @@ class NPowerlawMGaussianCore(Sage):
         N_pl: int,
         N_g: int,
         has_beta_spin_magnitude: bool,
-        has_truncated_normal_spin_magnitude: bool,
+        use_spin_magnitude_mixture: bool,
         has_truncated_normal_spin_x: bool,
         has_truncated_normal_spin_y: bool,
         has_truncated_normal_spin_z: bool,
         has_tilt: bool,
-        has_eccentricity: bool,
+        use_eccentricity_mixture: bool,
         has_redshift: bool,
         has_cos_iota: bool,
         has_phi_12: bool,
@@ -118,12 +118,12 @@ class NPowerlawMGaussianCore(Sage):
         self.N_pl = N_pl
         self.N_g = N_g
         self.has_beta_spin_magnitude = has_beta_spin_magnitude
-        self.has_truncated_normal_spin_magnitude = has_truncated_normal_spin_magnitude
+        self.use_spin_magnitude_mixture = use_spin_magnitude_mixture
         self.has_truncated_normal_spin_x = has_truncated_normal_spin_x
         self.has_truncated_normal_spin_y = has_truncated_normal_spin_y
         self.has_truncated_normal_spin_z = has_truncated_normal_spin_z
         self.has_tilt = has_tilt
-        self.has_eccentricity = has_eccentricity
+        self.use_eccentricity_mixture = use_eccentricity_mixture
         self.has_redshift = has_redshift
         self.has_cos_iota = has_cos_iota
         self.has_phi_12 = has_phi_12
@@ -157,12 +157,12 @@ class NPowerlawMGaussianCore(Sage):
             "N_pl": self.N_pl,
             "N_g": self.N_g,
             "use_beta_spin_magnitude": self.has_beta_spin_magnitude,
-            "use_truncated_normal_spin_magnitude": self.has_truncated_normal_spin_magnitude,
+            "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
             "use_truncated_normal_spin_x": self.has_truncated_normal_spin_x,
             "use_truncated_normal_spin_y": self.has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": self.has_truncated_normal_spin_z,
             "use_tilt": self.has_tilt,
-            "use_eccentricity": self.has_eccentricity,
+            "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_redshift": self.has_redshift,
             "use_cos_iota": self.has_cos_iota,
             "use_phi_12": self.has_phi_12,
@@ -175,7 +175,7 @@ class NPowerlawMGaussianCore(Sage):
     @property
     def parameters(self) -> List[str]:
         names = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
-        if self.has_beta_spin_magnitude or self.has_truncated_normal_spin_magnitude:
+        if self.has_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.has_truncated_normal_spin_x:
@@ -191,7 +191,7 @@ class NPowerlawMGaussianCore(Sage):
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.has_phi_12:
             names.append(P.PHI_12.value)
-        if self.has_eccentricity:
+        if self.use_eccentricity_mixture:
             names.append(P.ECCENTRICITY.value)
         if self.has_redshift:
             names.append(P.REDSHIFT.value)
@@ -225,27 +225,39 @@ class NPowerlawMGaussianCore(Sage):
             ("mmin_pl", self.N_pl),
         ]
 
-        if self.has_truncated_normal_spin_magnitude:
+        if self.use_spin_magnitude_mixture:
+            # fmt: off
             all_params.extend(
                 [
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
+                    ("a_zeta_g", self.N_g),
+                    ("a_zeta_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low_pl", self.N_pl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_pl", self.N_pl),
                 ]
             )
+            # fmt: on
         if self.has_beta_spin_magnitude:
             all_params.extend(
                 [
@@ -352,17 +364,27 @@ class NPowerlawMGaussianCore(Sage):
                 ]
             )
 
-        if self.has_eccentricity:
+        if self.use_eccentricity_mixture:
             all_params.extend(
                 [
-                    (P.ECCENTRICITY.value + "_high_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_high_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_loc_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_loc_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_low_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_low_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_scale_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_scale_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_high1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_high1_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_high2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_high2_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_loc1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_loc1_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_loc2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_loc2_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_low1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_low1_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_low2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_low2_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_scale1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_scale1_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_scale2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_scale2_pl", self.N_pl),
+                    (P.ECCENTRICITY.value + "_zeta_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_zeta_pl", self.N_pl),
                 ]
             )
 
@@ -476,9 +498,9 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include beta spin parameters in the model.",
     )
     spin_group.add_argument(
-        "--add-truncated-normal-spin-magnitude",
+        "--add-spin-magnitude-mixture",
         action="store_true",
-        help="Include truncated normal spin parameters in the model.",
+        help="Include spin parameters mixture in the model.",
     )
 
     model_group.add_argument(
@@ -507,7 +529,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include redshift parameter in the model",
     )
     model_group.add_argument(
-        "--add-truncated-normal-eccentricity",
+        "--add-eccentricity-mixture",
         action="store_true",
         help="Include truncated normal eccentricity in the model.",
     )
@@ -560,12 +582,12 @@ def f_main() -> None:
         N_pl=args.n_pl,
         N_g=args.n_g,
         has_beta_spin_magnitude=args.add_beta_spin_magnitude,
-        has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
+        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         has_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
         has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
         has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         has_tilt=args.add_tilt,
-        has_eccentricity=args.add_truncated_normal_eccentricity,
+        use_eccentricity_mixture=args.add_eccentricity_mixture,
         has_redshift=args.add_redshift,
         has_cos_iota=args.add_cos_iota,
         has_phi_12=args.add_phi_12,
@@ -603,12 +625,12 @@ def n_main() -> None:
         N_pl=args.n_pl,
         N_g=args.n_g,
         has_beta_spin_magnitude=args.add_beta_spin_magnitude,
-        has_truncated_normal_spin_magnitude=args.add_truncated_normal_spin_magnitude,
+        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         has_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
         has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
         has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         has_tilt=args.add_tilt,
-        has_eccentricity=args.add_truncated_normal_eccentricity,
+        use_eccentricity_mixture=args.add_eccentricity_mixture,
         has_redshift=args.add_redshift,
         has_cos_iota=args.add_cos_iota,
         has_phi_12=args.add_phi_12,
