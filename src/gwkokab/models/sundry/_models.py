@@ -11,7 +11,7 @@ from numpyro.distributions import CategoricalProbs, MixtureGeneral, TruncatedNor
 from ..constraints import any_constraint
 
 
-def EccentricMixtureModel(
+def TwoTruncatedNormalMixture(
     high1: ArrayLike,
     high2: ArrayLike,
     loc1: ArrayLike,

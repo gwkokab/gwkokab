@@ -18,12 +18,12 @@ from ..utils import (
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
-    create_eccentric_mixture_models,
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_primary_mass_ratios,
     create_powerlaw_redshift,
     create_spin_magnitude_mixture_models,
     create_truncated_normal_distributions,
+    create_two_truncated_normal_mixture,
     create_uniform_distributions,
 )
 
@@ -119,7 +119,7 @@ def _build_non_mass_distributions(
         (use_phi_1, P.PHI_1.value, create_uniform_distributions),
         (use_phi_2, P.PHI_2.value, create_uniform_distributions),
         (use_phi_12, P.PHI_12.value, create_uniform_distributions),
-        (use_eccentricity_mixture, P.ECCENTRICITY.value, create_eccentric_mixture_models),
+        (use_eccentricity_mixture, P.ECCENTRICITY.value, create_two_truncated_normal_mixture),
         (use_mean_anomaly, P.MEAN_ANOMALY.value, create_uniform_distributions),
         (use_redshift, P.REDSHIFT.value, create_powerlaw_redshift),
         (use_right_ascension, P.RIGHT_ASCENSION.value, create_uniform_distributions),

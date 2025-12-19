@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from ._models import EccentricMixtureModel as EccentricMixtureModel
+from ._models import TwoTruncatedNormalMixture as TwoTruncatedNormalMixture
