@@ -156,7 +156,7 @@ def main() -> None:
     N_g = model_json["N_g"]
 
     has_beta_spin_magnitude = args.add_beta_spin_magnitude
-    has_truncated_normal_spin_magnitude = args.add_spin_magnitude_mixture
+    has_spin_magnitude_mixture = args.add_spin_magnitude_mixture
     has_truncated_normal_spin_x = args.add_truncated_normal_spin_x
     has_truncated_normal_spin_y = args.add_truncated_normal_spin_y
     has_truncated_normal_spin_z = args.add_truncated_normal_spin_z
@@ -175,7 +175,7 @@ def main() -> None:
     has_phi_orb = args.add_phi_orb
 
     err_params_name = ["scale_eta", "scale_Mc"]
-    if has_beta_spin_magnitude or has_truncated_normal_spin_magnitude:
+    if has_beta_spin_magnitude or has_spin_magnitude_mixture:
         err_params_name.extend(
             [
                 P.PRIMARY_SPIN_MAGNITUDE.value + "_high",
@@ -373,7 +373,7 @@ def main() -> None:
             ]
         )
 
-    if has_truncated_normal_spin_magnitude:
+    if has_spin_magnitude_mixture:
         parameters_name += (
             P.PRIMARY_SPIN_MAGNITUDE.value,
             P.SECONDARY_SPIN_MAGNITUDE.value,
@@ -409,7 +409,7 @@ def main() -> None:
             ]
         )
 
-    if has_beta_spin_magnitude or has_truncated_normal_spin_magnitude:
+    if has_beta_spin_magnitude or has_spin_magnitude_mixture:
         error_magazine.register(
             P.PRIMARY_SPIN_MAGNITUDE.value,
             partial(
@@ -930,7 +930,7 @@ def main() -> None:
             "N_pl": N_pl,
             "N_g": N_g,
             "use_beta_spin_magnitude": has_beta_spin_magnitude,
-            "use_truncated_normal_spin_magnitude": has_truncated_normal_spin_magnitude,
+            "use_spin_magnitude_mixture": has_spin_magnitude_mixture,
             "use_truncated_normal_spin_x": has_truncated_normal_spin_x,
             "use_truncated_normal_spin_y": has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": has_truncated_normal_spin_z,
