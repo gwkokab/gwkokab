@@ -36,6 +36,8 @@ from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
-    NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,
 )
-from .sundry import TwoTruncatedNormalMixture as TwoTruncatedNormalMixture
+from .sundry import (
+    NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,
+    TwoTruncatedNormalMixture as TwoTruncatedNormalMixture,
+)

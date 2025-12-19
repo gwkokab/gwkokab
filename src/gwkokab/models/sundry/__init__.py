@@ -2,4 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from ._models import TwoTruncatedNormalMixture as TwoTruncatedNormalMixture
+from ._models import (
+    NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,
+    TwoTruncatedNormalMixture as TwoTruncatedNormalMixture,
+)
