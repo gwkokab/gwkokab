@@ -14,6 +14,7 @@ from . import (
     core as core,
     ecc_matters as ecc_matters,
     n_pls_m_gs as n_pls_m_gs,
-    one_powerlaw_one_peak as one_powerlaw_one_peak,
+    o3_n_pls_m_gs as o3_n_pls_m_gs,
+    o4_n_bpls_m_gs as o4_n_bpls_m_gs,
     utils as utils,
 )
