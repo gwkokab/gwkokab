@@ -1,6 +1,7 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+
 from typing import Optional
 
 import equinox as eqx
@@ -11,6 +12,7 @@ from jaxtyping import ArrayLike
 from gwkokab.constants import SPEED_OF_LIGHT
 
 
+# TODO: A better alternative for Cosmology class that can work with JAX
 class Cosmology(eqx.Module):
     """Flat ΛCDM cosmology with Mpc-based units for distances and comoving volumes."""
 
@@ -56,10 +58,6 @@ class Cosmology(eqx.Module):
         self._OmegaKappa = 1.0 - (
             self._OmegaMatter + self._OmegaRadiation + self._OmegaLambda
         )
-
-        # assert jnp.isclose(self._OmegaKappa, 0.0, atol=1e-10), (
-        #     "Only flat cosmologies are supported (Ω_k ≈ 0)."
-        # )
 
         self._z = jnp.arange(0.0, max_z + dz, dz)
         self._Dc = quadax.cumulative_trapezoid(
