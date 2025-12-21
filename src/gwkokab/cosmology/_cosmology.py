@@ -82,6 +82,10 @@ class Cosmology(eqx.Module):
     def dDcdz(self, z: ArrayLike) -> ArrayLike:
         return (SPEED_OF_LIGHT / self._Ho) / self.z_to_E(z)
 
+    def dDLdz(self, z: ArrayLike) -> ArrayLike:
+        """Derivative of luminosity distance with respect to redshift."""
+        return self.dDcdz(z) * (1.0 + z) + self.z_to_Dc(z)
+
     def logdVcdz(self, z: ArrayLike, Dc: Optional[ArrayLike] = None) -> ArrayLike:
         if Dc is None:
             Dc = self.z_to_Dc(z)
