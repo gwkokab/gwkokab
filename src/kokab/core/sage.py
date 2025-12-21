@@ -135,6 +135,7 @@ class Sage(Guru):
             log_ref_priors = [d[..., -1] for d in data]
             data = [np.delete(d, -1, axis=-1) for d in data]
         else:
+            data = get_posterior_data(glob(self.posterior_regex), self.parameters)
             log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
         assert len(data) == len(log_ref_priors), (
             "Data and log reference priors must have the same length"
