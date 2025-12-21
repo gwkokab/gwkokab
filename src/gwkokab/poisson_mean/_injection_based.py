@@ -31,7 +31,6 @@ def poisson_mean_from_sensitivity_injections(
     del key  # Unused.
 
     injections_dict = load_injection_data(filename, 1 / far_cut, snr_cut)
-    injections_dict = apply_injection_prior(injections_dict, parameters)
 
     _PARAM_MAPPING = {
         "mass_1": P.PRIMARY_MASS_SOURCE.value,
@@ -49,6 +48,7 @@ def poisson_mean_from_sensitivity_injections(
     }
 
     injections_dict = {_PARAM_MAPPING.get(k, k): v for k, v in injections_dict.items()}
+    injections_dict = apply_injection_prior(injections_dict, parameters)
 
     samples = jnp.stack(
         [jnp.asarray(injections_dict[param]) for param in parameters],
