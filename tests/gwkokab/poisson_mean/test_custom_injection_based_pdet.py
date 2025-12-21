@@ -6,17 +6,17 @@ from collections.abc import Callable, Sequence
 from typing import List, Optional, Tuple
 
 import equinox as eqx
-import h5py
 import jax
+import numpy as np
 from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 from numpyro._typing import DistributionT
 
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
-from gwkokab.poisson_mean._injection_based import (
-    load_o1o2o3_or_endO_injection_data,
-    load_o1o2o3o4a_injection_data,
+from gwkokab.poisson_mean._injection_based_helper import (
+    apply_injection_prior,
+    load_injection_data,
 )
 from gwkokab.utils.tools import batch_and_remainder
 
@@ -42,33 +42,34 @@ def custom_poisson_mean_estimator(
         filter(lambda p: p != P.ECCENTRICITY.value, parameters)
     )
 
-    with h5py.File(filename, "r") as f:
-        is_o1o2o3o4a = "events" in f
+    injections_dict = load_injection_data(filename, 1.0 / far_cut, snr_cut)
 
-    if is_o1o2o3o4a:
-        del ifar_pipelines  # Unused.
-        # θ_i, log w_i, T, N_total
-        samples, log_weights, analysis_time_years, total_injections = (
-            load_o1o2o3o4a_injection_data(
-                filename,
-                parameters_without_ecc,
-                far_cut,
-                snr_cut,
-            )
-        )
-    else:
-        # θ_i, log w_i, T, N_total
-        samples, log_weights, analysis_time_years, total_injections = (
-            load_o1o2o3_or_endO_injection_data(
-                filename,
-                parameters_without_ecc,
-                far_cut,
-                snr_cut,
-                ifar_pipelines,
-            )
-        )
+    _PARAM_MAPPING = {
+        "mass_1": P.PRIMARY_MASS_SOURCE.value,
+        "mass_2": P.SECONDARY_MASS_SOURCE.value,
+        "mass1_source": P.PRIMARY_MASS_SOURCE.value,
+        "mass2_source": P.SECONDARY_MASS_SOURCE.value,
+        "redshift": P.REDSHIFT.value,
+        "spin1x": P.PRIMARY_SPIN_X.value,
+        "spin1y": P.PRIMARY_SPIN_Y.value,
+        "spin1z": P.PRIMARY_SPIN_Z.value,
+        "spin2x": P.SECONDARY_SPIN_X.value,
+        "spin2y": P.SECONDARY_SPIN_Y.value,
+        "spin2z": P.SECONDARY_SPIN_Z.value,
+        "z": P.REDSHIFT.value,
+    }
 
-    n_accepted = log_weights.shape[0]
+    injections_dict = {_PARAM_MAPPING.get(k, k): v for k, v in injections_dict.items()}
+    injections_dict = apply_injection_prior(injections_dict, parameters_without_ecc)
+
+    samples = jnp.stack(
+        [jnp.asarray(injections_dict[param]) for param in parameters_without_ecc],
+        axis=-1,
+    )
+    log_weights = np.log(injections_dict["prior"])
+    analysis_time_years = injections_dict["analysis_time"]
+    total_injections = injections_dict["total_generated"]
+    n_accepted = samples.shape[0]
 
     def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
         scaled_mixture_without_ecc: List[DistributionT] = list(
