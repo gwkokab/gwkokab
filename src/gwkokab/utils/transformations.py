@@ -395,3 +395,38 @@ def cart_to_spherical(
     )  # theta = arccos(z / r)
     phi = jnp.arctan2(y, x)  # phi = arctan(y / x)
     return r, theta, phi
+
+
+def sin_tilt(costilt: ArrayLike) -> ArrayLike:
+    r"""
+    .. math::
+        \sin(\theta) = \sqrt{1 - \cos^2(\theta)}
+    """
+    return jnp.sqrt(1 - jnp.square(costilt))
+
+
+def chi_p_from_components(
+    a_1: ArrayLike,
+    cos_tilt_1: ArrayLike,
+    a_2: ArrayLike,
+    cos_tilt_2: ArrayLike,
+    mass_ratio: ArrayLike,
+) -> ArrayLike:
+    r"""
+    .. math::
+        \chi_p(a_1, \cos(\theta_1), a_2, \cos(\theta_2), q) =
+        \max \left(
+            a_1 \sin(\theta_1),
+            \frac{3 + 4q}{4 + 3q} q a_2 \sin(\theta_2)
+        \right)
+    """
+    sin_tilt_1 = sin_tilt(cos_tilt_1)
+    sin_tilt_2 = sin_tilt(cos_tilt_2)
+    return jnp.maximum(
+        a_1 * sin_tilt_1,
+        (3.0 + 4.0 * mass_ratio)
+        / (4.0 + 3.0 * mass_ratio)
+        * mass_ratio
+        * a_2
+        * sin_tilt_2,
+    )
