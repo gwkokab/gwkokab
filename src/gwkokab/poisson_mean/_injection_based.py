@@ -9,6 +9,7 @@ import jax
 import numpy as np
 from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
+from loguru import logger
 
 from ..models.utils import ScaledMixture
 from ..parameters import Parameters as P
@@ -30,7 +31,7 @@ def poisson_mean_from_sensitivity_injections(
 ]:
     del key  # Unused.
 
-    injections_dict = load_injection_data(filename, 1 / far_cut, snr_cut)
+    injections_dict = load_injection_data(filename, 1.0 / far_cut, snr_cut)
 
     _PARAM_MAPPING = {
         "mass_1": P.PRIMARY_MASS_SOURCE.value,
@@ -57,6 +58,14 @@ def poisson_mean_from_sensitivity_injections(
     log_weights = np.log(injections_dict["prior"])
     analysis_time_years = injections_dict["analysis_time"]
     total_injections = injections_dict["total_generated"]
+
+    logger.debug(
+        "Found {} out of {} injections with FAR < {} and SNR > {}",
+        samples.shape[0],
+        total_injections,
+        far_cut,
+        snr_cut,
+    )
 
     def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
         model_log_prob = jax.lax.map(
