@@ -47,7 +47,7 @@ class Sage(Guru):
         model: Union[Distribution, Callable[..., Distribution]],
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
-        posterior_columns: List[str],
+        read_reference_prior: bool,
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -70,8 +70,8 @@ class Sage(Guru):
             List of functions to apply to the data before passing it to the model.
         posterior_regex : str
             Regular expression to match posterior files.
-        posterior_columns : List[str]
-            List of columns to extract from the posterior files.
+        read_reference_prior : bool
+            Whether to read the reference prior from the posterior samples.
         seed : int
             Seed for the random number generator.
         prior_filename : str
@@ -102,7 +102,7 @@ class Sage(Guru):
         )
         self.likelihood_fn = likelihood_fn
         self.n_buckets = n_buckets
-        self.posterior_columns = posterior_columns
+        self.read_reference_prior = read_reference_prior
         self.posterior_regex = posterior_regex
         self.threshold = threshold
         self.where_fns = where_fns
@@ -123,17 +123,19 @@ class Sage(Guru):
     def read_data(
         self,
     ) -> Tuple[int, float, Tuple[Array, ...], Tuple[Array, ...], Tuple[Array, ...]]:
-        data = get_posterior_data(glob(self.posterior_regex), self.posterior_columns)
-        if LOG_REF_PRIOR_NAME in self.posterior_columns:
-            idx = self.posterior_columns.index(LOG_REF_PRIOR_NAME)
-            self.posterior_columns.pop(idx)
+        if self.read_reference_prior:
+            data = get_posterior_data(
+                glob(self.posterior_regex), self.parameters + [LOG_REF_PRIOR_NAME]
+            )
             warn_if(
                 True,
-                msg="Please ensure that reference prior is in the last column of the posteriors.",
+                msg="Ensure that logarithm of reference prior is stored with the name "
+                "'log_prior', as the last column in the posterior samples.",
             )
-            log_ref_priors = [d[..., idx] for d in data]
-            data = [np.delete(d, idx, axis=-1) for d in data]
+            log_ref_priors = [d[..., -1] for d in data]
+            data = [np.delete(d, -1, axis=-1) for d in data]
         else:
+            data = get_posterior_data(glob(self.posterior_regex), self.parameters)
             log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
         assert len(data) == len(log_ref_priors), (
             "Data and log reference priors must have the same length"
@@ -320,11 +322,9 @@ def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         required=True,
     )
     sage_group.add_argument(
-        "--posterior-columns",
-        help="Columns of the posterior samples.",
-        nargs="+",
-        type=str,
-        required=True,
+        "--read-reference-prior",
+        help="Whether to read the logarithm of reference prior from the posterior samples.",
+        action="store_true",
     )
 
     optm_group = parser.add_argument_group("Optimization Options")
