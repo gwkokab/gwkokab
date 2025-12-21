@@ -63,6 +63,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         N_g: int,
         use_beta_spin_magnitude: bool,
         use_spin_magnitude_mixture: bool,
+        use_chi_eff_mixture: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_redshift: bool,
@@ -96,6 +97,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         self.N_g = N_g
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
         self.use_spin_magnitude_mixture = use_spin_magnitude_mixture
+        self.use_chi_eff_mixture = use_chi_eff_mixture
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_redshift = use_redshift
@@ -126,6 +128,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             "N_g": self.N_g,
             "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
             "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
+            "use_chi_eff_mixture": self.use_chi_eff_mixture,
             "use_tilt": self.use_tilt,
             "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_redshift": self.use_redshift,
@@ -137,6 +140,8 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         if self.use_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
+        if self.use_chi_eff_mixture:
+            names.append(P.EFFECTIVE_SPIN_MAGNITUDE.value)
         if self.use_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.use_eccentricity_mixture:
@@ -204,6 +209,30 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_chi_eff_mixture:
+            all_params.extend(
+                [
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high1_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high1_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high2_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high2_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_loc1_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_loc1_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_loc2_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_loc2_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low1_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low1_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low2_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low2_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale1_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale1_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale2_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale2_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_pl", self.N_pl),
                 ]
             )
 
@@ -299,6 +328,11 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
 
     model_group.add_argument(
+        "--add-chi-eff-mixture",
+        action="store_true",
+        help="Include chi_eff mixture parameters in the model.",
+    )
+    model_group.add_argument(
         "--add-tilt",
         action="store_true",
         help="Include tilt parameters in the model.",
@@ -339,6 +373,7 @@ def f_main() -> None:
         N_g=args.n_g,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
+        use_chi_eff_mixture=args.add_chi_eff_mixture,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,
@@ -378,6 +413,7 @@ def n_main() -> None:
         N_g=args.n_g,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
+        use_chi_eff_mixture=args.add_chi_eff_mixture,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,

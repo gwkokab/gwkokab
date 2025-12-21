@@ -39,7 +39,6 @@ def get_selection_fn_and_poisson_mean_estimator(
         msg="estimator_type must be one of " + ", ".join(valid_estimator_types),
     )
     if estimator_type == "injection":
-        ifar_pipelines = kwargs.pop("ifar_pipelines", None)
         return _poisson_mean_from_sensitivity_injections(
             key=key,
             parameters=parameters,
@@ -47,7 +46,6 @@ def get_selection_fn_and_poisson_mean_estimator(
             batch_size=batch_size,
             far_cut=kwargs.pop("far_cut", 1.0),
             snr_cut=kwargs.pop("snr_cut", 10.0),
-            ifar_pipelines=ifar_pipelines,
         )
     elif estimator_type == "neural_vt":
         return _poisson_mean_from_neural_vt(

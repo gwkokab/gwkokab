@@ -16,10 +16,7 @@ from numpyro.distributions import (
 from ...utils.kernel import log_planck_taper_window
 from ..constraints import any_constraint
 from ..utils import JointDistribution
-from ._ncombination import (
-    create_powerlaws,
-    create_truncated_normal_distributions,
-)
+from ._ncombination import create_powerlaws, create_truncated_normal_distributions
 from ._utils import (
     _M1_GRID_SIZE,
     _SmoothedPowerlawMassRatioAndRest,
@@ -31,6 +28,7 @@ def _build_pl_component_distributions(
     N: int,
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
+    use_chi_eff_mixture: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_redshift: bool,
@@ -48,6 +46,7 @@ def _build_pl_component_distributions(
         params=params,
         use_beta_spin_magnitude=use_beta_spin_magnitude,
         use_spin_magnitude_mixture=use_spin_magnitude_mixture,
+        use_chi_eff_mixture=use_chi_eff_mixture,
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
         use_redshift=use_redshift,
@@ -64,6 +63,7 @@ def _build_g_component_distributions(
     N: int,
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
+    use_chi_eff_mixture: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_redshift: bool,
@@ -84,6 +84,7 @@ def _build_g_component_distributions(
         mass_distributions=[[d] for d in mass_distributions],
         use_beta_spin_magnitude=use_beta_spin_magnitude,
         use_spin_magnitude_mixture=use_spin_magnitude_mixture,
+        use_chi_eff_mixture=use_chi_eff_mixture,
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
         use_redshift=use_redshift,
@@ -102,6 +103,7 @@ def NSmoothedPowerlawMSmoothedGaussian(
     N_g: int,
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
+    use_chi_eff_mixture: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_redshift: bool,
@@ -126,6 +128,7 @@ def NSmoothedPowerlawMSmoothedGaussian(
             N=N_pl,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_spin_magnitude_mixture=use_spin_magnitude_mixture,
+            use_chi_eff_mixture=use_chi_eff_mixture,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
             use_redshift=use_redshift,
@@ -140,6 +143,7 @@ def NSmoothedPowerlawMSmoothedGaussian(
             N=N_g,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_spin_magnitude_mixture=use_spin_magnitude_mixture,
+            use_chi_eff_mixture=use_chi_eff_mixture,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
             use_redshift=use_redshift,
