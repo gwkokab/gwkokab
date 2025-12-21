@@ -63,6 +63,11 @@ def make_parser() -> ArgumentParser:
         help="Include truncated-normal spin z components.",
     )
     model_group.add_argument(
+        "--add-chi-eff-mixture",
+        action="store_true",
+        help="Include chi_eff mixture parameters in the model.",
+    )
+    model_group.add_argument(
         "--add-tilt",
         action="store_true",
         help="Include spin-orbit tilt cosines cos_tilt1, cos_tilt2 (cosines of angles between each spin and orbital angular momentum; physical range -1 to 1).",
@@ -160,6 +165,7 @@ def main() -> None:
     has_truncated_normal_spin_x = args.add_truncated_normal_spin_x
     has_truncated_normal_spin_y = args.add_truncated_normal_spin_y
     has_truncated_normal_spin_z = args.add_truncated_normal_spin_z
+    has_chi_eff_mixture = args.add_chi_eff_mixture
     has_tilt = args.add_tilt
     use_eccentricity_mixture = args.add_eccentricity_mixture
     has_mean_anomaly = args.add_mean_anomaly
@@ -217,6 +223,16 @@ def main() -> None:
                 P.SECONDARY_SPIN_Z.value + "_high",
                 P.SECONDARY_SPIN_Z.value + "_low",
                 P.SECONDARY_SPIN_Z.value + "_scale",
+            ]
+        )
+    if has_chi_eff_mixture:
+        err_params_name.extend(
+            [
+                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high",
+                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low",
+                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale",
+                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_cut_low",
+                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_cut_high",
             ]
         )
     if has_tilt:
@@ -572,6 +588,45 @@ def main() -> None:
                 high=err_params_value.get(P.SECONDARY_SPIN_Z.value + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
+            ),
+        )
+
+    if has_chi_eff_mixture:
+        all_params.extend(
+            [
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high1_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high1_pl", N_pl),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high2_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high2_pl", N_pl),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_loc1_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_loc1_pl", N_pl),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_loc2_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_loc2_pl", N_pl),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low1_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low1_pl", N_pl),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low2_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low2_pl", N_pl),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale1_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale1_pl", N_pl),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale2_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale2_pl", N_pl),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_g", N_g),
+                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_pl", N_pl),
+            ]
+        )
+        error_magazine.register(
+            P.EFFECTIVE_SPIN_MAGNITUDE.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale"],
+                low=err_params_value.get(P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low"),
+                high=err_params_value.get(P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high"),
+                cut_low=err_params_value.get(
+                    P.EFFECTIVE_SPIN_MAGNITUDE.value + "_cut_low"
+                ),
+                cut_high=err_params_value.get(
+                    P.EFFECTIVE_SPIN_MAGNITUDE.value + "_cut_high"
+                ),
             ),
         )
 
