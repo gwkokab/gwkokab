@@ -16,6 +16,7 @@ import numpy as np
 from jaxtyping import Array
 from loguru import logger
 
+from ..constants import SECONDS_PER_YEAR
 from ..cosmology import PLANCK_2015_Cosmology
 from ..parameters import Parameters as P
 from ..utils.transformations import (
@@ -156,7 +157,7 @@ def load_injection_data(
         if "injections" in ff:
             data = ff["injections"]
             total_generated = int(data.attrs["total_generated"][()])
-            analysis_time = data.attrs["analysis_time_s"][()] / 365.25 / 24 / 60 / 60
+            analysis_time = data.attrs["analysis_time_s"][()] / SECONDS_PER_YEAR
         elif "events" in ff:
             keys_of_interest = {
                 "mass1_source",
