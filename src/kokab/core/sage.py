@@ -322,7 +322,7 @@ def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     sage_group.add_argument(
         "--read-reference-prior",
-        help="Whether to read the reference prior from the posterior samples.",
+        help="Whether to read the logarithm of reference prior from the posterior samples.",
         action="store_true",
     )
 
