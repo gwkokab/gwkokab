@@ -646,12 +646,16 @@ def create_two_truncated_normal_mixture(
     eccentricity_collection = []
 
     for i in range(N):
-        high1 = _get_parameter(params, f"{high1_name}_{i}", high1_name)
-        high2 = _get_parameter(params, f"{high2_name}_{i}", high2_name)
+        high1 = _get_parameter(
+            params, f"{high1_name}_{i}", high1_name, is_necessary=False
+        )
+        high2 = _get_parameter(
+            params, f"{high2_name}_{i}", high2_name, is_necessary=False
+        )
         loc1 = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)
         loc2 = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)
-        low1 = _get_parameter(params, f"{low1_name}_{i}", low1_name)
-        low2 = _get_parameter(params, f"{low2_name}_{i}", low2_name)
+        low1 = _get_parameter(params, f"{low1_name}_{i}", low1_name, is_necessary=False)
+        low2 = _get_parameter(params, f"{low2_name}_{i}", low2_name, is_necessary=False)
         scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
         scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
         zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
