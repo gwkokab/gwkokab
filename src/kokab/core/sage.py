@@ -149,6 +149,14 @@ class Sage(Guru):
                 "Number of buckets not specified. Using the best number of buckets: {n_buckets}.",
                 n_buckets=self.n_buckets,
             )
+        elif self.n_buckets != len(_data_group):
+            warn_if(
+                True,
+                msg=f"Specified number of buckets ({self.n_buckets}) is different from "
+                f"the best number of buckets ({len(_data_group)}). Using the best number"
+                " of buckets.",
+            )
+            self.n_buckets = len(_data_group)
 
         for i in range(self.n_buckets):
             _log_ref_priors_group[i] = np.where(  # type: ignore
