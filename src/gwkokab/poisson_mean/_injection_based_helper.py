@@ -301,7 +301,7 @@ def load_injection_data(
             gwpop_data["prior"] /= np.sin(np.arccos(gwpop_data["cos_tilt_1"]))
             gwpop_data["prior"] /= np.sin(np.arccos(gwpop_data["cos_tilt_2"]))
 
-        weights = np.ones(())
+        weights = np.asarray(1.0)
         if "v1_1ifo" in vt_file:
             weights *= np.asarray(data["weights_1ifo"][()][found])
         elif "weights" in data:
