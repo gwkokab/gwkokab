@@ -13,6 +13,7 @@ from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.core.sage import Sage, sage_arg_parser as sage_parser
 from kokab.ecc_matters.common import EccentricityMattersModel
+from kokab.utils.logger import log_info
 
 
 class EccentricityMattersCore(Sage):
@@ -46,6 +47,8 @@ def f_main() -> None:
 
     args = parser.parse_args()
 
+    log_info(start=True)
+
     EccentricityMattersFSage(
         likelihood_fn=flowMC_poisson_likelihood,
         model=EccentricityMattersModel,
@@ -72,6 +75,8 @@ def n_main() -> None:
     parser = numpyro_arg_parser(parser)
 
     args = parser.parse_args()
+
+    log_info(start=True)
 
     EccentricityMattersNSage(
         likelihood_fn=numpyro_poisson_likelihood,
