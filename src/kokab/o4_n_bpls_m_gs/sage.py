@@ -171,7 +171,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
             all_params.extend(
                 [
                     ("a_zeta_g", self.N_g),
-                    ("a_zeta_pl", self.N_bpl),
+                    ("a_zeta_bpl", self.N_bpl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high_g", self.N_g),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high_pl", self.N_bpl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low_g", self.N_g),
