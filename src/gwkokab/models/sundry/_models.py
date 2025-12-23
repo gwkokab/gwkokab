@@ -19,14 +19,14 @@ from ..constraints import any_constraint
 
 
 def TwoTruncatedNormalMixture(
-    high1: ArrayLike,
-    high2: ArrayLike,
-    loc1: ArrayLike,
-    loc2: ArrayLike,
-    low1: ArrayLike,
-    low2: ArrayLike,
-    scale1: ArrayLike,
-    scale2: ArrayLike,
+    comp1_high: Optional[ArrayLike],
+    comp1_loc: ArrayLike,
+    comp1_low: Optional[ArrayLike],
+    comp1_scale: ArrayLike,
+    comp2_high: Optional[ArrayLike],
+    comp2_loc: ArrayLike,
+    comp2_low: Optional[ArrayLike],
+    comp2_scale: ArrayLike,
     zeta: ArrayLike,
     *,
     validate_args: Optional[bool] = None,
@@ -35,21 +35,21 @@ def TwoTruncatedNormalMixture(
 
     Parameters
     ----------
-    high1 : ArrayLike
+    comp1_high : Optional[ArrayLike]
         Upper truncation for the first component.
-    high2 : ArrayLike
-        Upper truncation for the second component.
-    loc1 : ArrayLike
+    comp1_loc : ArrayLike
         Location parameter for the first component.
-    loc2 : ArrayLike
-        Location parameter for the second component.
-    low1 : ArrayLike
+    comp1_low : Optional[ArrayLike]
         Lower truncation for the first component.
-    low2 : ArrayLike
-        Lower truncation for the second component.
-    scale1 : ArrayLike
+    comp1_scale : ArrayLike
         Scale parameter for the first component.
-    scale2 : ArrayLike
+    comp2_high : Optional[ArrayLike]
+        Upper truncation for the second component.
+    comp2_loc : ArrayLike
+        Location parameter for the second component.
+    comp2_low : Optional[ArrayLike]
+        Lower truncation for the second component.
+    comp2_scale : ArrayLike
         Scale parameter for the second component.
     zeta : ArrayLike
         Mixing proportion for the second component.
@@ -65,17 +65,17 @@ def TwoTruncatedNormalMixture(
         probs=jnp.stack((1.0 - zeta, zeta), axis=-1), validate_args=validate_args
     )
     trun_norm1 = TruncatedNormal(
-        low=low1,
-        high=high1,
-        loc=loc1,
-        scale=scale1,
+        low=comp1_low,
+        high=comp1_high,
+        loc=comp1_loc,
+        scale=comp1_scale,
         validate_args=validate_args,
     )
     trun_norm2 = TruncatedNormal(
-        low=low2,
-        high=high2,
-        loc=loc2,
-        scale=scale2,
+        low=comp2_low,
+        high=comp2_high,
+        loc=comp2_loc,
+        scale=comp2_scale,
         validate_args=validate_args,
     )
     component_distributions = [trun_norm1, trun_norm2]

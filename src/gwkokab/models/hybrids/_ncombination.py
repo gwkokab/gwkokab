@@ -633,42 +633,50 @@ def create_two_truncated_normal_mixture(
     List[MixtureGeneral]
         A list of eccentric mixture models.
     """
-    high1_name = parameter_name + "_high1_" + component_type
-    high2_name = parameter_name + "_high2_" + component_type
-    loc1_name = parameter_name + "_loc1_" + component_type
-    loc2_name = parameter_name + "_loc2_" + component_type
-    low1_name = parameter_name + "_low1_" + component_type
-    low2_name = parameter_name + "_low2_" + component_type
-    scale1_name = parameter_name + "_scale1_" + component_type
-    scale2_name = parameter_name + "_scale2_" + component_type
+    comp1_high_name = parameter_name + "_comp1_high_" + component_type
+    comp2_high_name = parameter_name + "_comp2_high_" + component_type
+    comp1_loc_name = parameter_name + "_comp1_loc_" + component_type
+    comp2_loc_name = parameter_name + "_comp2_loc_" + component_type
+    comp1_low_name = parameter_name + "_comp1_low_" + component_type
+    comp2_low_name = parameter_name + "_comp2_low_" + component_type
+    comp1_scale_name = parameter_name + "_comp1_scale_" + component_type
+    comp2_scale_name = parameter_name + "_comp2_scale_" + component_type
     zeta_name = parameter_name + "_zeta_" + component_type
 
     eccentricity_collection = []
 
     for i in range(N):
-        high1 = _get_parameter(
-            params, f"{high1_name}_{i}", high1_name, is_necessary=False
+        comp1_high = _get_parameter(
+            params, f"{comp1_high_name}_{i}", comp1_high_name, is_necessary=False
         )
-        high2 = _get_parameter(
-            params, f"{high2_name}_{i}", high2_name, is_necessary=False
+        comp2_high = _get_parameter(
+            params, f"{comp2_high_name}_{i}", comp2_high_name, is_necessary=False
         )
-        loc1 = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)
-        loc2 = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)
-        low1 = _get_parameter(params, f"{low1_name}_{i}", low1_name, is_necessary=False)
-        low2 = _get_parameter(params, f"{low2_name}_{i}", low2_name, is_necessary=False)
-        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
-        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
+        comp1_loc = _get_parameter(params, f"{comp1_loc_name}_{i}", comp1_loc_name)
+        comp2_loc = _get_parameter(params, f"{comp2_loc_name}_{i}", comp2_loc_name)
+        comp1_low = _get_parameter(
+            params, f"{comp1_low_name}_{i}", comp1_low_name, is_necessary=False
+        )
+        comp2_low = _get_parameter(
+            params, f"{comp2_low_name}_{i}", comp2_low_name, is_necessary=False
+        )
+        comp1_scale = _get_parameter(
+            params, f"{comp1_scale_name}_{i}", comp1_scale_name
+        )
+        comp2_scale = _get_parameter(
+            params, f"{comp2_scale_name}_{i}", comp2_scale_name
+        )
         zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
 
         eccentricity_dist = TwoTruncatedNormalMixture(
-            high1=high1,
-            high2=high2,
-            loc1=loc1,
-            loc2=loc2,
-            low1=low1,
-            low2=low2,
-            scale1=scale1,
-            scale2=scale2,
+            comp1_high=comp1_high,
+            comp1_loc=comp1_loc,
+            comp1_low=comp1_low,
+            comp2_high=comp2_high,
+            comp2_loc=comp2_loc,
+            comp2_low=comp2_low,
+            comp1_scale=comp1_scale,
+            comp2_scale=comp2_scale,
             zeta=zeta,
             validate_args=validate_args,
         )
