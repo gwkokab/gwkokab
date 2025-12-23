@@ -51,7 +51,7 @@ extensions = [
 
 bibtex_encoding = "latin"
 bibtex_default_style = "unsrt"
-bibtex_bibfiles = ["examples/refs.bib"]
+bibtex_bibfiles = ["references.bib"]
 
 nb_execution_mode = "off"
 myst_heading_anchors = 4
