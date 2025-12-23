@@ -228,11 +228,11 @@ def main() -> None:
     if has_chi_eff_mixture:
         err_params_name.extend(
             [
-                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high",
-                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low",
-                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale",
-                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_cut_low",
-                P.EFFECTIVE_SPIN_MAGNITUDE.value + "_cut_high",
+                P.EFFECTIVE_SPIN.value + "_high",
+                P.EFFECTIVE_SPIN.value + "_low",
+                P.EFFECTIVE_SPIN.value + "_scale",
+                P.EFFECTIVE_SPIN.value + "_cut_low",
+                P.EFFECTIVE_SPIN.value + "_cut_high",
             ]
         )
     if has_tilt:
@@ -602,39 +602,35 @@ def main() -> None:
     if has_chi_eff_mixture:
         all_params.extend(
             [
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_high_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_high_pl", N_pl),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_loc_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_loc_pl", N_pl),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_low_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_low_pl", N_pl),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_scale_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_scale_pl", N_pl),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_high_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_high_pl", N_pl),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_loc_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_loc_pl", N_pl),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_low_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_low_pl", N_pl),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_scale_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_scale_pl", N_pl),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_g", N_g),
-                (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_comp1_high_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_comp1_high_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_comp1_loc_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_comp1_loc_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_comp1_low_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_comp1_low_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_comp1_scale_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_comp1_scale_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_comp2_high_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_comp2_high_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_comp2_loc_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_comp2_loc_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_comp2_low_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_comp2_low_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_comp2_scale_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_comp2_scale_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_zeta_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_zeta_pl", N_pl),
             ]
         )
         error_magazine.register(
-            P.EFFECTIVE_SPIN_MAGNITUDE.value,
+            P.EFFECTIVE_SPIN.value,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.EFFECTIVE_SPIN_MAGNITUDE.value + "_scale"],
-                low=err_params_value.get(P.EFFECTIVE_SPIN_MAGNITUDE.value + "_low"),
-                high=err_params_value.get(P.EFFECTIVE_SPIN_MAGNITUDE.value + "_high"),
-                cut_low=err_params_value.get(
-                    P.EFFECTIVE_SPIN_MAGNITUDE.value + "_cut_low"
-                ),
-                cut_high=err_params_value.get(
-                    P.EFFECTIVE_SPIN_MAGNITUDE.value + "_cut_high"
-                ),
+                scale=err_params_value[P.EFFECTIVE_SPIN.value + "_scale"],
+                low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_low"),
+                high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_high"),
+                cut_low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_low"),
+                cut_high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_high"),
             ),
         )
 

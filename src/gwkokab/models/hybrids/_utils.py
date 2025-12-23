@@ -46,7 +46,7 @@ def build_non_mass_distributions(
         (use_beta_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_beta_distributions),
         (use_beta_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_beta_distributions),
         (use_spin_magnitude_mixture, P.PRIMARY_SPIN_MAGNITUDE.value + "_" + P.SECONDARY_SPIN_MAGNITUDE.value, create_spin_magnitude_mixture_models),
-        (use_chi_eff_mixture, P.EFFECTIVE_SPIN_MAGNITUDE.value, create_two_truncated_normal_mixture),
+        (use_chi_eff_mixture, P.EFFECTIVE_SPIN.value, create_two_truncated_normal_mixture),
         # combined tilt distribution
         (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_minimum_tilt_model),
         (use_eccentricity_mixture, P.ECCENTRICITY.value, create_two_truncated_normal_mixture),

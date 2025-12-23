@@ -324,19 +324,17 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
         jacobian = primary_mass_to_chirp_mass_jacobian(data[P.MASS_RATIO.value])
         data[P.CHIRP_MASS.value] = data[P.PRIMARY_MASS_SOURCE.value] / jacobian
         data["prior"] *= jacobian
-    if P.EFFECTIVE_SPIN_MAGNITUDE.value in parameters:
-        data[P.EFFECTIVE_SPIN_MAGNITUDE.value] = (
-            m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
-                m1=data[P.PRIMARY_MASS_SOURCE.value],
-                m2=data[P.SECONDARY_MASS_SOURCE.value],
-                chi1=data[P.PRIMARY_SPIN_MAGNITUDE.value],
-                chi2=data[P.SECONDARY_SPIN_MAGNITUDE.value],
-                costilt1=data[P.COS_TILT_1.value],
-                costilt2=data[P.COS_TILT_2.value],
-            )  # type: ignore
-        )
-        if P.PRECESSING_SPIN_MAGNITUDE.value in parameters:
-            data[P.PRECESSING_SPIN_MAGNITUDE.value] = chi_p_from_components(
+    if P.EFFECTIVE_SPIN.value in parameters:
+        data[P.EFFECTIVE_SPIN.value] = m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
+            m1=data[P.PRIMARY_MASS_SOURCE.value],
+            m2=data[P.SECONDARY_MASS_SOURCE.value],
+            chi1=data[P.PRIMARY_SPIN_MAGNITUDE.value],
+            chi2=data[P.SECONDARY_SPIN_MAGNITUDE.value],
+            costilt1=data[P.COS_TILT_1.value],
+            costilt2=data[P.COS_TILT_2.value],
+        )  # type: ignore
+        if P.PRECESSING_SPIN.value in parameters:
+            data[P.PRECESSING_SPIN.value] = chi_p_from_components(
                 a_1=data[P.PRIMARY_SPIN_MAGNITUDE.value],
                 cos_tilt_1=data[P.COS_TILT_1.value],
                 a_2=data[P.SECONDARY_SPIN_MAGNITUDE.value],
@@ -348,8 +346,8 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
                 f"Applying isotropic prior to chi_eff and chi_p, assuming injections with amax={amax}."
             )
             p_chi_iso = prior_chieff_chip_isotropic(
-                data[P.EFFECTIVE_SPIN_MAGNITUDE.value],
-                data[P.PRECESSING_SPIN_MAGNITUDE.value],
+                data[P.EFFECTIVE_SPIN.value],
+                data[P.PRECESSING_SPIN.value],
                 data[P.MASS_RATIO.value],
                 amax=amax,
             )
@@ -359,7 +357,7 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
                 f"Applying isotropic prior to chi_eff, assuming injections with amax={amax}."
             )
             p_chi_iso = chi_effective_prior_from_isotropic_spins(
-                data[P.EFFECTIVE_SPIN_MAGNITUDE.value],
+                data[P.EFFECTIVE_SPIN.value],
                 data[P.MASS_RATIO.value],
                 amax=amax,
             )

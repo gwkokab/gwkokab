@@ -115,7 +115,7 @@ def _build_non_mass_distributions(
         (use_truncated_normal_spin_y, P.SECONDARY_SPIN_Y.value, create_truncated_normal_distributions),
         (use_truncated_normal_spin_z, P.PRIMARY_SPIN_Z.value, create_truncated_normal_distributions),
         (use_truncated_normal_spin_z, P.SECONDARY_SPIN_Z.value, create_truncated_normal_distributions),
-        (use_chi_eff_mixture, P.EFFECTIVE_SPIN_MAGNITUDE.value, create_two_truncated_normal_mixture),
+        (use_chi_eff_mixture, P.EFFECTIVE_SPIN.value, create_two_truncated_normal_mixture),
         # combined tilt distribution
         (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_independent_spin_orientation_gaussian_isotropic),
         (use_phi_1, P.PHI_1.value, create_uniform_distributions),

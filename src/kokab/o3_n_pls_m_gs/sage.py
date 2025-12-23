@@ -141,7 +141,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.use_chi_eff_mixture:
-            names.append(P.EFFECTIVE_SPIN_MAGNITUDE.value)
+            names.append(P.EFFECTIVE_SPIN.value)
         if self.use_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.use_eccentricity_mixture:
@@ -221,24 +221,24 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         if self.use_chi_eff_mixture:
             all_params.extend(
                 [
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_high_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_high_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_loc_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_loc_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_low_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_low_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_scale_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_scale_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_high_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_high_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_loc_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_loc_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_low_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_low_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_scale_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_scale_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_g", self.N_g),
-                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_comp1_high_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_comp1_high_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_comp1_loc_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_comp1_loc_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_comp1_low_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_comp1_low_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_comp1_scale_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_comp1_scale_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_comp2_high_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_comp2_high_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_comp2_loc_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_comp2_loc_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_comp2_low_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_comp2_low_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_comp2_scale_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_comp2_scale_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_zeta_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_zeta_pl", self.N_pl),
                 ]
             )
 
