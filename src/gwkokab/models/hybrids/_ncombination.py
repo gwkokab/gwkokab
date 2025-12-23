@@ -78,10 +78,10 @@ def _get_parameter(
 ) -> Optional[_VT]:
     value = _fetch_first_matching_value(params, *name)
     if value is None:
-        if is_necessary:
-            raise ValueError(f"Missing parameter {name}")
-        else:
+        if default is not None:
             value = default
+        elif is_necessary:
+            raise ValueError(f"Missing parameter {name}")
     return value
 
 
