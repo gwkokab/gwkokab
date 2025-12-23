@@ -6,7 +6,10 @@ import enum
 
 
 class Parameters(enum.Enum):
+    CHI_1 = "chi_1"
+    CHI_2 = "chi_2"
     CHIRP_MASS = "chirp_mass"
+    CHIRP_MASS_DETECTOR = "chirp_mass_detector"
     CHIRP_MASS_SOURCE = "chirp_mass_source"
     COS_IOTA = "cos_iota"
     COS_TILT_1 = "cos_tilt_1"
@@ -14,6 +17,7 @@ class Parameters(enum.Enum):
     DETECTION_TIME = "detection_time"
     ECCENTRICITY = "eccentricity"
     EFFECTIVE_SPIN_MAGNITUDE = "chi_eff"
+    LUMINOSITY_DISTANCE = "luminosity_distance"
     MASS_RATIO = "mass_ratio"
     MEAN_ANOMALY = "mean_anomaly"
     PHI_1 = "phi_1"
@@ -21,6 +25,7 @@ class Parameters(enum.Enum):
     PHI_2 = "phi_2"
     PHI_ORB = "phi_orb"
     POLARIZATION_ANGLE = "psi"
+    PRECESSING_SPIN_MAGNITUDE = "chi_p"
     PRIMARY_MASS_DETECTED = "mass_1"
     PRIMARY_MASS_SOURCE = "mass_1_source"
     PRIMARY_SPIN_MAGNITUDE = "a_1"

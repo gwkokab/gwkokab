@@ -6,16 +6,9 @@ from typing import Optional
 
 from jax import numpy as jnp
 from jax.typing import ArrayLike
-from numpyro.distributions import (
-    Beta,
-    CategoricalProbs,
-    constraints,
-    Independent,
-    MixtureGeneral,
-    MultivariateNormal,
-    TruncatedNormal,
-    Uniform,
-)
+from numpyro.distributions import Beta, MixtureGeneral, MultivariateNormal
+
+from ..sundry import NDIsotropicAndTruncatedNormalMixture
 
 
 def GaussianSpinModel(
@@ -112,36 +105,14 @@ def IndependentSpinOrientationGaussianIsotropic(
     MixtureGeneral
         Mixture model of spin orientations.
     """
-    mixing_probs = jnp.stack([1.0 - zeta, zeta], axis=-1)
-    low = -jnp.ones((2,))
-    high = jnp.ones((2,))
-    batch_dim = 1
-    isotropic_component = Independent(
-        Uniform(
-            low=low,
-            high=high,
-            validate_args=validate_args,
-        ),
-        batch_dim,
-        validate_args=validate_args,
-    )
-    gaussian_component = Independent(
-        TruncatedNormal(
-            loc=high,  # set to high because high=1
-            scale=jnp.stack([scale1, scale2], axis=-1),
-            low=low,
-            high=high,
-            validate_args=validate_args,
-        ),
-        batch_dim,
-        validate_args=validate_args,
-    )
-    return MixtureGeneral(
-        mixing_distribution=CategoricalProbs(
-            probs=mixing_probs, validate_args=validate_args
-        ),
-        component_distributions=[isotropic_component, gaussian_component],
-        support=constraints.independent(constraints.interval(-1.0, 1.0), batch_dim),
+    return NDIsotropicAndTruncatedNormalMixture(
+        zeta=zeta,
+        loc=1.0,
+        scale=jnp.stack((scale1, scale2), axis=-1),
+        isotropic_low=-1.0,
+        isotropic_high=jnp.ones((2,)),
+        gaussian_low=-1.0,
+        gaussian_high=1.0,
         validate_args=validate_args,
     )
 
@@ -207,36 +178,14 @@ def MinimumTiltModel(
     MixtureGeneral
         Mixture model of spin orientations.
     """
-    mixing_probs = jnp.stack([1.0 - zeta, zeta], axis=-1)
-    low = jnp.full((2,), minimum)
-    high = jnp.ones((2,))
-    batch_dim = 1
-    isotropic_component = Independent(
-        Uniform(
-            low=low,
-            high=high,
-            validate_args=validate_args,
-        ),
-        batch_dim,
-        validate_args=validate_args,
-    )
-    gaussian_component = Independent(
-        TruncatedNormal(
-            loc=loc,
-            scale=scale,
-            low=low,
-            high=high,
-            validate_args=validate_args,
-        ),
-        batch_dim,
-        validate_args=validate_args,
-    )
-    return MixtureGeneral(
-        mixing_distribution=CategoricalProbs(
-            probs=mixing_probs, validate_args=validate_args
-        ),
-        component_distributions=[isotropic_component, gaussian_component],
-        support=constraints.independent(constraints.interval(minimum, 1.0), batch_dim),
+    return NDIsotropicAndTruncatedNormalMixture(
+        zeta=zeta,
+        loc=loc,
+        scale=scale,
+        isotropic_low=minimum,
+        isotropic_high=jnp.ones((2,)),
+        gaussian_low=minimum,
+        gaussian_high=jnp.ones((2,)),
         validate_args=validate_args,
     )
 
@@ -279,35 +228,13 @@ def MinimumTiltModelExtended(
     MixtureGeneral
         Mixture model of spin orientations with minimum tilt constraints for each spin.
     """
-    mixing_probs = jnp.stack([1.0 - zeta, zeta], axis=-1)
-    low = jnp.stack([minimum1, minimum2], axis=-1)
-    high = jnp.ones((2,))
-    batch_dim = 1
-    isotropic_component = Independent(
-        Uniform(
-            low=low,
-            high=high,
-            validate_args=validate_args,
-        ),
-        batch_dim,
-        validate_args=validate_args,
-    )
-    gaussian_component = Independent(
-        TruncatedNormal(
-            loc=jnp.stack([loc1, loc2], axis=-1),
-            scale=jnp.stack([scale1, scale2], axis=-1),
-            low=low,
-            high=high,
-            validate_args=validate_args,
-        ),
-        batch_dim,
-        validate_args=validate_args,
-    )
-    return MixtureGeneral(
-        mixing_distribution=CategoricalProbs(
-            probs=mixing_probs, validate_args=validate_args
-        ),
-        component_distributions=[isotropic_component, gaussian_component],
-        support=constraints.independent(constraints.interval(low, 1.0), batch_dim),
+    return NDIsotropicAndTruncatedNormalMixture(
+        zeta=zeta,
+        loc=jnp.stack([loc1, loc2], axis=-1),
+        scale=jnp.stack([scale1, scale2], axis=-1),
+        isotropic_low=jnp.stack([minimum1, minimum2], axis=-1),
+        isotropic_high=1.0,
+        gaussian_low=jnp.stack([minimum1, minimum2], axis=-1),
+        gaussian_high=1.0,
         validate_args=validate_args,
     )

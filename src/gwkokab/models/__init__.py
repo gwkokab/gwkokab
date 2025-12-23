@@ -18,6 +18,7 @@ from .hybrids import (
     BrokenPowerlawTwoPeakMultiSpinMultiTiltFull as BrokenPowerlawTwoPeakMultiSpinMultiTiltFull,
     NBrokenPowerlawMGaussian as NBrokenPowerlawMGaussian,
     NPowerlawMGaussian as NPowerlawMGaussian,
+    NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPeak as PowerlawPeak,
 )
 from .mass import (
@@ -35,4 +36,8 @@ from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
     IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
+)
+from .sundry import (
+    NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,
+    TwoTruncatedNormalMixture as TwoTruncatedNormalMixture,
 )

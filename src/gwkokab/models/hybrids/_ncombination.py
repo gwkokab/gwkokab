@@ -5,7 +5,7 @@
 from typing import Dict, List, Literal, Optional, TypeVar
 
 from jax import numpy as jnp
-from jaxtyping import Array
+from jaxtyping import Array, ArrayLike
 from numpyro.distributions import (
     Beta,
     Distribution,
@@ -21,17 +21,21 @@ from ..spin import (
     IndependentSpinOrientationGaussianIsotropic,
     MinimumTiltModelExtended,
 )
+from ..sundry import NDIsotropicAndTruncatedNormalMixture, TwoTruncatedNormalMixture
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
-from ..utils import ExtendedSupportTransformedDistribution
+from ..utils import DoublyTruncatedPowerLaw, ExtendedSupportTransformedDistribution
 
 
 __all__ = [
     "combine_distributions",
     "create_beta_distributions",
     "create_broken_powerlaws",
+    "create_two_truncated_normal_mixture",
     "create_independent_spin_orientation_gaussian_isotropic",
+    "create_powerlaw_primary_mass_ratios",
     "create_powerlaw_redshift",
     "create_powerlaws",
+    "create_spin_magnitude_mixture_models",
     "create_truncated_normal_distributions",
     "create_uniform_distributions",
 ]
@@ -63,6 +67,21 @@ def _fetch_first_matching_value(
         if key in dictionary:
             return dictionary[key]
     return None
+
+
+def _get_parameter(
+    params: Dict[_KT, _VT],
+    *name: _KT,
+    is_necessary: bool = True,
+    default: Optional[_VT] = None,
+) -> Optional[_VT]:
+    value = _fetch_first_matching_value(params, *name)
+    if value is None:
+        if is_necessary:
+            raise ValueError(f"Missing parameter {name}")
+        else:
+            value = default
+    return value
 
 
 def combine_distributions(
@@ -111,14 +130,8 @@ def create_beta_distributions(
     mean_name = f"{parameter_name}_mean_{component_type}"
     variance_name = f"{parameter_name}_variance_{component_type}"
     for i in range(N):
-        mean = _fetch_first_matching_value(params, f"{mean_name}_{i}", mean_name)
-        if mean is None:
-            raise ValueError(f"Missing parameter {mean_name}_{i}")
-        variance = _fetch_first_matching_value(
-            params, f"{variance_name}_{i}", variance_name
-        )
-        if variance is None:
-            raise ValueError(f"Missing parameter {variance_name}_{i}")
+        mean = _get_parameter(params, f"{mean_name}_{i}", mean_name)
+        variance = _get_parameter(params, f"{variance_name}_{i}", variance_name)
 
         beta_collection.append(
             BetaFromMeanVar(
@@ -206,16 +219,10 @@ def create_truncated_normal_distributions(
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
     for i in range(N):
-        loc = _fetch_first_matching_value(params, f"{loc_name}_{i}", loc_name)
-        if loc is None:
-            raise ValueError(f"Missing parameter {loc_name}_{i}")
-
-        scale = _fetch_first_matching_value(params, f"{scale_name}_{i}", scale_name)
-        if scale is None:
-            raise ValueError(f"Missing parameter {scale_name}_{i}")
-
-        low = _fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
-        high = _fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
+        loc = _get_parameter(params, f"{loc_name}_{i}", loc_name)
+        scale = _get_parameter(params, f"{scale_name}_{i}", scale_name)
+        low = _get_parameter(params, f"{low_name}_{i}", low_name, is_necessary=False)
+        high = _get_parameter(params, f"{high_name}_{i}", high_name, is_necessary=False)
 
         truncated_normal_collection.append(
             TruncatedNormal(
@@ -265,18 +272,9 @@ def create_independent_spin_orientation_gaussian_isotropic(
     scale2_name = f"cos_tilt_2_scale_{component_type}"
 
     for i in range(N):
-        zeta = _fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
-        if zeta is None:
-            raise ValueError(f"Missing parameter {zeta_name}_{i}")
-
-        scale1 = _fetch_first_matching_value(params, f"{scale1_name}_{i}", scale1_name)
-        if scale1 is None:
-            raise ValueError(f"Missing parameter {scale1_name}_{i}")
-
-        scale2 = _fetch_first_matching_value(params, f"{scale2_name}_{i}", scale2_name)
-        if scale2 is None:
-            raise ValueError(f"Missing parameter {scale2_name}_{i}")
-
+        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
+        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
+        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
         dist_collection.append(
             IndependentSpinOrientationGaussianIsotropic(
                 zeta=zeta,
@@ -289,7 +287,7 @@ def create_independent_spin_orientation_gaussian_isotropic(
     return dist_collection
 
 
-def create_powerlaws(
+def create_powerlaw_primary_mass_ratios(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
@@ -321,22 +319,10 @@ def create_powerlaws(
     mmin_name = "mmin_pl"
     mmax_name = "mmax_pl"
     for i in range(N):
-        alpha = _fetch_first_matching_value(params, f"{alpha_name}_{i}", alpha_name)
-        if alpha is None:
-            raise ValueError(f"Missing parameter {alpha_name}_{i}")
-
-        beta = _fetch_first_matching_value(params, f"{beta_name}_{i}", beta_name)
-        if beta is None:
-            raise ValueError(f"Missing parameter {beta_name}_{i}")
-
-        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
-        if mmin is None:
-            raise ValueError(f"Missing parameter {mmin_name}_{i}")
-
-        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
-        if mmax is None:
-            raise ValueError(f"Missing parameter {mmax_name}_{i}")
-
+        alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
+        beta = _get_parameter(params, f"{beta_name}_{i}", beta_name)
+        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
+        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
         powerlaw = PowerlawPrimaryMassRatio(
             alpha=alpha, beta=beta, mmin=mmin, mmax=mmax, validate_args=validate_args
         )
@@ -386,14 +372,8 @@ def create_powerlaw_redshift(
     z_max_name = f"{parameter_name}_z_max_{component_type}"
 
     for i in range(N):
-        kappa = _fetch_first_matching_value(params, f"{kappa_name}_{i}", kappa_name)
-        if kappa is None:
-            raise ValueError(f"Missing parameter {kappa_name}_{i}")
-
-        z_max = _fetch_first_matching_value(params, f"{z_max_name}_{i}", z_max_name)
-        if z_max is None:
-            raise ValueError(f"Missing parameter {z_max_name}_{i}")
-
+        kappa = _get_parameter(params, f"{kappa_name}_{i}", kappa_name)
+        z_max = _get_parameter(params, f"{z_max_name}_{i}", z_max_name)
         powerlaw_redshift_collection.append(
             PowerlawRedshift(kappa=kappa, z_max=z_max, validate_args=validate_args)
         )
@@ -451,14 +431,8 @@ def create_uniform_distributions(
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
     for i in range(N):
-        low = _fetch_first_matching_value(params, f"{low_name}_{i}", low_name)
-        if low is None:
-            raise ValueError(f"Missing parameter {low_name}_{i}")
-
-        high = _fetch_first_matching_value(params, f"{high_name}_{i}", high_name)
-        if high is None:
-            raise ValueError(f"Missing parameter {high_name}_{i}")
-
+        low = _get_parameter(params, f"{low_name}_{i}", low_name)
+        high = _get_parameter(params, f"{high_name}_{i}", high_name)
         uniform_collection.append(
             Uniform(low=low, high=high, validate_args=validate_args)
         )
@@ -499,25 +473,11 @@ def create_broken_powerlaws(
     mmax_name = "m1max_bpl"
     mmin_name = "m1min_bpl"
     for i in range(N):
-        alpha1 = _fetch_first_matching_value(params, f"{alpha1_name}_{i}", alpha1_name)
-        if alpha1 is None:
-            raise ValueError(f"Missing parameter {alpha1_name}_{i}")
-        alpha2 = _fetch_first_matching_value(params, f"{alpha2_name}_{i}", alpha2_name)
-        if alpha2 is None:
-            raise ValueError(f"Missing parameter {alpha2_name}_{i}")
-
-        mbreak = _fetch_first_matching_value(params, f"{mbreak_name}_{i}", mbreak_name)
-        if mbreak is None:
-            raise ValueError(f"Missing parameter {mbreak_name}_{i}")
-
-        mmin = _fetch_first_matching_value(params, f"{mmin_name}_{i}", mmin_name)
-        if mmin is None:
-            raise ValueError(f"Missing parameter {mmin_name}_{i}")
-
-        mmax = _fetch_first_matching_value(params, f"{mmax_name}_{i}", mmax_name)
-        if mmax is None:
-            raise ValueError(f"Missing parameter {mmax_name}_{i}")
-
+        alpha1 = _get_parameter(params, f"{alpha1_name}_{i}", alpha1_name)
+        alpha2 = _get_parameter(params, f"{alpha2_name}_{i}", alpha2_name)
+        mbreak = _get_parameter(params, f"{mbreak_name}_{i}", mbreak_name)
+        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
+        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
         broken_powerlaw = BrokenPowerlaw(
             alpha1=alpha1,
             alpha2=alpha2,
@@ -573,38 +533,17 @@ def create_minimum_tilt_model(
     minimum2_name = f"cos_tilt_2_minimum_{component_type}"
 
     for i in range(N):
-        zeta = _fetch_first_matching_value(params, f"{zeta_name}_{i}", zeta_name)
-        if zeta is None:
-            raise ValueError(f"Missing parameter {zeta_name}_{i}")
-
-        loc1 = _fetch_first_matching_value(params, f"{loc1_name}_{i}", loc1_name)
-        if loc1 is None:
-            raise ValueError(f"Missing parameter {loc1_name}_{i}")
-
-        loc2 = _fetch_first_matching_value(params, f"{loc2_name}_{i}", loc2_name)
-        if loc2 is None:
-            raise ValueError(f"Missing parameter {loc2_name}_{i}")
-
-        scale1 = _fetch_first_matching_value(params, f"{scale1_name}_{i}", scale1_name)
-        if scale1 is None:
-            raise ValueError(f"Missing parameter {scale1_name}_{i}")
-
-        scale2 = _fetch_first_matching_value(params, f"{scale2_name}_{i}", scale2_name)
-        if scale2 is None:
-            raise ValueError(f"Missing parameter {scale2_name}_{i}")
-
-        minimum1 = _fetch_first_matching_value(
-            params, f"{minimum1_name}_{i}", minimum1_name
+        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
+        loc1 = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)
+        loc2 = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)
+        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
+        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
+        minimum1 = _get_parameter(
+            params, f"{minimum1_name}_{i}", minimum1_name, default=-1.0
         )
-        if minimum1 is None:
-            minimum1 = jnp.asarray(-1.0)
-
-        minimum2 = _fetch_first_matching_value(
-            params, f"{minimum2_name}_{i}", minimum2_name
+        minimum2 = _get_parameter(
+            params, f"{minimum2_name}_{i}", minimum2_name, default=-1.0
         )
-        if minimum2 is None:
-            minimum2 = jnp.asarray(-1.0)
-
         dist_collection.append(
             MinimumTiltModelExtended(
                 zeta=zeta,
@@ -619,3 +558,215 @@ def create_minimum_tilt_model(
         )
 
     return dist_collection
+
+
+def create_powerlaws(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of Distribution for powerlaws.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of Distribution for powerlaws
+
+    Raises
+    ------
+    ValueError
+        if alpha, mmin, or mmax is missing
+    """
+    powerlaws_collection = []
+    alpha_name = "alpha_pl"
+    mmax_name = "mmax_pl"
+    mmin_name = "mmin_pl"
+    for i in range(N):
+        alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
+        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
+        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
+
+        powerlaw = DoublyTruncatedPowerLaw(
+            alpha=-alpha,
+            low=mmin,
+            high=mmax,
+            validate_args=validate_args,
+        )
+
+        powerlaws_collection.append(powerlaw)
+    return powerlaws_collection
+
+
+def create_two_truncated_normal_mixture(
+    N: int,
+    parameter_name: Literal["eccentricity"],
+    component_type: Literal["bpl", "pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[MixtureGeneral]:
+    """Create a list of eccentric mixture models.
+
+    Parameters
+    ----------
+    N : int
+        Number of components.
+    parameter_name : Literal["eccentricity"]
+        The name of the parameter.
+    component_type : Literal["bpl", "pl", "g"]
+        The type of component.
+    params : Dict[str, Array]
+        A dictionary of parameters.
+    validate_args : Optional[bool], optional
+        Whether to validate arguments, by default None.
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        A list of eccentric mixture models.
+    """
+    high1_name = parameter_name + "_high1_" + component_type
+    high2_name = parameter_name + "_high2_" + component_type
+    loc1_name = parameter_name + "_loc1_" + component_type
+    loc2_name = parameter_name + "_loc2_" + component_type
+    low1_name = parameter_name + "_low1_" + component_type
+    low2_name = parameter_name + "_low2_" + component_type
+    scale1_name = parameter_name + "_scale1_" + component_type
+    scale2_name = parameter_name + "_scale2_" + component_type
+    zeta_name = parameter_name + "_zeta_" + component_type
+
+    eccentricity_collection = []
+
+    for i in range(N):
+        high1 = _get_parameter(
+            params, f"{high1_name}_{i}", high1_name, is_necessary=False
+        )
+        high2 = _get_parameter(
+            params, f"{high2_name}_{i}", high2_name, is_necessary=False
+        )
+        loc1 = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)
+        loc2 = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)
+        low1 = _get_parameter(params, f"{low1_name}_{i}", low1_name, is_necessary=False)
+        low2 = _get_parameter(params, f"{low2_name}_{i}", low2_name, is_necessary=False)
+        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
+        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
+        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
+
+        eccentricity_dist = TwoTruncatedNormalMixture(
+            high1=high1,
+            high2=high2,
+            loc1=loc1,
+            loc2=loc2,
+            low1=low1,
+            low2=low2,
+            scale1=scale1,
+            scale2=scale2,
+            zeta=zeta,
+            validate_args=validate_args,
+        )
+        eccentricity_collection.append(eccentricity_dist)
+
+    return eccentricity_collection
+
+
+def create_spin_magnitude_mixture_models(
+    N: int,
+    parameter_name,
+    component_type: Literal["bpl", "pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+):
+    """Create a list of spin magnitude mixture models.
+
+    .. note::
+        The `parameter_name` argument is ignored. This function is
+        hardcoded to create models for primary and secondary spin magnitudes
+        ('a_1' and 'a_2').
+
+    Parameters
+    ----------
+    N : int
+        Number of components.
+    parameter_name : str
+        Unused. Kept for compatibility with the calling interface.
+    component_type : Literal["bpl", "pl", "g"]
+        The type of component.
+    params : Dict[str, Array]
+        A dictionary of parameters.
+    validate_args : Optional[bool], optional
+        Whether to validate arguments, by default None.
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        A list of spin magnitude mixture models.
+    """
+    zeta_name = "a_zeta_" + component_type
+    loc1_name = "a_1_loc_" + component_type
+    scale1_name = "a_1_scale_" + component_type
+    isotropic_low1_name = "a_1_isotropic_low_" + component_type
+    isotropic_high1_name = "a_1_isotropic_high_" + component_type
+    gaussian_low1_name = "a_1_gaussian_low_" + component_type
+    gaussian_high1_name = "a_1_gaussian_high_" + component_type
+    loc2_name = "a_2_loc_" + component_type
+    scale2_name = "a_2_scale_" + component_type
+    isotropic_low2_name = "a_2_isotropic_low_" + component_type
+    isotropic_high2_name = "a_2_isotropic_high_" + component_type
+    gaussian_low2_name = "a_2_gaussian_low_" + component_type
+    gaussian_high2_name = "a_2_gaussian_high_" + component_type
+
+    spin_collection = []
+
+    for i in range(N):
+        zeta: ArrayLike = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)  # type: ignore
+        loc1: ArrayLike = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)  # type: ignore
+        scale1: ArrayLike = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)  # type: ignore
+        isotropic_low1: ArrayLike = _get_parameter(
+            params, f"{isotropic_low1_name}_{i}", isotropic_low1_name
+        )  # type: ignore
+        isotropic_high1: ArrayLike = _get_parameter(
+            params, f"{isotropic_high1_name}_{i}", isotropic_high1_name
+        )  # type: ignore
+        gaussian_low1: ArrayLike = _get_parameter(
+            params, f"{gaussian_low1_name}_{i}", gaussian_low1_name
+        )  # type: ignore
+        gaussian_high1: ArrayLike = _get_parameter(
+            params, f"{gaussian_high1_name}_{i}", gaussian_high1_name
+        )  # type: ignore
+        loc2: ArrayLike = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)  # type: ignore
+        scale2: ArrayLike = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)  # type: ignore
+        isotropic_low2: ArrayLike = _get_parameter(
+            params, f"{isotropic_low2_name}_{i}", isotropic_low2_name
+        )  # type: ignore
+        isotropic_high2: ArrayLike = _get_parameter(
+            params, f"{isotropic_high2_name}_{i}", isotropic_high2_name
+        )  # type: ignore
+        gaussian_low2: ArrayLike = _get_parameter(
+            params, f"{gaussian_low2_name}_{i}", gaussian_low2_name
+        )  # type: ignore
+        gaussian_high2: ArrayLike = _get_parameter(
+            params, f"{gaussian_high2_name}_{i}", gaussian_high2_name
+        )  # type: ignore
+
+        spin_dist = NDIsotropicAndTruncatedNormalMixture(
+            zeta=zeta,
+            loc=jnp.stack((loc1, loc2), axis=-1),
+            scale=jnp.stack((scale1, scale2), axis=-1),
+            isotropic_low=jnp.stack((isotropic_low1, isotropic_low2), axis=-1),
+            isotropic_high=jnp.stack((isotropic_high1, isotropic_high2), axis=-1),
+            gaussian_low=jnp.stack((gaussian_low1, gaussian_low2), axis=-1),
+            gaussian_high=jnp.stack((gaussian_high1, gaussian_high2), axis=-1),
+            validate_args=validate_args,
+        )
+
+        spin_collection.append(spin_dist)
+
+    return spin_collection

@@ -2,8 +2,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+from typing import Optional
+
 import jax
 from jax import numpy as jnp
+from jaxtyping import ArrayLike
+from numpyro._typing import ConstraintT
+from numpyro.distributions import constraints, Distribution
+from numpyro.distributions.util import is_prng_key, promote_shapes, validate_sample
 
 
 @jax.custom_jvp
@@ -342,3 +348,114 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
     )
 
     return primal_out, tangent_out
+
+
+class DoublyTruncatedPowerLaw(Distribution):
+    r"""Power law distribution with :math:`\alpha` index, and lower and upper bounds. We
+    can define the power law distribution as,
+
+    .. math::
+        f(x; \alpha, a, b) = \frac{x^{\alpha}}{Z(\alpha, a, b)},
+
+    where, :math:`a` and :math:`b` are the lower and upper bounds respectively,
+    and :math:`Z(\alpha, a, b)` is the normalization constant. It is defined as,
+
+    .. math::
+        Z(\alpha, a, b) = \begin{cases}
+            \log(b) - \log(a) & \text{if } \alpha = -1, \\
+            \frac{b^{1 + \alpha} - a^{1 + \alpha}}{1 + \alpha} & \text{otherwise}.
+        \end{cases}
+
+    :param alpha: index of the power law distribution
+    :param low: lower bound of the distribution
+    :param high: upper bound of the distribution
+    """
+
+    arg_constraints = {
+        "alpha": constraints.real,
+        "low": constraints.greater_than_eq(0),
+        "high": constraints.greater_than(0),
+    }
+    reparametrized_params = ["alpha", "low", "high"]
+    pytree_aux_fields = ("_support",)
+    pytree_data_fields = ("alpha", "low", "high")
+
+    def __init__(
+        self,
+        alpha: ArrayLike,
+        low: ArrayLike,
+        high: ArrayLike,
+        *,
+        validate_args: Optional[bool] = None,
+    ):
+        self.alpha, self.low, self.high = promote_shapes(alpha, low, high)
+        self._support = constraints.interval(low, high)
+        batch_shape = jax.lax.broadcast_shapes(
+            jnp.shape(alpha), jnp.shape(low), jnp.shape(high)
+        )
+        super(DoublyTruncatedPowerLaw, self).__init__(
+            batch_shape=batch_shape, validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self) -> ConstraintT:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value: ArrayLike) -> ArrayLike:
+        r"""Logarithmic probability distribution:
+        Z inequal minus one:
+        .. math::
+            (x^\alpha) (\alpha + 1)/(b^(\alpha + 1) - a^(\alpha + 1))
+
+        Z equal minus one:
+        .. math::
+            (x^\alpha)/(log(b) - log(a))
+        Derivations are calculated by Wolfram Alpha via the Jacobian matrix accordingly.
+        """
+
+        return doubly_truncated_power_law_log_prob(
+            value, self.alpha, self.low, self.high
+        )
+
+    def cdf(self, value: ArrayLike) -> ArrayLike:
+        r"""Cumulated probability distribution:
+        Z inequal minus one:
+
+        .. math::
+
+            \frac{x^{\alpha + 1} - a^{\alpha + 1}}{b^{\alpha + 1} - a^{\alpha + 1}}
+
+        Z equal minus one:
+
+        .. math::
+
+            \frac{\log(x) - \log(a)}{\log(b) - \log(a)}
+
+        Derivations are calculated by Wolfram Alpha via the Jacobian matrix accordingly.
+        """
+        return doubly_truncated_power_law_cdf(value, self.alpha, self.low, self.high)
+
+    def icdf(self, q: ArrayLike) -> ArrayLike:
+        r"""Inverse cumulated probability distribution:
+        Z inequal minus one:
+
+        .. math::
+            a \left(\frac{b}{a}\right)^{q}
+
+        Z equal minus one:
+
+        .. math::
+            \left(a^{1 + \alpha} + q (b^{1 + \alpha} - a^{1 + \alpha})\right)^{\frac{1}{1 + \alpha}}
+
+        Derivations are calculated by Wolfram Alpha via the Jacobian matrix accordingly.
+        """
+        return doubly_truncated_power_law_icdf(q, self.alpha, self.low, self.high)
+
+    def sample(
+        self, key: jax.dtypes.prng_key, sample_shape: tuple[int, ...] = ()
+    ) -> ArrayLike:
+        assert is_prng_key(key)
+        u = jax.random.uniform(key, sample_shape + self.batch_shape)
+        samples = self.icdf(u)
+        return samples

@@ -5,6 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
+from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro._typing import DistributionLike
 from numpyro.distributions.distribution import enable_validation
@@ -16,8 +17,43 @@ from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.core.sage import Sage, sage_arg_parser
+from kokab.utils.checks import check_min_concentration_for_beta_dist
 from kokab.utils.common import expand_arguments
 from kokab.utils.logger import log_info
+
+
+def where_fns_list(
+    use_beta_spin_magnitude: bool,
+) -> Optional[List[Callable[..., Array]]]:
+    where_fns = []
+
+    if use_beta_spin_magnitude:
+
+        def positive_concentration(**kwargs) -> Array:
+            N_bpl: int = kwargs.get("N_bpl")  # type: ignore
+            N_g: int = kwargs.get("N_g")  # type: ignore
+            mask = jnp.ones((), dtype=bool)
+            for n_bpl in range(N_bpl):
+                chi_mean: Array = kwargs.get(
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_bpl_" + str(n_bpl)
+                )  # type: ignore
+                chi_variance: Array = kwargs.get(
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_bpl_" + str(n_bpl)
+                )  # type: ignore
+                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
+            for n_g in range(N_g):
+                chi_mean: Array = kwargs.get(
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g_" + str(n_g)
+                )  # type: ignore
+                chi_variance: Array = kwargs.get(
+                    P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g_" + str(n_g)
+                )  # type: ignore
+                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
+            return mask
+
+        where_fns.append(positive_concentration)
+
+    return where_fns if len(where_fns) > 0 else None
 
 
 class NBrokenPowerlawMGaussianCore(Sage):
@@ -25,8 +61,11 @@ class NBrokenPowerlawMGaussianCore(Sage):
         self,
         N_bpl: int,
         N_g: int,
-        use_spin_magnitude: bool,
+        use_beta_spin_magnitude: bool,
+        use_spin_magnitude_mixture: bool,
+        use_chi_eff_mixture: bool,
         use_tilt: bool,
+        use_eccentricity_mixture: bool,
         use_redshift: bool,
         likelihood_fn: Callable[
             [
@@ -42,7 +81,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
             Callable,
         ],
         posterior_regex: str,
-        posterior_columns: List[str],
+        read_reference_prior: bool,
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -56,27 +95,30 @@ class NBrokenPowerlawMGaussianCore(Sage):
     ) -> None:
         self.N_bpl = N_bpl
         self.N_g = N_g
-        self.use_spin_magnitude = use_spin_magnitude
+        self.use_beta_spin_magnitude = use_beta_spin_magnitude
+        self.use_spin_magnitude_mixture = use_spin_magnitude_mixture
+        self.use_chi_eff_mixture = use_chi_eff_mixture
         self.use_tilt = use_tilt
+        self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_redshift = use_redshift
 
         super().__init__(
             likelihood_fn=likelihood_fn,
             model=NBrokenPowerlawMGaussian,
             posterior_regex=posterior_regex,
-            posterior_columns=posterior_columns,
+            read_reference_prior=read_reference_prior,
             seed=seed,
             prior_filename=prior_filename,
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
             variance_cut_threshold=variance_cut_threshold,
-            analysis_name="n_bpls_m_gs",
+            analysis_name="ofour_n_bpls_m_gs",
             n_buckets=n_buckets,
             threshold=threshold,
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            where_fns=None,
+            where_fns=where_fns_list(use_beta_spin_magnitude=use_beta_spin_magnitude),
         )
 
     @property
@@ -84,19 +126,26 @@ class NBrokenPowerlawMGaussianCore(Sage):
         return {
             "N_bpl": self.N_bpl,
             "N_g": self.N_g,
-            "use_spin_magnitude": self.use_spin_magnitude,
+            "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
+            "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
+            "use_chi_eff_mixture": self.use_chi_eff_mixture,
             "use_tilt": self.use_tilt,
+            "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_redshift": self.use_redshift,
         }
 
     @property
     def parameters(self) -> List[str]:
         names = [P.PRIMARY_MASS_SOURCE.value]
-        if self.use_spin_magnitude:
+        if self.use_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
+        if self.use_chi_eff_mixture:
+            names.append(P.EFFECTIVE_SPIN_MAGNITUDE.value)
         if self.use_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
+        if self.use_eccentricity_mixture:
+            names.append(P.ECCENTRICITY.value)
         if self.use_redshift:
             names.append(P.REDSHIFT.value)
         names.append(P.SECONDARY_MASS_SOURCE.value)
@@ -117,25 +166,51 @@ class NBrokenPowerlawMGaussianCore(Sage):
             ("m1min_bpl", self.N_bpl),
         ]
 
-        if self.use_spin_magnitude:
+        if self.use_spin_magnitude_mixture:
+            # fmt: off
             all_params.extend(
                 [
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_high_bpl", self.N_bpl),
+                    ("a_zeta_g", self.N_g),
+                    ("a_zeta_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_high_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_gaussian_low_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_high_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_isotropic_low_bpl", self.N_bpl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_loc_bpl", self.N_bpl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_low_bpl", self.N_bpl),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
                     (P.PRIMARY_SPIN_MAGNITUDE.value + "_scale_bpl", self.N_bpl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_high_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_high_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_gaussian_low_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_high_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_isotropic_low_bpl", self.N_bpl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_g", self.N_g),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_loc_bpl", self.N_bpl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_low_bpl", self.N_bpl),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_g", self.N_g),
                     (P.SECONDARY_SPIN_MAGNITUDE.value + "_scale_bpl", self.N_bpl),
+                ]
+            )
+            # fmt: on
+
+        if self.use_beta_spin_magnitude:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_bpl", self.N_bpl),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_bpl", self.N_bpl),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_bpl", self.N_bpl),
                 ]
             )
 
@@ -156,6 +231,30 @@ class NBrokenPowerlawMGaussianCore(Sage):
                     (P.COS_TILT_2.value + "_minimum_g", self.N_g),
                     (P.COS_TILT_2.value + "_scale_bpl", self.N_bpl),
                     (P.COS_TILT_2.value + "_scale_g", self.N_g),
+                ]
+            )
+
+        if self.use_eccentricity_mixture:
+            all_params.extend(
+                [
+                    (P.ECCENTRICITY.value + "_high1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_high1_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_high2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_high2_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_loc1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_loc1_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_loc2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_loc2_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_low1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_low1_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_low2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_low2_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_scale1_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_scale1_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_scale2_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_scale2_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_zeta_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_zeta_bpl", self.N_bpl),
                 ]
             )
 
@@ -196,15 +295,32 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Number of Gaussian components in the mass model.",
     )
 
-    model_group.add_argument(
-        "--add-spin-magnitude",
+    spin_group = model_group.add_mutually_exclusive_group()
+    spin_group.add_argument(
+        "--add-beta-spin-magnitude",
         action="store_true",
-        help="Include spin magnitude parameters in the model.",
+        help="Include beta spin magnitude parameters in the model.",
+    )
+    spin_group.add_argument(
+        "--add-spin-magnitude-mixture",
+        action="store_true",
+        help="Include truncated normal spin magnitude parameters in the model.",
+    )
+
+    model_group.add_argument(
+        "--add-chi-eff-mixture",
+        action="store_true",
+        help="Include chi_eff mixture parameters in the model.",
     )
     model_group.add_argument(
         "--add-tilt",
         action="store_true",
         help="Include tilt parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-eccentricity-mixture",
+        action="store_true",
+        help="Include eccentricity mixture in the model.",
     )
     model_group.add_argument(
         "--add-redshift",
@@ -233,12 +349,15 @@ def f_main() -> None:
     NBrokenPowerlawMGaussianFSage(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
-        use_spin_magnitude=args.add_spin_magnitude,
+        use_beta_spin_magnitude=args.add_beta_spin_magnitude,
+        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
+        use_chi_eff_mixture=args.add_chi_eff_mixture,
         use_tilt=args.add_tilt,
+        use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
         posterior_regex=args.posterior_regex,
-        posterior_columns=args.posterior_columns,
+        read_reference_prior=args.read_reference_prior,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
@@ -268,12 +387,15 @@ def n_main() -> None:
     NBrokenPowerlawMGaussianNSage(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
-        use_spin_magnitude=args.add_spin_magnitude,
+        use_beta_spin_magnitude=args.add_beta_spin_magnitude,
+        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
+        use_chi_eff_mixture=args.add_chi_eff_mixture,
         use_tilt=args.add_tilt,
+        use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
         posterior_regex=args.posterior_regex,
-        posterior_columns=args.posterior_columns,
+        read_reference_prior=args.read_reference_prior,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
