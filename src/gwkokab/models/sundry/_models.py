@@ -87,6 +87,94 @@ def TwoTruncatedNormalMixture(
     )
 
 
+def NDTwoTruncatedNormalMixture(
+    comp1_high: ArrayLike,
+    comp1_loc: ArrayLike,
+    comp1_low: ArrayLike,
+    comp1_scale: ArrayLike,
+    comp2_high: ArrayLike,
+    comp2_loc: ArrayLike,
+    comp2_low: ArrayLike,
+    comp2_scale: ArrayLike,
+    zeta: ArrayLike,
+    *,
+    batch_dim: int = 1,
+    validate_args: Optional[bool] = None,
+) -> MixtureGeneral:
+    r"""General N-dimensional mixture model of two truncated normal distributions.
+
+    Parameters
+    ----------
+    comp1_high : ArrayLike
+        The upper bound of the first truncated normal distribution.
+    comp1_loc : ArrayLike
+        The mean of the first truncated normal distribution.
+    comp1_low : ArrayLike
+        The lower bound of the first truncated normal distribution.
+    comp1_scale : ArrayLike
+        The standard deviation of the first truncated normal distribution.
+    comp2_high : ArrayLike
+        The upper bound of the second truncated normal distribution.
+    comp2_loc : ArrayLike
+        The mean of the second truncated normal distribution.
+    comp2_low : ArrayLike
+        The lower bound of the second truncated normal distribution.
+    comp2_scale : ArrayLike
+        The standard deviation of the second truncated normal distribution.
+    zeta : ArrayLike
+        The mixing proportion for the second component.
+    batch_dim : int, optional
+        The batch dimension for the distributions, by default 1
+    validate_args : Optional[bool], optional
+        Whether to validate the arguments, by default None
+    Returns
+    -------
+    MixtureGeneral
+        N-dimensional mixture model of two truncated normal distributions.
+    """
+    mixing_probs = jnp.stack((1.0 - zeta, zeta), axis=-1)
+
+    gaussian_component1 = Independent(
+        TruncatedNormal(
+            loc=comp1_loc,
+            scale=comp1_scale,
+            low=comp1_low,
+            high=comp1_high,
+            validate_args=validate_args,
+        ),
+        batch_dim,
+        validate_args=validate_args,
+    )
+    gaussian_component2 = Independent(
+        TruncatedNormal(
+            loc=comp2_loc,
+            scale=comp2_scale,
+            low=comp2_low,
+            high=comp2_high,
+            validate_args=validate_args,
+        ),
+        batch_dim,
+        validate_args=validate_args,
+    )
+    return MixtureGeneral(
+        mixing_distribution=CategoricalProbs(
+            probs=mixing_probs, validate_args=validate_args
+        ),
+        component_distributions=[gaussian_component1, gaussian_component2],
+        support=any_constraint(
+            (
+                constraints.independent(
+                    constraints.interval(comp1_low, comp1_high), batch_dim
+                ),
+                constraints.independent(
+                    constraints.interval(comp2_low, comp2_high), batch_dim
+                ),
+            )
+        ),
+        validate_args=validate_args,
+    )
+
+
 def NDIsotropicAndTruncatedNormalMixture(
     zeta: ArrayLike,
     loc: ArrayLike,

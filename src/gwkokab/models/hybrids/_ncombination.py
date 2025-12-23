@@ -14,6 +14,7 @@ from numpyro.distributions import (
     Uniform,
 )
 
+from ...parameters import Parameters as P
 from ..mass import BrokenPowerlaw, PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import (
@@ -21,7 +22,7 @@ from ..spin import (
     IndependentSpinOrientationGaussianIsotropic,
     MinimumTiltModelExtended,
 )
-from ..sundry import NDIsotropicAndTruncatedNormalMixture, TwoTruncatedNormalMixture
+from ..sundry import NDTwoTruncatedNormalMixture, TwoTruncatedNormalMixture
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import DoublyTruncatedPowerLaw, ExtendedSupportTransformedDistribution
 
@@ -30,13 +31,13 @@ __all__ = [
     "combine_distributions",
     "create_beta_distributions",
     "create_broken_powerlaws",
-    "create_two_truncated_normal_mixture",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_primary_mass_ratios",
     "create_powerlaw_redshift",
     "create_powerlaws",
     "create_spin_magnitude_mixture_models",
     "create_truncated_normal_distributions",
+    "create_two_truncated_normal_mixture",
     "create_uniform_distributions",
 ]
 
@@ -77,10 +78,10 @@ def _get_parameter(
 ) -> Optional[_VT]:
     value = _fetch_first_matching_value(params, *name)
     if value is None:
-        if is_necessary:
-            raise ValueError(f"Missing parameter {name}")
-        else:
+        if default is not None:
             value = default
+        elif is_necessary:
+            raise ValueError(f"Missing parameter {name}")
     return value
 
 
@@ -646,20 +647,12 @@ def create_two_truncated_normal_mixture(
     eccentricity_collection = []
 
     for i in range(N):
-        comp1_high = _get_parameter(
-            params, f"{comp1_high_name}_{i}", comp1_high_name, is_necessary=False
-        )
-        comp2_high = _get_parameter(
-            params, f"{comp2_high_name}_{i}", comp2_high_name, is_necessary=False
-        )
+        comp1_high = _get_parameter(params, f"{comp1_high_name}_{i}", comp1_high_name)
+        comp2_high = _get_parameter(params, f"{comp2_high_name}_{i}", comp2_high_name)
         comp1_loc = _get_parameter(params, f"{comp1_loc_name}_{i}", comp1_loc_name)
         comp2_loc = _get_parameter(params, f"{comp2_loc_name}_{i}", comp2_loc_name)
-        comp1_low = _get_parameter(
-            params, f"{comp1_low_name}_{i}", comp1_low_name, is_necessary=False
-        )
-        comp2_low = _get_parameter(
-            params, f"{comp2_low_name}_{i}", comp2_low_name, is_necessary=False
-        )
+        comp1_low = _get_parameter(params, f"{comp1_low_name}_{i}", comp1_low_name)
+        comp2_low = _get_parameter(params, f"{comp2_low_name}_{i}", comp2_low_name)
         comp1_scale = _get_parameter(
             params, f"{comp1_scale_name}_{i}", comp1_scale_name
         )
@@ -717,61 +710,69 @@ def create_spin_magnitude_mixture_models(
     List[MixtureGeneral]
         A list of spin magnitude mixture models.
     """
+
+    # fmt: off
     zeta_name = "a_zeta_" + component_type
-    loc1_name = "a_1_loc_" + component_type
-    scale1_name = "a_1_scale_" + component_type
-    isotropic_low1_name = "a_1_isotropic_low_" + component_type
-    isotropic_high1_name = "a_1_isotropic_high_" + component_type
-    gaussian_low1_name = "a_1_gaussian_low_" + component_type
-    gaussian_high1_name = "a_1_gaussian_high_" + component_type
-    loc2_name = "a_2_loc_" + component_type
-    scale2_name = "a_2_scale_" + component_type
-    isotropic_low2_name = "a_2_isotropic_low_" + component_type
-    isotropic_high2_name = "a_2_isotropic_high_" + component_type
-    gaussian_low2_name = "a_2_gaussian_low_" + component_type
-    gaussian_high2_name = "a_2_gaussian_high_" + component_type
+    a_1_comp1_high_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_high_" + component_type
+    a_1_comp1_loc_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_loc_" + component_type
+    a_1_comp1_low_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_low_" + component_type
+    a_1_comp1_scale_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_scale_" + component_type
+    a_1_comp2_high_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_high_" + component_type
+    a_1_comp2_loc_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_loc_" + component_type
+    a_1_comp2_low_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_low_" + component_type
+    a_1_comp2_scale_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_scale_" + component_type
+    a_2_comp1_high_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_high_" + component_type
+    a_2_comp1_loc_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_loc_" + component_type
+    a_2_comp1_low_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_low_" + component_type
+    a_2_comp1_scale_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_scale_" + component_type
+    a_2_comp2_high_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_high_" + component_type
+    a_2_comp2_loc_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_loc_" + component_type
+    a_2_comp2_low_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_low_" + component_type
+    a_2_comp2_scale_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_scale_" + component_type
+    # fmt: on
 
     spin_collection = []
 
     for i in range(N):
-        zeta: ArrayLike = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)  # type: ignore
-        loc1: ArrayLike = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)  # type: ignore
-        scale1: ArrayLike = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)  # type: ignore
-        isotropic_low1: ArrayLike = _get_parameter(
-            params, f"{isotropic_low1_name}_{i}", isotropic_low1_name
-        )  # type: ignore
-        isotropic_high1: ArrayLike = _get_parameter(
-            params, f"{isotropic_high1_name}_{i}", isotropic_high1_name
-        )  # type: ignore
-        gaussian_low1: ArrayLike = _get_parameter(
-            params, f"{gaussian_low1_name}_{i}", gaussian_low1_name
-        )  # type: ignore
-        gaussian_high1: ArrayLike = _get_parameter(
-            params, f"{gaussian_high1_name}_{i}", gaussian_high1_name
-        )  # type: ignore
-        loc2: ArrayLike = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)  # type: ignore
-        scale2: ArrayLike = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)  # type: ignore
-        isotropic_low2: ArrayLike = _get_parameter(
-            params, f"{isotropic_low2_name}_{i}", isotropic_low2_name
-        )  # type: ignore
-        isotropic_high2: ArrayLike = _get_parameter(
-            params, f"{isotropic_high2_name}_{i}", isotropic_high2_name
-        )  # type: ignore
-        gaussian_low2: ArrayLike = _get_parameter(
-            params, f"{gaussian_low2_name}_{i}", gaussian_low2_name
-        )  # type: ignore
-        gaussian_high2: ArrayLike = _get_parameter(
-            params, f"{gaussian_high2_name}_{i}", gaussian_high2_name
-        )  # type: ignore
+        # fmt: off
+        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
+        a_1_comp1_high: ArrayLike = _get_parameter(params, f"{a_1_comp1_high_name}_{i}", a_1_comp1_high_name, default=1.0) # type: ignore
+        a_1_comp1_loc: ArrayLike = _get_parameter(params, f"{a_1_comp1_loc_name}_{i}", a_1_comp1_loc_name) # type: ignore
+        a_1_comp1_low: ArrayLike = _get_parameter(params, f"{a_1_comp1_low_name}_{i}", a_1_comp1_low_name, default=0.0) # type: ignore
+        a_1_comp1_scale: ArrayLike = _get_parameter(params, f"{a_1_comp1_scale_name}_{i}", a_1_comp1_scale_name) # type: ignore
+        a_1_comp2_high: ArrayLike = _get_parameter(params, f"{a_1_comp2_high_name}_{i}", a_1_comp2_high_name, default=1.0) # type: ignore
+        a_1_comp2_loc: ArrayLike = _get_parameter(params, f"{a_1_comp2_loc_name}_{i}", a_1_comp2_loc_name) # type: ignore
+        a_1_comp2_low: ArrayLike = _get_parameter(params, f"{a_1_comp2_low_name}_{i}", a_1_comp2_low_name, default=0.0) # type: ignore
+        a_1_comp2_scale: ArrayLike = _get_parameter(params, f"{a_1_comp2_scale_name}_{i}", a_1_comp2_scale_name) # type: ignore
+        a_2_comp1_high: ArrayLike = _get_parameter(params, f"{a_2_comp1_high_name}_{i}", a_2_comp1_high_name, default=1.0) # type: ignore
+        a_2_comp1_loc: ArrayLike = _get_parameter(params, f"{a_2_comp1_loc_name}_{i}", a_2_comp1_loc_name) # type: ignore
+        a_2_comp1_low: ArrayLike = _get_parameter(params, f"{a_2_comp1_low_name}_{i}", a_2_comp1_low_name, default=0.0) # type: ignore
+        a_2_comp1_scale: ArrayLike = _get_parameter(params, f"{a_2_comp1_scale_name}_{i}", a_2_comp1_scale_name) # type: ignore
+        a_2_comp2_high: ArrayLike = _get_parameter(params, f"{a_2_comp2_high_name}_{i}", a_2_comp2_high_name, default=1.0) # type: ignore
+        a_2_comp2_loc: ArrayLike = _get_parameter(params, f"{a_2_comp2_loc_name}_{i}", a_2_comp2_loc_name) # type: ignore
+        a_2_comp2_low: ArrayLike = _get_parameter(params, f"{a_2_comp2_low_name}_{i}", a_2_comp2_low_name, default=0.0) # type: ignore
+        a_2_comp2_scale: ArrayLike = _get_parameter(params, f"{a_2_comp2_scale_name}_{i}", a_2_comp2_scale_name) # type: ignore
+        # fmt: on
 
-        spin_dist = NDIsotropicAndTruncatedNormalMixture(
+        comp1_high = jnp.stack((a_1_comp1_high, a_2_comp1_high), axis=-1)
+        comp1_loc = jnp.stack((a_1_comp1_loc, a_2_comp1_loc), axis=-1)
+        comp1_low = jnp.stack((a_1_comp1_low, a_2_comp1_low), axis=-1)
+        comp1_scale = jnp.stack((a_1_comp1_scale, a_2_comp1_scale), axis=-1)
+        comp2_high = jnp.stack((a_1_comp2_high, a_2_comp2_high), axis=-1)
+        comp2_loc = jnp.stack((a_1_comp2_loc, a_2_comp2_loc), axis=-1)
+        comp2_low = jnp.stack((a_1_comp2_low, a_2_comp2_low), axis=-1)
+        comp2_scale = jnp.stack((a_1_comp2_scale, a_2_comp2_scale), axis=-1)
+
+        spin_dist = NDTwoTruncatedNormalMixture(
             zeta=zeta,
-            loc=jnp.stack((loc1, loc2), axis=-1),
-            scale=jnp.stack((scale1, scale2), axis=-1),
-            isotropic_low=jnp.stack((isotropic_low1, isotropic_low2), axis=-1),
-            isotropic_high=jnp.stack((isotropic_high1, isotropic_high2), axis=-1),
-            gaussian_low=jnp.stack((gaussian_low1, gaussian_low2), axis=-1),
-            gaussian_high=jnp.stack((gaussian_high1, gaussian_high2), axis=-1),
+            comp1_high=comp1_high,
+            comp1_loc=comp1_loc,
+            comp1_low=comp1_low,
+            comp1_scale=comp1_scale,
+            comp2_high=comp2_high,
+            comp2_loc=comp2_loc,
+            comp2_low=comp2_low,
+            comp2_scale=comp2_scale,
             validate_args=validate_args,
         )
 

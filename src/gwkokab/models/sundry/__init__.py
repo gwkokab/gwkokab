@@ -8,5 +8,6 @@ category on intrinsic or extrinsic parameter models.
 
 from ._models import (
     NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,
+    NDTwoTruncatedNormalMixture as NDTwoTruncatedNormalMixture,
     TwoTruncatedNormalMixture as TwoTruncatedNormalMixture,
 )
