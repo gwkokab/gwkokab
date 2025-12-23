@@ -214,6 +214,30 @@ class NBrokenPowerlawMGaussianCore(Sage):
                 ]
             )
 
+        if self.use_chi_eff_mixture:
+            all_params.extend(
+                [
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_high_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_high_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_loc_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_loc_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_low_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_low_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_scale_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp1_scale_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_high_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_high_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_loc_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_loc_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_low_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_low_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_scale_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_comp2_scale_g", self.N_g),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_bpl", self.N_bpl),
+                    (P.EFFECTIVE_SPIN_MAGNITUDE.value + "_zeta_g", self.N_g),
+                ]
+            )
+
         if self.use_tilt:
             all_params.extend(
                 [
@@ -237,24 +261,24 @@ class NBrokenPowerlawMGaussianCore(Sage):
         if self.use_eccentricity_mixture:
             all_params.extend(
                 [
-                    (P.ECCENTRICITY.value + "_high1_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_high1_bpl", self.N_bpl),
-                    (P.ECCENTRICITY.value + "_high2_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_high2_bpl", self.N_bpl),
-                    (P.ECCENTRICITY.value + "_loc1_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_loc1_bpl", self.N_bpl),
-                    (P.ECCENTRICITY.value + "_loc2_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_loc2_bpl", self.N_bpl),
-                    (P.ECCENTRICITY.value + "_low1_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_low1_bpl", self.N_bpl),
-                    (P.ECCENTRICITY.value + "_low2_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_low2_bpl", self.N_bpl),
-                    (P.ECCENTRICITY.value + "_scale1_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_scale1_bpl", self.N_bpl),
-                    (P.ECCENTRICITY.value + "_scale2_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_scale2_bpl", self.N_bpl),
-                    (P.ECCENTRICITY.value + "_zeta_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_comp1_high_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_comp1_high_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_comp1_loc_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_comp1_loc_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_comp1_low_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_comp1_low_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_comp1_scale_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_comp1_scale_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_comp2_high_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_comp2_high_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_comp2_loc_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_comp2_loc_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_comp2_low_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_comp2_low_g", self.N_g),
+                    (P.ECCENTRICITY.value + "_comp2_scale_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_comp2_scale_g", self.N_g),
                     (P.ECCENTRICITY.value + "_zeta_bpl", self.N_bpl),
+                    (P.ECCENTRICITY.value + "_zeta_g", self.N_g),
                 ]
             )
 
