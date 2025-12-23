@@ -59,6 +59,7 @@ def poisson_mean_from_sensitivity_injections(
     analysis_time_years = injections_dict["analysis_time"]
     total_injections = injections_dict["total_generated"]
 
+    logger.debug("Analysis time (years): {}", analysis_time_years)
     logger.debug(
         "Found {} out of {} injections with FAR < {} and SNR > {}",
         samples.shape[0],
