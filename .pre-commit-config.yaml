@@ -79,6 +79,10 @@ repos:
     rev: v0.24.1
     hooks:
       - id: validate-pyproject
+  - repo: https://github.com/cmhughes/latexindent.pl.git
+    rev: V3.24.7
+    hooks:
+      - id: latexindent
   - repo: local
     hooks:
       - id: no-bracket-links
