@@ -214,7 +214,7 @@ def load_injection_data(
                 "total_analysis_time_1ifo",
             ]:
                 if key in ff.attrs:
-                    analysis_time = ff.attrs[key][()] / 365.25 / 24 / 60 / 60
+                    analysis_time = ff.attrs[key][()] / SECONDS_PER_YEAR
                     break
             else:
                 raise AttributeError(
@@ -242,9 +242,7 @@ def load_injection_data(
             raise ValueError("No sensitivity injections pass threshold.")
         gwpop_data = dict(
             mass_1=np.asarray(data[mass_1_key][()][found]),
-            mass_ratio=np.asarray(
-                data[mass_2_key][()][found] / data[mass_1_key][()][found]
-            ),
+            mass_2=np.asarray(data[mass_2_key][()][found]),
             redshift=np.asarray(data[redshift_key][()][found]),
             total_generated=total_generated,
             analysis_time=analysis_time,
@@ -315,9 +313,9 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
     ratio.
     """
 
-    if P.SECONDARY_MASS_SOURCE.value in parameters:
-        data[P.SECONDARY_MASS_SOURCE.value] = (
-            data[P.PRIMARY_MASS_SOURCE.value] * data[P.MASS_RATIO.value]
+    if P.MASS_RATIO.value in parameters:
+        data[P.MASS_RATIO.value] = (
+            data[P.SECONDARY_MASS_SOURCE.value] / data[P.PRIMARY_MASS_SOURCE.value]
         )
         data["prior"] /= data[P.PRIMARY_MASS_SOURCE.value]
     if P.CHIRP_MASS.value in parameters:
