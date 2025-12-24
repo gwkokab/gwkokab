@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 r"""This module provides convenience command-line interfaces for the models and
 analyses presented in: `Eccentricity matters: Impact of eccentricity on inferred binary
-black hole populations <https://link.aps.org/accepted/10.1103/PhysRevD.110.063009>`_
+black hole populations <https://journals.aps.org/prd/abstract/10.1103/PhysRevD.110.063009>`_
 :cite:`PhysRevD.110.063009`.
 
 Model Overview
