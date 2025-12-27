@@ -23,6 +23,7 @@ class NPowerlawMGaussianMonk(Monk):
         has_truncated_normal_spin_y: bool,
         has_truncated_normal_spin_z: bool,
         use_chi_eff_mixture: bool,
+        use_truncated_normal_chi_p: bool,
         has_tilt: bool,
         use_eccentricity_mixture: bool,
         has_redshift: bool,
@@ -53,6 +54,7 @@ class NPowerlawMGaussianMonk(Monk):
         self.has_truncated_normal_spin_y = has_truncated_normal_spin_y
         self.has_truncated_normal_spin_z = has_truncated_normal_spin_z
         self.use_chi_eff_mixture = use_chi_eff_mixture
+        self.use_truncated_normal_chi_p = use_truncated_normal_chi_p
         self.has_tilt = has_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.has_redshift = has_redshift
@@ -91,6 +93,7 @@ class NPowerlawMGaussianMonk(Monk):
             "use_truncated_normal_spin_y": self.has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": self.has_truncated_normal_spin_z,
             "use_chi_eff_mixture": self.use_chi_eff_mixture,
+            "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
             "use_tilt": self.has_tilt,
             "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_redshift": self.has_redshift,
@@ -119,6 +122,8 @@ class NPowerlawMGaussianMonk(Monk):
             names.append(P.SECONDARY_SPIN_Z.value)
         if self.use_chi_eff_mixture:
             names.append(P.EFFECTIVE_SPIN.value)
+        if self.use_truncated_normal_chi_p:
+            names.append(P.PRECESSING_SPIN.value)
         if self.has_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.has_phi_12:
@@ -298,6 +303,20 @@ class NPowerlawMGaussianMonk(Monk):
                     (P.EFFECTIVE_SPIN.value + "_comp2_scale_pl", self.N_pl),
                     (P.EFFECTIVE_SPIN.value + "_zeta_g", self.N_g),
                     (P.EFFECTIVE_SPIN.value + "_zeta_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_truncated_normal_chi_p:
+            all_params.extend(
+                [
+                    (P.PRECESSING_SPIN.value + "_high_g", self.N_g),
+                    (P.PRECESSING_SPIN.value + "_high_pl", self.N_pl),
+                    (P.PRECESSING_SPIN.value + "_loc_g", self.N_g),
+                    (P.PRECESSING_SPIN.value + "_loc_pl", self.N_pl),
+                    (P.PRECESSING_SPIN.value + "_low_g", self.N_g),
+                    (P.PRECESSING_SPIN.value + "_low_pl", self.N_pl),
+                    (P.PRECESSING_SPIN.value + "_scale_g", self.N_g),
+                    (P.PRECESSING_SPIN.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -482,6 +501,11 @@ def main() -> None:
         help="Include chi_eff mixture parameters in the model.",
     )
     model_group.add_argument(
+        "--add-truncated-normal-chi-p",
+        action="store_true",
+        help="Include truncated normal chi_p parameters in the model.",
+    )
+    model_group.add_argument(
         "--add-tilt",
         action="store_true",
         help="Include tilt parameters in the model.",
@@ -540,6 +564,7 @@ def main() -> None:
         has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
         has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         use_chi_eff_mixture=args.add_chi_eff_mixture,
+        use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         has_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         has_redshift=args.add_redshift,

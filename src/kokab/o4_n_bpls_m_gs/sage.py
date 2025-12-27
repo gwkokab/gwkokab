@@ -64,6 +64,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
         use_beta_spin_magnitude: bool,
         use_spin_magnitude_mixture: bool,
         use_chi_eff_mixture: bool,
+        use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_redshift: bool,
@@ -98,6 +99,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
         self.use_spin_magnitude_mixture = use_spin_magnitude_mixture
         self.use_chi_eff_mixture = use_chi_eff_mixture
+        self.use_truncated_normal_chi_p = use_truncated_normal_chi_p
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_redshift = use_redshift
@@ -129,6 +131,7 @@ class NBrokenPowerlawMGaussianCore(Sage):
             "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
             "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
             "use_chi_eff_mixture": self.use_chi_eff_mixture,
+            "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
             "use_tilt": self.use_tilt,
             "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_redshift": self.use_redshift,
@@ -142,6 +145,8 @@ class NBrokenPowerlawMGaussianCore(Sage):
             names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
         if self.use_chi_eff_mixture:
             names.append(P.EFFECTIVE_SPIN.value)
+        if self.use_truncated_normal_chi_p:
+            names.append(P.PRECESSING_SPIN.value)
         if self.use_tilt:
             names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
         if self.use_eccentricity_mixture:
@@ -244,6 +249,20 @@ class NBrokenPowerlawMGaussianCore(Sage):
                 ]
             )
 
+        if self.use_truncated_normal_chi_p:
+            all_params.extend(
+                [
+                    (P.PRECESSING_SPIN.value + "_high_g", self.N_g),
+                    (P.PRECESSING_SPIN.value + "_high_bpl", self.N_bpl),
+                    (P.PRECESSING_SPIN.value + "_loc_g", self.N_g),
+                    (P.PRECESSING_SPIN.value + "_loc_bpl", self.N_bpl),
+                    (P.PRECESSING_SPIN.value + "_low_g", self.N_g),
+                    (P.PRECESSING_SPIN.value + "_low_bpl", self.N_bpl),
+                    (P.PRECESSING_SPIN.value + "_scale_g", self.N_g),
+                    (P.PRECESSING_SPIN.value + "_scale_bpl", self.N_bpl),
+                ]
+            )
+
         if self.use_tilt:
             all_params.extend(
                 [
@@ -343,6 +362,11 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include chi_eff mixture parameters in the model.",
     )
     model_group.add_argument(
+        "--add-truncated-normal-chi-p",
+        action="store_true",
+        help="Include truncated normal chi_p parameters in the model.",
+    )
+    model_group.add_argument(
         "--add-tilt",
         action="store_true",
         help="Include tilt parameters in the model.",
@@ -382,6 +406,7 @@ def f_main() -> None:
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         use_chi_eff_mixture=args.add_chi_eff_mixture,
+        use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,
@@ -420,6 +445,7 @@ def n_main() -> None:
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         use_chi_eff_mixture=args.add_chi_eff_mixture,
+        use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,

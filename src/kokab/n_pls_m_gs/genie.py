@@ -68,6 +68,11 @@ def make_parser() -> ArgumentParser:
         help="Include chi_eff mixture parameters in the model.",
     )
     model_group.add_argument(
+        "--add-truncated-normal-chi-p",
+        action="store_true",
+        help="Include truncated-normal chi_p components.",
+    )
+    model_group.add_argument(
         "--add-tilt",
         action="store_true",
         help="Include spin-orbit tilt cosines cos_tilt1, cos_tilt2 (cosines of angles between each spin and orbital angular momentum; physical range -1 to 1).",
@@ -166,6 +171,7 @@ def main() -> None:
     has_truncated_normal_spin_y = args.add_truncated_normal_spin_y
     has_truncated_normal_spin_z = args.add_truncated_normal_spin_z
     has_chi_eff_mixture = args.add_chi_eff_mixture
+    has_truncated_normal_chi_p = args.add_truncated_normal_chi_p
     has_tilt = args.add_tilt
     use_eccentricity_mixture = args.add_eccentricity_mixture
     has_mean_anomaly = args.add_mean_anomaly
@@ -233,6 +239,16 @@ def main() -> None:
                 P.EFFECTIVE_SPIN.value + "_scale",
                 P.EFFECTIVE_SPIN.value + "_cut_low",
                 P.EFFECTIVE_SPIN.value + "_cut_high",
+            ]
+        )
+    if has_truncated_normal_chi_p:
+        err_params_name.extend(
+            [
+                P.PRECESSING_SPIN.value + "_high",
+                P.PRECESSING_SPIN.value + "_low",
+                P.PRECESSING_SPIN.value + "_scale",
+                P.PRECESSING_SPIN.value + "_cut_low",
+                P.PRECESSING_SPIN.value + "_cut_high",
             ]
         )
     if has_tilt:
@@ -600,6 +616,7 @@ def main() -> None:
         )
 
     if has_chi_eff_mixture:
+        parameters_name += (P.EFFECTIVE_SPIN.value,)
         all_params.extend(
             [
                 (P.EFFECTIVE_SPIN.value + "_comp1_high_g", N_g),
@@ -631,6 +648,32 @@ def main() -> None:
                 high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_high"),
                 cut_low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_low"),
                 cut_high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_high"),
+            ),
+        )
+
+    if has_truncated_normal_chi_p:
+        parameters_name += (P.PRECESSING_SPIN.value,)
+        all_params.extend(
+            [
+                (P.PRECESSING_SPIN.value + "_high_g", N_g),
+                (P.PRECESSING_SPIN.value + "_high_pl", N_pl),
+                (P.PRECESSING_SPIN.value + "_loc_g", N_g),
+                (P.PRECESSING_SPIN.value + "_loc_pl", N_pl),
+                (P.PRECESSING_SPIN.value + "_low_g", N_g),
+                (P.PRECESSING_SPIN.value + "_low_pl", N_pl),
+                (P.PRECESSING_SPIN.value + "_scale_g", N_g),
+                (P.PRECESSING_SPIN.value + "_scale_pl", N_pl),
+            ]
+        )
+        error_magazine.register(
+            P.PRECESSING_SPIN.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.PRECESSING_SPIN.value + "_scale"],
+                low=err_params_value.get(P.PRECESSING_SPIN.value + "_low"),
+                high=err_params_value.get(P.PRECESSING_SPIN.value + "_high"),
+                cut_low=err_params_value.get(P.PRECESSING_SPIN.value + "_cut_low"),
+                cut_high=err_params_value.get(P.PRECESSING_SPIN.value + "_cut_high"),
             ),
         )
 
