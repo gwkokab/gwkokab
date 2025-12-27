@@ -331,6 +331,12 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
             costilt1=data[P.COS_TILT_1.value],
             costilt2=data[P.COS_TILT_2.value],
         )  # type: ignore
+
+        if P.MASS_RATIO.value not in data:
+            data[P.MASS_RATIO.value] = (
+                data[P.SECONDARY_MASS_SOURCE.value] / data[P.PRIMARY_MASS_SOURCE.value]
+            )
+
         if P.PRECESSING_SPIN.value in parameters:
             data[P.PRECESSING_SPIN.value] = chi_p_from_components(
                 a_1=data[P.PRIMARY_SPIN_MAGNITUDE.value],
