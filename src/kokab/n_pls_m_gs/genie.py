@@ -616,6 +616,7 @@ def main() -> None:
         )
 
     if has_chi_eff_mixture:
+        parameters_name += (P.EFFECTIVE_SPIN.value,)
         all_params.extend(
             [
                 (P.EFFECTIVE_SPIN.value + "_comp1_high_g", N_g),
@@ -651,6 +652,7 @@ def main() -> None:
         )
 
     if has_truncated_normal_chi_p:
+        parameters_name += (P.PRECESSING_SPIN.value,)
         all_params.extend(
             [
                 (P.PRECESSING_SPIN.value + "_high_g", N_g),
