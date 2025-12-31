@@ -181,7 +181,13 @@ def skip_util_classes(app, what, name: str, obj, skip, options):
     if (
         what == "module"
         and name.startswith("kokab")
-        and ("sage" in name or "genie" in name or "common" in name or "ppd" in name)
+        and (
+            "sage" in name
+            or "genie" in name
+            or "common" in name
+            or "ppd" in name
+            or "monk" in name
+        )
     ):
         skip = True
         return skip
