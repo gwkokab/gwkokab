@@ -254,8 +254,7 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
 
     This class implements effective spin skew normal model introduced in equation (B37)
     `GWTC-4.0: Population Properties of Merging Compact Binaries
-    <https://arxiv.org/abs/2508.18083>`_. The implementation is pending and will be
-    added in future updates.
+    <https://arxiv.org/abs/2508.18083>`_.
     """
 
     arg_constraints = {
