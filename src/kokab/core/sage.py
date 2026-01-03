@@ -48,6 +48,7 @@ class Sage(Guru):
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
         read_reference_prior: bool,
+        n_pe_samples: Optional[int],
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -104,6 +105,7 @@ class Sage(Guru):
         self.n_buckets = n_buckets
         self.read_reference_prior = read_reference_prior
         self.posterior_regex = posterior_regex
+        self.n_pe_samples = n_pe_samples
         self.threshold = threshold
         self.where_fns = where_fns
         self.set_rng_key(seed=seed)
@@ -333,6 +335,13 @@ def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         "--read-reference-prior",
         help="Whether to read the logarithm of reference prior from the posterior samples.",
         action="store_true",
+    )
+    sage_group.add_argument(
+        "--n-pe-samples",
+        help="Number of samples of parameter estimations to randomly select from the "
+        "each event. If not specified, all samples will be used.",
+        type=int,
+        default=None,
     )
 
     optm_group = parser.add_argument_group("Optimization Options")
