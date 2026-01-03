@@ -125,6 +125,13 @@ class Sage(Guru):
     def read_data(
         self,
     ) -> Tuple[int, float, Tuple[Array, ...], Tuple[Array, ...], Tuple[Array, ...]]:
+        if self.n_pe_samples is not None:
+            logger.info(
+                "Reading up to {n_pe_samples} samples from each event's posterior samples.",
+                n_pe_samples=self.n_pe_samples,
+            )
+        else:
+            logger.info("Reading all samples from each event's posterior samples.")
         if self.read_reference_prior:
             data = get_posterior_data(
                 glob(self.posterior_regex),
