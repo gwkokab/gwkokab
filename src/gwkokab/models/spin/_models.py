@@ -4,9 +4,18 @@
 
 from typing import Optional
 
+import jax
 from jax import numpy as jnp
-from jax.typing import ArrayLike
-from numpyro.distributions import Beta, MixtureGeneral, MultivariateNormal
+from jax.scipy.stats import truncnorm
+from jaxtyping import ArrayLike
+from numpyro.distributions import (
+    Beta,
+    constraints,
+    Distribution,
+    MixtureGeneral,
+    MultivariateNormal,
+)
+from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ..sundry import NDIsotropicAndTruncatedNormalMixture
 
@@ -238,3 +247,69 @@ def MinimumTiltModelExtended(
         gaussian_high=1.0,
         validate_args=validate_args,
     )
+
+
+class GWTC4EffectiveSpinSkewNormalModel(Distribution):
+    """GWTC-4 effective spin skew normal model.
+
+    This class implements effective spin skew normal model introduced in equation (B37)
+    `GWTC-4.0: Population Properties of Merging Compact Binaries
+    <https://arxiv.org/abs/2508.18083>`_.
+    """
+
+    arg_constraints = {
+        "loc": constraints.real,
+        "scale": constraints.positive,
+        "epsilon": constraints.interval(-1.0, 1.0),
+    }
+    support = constraints.interval(-1.0, 1.0)
+    pytree_data_fields = ("loc", "scale", "epsilon")
+
+    def __init__(
+        self,
+        loc: ArrayLike,
+        scale: ArrayLike,
+        epsilon: ArrayLike,
+        *,
+        validate_args: Optional[bool] = None,
+    ):
+        self.loc, self.scale, self.epsilon = promote_shapes(loc, scale, epsilon)
+        batch_shape = jax.lax.broadcast_shapes(
+            jnp.shape(self.loc), jnp.shape(self.scale), jnp.shape(self.epsilon)
+        )
+        super(GWTC4EffectiveSpinSkewNormalModel, self).__init__(
+            batch_shape=batch_shape, validate_args=validate_args
+        )
+
+    @validate_sample
+    def log_prob(self, value: ArrayLike) -> ArrayLike:
+        scale1 = self.scale * (1.0 + self.epsilon)
+        scale2 = self.scale * (1.0 - self.epsilon)
+        normalization_constant = (1.0 + self.epsilon) * truncnorm.cdf(
+            0.0,
+            -(1.0 + self.loc) / scale1,
+            (1.0 - self.loc) / scale1,
+            loc=self.loc,
+            scale=scale1,
+        ) + (1.0 - self.epsilon) * truncnorm.sf(
+            0.0,
+            -(1.0 + self.loc) / scale2,
+            (1.0 - self.loc) / scale2,
+            loc=self.loc,
+            scale=scale2,
+        )
+
+        factor = 1.0 + jnp.where(value <= 0.0, 1.0, -1.0) * self.epsilon
+        scale = self.scale * factor
+
+        log_pdf_unnorm = jnp.log(factor) + truncnorm.logpdf(
+            value,
+            -(1.0 + self.loc) / scale,
+            (1.0 - self.loc) / scale,
+            loc=self.loc,
+            scale=scale,
+        )
+
+        log_pdf = log_pdf_unnorm - jnp.log(normalization_constant)
+
+        return log_pdf
