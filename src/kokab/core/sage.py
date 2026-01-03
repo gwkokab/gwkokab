@@ -127,7 +127,10 @@ class Sage(Guru):
     ) -> Tuple[int, float, Tuple[Array, ...], Tuple[Array, ...], Tuple[Array, ...]]:
         if self.read_reference_prior:
             data = get_posterior_data(
-                glob(self.posterior_regex), self.parameters + [LOG_REF_PRIOR_NAME]
+                glob(self.posterior_regex),
+                self.parameters + [LOG_REF_PRIOR_NAME],
+                self.n_pe_samples,
+                self.seed,
             )
             warn_if(
                 True,
@@ -137,7 +140,12 @@ class Sage(Guru):
             log_ref_priors = [d[..., -1] for d in data]
             data = [np.delete(d, -1, axis=-1) for d in data]
         else:
-            data = get_posterior_data(glob(self.posterior_regex), self.parameters)
+            data = get_posterior_data(
+                glob(self.posterior_regex),
+                self.parameters,
+                self.n_pe_samples,
+                self.seed,
+            )
             log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
         assert len(data) == len(log_ref_priors), (
             "Data and log reference priors must have the same length"
