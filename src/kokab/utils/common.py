@@ -128,7 +128,7 @@ def get_posterior_data(
                 msg=f"Requested {n_pe_samples} samples, but only {n_total_samples} "
                 f"available in '{event}'. Using all available samples.",
             )
-            df = df.sample(n=min(n_pe_samples, len(df)))
+            df = df.sample(n=min(n_pe_samples, n_total_samples))
         data = df[posterior_columns].to_numpy()
         data_list.append(data)
     return data_list
