@@ -259,6 +259,7 @@ class Guru:
             logger.info(f"Setting the random number generator key with seed {seed}.")
             key = jrd.PRNGKey(seed)
             self._rng_key = key
+        self.seed = seed
 
     def classify_model_parameters(
         self,

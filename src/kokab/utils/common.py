@@ -3,10 +3,12 @@
 
 
 import json
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
+
+from gwkokab.utils.tools import warn_if
 
 
 def read_json(json_file: str) -> Dict:
@@ -81,7 +83,10 @@ def expand_arguments(arg: str, n: int) -> List[str]:
 
 
 def get_posterior_data(
-    filenames: List[str], posterior_columns: List[str]
+    filenames: List[str],
+    posterior_columns: List[str],
+    n_pe_samples: Optional[int] = None,
+    seed: Optional[int] = 37,
 ) -> List[np.ndarray]:
     """Get the posterior data from a list of files.
 
@@ -91,6 +96,11 @@ def get_posterior_data(
         list of filenames
     posterior_columns : List[str]
         list of posterior columns
+    n_pe_samples : Optional[int]
+        number of parameter estimations to randomly select from the posterior samples for
+        each event. If None, all samples will be used.
+    seed : Optional[int]
+        random seed for sampling posterior data
 
     Returns
     -------
@@ -106,6 +116,8 @@ def get_posterior_data(
     """
     if len(filenames) == 0:
         raise ValueError("No files found to read posterior data")
+    if seed is None:
+        seed = 37
     data_list = []
     for event in filenames:
         df = pd.read_csv(event, delimiter=" ")
@@ -114,6 +126,14 @@ def get_posterior_data(
             raise KeyError(
                 f"The file '{event}' is missing required columns: {missing_columns}"
             )
+        if n_pe_samples is not None:
+            n_total_samples = len(df)
+            warn_if(
+                n_pe_samples > n_total_samples,
+                msg=f"Requested {n_pe_samples} samples, but only {n_total_samples} "
+                f"available in '{event}'. Using all available samples.",
+            )
+            df = df.sample(n=min(n_pe_samples, n_total_samples), random_state=seed)
         data = df[posterior_columns].to_numpy()
         data_list.append(data)
     return data_list

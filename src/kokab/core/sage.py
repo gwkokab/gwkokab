@@ -48,6 +48,7 @@ class Sage(Guru):
         where_fns: Optional[List[Callable[..., Array]]],
         posterior_regex: str,
         read_reference_prior: bool,
+        n_pe_samples: Optional[int],
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -104,6 +105,7 @@ class Sage(Guru):
         self.n_buckets = n_buckets
         self.read_reference_prior = read_reference_prior
         self.posterior_regex = posterior_regex
+        self.n_pe_samples = n_pe_samples
         self.threshold = threshold
         self.where_fns = where_fns
         self.set_rng_key(seed=seed)
@@ -123,9 +125,19 @@ class Sage(Guru):
     def read_data(
         self,
     ) -> Tuple[int, float, Tuple[Array, ...], Tuple[Array, ...], Tuple[Array, ...]]:
+        if self.n_pe_samples is not None:
+            logger.info(
+                "Reading up to {n_pe_samples} samples from each event's posterior samples.",
+                n_pe_samples=self.n_pe_samples,
+            )
+        else:
+            logger.info("Reading all samples from each event's posterior samples.")
         if self.read_reference_prior:
             data = get_posterior_data(
-                glob(self.posterior_regex), self.parameters + [LOG_REF_PRIOR_NAME]
+                glob(self.posterior_regex),
+                self.parameters + [LOG_REF_PRIOR_NAME],
+                self.n_pe_samples,
+                self.seed,
             )
             warn_if(
                 True,
@@ -135,7 +147,12 @@ class Sage(Guru):
             log_ref_priors = [d[..., -1] for d in data]
             data = [np.delete(d, -1, axis=-1) for d in data]
         else:
-            data = get_posterior_data(glob(self.posterior_regex), self.parameters)
+            data = get_posterior_data(
+                glob(self.posterior_regex),
+                self.parameters,
+                self.n_pe_samples,
+                self.seed,
+            )
             log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
         assert len(data) == len(log_ref_priors), (
             "Data and log reference priors must have the same length"
@@ -333,6 +350,13 @@ def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         "--read-reference-prior",
         help="Whether to read the logarithm of reference prior from the posterior samples.",
         action="store_true",
+    )
+    sage_group.add_argument(
+        "--n-pe-samples",
+        help="Number of samples of parameter estimations to randomly select from the "
+        "each event. If not specified, all samples will be used.",
+        type=int,
+        default=None,
     )
 
     optm_group = parser.add_argument_group("Optimization Options")
