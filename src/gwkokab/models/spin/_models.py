@@ -260,7 +260,7 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
     arg_constraints = {
         "loc": constraints.real,
         "scale": constraints.positive,
-        "epsilon": constraints.real,
+        "epsilon": constraints.interval(-1.0, 1.0),
     }
     support = constraints.interval(-1.0, 1.0)
     pytree_data_fields = ("loc", "scale", "epsilon")
