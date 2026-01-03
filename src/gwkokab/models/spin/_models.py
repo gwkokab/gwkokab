@@ -302,15 +302,12 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
         factor = 1.0 + jnp.where(value <= 0.0, 1.0, -1.0) * self.epsilon
         scale = self.scale * factor
 
-        log_pdf_unnorm = jnp.log(
-            factor
-            * truncnorm.pdf(
-                value,
-                -(1.0 + self.loc) / scale,
-                (1.0 - self.loc) / scale,
-                loc=self.loc,
-                scale=scale,
-            )
+        log_pdf_unnorm = jnp.log(factor) + truncnorm.logpdf(
+            value,
+            -(1.0 + self.loc) / scale,
+            (1.0 - self.loc) / scale,
+            loc=self.loc,
+            scale=scale,
         )
 
         log_pdf = log_pdf_unnorm - jnp.log(normalization_constant)
