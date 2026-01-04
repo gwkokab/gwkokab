@@ -68,6 +68,11 @@ def make_parser() -> ArgumentParser:
         help="Include chi_eff mixture parameters in the model.",
     )
     model_group.add_argument(
+        "--add-skew-normal-chi-eff",
+        action="store_true",
+        help="Include skew-normal chi_eff components.",
+    )
+    model_group.add_argument(
         "--add-truncated-normal-chi-p",
         action="store_true",
         help="Include truncated-normal chi_p components.",
@@ -171,6 +176,7 @@ def main() -> None:
     has_truncated_normal_spin_y = args.add_truncated_normal_spin_y
     has_truncated_normal_spin_z = args.add_truncated_normal_spin_z
     has_chi_eff_mixture = args.add_chi_eff_mixture
+    use_skew_normal_chi_eff = args.add_skew_normal_chi_eff
     has_truncated_normal_chi_p = args.add_truncated_normal_chi_p
     has_tilt = args.add_tilt
     use_eccentricity_mixture = args.add_eccentricity_mixture
@@ -232,6 +238,16 @@ def main() -> None:
             ]
         )
     if has_chi_eff_mixture:
+        err_params_name.extend(
+            [
+                P.EFFECTIVE_SPIN.value + "_high",
+                P.EFFECTIVE_SPIN.value + "_low",
+                P.EFFECTIVE_SPIN.value + "_scale",
+                P.EFFECTIVE_SPIN.value + "_cut_low",
+                P.EFFECTIVE_SPIN.value + "_cut_high",
+            ]
+        )
+    if use_skew_normal_chi_eff:
         err_params_name.extend(
             [
                 P.EFFECTIVE_SPIN.value + "_high",
@@ -650,6 +666,29 @@ def main() -> None:
                 cut_high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_high"),
             ),
         )
+    if use_skew_normal_chi_eff:
+        parameters_name += (P.EFFECTIVE_SPIN.value,)
+        all_params.extend(
+            [
+                (P.EFFECTIVE_SPIN.value + "_epsilon_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_epsilon_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_loc_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_loc_pl", N_pl),
+                (P.EFFECTIVE_SPIN.value + "_scale_g", N_g),
+                (P.EFFECTIVE_SPIN.value + "_scale_pl", N_pl),
+            ]
+        )
+        error_magazine.register(
+            P.EFFECTIVE_SPIN.value,
+            partial(
+                truncated_normal_error,
+                scale=err_params_value[P.EFFECTIVE_SPIN.value + "_scale"],
+                low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_low"),
+                high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_high"),
+                cut_low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_low"),
+                cut_high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_high"),
+            ),
+        )
 
     if has_truncated_normal_chi_p:
         parameters_name += (P.PRECESSING_SPIN.value,)
@@ -1036,6 +1075,8 @@ def main() -> None:
             "use_truncated_normal_spin_x": has_truncated_normal_spin_x,
             "use_truncated_normal_spin_y": has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": has_truncated_normal_spin_z,
+            "use_chi_eff_mixture": has_chi_eff_mixture,
+            "use_skew_normal_chi_eff": use_skew_normal_chi_eff,
             "use_tilt": has_tilt,
             "use_eccentricity_mixture": use_eccentricity_mixture,
             "use_mean_anomaly": has_mean_anomaly,
