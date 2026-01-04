@@ -789,7 +789,7 @@ def create_gwtc4_effective_spin_skew_normal_models(
     component_type: Literal["bpl", "pl", "g"],
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[MixtureGeneral]:
+) -> List[Distribution]:
     """Create a list of :func:`GWTC4EffectiveSpinSkewNormalModel` distributions for
     effective spin.
 
@@ -808,8 +808,8 @@ def create_gwtc4_effective_spin_skew_normal_models(
 
     Returns
     -------
-    List[MixtureGeneral]
-        list of mixture general distributions for effective spin
+    List[Distribution]
+        list of :func:`GWTC4EffectiveSpinSkewNormalModel` distributions
     Raises
     ------
     ValueError
