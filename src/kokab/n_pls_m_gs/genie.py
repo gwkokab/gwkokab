@@ -237,17 +237,7 @@ def main() -> None:
                 P.SECONDARY_SPIN_Z.value + "_scale",
             ]
         )
-    if has_chi_eff_mixture:
-        err_params_name.extend(
-            [
-                P.EFFECTIVE_SPIN.value + "_high",
-                P.EFFECTIVE_SPIN.value + "_low",
-                P.EFFECTIVE_SPIN.value + "_scale",
-                P.EFFECTIVE_SPIN.value + "_cut_low",
-                P.EFFECTIVE_SPIN.value + "_cut_high",
-            ]
-        )
-    if use_skew_normal_chi_eff:
+    if has_chi_eff_mixture or use_skew_normal_chi_eff:
         err_params_name.extend(
             [
                 P.EFFECTIVE_SPIN.value + "_high",
