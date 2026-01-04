@@ -250,11 +250,30 @@ def MinimumTiltModelExtended(
 
 
 class GWTC4EffectiveSpinSkewNormalModel(Distribution):
-    """GWTC-4 effective spin skew normal model.
+    r"""GWTC-4 effective spin skew normal model.
 
     This class implements effective spin skew normal model introduced in equation (B37)
     `GWTC-4.0: Population Properties of Merging Compact Binaries
     <https://arxiv.org/abs/2508.18083>`_.
+
+    .. math::
+
+        p(\chi_\mathrm{eff} | \mu, \sigma, \epsilon) \propto \begin{cases}
+            (1 + \epsilon) \mathcal{N}_{[-1,1]}(\chi_\mathrm{eff} | \mu, \sigma (1 + \epsilon)), & \chi_\mathrm{eff} \leq 0 \\
+            (1 - \epsilon) \mathcal{N}_{[-1,1]}(\chi_\mathrm{eff} | \mu, \sigma (1 - \epsilon)), & \chi_\mathrm{eff} > 0
+        \end{cases}
+
+    where :math:`\mathcal{N}_{[-1,1]}(x | \mu, \sigma)` is the truncated normal distribution
+    with mean :math:`\mu` and standard deviation :math:`\sigma`, truncated to the interval
+    :math:`[-1, 1]`.
+
+    The normalization constant is expressed as:
+
+    .. math::
+        \mathcal{Z} = (1 + \epsilon) \left[ \frac{\Phi\left( -\displaystyle\frac{\mu}{\sigma (1 + \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 + \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 + \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 + \epsilon)} \right)} \right]
+            + (1 - \epsilon) \left[1 - \frac{\Phi\left( -\displaystyle\frac{\mu}{\sigma (1 - \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 - \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 - \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 - \epsilon)} \right)} \right]
+
+    where, :math:`\Phi(x)` is the cumulative distribution function of the standard normal distribution.
     """
 
     arg_constraints = {

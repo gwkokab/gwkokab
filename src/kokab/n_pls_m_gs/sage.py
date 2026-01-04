@@ -81,6 +81,7 @@ class NPowerlawMGaussianCore(Sage):
         has_truncated_normal_spin_y: bool,
         has_truncated_normal_spin_z: bool,
         use_chi_eff_mixture: bool,
+        use_skew_normal_chi_eff: bool,
         use_truncated_normal_chi_p: bool,
         has_tilt: bool,
         use_eccentricity_mixture: bool,
@@ -126,6 +127,7 @@ class NPowerlawMGaussianCore(Sage):
         self.has_truncated_normal_spin_y = has_truncated_normal_spin_y
         self.has_truncated_normal_spin_z = has_truncated_normal_spin_z
         self.use_chi_eff_mixture = use_chi_eff_mixture
+        self.use_skew_normal_chi_eff = use_skew_normal_chi_eff
         self.use_truncated_normal_chi_p = use_truncated_normal_chi_p
         self.has_tilt = has_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
@@ -168,6 +170,7 @@ class NPowerlawMGaussianCore(Sage):
             "use_truncated_normal_spin_y": self.has_truncated_normal_spin_y,
             "use_truncated_normal_spin_z": self.has_truncated_normal_spin_z,
             "use_chi_eff_mixture": self.use_chi_eff_mixture,
+            "use_skew_normal_chi_eff": self.use_skew_normal_chi_eff,
             "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
             "use_tilt": self.has_tilt,
             "use_eccentricity_mixture": self.use_eccentricity_mixture,
@@ -195,7 +198,7 @@ class NPowerlawMGaussianCore(Sage):
         if self.has_truncated_normal_spin_z:
             names.append(P.PRIMARY_SPIN_Z.value)
             names.append(P.SECONDARY_SPIN_Z.value)
-        if self.use_chi_eff_mixture:
+        if self.use_chi_eff_mixture or self.use_skew_normal_chi_eff:
             names.append(P.EFFECTIVE_SPIN.value)
         if self.use_truncated_normal_chi_p:
             names.append(P.PRECESSING_SPIN.value)
@@ -378,6 +381,18 @@ class NPowerlawMGaussianCore(Sage):
                     (P.EFFECTIVE_SPIN.value + "_comp2_scale_pl", self.N_pl),
                     (P.EFFECTIVE_SPIN.value + "_zeta_g", self.N_g),
                     (P.EFFECTIVE_SPIN.value + "_zeta_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_skew_normal_chi_eff:
+            all_params.extend(
+                [
+                    (P.EFFECTIVE_SPIN.value + "_epsilon_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_epsilon_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_loc_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_loc_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN.value + "_scale_g", self.N_g),
+                    (P.EFFECTIVE_SPIN.value + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -581,6 +596,11 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include chi_eff mixture parameters in the model.",
     )
     model_group.add_argument(
+        "--add-skew-normal-chi-eff",
+        action="store_true",
+        help="Include skew normal chi_eff parameters in the model.",
+    )
+    model_group.add_argument(
         "--add-truncated-normal-chi-p",
         action="store_true",
         help="Include truncated normal chi_p parameters in the model.",
@@ -654,6 +674,7 @@ def f_main() -> None:
         has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
         has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         use_chi_eff_mixture=args.add_chi_eff_mixture,
+        use_skew_normal_chi_eff=args.add_skew_normal_chi_eff,
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         has_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
@@ -700,6 +721,7 @@ def n_main() -> None:
         has_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
         has_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
         use_chi_eff_mixture=args.add_chi_eff_mixture,
+        use_skew_normal_chi_eff=args.add_skew_normal_chi_eff,
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         has_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
