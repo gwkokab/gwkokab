@@ -249,6 +249,7 @@ def MinimumTiltModelExtended(
     )
 
 
+# TODO(Qazalbash): cite original paper and its equation along with GWTC-4.0 paper.
 class GWTC4EffectiveSpinSkewNormalModel(Distribution):
     r"""GWTC-4 effective spin skew normal model.
 
@@ -259,8 +260,8 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
     .. math::
 
         p(\chi_\mathrm{eff} | \mu, \sigma, \epsilon) \propto \begin{cases}
-            (1 + \epsilon) \mathcal{N}_{[-1,1]}(\chi_\mathrm{eff} | \mu, \sigma (1 + \epsilon)), & \chi_\mathrm{eff} \leq 0 \\
-            (1 - \epsilon) \mathcal{N}_{[-1,1]}(\chi_\mathrm{eff} | \mu, \sigma (1 - \epsilon)), & \chi_\mathrm{eff} > 0
+            (1 + \epsilon) \mathcal{N}_{[-1,1]}(\chi_\mathrm{eff} | \mu, \sigma (1 + \epsilon)), & \chi_\mathrm{eff} \leq \mu \\
+            (1 - \epsilon) \mathcal{N}_{[-1,1]}(\chi_\mathrm{eff} | \mu, \sigma (1 - \epsilon)), & \chi_\mathrm{eff} > \mu
         \end{cases}
 
     where :math:`\mathcal{N}_{[-1,1]}(x | \mu, \sigma)` is the truncated normal distribution
@@ -270,8 +271,8 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
     The normalization constant is expressed as:
 
     .. math::
-        \mathcal{Z} = (1 + \epsilon) \left[ \frac{\Phi\left( -\displaystyle\frac{\mu}{\sigma (1 + \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 + \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 + \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 + \epsilon)} \right)} \right]
-            + (1 - \epsilon) \left[1 - \frac{\Phi\left( -\displaystyle\frac{\mu}{\sigma (1 - \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 - \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 - \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 - \epsilon)} \right)} \right]
+        \mathcal{Z} = \frac{1 - \epsilon}{2} \left[\frac{\mathrm{erf}\left( \displaystyle -\frac{1 + \mu}{\sqrt{2}\sigma (1 - \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 - \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 - \epsilon)} \right)} \right]
+        -\frac{1 + \epsilon}{2} \left[ \frac{\mathrm{erf}\left( \displaystyle -\frac{1 + \mu}{\sqrt{2}\sigma (1 + \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 + \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 + \epsilon)} \right)} \right]
 
     where, :math:`\Phi(x)` is the cumulative distribution function of the standard normal distribution.
     """
@@ -305,20 +306,20 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
         scale1 = self.scale * (1.0 + self.epsilon)
         scale2 = self.scale * (1.0 - self.epsilon)
         normalization_constant = (1.0 + self.epsilon) * truncnorm.cdf(
-            0.0,
+            self.loc,
             -(1.0 + self.loc) / scale1,
             (1.0 - self.loc) / scale1,
             loc=self.loc,
             scale=scale1,
         ) + (1.0 - self.epsilon) * truncnorm.sf(
-            0.0,
+            self.loc,
             -(1.0 + self.loc) / scale2,
             (1.0 - self.loc) / scale2,
             loc=self.loc,
             scale=scale2,
         )
 
-        factor = 1.0 + jnp.where(value <= 0.0, 1.0, -1.0) * self.epsilon
+        factor = 1.0 + jnp.where(value <= self.loc, 1.0, -1.0) * self.epsilon
         scale = self.scale * factor
 
         log_pdf_unnorm = jnp.log(factor) + truncnorm.logpdf(
