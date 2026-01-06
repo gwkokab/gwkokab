@@ -249,12 +249,32 @@ def MinimumTiltModelExtended(
     )
 
 
+# TODO(Qazalbash): cite original paper and its equation along with GWTC-4.0 paper.
 class GWTC4EffectiveSpinSkewNormalModel(Distribution):
-    """GWTC-4 effective spin skew normal model.
+    r"""GWTC-4 effective spin skew normal model.
 
     This class implements effective spin skew normal model introduced in equation (B37)
     `GWTC-4.0: Population Properties of Merging Compact Binaries
     <https://arxiv.org/abs/2508.18083>`_.
+
+    .. math::
+
+        p(\chi_\mathrm{eff} | \mu, \sigma, \epsilon) \propto \begin{cases}
+            (1 + \epsilon) \mathcal{N}_{[-1,1]}(\chi_\mathrm{eff} | \mu, \sigma (1 + \epsilon)), & \chi_\mathrm{eff} \leq \mu \\
+            (1 - \epsilon) \mathcal{N}_{[-1,1]}(\chi_\mathrm{eff} | \mu, \sigma (1 - \epsilon)), & \chi_\mathrm{eff} > \mu
+        \end{cases}
+
+    where :math:`\mathcal{N}_{[-1,1]}(x | \mu, \sigma)` is the truncated normal distribution
+    with mean :math:`\mu` and standard deviation :math:`\sigma`, truncated to the interval
+    :math:`[-1, 1]`.
+
+    The normalization constant is expressed as:
+
+    .. math::
+        \mathcal{Z} = \frac{1 - \epsilon}{2} \left[\frac{\mathrm{erf}\left( \displaystyle -\frac{1 + \mu}{\sqrt{2}\sigma (1 - \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 - \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 - \epsilon)} \right)} \right]
+        -\frac{1 + \epsilon}{2} \left[ \frac{\mathrm{erf}\left( \displaystyle -\frac{1 + \mu}{\sqrt{2}\sigma (1 + \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 + \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 + \epsilon)} \right)} \right]
+
+    where, :math:`\Phi(x)` is the cumulative distribution function of the standard normal distribution.
     """
 
     arg_constraints = {
@@ -286,20 +306,20 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
         scale1 = self.scale * (1.0 + self.epsilon)
         scale2 = self.scale * (1.0 - self.epsilon)
         normalization_constant = (1.0 + self.epsilon) * truncnorm.cdf(
-            0.0,
+            self.loc,
             -(1.0 + self.loc) / scale1,
             (1.0 - self.loc) / scale1,
             loc=self.loc,
             scale=scale1,
         ) + (1.0 - self.epsilon) * truncnorm.sf(
-            0.0,
+            self.loc,
             -(1.0 + self.loc) / scale2,
             (1.0 - self.loc) / scale2,
             loc=self.loc,
             scale=scale2,
         )
 
-        factor = 1.0 + jnp.where(value <= 0.0, 1.0, -1.0) * self.epsilon
+        factor = 1.0 + jnp.where(value <= self.loc, 1.0, -1.0) * self.epsilon
         scale = self.scale * factor
 
         log_pdf_unnorm = jnp.log(factor) + truncnorm.logpdf(

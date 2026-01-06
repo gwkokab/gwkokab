@@ -19,6 +19,7 @@ from ..mass import BrokenPowerlaw, PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import (
     BetaFromMeanVar,
+    GWTC4EffectiveSpinSkewNormalModel,
     IndependentSpinOrientationGaussianIsotropic,
     MinimumTiltModelExtended,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "combine_distributions",
     "create_beta_distributions",
     "create_broken_powerlaws",
+    "create_gwtc4_effective_spin_skew_normal_models",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_primary_mass_ratios",
     "create_powerlaw_redshift",
@@ -779,3 +781,56 @@ def create_spin_magnitude_mixture_models(
         spin_collection.append(spin_dist)
 
     return spin_collection
+
+
+def create_gwtc4_effective_spin_skew_normal_models(
+    N: int,
+    parameter_name: Literal["chi_eff"],
+    component_type: Literal["bpl", "pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of :func:`GWTC4EffectiveSpinSkewNormalModel` distributions for
+    effective spin.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[&quot;chi_eff&quot;]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;bpl&quot;, &quot;pl&quot;, &quot;g&quot;]
+        type of component, either "bpl", "pl", or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of :func:`GWTC4EffectiveSpinSkewNormalModel` distributions
+    Raises
+    ------
+    ValueError
+        if loc, scale, or epsilon is missing
+    """
+    dist_collection = []
+    loc_name = f"{parameter_name}_loc_{component_type}"
+    scale_name = f"{parameter_name}_scale_{component_type}"
+    epsilon_name = f"{parameter_name}_epsilon_{component_type}"
+
+    for i in range(N):
+        loc: ArrayLike = _get_parameter(params, f"{loc_name}_{i}", loc_name)  # type: ignore
+        scale: ArrayLike = _get_parameter(params, f"{scale_name}_{i}", scale_name)  # type: ignore
+        epsilon: ArrayLike = _get_parameter(params, f"{epsilon_name}_{i}", epsilon_name)  # type: ignore
+        dist_collection.append(
+            GWTC4EffectiveSpinSkewNormalModel(
+                loc=loc,
+                scale=scale,
+                epsilon=epsilon,
+                validate_args=validate_args,
+            )
+        )
+
+    return dist_collection
