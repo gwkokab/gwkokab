@@ -76,11 +76,6 @@ def make_parser() -> ArgumentParser:
     )
 
     model_group.add_argument(
-        "--add-skew-normal-chi-eff",
-        action="store_true",
-        help="Include skew-normal chi_eff components.",
-    )
-    model_group.add_argument(
         "--add-truncated-normal-chi-p",
         action="store_true",
         help="Include truncated-normal chi_p components.",
