@@ -590,11 +590,19 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include truncated normal spin z parameters in the model.",
     )
-    model_group.add_argument(
+
+    chi_eff_group = model_group.add_mutually_exclusive_group()
+    chi_eff_group.add_argument(
         "--add-chi-eff-mixture",
         action="store_true",
         help="Include chi_eff mixture parameters in the model.",
     )
+    chi_eff_group.add_argument(
+        "--add-skew-normal-chi-eff",
+        action="store_true",
+        help="Include skew normal chi_eff parameters in the model.",
+    )
+
     model_group.add_argument(
         "--add-skew-normal-chi-eff",
         action="store_true",
