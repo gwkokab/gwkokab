@@ -19,11 +19,7 @@ from kokab.utils.logger import log_info
 class EccentricityMattersCore(Sage):
     @property
     def parameters(self) -> List[str]:
-        return [
-            P.PRIMARY_MASS_SOURCE.value,
-            P.SECONDARY_MASS_SOURCE.value,
-            P.ECCENTRICITY.value,
-        ]
+        return [P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.ECCENTRICITY]
 
     @property
     def model_parameters(self) -> List[str]:
