@@ -313,46 +313,44 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
     ratio.
     """
 
-    if P.MASS_RATIO.value in parameters:
-        data[P.MASS_RATIO.value] = (
-            data[P.SECONDARY_MASS_SOURCE.value] / data[P.PRIMARY_MASS_SOURCE.value]
-        )
-        data["prior"] /= data[P.PRIMARY_MASS_SOURCE.value]
-    if P.CHIRP_MASS.value in parameters:
-        jacobian = primary_mass_to_chirp_mass_jacobian(data[P.MASS_RATIO.value])
-        data[P.CHIRP_MASS.value] = data[P.PRIMARY_MASS_SOURCE.value] / jacobian
+    if P.MASS_RATIO in parameters:
+        data[P.MASS_RATIO] = data[P.SECONDARY_MASS_SOURCE] / data[P.PRIMARY_MASS_SOURCE]
+        data["prior"] /= data[P.PRIMARY_MASS_SOURCE]
+    if P.CHIRP_MASS in parameters:
+        jacobian = primary_mass_to_chirp_mass_jacobian(data[P.MASS_RATIO])
+        data[P.CHIRP_MASS] = data[P.PRIMARY_MASS_SOURCE] / jacobian
         data["prior"] *= jacobian
-    if P.EFFECTIVE_SPIN.value in parameters:
-        data[P.EFFECTIVE_SPIN.value] = m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
-            m1=data[P.PRIMARY_MASS_SOURCE.value],
-            m2=data[P.SECONDARY_MASS_SOURCE.value],
-            chi1=data[P.PRIMARY_SPIN_MAGNITUDE.value],
-            chi2=data[P.SECONDARY_SPIN_MAGNITUDE.value],
-            costilt1=data[P.COS_TILT_1.value],
-            costilt2=data[P.COS_TILT_2.value],
+    if P.EFFECTIVE_SPIN in parameters:
+        data[P.EFFECTIVE_SPIN] = m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
+            m1=data[P.PRIMARY_MASS_SOURCE],
+            m2=data[P.SECONDARY_MASS_SOURCE],
+            chi1=data[P.PRIMARY_SPIN_MAGNITUDE],
+            chi2=data[P.SECONDARY_SPIN_MAGNITUDE],
+            costilt1=data[P.COS_TILT_1],
+            costilt2=data[P.COS_TILT_2],
         )  # type: ignore
 
-        if P.MASS_RATIO.value not in data:
-            data[P.MASS_RATIO.value] = (
-                data[P.SECONDARY_MASS_SOURCE.value] / data[P.PRIMARY_MASS_SOURCE.value]
+        if P.MASS_RATIO not in data:
+            data[P.MASS_RATIO] = (
+                data[P.SECONDARY_MASS_SOURCE] / data[P.PRIMARY_MASS_SOURCE]
             )
 
-        if P.PRECESSING_SPIN.value in parameters:
-            data[P.PRECESSING_SPIN.value] = chi_p_from_components(
-                a_1=data[P.PRIMARY_SPIN_MAGNITUDE.value],
-                cos_tilt_1=data[P.COS_TILT_1.value],
-                a_2=data[P.SECONDARY_SPIN_MAGNITUDE.value],
-                cos_tilt_2=data[P.COS_TILT_2.value],
-                mass_ratio=data[P.MASS_RATIO.value],
+        if P.PRECESSING_SPIN in parameters:
+            data[P.PRECESSING_SPIN] = chi_p_from_components(
+                a_1=data[P.PRIMARY_SPIN_MAGNITUDE],
+                cos_tilt_1=data[P.COS_TILT_1],
+                a_2=data[P.SECONDARY_SPIN_MAGNITUDE],
+                cos_tilt_2=data[P.COS_TILT_2],
+                mass_ratio=data[P.MASS_RATIO],
             )  # type: ignore
             amax = 1
             logger.info(
                 f"Applying isotropic prior to chi_eff and chi_p, assuming injections with amax={amax}."
             )
             p_chi_iso = prior_chieff_chip_isotropic(
-                data[P.EFFECTIVE_SPIN.value],
-                data[P.PRECESSING_SPIN.value],
-                data[P.MASS_RATIO.value],
+                data[P.EFFECTIVE_SPIN],
+                data[P.PRECESSING_SPIN],
+                data[P.MASS_RATIO],
                 amax=amax,
             )
         else:
@@ -361,49 +359,41 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
                 f"Applying isotropic prior to chi_eff, assuming injections with amax={amax}."
             )
             p_chi_iso = chi_effective_prior_from_isotropic_spins(
-                data[P.EFFECTIVE_SPIN.value],
-                data[P.MASS_RATIO.value],
+                data[P.EFFECTIVE_SPIN],
+                data[P.MASS_RATIO],
                 amax=amax,
             )
         p_magnitude_costilt_iso = (1 / 2) ** 2 * (1 / amax) ** 2
         data["prior"] *= p_chi_iso / p_magnitude_costilt_iso
-    if P.CHI_1.value in parameters:
-        data[P.CHI_1.value] = (
-            data[P.PRIMARY_SPIN_MAGNITUDE.value] * data[P.COS_TILT_1.value]
+    if P.CHI_1 in parameters:
+        data[P.CHI_1] = data[P.PRIMARY_SPIN_MAGNITUDE] * data[P.COS_TILT_1]
+        data["prior"] *= 2 * aligned_spin_prior(data[P.CHI_1])
+    if P.CHI_2 in parameters:
+        data[P.CHI_2] = data[P.SECONDARY_SPIN_MAGNITUDE] * data[P.COS_TILT_2]
+        data["prior"] *= 2 * aligned_spin_prior(data[P.CHI_2])
+    if P.PRIMARY_MASS_DETECTED in parameters:
+        data[P.PRIMARY_MASS_DETECTED] = data[P.PRIMARY_MASS_SOURCE] * (
+            1 + data[P.REDSHIFT]
         )
-        data["prior"] *= 2 * aligned_spin_prior(data[P.CHI_1.value])
-    if P.CHI_2.value in parameters:
-        data[P.CHI_2.value] = (
-            data[P.SECONDARY_SPIN_MAGNITUDE.value] * data[P.COS_TILT_2.value]
+        data["prior"] /= 1 + data[P.REDSHIFT]
+    if P.SECONDARY_MASS_DETECTED in parameters:
+        data[P.SECONDARY_MASS_DETECTED] = (
+            data[P.PRIMARY_MASS_DETECTED] * data[P.MASS_RATIO]
         )
-        data["prior"] *= 2 * aligned_spin_prior(data[P.CHI_2.value])
-    if P.PRIMARY_MASS_DETECTED.value in parameters:
-        data[P.PRIMARY_MASS_DETECTED.value] = data[P.PRIMARY_MASS_SOURCE.value] * (
-            1 + data[P.REDSHIFT.value]
-        )
-        data["prior"] /= 1 + data[P.REDSHIFT.value]
-    if P.SECONDARY_MASS_DETECTED.value in parameters:
-        data[P.SECONDARY_MASS_DETECTED.value] = (
-            data[P.PRIMARY_MASS_DETECTED.value] * data[P.MASS_RATIO.value]
-        )
-        data["prior"] /= data[P.PRIMARY_MASS_DETECTED.value]
-    if P.CHIRP_MASS_DETECTOR.value in parameters:
-        jacobian = primary_mass_to_chirp_mass_jacobian(data[P.MASS_RATIO.value])
+        data["prior"] /= data[P.PRIMARY_MASS_DETECTED]
+    if P.CHIRP_MASS_DETECTOR in parameters:
+        jacobian = primary_mass_to_chirp_mass_jacobian(data[P.MASS_RATIO])
         try:
-            data[P.CHIRP_MASS_DETECTOR.value] = (
-                data[P.PRIMARY_MASS_DETECTED.value] / jacobian
-            )
+            data[P.CHIRP_MASS_DETECTOR] = data[P.PRIMARY_MASS_DETECTED] / jacobian
             data["prior"] *= jacobian
         except (KeyError, AttributeError, TypeError):
-            data[P.CHIRP_MASS_DETECTOR.value] = (
-                data[P.PRIMARY_MASS_SOURCE.value]
-                * (1 + data[P.REDSHIFT.value])
-                / jacobian
+            data[P.CHIRP_MASS_DETECTOR] = (
+                data[P.PRIMARY_MASS_SOURCE] * (1 + data[P.REDSHIFT]) / jacobian
             )
-            data["prior"] *= jacobian / (1 + data[P.REDSHIFT.value])
-    if P.LUMINOSITY_DISTANCE.value in parameters:
+            data["prior"] *= jacobian / (1 + data[P.REDSHIFT])
+    if P.LUMINOSITY_DISTANCE in parameters:
         cosmo = PLANCK_2015_Cosmology()
 
-        data[P.LUMINOSITY_DISTANCE.value] = cosmo.z_to_DL(data[P.REDSHIFT.value])  # type: ignore
-        data["prior"] /= cosmo.dDLdz(data[P.REDSHIFT.value])  # type: ignore
+        data[P.LUMINOSITY_DISTANCE] = cosmo.z_to_DL(data[P.REDSHIFT])  # type: ignore
+        data["prior"] /= cosmo.dDLdz(data[P.REDSHIFT])  # type: ignore
     return data

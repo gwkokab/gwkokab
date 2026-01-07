@@ -38,25 +38,23 @@ def custom_poisson_mean_estimator(
     """Custom injection-based Poisson mean estimator which ignores eccentricity."""
     del key  # Unused.
 
-    parameters_without_ecc = list(
-        filter(lambda p: p != P.ECCENTRICITY.value, parameters)
-    )
+    parameters_without_ecc = list(filter(lambda p: p != P.ECCENTRICITY, parameters))
 
     injections_dict = load_injection_data(filename, 1.0 / far_cut, snr_cut)
 
     _PARAM_MAPPING = {
-        "mass_1": P.PRIMARY_MASS_SOURCE.value,
-        "mass_2": P.SECONDARY_MASS_SOURCE.value,
-        "mass1_source": P.PRIMARY_MASS_SOURCE.value,
-        "mass2_source": P.SECONDARY_MASS_SOURCE.value,
-        "redshift": P.REDSHIFT.value,
-        "spin1x": P.PRIMARY_SPIN_X.value,
-        "spin1y": P.PRIMARY_SPIN_Y.value,
-        "spin1z": P.PRIMARY_SPIN_Z.value,
-        "spin2x": P.SECONDARY_SPIN_X.value,
-        "spin2y": P.SECONDARY_SPIN_Y.value,
-        "spin2z": P.SECONDARY_SPIN_Z.value,
-        "z": P.REDSHIFT.value,
+        "mass_1": P.PRIMARY_MASS_SOURCE,
+        "mass_2": P.SECONDARY_MASS_SOURCE,
+        "mass1_source": P.PRIMARY_MASS_SOURCE,
+        "mass2_source": P.SECONDARY_MASS_SOURCE,
+        "redshift": P.REDSHIFT,
+        "spin1x": P.PRIMARY_SPIN_X,
+        "spin1y": P.PRIMARY_SPIN_Y,
+        "spin1z": P.PRIMARY_SPIN_Z,
+        "spin2x": P.SECONDARY_SPIN_X,
+        "spin2y": P.SECONDARY_SPIN_Y,
+        "spin2z": P.SECONDARY_SPIN_Z,
+        "z": P.REDSHIFT,
     }
 
     injections_dict = {_PARAM_MAPPING.get(k, k): v for k, v in injections_dict.items()}

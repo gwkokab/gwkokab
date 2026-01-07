@@ -199,166 +199,166 @@ def main() -> None:
     if has_beta_spin_magnitude or has_spin_magnitude_mixture:
         err_params_name.extend(
             [
-                P.PRIMARY_SPIN_MAGNITUDE.value + "_high",
-                P.PRIMARY_SPIN_MAGNITUDE.value + "_low",
-                P.PRIMARY_SPIN_MAGNITUDE.value + "_scale",
-                P.SECONDARY_SPIN_MAGNITUDE.value + "_high",
-                P.SECONDARY_SPIN_MAGNITUDE.value + "_low",
-                P.SECONDARY_SPIN_MAGNITUDE.value + "_scale",
+                P.PRIMARY_SPIN_MAGNITUDE + "_high",
+                P.PRIMARY_SPIN_MAGNITUDE + "_low",
+                P.PRIMARY_SPIN_MAGNITUDE + "_scale",
+                P.SECONDARY_SPIN_MAGNITUDE + "_high",
+                P.SECONDARY_SPIN_MAGNITUDE + "_low",
+                P.SECONDARY_SPIN_MAGNITUDE + "_scale",
             ]
         )
     if has_truncated_normal_spin_x:
         err_params_name.extend(
             [
-                P.PRIMARY_SPIN_X.value + "_high",
-                P.PRIMARY_SPIN_X.value + "_low",
-                P.PRIMARY_SPIN_X.value + "_scale",
-                P.SECONDARY_SPIN_X.value + "_high",
-                P.SECONDARY_SPIN_X.value + "_low",
-                P.SECONDARY_SPIN_X.value + "_scale",
+                P.PRIMARY_SPIN_X + "_high",
+                P.PRIMARY_SPIN_X + "_low",
+                P.PRIMARY_SPIN_X + "_scale",
+                P.SECONDARY_SPIN_X + "_high",
+                P.SECONDARY_SPIN_X + "_low",
+                P.SECONDARY_SPIN_X + "_scale",
             ]
         )
     if has_truncated_normal_spin_y:
         err_params_name.extend(
             [
-                P.PRIMARY_SPIN_Y.value + "_high",
-                P.PRIMARY_SPIN_Y.value + "_low",
-                P.PRIMARY_SPIN_Y.value + "_scale",
-                P.SECONDARY_SPIN_Y.value + "_high",
-                P.SECONDARY_SPIN_Y.value + "_low",
-                P.SECONDARY_SPIN_Y.value + "_scale",
+                P.PRIMARY_SPIN_Y + "_high",
+                P.PRIMARY_SPIN_Y + "_low",
+                P.PRIMARY_SPIN_Y + "_scale",
+                P.SECONDARY_SPIN_Y + "_high",
+                P.SECONDARY_SPIN_Y + "_low",
+                P.SECONDARY_SPIN_Y + "_scale",
             ]
         )
     if has_truncated_normal_spin_z:
         err_params_name.extend(
             [
-                P.PRIMARY_SPIN_Z.value + "_high",
-                P.PRIMARY_SPIN_Z.value + "_low",
-                P.PRIMARY_SPIN_Z.value + "_scale",
-                P.SECONDARY_SPIN_Z.value + "_high",
-                P.SECONDARY_SPIN_Z.value + "_low",
-                P.SECONDARY_SPIN_Z.value + "_scale",
+                P.PRIMARY_SPIN_Z + "_high",
+                P.PRIMARY_SPIN_Z + "_low",
+                P.PRIMARY_SPIN_Z + "_scale",
+                P.SECONDARY_SPIN_Z + "_high",
+                P.SECONDARY_SPIN_Z + "_low",
+                P.SECONDARY_SPIN_Z + "_scale",
             ]
         )
     if has_chi_eff_mixture or use_skew_normal_chi_eff:
         err_params_name.extend(
             [
-                P.EFFECTIVE_SPIN.value + "_high",
-                P.EFFECTIVE_SPIN.value + "_low",
-                P.EFFECTIVE_SPIN.value + "_scale",
-                P.EFFECTIVE_SPIN.value + "_cut_low",
-                P.EFFECTIVE_SPIN.value + "_cut_high",
+                P.EFFECTIVE_SPIN + "_high",
+                P.EFFECTIVE_SPIN + "_low",
+                P.EFFECTIVE_SPIN + "_scale",
+                P.EFFECTIVE_SPIN + "_cut_low",
+                P.EFFECTIVE_SPIN + "_cut_high",
             ]
         )
     if has_truncated_normal_chi_p:
         err_params_name.extend(
             [
-                P.PRECESSING_SPIN.value + "_high",
-                P.PRECESSING_SPIN.value + "_low",
-                P.PRECESSING_SPIN.value + "_scale",
-                P.PRECESSING_SPIN.value + "_cut_low",
-                P.PRECESSING_SPIN.value + "_cut_high",
+                P.PRECESSING_SPIN + "_high",
+                P.PRECESSING_SPIN + "_low",
+                P.PRECESSING_SPIN + "_scale",
+                P.PRECESSING_SPIN + "_cut_low",
+                P.PRECESSING_SPIN + "_cut_high",
             ]
         )
     if has_tilt:
         err_params_name.extend(
             [
-                P.COS_TILT_1.value + "_high",
-                P.COS_TILT_1.value + "_low",
-                P.COS_TILT_1.value + "_scale",
-                P.COS_TILT_2.value + "_high",
-                P.COS_TILT_2.value + "_low",
-                P.COS_TILT_2.value + "_scale",
+                P.COS_TILT_1 + "_high",
+                P.COS_TILT_1 + "_low",
+                P.COS_TILT_1 + "_scale",
+                P.COS_TILT_2 + "_high",
+                P.COS_TILT_2 + "_low",
+                P.COS_TILT_2 + "_scale",
             ]
         )
     if use_eccentricity_mixture:
         err_params_name.extend(
             [
-                P.ECCENTRICITY.value + "_high",
-                P.ECCENTRICITY.value + "_low",
-                P.ECCENTRICITY.value + "_scale",
+                P.ECCENTRICITY + "_high",
+                P.ECCENTRICITY + "_low",
+                P.ECCENTRICITY + "_scale",
             ]
         )
     if has_mean_anomaly:
         err_params_name.extend(
             [
-                P.MEAN_ANOMALY.value + "_high",
-                P.MEAN_ANOMALY.value + "_low",
-                P.MEAN_ANOMALY.value + "_scale",
+                P.MEAN_ANOMALY + "_high",
+                P.MEAN_ANOMALY + "_low",
+                P.MEAN_ANOMALY + "_scale",
             ]
         )
     if has_redshift:
         err_params_name.extend(
             [
-                P.REDSHIFT.value + "_high",
-                P.REDSHIFT.value + "_low",
-                P.REDSHIFT.value + "_scale",
+                P.REDSHIFT + "_high",
+                P.REDSHIFT + "_low",
+                P.REDSHIFT + "_scale",
             ]
         )
     if has_cos_iota:
         err_params_name.extend(
             [
-                P.COS_IOTA.value + "_high",
-                P.COS_IOTA.value + "_low",
-                P.COS_IOTA.value + "_scale",
+                P.COS_IOTA + "_high",
+                P.COS_IOTA + "_low",
+                P.COS_IOTA + "_scale",
             ]
         )
     if has_polarization_angle:
         err_params_name.extend(
             [
-                P.POLARIZATION_ANGLE.value + "_high",
-                P.POLARIZATION_ANGLE.value + "_low",
-                P.POLARIZATION_ANGLE.value + "_scale",
+                P.POLARIZATION_ANGLE + "_high",
+                P.POLARIZATION_ANGLE + "_low",
+                P.POLARIZATION_ANGLE + "_scale",
             ]
         )
     if has_right_ascension:
         err_params_name.extend(
             [
-                P.RIGHT_ASCENSION.value + "_high",
-                P.RIGHT_ASCENSION.value + "_low",
-                P.RIGHT_ASCENSION.value + "_scale",
+                P.RIGHT_ASCENSION + "_high",
+                P.RIGHT_ASCENSION + "_low",
+                P.RIGHT_ASCENSION + "_scale",
             ]
         )
     if has_sin_declination:
         err_params_name.extend(
             [
-                P.SIN_DECLINATION.value + "_high",
-                P.SIN_DECLINATION.value + "_low",
-                P.SIN_DECLINATION.value + "_scale",
+                P.SIN_DECLINATION + "_high",
+                P.SIN_DECLINATION + "_low",
+                P.SIN_DECLINATION + "_scale",
             ]
         )
     if has_detection_time:
-        err_params_name.append(P.DETECTION_TIME.value + "_scale")
+        err_params_name.append(P.DETECTION_TIME + "_scale")
     if has_phi_1:
         err_params_name.extend(
             [
-                P.PHI_1.value + "_high",
-                P.PHI_1.value + "_low",
-                P.PHI_1.value + "_scale",
+                P.PHI_1 + "_high",
+                P.PHI_1 + "_low",
+                P.PHI_1 + "_scale",
             ]
         )
     if has_phi_2:
         err_params_name.extend(
             [
-                P.PHI_2.value + "_high",
-                P.PHI_2.value + "_low",
-                P.PHI_2.value + "_scale",
+                P.PHI_2 + "_high",
+                P.PHI_2 + "_low",
+                P.PHI_2 + "_scale",
             ]
         )
     if has_phi_12:
         err_params_name.extend(
             [
-                P.PHI_12.value + "_high",
-                P.PHI_12.value + "_low",
-                P.PHI_12.value + "_scale",
+                P.PHI_12 + "_high",
+                P.PHI_12 + "_low",
+                P.PHI_12 + "_scale",
             ]
         )
     if has_phi_orb:
         err_params_name.extend(
             [
-                P.PHI_ORB.value + "_high",
-                P.PHI_ORB.value + "_low",
-                P.PHI_ORB.value + "_scale",
+                P.PHI_ORB + "_high",
+                P.PHI_ORB + "_low",
+                P.PHI_ORB + "_scale",
             ]
         )
 
@@ -381,12 +381,12 @@ def main() -> None:
     ]
 
     parameters_name: Tuple[str, ...] = (
-        P.PRIMARY_MASS_SOURCE.value,
-        P.SECONDARY_MASS_SOURCE.value,
+        P.PRIMARY_MASS_SOURCE,
+        P.SECONDARY_MASS_SOURCE,
     )
 
     error_magazine.register(
-        (P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value),
+        (P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE),
         lambda x, size, key: banana_error_m1_m2(
             x,
             size,
@@ -398,573 +398,571 @@ def main() -> None:
 
     if has_beta_spin_magnitude:
         parameters_name += (
-            P.PRIMARY_SPIN_MAGNITUDE.value,
-            P.SECONDARY_SPIN_MAGNITUDE.value,
+            P.PRIMARY_SPIN_MAGNITUDE,
+            P.SECONDARY_SPIN_MAGNITUDE,
         )
         all_params.extend(
             [
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_mean_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_mean_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_variance_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_variance_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_mean_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_mean_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_variance_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_variance_pl", N_pl),
             ]
         )
 
     if has_spin_magnitude_mixture:
         parameters_name += (
-            P.PRIMARY_SPIN_MAGNITUDE.value,
-            P.SECONDARY_SPIN_MAGNITUDE.value,
+            P.PRIMARY_SPIN_MAGNITUDE,
+            P.SECONDARY_SPIN_MAGNITUDE,
         )
         all_params.extend(
             [
                 ("a_zeta_g", N_g),
                 ("a_zeta_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_high_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_high_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_loc_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_loc_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_low_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_low_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_scale_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_scale_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_high_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_high_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_loc_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_loc_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_low_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_low_pl", N_pl),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_scale_g", N_g),
-                (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_scale_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_high_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_high_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_loc_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_loc_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_low_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_low_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_scale_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_scale_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_high_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_high_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_loc_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_loc_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_low_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_low_pl", N_pl),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_scale_g", N_g),
-                (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_scale_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_loc_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_loc_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_low_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_low_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_scale_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_scale_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_high_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_high_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_loc_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_loc_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_low_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_low_pl", N_pl),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_scale_g", N_g),
+                (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_scale_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_high_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_high_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_loc_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_loc_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_low_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_low_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_scale_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_scale_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_high_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_high_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_loc_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_loc_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_low_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_low_pl", N_pl),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_scale_g", N_g),
+                (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_scale_pl", N_pl),
             ]
         )
 
     if has_beta_spin_magnitude or has_spin_magnitude_mixture:
         error_magazine.register(
-            P.PRIMARY_SPIN_MAGNITUDE.value,
+            P.PRIMARY_SPIN_MAGNITUDE,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.PRIMARY_SPIN_MAGNITUDE.value + "_scale"],
-                low=err_params_value.get(P.PRIMARY_SPIN_MAGNITUDE.value + "_low"),
-                high=err_params_value.get(P.PRIMARY_SPIN_MAGNITUDE.value + "_high"),
+                scale=err_params_value[P.PRIMARY_SPIN_MAGNITUDE + "_scale"],
+                low=err_params_value.get(P.PRIMARY_SPIN_MAGNITUDE + "_low"),
+                high=err_params_value.get(P.PRIMARY_SPIN_MAGNITUDE + "_high"),
                 cut_low=0.0,
                 cut_high=1.0,
             ),
         )
 
         error_magazine.register(
-            P.SECONDARY_SPIN_MAGNITUDE.value,
+            P.SECONDARY_SPIN_MAGNITUDE,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.SECONDARY_SPIN_MAGNITUDE.value + "_scale"],
-                low=err_params_value.get(P.SECONDARY_SPIN_MAGNITUDE.value + "_low"),
-                high=err_params_value.get(P.SECONDARY_SPIN_MAGNITUDE.value + "_high"),
+                scale=err_params_value[P.SECONDARY_SPIN_MAGNITUDE + "_scale"],
+                low=err_params_value.get(P.SECONDARY_SPIN_MAGNITUDE + "_low"),
+                high=err_params_value.get(P.SECONDARY_SPIN_MAGNITUDE + "_high"),
                 cut_low=0.0,
                 cut_high=1.0,
             ),
         )
 
     if has_truncated_normal_spin_x:
-        parameters_name += (P.PRIMARY_SPIN_X.value, P.SECONDARY_SPIN_X.value)
+        parameters_name += (P.PRIMARY_SPIN_X, P.SECONDARY_SPIN_X)
         all_params.extend(
             [
-                (P.PRIMARY_SPIN_X.value + "_high_g", N_g),
-                (P.PRIMARY_SPIN_X.value + "_high_pl", N_pl),
-                (P.PRIMARY_SPIN_X.value + "_loc_g", N_g),
-                (P.PRIMARY_SPIN_X.value + "_loc_pl", N_pl),
-                (P.PRIMARY_SPIN_X.value + "_low_g", N_g),
-                (P.PRIMARY_SPIN_X.value + "_low_pl", N_pl),
-                (P.PRIMARY_SPIN_X.value + "_scale_g", N_g),
-                (P.PRIMARY_SPIN_X.value + "_scale_pl", N_pl),
-                (P.SECONDARY_SPIN_X.value + "_high_g", N_g),
-                (P.SECONDARY_SPIN_X.value + "_high_pl", N_pl),
-                (P.SECONDARY_SPIN_X.value + "_loc_g", N_g),
-                (P.SECONDARY_SPIN_X.value + "_loc_pl", N_pl),
-                (P.SECONDARY_SPIN_X.value + "_low_g", N_g),
-                (P.SECONDARY_SPIN_X.value + "_low_pl", N_pl),
-                (P.SECONDARY_SPIN_X.value + "_scale_g", N_g),
-                (P.SECONDARY_SPIN_X.value + "_scale_pl", N_pl),
+                (P.PRIMARY_SPIN_X + "_high_g", N_g),
+                (P.PRIMARY_SPIN_X + "_high_pl", N_pl),
+                (P.PRIMARY_SPIN_X + "_loc_g", N_g),
+                (P.PRIMARY_SPIN_X + "_loc_pl", N_pl),
+                (P.PRIMARY_SPIN_X + "_low_g", N_g),
+                (P.PRIMARY_SPIN_X + "_low_pl", N_pl),
+                (P.PRIMARY_SPIN_X + "_scale_g", N_g),
+                (P.PRIMARY_SPIN_X + "_scale_pl", N_pl),
+                (P.SECONDARY_SPIN_X + "_high_g", N_g),
+                (P.SECONDARY_SPIN_X + "_high_pl", N_pl),
+                (P.SECONDARY_SPIN_X + "_loc_g", N_g),
+                (P.SECONDARY_SPIN_X + "_loc_pl", N_pl),
+                (P.SECONDARY_SPIN_X + "_low_g", N_g),
+                (P.SECONDARY_SPIN_X + "_low_pl", N_pl),
+                (P.SECONDARY_SPIN_X + "_scale_g", N_g),
+                (P.SECONDARY_SPIN_X + "_scale_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            P.PRIMARY_SPIN_X.value,
+            P.PRIMARY_SPIN_X,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.PRIMARY_SPIN_X.value + "_scale"],
-                low=err_params_value.get(P.PRIMARY_SPIN_X.value + "_low"),
-                high=err_params_value.get(P.PRIMARY_SPIN_X.value + "_high"),
+                scale=err_params_value[P.PRIMARY_SPIN_X + "_scale"],
+                low=err_params_value.get(P.PRIMARY_SPIN_X + "_low"),
+                high=err_params_value.get(P.PRIMARY_SPIN_X + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
         error_magazine.register(
-            P.SECONDARY_SPIN_X.value,
+            P.SECONDARY_SPIN_X,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.SECONDARY_SPIN_X.value + "_scale"],
-                low=err_params_value.get(P.SECONDARY_SPIN_X.value + "_low"),
-                high=err_params_value.get(P.SECONDARY_SPIN_X.value + "_high"),
+                scale=err_params_value[P.SECONDARY_SPIN_X + "_scale"],
+                low=err_params_value.get(P.SECONDARY_SPIN_X + "_low"),
+                high=err_params_value.get(P.SECONDARY_SPIN_X + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
     if has_truncated_normal_spin_y:
-        parameters_name += (P.PRIMARY_SPIN_Y.value, P.SECONDARY_SPIN_Y.value)
+        parameters_name += (P.PRIMARY_SPIN_Y, P.SECONDARY_SPIN_Y)
         all_params.extend(
             [
-                (P.PRIMARY_SPIN_Y.value + "_high_g", N_g),
-                (P.PRIMARY_SPIN_Y.value + "_high_pl", N_pl),
-                (P.PRIMARY_SPIN_Y.value + "_loc_g", N_g),
-                (P.PRIMARY_SPIN_Y.value + "_loc_pl", N_pl),
-                (P.PRIMARY_SPIN_Y.value + "_low_g", N_g),
-                (P.PRIMARY_SPIN_Y.value + "_low_pl", N_pl),
-                (P.PRIMARY_SPIN_Y.value + "_scale_g", N_g),
-                (P.PRIMARY_SPIN_Y.value + "_scale_pl", N_pl),
-                (P.SECONDARY_SPIN_Y.value + "_high_g", N_g),
-                (P.SECONDARY_SPIN_Y.value + "_high_pl", N_pl),
-                (P.SECONDARY_SPIN_Y.value + "_loc_g", N_g),
-                (P.SECONDARY_SPIN_Y.value + "_loc_pl", N_pl),
-                (P.SECONDARY_SPIN_Y.value + "_low_g", N_g),
-                (P.SECONDARY_SPIN_Y.value + "_low_pl", N_pl),
-                (P.SECONDARY_SPIN_Y.value + "_scale_g", N_g),
-                (P.SECONDARY_SPIN_Y.value + "_scale_pl", N_pl),
+                (P.PRIMARY_SPIN_Y + "_high_g", N_g),
+                (P.PRIMARY_SPIN_Y + "_high_pl", N_pl),
+                (P.PRIMARY_SPIN_Y + "_loc_g", N_g),
+                (P.PRIMARY_SPIN_Y + "_loc_pl", N_pl),
+                (P.PRIMARY_SPIN_Y + "_low_g", N_g),
+                (P.PRIMARY_SPIN_Y + "_low_pl", N_pl),
+                (P.PRIMARY_SPIN_Y + "_scale_g", N_g),
+                (P.PRIMARY_SPIN_Y + "_scale_pl", N_pl),
+                (P.SECONDARY_SPIN_Y + "_high_g", N_g),
+                (P.SECONDARY_SPIN_Y + "_high_pl", N_pl),
+                (P.SECONDARY_SPIN_Y + "_loc_g", N_g),
+                (P.SECONDARY_SPIN_Y + "_loc_pl", N_pl),
+                (P.SECONDARY_SPIN_Y + "_low_g", N_g),
+                (P.SECONDARY_SPIN_Y + "_low_pl", N_pl),
+                (P.SECONDARY_SPIN_Y + "_scale_g", N_g),
+                (P.SECONDARY_SPIN_Y + "_scale_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            P.PRIMARY_SPIN_Y.value,
+            P.PRIMARY_SPIN_Y,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.PRIMARY_SPIN_Y.value + "_scale"],
-                low=err_params_value.get(P.PRIMARY_SPIN_Y.value + "_low"),
-                high=err_params_value.get(P.PRIMARY_SPIN_Y.value + "_high"),
+                scale=err_params_value[P.PRIMARY_SPIN_Y + "_scale"],
+                low=err_params_value.get(P.PRIMARY_SPIN_Y + "_low"),
+                high=err_params_value.get(P.PRIMARY_SPIN_Y + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
         error_magazine.register(
-            P.SECONDARY_SPIN_Y.value,
+            P.SECONDARY_SPIN_Y,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.SECONDARY_SPIN_Y.value + "_scale"],
-                low=err_params_value.get(P.SECONDARY_SPIN_Y.value + "_low"),
-                high=err_params_value.get(P.SECONDARY_SPIN_Y.value + "_high"),
+                scale=err_params_value[P.SECONDARY_SPIN_Y + "_scale"],
+                low=err_params_value.get(P.SECONDARY_SPIN_Y + "_low"),
+                high=err_params_value.get(P.SECONDARY_SPIN_Y + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
     if has_truncated_normal_spin_z:
-        parameters_name += (P.PRIMARY_SPIN_Z.value, P.SECONDARY_SPIN_Z.value)
+        parameters_name += (P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z)
         all_params.extend(
             [
-                (P.PRIMARY_SPIN_Z.value + "_high_g", N_g),
-                (P.PRIMARY_SPIN_Z.value + "_high_pl", N_pl),
-                (P.PRIMARY_SPIN_Z.value + "_loc_g", N_g),
-                (P.PRIMARY_SPIN_Z.value + "_loc_pl", N_pl),
-                (P.PRIMARY_SPIN_Z.value + "_low_g", N_g),
-                (P.PRIMARY_SPIN_Z.value + "_low_pl", N_pl),
-                (P.PRIMARY_SPIN_Z.value + "_scale_g", N_g),
-                (P.PRIMARY_SPIN_Z.value + "_scale_pl", N_pl),
-                (P.SECONDARY_SPIN_Z.value + "_high_g", N_g),
-                (P.SECONDARY_SPIN_Z.value + "_high_pl", N_pl),
-                (P.SECONDARY_SPIN_Z.value + "_loc_g", N_g),
-                (P.SECONDARY_SPIN_Z.value + "_loc_pl", N_pl),
-                (P.SECONDARY_SPIN_Z.value + "_low_g", N_g),
-                (P.SECONDARY_SPIN_Z.value + "_low_pl", N_pl),
-                (P.SECONDARY_SPIN_Z.value + "_scale_g", N_g),
-                (P.SECONDARY_SPIN_Z.value + "_scale_pl", N_pl),
+                (P.PRIMARY_SPIN_Z + "_high_g", N_g),
+                (P.PRIMARY_SPIN_Z + "_high_pl", N_pl),
+                (P.PRIMARY_SPIN_Z + "_loc_g", N_g),
+                (P.PRIMARY_SPIN_Z + "_loc_pl", N_pl),
+                (P.PRIMARY_SPIN_Z + "_low_g", N_g),
+                (P.PRIMARY_SPIN_Z + "_low_pl", N_pl),
+                (P.PRIMARY_SPIN_Z + "_scale_g", N_g),
+                (P.PRIMARY_SPIN_Z + "_scale_pl", N_pl),
+                (P.SECONDARY_SPIN_Z + "_high_g", N_g),
+                (P.SECONDARY_SPIN_Z + "_high_pl", N_pl),
+                (P.SECONDARY_SPIN_Z + "_loc_g", N_g),
+                (P.SECONDARY_SPIN_Z + "_loc_pl", N_pl),
+                (P.SECONDARY_SPIN_Z + "_low_g", N_g),
+                (P.SECONDARY_SPIN_Z + "_low_pl", N_pl),
+                (P.SECONDARY_SPIN_Z + "_scale_g", N_g),
+                (P.SECONDARY_SPIN_Z + "_scale_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            P.PRIMARY_SPIN_Z.value,
+            P.PRIMARY_SPIN_Z,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.PRIMARY_SPIN_Z.value + "_scale"],
-                low=err_params_value.get(P.PRIMARY_SPIN_Z.value + "_low"),
-                high=err_params_value.get(P.PRIMARY_SPIN_Z.value + "_high"),
+                scale=err_params_value[P.PRIMARY_SPIN_Z + "_scale"],
+                low=err_params_value.get(P.PRIMARY_SPIN_Z + "_low"),
+                high=err_params_value.get(P.PRIMARY_SPIN_Z + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
         error_magazine.register(
-            P.SECONDARY_SPIN_Z.value,
+            P.SECONDARY_SPIN_Z,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.SECONDARY_SPIN_Z.value + "_scale"],
-                low=err_params_value.get(P.SECONDARY_SPIN_Z.value + "_low"),
-                high=err_params_value.get(P.SECONDARY_SPIN_Z.value + "_high"),
+                scale=err_params_value[P.SECONDARY_SPIN_Z + "_scale"],
+                low=err_params_value.get(P.SECONDARY_SPIN_Z + "_low"),
+                high=err_params_value.get(P.SECONDARY_SPIN_Z + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
     if has_chi_eff_mixture:
-        parameters_name += (P.EFFECTIVE_SPIN.value,)
+        parameters_name += (P.EFFECTIVE_SPIN,)
         all_params.extend(
             [
-                (P.EFFECTIVE_SPIN.value + "_comp1_high_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_comp1_high_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_comp1_loc_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_comp1_loc_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_comp1_low_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_comp1_low_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_comp1_scale_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_comp1_scale_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_comp2_high_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_comp2_high_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_comp2_loc_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_comp2_loc_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_comp2_low_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_comp2_low_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_comp2_scale_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_comp2_scale_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_zeta_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_zeta_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_comp1_high_g", N_g),
+                (P.EFFECTIVE_SPIN + "_comp1_high_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_comp1_loc_g", N_g),
+                (P.EFFECTIVE_SPIN + "_comp1_loc_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_comp1_low_g", N_g),
+                (P.EFFECTIVE_SPIN + "_comp1_low_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_comp1_scale_g", N_g),
+                (P.EFFECTIVE_SPIN + "_comp1_scale_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_comp2_high_g", N_g),
+                (P.EFFECTIVE_SPIN + "_comp2_high_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_comp2_loc_g", N_g),
+                (P.EFFECTIVE_SPIN + "_comp2_loc_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_comp2_low_g", N_g),
+                (P.EFFECTIVE_SPIN + "_comp2_low_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_comp2_scale_g", N_g),
+                (P.EFFECTIVE_SPIN + "_comp2_scale_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_zeta_g", N_g),
+                (P.EFFECTIVE_SPIN + "_zeta_pl", N_pl),
             ]
         )
         error_magazine.register(
-            P.EFFECTIVE_SPIN.value,
+            P.EFFECTIVE_SPIN,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.EFFECTIVE_SPIN.value + "_scale"],
-                low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_low"),
-                high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_high"),
-                cut_low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_low"),
-                cut_high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_high"),
+                scale=err_params_value[P.EFFECTIVE_SPIN + "_scale"],
+                low=err_params_value.get(P.EFFECTIVE_SPIN + "_low"),
+                high=err_params_value.get(P.EFFECTIVE_SPIN + "_high"),
+                cut_low=err_params_value.get(P.EFFECTIVE_SPIN + "_cut_low"),
+                cut_high=err_params_value.get(P.EFFECTIVE_SPIN + "_cut_high"),
             ),
         )
     if use_skew_normal_chi_eff:
-        parameters_name += (P.EFFECTIVE_SPIN.value,)
+        parameters_name += (P.EFFECTIVE_SPIN,)
         all_params.extend(
             [
-                (P.EFFECTIVE_SPIN.value + "_epsilon_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_epsilon_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_loc_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_loc_pl", N_pl),
-                (P.EFFECTIVE_SPIN.value + "_scale_g", N_g),
-                (P.EFFECTIVE_SPIN.value + "_scale_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_epsilon_g", N_g),
+                (P.EFFECTIVE_SPIN + "_epsilon_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_loc_g", N_g),
+                (P.EFFECTIVE_SPIN + "_loc_pl", N_pl),
+                (P.EFFECTIVE_SPIN + "_scale_g", N_g),
+                (P.EFFECTIVE_SPIN + "_scale_pl", N_pl),
             ]
         )
         error_magazine.register(
-            P.EFFECTIVE_SPIN.value,
+            P.EFFECTIVE_SPIN,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.EFFECTIVE_SPIN.value + "_scale"],
-                low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_low"),
-                high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_high"),
-                cut_low=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_low"),
-                cut_high=err_params_value.get(P.EFFECTIVE_SPIN.value + "_cut_high"),
+                scale=err_params_value[P.EFFECTIVE_SPIN + "_scale"],
+                low=err_params_value.get(P.EFFECTIVE_SPIN + "_low"),
+                high=err_params_value.get(P.EFFECTIVE_SPIN + "_high"),
+                cut_low=err_params_value.get(P.EFFECTIVE_SPIN + "_cut_low"),
+                cut_high=err_params_value.get(P.EFFECTIVE_SPIN + "_cut_high"),
             ),
         )
 
     if has_truncated_normal_chi_p:
-        parameters_name += (P.PRECESSING_SPIN.value,)
+        parameters_name += (P.PRECESSING_SPIN,)
         all_params.extend(
             [
-                (P.PRECESSING_SPIN.value + "_high_g", N_g),
-                (P.PRECESSING_SPIN.value + "_high_pl", N_pl),
-                (P.PRECESSING_SPIN.value + "_loc_g", N_g),
-                (P.PRECESSING_SPIN.value + "_loc_pl", N_pl),
-                (P.PRECESSING_SPIN.value + "_low_g", N_g),
-                (P.PRECESSING_SPIN.value + "_low_pl", N_pl),
-                (P.PRECESSING_SPIN.value + "_scale_g", N_g),
-                (P.PRECESSING_SPIN.value + "_scale_pl", N_pl),
+                (P.PRECESSING_SPIN + "_high_g", N_g),
+                (P.PRECESSING_SPIN + "_high_pl", N_pl),
+                (P.PRECESSING_SPIN + "_loc_g", N_g),
+                (P.PRECESSING_SPIN + "_loc_pl", N_pl),
+                (P.PRECESSING_SPIN + "_low_g", N_g),
+                (P.PRECESSING_SPIN + "_low_pl", N_pl),
+                (P.PRECESSING_SPIN + "_scale_g", N_g),
+                (P.PRECESSING_SPIN + "_scale_pl", N_pl),
             ]
         )
         error_magazine.register(
-            P.PRECESSING_SPIN.value,
+            P.PRECESSING_SPIN,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.PRECESSING_SPIN.value + "_scale"],
-                low=err_params_value.get(P.PRECESSING_SPIN.value + "_low"),
-                high=err_params_value.get(P.PRECESSING_SPIN.value + "_high"),
-                cut_low=err_params_value.get(P.PRECESSING_SPIN.value + "_cut_low"),
-                cut_high=err_params_value.get(P.PRECESSING_SPIN.value + "_cut_high"),
+                scale=err_params_value[P.PRECESSING_SPIN + "_scale"],
+                low=err_params_value.get(P.PRECESSING_SPIN + "_low"),
+                high=err_params_value.get(P.PRECESSING_SPIN + "_high"),
+                cut_low=err_params_value.get(P.PRECESSING_SPIN + "_cut_low"),
+                cut_high=err_params_value.get(P.PRECESSING_SPIN + "_cut_high"),
             ),
         )
 
     if has_tilt:
-        parameters_name += (P.COS_TILT_1.value, P.COS_TILT_2.value)
+        parameters_name += (P.COS_TILT_1, P.COS_TILT_2)
         all_params.extend(
             [
                 ("cos_tilt_zeta_g", N_g),
                 ("cos_tilt_zeta_pl", N_pl),
-                (P.COS_TILT_1.value + "_scale_g", N_g),
-                (P.COS_TILT_1.value + "_scale_pl", N_pl),
-                (P.COS_TILT_2.value + "_scale_g", N_g),
-                (P.COS_TILT_2.value + "_scale_pl", N_pl),
+                (P.COS_TILT_1 + "_scale_g", N_g),
+                (P.COS_TILT_1 + "_scale_pl", N_pl),
+                (P.COS_TILT_2 + "_scale_g", N_g),
+                (P.COS_TILT_2 + "_scale_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            P.COS_TILT_1.value,
+            P.COS_TILT_1,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.COS_TILT_1.value + "_scale"],
-                low=err_params_value.get(P.COS_TILT_1.value + "_low"),
-                high=err_params_value.get(P.COS_TILT_1.value + "_high"),
+                scale=err_params_value[P.COS_TILT_1 + "_scale"],
+                low=err_params_value.get(P.COS_TILT_1 + "_low"),
+                high=err_params_value.get(P.COS_TILT_1 + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
         error_magazine.register(
-            P.COS_TILT_2.value,
+            P.COS_TILT_2,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.COS_TILT_2.value + "_scale"],
-                low=err_params_value.get(P.COS_TILT_2.value + "_low"),
-                high=err_params_value.get(P.COS_TILT_2.value + "_high"),
+                scale=err_params_value[P.COS_TILT_2 + "_scale"],
+                low=err_params_value.get(P.COS_TILT_2 + "_low"),
+                high=err_params_value.get(P.COS_TILT_2 + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
     if has_phi_1:
-        parameters_name += (P.PHI_1.value,)
+        parameters_name += (P.PHI_1,)
 
         all_params.extend(
             [
-                (P.PHI_1.value + "_high_g", N_g),
-                (P.PHI_1.value + "_high_pl", N_pl),
-                (P.PHI_1.value + "_low_g", N_g),
-                (P.PHI_1.value + "_low_pl", N_pl),
+                (P.PHI_1 + "_high_g", N_g),
+                (P.PHI_1 + "_high_pl", N_pl),
+                (P.PHI_1 + "_low_g", N_g),
+                (P.PHI_1 + "_low_pl", N_pl),
             ]
         )
 
         def phi_1_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[P.PHI_1.value + "_scale"],
-                low=err_params_value.get(P.PHI_1.value + "_low", 0.0),
-                high=err_params_value.get(P.PHI_1.value + "_high", 2 * jnp.pi),
+                scale=err_params_value[P.PHI_1 + "_scale"],
+                low=err_params_value.get(P.PHI_1 + "_low", 0.0),
+                high=err_params_value.get(P.PHI_1 + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
-        error_magazine.register(P.PHI_1.value, phi_1_error)
+        error_magazine.register(P.PHI_1, phi_1_error)
 
     if has_phi_2:
-        parameters_name += (P.PHI_2.value,)
+        parameters_name += (P.PHI_2,)
 
         all_params.extend(
             [
-                (P.PHI_2.value + "_high_g", N_g),
-                (P.PHI_2.value + "_high_pl", N_pl),
-                (P.PHI_2.value + "_low_g", N_g),
-                (P.PHI_2.value + "_low_pl", N_pl),
+                (P.PHI_2 + "_high_g", N_g),
+                (P.PHI_2 + "_high_pl", N_pl),
+                (P.PHI_2 + "_low_g", N_g),
+                (P.PHI_2 + "_low_pl", N_pl),
             ]
         )
 
         def phi_2_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[P.PHI_2.value + "_scale"],
-                low=err_params_value.get(P.PHI_2.value + "_low", 0.0),
-                high=err_params_value.get(P.PHI_2.value + "_high", 2 * jnp.pi),
+                scale=err_params_value[P.PHI_2 + "_scale"],
+                low=err_params_value.get(P.PHI_2 + "_low", 0.0),
+                high=err_params_value.get(P.PHI_2 + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
-        error_magazine.register(P.PHI_2.value, phi_2_error)
+        error_magazine.register(P.PHI_2, phi_2_error)
 
     if has_phi_12:
-        parameters_name += (P.PHI_12.value,)
+        parameters_name += (P.PHI_12,)
 
         all_params.extend(
             [
-                (P.PHI_12.value + "_high_g", N_g),
-                (P.PHI_12.value + "_high_pl", N_pl),
-                (P.PHI_12.value + "_low_g", N_g),
-                (P.PHI_12.value + "_low_pl", N_pl),
+                (P.PHI_12 + "_high_g", N_g),
+                (P.PHI_12 + "_high_pl", N_pl),
+                (P.PHI_12 + "_low_g", N_g),
+                (P.PHI_12 + "_low_pl", N_pl),
             ]
         )
 
         def phi_12_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[P.PHI_12.value + "_scale"],
-                low=err_params_value.get(P.PHI_12.value + "_low", 0.0),
-                high=err_params_value.get(P.PHI_12.value + "_high", 2 * jnp.pi),
+                scale=err_params_value[P.PHI_12 + "_scale"],
+                low=err_params_value.get(P.PHI_12 + "_low", 0.0),
+                high=err_params_value.get(P.PHI_12 + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
-        error_magazine.register(P.PHI_12.value, phi_12_error)
+        error_magazine.register(P.PHI_12, phi_12_error)
 
     if use_eccentricity_mixture:
-        parameters_name += (P.ECCENTRICITY.value,)
+        parameters_name += (P.ECCENTRICITY,)
         all_params.extend(
             [
-                (P.ECCENTRICITY.value + "_comp1_high_g", N_g),
-                (P.ECCENTRICITY.value + "_comp1_high_pl", N_pl),
-                (P.ECCENTRICITY.value + "_comp1_loc_g", N_g),
-                (P.ECCENTRICITY.value + "_comp1_loc_pl", N_pl),
-                (P.ECCENTRICITY.value + "_comp1_low_g", N_g),
-                (P.ECCENTRICITY.value + "_comp1_low_pl", N_pl),
-                (P.ECCENTRICITY.value + "_comp1_scale_g", N_g),
-                (P.ECCENTRICITY.value + "_comp1_scale_pl", N_pl),
-                (P.ECCENTRICITY.value + "_comp2_high_g", N_g),
-                (P.ECCENTRICITY.value + "_comp2_high_pl", N_pl),
-                (P.ECCENTRICITY.value + "_comp2_loc_g", N_g),
-                (P.ECCENTRICITY.value + "_comp2_loc_pl", N_pl),
-                (P.ECCENTRICITY.value + "_comp2_low_g", N_g),
-                (P.ECCENTRICITY.value + "_comp2_low_pl", N_pl),
-                (P.ECCENTRICITY.value + "_comp2_scale_g", N_g),
-                (P.ECCENTRICITY.value + "_comp2_scale_pl", N_pl),
-                (P.ECCENTRICITY.value + "_zeta_g", N_g),
-                (P.ECCENTRICITY.value + "_zeta_pl", N_pl),
+                (P.ECCENTRICITY + "_comp1_high_g", N_g),
+                (P.ECCENTRICITY + "_comp1_high_pl", N_pl),
+                (P.ECCENTRICITY + "_comp1_loc_g", N_g),
+                (P.ECCENTRICITY + "_comp1_loc_pl", N_pl),
+                (P.ECCENTRICITY + "_comp1_low_g", N_g),
+                (P.ECCENTRICITY + "_comp1_low_pl", N_pl),
+                (P.ECCENTRICITY + "_comp1_scale_g", N_g),
+                (P.ECCENTRICITY + "_comp1_scale_pl", N_pl),
+                (P.ECCENTRICITY + "_comp2_high_g", N_g),
+                (P.ECCENTRICITY + "_comp2_high_pl", N_pl),
+                (P.ECCENTRICITY + "_comp2_loc_g", N_g),
+                (P.ECCENTRICITY + "_comp2_loc_pl", N_pl),
+                (P.ECCENTRICITY + "_comp2_low_g", N_g),
+                (P.ECCENTRICITY + "_comp2_low_pl", N_pl),
+                (P.ECCENTRICITY + "_comp2_scale_g", N_g),
+                (P.ECCENTRICITY + "_comp2_scale_pl", N_pl),
+                (P.ECCENTRICITY + "_zeta_g", N_g),
+                (P.ECCENTRICITY + "_zeta_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            P.ECCENTRICITY.value,
+            P.ECCENTRICITY,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.ECCENTRICITY.value + "_scale"],
-                low=err_params_value.get(P.ECCENTRICITY.value + "_low"),
-                high=err_params_value.get(P.ECCENTRICITY.value + "_high"),
+                scale=err_params_value[P.ECCENTRICITY + "_scale"],
+                low=err_params_value.get(P.ECCENTRICITY + "_low"),
+                high=err_params_value.get(P.ECCENTRICITY + "_high"),
                 cut_low=0.0,
                 cut_high=1.0,
             ),
         )
 
     if has_mean_anomaly:
-        parameters_name += (P.MEAN_ANOMALY.value,)
+        parameters_name += (P.MEAN_ANOMALY,)
 
         all_params.extend(
             [
-                (P.MEAN_ANOMALY.value + "_high_g", N_g),
-                (P.MEAN_ANOMALY.value + "_high_pl", N_pl),
-                (P.MEAN_ANOMALY.value + "_low_g", N_g),
-                (P.MEAN_ANOMALY.value + "_low_pl", N_pl),
+                (P.MEAN_ANOMALY + "_high_g", N_g),
+                (P.MEAN_ANOMALY + "_high_pl", N_pl),
+                (P.MEAN_ANOMALY + "_low_g", N_g),
+                (P.MEAN_ANOMALY + "_low_pl", N_pl),
             ]
         )
 
         def mean_anomaly_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[P.MEAN_ANOMALY.value + "_scale"],
-                low=err_params_value.get(P.MEAN_ANOMALY.value + "_low", 0.0),
-                high=err_params_value.get(P.MEAN_ANOMALY.value + "_high", 2.0 * jnp.pi),
+                scale=err_params_value[P.MEAN_ANOMALY + "_scale"],
+                low=err_params_value.get(P.MEAN_ANOMALY + "_low", 0.0),
+                high=err_params_value.get(P.MEAN_ANOMALY + "_high", 2.0 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
             err_x = jnp.mod(err_x, 2.0 * jnp.pi)
             return err_x
 
-        error_magazine.register(P.MEAN_ANOMALY.value, mean_anomaly_error)
+        error_magazine.register(P.MEAN_ANOMALY, mean_anomaly_error)
 
     if has_redshift:
-        parameters_name += (P.REDSHIFT.value,)
+        parameters_name += (P.REDSHIFT,)
 
         all_params.extend(
             [
-                (P.REDSHIFT.value + "_kappa_g", N_g),
-                (P.REDSHIFT.value + "_kappa_pl", N_pl),
-                (P.REDSHIFT.value + "_z_max_g", N_g),
-                (P.REDSHIFT.value + "_z_max_pl", N_pl),
+                (P.REDSHIFT + "_kappa_g", N_g),
+                (P.REDSHIFT + "_kappa_pl", N_pl),
+                (P.REDSHIFT + "_z_max_g", N_g),
+                (P.REDSHIFT + "_z_max_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            P.REDSHIFT.value,
+            P.REDSHIFT,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.REDSHIFT.value + "_scale"],
-                low=err_params_value.get(P.REDSHIFT.value + "_low"),
-                high=err_params_value.get(P.REDSHIFT.value + "_high"),
+                scale=err_params_value[P.REDSHIFT + "_scale"],
+                low=err_params_value.get(P.REDSHIFT + "_low"),
+                high=err_params_value.get(P.REDSHIFT + "_high"),
                 cut_low=1e-3,
                 cut_high=None,
             ),
         )
 
     if has_right_ascension:
-        parameters_name += (P.RIGHT_ASCENSION.value,)
+        parameters_name += (P.RIGHT_ASCENSION,)
 
         all_params.extend(
             [
-                (P.RIGHT_ASCENSION.value + "_high_g", N_g),
-                (P.RIGHT_ASCENSION.value + "_high_pl", N_pl),
-                (P.RIGHT_ASCENSION.value + "_low_g", N_g),
-                (P.RIGHT_ASCENSION.value + "_low_pl", N_pl),
+                (P.RIGHT_ASCENSION + "_high_g", N_g),
+                (P.RIGHT_ASCENSION + "_high_pl", N_pl),
+                (P.RIGHT_ASCENSION + "_low_g", N_g),
+                (P.RIGHT_ASCENSION + "_low_pl", N_pl),
             ]
         )
 
         def right_ascension_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[P.RIGHT_ASCENSION.value + "_scale"],
-                low=err_params_value.get(P.RIGHT_ASCENSION.value + "_low", 0.0),
-                high=err_params_value.get(
-                    P.RIGHT_ASCENSION.value + "_high", 2.0 * jnp.pi
-                ),
+                scale=err_params_value[P.RIGHT_ASCENSION + "_scale"],
+                low=err_params_value.get(P.RIGHT_ASCENSION + "_low", 0.0),
+                high=err_params_value.get(P.RIGHT_ASCENSION + "_high", 2.0 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
             err_x = jnp.mod(err_x, 2.0 * jnp.pi)
             return err_x
 
-        error_magazine.register(P.RIGHT_ASCENSION.value, right_ascension_error)
+        error_magazine.register(P.RIGHT_ASCENSION, right_ascension_error)
 
     if has_sin_declination:
-        parameters_name += (P.SIN_DECLINATION.value,)
+        parameters_name += (P.SIN_DECLINATION,)
 
         all_params.extend(
             [
-                (P.SIN_DECLINATION.value + "_high_g", N_g),
-                (P.SIN_DECLINATION.value + "_high_pl", N_pl),
-                (P.SIN_DECLINATION.value + "_low_g", N_g),
-                (P.SIN_DECLINATION.value + "_low_pl", N_pl),
+                (P.SIN_DECLINATION + "_high_g", N_g),
+                (P.SIN_DECLINATION + "_high_pl", N_pl),
+                (P.SIN_DECLINATION + "_low_g", N_g),
+                (P.SIN_DECLINATION + "_low_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            P.SIN_DECLINATION.value,
+            P.SIN_DECLINATION,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.SIN_DECLINATION.value + "_scale"],
-                low=err_params_value.get(P.SIN_DECLINATION.value + "_low"),
-                high=err_params_value.get(P.SIN_DECLINATION.value + "_high"),
+                scale=err_params_value[P.SIN_DECLINATION + "_scale"],
+                low=err_params_value.get(P.SIN_DECLINATION + "_low"),
+                high=err_params_value.get(P.SIN_DECLINATION + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
     if has_detection_time:
-        parameters_name += (P.DETECTION_TIME.value,)
+        parameters_name += (P.DETECTION_TIME,)
 
         all_params.extend(
             [
-                (P.DETECTION_TIME.value + "_high_g", N_g),
-                (P.DETECTION_TIME.value + "_high_pl", N_pl),
-                (P.DETECTION_TIME.value + "_low_g", N_g),
-                (P.DETECTION_TIME.value + "_low_pl", N_pl),
+                (P.DETECTION_TIME + "_high_g", N_g),
+                (P.DETECTION_TIME + "_high_pl", N_pl),
+                (P.DETECTION_TIME + "_low_g", N_g),
+                (P.DETECTION_TIME + "_low_pl", N_pl),
             ]
         )
 
@@ -973,85 +971,85 @@ def main() -> None:
             safe_x = jnp.maximum(x, eps)
             err_x = dist.LogNormal(
                 loc=jnp.log(safe_x),
-                scale=err_params_value[P.DETECTION_TIME.value + "_scale"],
+                scale=err_params_value[P.DETECTION_TIME + "_scale"],
             ).sample(key=key, sample_shape=(size,))
 
             return err_x
 
-        error_magazine.register(P.DETECTION_TIME.value, detection_time_error)
+        error_magazine.register(P.DETECTION_TIME, detection_time_error)
 
     if has_cos_iota:
-        parameters_name += (P.COS_IOTA.value,)
+        parameters_name += (P.COS_IOTA,)
 
         all_params.extend(
             [
-                (P.COS_IOTA.value + "_high_g", N_g),
-                (P.COS_IOTA.value + "_high_pl", N_pl),
-                (P.COS_IOTA.value + "_low_g", N_g),
-                (P.COS_IOTA.value + "_low_pl", N_pl),
+                (P.COS_IOTA + "_high_g", N_g),
+                (P.COS_IOTA + "_high_pl", N_pl),
+                (P.COS_IOTA + "_low_g", N_g),
+                (P.COS_IOTA + "_low_pl", N_pl),
             ]
         )
 
         error_magazine.register(
-            P.COS_IOTA.value,
+            P.COS_IOTA,
             partial(
                 truncated_normal_error,
-                scale=err_params_value[P.COS_IOTA.value + "_scale"],
-                low=err_params_value.get(P.COS_IOTA.value + "_low"),
-                high=err_params_value.get(P.COS_IOTA.value + "_high"),
+                scale=err_params_value[P.COS_IOTA + "_scale"],
+                low=err_params_value.get(P.COS_IOTA + "_low"),
+                high=err_params_value.get(P.COS_IOTA + "_high"),
                 cut_low=-1.0,
                 cut_high=1.0,
             ),
         )
 
     if has_polarization_angle:
-        parameters_name += (P.POLARIZATION_ANGLE.value,)
+        parameters_name += (P.POLARIZATION_ANGLE,)
 
         all_params.extend(
             [
-                (P.POLARIZATION_ANGLE.value + "_high_g", N_g),
-                (P.POLARIZATION_ANGLE.value + "_high_pl", N_pl),
-                (P.POLARIZATION_ANGLE.value + "_low_g", N_g),
-                (P.POLARIZATION_ANGLE.value + "_low_pl", N_pl),
+                (P.POLARIZATION_ANGLE + "_high_g", N_g),
+                (P.POLARIZATION_ANGLE + "_high_pl", N_pl),
+                (P.POLARIZATION_ANGLE + "_low_g", N_g),
+                (P.POLARIZATION_ANGLE + "_low_pl", N_pl),
             ]
         )
 
         def polarization_angle_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[P.POLARIZATION_ANGLE.value + "_scale"],
-                low=err_params_value.get(P.POLARIZATION_ANGLE.value + "_low", 0.0),
-                high=err_params_value.get(P.POLARIZATION_ANGLE.value + "_high", jnp.pi),
+                scale=err_params_value[P.POLARIZATION_ANGLE + "_scale"],
+                low=err_params_value.get(P.POLARIZATION_ANGLE + "_low", 0.0),
+                high=err_params_value.get(P.POLARIZATION_ANGLE + "_high", jnp.pi),
             ).sample(key=key, sample_shape=(size,))
             err_x = jnp.mod(err_x, jnp.pi)
             return err_x
 
-        error_magazine.register(P.POLARIZATION_ANGLE.value, polarization_angle_error)
+        error_magazine.register(P.POLARIZATION_ANGLE, polarization_angle_error)
 
     if has_phi_orb:
-        parameters_name += (P.PHI_ORB.value,)
+        parameters_name += (P.PHI_ORB,)
 
         all_params.extend(
             [
-                (P.PHI_ORB.value + "_high_g", N_g),
-                (P.PHI_ORB.value + "_high_pl", N_pl),
-                (P.PHI_ORB.value + "_low_g", N_g),
-                (P.PHI_ORB.value + "_low_pl", N_pl),
+                (P.PHI_ORB + "_high_g", N_g),
+                (P.PHI_ORB + "_high_pl", N_pl),
+                (P.PHI_ORB + "_low_g", N_g),
+                (P.PHI_ORB + "_low_pl", N_pl),
             ]
         )
 
         def phi_orb_error(x, size, key):
             err_x = dist.TruncatedNormal(
                 loc=x,
-                scale=err_params_value[P.PHI_ORB.value + "_scale"],
-                low=err_params_value.get(P.PHI_ORB.value + "_low", 0.0),
-                high=err_params_value.get(P.PHI_ORB.value + "_high", 2 * jnp.pi),
+                scale=err_params_value[P.PHI_ORB + "_scale"],
+                low=err_params_value.get(P.PHI_ORB + "_low", 0.0),
+                high=err_params_value.get(P.PHI_ORB + "_high", 2 * jnp.pi),
             ).sample(key=key, sample_shape=(size,))
 
             err_x = jnp.mod(err_x, 2 * jnp.pi)
             return err_x
 
-        error_magazine.register(P.PHI_ORB.value, phi_orb_error)
+        error_magazine.register(P.PHI_ORB, phi_orb_error)
 
     extended_params = []
     for params in all_params:

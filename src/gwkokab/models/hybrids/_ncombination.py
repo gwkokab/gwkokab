@@ -715,22 +715,22 @@ def create_spin_magnitude_mixture_models(
 
     # fmt: off
     zeta_name = "a_zeta_" + component_type
-    a_1_comp1_high_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_high_" + component_type
-    a_1_comp1_loc_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_loc_" + component_type
-    a_1_comp1_low_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_low_" + component_type
-    a_1_comp1_scale_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_scale_" + component_type
-    a_1_comp2_high_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_high_" + component_type
-    a_1_comp2_loc_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_loc_" + component_type
-    a_1_comp2_low_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_low_" + component_type
-    a_1_comp2_scale_name = P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_scale_" + component_type
-    a_2_comp1_high_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_high_" + component_type
-    a_2_comp1_loc_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_loc_" + component_type
-    a_2_comp1_low_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_low_" + component_type
-    a_2_comp1_scale_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_scale_" + component_type
-    a_2_comp2_high_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_high_" + component_type
-    a_2_comp2_loc_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_loc_" + component_type
-    a_2_comp2_low_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_low_" + component_type
-    a_2_comp2_scale_name = P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_scale_" + component_type
+    a_1_comp1_high_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_" + component_type
+    a_1_comp1_loc_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp1_loc_" + component_type
+    a_1_comp1_low_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp1_low_" + component_type
+    a_1_comp1_scale_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp1_scale_" + component_type
+    a_1_comp2_high_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp2_high_" + component_type
+    a_1_comp2_loc_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp2_loc_" + component_type
+    a_1_comp2_low_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp2_low_" + component_type
+    a_1_comp2_scale_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp2_scale_" + component_type
+    a_2_comp1_high_name = P.SECONDARY_SPIN_MAGNITUDE + "_comp1_high_" + component_type
+    a_2_comp1_loc_name = P.SECONDARY_SPIN_MAGNITUDE + "_comp1_loc_" + component_type
+    a_2_comp1_low_name = P.SECONDARY_SPIN_MAGNITUDE + "_comp1_low_" + component_type
+    a_2_comp1_scale_name = P.SECONDARY_SPIN_MAGNITUDE + "_comp1_scale_" + component_type
+    a_2_comp2_high_name = P.SECONDARY_SPIN_MAGNITUDE + "_comp2_high_" + component_type
+    a_2_comp2_loc_name = P.SECONDARY_SPIN_MAGNITUDE + "_comp2_loc_" + component_type
+    a_2_comp2_low_name = P.SECONDARY_SPIN_MAGNITUDE + "_comp2_low_" + component_type
+    a_2_comp2_scale_name = P.SECONDARY_SPIN_MAGNITUDE + "_comp2_scale_" + component_type
     # fmt: on
 
     spin_collection = []
