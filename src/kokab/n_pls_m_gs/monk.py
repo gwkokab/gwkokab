@@ -110,41 +110,41 @@ class NPowerlawMGaussianMonk(Monk):
 
     @property
     def parameters(self) -> List[str]:
-        names = [P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value]
+        names = [P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE]
         if self.has_beta_spin_magnitude or self.use_spin_magnitude_mixture:
-            names.append(P.PRIMARY_SPIN_MAGNITUDE.value)
-            names.append(P.SECONDARY_SPIN_MAGNITUDE.value)
+            names.append(P.PRIMARY_SPIN_MAGNITUDE)
+            names.append(P.SECONDARY_SPIN_MAGNITUDE)
         if self.has_truncated_normal_spin_x:
-            names.append(P.PRIMARY_SPIN_X.value)
-            names.append(P.SECONDARY_SPIN_X.value)
+            names.append(P.PRIMARY_SPIN_X)
+            names.append(P.SECONDARY_SPIN_X)
         if self.has_truncated_normal_spin_y:
-            names.append(P.PRIMARY_SPIN_Y.value)
-            names.append(P.SECONDARY_SPIN_Y.value)
+            names.append(P.PRIMARY_SPIN_Y)
+            names.append(P.SECONDARY_SPIN_Y)
         if self.has_truncated_normal_spin_z:
-            names.append(P.PRIMARY_SPIN_Z.value)
-            names.append(P.SECONDARY_SPIN_Z.value)
+            names.append(P.PRIMARY_SPIN_Z)
+            names.append(P.SECONDARY_SPIN_Z)
         if self.use_chi_eff_mixture or self.use_skew_normal_chi_eff:
-            names.append(P.EFFECTIVE_SPIN.value)
+            names.append(P.EFFECTIVE_SPIN)
         if self.use_truncated_normal_chi_p:
-            names.append(P.PRECESSING_SPIN.value)
+            names.append(P.PRECESSING_SPIN)
         if self.has_tilt:
-            names.extend([P.COS_TILT_1.value, P.COS_TILT_2.value])
+            names.extend([P.COS_TILT_1, P.COS_TILT_2])
         if self.has_phi_12:
-            names.append(P.PHI_12.value)
+            names.append(P.PHI_12)
         if self.use_eccentricity_mixture:
-            names.append(P.ECCENTRICITY.value)
+            names.append(P.ECCENTRICITY)
         if self.has_redshift:
-            names.append(P.REDSHIFT.value)
+            names.append(P.REDSHIFT)
         if self.has_right_ascension:
-            names.append(P.RIGHT_ASCENSION.value)
+            names.append(P.RIGHT_ASCENSION)
         if self.has_sin_declination:
-            names.append(P.SIN_DECLINATION.value)
+            names.append(P.SIN_DECLINATION)
         if self.has_detection_time:
-            names.append(P.DETECTION_TIME.value)
+            names.append(P.DETECTION_TIME)
         if self.has_cos_iota:
-            names.append(P.COS_IOTA.value)
+            names.append(P.COS_IOTA)
         if self.has_polarization_angle:
-            names.append(P.POLARIZATION_ANGLE.value)
+            names.append(P.POLARIZATION_ANGLE)
         return names
 
     @property
@@ -170,168 +170,168 @@ class NPowerlawMGaussianMonk(Monk):
                 [
                     ("a_zeta_g", self.N_g),
                     ("a_zeta_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_high_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_loc_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_loc_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_low_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_scale_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp1_scale_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_high_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_loc_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_loc_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_low_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_scale_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_comp2_scale_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_high_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_loc_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_loc_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_low_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_scale_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp1_scale_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_high_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_loc_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_loc_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_low_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_scale_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_comp2_scale_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp1_scale_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_comp2_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp1_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_comp2_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_beta_spin_magnitude:
             all_params.extend(
                 [
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
-                    (P.PRIMARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_mean_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_g", self.N_g),
-                    (P.SECONDARY_SPIN_MAGNITUDE.value + "_variance_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_mean_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_mean_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_variance_g", self.N_g),
+                    (P.PRIMARY_SPIN_MAGNITUDE + "_variance_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_mean_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_mean_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_variance_g", self.N_g),
+                    (P.SECONDARY_SPIN_MAGNITUDE + "_variance_pl", self.N_pl),
                 ]
             )
 
         if self.has_truncated_normal_spin_x:
             all_params.extend(
                 [
-                    (P.PRIMARY_SPIN_X.value + "_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_X.value + "_high_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_X.value + "_loc_g", self.N_g),
-                    (P.PRIMARY_SPIN_X.value + "_loc_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_X.value + "_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_X.value + "_low_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_X.value + "_scale_g", self.N_g),
-                    (P.PRIMARY_SPIN_X.value + "_scale_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_X.value + "_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_X.value + "_high_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_X.value + "_loc_g", self.N_g),
-                    (P.SECONDARY_SPIN_X.value + "_loc_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_X.value + "_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_X.value + "_low_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_X.value + "_scale_g", self.N_g),
-                    (P.SECONDARY_SPIN_X.value + "_scale_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_X + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_X + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_X + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_X + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_X + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_X + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_X + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_X + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_truncated_normal_spin_y:
             all_params.extend(
                 [
-                    (P.PRIMARY_SPIN_Y.value + "_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_Y.value + "_high_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_Y.value + "_loc_g", self.N_g),
-                    (P.PRIMARY_SPIN_Y.value + "_loc_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_Y.value + "_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_Y.value + "_low_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_Y.value + "_scale_g", self.N_g),
-                    (P.PRIMARY_SPIN_Y.value + "_scale_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_Y.value + "_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_Y.value + "_high_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_Y.value + "_loc_g", self.N_g),
-                    (P.SECONDARY_SPIN_Y.value + "_loc_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_Y.value + "_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_Y.value + "_low_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_Y.value + "_scale_g", self.N_g),
-                    (P.SECONDARY_SPIN_Y.value + "_scale_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_truncated_normal_spin_z:
             all_params.extend(
                 [
-                    (P.PRIMARY_SPIN_Z.value + "_high_g", self.N_g),
-                    (P.PRIMARY_SPIN_Z.value + "_high_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_Z.value + "_loc_g", self.N_g),
-                    (P.PRIMARY_SPIN_Z.value + "_loc_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_Z.value + "_low_g", self.N_g),
-                    (P.PRIMARY_SPIN_Z.value + "_low_pl", self.N_pl),
-                    (P.PRIMARY_SPIN_Z.value + "_scale_g", self.N_g),
-                    (P.PRIMARY_SPIN_Z.value + "_scale_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_Z.value + "_high_g", self.N_g),
-                    (P.SECONDARY_SPIN_Z.value + "_high_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_Z.value + "_loc_g", self.N_g),
-                    (P.SECONDARY_SPIN_Z.value + "_loc_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_Z.value + "_low_g", self.N_g),
-                    (P.SECONDARY_SPIN_Z.value + "_low_pl", self.N_pl),
-                    (P.SECONDARY_SPIN_Z.value + "_scale_g", self.N_g),
-                    (P.SECONDARY_SPIN_Z.value + "_scale_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.use_chi_eff_mixture:
             all_params.extend(
                 [
-                    (P.EFFECTIVE_SPIN.value + "_comp1_high_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_comp1_high_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_comp1_loc_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_comp1_loc_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_comp1_low_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_comp1_low_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_comp1_scale_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_comp1_scale_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_comp2_high_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_comp2_high_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_comp2_loc_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_comp2_loc_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_comp2_low_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_comp2_low_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_comp2_scale_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_comp2_scale_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_zeta_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_zeta_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_comp1_high_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_comp1_high_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_comp1_loc_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_comp1_loc_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_comp1_low_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_comp1_low_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_comp1_scale_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_comp1_scale_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_comp2_high_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_comp2_high_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_comp2_loc_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_comp2_loc_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_comp2_low_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_comp2_low_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_comp2_scale_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_comp2_scale_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_zeta_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_zeta_pl", self.N_pl),
                 ]
             )
 
         if self.use_skew_normal_chi_eff:
             all_params.extend(
                 [
-                    (P.EFFECTIVE_SPIN.value + "_epsilon_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_epsilon_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_loc_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_loc_pl", self.N_pl),
-                    (P.EFFECTIVE_SPIN.value + "_scale_g", self.N_g),
-                    (P.EFFECTIVE_SPIN.value + "_scale_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_epsilon_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_epsilon_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_loc_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_loc_pl", self.N_pl),
+                    (P.EFFECTIVE_SPIN + "_scale_g", self.N_g),
+                    (P.EFFECTIVE_SPIN + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.use_truncated_normal_chi_p:
             all_params.extend(
                 [
-                    (P.PRECESSING_SPIN.value + "_high_g", self.N_g),
-                    (P.PRECESSING_SPIN.value + "_high_pl", self.N_pl),
-                    (P.PRECESSING_SPIN.value + "_loc_g", self.N_g),
-                    (P.PRECESSING_SPIN.value + "_loc_pl", self.N_pl),
-                    (P.PRECESSING_SPIN.value + "_low_g", self.N_g),
-                    (P.PRECESSING_SPIN.value + "_low_pl", self.N_pl),
-                    (P.PRECESSING_SPIN.value + "_scale_g", self.N_g),
-                    (P.PRECESSING_SPIN.value + "_scale_pl", self.N_pl),
+                    (P.PRECESSING_SPIN + "_high_g", self.N_g),
+                    (P.PRECESSING_SPIN + "_high_pl", self.N_pl),
+                    (P.PRECESSING_SPIN + "_loc_g", self.N_g),
+                    (P.PRECESSING_SPIN + "_loc_pl", self.N_pl),
+                    (P.PRECESSING_SPIN + "_low_g", self.N_g),
+                    (P.PRECESSING_SPIN + "_low_pl", self.N_pl),
+                    (P.PRECESSING_SPIN + "_scale_g", self.N_g),
+                    (P.PRECESSING_SPIN + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -340,124 +340,124 @@ class NPowerlawMGaussianMonk(Monk):
                 [
                     ("cos_tilt_zeta_g", self.N_g),
                     ("cos_tilt_zeta_pl", self.N_pl),
-                    (P.COS_TILT_1.value + "_scale_g", self.N_g),
-                    (P.COS_TILT_1.value + "_scale_pl", self.N_pl),
-                    (P.COS_TILT_2.value + "_scale_g", self.N_g),
-                    (P.COS_TILT_2.value + "_scale_pl", self.N_pl),
+                    (P.COS_TILT_1 + "_scale_g", self.N_g),
+                    (P.COS_TILT_1 + "_scale_pl", self.N_pl),
+                    (P.COS_TILT_2 + "_scale_g", self.N_g),
+                    (P.COS_TILT_2 + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_phi_12:
             all_params.extend(
                 [
-                    (P.PHI_12.value + "_high_g", self.N_g),
-                    (P.PHI_12.value + "_high_pl", self.N_pl),
-                    (P.PHI_12.value + "_loc_g", self.N_g),
-                    (P.PHI_12.value + "_loc_pl", self.N_pl),
-                    (P.PHI_12.value + "_low_g", self.N_g),
-                    (P.PHI_12.value + "_low_pl", self.N_pl),
-                    (P.PHI_12.value + "_scale_g", self.N_g),
-                    (P.PHI_12.value + "_scale_pl", self.N_pl),
+                    (P.PHI_12 + "_high_g", self.N_g),
+                    (P.PHI_12 + "_high_pl", self.N_pl),
+                    (P.PHI_12 + "_loc_g", self.N_g),
+                    (P.PHI_12 + "_loc_pl", self.N_pl),
+                    (P.PHI_12 + "_low_g", self.N_g),
+                    (P.PHI_12 + "_low_pl", self.N_pl),
+                    (P.PHI_12 + "_scale_g", self.N_g),
+                    (P.PHI_12 + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.use_eccentricity_mixture:
             all_params.extend(
                 [
-                    (P.ECCENTRICITY.value + "_comp1_high_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_comp1_high_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_comp1_loc_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_comp1_loc_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_comp1_low_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_comp1_low_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_comp1_scale_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_comp1_scale_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_comp2_high_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_comp2_high_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_comp2_loc_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_comp2_loc_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_comp2_low_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_comp2_low_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_comp2_scale_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_comp2_scale_pl", self.N_pl),
-                    (P.ECCENTRICITY.value + "_zeta_g", self.N_g),
-                    (P.ECCENTRICITY.value + "_zeta_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_comp1_high_g", self.N_g),
+                    (P.ECCENTRICITY + "_comp1_high_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_comp1_loc_g", self.N_g),
+                    (P.ECCENTRICITY + "_comp1_loc_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_comp1_low_g", self.N_g),
+                    (P.ECCENTRICITY + "_comp1_low_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_comp1_scale_g", self.N_g),
+                    (P.ECCENTRICITY + "_comp1_scale_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_comp2_high_g", self.N_g),
+                    (P.ECCENTRICITY + "_comp2_high_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_comp2_loc_g", self.N_g),
+                    (P.ECCENTRICITY + "_comp2_loc_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_comp2_low_g", self.N_g),
+                    (P.ECCENTRICITY + "_comp2_low_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_comp2_scale_g", self.N_g),
+                    (P.ECCENTRICITY + "_comp2_scale_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_zeta_g", self.N_g),
+                    (P.ECCENTRICITY + "_zeta_pl", self.N_pl),
                 ]
             )
 
         if self.has_redshift:
             all_params.extend(
                 [
-                    (P.REDSHIFT.value + "_kappa_g", self.N_g),
-                    (P.REDSHIFT.value + "_kappa_pl", self.N_pl),
-                    (P.REDSHIFT.value + "_z_max_g", self.N_g),
-                    (P.REDSHIFT.value + "_z_max_pl", self.N_pl),
+                    (P.REDSHIFT + "_kappa_g", self.N_g),
+                    (P.REDSHIFT + "_kappa_pl", self.N_pl),
+                    (P.REDSHIFT + "_z_max_g", self.N_g),
+                    (P.REDSHIFT + "_z_max_pl", self.N_pl),
                 ]
             )
 
         if self.has_right_ascension:
             all_params.extend(
                 [
-                    (P.RIGHT_ASCENSION.value + "_high_g", self.N_g),
-                    (P.RIGHT_ASCENSION.value + "_high_pl", self.N_pl),
-                    (P.RIGHT_ASCENSION.value + "_loc_g", self.N_g),
-                    (P.RIGHT_ASCENSION.value + "_loc_pl", self.N_pl),
-                    (P.RIGHT_ASCENSION.value + "_low_g", self.N_g),
-                    (P.RIGHT_ASCENSION.value + "_low_pl", self.N_pl),
-                    (P.RIGHT_ASCENSION.value + "_scale_g", self.N_g),
-                    (P.RIGHT_ASCENSION.value + "_scale_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION + "_high_g", self.N_g),
+                    (P.RIGHT_ASCENSION + "_high_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION + "_loc_g", self.N_g),
+                    (P.RIGHT_ASCENSION + "_loc_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION + "_low_g", self.N_g),
+                    (P.RIGHT_ASCENSION + "_low_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION + "_scale_g", self.N_g),
+                    (P.RIGHT_ASCENSION + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_sin_declination:
             all_params.extend(
                 [
-                    (P.SIN_DECLINATION.value + "_high_g", self.N_g),
-                    (P.SIN_DECLINATION.value + "_high_pl", self.N_pl),
-                    (P.SIN_DECLINATION.value + "_loc_g", self.N_g),
-                    (P.SIN_DECLINATION.value + "_loc_pl", self.N_pl),
-                    (P.SIN_DECLINATION.value + "_low_g", self.N_g),
-                    (P.SIN_DECLINATION.value + "_low_pl", self.N_pl),
-                    (P.SIN_DECLINATION.value + "_scale_g", self.N_g),
-                    (P.SIN_DECLINATION.value + "_scale_pl", self.N_pl),
+                    (P.SIN_DECLINATION + "_high_g", self.N_g),
+                    (P.SIN_DECLINATION + "_high_pl", self.N_pl),
+                    (P.SIN_DECLINATION + "_loc_g", self.N_g),
+                    (P.SIN_DECLINATION + "_loc_pl", self.N_pl),
+                    (P.SIN_DECLINATION + "_low_g", self.N_g),
+                    (P.SIN_DECLINATION + "_low_pl", self.N_pl),
+                    (P.SIN_DECLINATION + "_scale_g", self.N_g),
+                    (P.SIN_DECLINATION + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_detection_time:
             all_params.extend(
                 [
-                    (P.DETECTION_TIME.value + "_high_g", self.N_g),
-                    (P.DETECTION_TIME.value + "_high_pl", self.N_pl),
-                    (P.DETECTION_TIME.value + "_low_g", self.N_g),
-                    (P.DETECTION_TIME.value + "_low_pl", self.N_pl),
+                    (P.DETECTION_TIME + "_high_g", self.N_g),
+                    (P.DETECTION_TIME + "_high_pl", self.N_pl),
+                    (P.DETECTION_TIME + "_low_g", self.N_g),
+                    (P.DETECTION_TIME + "_low_pl", self.N_pl),
                 ]
             )
 
         if self.has_cos_iota:
             all_params.extend(
                 [
-                    (P.COS_IOTA.value + "_high_g", self.N_g),
-                    (P.COS_IOTA.value + "_high_pl", self.N_pl),
-                    (P.COS_IOTA.value + "_loc_g", self.N_g),
-                    (P.COS_IOTA.value + "_loc_pl", self.N_pl),
-                    (P.COS_IOTA.value + "_low_g", self.N_g),
-                    (P.COS_IOTA.value + "_low_pl", self.N_pl),
-                    (P.COS_IOTA.value + "_scale_g", self.N_g),
-                    (P.COS_IOTA.value + "_scale_pl", self.N_pl),
+                    (P.COS_IOTA + "_high_g", self.N_g),
+                    (P.COS_IOTA + "_high_pl", self.N_pl),
+                    (P.COS_IOTA + "_loc_g", self.N_g),
+                    (P.COS_IOTA + "_loc_pl", self.N_pl),
+                    (P.COS_IOTA + "_low_g", self.N_g),
+                    (P.COS_IOTA + "_low_pl", self.N_pl),
+                    (P.COS_IOTA + "_scale_g", self.N_g),
+                    (P.COS_IOTA + "_scale_pl", self.N_pl),
                 ]
             )
 
         if self.has_polarization_angle:
             all_params.extend(
                 [
-                    (P.POLARIZATION_ANGLE.value + "_high_g", self.N_g),
-                    (P.POLARIZATION_ANGLE.value + "_high_pl", self.N_pl),
-                    (P.POLARIZATION_ANGLE.value + "_loc_g", self.N_g),
-                    (P.POLARIZATION_ANGLE.value + "_loc_pl", self.N_pl),
-                    (P.POLARIZATION_ANGLE.value + "_low_g", self.N_g),
-                    (P.POLARIZATION_ANGLE.value + "_low_pl", self.N_pl),
-                    (P.POLARIZATION_ANGLE.value + "_scale_g", self.N_g),
-                    (P.POLARIZATION_ANGLE.value + "_scale_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE + "_high_g", self.N_g),
+                    (P.POLARIZATION_ANGLE + "_high_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE + "_loc_g", self.N_g),
+                    (P.POLARIZATION_ANGLE + "_loc_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE + "_low_g", self.N_g),
+                    (P.POLARIZATION_ANGLE + "_low_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE + "_scale_g", self.N_g),
+                    (P.POLARIZATION_ANGLE + "_scale_pl", self.N_pl),
                 ]
             )
 

@@ -86,7 +86,7 @@ def main() -> None:
     )
 
     error_magazine.register(
-        (P.PRIMARY_MASS_SOURCE.value, P.SECONDARY_MASS_SOURCE.value),
+        (P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE),
         lambda x, size, key: banana_error_m1_m2(
             x,
             size,
@@ -96,7 +96,7 @@ def main() -> None:
         ),
     )
 
-    @error_magazine.register(P.ECCENTRICITY.value)
+    @error_magazine.register(P.ECCENTRICITY)
     def ecc_error_fn(x, size, key):
         err_x = dist.TruncatedNormal(
             loc=x,
@@ -110,9 +110,9 @@ def main() -> None:
         return err_x
 
     parameters_name = [
-        P.PRIMARY_MASS_SOURCE.value,
-        P.SECONDARY_MASS_SOURCE.value,
-        P.ECCENTRICITY.value,
+        P.PRIMARY_MASS_SOURCE,
+        P.SECONDARY_MASS_SOURCE,
+        P.ECCENTRICITY,
     ]
 
     logger.info(f"Setting the random number generator key with seed {args.seed}.")
