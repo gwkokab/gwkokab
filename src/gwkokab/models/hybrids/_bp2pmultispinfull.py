@@ -12,7 +12,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ...utils.kernel import log_planck_taper_window
 from ...utils.math import truncnorm_logpdf
-from ..constraints import all_constraint, mass_sandwich
+from ..constraints import all_constraint, mass_ratio_mass_sandwich
 from ..redshift import PowerlawRedshift
 from ..utils import (
     doubly_truncated_power_law_log_prob,
@@ -491,7 +491,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
 
         self._support = all_constraint(
             [
-                mass_sandwich(m2min, mmax),
+                mass_ratio_mass_sandwich(m2min, mmax),
                 constraints.interval(a1_low, a1_high),
                 constraints.interval(a2_low, a2_high),
                 constraints.interval(-1.0, 1.0),
@@ -715,7 +715,7 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> ArrayLike:
-        m1, m2, a1, a2, t1, t2 = jnp.unstack(value, axis=-1)
+        m1, q, a1, a2, t1, t2 = jnp.unstack(value, axis=-1)
         log_prob_m1_component = self._log_prob_m1_unnorm_component(m1)
         log_prob_a1_component = self._log_prob_a1_components(a1)
         log_prob_a2_component = self._log_prob_a2_components(a2)
@@ -737,9 +737,9 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
         _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=1.0, right=1.0)
         safe_Z_q = jnp.where(_Z_q <= 0, 1.0, _Z_q)
         log_Z_q = jnp.where(_Z_q <= 0, 0.0, jnp.log(safe_Z_q))
-        log_prob_q = self._log_prob_q_unnorm(m1, m2 / m1) - log_Z_q
+        log_prob_q = self._log_prob_q_unnorm(m1, q) - log_Z_q
 
-        return -jnp.log(m1) + log_prob_m1_a1_a2_t1_t2 + log_prob_q - self._logZ
+        return log_prob_m1_a1_a2_t1_t2 + log_prob_q - self._logZ
 
 
 def BrokenPowerlawTwoPeakMultiSpinMultiTiltFull(

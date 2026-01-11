@@ -11,9 +11,7 @@ from numpyro.distributions import HalfNormal, Independent
 from ..mass import SmoothedTwoComponentPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
-from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import (
-    ExtendedSupportTransformedDistribution,
     JointDistribution,
     ScaledMixture,
 )
@@ -29,19 +27,15 @@ def PowerlawPeak(
 ) -> ScaledMixture:
     # NOTE: If you change something here, please also change in
     # kokab/one_powerlaw_one_peak/ppd.py
-    smoothing_model = ExtendedSupportTransformedDistribution(
-        SmoothedTwoComponentPrimaryMassRatio(
-            alpha=params["alpha"],
-            beta=params["beta"],
-            delta=params["delta"],
-            lambda_peak=params["lambda_peak"],
-            loc=params["loc"],
-            mmax=params["mmax"],
-            mmin=params["mmin"],
-            scale=params["scale"],
-            validate_args=validate_args,
-        ),
-        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+    smoothing_model = SmoothedTwoComponentPrimaryMassRatio(
+        alpha=params["alpha"],
+        beta=params["beta"],
+        delta=params["delta"],
+        lambda_peak=params["lambda_peak"],
+        loc=params["loc"],
+        mmax=params["mmax"],
+        mmin=params["mmin"],
+        scale=params["scale"],
         validate_args=validate_args,
     )
 

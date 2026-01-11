@@ -315,7 +315,7 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
 
     if P.MASS_RATIO in parameters:
         data[P.MASS_RATIO] = data[P.SECONDARY_MASS_SOURCE] / data[P.PRIMARY_MASS_SOURCE]
-        data["prior"] /= data[P.PRIMARY_MASS_SOURCE]
+        data["prior"] *= data[P.PRIMARY_MASS_SOURCE]
     if P.CHIRP_MASS in parameters:
         jacobian = primary_mass_to_chirp_mass_jacobian(data[P.MASS_RATIO])
         data[P.CHIRP_MASS] = data[P.PRIMARY_MASS_SOURCE] / jacobian
