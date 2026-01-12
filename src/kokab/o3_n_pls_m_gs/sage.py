@@ -158,7 +158,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             names.append(P.ECCENTRICITY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
-        names.append(P.SECONDARY_MASS_SOURCE)
+        names.append(P.MASS_RATIO)
         return names
 
     @property
