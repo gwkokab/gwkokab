@@ -608,6 +608,7 @@ class Sampler:
                     )
                     _save_acceptances(self.resources)
                     _save_chains(self.resources, labels, "train")
+                    _save_loss(self.resources)
 
         logger.info("Transitioning to production: Cleaning up global training samples.")
         for strategy in self.strategy_order[
@@ -767,12 +768,22 @@ def _save_samples(
         local_indices = list(range(start_idx, start_idx + n_local_steps_per_loop))
         selected_indices.extend(local_indices)
 
-    local_sampler_positions = positions[:, selected_indices, :]
+    local_sampler_positions = positions[:, selected_indices, :].reshape(-1, n_dims)
+    local_sampler_positions = local_sampler_positions[
+        ~np.isneginf(local_sampler_positions).any(axis=1)
+    ]
 
     np.savetxt(
         rf"{_INFERENCE_DIRECTORY}/{POSTERIOR_SAMPLES_FILENAME}",
-        local_sampler_positions.reshape(-1, n_dims),
+        local_sampler_positions,
         header=header,
+    )
+
+
+def _save_loss(resources: dict):
+    train_loss_vals = np.array(resources["loss_buffer"].data)
+    np.savetxt(
+        rf"{_INFERENCE_DIRECTORY}/loss.dat", train_loss_vals.reshape(-1), header="loss"
     )
 
 
