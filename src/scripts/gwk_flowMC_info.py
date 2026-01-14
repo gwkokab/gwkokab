@@ -29,10 +29,7 @@ def load_config(path: str) -> Dict[str, Any]:
     with open(path_obj, "r") as f:
         cfg = json.load(f)
 
-    if "bundle_config" not in cfg:
-        raise ValueError("Config file must contain a 'bundle_config' key.")
-
-    return cfg["bundle_config"]
+    return cfg
 
 
 def infer_n_dims(bundle_config: dict, cli_n_dims: Optional[int]) -> int:

@@ -798,34 +798,31 @@ class FlowMCBased(Guru):
         data: Dict[str, Any],
         labels: List[str],
     ) -> None:
-        sampler_config = read_json(self.sampler_settings_filename)
+        sampler_cfg: dict = read_json(self.sampler_settings_filename)
 
-        bundle_config: dict = sampler_config.pop("bundle_config", {})
-
-        batch_size = bundle_config["batch_size"]
-        chain_batch_size = bundle_config["chain_batch_size"]
-        global_thinning = bundle_config["global_thinning"]
-        learning_rate = bundle_config["learning_rate"]
-        local_thinning = bundle_config["local_thinning"]
-        local_sampler_name: str = bundle_config.get("local_sampler_name", "mala")
-        step_size = bundle_config["step_size"]
-        mass_matrix = bundle_config.get("mass_matrix", 1.0)
-        n_leapfrog = bundle_config.get("n_leapfrog", 10)
-        n_chains = bundle_config["n_chains"]
-        n_epochs = bundle_config["n_epochs"]
-        n_global_steps = bundle_config["n_global_steps"]
-        n_local_steps = bundle_config["n_local_steps"]
-        n_max_examples = bundle_config["n_max_examples"]
-        history_window = bundle_config.get("history_window", 100)
-        n_NFproposal_batch_size = bundle_config["n_NFproposal_batch_size"]
-        n_production_loops = bundle_config["n_production_loops"]
-        n_training_loops = bundle_config["n_training_loops"]
-        rq_spline_hidden_units = bundle_config["rq_spline_hidden_units"]
-        rq_spline_n_bins = bundle_config["rq_spline_n_bins"]
-        rq_spline_n_layers = bundle_config["rq_spline_n_layers"]
-        rq_spline_range = bundle_config.get("rq_spline_range", (-10.0, 10.0))
-        rq_spline_range = tuple(rq_spline_range)
-        verbose = bundle_config["verbose"]
+        batch_size = sampler_cfg["batch_size"]
+        chain_batch_size = sampler_cfg["chain_batch_size"]
+        global_thinning = sampler_cfg["global_thinning"]
+        learning_rate = sampler_cfg["learning_rate"]
+        local_thinning = sampler_cfg["local_thinning"]
+        local_sampler_name: str = sampler_cfg.get("local_sampler_name", "mala")
+        step_size = sampler_cfg["step_size"]
+        mass_matrix = sampler_cfg.get("mass_matrix", 1.0)
+        n_leapfrog = sampler_cfg.get("n_leapfrog", 10)
+        n_chains = sampler_cfg["n_chains"]
+        n_epochs = sampler_cfg["n_epochs"]
+        n_global_steps = sampler_cfg["n_global_steps"]
+        n_local_steps = sampler_cfg["n_local_steps"]
+        n_max_examples = sampler_cfg["n_max_examples"]
+        history_window = sampler_cfg.get("history_window", 100)
+        n_NFproposal_batch_size = sampler_cfg["n_NFproposal_batch_size"]
+        n_production_loops = sampler_cfg["n_production_loops"]
+        n_training_loops = sampler_cfg["n_training_loops"]
+        rq_spline_hidden_units = sampler_cfg["rq_spline_hidden_units"]
+        rq_spline_n_bins = sampler_cfg["rq_spline_n_bins"]
+        rq_spline_n_layers = sampler_cfg["rq_spline_n_layers"]
+        rq_spline_range = tuple(sampler_cfg.get("rq_spline_range", (-10.0, 10.0)))
+        verbose = sampler_cfg["verbose"]
 
         logger.debug("Validation for Sampler parameters starting")
 
