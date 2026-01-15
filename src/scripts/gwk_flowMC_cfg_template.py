@@ -93,8 +93,8 @@ def main() -> None:
     args = parser.parse_args()
 
     # Get the flat config and format it with logical spacing
-    sampler_cfg = get_cfg()
-    formatted_output = format_json_with_gaps(sampler_cfg)
+    cfg = get_cfg()
+    formatted_output = format_json_with_gaps(cfg)
 
     with open(args.output, "w") as f:
         f.write(formatted_output)

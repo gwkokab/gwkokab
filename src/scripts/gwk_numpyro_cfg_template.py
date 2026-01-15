@@ -5,7 +5,7 @@
 from typing import Any, Dict
 
 
-def get_numpyro_cfg() -> Dict[str, Any]:
+def get_cfg() -> Dict[str, Any]:
     """Defines the configuration for a NumPyro-based sampler. This structure is kept
     nested to logically separate kernel parameters from MCMC execution parameters.
 
@@ -54,7 +54,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    cfg = get_numpyro_cfg()
+    cfg = get_cfg()
 
     import json
 
