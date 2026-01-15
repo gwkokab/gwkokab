@@ -142,6 +142,8 @@ f_monk_n_pls_m_gs = "kokab.n_pls_m_gs.monk:main"
 # These scripts are for developer/user experience.
 gwk_diag_mass_matrix = "scripts.gwk_diag_mass_matrix:main"
 gwk_flowMC_info = "scripts.gwk_flowMC_info:main"
+gwk_flowMC_cfg_template = "scripts.gwk_flowMC_cfg_template:main"
+gwk_numpyro_cfg_template = "scripts.gwk_numpyro_cfg_template:main"
 
 
 [tool.pytest.ini_options]
