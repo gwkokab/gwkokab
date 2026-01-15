@@ -569,7 +569,7 @@ class Sampler:
         data: dict,
         n_local_steps_per_loop: int,
         n_global_steps_per_loop: int,
-        labels: list[str],
+        labels: List[str],
     ):
         """Sample from the posterior using the local sampler.
 
@@ -607,7 +607,7 @@ class Sampler:
                         rng_key, self.resources, last_step, data
                     )
                     _save_acceptances(self.resources)
-                    _save_chains(self.resources, labels, "train")
+                    _save_chains(self.resources, labels, is_training=True)
                     _save_loss(self.resources)
 
         logger.info("Transitioning to production: Cleaning up global training samples.")
@@ -635,7 +635,7 @@ class Sampler:
                         rng_key, self.resources, last_step, data
                     )
                     _save_acceptances(self.resources)
-                    _save_chains(self.resources, labels, "prod")
+                    _save_chains(self.resources, labels, is_training=False)
                     _save_samples(
                         self.resources,
                         labels,
@@ -711,18 +711,28 @@ def _save_acceptances(resources: dict) -> None:
         )
 
 
-def _save_chains(
-    resources: dict,
-    labels: list[str],
-    phase: Literal["train", "prod"] = "prod",
-) -> None:
-    """Saves chain positions and log_probs for a specific phase (train or prod)."""
+def _save_chains(resources: Dict, labels: List[str], *, is_training: bool) -> None:
+    """Saves the chains to disk.
+
+    Parameters
+    ----------
+    resources : Dict
+        dictionary of resources
+    labels : List[str]
+        list of parameter labels
+    is_training : bool
+        whether the phase is training or production
+    """
     header = " ".join(labels)
 
-    pos_key = (
-        f"positions_{phase}ing" if phase == "train" else f"positions_{phase}uction"
-    )
-    lp_key = f"log_prob_{phase}ing" if phase == "train" else f"log_prob_{phase}uction"
+    if is_training:
+        phase = "train"
+        pos_key = "positions_training"
+        lp_key = "log_prob_training"
+    else:
+        phase = "prod"
+        pos_key = "positions_production"
+        lp_key = "log_prob_production"
 
     if pos_key not in resources:
         logger.warning(f"Key {pos_key} not found in resources. Skipping save.")
@@ -749,24 +759,37 @@ def _save_chains(
 
 
 def _save_samples(
-    resources: dict,
-    labels: list[str],
+    resources: Dict,
+    labels: List[str],
     n_local_steps_per_loop: int,
     n_global_steps_per_loop: int,
 ) -> None:
+    """Saves the posterior samples from the local sampler to disk.
+
+    Parameters
+    ----------
+    resources : Dict
+        dictionary of resources
+    labels : List[str]
+        list of parameter labels
+    n_local_steps_per_loop : int
+        number of local steps per loop
+    n_global_steps_per_loop : int
+        number of global steps per loop
+    """
     header = " ".join(labels)
 
     positions = np.array(resources["positions_production"].data)
 
     _, n_production_steps, n_dims = positions.shape
-    n_loops = n_production_steps // (n_local_steps_per_loop + n_global_steps_per_loop)
 
-    selected_indices = []
-
-    for loop in range(n_loops):
-        start_idx = loop * (n_local_steps_per_loop + n_global_steps_per_loop)
-        local_indices = list(range(start_idx, start_idx + n_local_steps_per_loop))
-        selected_indices.extend(local_indices)
+    selected_indices = list(
+        filter(
+            lambda idx: (idx % (n_local_steps_per_loop + n_global_steps_per_loop))
+            < n_local_steps_per_loop,
+            range(n_production_steps),
+        )
+    )
 
     local_sampler_positions = positions[:, selected_indices, :].reshape(-1, n_dims)
     local_sampler_positions = local_sampler_positions[
@@ -780,7 +803,14 @@ def _save_samples(
     )
 
 
-def _save_loss(resources: dict):
+def _save_loss(resources: dict) -> None:
+    """Saves the training loss to disk.
+
+    Parameters
+    ----------
+    resources : Dict
+        dictionary of resources
+    """
     train_loss_vals = np.array(resources["loss_buffer"].data)
     np.savetxt(
         rf"{_INFERENCE_DIRECTORY}/loss.dat", train_loss_vals.reshape(-1), header="loss"
