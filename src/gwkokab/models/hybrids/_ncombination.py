@@ -616,7 +616,7 @@ def create_two_truncated_normal_mixture(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[MixtureGeneral]:
-    """Create a list of eccentric mixture models.
+    """Create a list of two truncated normal mixture models.
 
     Parameters
     ----------
@@ -646,15 +646,23 @@ def create_two_truncated_normal_mixture(
     comp2_scale_name = parameter_name + "_comp2_scale_" + component_type
     zeta_name = parameter_name + "_zeta_" + component_type
 
-    eccentricity_collection = []
+    two_truncated_normal_mixture_dist_collection = []
 
     for i in range(N):
-        comp1_high = _get_parameter(params, f"{comp1_high_name}_{i}", comp1_high_name)
-        comp2_high = _get_parameter(params, f"{comp2_high_name}_{i}", comp2_high_name)
+        comp1_high = _get_parameter(
+            params, f"{comp1_high_name}_{i}", comp1_high_name, is_necessary=False
+        )
+        comp2_high = _get_parameter(
+            params, f"{comp2_high_name}_{i}", comp2_high_name, is_necessary=False
+        )
         comp1_loc = _get_parameter(params, f"{comp1_loc_name}_{i}", comp1_loc_name)
         comp2_loc = _get_parameter(params, f"{comp2_loc_name}_{i}", comp2_loc_name)
-        comp1_low = _get_parameter(params, f"{comp1_low_name}_{i}", comp1_low_name)
-        comp2_low = _get_parameter(params, f"{comp2_low_name}_{i}", comp2_low_name)
+        comp1_low = _get_parameter(
+            params, f"{comp1_low_name}_{i}", comp1_low_name, is_necessary=False
+        )
+        comp2_low = _get_parameter(
+            params, f"{comp2_low_name}_{i}", comp2_low_name, is_necessary=False
+        )
         comp1_scale = _get_parameter(
             params, f"{comp1_scale_name}_{i}", comp1_scale_name
         )
@@ -663,7 +671,7 @@ def create_two_truncated_normal_mixture(
         )
         zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
 
-        eccentricity_dist = TwoTruncatedNormalMixture(
+        two_truncated_normal_mixture_dist = TwoTruncatedNormalMixture(
             comp1_high=comp1_high,
             comp1_loc=comp1_loc,
             comp1_low=comp1_low,
@@ -675,9 +683,11 @@ def create_two_truncated_normal_mixture(
             zeta=zeta,
             validate_args=validate_args,
         )
-        eccentricity_collection.append(eccentricity_dist)
+        two_truncated_normal_mixture_dist_collection.append(
+            two_truncated_normal_mixture_dist
+        )
 
-    return eccentricity_collection
+    return two_truncated_normal_mixture_dist_collection
 
 
 def create_spin_magnitude_mixture_models(
