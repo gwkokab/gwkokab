@@ -197,7 +197,7 @@ class GaussianPrimaryMassRatio(Distribution):
         )
         self._support = all_constraint(
             [
-                mass_ratio_mass_sandwich(self.m1min, self.mmax),
+                mass_sandwich(self.m1min, self.mmax),
                 constraints.interval(self.m1min, self.mmax),
                 constraints.interval(self.m2min, self.mmax),
             ],
