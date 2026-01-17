@@ -343,8 +343,8 @@ def create_gaussian_primary_mass_ratios(
     N: int,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
-) -> List[ExtendedSupportTransformedDistribution]:
-    """Create a list of ExtendedSupportTransformedDistribution for powerlaws.
+) -> List[GaussianPrimaryMassRatio]:
+    """Create a list of GaussianPrimaryMassRatio.
 
     Parameters
     ----------
@@ -357,13 +357,13 @@ def create_gaussian_primary_mass_ratios(
 
     Returns
     -------
-    List[ExtendedSupportTransformedDistribution]
-        list of ExtendedSupportTransformedDistribution for powerlaws
+    List[GaussianPrimaryMassRatio]
+        list of GaussianPrimaryMassRatio
 
     Raises
     ------
     ValueError
-        if alpha, beta, mmin, or mmax is missing
+        if loc, scale, beta, m1min, m2min, or mmax is missing
     """
     gaussians_collection = []
     loc_name = "loc_g"

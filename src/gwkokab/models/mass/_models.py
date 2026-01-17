@@ -216,7 +216,7 @@ class GaussianPrimaryMassRatio(Distribution):
         m1, m2 = jnp.unstack(value, axis=-1)
         log_prob_m1 = self._trunnorm.log_prob(m1)
         log_prob_q = jnp.where(
-            jnp.less_equal(m1, self.m1min),
+            jnp.less_equal(m1, self.m2min),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
                 x=m2 / m1, alpha=self.beta, low=self.m2min / m1, high=1.0
