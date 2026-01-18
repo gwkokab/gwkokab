@@ -798,7 +798,7 @@ def test_log_prob_gradient(jax_dist, params):
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
-        if (jax_dist is NPowerlawMGaussian):
+        if jax_dist is NPowerlawMGaussian:
             if any([k.startswith("mmin"), k.startswith("mmax")]):
                 continue
             rtol = 0.05
