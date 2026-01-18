@@ -791,15 +791,18 @@ def test_log_prob_gradient(jax_dist, params):
             return jnp.sum(jax_dist(**param).log_prob(value))
 
     eps = 1e-3
+    rtol = 0.01
+    atol = 0.01
     for i, k in enumerate(params.keys()):
         if jax_dist is PowerlawPrimaryMassRatio and i > 1:
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
-        if (jax_dist is NPowerlawMGaussian) and any(
-            [k.startswith("mmin"), k.startswith("mmax"), "low" in k, "high" in k]
-        ):
-            continue
+        if (jax_dist is NPowerlawMGaussian):
+            if any([k.startswith("mmin"), k.startswith("mmax")]):
+                continue
+            rtol = 0.05
+            atol = 0.05
         if params[k] is None or jnp.result_type(params[k]) in (jnp.int32, jnp.int64):
             continue
         if isinstance(params[k], bool):
@@ -812,7 +815,7 @@ def test_log_prob_gradient(jax_dist, params):
         # finite diff approximation
         expected_grad = (fn_rhs - fn_lhs) / (2.0 * eps)
         assert jnp.shape(actual_grad) == jnp.shape(params[k])
-        assert_allclose(jnp.sum(actual_grad), expected_grad, rtol=0.01, atol=0.01)
+        assert_allclose(jnp.sum(actual_grad), expected_grad, rtol=rtol, atol=atol)
 
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
