@@ -1,7 +1,13 @@
 # source: https://prek.j178.dev/integrations/?h=action#github-actions
 
 name: Prek checks
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 jobs:
   prek:
