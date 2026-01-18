@@ -7,6 +7,7 @@ from ._bpls import (
     BrokenPowerlawTwoPeak as BrokenPowerlawTwoPeak,
 )
 from ._models import (
+    GaussianPrimaryMassRatio as GaussianPrimaryMassRatio,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,
