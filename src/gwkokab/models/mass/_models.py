@@ -119,9 +119,9 @@ class GaussianPrimaryMassRatio(Distribution):
     .. math::
         \begin{align*}
             p(m_1\mid\mu,\sigma)&
-            \propto \exp(-\left(\frac{m_1-\mu}{\sigma}\right)^2),\qquad m_{\mathrm{min}}\leq m_1\leq m_{\mathrm{max}}\\
+            \propto \exp(-\left(\frac{m_1-\mu}{\sigma}\right)^2),\qquad m_{1, \mathrm{min}}\leq m_1\leq m_{\mathrm{max}}\\
             p(q\mid m_1,\beta)&
-            \propto q^{\beta},\qquad \frac{m_{\mathrm{min}}}{m_1}\leq q\leq 1
+            \propto q^{\beta},\qquad \frac{m_{2, \mathrm{min}}}{m_1}\leq q\leq 1
         \end{align*}
     """
 
