@@ -82,8 +82,8 @@ Follow these steps to contribute code:
    from the top of the repository:
 
    ```bash
-   pip install pre-commit
-   pre-commit run --all
+   pip install prek
+   prek run --all-files
    ```
 
 9. Make sure the tests pass by running the following command from the top of the repository:
