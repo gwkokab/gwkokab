@@ -116,7 +116,18 @@ class PowerlawPrimaryMassRatio(Distribution):
 
 
 class GaussianPrimaryMassRatio(Distribution):
-    r"""Gaussian for primary mass combined with power law for mass ratio."""
+    r"""Gaussian for primary mass combined with power law for mass ratio.
+
+    .. math::
+
+        p(m_1,q\mid\mu,\sigma,\beta) = p(m_1\mid\mu,\sigma)p(q \mid m_1, \beta)
+
+    .. math::
+        p(m_1\mid\mu,\sigma) \propto \exp\left(-\left(\frac{m_1-\mu}{\sigma}\right)^2\right),\qquad m_{1, \mathrm{min}}\leq m_1\leq m_{1, \mathrm{max}}
+
+    .. math::
+        p(q\mid m_1,\beta) \propto q^{\beta},\qquad \frac{m_{2, \mathrm{min}}}{m_1}\leq q\leq \min\left(1, \frac{m_{2, \mathrm{max}}}{m_1}\right)
+    """
 
     arg_constraints = {
         "beta": constraints.real,
@@ -167,8 +178,6 @@ class GaussianPrimaryMassRatio(Distribution):
             Power law index for mass ratio
         loc : ArrayLike
             Mean of the Gaussian distribution for primary mass
-        scale : ArrayLike
-            Standard deviation of the Gaussian distribution for primary mass
         m1max : ArrayLike
             Maximum primary mass
         m1min : ArrayLike
@@ -177,6 +186,10 @@ class GaussianPrimaryMassRatio(Distribution):
             Maximum secondary mass
         m2min : ArrayLike
             Minimum secondary mass
+        scale : ArrayLike
+            Standard deviation of the Gaussian distribution for primary mass
+        validate_args : Optional[bool], optional
+            Whether to validate the parameters, by default None
         """
         (
             self.beta,
