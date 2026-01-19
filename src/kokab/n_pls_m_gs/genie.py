@@ -373,7 +373,8 @@ def main() -> None:
         ("beta_g", N_g),
         ("m1min_g", N_g),
         ("m2min_g", N_g),
-        ("mmax_g", N_g),
+        ("m1max_g", N_g),
+        ("m2max_g", N_g),
         ("mmax_pl", N_pl),
         ("mmin_pl", N_pl),
     ]

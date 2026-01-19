@@ -12,7 +12,12 @@ from numpyro.distributions import constraints, Distribution, TruncatedNormal
 from numpyro.distributions.util import promote_shapes, validate_sample
 
 from ...utils.kernel import log_planck_taper_window
-from ..constraints import all_constraint, mass_ratio_mass_sandwich, mass_sandwich
+from ..constraints import (
+    all_constraint,
+    decreasing_vector,
+    mass_ratio_mass_sandwich,
+    mass_sandwich,
+)
 from ..utils import (
     doubly_truncated_power_law_icdf,
     doubly_truncated_power_law_log_norm_constant,
@@ -111,95 +116,106 @@ class PowerlawPrimaryMassRatio(Distribution):
 
 
 class GaussianPrimaryMassRatio(Distribution):
-    r"""Gaussian for primary mass combined with power law for mass ratio,
-
-    .. math::
-        p(m_1,q\mid\\mu,\sigma,\beta) = p(m_1\mid\mu,\sigma)p(q \mid m_1, \beta)
-
-    .. math::
-        \begin{align*}
-            p(m_1\mid\mu,\sigma)&
-            \propto \exp(-\left(\frac{m_1-\mu}{\sigma}\right)^2),\qquad m_{1, \mathrm{min}}\leq m_1\leq m_{\mathrm{max}}\\
-            p(q\mid m_1,\beta)&
-            \propto q^{\beta},\qquad \frac{m_{2, \mathrm{min}}}{m_1}\leq q\leq 1
-        \end{align*}
-    """
+    r"""Gaussian for primary mass combined with power law for mass ratio."""
 
     arg_constraints = {
         "beta": constraints.real,
         "loc": constraints.real,
+        "m1max": constraints.positive,
         "m1min": constraints.positive,
+        "m2max": constraints.positive,
         "m2min": constraints.positive,
-        "mmax": constraints.positive,
         "scale": constraints.positive,
     }
-    reparametrized_params = ["loc", "scale", "beta", "m1min", "m2min", "mmax"]
+    reparametrized_params = [
+        "beta",
+        "loc",
+        "m1max",
+        "m1min",
+        "m2max",
+        "m2min",
+        "scale",
+    ]
     pytree_data_fields = (
         "_support",
         "_trunnorm",
         "beta",
         "loc",
+        "m1max",
         "m1min",
+        "m2max",
         "m2min",
-        "mmax",
         "scale",
     )
 
     def __init__(
         self,
-        loc: ArrayLike,
-        scale: ArrayLike,
         beta: ArrayLike,
+        loc: ArrayLike,
+        m1max: ArrayLike,
         m1min: ArrayLike,
+        m2max: ArrayLike,
         m2min: ArrayLike,
-        mmax: ArrayLike,
+        scale: ArrayLike,
         *,
         validate_args: Optional[bool] = None,
     ) -> None:
         """
         Parameters
         ----------
+        beta : ArrayLike
+            Power law index for mass ratio
         loc : ArrayLike
             Mean of the Gaussian distribution for primary mass
         scale : ArrayLike
             Standard deviation of the Gaussian distribution for primary mass
-        beta : ArrayLike
-            Power law index for mass ratio
+        m1max : ArrayLike
+            Maximum primary mass
         m1min : ArrayLike
             Minimum primary mass
+        m2max : ArrayLike
+            Maximum secondary mass
         m2min : ArrayLike
             Minimum secondary mass
-        mmax : ArrayLike
-            Maximum primary mass
         """
         (
-            self.loc,
-            self.scale,
             self.beta,
+            self.loc,
+            self.m1max,
             self.m1min,
+            self.m2max,
             self.m2min,
-            self.mmax,
-        ) = promote_shapes(loc, scale, beta, m1min, m2min, mmax)
+            self.scale,
+        ) = promote_shapes(
+            beta,
+            loc,
+            m1max,
+            m1min,
+            m2max,
+            m2min,
+            scale,
+        )
         batch_shape = lax.broadcast_shapes(
-            jnp.shape(loc),
-            jnp.shape(scale),
             jnp.shape(beta),
+            jnp.shape(loc),
+            jnp.shape(m1max),
             jnp.shape(m1min),
+            jnp.shape(m2max),
             jnp.shape(m2min),
-            jnp.shape(mmax),
+            jnp.shape(scale),
         )
         self._trunnorm = TruncatedNormal(
             loc=self.loc,
             scale=self.scale,
             low=self.m1min,
-            high=self.mmax,
+            high=self.m1max,
             validate_args=validate_args,
         )
         self._support = all_constraint(
             [
-                mass_sandwich(self.m1min, self.mmax),
-                constraints.interval(self.m1min, self.mmax),
-                constraints.interval(self.m2min, self.mmax),
+                decreasing_vector,
+                constraints.interval(self.m1min, self.m1max),
+                constraints.interval(self.m2min, self.m2max),
             ],
             [(0, 2), 0, 1],
         )
@@ -219,7 +235,10 @@ class GaussianPrimaryMassRatio(Distribution):
             jnp.less_equal(m1, self.m2min),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
-                x=m2 / m1, alpha=self.beta, low=self.m2min / m1, high=1.0
+                x=m2 / m1,
+                alpha=self.beta,
+                low=self.m2min / m1,
+                high=jnp.minimum(1.0, jnp.divide(self.m2max, m1)),
             ),
         )
 
@@ -233,7 +252,7 @@ class GaussianPrimaryMassRatio(Distribution):
             q=u_q,
             alpha=self.beta,
             low=jnp.divide(self.m2min, m1),
-            high=1.0,
+            high=jnp.minimum(1.0, jnp.divide(self.m2max, m1)),
         )
         m2 = m1 * q
         return jnp.stack((m1, m2), axis=-1)

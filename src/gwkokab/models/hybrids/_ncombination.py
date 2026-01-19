@@ -371,21 +371,24 @@ def create_gaussian_primary_mass_ratios(
     beta_name = "beta_g"
     m1min_name = "m1min_g"
     m2min_name = "m2min_g"
-    mmax_name = "mmax_g"
+    m1max_name = "m1max_g"
+    m2max_name = "m2max_g"
     for i in range(N):
         loc = _get_parameter(params, f"{loc_name}_{i}", loc_name)
         scale = _get_parameter(params, f"{scale_name}_{i}", scale_name)
         beta = _get_parameter(params, f"{beta_name}_{i}", beta_name)
         m1min = _get_parameter(params, f"{m1min_name}_{i}", m1min_name)
         m2min = _get_parameter(params, f"{m2min_name}_{i}", m2min_name)
-        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
+        m1max = _get_parameter(params, f"{m1max_name}_{i}", m1max_name)
+        m2max = _get_parameter(params, f"{m2max_name}_{i}", m2max_name)
         gaussian = GaussianPrimaryMassRatio(
             loc=loc,
             scale=scale,
             beta=beta,
             m1min=m1min,
             m2min=m2min,
-            mmax=mmax,
+            m1max=m1max,
+            m2max=m2max,
             validate_args=validate_args,
         )
         gaussians_collection.append(gaussian)

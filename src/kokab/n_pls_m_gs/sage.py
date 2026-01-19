@@ -233,7 +233,8 @@ class NPowerlawMGaussianCore(Sage):
             ("beta_g", self.N_g),
             ("m1min_g", self.N_g),
             ("m2min_g", self.N_g),
-            ("mmax_g", self.N_g),
+            ("m1max_g", self.N_g),
+            ("m2max_g", self.N_g),
             ("mmax_pl", self.N_pl),
             ("mmin_pl", self.N_pl),
         ]
