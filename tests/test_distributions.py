@@ -88,14 +88,14 @@ generic_nspmsg = {
     "mmax_g_1": 180.0,
     "delta_g_1": 5,
     # "use_spin": True,
-    "a_1_mean_g": 0.5,
-    "a_1_mean_pl": 0.7,
-    "a_2_mean_g": 0.2,
-    "a_2_mean_pl": 0.6,
-    "a_1_variance_g": 0.1,
-    "a_1_variance_pl": 0.2,
-    "a_2_variance_g": 0.14,
-    "a_2_variance_pl": 0.1,
+    "chi1_mean_g": 0.5,
+    "chi1_mean_pl": 0.7,
+    "chi2_mean_g": 0.2,
+    "chi2_mean_pl": 0.6,
+    "chi1_variance_g": 0.1,
+    "chi1_variance_pl": 0.2,
+    "chi2_variance_g": 0.14,
+    "chi2_variance_pl": 0.1,
     # "use_tilt": True,
     "cos_tilt_zeta_g_0": 0.5,
     "cos_tilt_zeta_g_1": 0.5,
@@ -148,28 +148,32 @@ generic_npmg = {
     "mmax_pl_1": 100.0,
     "delta_pl_1": 20,
     ## gaussian 0
-    "loc_g_0": 70.0,
-    "scale_g_0": 3.2,
-    "m1min_g_0": 10.0,
-    "m2min_g_0": 10.0,
-    "mmax_g_0": 180.0,
-    "beta_g_0": 2.0,
+    "m1_loc_g_0": 70.0,
+    "m2_loc_g_0": 30.0,
+    "m1_scale_g_0": 2.1,
+    "m2_scale_g_0": 3.2,
+    "m1_low_g_0": 10.0,
+    "m1_high_g_0": 180.0,
+    "m2_low_g_0": 10.0,
+    "m2_high_g_0": 180.0,
     ## gaussian 1
-    "loc_g_1": 80.0,
-    "scale_g_1": 2.2,
-    "m1min_g_1": 10.0,
-    "m2min_g_1": 10.0,
-    "mmax_g_1": 180.0,
-    "beta_g_1": 1.5,
+    "m1_loc_g_1": 80.0,
+    "m2_loc_g_1": 20.0,
+    "m1_scale_g_1": 1.1,
+    "m2_scale_g_1": 2.2,
+    "m1_low_g_1": 10.0,
+    "m1_high_g_1": 180.0,
+    "m2_low_g_1": 10.0,
+    "m2_high_g_1": 180.0,
     # "use_spin": True,
-    "a_1_mean_g": 0.5,
-    "a_1_mean_pl": 0.7,
-    "a_2_mean_g": 0.2,
-    "a_2_mean_pl": 0.6,
-    "a_1_variance_g": 0.1,
-    "a_1_variance_pl": 0.2,
-    "a_2_variance_g": 0.14,
-    "a_2_variance_pl": 0.1,
+    "chi1_mean_g": 0.5,
+    "chi1_mean_pl": 0.7,
+    "chi2_mean_g": 0.2,
+    "chi2_mean_pl": 0.6,
+    "chi1_variance_g": 0.1,
+    "chi1_variance_pl": 0.2,
+    "chi2_variance_g": 0.14,
+    "chi2_variance_pl": 0.1,
     # "use_tilt": True,
     "cos_tilt_zeta_g_0": 0.5,
     "cos_tilt_zeta_g_1": 0.5,
@@ -228,26 +232,11 @@ CONTINUOUS = [
     (NPowerlawMGaussian, {"N_pl": 1, "N_g": 2, **generic_npmg}),
     (NPowerlawMGaussian, {"N_pl": 2, "N_g": 2, **generic_npmg}),
     ######### NPowerlawMGaussian (m1, m2, chi1, chi2) #########
-    (
-        NPowerlawMGaussian,
-        {"N_pl": 1, "N_g": 0, "use_beta_spin_magnitude": True, **generic_npmg},
-    ),
-    (
-        NPowerlawMGaussian,
-        {"N_pl": 0, "N_g": 1, "use_beta_spin_magnitude": True, **generic_npmg},
-    ),
-    (
-        NPowerlawMGaussian,
-        {"N_pl": 1, "N_g": 1, "use_beta_spin_magnitude": True, **generic_npmg},
-    ),
-    (
-        NPowerlawMGaussian,
-        {"N_pl": 1, "N_g": 2, "use_beta_spin_magnitude": True, **generic_npmg},
-    ),
-    (
-        NPowerlawMGaussian,
-        {"N_pl": 2, "N_g": 2, "use_beta_spin_magnitude": True, **generic_npmg},
-    ),
+    (NPowerlawMGaussian, {"N_pl": 1, "N_g": 0, "use_spin": True, **generic_npmg}),
+    (NPowerlawMGaussian, {"N_pl": 0, "N_g": 1, "use_spin": True, **generic_npmg}),
+    (NPowerlawMGaussian, {"N_pl": 1, "N_g": 1, "use_spin": True, **generic_npmg}),
+    (NPowerlawMGaussian, {"N_pl": 1, "N_g": 2, "use_spin": True, **generic_npmg}),
+    (NPowerlawMGaussian, {"N_pl": 2, "N_g": 2, "use_spin": True, **generic_npmg}),
     ######### NPowerlawMGaussian (m1, m2, cos_tilt_1, cos_tilt_2) #########
     (NPowerlawMGaussian, {"N_pl": 1, "N_g": 0, "use_tilt": True, **generic_npmg}),
     (NPowerlawMGaussian, {"N_pl": 0, "N_g": 1, "use_tilt": True, **generic_npmg}),
@@ -281,7 +270,7 @@ CONTINUOUS = [
         {
             "N_pl": 1,
             "N_g": 0,
-            "use_beta_spin_magnitude": True,
+            "use_spin": True,
             "use_tilt": True,
             "use_eccentricity": True,
             **generic_npmg,
@@ -292,7 +281,7 @@ CONTINUOUS = [
         {
             "N_pl": 0,
             "N_g": 1,
-            "use_beta_spin_magnitude": True,
+            "use_spin": True,
             "use_tilt": True,
             "use_eccentricity": True,
             **generic_npmg,
@@ -303,7 +292,7 @@ CONTINUOUS = [
         {
             "N_pl": 1,
             "N_g": 1,
-            "use_beta_spin_magnitude": True,
+            "use_spin": True,
             "use_tilt": True,
             "use_eccentricity": True,
             **generic_npmg,
@@ -314,7 +303,7 @@ CONTINUOUS = [
         {
             "N_pl": 1,
             "N_g": 2,
-            "use_beta_spin_magnitude": True,
+            "use_spin": True,
             "use_tilt": True,
             "use_eccentricity": True,
             **generic_npmg,
@@ -325,7 +314,7 @@ CONTINUOUS = [
         {
             "N_pl": 2,
             "N_g": 2,
-            "use_beta_spin_magnitude": True,
+            "use_spin": True,
             "use_tilt": True,
             "use_eccentricity": True,
             **generic_npmg,
@@ -791,18 +780,15 @@ def test_log_prob_gradient(jax_dist, params):
             return jnp.sum(jax_dist(**param).log_prob(value))
 
     eps = 1e-3
-    rtol = 0.01
-    atol = 0.01
     for i, k in enumerate(params.keys()):
         if jax_dist is PowerlawPrimaryMassRatio and i > 1:
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
-        if jax_dist is NPowerlawMGaussian:
-            if any([k.startswith("mmin"), k.startswith("mmax")]):
-                continue
-            rtol = 0.05
-            atol = 0.05
+        if (jax_dist is NPowerlawMGaussian) and any(
+            [k.startswith("mmin"), k.startswith("mmax"), "low" in k, "high" in k]
+        ):
+            continue
         if params[k] is None or jnp.result_type(params[k]) in (jnp.int32, jnp.int64):
             continue
         if isinstance(params[k], bool):
@@ -815,7 +801,7 @@ def test_log_prob_gradient(jax_dist, params):
         # finite diff approximation
         expected_grad = (fn_rhs - fn_lhs) / (2.0 * eps)
         assert jnp.shape(actual_grad) == jnp.shape(params[k])
-        assert_allclose(jnp.sum(actual_grad), expected_grad, rtol=rtol, atol=atol)
+        assert_allclose(jnp.sum(actual_grad), expected_grad, rtol=0.01, atol=0.01)
 
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)

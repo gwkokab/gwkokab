@@ -10,7 +10,6 @@ from numpyro.distributions import Distribution
 
 from ...parameters import Parameters as P
 from ..constraints import any_constraint
-from ..mass import GaussianPrimaryMassRatio
 from ..utils import (
     ExtendedSupportTransformedDistribution,
     JointDistribution,
@@ -19,7 +18,6 @@ from ..utils import (
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
-    create_gaussian_primary_mass_ratios,
     create_gwtc4_effective_spin_skew_normal_models,
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_primary_mass_ratios,
@@ -342,16 +340,26 @@ def _build_g_component_distributions(
     List[JointDistribution]
         list of JointDistribution
     """
-    gaussians = create_gaussian_primary_mass_ratios(
+    m1_dists = create_truncated_normal_distributions(
         N=N,
+        parameter_name="m1",
+        component_type="g",
+        params=params,
+        validate_args=validate_args,
+    )
+    m2_dists = create_truncated_normal_distributions(
+        N=N,
+        parameter_name="m2",
+        component_type="g",
         params=params,
         validate_args=validate_args,
     )
 
     mass_distributions = jtr.map(
-        lambda gaussian: [gaussian],
-        gaussians,
-        is_leaf=lambda x: isinstance(x, GaussianPrimaryMassRatio),
+        lambda m1, m2: [m1, m2],
+        m1_dists,
+        m2_dists,
+        is_leaf=lambda x: isinstance(x, Distribution),
     )
 
     build_distributions = _build_non_mass_distributions(

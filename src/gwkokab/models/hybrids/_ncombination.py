@@ -15,7 +15,7 @@ from numpyro.distributions import (
 )
 
 from ...parameters import Parameters as P
-from ..mass import BrokenPowerlaw, GaussianPrimaryMassRatio, PowerlawPrimaryMassRatio
+from ..mass import BrokenPowerlaw, PowerlawPrimaryMassRatio
 from ..redshift import PowerlawRedshift
 from ..spin import (
     BetaFromMeanVar,
@@ -32,7 +32,6 @@ __all__ = [
     "combine_distributions",
     "create_beta_distributions",
     "create_broken_powerlaws",
-    "create_gaussian_primary_mass_ratios",
     "create_gwtc4_effective_spin_skew_normal_models",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_powerlaw_primary_mass_ratios",
@@ -337,59 +336,6 @@ def create_powerlaw_primary_mass_ratios(
         )
         powerlaws_collection.append(transformed_powerlaw)
     return powerlaws_collection
-
-
-def create_gaussian_primary_mass_ratios(
-    N: int,
-    params: Dict[str, Array],
-    validate_args: Optional[bool] = None,
-) -> List[GaussianPrimaryMassRatio]:
-    """Create a list of GaussianPrimaryMassRatio.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[GaussianPrimaryMassRatio]
-        list of GaussianPrimaryMassRatio
-
-    Raises
-    ------
-    ValueError
-        if loc, scale, beta, m1min, m2min, or mmax is missing
-    """
-    gaussians_collection = []
-    loc_name = "loc_g"
-    scale_name = "scale_g"
-    beta_name = "beta_g"
-    m1min_name = "m1min_g"
-    m2min_name = "m2min_g"
-    mmax_name = "mmax_g"
-    for i in range(N):
-        loc = _get_parameter(params, f"{loc_name}_{i}", loc_name)
-        scale = _get_parameter(params, f"{scale_name}_{i}", scale_name)
-        beta = _get_parameter(params, f"{beta_name}_{i}", beta_name)
-        m1min = _get_parameter(params, f"{m1min_name}_{i}", m1min_name)
-        m2min = _get_parameter(params, f"{m2min_name}_{i}", m2min_name)
-        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
-        gaussian = GaussianPrimaryMassRatio(
-            loc=loc,
-            scale=scale,
-            beta=beta,
-            m1min=m1min,
-            m2min=m2min,
-            mmax=mmax,
-            validate_args=validate_args,
-        )
-        gaussians_collection.append(gaussian)
-    return gaussians_collection
 
 
 def create_powerlaw_redshift(

@@ -24,7 +24,6 @@ from .hybrids import (
 from .mass import (
     BrokenPowerlaw as BrokenPowerlaw,
     BrokenPowerlawTwoPeak as BrokenPowerlawTwoPeak,
-    GaussianPrimaryMassRatio as GaussianPrimaryMassRatio,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,
