@@ -161,27 +161,20 @@ class PopulationFactory:
 
         population, [indices] = self.model.sample_with_intermediates(key, (size,))
 
-        raw_population = population
-        raw_indices = indices
-
         m1_index = self.parameters.index("mass_1_source")
         m2_index = self.parameters.index("mass_2_source")
 
         m1 = population[:, m1_index]
         m2 = population[:, m2_index]
 
-        mask = np.less_equal(m2, m1)
+        m1_new = jnp.maximum(m1, m2)
+        m2_new = jnp.minimum(m1, m2)
 
-        count = jnp.sum(mask)
+        population = population.at[:, m1_index].set(m1_new)
+        population = population.at[:, m2_index].set(m2_new)
 
-        logger.debug(
-            "Number of injections with m2 <= m1: {count} out of {size}",
-            count=count,
-            size=size,
-        )
-
-        population = population[mask]
-        indices = indices[mask]
+        raw_population = population
+        raw_indices = indices
 
         if self.log_selection_fn is not None:
             _, key = jrd.split(key)
