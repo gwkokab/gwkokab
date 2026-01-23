@@ -167,6 +167,13 @@ class PopulationFactory:
         m1 = population[:, m1_index]
         m2 = population[:, m2_index]
 
+        num_swapped = jnp.sum(m2 > m1)
+        logger.debug(
+            "Swapping {count} injections with m2 > m1 out of {size}",
+            count=num_swapped,
+            size=size,
+        )
+
         m1_new = jnp.maximum(m1, m2)
         m2_new = jnp.minimum(m1, m2)
 
