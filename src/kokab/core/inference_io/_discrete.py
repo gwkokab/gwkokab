@@ -8,8 +8,7 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 import numpy as np
 import pandas as pd
 from loguru import logger
-from pydantic import BaseModel, Field, field_validator, PositiveInt
-from pydantic_core.core_schema import ValidatorFunctionWrapHandler
+from pydantic import BaseModel, Field, PositiveInt
 
 from gwkokab.cosmology import PLANCK_2015_Cosmology
 from gwkokab.parameters import Parameters as P
@@ -27,7 +26,6 @@ class DiscreteParameterEstimationLoader(BaseModel):
     """Data loader for discrete parameter estimation with refactored logic."""
 
     filenames: Tuple[str, ...]
-    parameters: Tuple[str, ...]
     parameter_aliases: Dict[str, str] = Field(default_factory=dict)
     max_samples: Optional[PositiveInt] = Field(None)
     mass_prior: Literal[
@@ -39,28 +37,19 @@ class DiscreteParameterEstimationLoader(BaseModel):
     spin_prior: Literal[None, "component"] = Field(None)
     distance_prior: Literal[None, "comoving", "euclidean"] = Field(None)
 
-    @field_validator("parameters", mode="wrap")
-    def validate_parameters(
-        cls, input_value: Any, handler: ValidatorFunctionWrapHandler
-    ):
-        if not isinstance(input_value, (list, tuple)):
-            raise TypeError("Parameters must be a list or tuple of strings.")
-        parameters = tuple(p.value if isinstance(p, P) else p for p in input_value)
-        return handler(parameters)
-
     @classmethod
-    def from_json(
-        cls, config_path: str, parameters: Tuple[str, ...]
-    ) -> "DiscreteParameterEstimationLoader":
+    def from_json(cls, config_path: str) -> "DiscreteParameterEstimationLoader":
         raw_data = read_json(config_path)
         error_if("regex" not in raw_data, msg="The 'regex' field is required.")
 
         filenames = tuple(sorted(glob.glob(raw_data.pop("regex"))))
         error_if(not filenames, msg="No files matched the regex pattern.")
 
-        return cls(**raw_data, filenames=filenames, parameters=parameters)
+        return cls(**raw_data, filenames=filenames)
 
-    def load(self, seed: int = 37) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+    def load(
+        self, parameters: Tuple[str, ...], seed: int = 37
+    ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
         """Main entry point to load data and calculate priors."""
         # Pre-resolve aliases to avoid dict lookups in the loop
         aliases = {
@@ -81,7 +70,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
             ]
         }
 
-        posterior_columns = [self.parameter_aliases.get(p, p) for p in self.parameters]
+        posterior_columns = [self.parameter_aliases.get(p, p) for p in parameters]
         cosmo = PLANCK_2015_Cosmology()
 
         data_list, log_prior_list = [], []
@@ -99,9 +88,11 @@ class DiscreteParameterEstimationLoader(BaseModel):
             # Priors (Log only on first iteration)
             should_log = i == 0
 
-            log_prior += self._calculate_distance_prior(df, cosmo, aliases, should_log)
-            log_prior += self._calculate_mass_prior(df, aliases, should_log)
-            log_prior += self._calculate_spin_prior(df, aliases, should_log)
+            log_prior += self._calculate_distance_prior(
+                df, parameters, cosmo, aliases, should_log
+            )
+            log_prior += self._calculate_mass_prior(df, parameters, aliases, should_log)
+            log_prior += self._calculate_spin_prior(df, parameters, aliases, should_log)
 
             data_list.append(df[posterior_columns].to_numpy())
             log_prior_list.append(log_prior)
@@ -140,7 +131,12 @@ class DiscreteParameterEstimationLoader(BaseModel):
         )
 
     def _calculate_distance_prior(
-        self, df: pd.DataFrame, cosmo: Any, aliases: Dict, log: bool
+        self,
+        df: pd.DataFrame,
+        parameters: Tuple[str, ...],
+        cosmo: Any,
+        aliases: Dict,
+        log: bool,
     ) -> np.ndarray:
         if self.distance_prior is None:
             return 0.0
@@ -160,7 +156,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
         return 0.0
 
     def _calculate_mass_prior(
-        self, df: pd.DataFrame, aliases: Dict, log: bool
+        self, df: pd.DataFrame, parameters: Tuple[str, ...], aliases: Dict, log: bool
     ) -> np.ndarray:
         if self.mass_prior is None:
             return 0.0
@@ -168,14 +164,14 @@ class DiscreteParameterEstimationLoader(BaseModel):
         lp = np.zeros(len(df))
         q = self._get_q(df, aliases)
         error_if(
-            P.REDSHIFT not in self.parameters,
+            P.REDSHIFT not in parameters,
             ValueError,
             "Redshift must be included in parameters when using a mass prior.",
         )
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
 
-        if log and aliases[P.MASS_RATIO] in self.parameters:
+        if log and aliases[P.MASS_RATIO] in parameters:
             logger.info(
                 "Model is defined in terms of mass ratio, adjusting prior accordingly."
             )
@@ -191,7 +187,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
                     - np.log1p(z)
                     + np.log(primary_mass_to_chirp_mass_jacobian(q))
                 )
-            if aliases[P.MASS_RATIO] in self.parameters:
+            if aliases[P.MASS_RATIO] in parameters:
                 if log:
                     logger.info(
                         "Model is defined in terms of mass ratio, adjusting prior accordingly."
@@ -202,7 +198,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
             m1_det = df[aliases[P.PRIMARY_MASS_DETECTED]].to_numpy()
             if self.mass_prior == "flat-detector-chirp-mass-ratio":
                 lp -= np.log(m1_det) + np.log(primary_mass_to_chirp_mass_jacobian(q))
-            if aliases[P.MASS_RATIO] in self.parameters:
+            if aliases[P.MASS_RATIO] in parameters:
                 lp += np.log(m1_det)
 
         if any(
@@ -218,7 +214,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
         return lp
 
     def _calculate_spin_prior(
-        self, df: pd.DataFrame, aliases: Dict, log: bool
+        self, df: pd.DataFrame, parameters: Tuple[str, ...], aliases: Dict, log: bool
     ) -> np.ndarray:
         lp = 0.0
         if self.spin_prior == "component":
