@@ -3,12 +3,7 @@
 
 
 import json
-from typing import Dict, List, Optional, Tuple
-
-import numpy as np
-import pandas as pd
-
-from gwkokab.utils.tools import warn_if
+from typing import Dict, List, Tuple
 
 
 def read_json(json_file: str) -> Dict:
@@ -80,63 +75,6 @@ def expand_arguments(arg: str, n: int) -> List[str]:
         list of extended arguments
     """
     return [f"{arg}_{i}" for i in range(n)]
-
-
-def get_posterior_data(
-    filenames: List[str],
-    posterior_columns: List[str],
-    n_pe_samples: Optional[int] = None,
-    seed: Optional[int] = 37,
-) -> List[np.ndarray]:
-    """Get the posterior data from a list of files.
-
-    Parameters
-    ----------
-    filenames : List[str]
-        list of filenames
-    posterior_columns : List[str]
-        list of posterior columns
-    n_pe_samples : Optional[int]
-        number of parameter estimations to randomly select from the posterior samples for
-        each event. If None, all samples will be used.
-    seed : Optional[int]
-        random seed for sampling posterior data
-
-    Returns
-    -------
-    List[np.ndarray]
-        dictionary of posterior data
-
-    Raises
-    ------
-    ValueError
-        If no files are found to read posterior data
-    KeyError
-        If the file is missing required columns
-    """
-    if len(filenames) == 0:
-        raise ValueError("No files found to read posterior data")
-    if seed is None:
-        seed = 37
-    data_list = []
-    for event in filenames:
-        df = pd.read_csv(event, delimiter=" ")
-        missing_columns = set(posterior_columns) - set(df.columns)
-        if missing_columns:
-            raise KeyError(
-                f"The file '{event}' is missing required columns: {missing_columns}"
-            )
-        if n_pe_samples is not None:
-            n_total_samples = len(df)
-            warn_if(
-                n_pe_samples > n_total_samples,
-                msg=f"Requested {n_pe_samples} samples, but only {n_total_samples} "
-                f"available in '{event}'. Using all available samples.",
-            )
-            df = df.sample(n=min(n_pe_samples, n_total_samples), random_state=seed)
-        data = df[posterior_columns].to_numpy()
-        data_list.append(data)
-    return data_list
 
 
 def ppd_ranges(

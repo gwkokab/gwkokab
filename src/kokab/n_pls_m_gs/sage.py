@@ -15,6 +15,7 @@ from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.core.inference_io import DiscreteParameterEstimationLoader as DataLoader
 from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.core.sage import Sage, sage_arg_parser
 from kokab.utils.checks import check_min_concentration_for_beta_dist
@@ -105,9 +106,7 @@ class NPowerlawMGaussianCore(Sage):
             ],
             Callable,
         ],
-        posterior_regex: str,
-        read_reference_prior: bool,
-        n_pe_samples: Optional[int],
+        data_loader: DataLoader,
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -142,9 +141,7 @@ class NPowerlawMGaussianCore(Sage):
         super().__init__(
             likelihood_fn=likelihood_fn,
             model=NPowerlawMGaussian,
-            posterior_regex=posterior_regex,
-            read_reference_prior=read_reference_prior,
-            n_pe_samples=n_pe_samples,
+            data_loader=data_loader,
             seed=seed,
             prior_filename=prior_filename,
             poisson_mean_filename=poisson_mean_filename,
@@ -668,6 +665,8 @@ def f_main() -> None:
 
     log_info(start=True)
 
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
     NPowerlawMGaussianFSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -689,9 +688,7 @@ def f_main() -> None:
         has_sin_declination=args.add_sin_declination,
         has_detection_time=args.add_detection_time,
         likelihood_fn=flowMC_poisson_likelihood,
-        posterior_regex=args.posterior_regex,
-        read_reference_prior=args.read_reference_prior,
-        n_pe_samples=args.n_pe_samples,
+        data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
@@ -715,6 +712,8 @@ def n_main() -> None:
 
     log_info(start=True)
 
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
     NPowerlawMGaussianNSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -736,9 +735,7 @@ def n_main() -> None:
         has_sin_declination=args.add_sin_declination,
         has_detection_time=args.add_detection_time,
         likelihood_fn=numpyro_poisson_likelihood,
-        posterior_regex=args.posterior_regex,
-        read_reference_prior=args.read_reference_prior,
-        n_pe_samples=args.n_pe_samples,
+        data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,

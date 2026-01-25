@@ -15,6 +15,7 @@ from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.core.inference_io import DiscreteParameterEstimationLoader as DataLoader
 from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.core.sage import Sage, sage_arg_parser
 from kokab.utils.checks import check_min_concentration_for_beta_dist
@@ -82,9 +83,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             ],
             Callable,
         ],
-        posterior_regex: str,
-        read_reference_prior: bool,
-        n_pe_samples: Optional[int],
+        data_loader: DataLoader,
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -110,9 +109,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
         super().__init__(
             likelihood_fn=likelihood_fn,
             model=NSmoothedPowerlawMSmoothedGaussian,
-            posterior_regex=posterior_regex,
-            read_reference_prior=read_reference_prior,
-            n_pe_samples=n_pe_samples,
+            data_loader=data_loader,
             seed=seed,
             prior_filename=prior_filename,
             poisson_mean_filename=poisson_mean_filename,
@@ -417,6 +414,8 @@ def f_main() -> None:
 
     log_info(start=True)
 
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
     class NSmoothedPowerlawMSmoothedGaussianFSage(
         NSmoothedPowerlawMSmoothedGaussianCore, FlowMCBased
     ):
@@ -434,9 +433,7 @@ def f_main() -> None:
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
-        posterior_regex=args.posterior_regex,
-        read_reference_prior=args.read_reference_prior,
-        n_pe_samples=args.n_pe_samples,
+        data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
@@ -460,6 +457,8 @@ def n_main() -> None:
 
     log_info(start=True)
 
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
     class NSmoothedPowerlawMSmoothedGaussianNSage(
         NSmoothedPowerlawMSmoothedGaussianCore, NumpyroBased
     ):
@@ -477,9 +476,7 @@ def n_main() -> None:
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
-        posterior_regex=args.posterior_regex,
-        read_reference_prior=args.read_reference_prior,
-        n_pe_samples=args.n_pe_samples,
+        data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,

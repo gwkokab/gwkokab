@@ -8,10 +8,6 @@
 from typing import Final, Literal
 
 
-LOG_REF_PRIOR_NAME: Final[Literal["log_prior"]] = "log_prior"
-"""Helper variable to store the column name of log reference prior."""
-
-
 INFERENCE_DIRECTORY: Final[Literal["inference"]] = "inference"
 """Name of the directory to store inference results."""
 
