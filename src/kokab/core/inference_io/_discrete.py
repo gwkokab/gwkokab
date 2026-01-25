@@ -33,13 +33,17 @@ class DiscreteParameterEstimationLoader(BaseModel):
     """List of filenames to load samples from."""
 
     parameter_aliases: Dict[str, str] = Field(default_factory=dict)
-    """Alternate names for parameters in the files. For example, GWKokab uses
-    'chirp_mass_detector' but the files may use 'mc_det'. This dictionary maps
-    GWKokab parameter names to file column names.
+    """Alternate names for parameters in the files.
+
+    For example, GWKokab uses 'chirp_mass_detector' but the files may use 'mc_det'. This
+    dictionary maps GWKokab parameter names to file column names.
     """
 
     max_samples: Optional[PositiveInt] = Field(None)
-    """Maximum number of samples to load from each file. If None, all samples are used."""
+    """Maximum number of samples to load from each file.
+
+    If None, all samples are used.
+    """
 
     mass_prior: Literal[
         None,
@@ -53,7 +57,10 @@ class DiscreteParameterEstimationLoader(BaseModel):
     """Spin prior to apply when calculating log prior weights."""
 
     distance_prior: Literal[None, "comoving", "euclidean"] = Field(None)
-    """Distance prior to apply when calculating log prior weights. It assumes cosmo samples."""
+    """Distance prior to apply when calculating log prior weights.
+
+    It assumes cosmo samples.
+    """
 
     @classmethod
     def from_json(cls, config_path: str) -> "DiscreteParameterEstimationLoader":
