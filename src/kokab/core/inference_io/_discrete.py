@@ -188,10 +188,6 @@ class DiscreteParameterEstimationLoader(BaseModel):
                     + np.log(primary_mass_to_chirp_mass_jacobian(q))
                 )
             if aliases[P.MASS_RATIO] in parameters:
-                if log:
-                    logger.info(
-                        "Model is defined in terms of mass ratio, adjusting prior accordingly."
-                    )
                 lp += np.log(m1_src)
 
         elif aliases[P.PRIMARY_MASS_DETECTED] in df.columns:
