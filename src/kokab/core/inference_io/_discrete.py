@@ -23,22 +23,52 @@ from kokab.utils.common import read_json
 
 
 class DiscreteParameterEstimationLoader(BaseModel):
-    """Data loader for discrete parameter estimation with refactored logic."""
+    """Loader for discrete PE samples from files matching a regex.
+
+    It is inspired by
+    `gwpopulation_pipe.data_collection.evaluate_prior <https://docs.ligo.org/RatesAndPopulations/gwpopulation_pipe/api/gwpopulation_pipe.data_collection.evaluate_prior.html#gwpopulation_pipe.data_collection.evaluate_prior>`_.
+    """
 
     filenames: Tuple[str, ...]
+    """List of filenames to load samples from."""
+
     parameter_aliases: Dict[str, str] = Field(default_factory=dict)
+    """Alternate names for parameters in the files. For example, GWKokab uses
+    'chirp_mass_detector' but the files may use 'mc_det'. This dictionary maps
+    GWKokab parameter names to file column names.
+    """
+
     max_samples: Optional[PositiveInt] = Field(None)
+    """Maximum number of samples to load from each file. If None, all samples are used."""
+
     mass_prior: Literal[
         None,
         "flat-detector-components",
         "flat-detector-chirp-mass-ratio",
         "flat-source-components",
     ] = Field(None)
+    """Mass prior to apply when calculating log prior weights."""
+
     spin_prior: Literal[None, "component"] = Field(None)
+    """Spin prior to apply when calculating log prior weights."""
+
     distance_prior: Literal[None, "comoving", "euclidean"] = Field(None)
+    """Distance prior to apply when calculating log prior weights. It assumes cosmo samples."""
 
     @classmethod
     def from_json(cls, config_path: str) -> "DiscreteParameterEstimationLoader":
+        """Create a loader from a JSON configuration file.
+
+        Parameters
+        ----------
+        config_path : str
+            Path to JSON configuration file.
+
+        Returns
+        -------
+        DiscreteParameterEstimationLoader
+            Populated loader instance.
+        """
         raw_data = read_json(config_path)
         error_if("regex" not in raw_data, msg="The 'regex' field is required.")
 
@@ -50,7 +80,22 @@ class DiscreteParameterEstimationLoader(BaseModel):
     def load(
         self, parameters: Tuple[str, ...], seed: int = 37
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
-        """Main entry point to load data and calculate priors."""
+        """Load samples and calculate log prior weights for each event.
+
+        Parameters
+        ----------
+        parameters : Tuple[str, ...]
+            Parameters to load from the files.
+        seed : int, optional
+            Seed for random subsampling, by default 37
+
+        Returns
+        -------
+        Tuple[List[np.ndarray], List[np.ndarray]]
+            A tuple containing:
+            - A list of NumPy arrays with the loaded samples for each event.
+            - A list of NumPy arrays with the log prior weights for each event.
+        """
         # Pre-resolve aliases to avoid dict lookups in the loop
         aliases = {
             p: self.parameter_aliases.get(p, p)
