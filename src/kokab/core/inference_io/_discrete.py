@@ -195,6 +195,12 @@ class DiscreteParameterEstimationLoader(BaseModel):
         if self.distance_prior is None:
             return 0.0
 
+        error_if(
+            P.REDSHIFT not in parameters,
+            ValueError,
+            "Redshift must be included in parameters when using a distance prior.",
+        )
+
         z = df[aliases[P.REDSHIFT]].to_numpy()
         if self.distance_prior == "comoving":
             if log:
@@ -225,13 +231,29 @@ class DiscreteParameterEstimationLoader(BaseModel):
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
 
-        if log and aliases[P.MASS_RATIO] in parameters:
-            logger.info(
-                "Model is defined in terms of mass ratio, adjusting prior accordingly."
-            )
+        if log:
+            if aliases[P.MASS_RATIO] in parameters:
+                logger.info(
+                    "Model is defined in terms of mass ratio, adjusting prior accordingly."
+                )
+            if self.mass_prior == "flat-detector-components":
+                logger.info("Assuming uniform in detector frame component mass prior.")
+            elif self.mass_prior == "flat-detector-chirp-mass-ratio":
+                logger.info(
+                    "Assuming uniform in detector frame chirp mass and mass ratio prior."
+                )
+            elif self.mass_prior == "flat-source-components":
+                logger.info("Assuming uniform in source frame component mass prior.")
+            if any(
+                k in parameters
+                for k in [aliases[P.CHIRP_MASS], aliases[P.CHIRP_MASS_DETECTOR]]
+            ):
+                logger.info(
+                    "Model is defined in terms of chirp mass, adjusting prior accordingly."
+                )
 
         # Logic for primary mass source/detected
-        if aliases[P.PRIMARY_MASS_SOURCE] in df.columns:
+        if aliases[P.PRIMARY_MASS_SOURCE] in parameters:
             m1_src = df[aliases[P.PRIMARY_MASS_SOURCE]].to_numpy()
             if self.mass_prior == "flat-detector-components":
                 lp += 2.0 * np.log1p(z)
@@ -244,7 +266,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
             if aliases[P.MASS_RATIO] in parameters:
                 lp += np.log(m1_src)
 
-        elif aliases[P.PRIMARY_MASS_DETECTED] in df.columns:
+        elif aliases[P.PRIMARY_MASS_DETECTED] in parameters:
             m1_det = df[aliases[P.PRIMARY_MASS_DETECTED]].to_numpy()
             if self.mass_prior == "flat-detector-chirp-mass-ratio":
                 lp -= np.log(m1_det) + np.log(primary_mass_to_chirp_mass_jacobian(q))
@@ -252,13 +274,9 @@ class DiscreteParameterEstimationLoader(BaseModel):
                 lp += np.log(m1_det)
 
         if any(
-            k in df.columns
+            k in parameters
             for k in [aliases[P.CHIRP_MASS], aliases[P.CHIRP_MASS_DETECTOR]]
         ):
-            if log:
-                logger.info(
-                    "Model is defined in terms of chirp mass, adjusting prior accordingly."
-                )
             lp += np.log(primary_mass_to_chirp_mass_jacobian(q))
 
         return lp
@@ -273,19 +291,29 @@ class DiscreteParameterEstimationLoader(BaseModel):
             lp -= np.log(4.0)
 
         # Effective and Precessing Spin
-        if aliases[P.EFFECTIVE_SPIN] in df.columns:
+        if aliases[P.EFFECTIVE_SPIN] in parameters:
             chi_eff = df[aliases[P.EFFECTIVE_SPIN]].to_numpy()
             q = self._get_q(df, aliases)
 
-            if aliases[P.PRECESSING_SPIN] in df.columns:
+            if aliases[P.PRECESSING_SPIN] in parameters:
+                if log:
+                    logger.info(
+                        "Using chi_eff and chi_p prior from isotropic component spins."
+                    )
                 chi_p = df[aliases[P.PRECESSING_SPIN]].to_numpy()
                 lp += np.log(prior_chieff_chip_isotropic(chi_eff, chi_p, q))
             else:
+                if log:
+                    logger.info("Using chi_eff prior from isotropic component spins.")
                 lp += np.log(chi_effective_prior_from_isotropic_spins(chi_eff, q))
 
         # Magnitude Priors
         for key in [P.CHI_1, P.CHI_2]:
-            if aliases[key] in df.columns:
+            if aliases[key] in parameters:
+                if log:
+                    logger.info(
+                        "Applying aligned spin magnitude prior for {key}", key=key
+                    )
                 lp += np.log(aligned_spin_prior(df[aliases[key]].to_numpy()))
 
         return lp
