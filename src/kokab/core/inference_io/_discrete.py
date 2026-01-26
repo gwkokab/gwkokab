@@ -107,8 +107,10 @@ class DiscreteParameterEstimationLoader(BaseModel):
         aliases = {
             p: self.parameter_aliases.get(p, p)
             for p in [
-                P.CHIRP_MASS_DETECTOR,
                 P.CHIRP_MASS,
+                P.CHIRP_MASS_DETECTOR,
+                P.CHI_1,
+                P.CHI_2,
                 P.EFFECTIVE_SPIN,
                 P.MASS_RATIO,
                 P.PRECESSING_SPIN,
@@ -282,7 +284,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
                 lp += np.log(chi_effective_prior_from_isotropic_spins(chi_eff, q))
 
         # Magnitude Priors
-        for key in [P.PRIMARY_SPIN_MAGNITUDE, P.SECONDARY_SPIN_MAGNITUDE]:
+        for key in [P.CHI_1, P.CHI_2]:
             if aliases[key] in df.columns:
                 lp += np.log(aligned_spin_prior(df[aliases[key]].to_numpy()))
 
