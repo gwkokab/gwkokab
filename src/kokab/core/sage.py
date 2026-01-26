@@ -4,7 +4,6 @@
 
 from argparse import ArgumentParser
 from collections.abc import Callable
-from glob import glob
 from typing import Dict, List, Optional, Tuple, Union
 
 import jax
@@ -19,10 +18,12 @@ from gwkokab.inference.poissonlikelihood_utils import (
     variance_of_single_event_likelihood,
 )
 from gwkokab.models.utils import JointDistribution, ScaledMixture
+from gwkokab.parameters import Parameters as P
 from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 from gwkokab.utils.tools import batch_and_remainder, warn_if
-from kokab.utils.common import get_posterior_data, read_json
-from kokab.utils.literals import LOG_REF_PRIOR_NAME, POSTERIOR_SAMPLES_FILENAME
+from kokab.core.inference_io import DiscreteParameterEstimationLoader
+from kokab.utils.common import read_json
+from kokab.utils.literals import POSTERIOR_SAMPLES_FILENAME
 
 from ..utils.jenks import pad_and_stack
 from .guru import Guru
@@ -46,9 +47,7 @@ class Sage(Guru):
         ],
         model: Union[Distribution, Callable[..., Distribution]],
         where_fns: Optional[List[Callable[..., Array]]],
-        posterior_regex: str,
-        read_reference_prior: bool,
-        n_pe_samples: Optional[int],
+        data_loader: DiscreteParameterEstimationLoader,
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -69,10 +68,8 @@ class Sage(Guru):
             that returns a Distribution.
         where_fns : Optional[List[Callable[..., Array]]]
             List of functions to apply to the data before passing it to the model.
-        posterior_regex : str
-            Regular expression to match posterior files.
-        read_reference_prior : bool
-            Whether to read the reference prior from the posterior samples.
+        data_loader : DiscreteParameterEstimationLoader
+            Data loader to load the data for the analysis.
         seed : int
             Seed for the random number generator.
         prior_filename : str
@@ -103,9 +100,7 @@ class Sage(Guru):
         )
         self.likelihood_fn = likelihood_fn
         self.n_buckets = n_buckets
-        self.read_reference_prior = read_reference_prior
-        self.posterior_regex = posterior_regex
-        self.n_pe_samples = n_pe_samples
+        self.data_loader = data_loader
         self.threshold = threshold
         self.where_fns = where_fns
         self.set_rng_key(seed=seed)
@@ -125,35 +120,8 @@ class Sage(Guru):
     def read_data(
         self,
     ) -> Tuple[int, float, Tuple[Array, ...], Tuple[Array, ...], Tuple[Array, ...]]:
-        if self.n_pe_samples is not None:
-            logger.info(
-                "Reading up to {n_pe_samples} samples from each event's posterior samples.",
-                n_pe_samples=self.n_pe_samples,
-            )
-        else:
-            logger.info("Reading all samples from each event's posterior samples.")
-        if self.read_reference_prior:
-            data = get_posterior_data(
-                glob(self.posterior_regex),
-                self.parameters + [LOG_REF_PRIOR_NAME],
-                self.n_pe_samples,
-                self.seed,
-            )
-            warn_if(
-                True,
-                msg="Ensure that logarithm of reference prior is stored with the name "
-                "'log_prior', as the last column in the posterior samples.",
-            )
-            log_ref_priors = [d[..., -1] for d in data]
-            data = [np.delete(d, -1, axis=-1) for d in data]
-        else:
-            data = get_posterior_data(
-                glob(self.posterior_regex),
-                self.parameters,
-                self.n_pe_samples,
-                self.seed,
-            )
-            log_ref_priors = [np.zeros(d.shape[:-1]) for d in data]
+        parameters = [p.value if isinstance(p, P) else p for p in self.parameters]
+        data, log_ref_priors = self.data_loader.load(parameters, self.seed)
         assert len(data) == len(log_ref_priors), (
             "Data and log reference priors must have the same length"
         )
@@ -341,22 +309,10 @@ def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
     sage_group = parser.add_argument_group("Sage Options")
     sage_group.add_argument(
-        "--posterior-regex",
-        help="Regex for the posterior samples.",
+        "--data-loader-cfg",
         type=str,
         required=True,
-    )
-    sage_group.add_argument(
-        "--read-reference-prior",
-        help="Whether to read the logarithm of reference prior from the posterior samples.",
-        action="store_true",
-    )
-    sage_group.add_argument(
-        "--n-pe-samples",
-        help="Number of samples of parameter estimations to randomly select from the "
-        "each event. If not specified, all samples will be used.",
-        type=int,
-        default=None,
+        help="Path to the JSON configuration file for the DiscreteParameterEstimationLoader.",
     )
 
     optm_group = parser.add_argument_group("Optimization Options")

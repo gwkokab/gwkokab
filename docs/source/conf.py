@@ -155,6 +155,7 @@ intersphinx_mapping = {
     "numpyro": ("https://num.pyro.ai/en/stable/", None),
     "python": ("https://docs.python.org/3/", None),
     "chex": ("https://chex.readthedocs.io/en/latest/", None),
+    "pydantic": ("https://docs.pydantic.dev/latest/", None),
 }
 
 

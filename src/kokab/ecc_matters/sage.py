@@ -10,6 +10,7 @@ from numpyro.distributions.distribution import enable_validation
 from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
 from gwkokab.parameters import Parameters as P
 from kokab.core.flowMC_based import flowMC_arg_parser, FlowMCBased
+from kokab.core.inference_io import DiscreteParameterEstimationLoader as DataLoader
 from kokab.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from kokab.core.sage import Sage, sage_arg_parser as sage_parser
 from kokab.ecc_matters.common import EccentricityMattersModel
@@ -45,12 +46,12 @@ def f_main() -> None:
 
     log_info(start=True)
 
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
     EccentricityMattersFSage(
         likelihood_fn=flowMC_poisson_likelihood,
         model=EccentricityMattersModel,
-        posterior_regex=args.posterior_regex,
-        read_reference_prior=args.read_reference_prior,
-        n_pe_samples=args.n_pe_samples,
+        data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
@@ -75,12 +76,12 @@ def n_main() -> None:
 
     log_info(start=True)
 
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
     EccentricityMattersNSage(
         likelihood_fn=numpyro_poisson_likelihood,
         model=EccentricityMattersModel,
-        posterior_regex=args.posterior_regex,
-        read_reference_prior=args.read_reference_prior,
-        n_pe_samples=args.n_pe_samples,
+        data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_json,
