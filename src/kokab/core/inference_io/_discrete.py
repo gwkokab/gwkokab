@@ -23,27 +23,22 @@ from kokab.utils.common import read_json
 
 
 class DiscreteParameterEstimationLoader(BaseModel):
-    """Loader for discrete PE samples from files matching a regex.
+    """Loader for discrete Parameter Estimation (PE) samples from files matching a
+    regex.
 
-    It is inspired by
-    `gwpopulation_pipe.data_collection.evaluate_prior <https://docs.ligo.org/RatesAndPopulations/gwpopulation_pipe/api/gwpopulation_pipe.data_collection.evaluate_prior.html#gwpopulation_pipe.data_collection.evaluate_prior>`_.
+    This class handles the ingestion of gravitational-wave posterior samples, manages
+    parameter aliasing, performs subsampling, and calculates log-prior weights for
+    population inference.
     """
 
     filenames: Tuple[str, ...]
-    """List of filenames to load samples from."""
+    """Tuple of absolute paths to the sample files."""
 
     parameter_aliases: Dict[str, str] = Field(default_factory=dict)
-    """Alternate names for parameters in the files.
-
-    For example, GWKokab uses 'chirp_mass_detector' but the files may use 'mc_det'. This
-    dictionary maps GWKokab parameter names to file column names.
-    """
+    """Mapping of internal parameter names to the column names used in the CSV files."""
 
     max_samples: Optional[PositiveInt] = Field(None)
-    """Maximum number of samples to load from each file.
-
-    If None, all samples are used.
-    """
+    """If set, limits the number of samples loaded per event to this value."""
 
     mass_prior: Literal[
         None,
@@ -51,59 +46,80 @@ class DiscreteParameterEstimationLoader(BaseModel):
         "flat-detector-chirp-mass-ratio",
         "flat-source-components",
     ] = Field(None)
-    """Mass prior to apply when calculating log prior weights."""
+    """The mass prior assumed during the original PE run to be removed/reweighted."""
 
     spin_prior: Literal[None, "component"] = Field(None)
-    """Spin prior to apply when calculating log prior weights."""
+    """The spin prior assumed during the original PE run."""
 
     distance_prior: Literal[None, "comoving", "euclidean"] = Field(None)
-    """Distance prior to apply when calculating log prior weights.
-
-    It assumes cosmo samples.
-    """
+    """The distance prior assumed; used to calculate volume-sensitive weights."""
 
     @classmethod
     def from_json(cls, config_path: str) -> "DiscreteParameterEstimationLoader":
-        """Create a loader from a JSON configuration file.
+        """Initializes the loader from a JSON configuration file.
 
         Parameters
         ----------
         config_path : str
-            Path to JSON configuration file.
+            Path to the JSON file containing loader settings.
 
         Returns
         -------
         DiscreteParameterEstimationLoader
-            Populated loader instance.
+            An instance of DiscreteParameterEstimationLoader.
+
+        Raises
+        ------
+        KeyError
+            If the 'regex' field is missing in the configuration.
+        FileNotFoundError
+            If no files match the provided regex pattern.
         """
         raw_data = read_json(config_path)
-        error_if("regex" not in raw_data, msg="The 'regex' field is required.")
+        error_if(
+            "regex" not in raw_data,
+            KeyError,
+            msg="Config error: 'regex' field is required.",
+        )
 
-        filenames = tuple(sorted(glob.glob(raw_data.pop("regex"))))
-        error_if(not filenames, msg="No files matched the regex pattern.")
+        regex = raw_data.pop("regex")
+        filenames = tuple(sorted(glob.glob(regex)))
+
+        n_files = len(filenames)
+        error_if(
+            n_files == 0,
+            FileNotFoundError,
+            msg=f"No files matched the regex pattern: {regex}",
+        )
+
+        logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
         return cls(**raw_data, filenames=filenames)
 
     def load(
         self, parameters: Tuple[str, ...], seed: int = 37
     ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
-        """Load samples and calculate log prior weights for each event.
+        """Loads samples from disk and computes the corresponding log-prior weights.
+
+        It is inspired by :func:`~gwpopulation_pipe.data_collection.evaluate_prior`.
 
         Parameters
         ----------
         parameters : Tuple[str, ...]
-            Parameters to load from the files.
+            The list of parameters to extract from each file.
         seed : int, optional
-            Seed for random subsampling, by default 37
+            Random seed used for deterministic subsampling, by default 37
 
         Returns
         -------
         Tuple[List[np.ndarray], List[np.ndarray]]
             A tuple containing:
-            - A list of NumPy arrays with the loaded samples for each event.
-            - A list of NumPy arrays with the log prior weights for each event.
+                - A list of arrays (one per event) containing the requested parameters.
+                - A list of arrays (one per event) containing the log-prior weights.
         """
-        # Pre-resolve aliases to avoid dict lookups in the loop
+        logger.info(f"Starting load of {len(self.filenames)} events.")
+        logger.debug(f"Target physical parameters: {parameters}")
+
         aliases = {
             p: self.parameter_aliases.get(p, p)
             for p in [
@@ -126,22 +142,20 @@ class DiscreteParameterEstimationLoader(BaseModel):
 
         posterior_columns = [self.parameter_aliases.get(p, p) for p in parameters]
         cosmo = PLANCK_2015_Cosmology()
-
         data_list, log_prior_list = [], []
 
         for i, event in enumerate(self.filenames):
+            logger.debug(f"[{i + 1}/{len(self.filenames)}] Loading: {event}")
+
             df = pd.read_csv(event, delimiter=" ")
             self._validate_columns(df, event, posterior_columns)
 
-            if self.max_samples:
-                df = self._subsample(df, event, seed + i)
+            df = self._subsample(df, event, seed + i)
 
-            # Initialize log_prior array
             log_prior = np.zeros(len(df))
+            should_log = i == 0  # Log logic only once to avoid spam
 
-            # Priors (Log only on first iteration)
-            should_log = i == 0
-
+            # Perform prior reweighting
             log_prior += self._calculate_distance_prior(
                 df, parameters, cosmo, aliases, should_log
             )
@@ -151,27 +165,35 @@ class DiscreteParameterEstimationLoader(BaseModel):
             data_list.append(df[posterior_columns].to_numpy())
             log_prior_list.append(log_prior)
 
+        logger.success(f"Finished loading {len(data_list)} events.")
         return data_list, log_prior_list
 
     def _subsample(self, df: pd.DataFrame, event: str, seed: int) -> pd.DataFrame:
-        if self.max_samples is None:  # for type checker
+        """Helper to downsample a DataFrame if it exceeds max_samples."""
+        if self.max_samples is None:
             return df
 
         n_total = len(df)
-        if self.max_samples > n_total:
+        if self.max_samples >= n_total:
             warn_if(
                 True,
-                msg=f"Requested {self.max_samples}, using all {n_total} in {event}.",
+                msg=f"Subsampling skipped: {event} has {n_total} samples (requested {self.max_samples}).",
             )
             return df
+
         return df.sample(n=self.max_samples, random_state=seed)
 
     def _validate_columns(self, df: pd.DataFrame, event: str, columns: List[str]):
+        """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(df.columns)
-        error_if(bool(missing), KeyError, f"File '{event}' missing: {missing}")
+        error_if(
+            missing == set(),
+            KeyError,
+            f"File '{event}' is missing required columns: {missing}",
+        )
 
     def _get_q(self, df: pd.DataFrame, aliases: Dict) -> np.ndarray:
-        """Helper to extract or calculate mass ratio q."""
+        """Calculates mass ratio q = m2/m1, handling various alias possibilities."""
         if aliases[P.MASS_RATIO] in df.columns:
             return df[aliases[P.MASS_RATIO]].to_numpy()
         if aliases[P.PRIMARY_MASS_SOURCE] in df.columns:
@@ -192,24 +214,25 @@ class DiscreteParameterEstimationLoader(BaseModel):
         aliases: Dict,
         log: bool,
     ) -> np.ndarray:
+        """Calculates the log-weight for the distance/redshift prior."""
         if self.distance_prior is None:
             return 0.0
 
         error_if(
             P.REDSHIFT not in parameters,
             ValueError,
-            "Redshift must be included in parameters when using a distance prior.",
+            "Distance prior requires Redshift.",
         )
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
         if self.distance_prior == "comoving":
             if log:
-                logger.info("Using uniform comoving source frame distance prior.")
+                logger.info("Using Comoving Distance prior.")
             return cosmo.logdVcdz(z) + np.log(4 * np.pi) - np.log1p(z)
 
         if self.distance_prior == "euclidean":
             if log:
-                logger.info("Using Euclidean distance prior.")
+                logger.info("Using Euclidean Distance prior.")
             dl = cosmo.z_to_DL(z)
             return 2.0 * np.log(dl) + np.log(cosmo.dDLdz(z))
 
@@ -218,6 +241,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
     def _calculate_mass_prior(
         self, df: pd.DataFrame, parameters: Tuple[str, ...], aliases: Dict, log: bool
     ) -> np.ndarray:
+        """Calculates the log-weight for mass-related priors and Jacobians."""
         if self.mass_prior is None:
             return 0.0
 
@@ -226,34 +250,17 @@ class DiscreteParameterEstimationLoader(BaseModel):
         error_if(
             P.REDSHIFT not in parameters,
             ValueError,
-            "Redshift must be included in parameters when using a mass prior.",
+            "Mass prior reweighting requires Redshift.",
         )
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
 
         if log:
-            if aliases[P.MASS_RATIO] in parameters:
-                logger.info(
-                    "Model is defined in terms of mass ratio, adjusting prior accordingly."
-                )
-            if self.mass_prior == "flat-detector-components":
-                logger.info("Assuming uniform in detector frame component mass prior.")
-            elif self.mass_prior == "flat-detector-chirp-mass-ratio":
-                logger.info(
-                    "Assuming uniform in detector frame chirp mass and mass ratio prior."
-                )
-            elif self.mass_prior == "flat-source-components":
-                logger.info("Assuming uniform in source frame component mass prior.")
-            if any(
-                k in parameters
-                for k in [aliases[P.CHIRP_MASS], aliases[P.CHIRP_MASS_DETECTOR]]
-            ):
-                logger.info(
-                    "Model is defined in terms of chirp mass, adjusting prior accordingly."
-                )
+            logger.info(
+                "Applying mass prior reweighting: {prior}", prior=self.mass_prior
+            )
 
-        # Logic for primary mass source/detected
-        if aliases[P.PRIMARY_MASS_SOURCE] in parameters:
+        if P.PRIMARY_MASS_SOURCE in parameters:
             m1_src = df[aliases[P.PRIMARY_MASS_SOURCE]].to_numpy()
             if self.mass_prior == "flat-detector-components":
                 lp += 2.0 * np.log1p(z)
@@ -263,20 +270,17 @@ class DiscreteParameterEstimationLoader(BaseModel):
                     - np.log1p(z)
                     + np.log(primary_mass_to_chirp_mass_jacobian(q))
                 )
-            if aliases[P.MASS_RATIO] in parameters:
+            if P.MASS_RATIO in parameters:
                 lp += np.log(m1_src)
 
-        elif aliases[P.PRIMARY_MASS_DETECTED] in parameters:
+        elif P.PRIMARY_MASS_DETECTED in parameters:
             m1_det = df[aliases[P.PRIMARY_MASS_DETECTED]].to_numpy()
             if self.mass_prior == "flat-detector-chirp-mass-ratio":
                 lp -= np.log(m1_det) + np.log(primary_mass_to_chirp_mass_jacobian(q))
-            if aliases[P.MASS_RATIO] in parameters:
+            if P.MASS_RATIO in parameters:
                 lp += np.log(m1_det)
 
-        if any(
-            k in parameters
-            for k in [aliases[P.CHIRP_MASS], aliases[P.CHIRP_MASS_DETECTOR]]
-        ):
+        if any(k in parameters for k in [P.CHIRP_MASS, P.CHIRP_MASS_DETECTOR]):
             lp += np.log(primary_mass_to_chirp_mass_jacobian(q))
 
         return lp
@@ -284,36 +288,35 @@ class DiscreteParameterEstimationLoader(BaseModel):
     def _calculate_spin_prior(
         self, df: pd.DataFrame, parameters: Tuple[str, ...], aliases: Dict, log: bool
     ) -> np.ndarray:
+        """Calculates log-weights for spin priors (effective, precessing, and
+        magnitude).
+        """
         lp = 0.0
         if self.spin_prior == "component":
             if log:
-                logger.info("Assuming uniform in component spin prior for all events.")
+                logger.info("Reweighting with uniform component spin prior.")
             lp -= np.log(4.0)
 
-        # Effective and Precessing Spin
-        if aliases[P.EFFECTIVE_SPIN] in parameters:
+        if P.EFFECTIVE_SPIN in parameters:
             chi_eff = df[aliases[P.EFFECTIVE_SPIN]].to_numpy()
             q = self._get_q(df, aliases)
 
-            if aliases[P.PRECESSING_SPIN] in parameters:
+            if P.PRECESSING_SPIN in parameters:
                 if log:
                     logger.info(
-                        "Using chi_eff and chi_p prior from isotropic component spins."
+                        "Applying Effective Spin and Precessing Spin isotropic prior."
                     )
                 chi_p = df[aliases[P.PRECESSING_SPIN]].to_numpy()
                 lp += np.log(prior_chieff_chip_isotropic(chi_eff, chi_p, q))
             else:
                 if log:
-                    logger.info("Using chi_eff prior from isotropic component spins.")
+                    logger.info("Applying Effective Spin isotropic prior.")
                 lp += np.log(chi_effective_prior_from_isotropic_spins(chi_eff, q))
 
-        # Magnitude Priors
         for key in [P.CHI_1, P.CHI_2]:
-            if aliases[key] in parameters:
+            if key in parameters:
                 if log:
-                    logger.info(
-                        "Applying aligned spin magnitude prior for {key}", key=key
-                    )
+                    logger.info(f"Applying aligned spin prior for {key}")
                 lp += np.log(aligned_spin_prior(df[aliases[key]].to_numpy()))
 
         return lp
