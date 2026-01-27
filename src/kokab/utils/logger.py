@@ -36,7 +36,7 @@ def custom_format(record: Record) -> str:
     if "site-packages" in record["file"].path:
         record["extra"]["short_path"] = record["file"].path.split("site-packages")[1]
     else:
-        record["extra"]["short_path"] = os.getcwd()
+        record["extra"]["short_path"] = os.path.relpath(record["file"].path)
 
     return (
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
