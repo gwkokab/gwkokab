@@ -2,19 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["main", "dev"]
-    paths:
-      - ".github/workflows/ci.yml"
-      - "**/*.ipynb"
-      - "**/*.py"
-      - "docs"
+    branches:
+      - main
   pull_request:
-    branches: ["main", "dev"]
-    paths:
-      - ".github/workflows/ci.yml"
-      - "**/*.ipynb"
-      - "**/*.py"
-      - "docs"
     types:
       - opened
       - synchronize
@@ -32,7 +22,6 @@ jobs:
           - ubuntu-latest
         python-version:
           - "3.11"
-          - "3.12"
           - "3.13"
     env:
       GWKOKAB_NIGHTLY_BUILD: 1
