@@ -187,7 +187,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
         """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(df.columns)
         error_if(
-            missing == set(),
+            missing != set(),
             KeyError,
             f"File '{event}' is missing required columns: {missing}",
         )
