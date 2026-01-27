@@ -48,6 +48,7 @@ def set_log_level() -> None:
         log_filename,
         level=log_level,
         format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+        "<cyan>{file.path}:{line}</cyan> | "
         "<level>{level: <8}</level> | "
         "<level>{message}</level>",
     )
