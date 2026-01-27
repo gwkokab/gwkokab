@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from loguru import logger
+import os
+
+from loguru import logger, Record
 
 
 def time_now() -> str:
@@ -18,6 +20,32 @@ def time_now() -> str:
     return datetime.datetime.now().strftime(r"%Y%m%d%H%M%S")
 
 
+def custom_format(record: Record) -> str:
+    """Custom log format function for Loguru logger.
+
+    Parameters
+    ----------
+    record : Dict
+        Record dictionary.
+
+    Returns
+    -------
+    str
+        Formatted log string.
+    """
+    if "site-packages" in record["file"].path:
+        record["extra"]["short_path"] = record["file"].path.split("site-packages")[1]
+    else:
+        record["extra"]["short_path"] = os.path.relpath(record["file"].path)
+
+    return (
+        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
+        "<cyan>{extra[short_path]:<45}</cyan>:<cyan>{line:<6}</cyan> | "
+        "<level>{level: <8}</level> | "
+        "<level>{message}</level>"
+    )
+
+
 def set_log_level() -> None:
     """Set the log level for the logger. The preset log level when initialising GWKokab
     is the value of the `GWKOKAB_LOG_LEVEL` environment variable, or 'WARNING' if the
@@ -26,7 +54,6 @@ def set_log_level() -> None:
     Valid options of `GWKOKAB_LOG_LEVEL` are 'TRACE', 'DEBUG', 'INFO', 'SUCCESS',
     'WARNING', 'ERROR', and 'CRITICAL'.
     """
-    import os
 
     valid_levels = ("TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL")
 
@@ -47,14 +74,9 @@ def set_log_level() -> None:
     logger.add(
         log_filename,
         level=log_level,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<cyan>{file.path}:{line}</cyan> | "
-        "<level>{level: <8}</level> | "
-        "<level>{message}</level>",
+        format=custom_format,
     )
     logger.debug(f"Setting LogLevel to {log_level}")
-
-    del os
 
 
 def log_gwkokab_info() -> None:

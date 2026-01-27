@@ -20,7 +20,7 @@ from gwkokab.inference.poissonlikelihood_utils import (
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
-from gwkokab.utils.tools import batch_and_remainder, warn_if
+from gwkokab.utils.tools import batch_and_remainder, error_if, warn_if
 from kokab.core.inference_io import DiscreteParameterEstimationLoader
 from kokab.utils.common import read_json
 from kokab.utils.literals import POSTERIOR_SAMPLES_FILENAME
@@ -60,50 +60,21 @@ class Sage(Guru):
         check_leaks: bool = False,
         analysis_name: str = "",
     ) -> None:
-        """
-        Parameters
-        ----------
-        model : Union[Distribution, Callable[..., Distribution]]
-            model to be used in the Sage class. It can be a Distribution or a callable
-            that returns a Distribution.
-        where_fns : Optional[List[Callable[..., Array]]]
-            List of functions to apply to the data before passing it to the model.
-        data_loader : DiscreteParameterEstimationLoader
-            Data loader to load the data for the analysis.
-        seed : int
-            Seed for the random number generator.
-        prior_filename : str
-            Path to the JSON file containing the prior distributions.
-        poisson_mean_filename : str
-            Path to the JSON file containing the Poisson mean configuration.
-        sampler_settings_filename : str
-            Path to the JSON file containing the sampler settings.
-        n_buckets : int
-            Number of buckets to use for padding and stacking the data.
-        threshold : float
-            Threshold for padding and stacking the data.
-        debug_nans : bool, optional
-            If True, checks for NaNs in each computation. See details in the
-            [documentation](https://jax.readthedocs.io/en/latest/_autosummary/jax.debug_nans.html#jax.debug_nans),
-            by default False
-        profile_memory : bool, optional
-            If True, enables memory profiling, by default False
-        check_leaks : bool, optional
-            If True, checks for JAX Tracer leaks. See details in the
-            [documentation](https://jax.readthedocs.io/en/latest/_autosummary/jax.checking_leaks.html#jax.checking_leaks),
-            by default False
-        analysis_name : str, optional
-            Name of the analysis, by default ""
-        """
-        assert all(letter.isalpha() or letter == "_" for letter in analysis_name), (
-            "Analysis name must contain only letters and underscores."
+        error_if(
+            not (all(letter.isalpha() or letter == "_" for letter in analysis_name)),
+            msg="Analysis name must contain only letters and underscores.",
         )
+
         self.likelihood_fn = likelihood_fn
         self.n_buckets = n_buckets
         self.data_loader = data_loader
         self.threshold = threshold
         self.where_fns = where_fns
         self.set_rng_key(seed=seed)
+
+        logger.info(
+            f"Initializing Sage class for analysis identifier: '{analysis_name}'"
+        )
 
         super().__init__(
             analysis_name=analysis_name,
@@ -121,27 +92,34 @@ class Sage(Guru):
         self,
     ) -> Tuple[int, float, Tuple[Array, ...], Tuple[Array, ...], Tuple[Array, ...]]:
         parameters = [p.value if isinstance(p, P) else p for p in self.parameters]
+
         data, log_ref_priors = self.data_loader.load(parameters, self.seed)
-        assert len(data) == len(log_ref_priors), (
-            "Data and log reference priors must have the same length"
+
+        n_events = len(data)
+        error_if(
+            len(data) != len(log_ref_priors),
+            AssertionError,
+            msg="Number of data events does not match number of log reference priors.",
         )
+
+        logger.info("Commencing data partitioning into buckets.")
         _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
             data, log_ref_priors, n_buckets=self.n_buckets, threshold=self.threshold
         )
+
         if self.n_buckets is None:
             self.n_buckets = len(_data_group)
             logger.info(
-                "Number of buckets not specified. Using the best number of buckets: {n_buckets}.",
-                n_buckets=self.n_buckets,
+                f"Automatic bucket determination completed. Optimal buckets: {self.n_buckets}"
             )
         elif self.n_buckets != len(_data_group):
+            overridden_buckets = len(_data_group)
             warn_if(
                 True,
-                msg=f"Specified number of buckets ({self.n_buckets}) is different from "
-                f"the best number of buckets ({len(_data_group)}). Using the best number"
-                " of buckets.",
+                msg=f"Specified n_buckets ({self.n_buckets}) differs from partitioning results. "
+                f"Overriding to {overridden_buckets} buckets for computational alignment.",
             )
-            self.n_buckets = len(_data_group)
+            self.n_buckets = overridden_buckets
 
         for i in range(self.n_buckets):
             _log_ref_priors_group[i] = np.where(  # type: ignore
@@ -151,6 +129,10 @@ class Sage(Guru):
         _data_group = tuple(_data_group)
         _log_ref_priors_group = tuple(_log_ref_priors_group)
         _masks_group = tuple(_masks_group)
+
+        # Monitor device placement
+        primary_devices = jax.devices()
+        logger.info(f"Staging data groups to JAX devices: {primary_devices}")
 
         data_group: Tuple[Array, ...] = jax.block_until_ready(
             jax.device_put(_data_group)
@@ -162,32 +144,31 @@ class Sage(Guru):
             jax.device_put(_masks_group)
         )
 
-        logger.debug(
-            "data_group.shape: {shape}",
-            shape=", ".join([str(d.shape) for d in data_group]),
-        )
-        logger.debug(
-            "log_ref_priors_group.shape: {shape}",
-            shape=", ".join([str(d.shape) for d in log_ref_priors_group]),
-        )
-        logger.debug(
-            "masks_group.shape: {shape}",
-            shape=", ".join([str(d.shape) for d in masks_group]),
-        )
+        for i, group in enumerate(data_group):
+            mask_count = np.sum(_masks_group[i] == 0)
+            logger.debug(
+                f"Bucket {i}: Shape {group.shape} | Padding elements: {mask_count}"
+            )
 
-        n_events = len(data)
         sum_log_size = sum([np.log(d.shape[0]) for d in data])
-        log_constants = -sum_log_size  # -Σ log(M_i)
+        log_constants = -sum_log_size
 
         return n_events, log_constants, data_group, log_ref_priors_group, masks_group
 
     def run(self) -> None:
+        model_name = getattr(self.model, "__name__", str(self.model))
+        logger.info(f"Starting inference pipeline for model: {model_name}")
+
         constants, priors, variables, variables_index = self.classify_model_parameters()
+        logger.debug(
+            f"Parameter classification: {len(variables)} variables, {len(constants)} constants."
+        )
 
         n_events, log_constants, data_group, log_ref_priors_group, masks_group = (
             self.read_data()
         )
 
+        logger.info("Parsing Poisson mean configuration and initializing estimator.")
         pmean_config = read_json(self.poisson_mean_filename)
         _, poisson_mean_estimator, T_obs, variance_of_poisson_mean_estimator = (
             get_selection_fn_and_poisson_mean_estimator(
@@ -195,8 +176,11 @@ class Sage(Guru):
             )
         )
 
-        log_constants += n_events * np.log(T_obs)  # type: ignore
+        log_constants += n_events * np.log(T_obs)
 
+        logger.info(
+            "Constructing likelihood function and preparing for sampler execution."
+        )
         logpdf = self.likelihood_fn(
             dist_fn=self.model,
             priors=priors,
@@ -220,14 +204,8 @@ class Sage(Guru):
         )
 
         if self.variance_cut_threshold is not None:
-            samples: Array = jax.block_until_ready(
-                jax.device_put(
-                    np.loadtxt(
-                        f"{self.output_directory}/{POSTERIOR_SAMPLES_FILENAME}",
-                        skiprows=1,
-                        delimiter=" ",
-                    )
-                )
+            logger.info(
+                f"Post-processing: Applying variance cut filtering (Threshold: {self.variance_cut_threshold})"
             )
 
             def compute_variance(sample: Array) -> Array:
@@ -248,86 +226,89 @@ class Sage(Guru):
             max_variance = 0.0
             min_variance = float("inf")
 
+            samples_path = f"{self.output_directory}/{POSTERIOR_SAMPLES_FILENAME}"
+            try:
+                raw_samples = np.loadtxt(samples_path, skiprows=1, delimiter=" ")
+                samples: Array = jax.block_until_ready(jax.device_put(raw_samples))
+            except Exception as e:
+                logger.error(
+                    f"Post-processing failed: Unable to load posterior samples for filtering. Error: {e}"
+                )
+                return
+
             batched_samples, remainder_samples = batch_and_remainder(
                 samples, batch_size=500
             )
             n_batches = batched_samples.shape[0]
-            compute_variance_jit = jax.jit(jax.vmap(compute_variance))
+            compute_variance_jit = jax.vmap(compute_variance)
+
+            total_iters = n_batches + int(remainder_samples.shape[0] > 0)
+
             for i in tqdm.tqdm(
-                range(n_batches + int(remainder_samples.shape[0] > 0)),
-                desc="Computing variance of likelihood estimator",
+                range(total_iters),
+                desc="Estimating Likelihood Variance",
             ):
                 batch_sample = (
                     remainder_samples if i == n_batches else batched_samples[i]
                 )
-
                 variance = jax.device_get(compute_variance_jit(batch_sample))
-                variance = np.nan_to_num(variance, nan=float("inf"))  # type: ignore
+                variance = np.nan_to_num(variance, nan=float("inf"))
 
                 if mask is None:
                     mask = variance < self.variance_cut_threshold
                 else:
                     mask = np.concatenate(
                         (mask, variance < self.variance_cut_threshold), axis=0
-                    )  # type: ignore
+                    )
 
-                max_variance = max(max_variance, np.max(variance))  # type: ignore
-                min_variance = min(min_variance, np.min(variance))  # type: ignore
+                max_variance = max(max_variance, np.max(variance))
+                min_variance = min(min_variance, np.min(variance))
+
             logger.info(
-                "Variance of the likelihood estimator ranges from {min_variance} to {max_variance}.",
-                min_variance=min_variance,
-                max_variance=max_variance,
+                f"Variance estimation range: Min={min_variance:.4e}, Max={max_variance:.4e}"
             )
-            assert mask is not None, "Mask should not be None here."
-            n_saved = np.sum(mask)
+
+            assert mask is not None, "Error generating variance filter mask."
+            n_kept = np.sum(mask)
+            total_samples = samples.shape[0]
+
             logger.info(
-                "{n_saved} samples filtered out of {total_samples} with variance above the threshold of {threshold}.",
-                n_saved=n_saved,
-                total_samples=samples.shape[0],
-                threshold=self.variance_cut_threshold,
+                f"Filtering complete. Samples retained: {n_kept}/{total_samples}. "
+                f"Samples rejected: {total_samples - n_kept}."
             )
+
+            out_file = f"{self.output_directory}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}"
             np.savetxt(
-                f"{self.output_directory}/variance_filtered_{POSTERIOR_SAMPLES_FILENAME}",
+                out_file,
                 samples[mask],
                 header=" ".join(sorted(variables.keys())),
             )
+            logger.info(f"Filtered posterior samples saved to: {out_file}")
 
 
 def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the Sage script.
-
-    Parameters
-    ----------
-    parser : ArgumentParser
-        Parser to add the arguments to
-
-    Returns
-    -------
-    ArgumentParser
-        the command line argument parser
+    """Populate the command line argument parser with the arguments for the Sage
+    script.
     """
-
-    sage_group = parser.add_argument_group("Sage Options")
+    sage_group = parser.add_argument_group("Sage Configuration")
     sage_group.add_argument(
         "--data-loader-cfg",
         type=str,
         required=True,
-        help="Path to the JSON configuration file for the DiscreteParameterEstimationLoader.",
+        help="Path to JSON configuration for the DiscreteParameterEstimationLoader.",
     )
 
-    optm_group = parser.add_argument_group("Optimization Options")
+    optm_group = parser.add_argument_group("Performance Tuning Options")
     optm_group.add_argument(
         "--n-buckets",
-        help="Number of buckets for the data arrays to be split into. "
-        "This is useful for large datasets to avoid memory issues. "
+        help="Manually specify the number of data buckets for memory management. "
         "See https://github.com/gwkokab/gwkokab/issues/568 for more details.",
         type=int,
         default=None,
     )
     optm_group.add_argument(
         "--threshold",
-        help="Threshold to determine best number of buckets, if the number of buckets "
-        "is not specified. It should be between 0 and 100.",
+        help="Threshold (0-100) for automatic bucket optimization via Jenks natural breaks.",
         type=float,
         default=3.0,
     )
