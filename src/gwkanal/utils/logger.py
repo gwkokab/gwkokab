@@ -4,7 +4,7 @@
 
 import os
 
-from loguru import logger, Record
+from loguru import logger
 
 
 def time_now() -> str:
@@ -20,12 +20,12 @@ def time_now() -> str:
     return datetime.datetime.now().strftime(r"%Y%m%d%H%M%S")
 
 
-def custom_format(record: Record) -> str:
+def custom_format(record) -> str:
     """Custom log format function for Loguru logger.
 
     Parameters
     ----------
-    record : Dict
+    record : Record
         Record dictionary.
 
     Returns
