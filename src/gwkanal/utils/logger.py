@@ -33,16 +33,19 @@ def custom_format(record) -> str:
     str
         Formatted log string.
     """
+    path = record["file"].path
     if "site-packages" in record["file"].path:
-        record["extra"]["short_path"] = record["file"].path.split("site-packages")[1]
+        short_path = path.split("site-packages")[1][1:]
     else:
-        record["extra"]["short_path"] = os.path.relpath(record["file"].path)
+        short_path = os.path.relpath(path)
+
+    record["extra"]["short_path"] = short_path
 
     return (
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<cyan>{extra[short_path]:<45}</cyan>:<cyan>{line:<6}</cyan> | "
+        "<cyan>{extra[short_path]:<55}</cyan>:<cyan>{line:<5}</cyan> | "
         "<level>{level: <8}</level> | "
-        "<level>{message}</level>"
+        "<level>{message}</level>\n"
     )
 
 
