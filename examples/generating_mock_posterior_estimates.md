@@ -180,10 +180,5 @@ All the code and files used in this tutorial can be found in
 
 [REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/tree/main/generating_mock_posterior_estimates
 
-## References
-
-```{bibliography} refs.bib
-```
-
 [^1]: A niche model is a model that is specific to population inference of CBCs and not
         available in NumPyro.

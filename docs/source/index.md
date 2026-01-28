@@ -53,6 +53,13 @@ dev_docs
 ```
 
 ```{toctree}
+:caption: Index
+:hidden:
+
+references
+```
+
+```{toctree}
 :caption: Links
 :hidden:
 

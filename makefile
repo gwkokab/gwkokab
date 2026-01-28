@@ -43,6 +43,4 @@ cache_clean: uninstall
 	$(UV) cache clean
 
 doc: install
-	cp -r examples docs/source
-	cd docs && make html
-	cd ..
+	$(MAKE) -C docs html

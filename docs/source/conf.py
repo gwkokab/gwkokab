@@ -51,7 +51,7 @@ extensions = [
 
 bibtex_encoding = "latin"
 bibtex_default_style = "unsrt"
-bibtex_bibfiles = ["examples/refs.bib"]
+bibtex_bibfiles = ["references.bib"]
 
 nb_execution_mode = "off"
 myst_heading_anchors = 4
@@ -181,7 +181,13 @@ def skip_util_classes(app, what, name: str, obj, skip, options):
     if (
         what == "module"
         and name.startswith("kokab")
-        and ("sage" in name or "genie" in name or "common" in name or "ppd" in name)
+        and (
+            "sage" in name
+            or "genie" in name
+            or "common" in name
+            or "ppd" in name
+            or "monk" in name
+        )
     ):
         skip = True
         return skip
