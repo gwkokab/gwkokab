@@ -16,9 +16,11 @@ from ..constraints import all_constraint
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
+    create_gwtc4_effective_spin_skew_normal_models,
     create_minimum_tilt_model,
     create_powerlaw_redshift,
     create_spin_magnitude_mixture_models,
+    create_truncated_normal_distributions,
     create_two_truncated_normal_mixture,
 )
 
@@ -34,6 +36,8 @@ def build_non_mass_distributions(
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
     use_chi_eff_mixture: bool,
+    use_skew_normal_chi_eff: bool,
+    use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_redshift: bool,
@@ -43,14 +47,16 @@ def build_non_mass_distributions(
     build_distributions = mass_distributions
     # fmt: off
     _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
-        (use_beta_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE.value, create_beta_distributions),
-        (use_beta_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE.value, create_beta_distributions),
-        (use_spin_magnitude_mixture, P.PRIMARY_SPIN_MAGNITUDE.value + "_" + P.SECONDARY_SPIN_MAGNITUDE.value, create_spin_magnitude_mixture_models),
-        (use_chi_eff_mixture, P.EFFECTIVE_SPIN.value, create_two_truncated_normal_mixture),
+        (use_beta_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE, create_beta_distributions),
+        (use_beta_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE, create_beta_distributions),
+        (use_spin_magnitude_mixture, P.PRIMARY_SPIN_MAGNITUDE + "_" + P.SECONDARY_SPIN_MAGNITUDE, create_spin_magnitude_mixture_models),
+        (use_chi_eff_mixture, P.EFFECTIVE_SPIN, create_two_truncated_normal_mixture),
+        (use_skew_normal_chi_eff, P.EFFECTIVE_SPIN, create_gwtc4_effective_spin_skew_normal_models),
+        (use_truncated_normal_chi_p, P.PRECESSING_SPIN, create_truncated_normal_distributions),
         # combined tilt distribution
-        (use_tilt, P.COS_TILT_1.value + "_" + P.COS_TILT_2.value, create_minimum_tilt_model),
-        (use_eccentricity_mixture, P.ECCENTRICITY.value, create_two_truncated_normal_mixture),
-        (use_redshift, P.REDSHIFT.value, create_powerlaw_redshift),
+        (use_tilt, P.COS_TILT_1 + "_" + P.COS_TILT_2, create_minimum_tilt_model),
+        (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
+        (use_redshift, P.REDSHIFT, create_powerlaw_redshift),
 
     ]
     # fmt: on
@@ -145,7 +151,7 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
         )
         n_dim_rest_dist = rest_dist.event_shape[0]
         self._support = all_constraint(
-            [rest_dist._support, constraints.interval(m2min, m1max)],
+            [rest_dist._support, constraints.unit_interval],
             [(0, n_dim_rest_dist), n_dim_rest_dist],
         )
         super(_SmoothedPowerlawMassRatioAndRest, self).__init__(
@@ -183,25 +189,19 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
     @validate_sample
     def log_prob(self, value: Array) -> ArrayLike:
         m1 = jax.lax.dynamic_index_in_dim(value, 0, axis=-1, keepdims=False)
-        m2 = jax.lax.dynamic_index_in_dim(value, -1, axis=-1, keepdims=False)
+        q = jax.lax.dynamic_index_in_dim(value, -1, axis=-1, keepdims=False)
         rest = jax.lax.dynamic_slice_in_dim(value, 0, value.shape[-1] - 1, axis=-1)
 
         safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
         rest_log_prob = self.rest_dist.log_prob(rest) + log_smoothing_m1 - self.logZ
 
-        log_prob_q_unnorm = self._log_prob_q_unnorm(m1, m2 / m1)
+        log_prob_q_unnorm = self._log_prob_q_unnorm(m1, q)
         _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1, left=0.0, right=0.0)
         safe_Z_q = jnp.where(_Z_q <= 0, 1.0, _Z_q)
         log_Z_q = jnp.where(_Z_q <= 0, 0.0, jnp.log(safe_Z_q))
 
-        log_prob_val = (
-            self.log_rate
-            - jnp.log(m1)  # Jacobian
-            + rest_log_prob
-            + log_prob_q_unnorm
-            - log_Z_q
-        )
+        log_prob_val = self.log_rate + rest_log_prob + log_prob_q_unnorm - log_Z_q
 
         return jnp.where(
             (self.delta_m1 <= 0.0) | jnp.isneginf(log_prob_val), -jnp.inf, log_prob_val

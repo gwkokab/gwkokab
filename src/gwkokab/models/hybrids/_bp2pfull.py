@@ -11,9 +11,7 @@ from numpyro.distributions import Independent, TruncatedNormal
 from ..mass import BrokenPowerlawTwoPeak
 from ..redshift import PowerlawRedshift
 from ..spin import MinimumTiltModel
-from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import (
-    ExtendedSupportTransformedDistribution,
     JointDistribution,
     ScaledMixture,
 )
@@ -29,26 +27,22 @@ def BrokenPowerlawTwoPeakFull(
 ) -> ScaledMixture:
     # NOTE: If you change something here, please also change in
     # kokab/bp2pfull/ppd.py
-    smoothing_model = ExtendedSupportTransformedDistribution(
-        BrokenPowerlawTwoPeak(
-            alpha1=params["alpha1"],
-            alpha2=params["alpha2"],
-            beta=params["beta"],
-            loc1=params["loc1"],
-            loc2=params["loc2"],
-            scale1=params["scale1"],
-            scale2=params["scale2"],
-            delta_m1=params["delta_m1"],
-            delta_m2=params["delta_m2"],
-            lambda_0=params["lambda_0"],
-            lambda_1=params["lambda_1"],
-            m1min=params["m1min"],
-            m2min=params["m2min"],
-            mmax=params["mmax"],
-            mbreak=params["mbreak"],
-            validate_args=validate_args,
-        ),
-        transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+    smoothing_model = BrokenPowerlawTwoPeak(
+        alpha1=params["alpha1"],
+        alpha2=params["alpha2"],
+        beta=params["beta"],
+        loc1=params["loc1"],
+        loc2=params["loc2"],
+        scale1=params["scale1"],
+        scale2=params["scale2"],
+        delta_m1=params["delta_m1"],
+        delta_m2=params["delta_m2"],
+        lambda_0=params["lambda_0"],
+        lambda_1=params["lambda_1"],
+        m1min=params["m1min"],
+        m2min=params["m2min"],
+        mmax=params["mmax"],
+        mbreak=params["mbreak"],
         validate_args=validate_args,
     )
 

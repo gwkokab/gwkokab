@@ -5,7 +5,20 @@
 import enum
 
 
-class Parameters(enum.Enum):
+class Parameters(str, enum.Enum):
+    """Enumeration of common parameter names used in GWKokab."""
+
+    def __str__(self):
+        return str(self.value)
+
+    def __hash__(self):
+        return hash(self.value)
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            return self.value == other
+        return super().__eq__(other)
+
     CHI_1 = "chi_1"
     CHI_2 = "chi_2"
     CHIRP_MASS = "chirp_mass"
