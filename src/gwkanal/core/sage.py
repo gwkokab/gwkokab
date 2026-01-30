@@ -237,10 +237,10 @@ class Sage(Guru):
                 return
 
             batched_samples, remainder_samples = batch_and_remainder(
-                samples, batch_size=500
+                samples, batch_size=100
             )
             n_batches = batched_samples.shape[0]
-            compute_variance_jit = jax.vmap(compute_variance)
+            compute_variance_jit = jax.jit(jax.vmap(compute_variance))
 
             total_iters = n_batches + int(remainder_samples.shape[0] > 0)
 
