@@ -134,6 +134,7 @@ def main() -> None:
         num_realizations=args.num_realizations,
         error_size=args.error_size,
         tile_covariance=args.tile_covariance,
+        derive_parameters=args.derive_parameters,
     )
 
     popfactory.produce(factory_key)
