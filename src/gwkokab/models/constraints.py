@@ -393,7 +393,7 @@ class _TransformedConstraint(Constraint):
         )
 
     def eq(self, other: object, static: bool = False) -> bool:
-        if not isinstance(other, _AnyConstraint):
+        if not isinstance(other, _TransformedConstraint):
             return False
         if len(self.transforms) != len(other.transforms):
             return False
