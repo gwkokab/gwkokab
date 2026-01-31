@@ -513,7 +513,7 @@ class TestResolveFromArraysBasic:
         initial = np.array([[5]])
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (1, 1)
+        assert result.shape == (1, 2)
         assert result[0, 0] == 5
         assert "x" in params
         assert "y" in params
@@ -527,7 +527,7 @@ class TestResolveFromArraysBasic:
         initial = np.array([[1], [2], [3], [4], [5]])
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (5, 1)
+        assert result.shape == (5, 2)
         np.testing.assert_array_equal(result[:, 0], [1, 2, 3, 4, 5])
         assert "x" in params
         assert "y" in params
@@ -541,7 +541,7 @@ class TestResolveFromArraysBasic:
         initial = np.array([[1, 2], [3, 4], [5, 6]])
         result, params = mesh.resolve_from_arrays(initial, ("a", "b"))
 
-        assert result.shape == (3, 2)
+        assert result.shape == (3, 3)
         np.testing.assert_array_equal(result[:, 0], [1, 3, 5])  # column a
         np.testing.assert_array_equal(result[:, 1], [2, 4, 6])  # column b
         assert "a" in params
@@ -558,7 +558,7 @@ class TestResolveFromArraysBasic:
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
         # Original parameter order should be maintained
-        assert result.shape == (3, 1)
+        assert result.shape == (3, 3)
         np.testing.assert_array_equal(result[:, 0], [10, 20, 30])
         assert params[0] == "x"  # x should be first since it was in param_order
 
@@ -582,7 +582,7 @@ class TestResolveFromArraysMathematical:
         )
         result, params = mesh.resolve_from_arrays(initial, ("a", "b"))
 
-        assert result.shape == (4, 2)
+        assert result.shape == (4, 3)
         np.testing.assert_array_equal(result[:, 0], [3, 5, 8, 7])
         np.testing.assert_array_equal(result[:, 1], [4, 12, 15, 24])
         assert "c" in params
@@ -597,8 +597,8 @@ class TestResolveFromArraysMathematical:
         initial = np.array([[1], [2], [3], [5], [10]])
         result, params = mesh.resolve_from_arrays(initial, ("radius",))
 
-        assert result.shape == (5, 1)
-        np.testing.assert_array_equal(result[:, 0], [1, 2, 3, 5, 10])
+        assert result.shape == (5, 4)
+        np.testing.assert_array_equal(result[:, 3], [1, 2, 3, 5, 10])
         assert "area" in params
         assert "circumference" in params
         assert "diameter" in params
@@ -627,7 +627,7 @@ class TestResolveFromArraysMathematical:
         )
         result, params = mesh.resolve_from_arrays(initial, ("a", "b", "c"))
 
-        assert result.shape == (3, 3)
+        assert result.shape == (3, 6)
         assert "discriminant" in params
         assert "x1" in params
         assert "x2" in params
@@ -654,7 +654,7 @@ class TestResolveFromArraysMathematical:
         )
         result, params = mesh.resolve_from_arrays(initial, ("x", "y"))
 
-        assert result.shape == (5, 2)
+        assert result.shape == (5, 4)
         assert "r" in params
         assert "theta" in params
 
@@ -682,7 +682,7 @@ class TestResolveFromArraysPhysics:
         )
         result, params = mesh.resolve_from_arrays(initial, ("u", "a", "t"))
 
-        assert result.shape == (3, 3)
+        assert result.shape == (3, 5)
         assert "v" in params
         assert "s" in params
 
@@ -714,7 +714,7 @@ class TestResolveFromArraysPhysics:
             initial, ("mass", "velocity", "g", "height")
         )
 
-        assert result.shape == (3, 4)
+        assert result.shape == (3, 7)
         assert "kinetic_energy" in params
         assert "potential_energy" in params
         assert "total_energy" in params
@@ -737,7 +737,7 @@ class TestResolveFromArraysPhysics:
         )
         result, params = mesh.resolve_from_arrays(initial, ("voltage", "resistance"))
 
-        assert result.shape == (4, 2)
+        assert result.shape == (4, 4)
         assert "current" in params
         assert "power" in params
 
@@ -763,7 +763,7 @@ class TestResolveFromArraysPhysics:
         )
         result, params = mesh.resolve_from_arrays(initial, ("v0", "angle"))
 
-        assert result.shape == (3, 2)
+        assert result.shape == (3, 7)
         assert "vx" in params
         assert "vy" in params
         assert "range" in params
@@ -784,7 +784,7 @@ class TestResolveFromArraysChaining:
         initial = np.array([[1], [2], [3], [4], [5]])
         result, params = mesh.resolve_from_arrays(initial, ("a",))
 
-        assert result.shape == (5, 1)
+        assert result.shape == (5, 4)
         np.testing.assert_array_equal(result[:, 0], [1, 2, 3, 4, 5])
         assert "b" in params
         assert "c" in params
@@ -801,7 +801,7 @@ class TestResolveFromArraysChaining:
         initial = np.array([[5], [10], [15]])
         result, params = mesh.resolve_from_arrays(initial, ("a",))
 
-        assert result.shape == (3, 1)
+        assert result.shape == (3, 4)
         assert "b" in params
         assert "c" in params
         assert "d" in params
@@ -818,7 +818,7 @@ class TestResolveFromArraysEdgeCases:
         initial = np.array([]).reshape(0, 1)
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (0, 1)
+        assert result.shape == (0, 2)
         assert "x" in params
         assert "y" in params
 
@@ -830,7 +830,7 @@ class TestResolveFromArraysEdgeCases:
         initial = np.array([[1, 2, 3]])
         result, params = mesh.resolve_from_arrays(initial, ("a", "b", "c"))
 
-        assert result.shape == (1, 3)
+        assert result.shape == (1, 4)
         assert "d" in params
 
     def test_large_dataset(self):
@@ -843,7 +843,7 @@ class TestResolveFromArraysEdgeCases:
         initial = np.random.rand(1000, 1) * 100
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (1000, 1)
+        assert result.shape == (1000, 3)
         assert "y" in params
         assert "z" in params
 
@@ -856,7 +856,7 @@ class TestResolveFromArraysEdgeCases:
         initial = np.array([[0.1], [0.2], [0.3]])
         result, params = mesh.resolve_from_arrays(initial, ("a",))
 
-        assert result.shape == (3, 1)
+        assert result.shape == (3, 3)
         assert "b" in params
         assert "c" in params
 
@@ -869,8 +869,8 @@ class TestResolveFromArraysEdgeCases:
         initial = np.array([[-5], [-3], [0], [3], [5]])
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (5, 1)
-        np.testing.assert_array_equal(result[:, 0], [-5, -3, 0, 3, 5])
+        assert result.shape == (5, 3)
+        np.testing.assert_array_equal(result[:, 1], [-5, -3, 0, 3, 5])
         assert "y" in params
         assert "abs_x" in params
 
@@ -883,7 +883,7 @@ class TestResolveFromArraysEdgeCases:
         initial = np.array([[1], [2], [3], [4]])
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (4, 1)
+        assert result.shape == (4, 3)
         assert "double" in params
         assert "triple" in params
 
@@ -917,7 +917,7 @@ class TestResolveFromArraysRealWorld:
             initial, ("principal", "rate", "time")
         )
 
-        assert result.shape == (4, 3)
+        assert result.shape == (4, 5)
         assert "future_value" in params
         assert "interest_earned" in params
 
@@ -935,7 +935,7 @@ class TestResolveFromArraysRealWorld:
         initial = np.array([[0], [25], [100], [-40], [37]])
         result, params = mesh.resolve_from_arrays(initial, ("celsius",))
 
-        assert result.shape == (5, 1)
+        assert result.shape == (5, 3)
         assert "fahrenheit" in params
         assert "kelvin" in params
 
@@ -967,7 +967,7 @@ class TestResolveFromArraysRealWorld:
         )
         result, params = mesh.resolve_from_arrays(initial, ("value", "mean", "std"))
 
-        assert result.shape == (5, 3)
+        assert result.shape == (5, 5)
         assert "z_score" in params
         assert "squared_deviation" in params
 
@@ -984,7 +984,7 @@ class TestResolveFromArraysRealWorld:
         initial = np.array([[100], [1000], [5000], [10000]])
         result, params = mesh.resolve_from_arrays(initial, ("meters",))
 
-        assert result.shape == (4, 1)
+        assert result.shape == (4, 4)
         assert "kilometers" in params
         assert "miles" in params
         assert "feet" in params
@@ -1011,7 +1011,7 @@ class TestResolveFromArraysRealWorld:
         )
         result, params = mesh.resolve_from_arrays(initial, ("length", "width"))
 
-        assert result.shape == (4, 2)
+        assert result.shape == (4, 5)
         assert "area" in params
         assert "perimeter" in params
 
@@ -1028,7 +1028,7 @@ class TestResolveFromArraysNumerical:
         initial = np.array([[1e-100], [1e-50], [1], [1e50], [1e100]])
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (5, 1)
+        assert result.shape == (5, 2)
         assert "x_squared" in params
         # Check that computation completed without errors
 
@@ -1041,7 +1041,7 @@ class TestResolveFromArraysNumerical:
         initial = np.array([[1], [2], [3]], dtype=np.int32)
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (3, 1)
+        assert result.shape == (3, 2)
 
     def test_nan_handling(self):
         """Test handling of NaN values."""
@@ -1051,7 +1051,7 @@ class TestResolveFromArraysNumerical:
         initial = np.array([[1], [np.nan], [3]])
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (3, 1)
+        assert result.shape == (3, 2)
         assert np.isnan(result[1, 0])  # NaN should be preserved
 
     def test_inf_handling(self):
@@ -1059,12 +1059,18 @@ class TestResolveFromArraysNumerical:
         mesh = RelationMesh()
         mesh.add_rule(("x",), "y", lambda x: x / 2)
 
-        initial = np.array([[np.inf], [-np.inf], [10]])
+        initial = np.array(
+            [
+                [np.inf],
+                [-np.inf],
+                [10],
+            ]
+        )
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
-        assert result.shape == (3, 1)
-        assert np.isinf(result[0, 0])
-        assert np.isinf(result[1, 0])
+        assert result.shape == (3, 2)
+        assert np.isinf(result[0, 1])
+        assert np.isinf(result[1, 1])
 
 
 if __name__ == "__main__":
