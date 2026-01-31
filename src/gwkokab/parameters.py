@@ -164,10 +164,12 @@ class RelationMesh:
     ) -> Tuple[np.ndarray, Tuple[Any, ...]]:
         state_dict = {param: initial_state[:, i] for i, param in enumerate(param_order)}
         resolved_dict = self.resolve(state_dict)
+        # Sort keys to ensure a deterministic column order in the output
+        resolved_order = tuple(sorted(resolved_dict.keys(), key=str))
         resolved_array = np.column_stack(
-            [resolved_dict[param] for param in param_order]
+            [resolved_dict[param] for param in resolved_order]
         )
-        return resolved_array, tuple(resolved_dict.keys())
+        return resolved_array, resolved_order
 
 
 def default_relation_mesh() -> RelationMesh:
