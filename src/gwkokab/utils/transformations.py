@@ -430,3 +430,25 @@ def chi_p_from_components(
         * a_2
         * sin_tilt_2,
     )
+
+
+def spin_magnitude_from_components(
+    chi_x: ArrayLike, chi_y: ArrayLike, chi_z: ArrayLike
+) -> ArrayLike:
+    r"""
+    .. math::
+        \chi(\chi_x, \chi_y, \chi_z) = \sqrt{\chi_x^2 + \chi_y^2 + \chi_z^2}
+    """
+    return jnp.sqrt(jnp.square(chi_x) + jnp.square(chi_y) + jnp.square(chi_z))
+
+
+def spin_costilt_from_components(
+    chi_x: ArrayLike, chi_y: ArrayLike, chi_z: ArrayLike
+) -> ArrayLike:
+    r"""
+    .. math::
+        \cos(\theta)(\chi_x, \chi_y, \chi_z) = \frac{\chi_z}{\sqrt{\chi_x^2 + \chi_y^2 + \chi_z^2}}
+    """
+    spin_magnitude = spin_magnitude_from_components(chi_x, chi_y, chi_z)
+    safe_spin_magnitude = jnp.where(spin_magnitude == 0.0, 1.0, spin_magnitude)
+    return jnp.where(spin_magnitude == 0.0, jnp.inf, chi_z / safe_spin_magnitude)
