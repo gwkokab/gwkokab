@@ -356,10 +356,11 @@ class PopulationFactory:
                 )
                 continue
 
-            noisy_data, _ = self.relation_mesh.resolve_from_arrays(
-                initial_state=noisy_data,
-                param_order=self.parameters,
-            )
+            if self.derive_parameters:
+                noisy_data, _ = self.relation_mesh.resolve_from_arrays(
+                    initial_state=noisy_data,
+                    param_order=self.parameters,
+                )
 
             np.savetxt(
                 output_dir.format(index),
