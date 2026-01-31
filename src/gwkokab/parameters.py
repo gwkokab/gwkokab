@@ -3,7 +3,7 @@
 
 
 import enum
-from collections import defaultdict
+from collections import defaultdict, deque
 from typing import Any, Callable, Dict, Set, Tuple
 
 import numpy as np
@@ -101,49 +101,64 @@ class RelationMesh:
         """
         self.rules.append((inputs, output, func))
         self._all_params.update(inputs)
+
         if isinstance(output, tuple):
             self._all_params.update(output)
         else:
             self._all_params.add(output)
 
+        rule_idx = len(self.rules) - 1
         for inp in inputs:
-            self._out_edges[inp].append(len(self.rules) - 1)
+            self._out_edges[inp].append(rule_idx)
 
     def resolve(self, initial_state: Dict[Any, Any]) -> Dict[Any, Any]:
-        """Iteratively fills in missing parameters based on available rules.
-
-        Does not overwrite values once they are set in the state.
-        """
         state = dict(initial_state)
-        # Track which rules have been successfully applied
-        applied = [False] * len(self.rules)
 
-        while True:
-            progress = False
-            for i, (inputs, output, func) in enumerate(self.rules):
-                if applied[i]:
-                    continue
+        n_rules = len(self.rules)
+        missing = [0 for _ in range(n_rules)]
+        applied = [False for _ in range(n_rules)]
 
-                # Check if we have the necessary ingredients
-                if all(inp in state for inp in inputs):
-                    # Check if the target parameters are still missing
-                    targets = output if isinstance(output, tuple) else (output,)
-                    if any(t not in state for t in targets):
-                        result = func(*[state[inp] for inp in inputs])
+        # Count missing inputs for each rule
+        for i, (inputs, _, _) in enumerate(self.rules):
+            missing[i] = sum(inp not in state for inp in inputs)
 
-                        if isinstance(output, tuple):
-                            # Handle multi-output functions (like coordinate transforms)
-                            for name, val in zip(output, result):
-                                state.setdefault(name, val)
-                        else:
-                            state.setdefault(output, result)
+        # Initialize queue with rules that are already satisfied
+        queue = deque(i for i in range(n_rules) if missing[i] == 0)
 
-                        applied[i] = True
-                        progress = True
+        while queue:
+            i = queue.popleft()
+            if applied[i]:
+                continue
 
-            # If a full pass resulted in no new parameters, we are done
-            if not progress:
-                break
+            inputs, output, func = self.rules[i]
+            targets = output if isinstance(output, tuple) else (output,)
+
+            # Skip if all targets already exist
+            if all(t in state for t in targets):
+                applied[i] = True
+                continue
+
+            result = func(*(state[inp] for inp in inputs))
+
+            newly_added = []
+            if isinstance(output, tuple):
+                for name, val in zip(output, result):
+                    if name not in state:
+                        state[name] = val
+                        newly_added.append(name)
+            else:
+                if output not in state:
+                    state[output] = result
+                    newly_added.append(output)
+
+            applied[i] = True
+
+            # Update dependent rules
+            for param in newly_added:
+                for j in self._out_edges.get(param, []):
+                    missing[j] -= 1
+                    if missing[j] == 0:
+                        queue.append(j)
 
         return state
 
