@@ -43,6 +43,8 @@ from .transformations import (
     reduced_mass as reduced_mass,
     sin_tilt as sin_tilt,
     spherical_to_cart as spherical_to_cart,
+    spin_costilt_from_components as spin_costilt_from_components,
+    spin_magnitude_from_components as spin_magnitude_from_components,
     symmetric_mass_ratio as symmetric_mass_ratio,
     symmetric_mass_ratio_to_delta_m as symmetric_mass_ratio_to_delta_m,
     total_mass as total_mass,
