@@ -9,7 +9,6 @@ from jax import numpy as jnp
 from jax.scipy.special import xlog1py
 from jaxtyping import Array, ArrayLike, PRNGKeyArray
 from numpyro import distributions as dist
-from numpyro._typing import DistributionT
 from numpyro.distributions import constraints, Delta, Distribution
 from numpyro.distributions.util import validate_sample
 
@@ -63,7 +62,7 @@ def DirichletElement(
     n_dimensions: int,
     validate_args: Optional[bool] = None,
     **kwargs,
-) -> DistributionT:
+) -> Distribution:
     r"""Conditional Dirichlet Distribution.
 
     A `DirichletElement` is a distribution over the :math:`N`-dimensional simplex, where
@@ -93,7 +92,7 @@ def DirichletElement(
 
     Returns
     -------
-    DistributionT
+    Distribution
         DirichletElement distribution
 
     Raises
@@ -131,7 +130,7 @@ def DirichletElement(
     )
 
 
-def _available_prior(name: str) -> DistributionT:
+def _available_prior(name: str) -> Distribution:
     """Get the available prior from numpyro distributions.
 
     Parameters
@@ -141,7 +140,7 @@ def _available_prior(name: str) -> DistributionT:
 
     Returns
     -------
-    DistributionT
+    Distribution
         prior distribution
 
     Raises

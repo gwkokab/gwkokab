@@ -7,11 +7,11 @@ from typing import Tuple
 import jax
 from jax import numpy as jnp
 from jaxtyping import Array
-from numpyro._typing import DistributionT
+from numpyro.distributions.distribution import Distribution
 
 
 def variance_of_single_event_likelihood(
-    model_instance: DistributionT,
+    model_instance: Distribution,
     n_buckets: int,
     data_group: Tuple[Array, ...],
     log_ref_priors_group: Tuple[Array, ...],

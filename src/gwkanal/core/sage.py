@@ -11,7 +11,6 @@ import numpy as np
 import tqdm
 from jaxtyping import Array, ArrayLike
 from loguru import logger
-from numpyro._typing import DistributionLike
 from numpyro.distributions import Distribution
 
 from gwkanal.core.inference_io import DiscreteParameterEstimationLoader
@@ -34,9 +33,9 @@ class Sage(Guru):
         self,
         likelihood_fn: Callable[
             [
-                Callable[..., DistributionLike],
+                Callable[..., Distribution],
                 JointDistribution,
-                Dict[str, DistributionLike],
+                Dict[str, Distribution],
                 Dict[str, int],
                 ArrayLike,
                 Callable[[ScaledMixture], Array],

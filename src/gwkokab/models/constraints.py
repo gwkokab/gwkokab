@@ -68,7 +68,7 @@ class _MassSandwichConstraint(Constraint):
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
-    def __eq__(self, other: object) -> bool:
+    def eq(self, other: object, static: bool = False) -> bool:
         if not isinstance(other, _MassSandwichConstraint):
             return False
         return jnp.array_equal(self.mmin, other.mmin) & jnp.array_equal(
@@ -125,7 +125,7 @@ class _MassRatioMassSandwichConstraint(Constraint):
     def tree_flatten(self):
         return (self.mmin, self.mmax), (("mmin", "mmax"), dict())
 
-    def __eq__(self, other: object) -> bool:
+    def eq(self, other: object, static: bool = False) -> bool:
         if not isinstance(other, _MassRatioMassSandwichConstraint):
             return False
         return jnp.array_equal(self.mmin, other.mmin) & jnp.array_equal(
@@ -147,7 +147,7 @@ class _IncreasingVector(_SingletonConstraint):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, _IncreasingVector)
 
 
@@ -165,7 +165,7 @@ class _DecreasingVector(_SingletonConstraint):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, _DecreasingVector)
 
 
@@ -187,7 +187,7 @@ class _StrictlyIncreasingVector(_SingletonConstraint):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, _StrictlyIncreasingVector)
 
 
@@ -209,7 +209,7 @@ class _StrictlyDecreasingVector(_SingletonConstraint):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, _StrictlyDecreasingVector)
 
 
@@ -229,7 +229,7 @@ class _PositiveIncreasingVector(_SingletonConstraint):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, _PositiveIncreasingVector)
 
 
@@ -249,7 +249,7 @@ class _PositiveDecreasingVector(_SingletonConstraint):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, _PositiveDecreasingVector)
 
 
@@ -323,7 +323,7 @@ class _AllConstraint(Constraint):
             {"event_slices": self.event_slices},
         )
 
-    def __eq__(self, other: object) -> bool:
+    def eq(self, other: object, static: bool = False) -> bool:
         if not isinstance(other, _AllConstraint):
             return False
         return all(
@@ -350,7 +350,7 @@ class _AnyConstraint(Constraint):
     def tree_flatten(self):
         return (self.constraints,), (("constraints",), dict())
 
-    def __eq__(self, other: object) -> bool:
+    def eq(self, other: object, static: bool = False) -> bool:
         if not isinstance(other, _AnyConstraint):
             return False
         return all(
@@ -392,8 +392,8 @@ class _TransformedConstraint(Constraint):
             dict(),
         )
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, _AnyConstraint):
+    def eq(self, other: object, static: bool = False) -> bool:
+        if not isinstance(other, _TransformedConstraint):
             return False
         if len(self.transforms) != len(other.transforms):
             return False

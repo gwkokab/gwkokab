@@ -8,7 +8,6 @@ from typing import Dict, List, Literal, Optional, Tuple, Union
 import jax
 from jax import lax, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
-from numpyro._typing import ConstraintT, DistributionT
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
@@ -23,7 +22,7 @@ class _LazyConstraint(constraints.Constraint):
 
     def __init__(
         self,
-        *marginal_distributions: Union[DistributionT, jax.tree_util.Partial],
+        *marginal_distributions: Union[Distribution, jax.tree_util.Partial],
         dependencies: Dict[int, Dict[str, int]],
         event_slices: Sequence[int | Tuple[int, int]],
     ) -> None:
@@ -42,7 +41,7 @@ class _LazyConstraint(constraints.Constraint):
             marginal_dists[i] = mdist.func(*mdist.args, **mdist.keywords, **kwargs)  # type: ignore
         mask = None
         for mdist, event_slice in zip(marginal_dists, self.event_slices, strict=True):
-            constraint: ConstraintT = mdist.support  # type: ignore
+            constraint: constraints.Constraint = mdist.support  # type: ignore
             if isinstance(event_slice, int):
                 x_slice = lax.dynamic_index_in_dim(
                     x, event_slice, axis=-1, keepdims=False
@@ -89,12 +88,12 @@ class LazyJointDistribution(Distribution):
 
     def __init__(
         self,
-        *marginal_distributions: Union[DistributionT, jax.tree_util.Partial],
+        *marginal_distributions: Union[Distribution, jax.tree_util.Partial],
         dependencies: Dict[int, Dict[str, int]],
         partial_order: List[int],
         dependencies_event_shape: Optional[List[Tuple[int, ...]]] = None,
         flatten_method: Optional[Literal["deep", "shallow"]] = None,
-        support: Optional[ConstraintT] = None,
+        support: Optional[constraints.Constraint] = None,
         validate_args: Optional[bool] = None,
     ) -> None:
         """Construct a joint distribution from one or more marginal distributions.
@@ -105,7 +104,7 @@ class LazyJointDistribution(Distribution):
 
         Parameters
         ----------
-        marginal_distributions : *Union[DistributionT, jax.tree_util.Partial]
+        marginal_distributions : *Union[Distribution, jax.tree_util.Partial]
             One or more marginal distributions. Each marginal distribution can be an instance of
             `numpyro.distributions.Distribution` or a `jax.tree_util.Partial` that returns a
             `numpyro.distributions.Distribution` when called with its arguments.
@@ -128,7 +127,7 @@ class LazyJointDistribution(Distribution):
             If "shallow", one level of nested :class:`LazyJointDistributions` will be flattened.
             If "deep", all levels of nested :class:`LazyJointDistributions` will be recursively flattened.
             If None (default), the nesting is preserved as-is.
-        support : Optional[ConstraintT], optional
+        support : Optional[constraints.Constraint], optional
             The constraint object representing the support of the joint distribution.
             If not provided, it is computed from the support of the marginals.
         validate_args : Optional[bool], optional
@@ -169,7 +168,7 @@ class LazyJointDistribution(Distribution):
         # )
         marginal_flatten = marginal_distributions
         self.marginal_distributions: Sequence[
-            Union[DistributionT, jax.tree_util.Partial]
+            Union[Distribution, jax.tree_util.Partial]
         ] = tuple(marginal_flatten)
         self.shaped_values: Sequence[Union[int, Tuple[int, int]]] = tuple()
         dependencies = dependencies or {}  # for type checker
@@ -219,7 +218,7 @@ class LazyJointDistribution(Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
-        marginal_dists: List[DistributionT] = list(self.marginal_distributions)  # type: ignore
+        marginal_dists: List[Distribution] = list(self.marginal_distributions)  # type: ignore
         for i, dep in self.dependencies.items():
             kwargs = {
                 k: jax.lax.dynamic_index_in_dim(value, v, axis=-1, keepdims=False)
@@ -251,7 +250,7 @@ class LazyJointDistribution(Distribution):
         samples = [jnp.empty((*sample_shape, 1)) for _ in range(n_total)]
 
         for i in independent:
-            mdist: DistributionT = self.marginal_distributions[i]  # type: ignore
+            mdist: Distribution = self.marginal_distributions[i]  # type: ignore
             key, subkey = jrd.split(key)
             samples[i] = mdist.sample(subkey, sample_shape).reshape(*sample_shape, -1)
 

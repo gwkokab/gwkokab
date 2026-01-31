@@ -9,7 +9,7 @@ import equinox as eqx
 import jax
 from jax import Array, numpy as jnp
 from jaxtyping import ArrayLike
-from numpyro._typing import DistributionLike
+from numpyro.distributions.distribution import Distribution
 
 from ..models.utils import JointDistribution, ScaledMixture
 
@@ -18,9 +18,9 @@ __all__ = ["flowMC_poisson_likelihood"]
 
 
 def flowMC_poisson_likelihood(
-    dist_fn: Callable[..., DistributionLike],
+    dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
-    variables: Dict[str, DistributionLike],
+    variables: Dict[str, Distribution],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
