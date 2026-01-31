@@ -122,7 +122,7 @@ def test_parametrized_constraint_pytree(cls, cst_args, cst_kwargs):
         vmapped_csts = jit(vmap(lambda args: cls(*args, **cst_kwargs), in_axes=(0,)))(
             vmapped_cst_args
         )
-        assert vmap(lambda x: x == constraint, in_axes=0)(vmapped_csts).all()
+        assert vmap(lambda x: x.eq(constraint), in_axes=0)(vmapped_csts).all()
 
         twice_vmapped_cst_args = jax.tree.map(lambda x: x[None], vmapped_cst_args)
 
@@ -132,7 +132,7 @@ def test_parametrized_constraint_pytree(cls, cst_args, cst_kwargs):
                 in_axes=(0,),
             ),
         )(twice_vmapped_cst_args)
-        assert vmap(vmap(lambda x: x == constraint, in_axes=0), in_axes=0)(
+        assert vmap(vmap(lambda x: x.eq(constraint), in_axes=0), in_axes=0)(
             vmapped_csts
         ).all()
 
@@ -148,7 +148,7 @@ def test_singleton_constraint_eq(constraint):
     # by abstract values
     @jit
     def check_constraints(c1, c2):
-        return c1 == c2
+        return c1.eq(c2)
 
     assert check_constraints(constraint, constraint)
 
@@ -168,6 +168,6 @@ def test_parametrized_constraint_eq(cls, cst_args, cst_kwargs):
     # by abstract values
     @jit
     def check_constraints(c1, c2):
-        return c1 == c2
+        return c1.eq(c2)
 
     assert check_constraints(constraint, constraint2)
