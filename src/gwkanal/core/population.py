@@ -17,6 +17,7 @@ from numpyro.util import is_prng_key
 
 from gwkokab.models.utils import ScaledMixture
 from gwkokab.models.wrappers import ModelRegistry
+from gwkokab.parameters import default_relation_mesh
 from gwkokab.utils.tools import error_if
 
 
@@ -108,6 +109,7 @@ class PopulationFactory:
         num_realizations: int = 5,
         error_size: int = 2_000,
         tile_covariance: Optional[List[List[str]]] = None,
+        derive_parameters: bool = False,
     ) -> None:
         """Class with methods equipped to generate population for each realizations and
         adding errors in it.
@@ -129,6 +131,9 @@ class PopulationFactory:
             Number of realizations to generate, by default 5
         error_size : int, optional
             Size of the error to add in the population, by default 2_000
+        derive_parameters : bool, optional
+            Whether to derive additional parameters using the relation mesh,
+            by default False
 
         Raises
         ------
@@ -146,6 +151,8 @@ class PopulationFactory:
         self.num_realizations = num_realizations
         self.error_size = error_size
         self.tile_covariance = tile_covariance
+        self.derive_parameters = derive_parameters
+        self.new_parameters = parameters
 
         self.event_filename = ensure_dat_extension(self.event_filename)
         self.injection_filename = ensure_dat_extension(self.injection_filename)
@@ -222,6 +229,9 @@ class PopulationFactory:
             )
         pop_keys = jrd.split(key, self.num_realizations)
         os.makedirs(self.root_dir, exist_ok=True)
+
+        self.relation_mesh = default_relation_mesh()
+
         with tqdm.tqdm(
             range(self.num_realizations),
             unit="realization",
@@ -243,6 +253,18 @@ class PopulationFactory:
                 if population.shape == ():
                     continue
 
+                if self.derive_parameters:
+                    population, self.new_parameters = (
+                        self.relation_mesh.resolve_from_arrays(
+                            initial_state=population,
+                            param_order=self.parameters,
+                        )
+                    )
+                    raw_population, _ = self.relation_mesh.resolve_from_arrays(
+                        initial_state=raw_population,
+                        param_order=self.parameters,
+                    )
+
                 injections_file_path = os.path.join(
                     realizations_path, self.injection_filename
                 )
@@ -250,7 +272,7 @@ class PopulationFactory:
                 np.savetxt(
                     injections_file_path,
                     population,
-                    header=" ".join(self.parameters),
+                    header=" ".join(self.new_parameters),
                     comments="",  # To remove the default comment character '#'
                 )
                 np.savetxt(
@@ -268,7 +290,7 @@ class PopulationFactory:
                 np.savetxt(
                     raw_injections_file_path,
                     raw_population,
-                    header=" ".join(self.parameters),
+                    header=" ".join(self.new_parameters),
                     comments="",  # To remove the default comment character '#'
                 )
                 np.savetxt(
@@ -290,7 +312,7 @@ class PopulationFactory:
         for head, err_fn in error_magazine.registry.items():
             _head = []
             for h in head:
-                i = self.parameters.index(h)
+                i = self.new_parameters.index(h)
                 _head.append(i)
             heads.append(_head)
             error_fns.append(err_fn)
@@ -303,7 +325,7 @@ class PopulationFactory:
 
         injections_file_path = os.path.join(realizations_path, self.injection_filename)
         data_inj = np.loadtxt(injections_file_path, skiprows=1).reshape(
-            -1, len(self.parameters)
+            -1, len(self.new_parameters)
         )
 
         n_injections = data_inj.shape[0]
@@ -320,7 +342,9 @@ class PopulationFactory:
                 noisy_data_i: Array = err_fn(data[head], self.error_size, keys[key_idx])
                 if noisy_data_i.ndim == 1:
                     noisy_data_i = noisy_data_i.reshape(self.error_size, -1)
-                noisy_data[:, head] = noisy_data_i
+                noisy_data[
+                    :, [self.parameters.index(self.new_parameters[h]) for h in head]
+                ] = noisy_data_i
                 i += 1
             nan_mask = np.isnan(noisy_data).any(axis=1)
             noisy_data = noisy_data[~nan_mask]  # type: ignore
@@ -332,10 +356,15 @@ class PopulationFactory:
                 )
                 continue
 
+            noisy_data, _ = self.relation_mesh.resolve_from_arrays(
+                initial_state=noisy_data,
+                param_order=self.parameters,
+            )
+
             np.savetxt(
                 output_dir.format(index),
                 noisy_data,
-                header=" ".join(self.parameters),
+                header=" ".join(self.new_parameters),
                 comments="",  # To remove the default comment character '#'
             )
 

@@ -40,6 +40,11 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
         type=int,
     )
     genie_group.add_argument(
+        "--derive-parameters",
+        help="Compute the derivable parameters.",
+        action="store_true",
+    )
+    genie_group.add_argument(
         "--seed",
         help="Random seed for reproducibility.",
         default=37,
