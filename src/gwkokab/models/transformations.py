@@ -231,11 +231,12 @@ class BlockTransform(Transform):
             {"event_slices": self.event_slices},
         )
 
-    def __eq__(self, value):
+    def eq(self, value, static: bool = False):
         if not isinstance(value, BlockTransform):
             return False
         return self.event_slices == value.event_slices and all(
-            t1 == t2 for t1, t2 in zip(self.transforms, value.transforms)
+            t1.eq(t2, static=static)
+            for t1, t2 in zip(self.transforms, value.transforms)
         )
 
 
@@ -282,7 +283,7 @@ class PrimaryMassAndMassRatioToComponentMassesTransform(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         if not isinstance(other, PrimaryMassAndMassRatioToComponentMassesTransform):
             return False
         return self.domain == other.domain
@@ -328,7 +329,7 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         if not isinstance(other, ComponentMassesToChirpMassAndSymmetricMassRatio):
             return False
         return self.domain == other.domain
@@ -367,7 +368,7 @@ class DeltaToSymmetricMassRatio(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, type(self))
 
 
@@ -417,7 +418,7 @@ class ComponentMassesToChirpMassAndDelta(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, type(self))
 
 
@@ -454,7 +455,7 @@ class SourceMassAndRedshiftToDetectedMassAndRedshift(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, type(self))
 
 
@@ -493,7 +494,7 @@ class ComponentMassesAndRedshiftToDetectedMassAndRedshift(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, type(self))
 
 
@@ -534,7 +535,7 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, type(self))
 
 
@@ -580,7 +581,7 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, type(self))
 
 
@@ -620,7 +621,7 @@ class ComponentMassesToTotalMassAndMassRatio(Transform):
     def tree_flatten(self):
         return (), ((), dict())
 
-    def __eq__(self, other):
+    def eq(self, other, static: bool = False):
         return isinstance(other, type(self))
 
 
