@@ -10,7 +10,7 @@ import jax
 import numpy as np
 from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
-from numpyro._typing import DistributionT
+from numpyro.distributions.distribution import Distribution
 
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
@@ -70,7 +70,7 @@ def custom_poisson_mean_estimator(
     n_accepted = samples.shape[0]
 
     def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
-        scaled_mixture_without_ecc: List[DistributionT] = list(
+        scaled_mixture_without_ecc: List[Distribution] = list(
             scaled_mixture.component_distributions[0].marginal_distributions
         )
         # eccentricity is the second last distribution in both powerlawpeak and

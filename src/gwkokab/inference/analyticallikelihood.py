@@ -9,7 +9,6 @@ import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jax.scipy.linalg import cho_solve
 from jaxtyping import Array, PRNGKeyArray
-from numpyro._typing import DistributionT
 from numpyro.distributions import Distribution
 from numpyro.distributions.continuous import _batch_mahalanobis, tri_logabsdet
 from numpyro.distributions.util import cholesky_of_inverse
@@ -289,7 +288,7 @@ def analytical_likelihood(
             for name, i in variables_index.items()
         }
 
-        model_instance: DistributionT = dist_fn(**constant_params, **mapped_params)
+        model_instance: Distribution = dist_fn(**constant_params, **mapped_params)
 
         # μ = E_{Ω|Λ}[VT(ω)]
         expected_rates = poisson_mean_estimator(model_instance)

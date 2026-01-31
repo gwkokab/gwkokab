@@ -10,7 +10,7 @@ import jax
 import numpy as np
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
-from numpyro._typing import DistributionLike
+from numpyro.distributions.distribution import Distribution
 
 from gwkokab.utils.tools import error_if
 
@@ -50,7 +50,7 @@ def wipe_log_rate(
 def compute_probs(
     params: Array,
     xx_mesh: Array,
-    model: DistributionLike,
+    model: Distribution,
     constants: Dict[str, ArrayLike],
     nf_samples_mapping: Dict[str, int],
     batch_size: int = 1000,
@@ -64,7 +64,7 @@ def compute_probs(
     xx_mesh : Array
         A list of tuples `(start, end, num_points)` for each parameter, defining the
         grid over which to compute the PPD.
-    model : DistributionLike
+    model : Distribution
         The PPD of the model as a multidimensional array corresponding to the parameter
         grid.
     constants : Dict[str, ArrayLike]
@@ -201,7 +201,7 @@ def save_probs(
 
 
 def compute_and_save_ppd(
-    model: DistributionLike,
+    model: Distribution,
     nf_samples: Array,
     domains: List[Tuple[float, float, int]],
     output_file: str,
@@ -214,7 +214,7 @@ def compute_and_save_ppd(
 
     Parameters
     ----------
-    model : DistributionLike
+    model : Distribution
         The model.
     nf_samples : Array
         The normalizing flow samples.

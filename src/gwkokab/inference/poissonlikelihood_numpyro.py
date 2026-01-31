@@ -9,7 +9,6 @@ import jax
 import numpyro
 from jax import Array, numpy as jnp
 from jaxtyping import ArrayLike
-from numpyro._typing import DistributionT
 from numpyro.distributions import Distribution
 
 from ..models.utils import JointDistribution, LazyJointDistribution, ScaledMixture
@@ -19,9 +18,9 @@ __all__ = ["numpyro_poisson_likelihood"]
 
 
 def numpyro_poisson_likelihood(
-    dist_fn: Callable[..., DistributionT],
+    dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
-    variables: Dict[str, DistributionT],
+    variables: Dict[str, Distribution],
     variables_index: Dict[str, int],
     log_constants: ArrayLike,
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
@@ -46,7 +45,7 @@ def numpyro_poisson_likelihood(
         mapped_params = {
             name: variables_samples_[i] for name, i in variables_index.items()
         }
-        model_instance: DistributionT = dist_fn(
+        model_instance: Distribution = dist_fn(
             **constants, **mapped_params, validate_args=True
         )
 

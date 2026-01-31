@@ -7,8 +7,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
-from numpyro._typing import DistributionLike
-from numpyro.distributions.distribution import enable_validation
+from numpyro.distributions.distribution import Distribution, enable_validation
 
 from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from gwkanal.core.inference_io import DiscreteParameterEstimationLoader as DataLoader
@@ -95,9 +94,9 @@ class NPowerlawMGaussianCore(Sage):
         has_detection_time: bool,
         likelihood_fn: Callable[
             [
-                Callable[..., DistributionLike],
+                Callable[..., Distribution],
                 JointDistribution,
-                Dict[str, DistributionLike],
+                Dict[str, Distribution],
                 Dict[str, int],
                 ArrayLike,
                 Callable[[ScaledMixture], Array],

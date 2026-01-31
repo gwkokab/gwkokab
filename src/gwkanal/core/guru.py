@@ -12,7 +12,6 @@ import jax
 from jax import lax, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from loguru import logger
-from numpyro._typing import DistributionT
 from numpyro.distributions.distribution import Distribution
 from numpyro.util import is_prng_key
 
@@ -211,7 +210,7 @@ class Guru:
         analysis_name: str,
         check_leaks: bool,
         debug_nans: bool,
-        model: Union[DistributionT, Callable[..., DistributionT]],
+        model: Union[Distribution, Callable[..., Distribution]],
         poisson_mean_filename: str,
         prior_filename: str,
         profile_memory: bool,
@@ -273,7 +272,7 @@ class Guru:
 
         Returns
         -------
-        Tuple[ Dict[str, Union[int, float, bool, None]], Callable[..., DistributionT], JointDistribution, Dict[str, int], ]
+        Tuple[ Dict[str, Union[int, float, bool, None]], Callable[..., Distribution], JointDistribution, Dict[str, int], ]
             A tuple containing the constants, the distribution function, the prior
             distribution, and the variables index.
         """

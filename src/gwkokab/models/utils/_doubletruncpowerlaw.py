@@ -7,7 +7,6 @@ from typing import Optional
 import jax
 from jax import numpy as jnp
 from jaxtyping import ArrayLike
-from numpyro._typing import ConstraintT
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import is_prng_key, promote_shapes, validate_sample
 
@@ -398,7 +397,7 @@ class DoublyTruncatedPowerLaw(Distribution):
         )
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self) -> ConstraintT:
+    def support(self) -> constraints.Constraint:
         return self._support
 
     @validate_sample
