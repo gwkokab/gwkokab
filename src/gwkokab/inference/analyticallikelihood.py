@@ -17,7 +17,6 @@ from numpyro.distributions.util import cholesky_of_inverse
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
 
-@eqx.filter_jit
 def mvn_samples(
     loc: Array, scale_tril: Array, n_samples: int, key: PRNGKeyArray
 ) -> Array:
@@ -157,11 +156,6 @@ def analytical_likelihood(
 
         model_instance: Distribution = dist_fn(**constant_params, **mapped_params)
 
-        # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = poisson_mean_estimator(model_instance)
-
-        rng_key = key
-
         hessian_log_prob = jax.jit(
             jax.vmap(jax.hessian(model_instance.log_prob), axis_size=n_events)
         )
@@ -173,7 +167,7 @@ def analytical_likelihood(
             scale_tril_stack
         ) - hessian_log_prob(mean_stack)
         fit_covariance_matrix = jnp.linalg.solve(
-            fit_precision_matrix, jnp.eye(n_events)
+            fit_precision_matrix, jnp.eye(fit_precision_matrix.shape[-1])
         )
 
         is_psd = is_positive_semi_definite(fit_covariance_matrix)
@@ -202,12 +196,8 @@ def analytical_likelihood(
             scale_tril_stack,
         )
 
-        keys = jrd.split(rng_key, n_events)
-
         # data ~ G(θ, z | μ_f, Σ_f)
-        data: Array = jax.vmap(lambda m, s, k: mvn_samples(m, s, n_samples, k))(
-            fit_mean, fit_scale_tril, keys
-        )
+        data: Array = mvn_samples(fit_mean, fit_scale_tril, n_samples, key)
 
         # log ρ(data | Λ, κ)
         model_instance_log_prob = model_instance.log_prob(data)
@@ -224,6 +214,9 @@ def analytical_likelihood(
         total_log_likelihood = jnp.sum(log_estimates) - n_events * (
             jnp.log(n_samples) - jnp.log(T_obs)
         )
+
+        # μ = E_{Ω|Λ}[VT(ω)]
+        expected_rates = poisson_mean_estimator(model_instance)
 
         # log L(Λ,κ) = -μ + Σ log Σ exp (log ρ(data_n|Λ,κ)) - Σ log(M_i)
         log_likelihood = total_log_likelihood - expected_rates
