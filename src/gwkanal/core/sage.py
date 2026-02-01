@@ -13,15 +13,16 @@ from jaxtyping import Array, ArrayLike
 from loguru import logger
 from numpyro.distributions import Distribution
 
-from gwkanal.core.inference_io import DiscreteParameterEstimationLoader
-from gwkanal.utils.common import read_json
+from gwkanal.core.inference_io import (
+    DiscreteParameterEstimationLoader,
+    PoissonMeanEstimationLoader,
+)
 from gwkanal.utils.literals import POSTERIOR_SAMPLES_FILENAME
 from gwkokab.inference.poissonlikelihood_utils import (
     variance_of_single_event_likelihood,
 )
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
-from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 from gwkokab.utils.tools import batch_and_remainder, error_if, warn_if
 
 from ..utils.jenks import pad_and_stack
@@ -168,11 +169,11 @@ class Sage(Guru):
         )
 
         logger.info("Parsing Poisson mean configuration and initializing estimator.")
-        pmean_config = read_json(self.poisson_mean_filename)
+        pmean_loader = PoissonMeanEstimationLoader.from_json(
+            self.poisson_mean_filename, self.rng_key, self.parameters
+        )
         _, poisson_mean_estimator, T_obs, variance_of_poisson_mean_estimator = (
-            get_selection_fn_and_poisson_mean_estimator(
-                key=self.rng_key, parameters=self.parameters, **pmean_config
-            )
+            pmean_loader.get_estimators()
         )
 
         log_constants += n_events * np.log(T_obs)

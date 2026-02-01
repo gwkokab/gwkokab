@@ -111,7 +111,7 @@ genie_n_pls_m_gs \
     --num-realizations 1 \
     --seed $RANDOM \
     --model-json model.json \
-    --pmean-json pmean.json \
+    --pmean-cfg pmean.json \
     --err-json err.json
 ```
 

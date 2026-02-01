@@ -60,7 +60,7 @@ f_monk_n_pls_m_gs \
     --minimum-mc-error 0.01 \
     --n-checkpoints 10 \
     --n-max-steps 3 \
-    --pmean-json pmean.json \
+    --pmean-cfg pmean.json \
     --prior-json prior.json \
     --sampler-config flowMC_config.json
 ```
