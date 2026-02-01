@@ -13,5 +13,4 @@ from . import (
     numpyro_based as numpyro_based,
     population as population,
     sage as sage,
-    sampling_engine as sampling_engine,
 )
