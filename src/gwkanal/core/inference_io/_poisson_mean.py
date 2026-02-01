@@ -28,7 +28,7 @@ class BaseLoader(BaseModel):
         raise NotImplementedError("Subclasses must implement this method.")
 
 
-class NeuralVolumeTimeSensitivityPoissionMeanLoader(BaseLoader):
+class NeuralVolumeTimeSensitivityPoissonMeanLoader(BaseLoader):
     estimator_type: Literal["neural_vt"]
     batch_size: Optional[PositiveInt] = None
     num_samples: PositiveInt = 1_000
@@ -45,7 +45,7 @@ class NeuralVolumeTimeSensitivityPoissionMeanLoader(BaseLoader):
         )
 
 
-class NeuralVolumeProbabilityOfDetectionPoissionMeanLoader(BaseLoader):
+class NeuralVolumeProbabilityOfDetectionPoissonMeanLoader(BaseLoader):
     estimator_type: Literal["neural_pdet"]
     batch_size: Optional[PositiveInt] = None
     num_samples: PositiveInt = 1_000
@@ -90,6 +90,15 @@ class CustomPoissonMeanEstimationLoader(BaseLoader):
         spec = importlib.util.spec_from_file_location(
             "custom_module", self.python_module_path
         )
+        error_if(
+            spec is None or spec.loader is None,
+            ImportError,
+            f"Could not load spec for module at {self.python_module_path}",
+        )
+
+        spec = importlib.util.spec_from_file_location(
+            "custom_module", self.python_module_path
+        )
         custom_module = importlib.util.module_from_spec(spec)  # type: ignore
         spec.loader.exec_module(custom_module)  # type: ignore
 
@@ -108,8 +117,8 @@ class CustomPoissonMeanEstimationLoader(BaseLoader):
 
 class PoissonMeanEstimationLoader(BaseModel):
     loader: Union[
-        NeuralVolumeTimeSensitivityPoissionMeanLoader,
-        NeuralVolumeProbabilityOfDetectionPoissionMeanLoader,
+        NeuralVolumeTimeSensitivityPoissonMeanLoader,
+        NeuralVolumeProbabilityOfDetectionPoissonMeanLoader,
         GWTCInjectionLoader,
         CustomPoissonMeanEstimationLoader,
     ] = Field(discriminator="estimator_type")
