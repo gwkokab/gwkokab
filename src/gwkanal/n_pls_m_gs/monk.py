@@ -601,7 +601,7 @@ def main() -> None:
         data_filename=args.data_filename,
         seed=args.seed,
         prior_filename=args.prior_json,
-        poisson_mean_filename=args.pmean_json,
+        poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
         n_samples=args.n_samples,
         minimum_mc_error=args.minimum_mc_error,

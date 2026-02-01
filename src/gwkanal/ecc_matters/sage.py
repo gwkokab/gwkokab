@@ -8,7 +8,9 @@ from typing import List
 from numpyro.distributions.distribution import enable_validation
 
 from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
-from gwkanal.core.inference_io import DiscreteParameterEstimationLoader as DataLoader
+from gwkanal.core.inference_io import (
+    DiscreteParameterEstimationLoader as DataLoader,
+)
 from gwkanal.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from gwkanal.core.sage import Sage, sage_arg_parser as sage_parser
 from gwkanal.ecc_matters.common import EccentricityMattersModel
@@ -54,7 +56,7 @@ def f_main() -> None:
         data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
-        poisson_mean_filename=args.pmean_json,
+        poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
         variance_cut_threshold=args.variance_cut_threshold,
         analysis_name="f_sage_ecc_matters",
@@ -84,7 +86,7 @@ def n_main() -> None:
         data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
-        poisson_mean_filename=args.pmean_json,
+        poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
         variance_cut_threshold=args.variance_cut_threshold,
         analysis_name="n_sage_ecc_matters",

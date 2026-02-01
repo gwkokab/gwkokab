@@ -10,15 +10,14 @@ from jax import numpy as jnp, random as jrd
 from loguru import logger
 from numpyro import distributions as dist
 
+from gwkanal.core.inference_io import PoissonMeanEstimationLoader
 from gwkanal.core.population import error_magazine, PopulationFactory
 from gwkanal.ecc_matters.common import EccentricityMattersModel
 from gwkanal.utils import genie_parser
-from gwkanal.utils.common import read_json
 from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
 from gwkokab.errors import banana_error_m1_m2
 from gwkokab.parameters import Parameters as P
-from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 
 
 def make_parser() -> ArgumentParser:
@@ -118,12 +117,11 @@ def main() -> None:
     logger.info(f"Setting the random number generator key with seed {args.seed}.")
     pmean_key, factory_key = jrd.split(jrd.PRNGKey(args.seed), 2)
 
-    pmean_config = read_json(args.pmean_json)
-    log_selection_fn, erate_estimator, _, _ = (
-        get_selection_fn_and_poisson_mean_estimator(
-            key=pmean_key, parameters=parameters_name, **pmean_config
-        )
+    logger.info("Parsing Poisson mean configuration and initializing estimator.")
+    pmean_loader = PoissonMeanEstimationLoader.from_json(
+        args.pmean_cfg, pmean_key, parameters_name
     )
+    log_selection_fn, erate_estimator, _, _ = pmean_loader.get_estimators()
 
     popfactory = PopulationFactory(
         model_fn=EccentricityMattersModel,

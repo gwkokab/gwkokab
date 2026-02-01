@@ -53,7 +53,7 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
 
     pmean_group = parser.add_argument_group("Poisson Mean Options")
     pmean_group.add_argument(
-        "--pmean-json",
+        "--pmean-cfg",
         help="Path to the JSON file containing the Poisson mean options.",
         type=str,
         default="pmean.json",

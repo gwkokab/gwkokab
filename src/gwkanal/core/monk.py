@@ -15,9 +15,8 @@ from loguru import logger
 from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
 
-from gwkanal.utils.common import read_json
+from gwkanal.core.inference_io import PoissonMeanEstimationLoader
 from gwkokab.inference import analytical_likelihood
-from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
 from gwkokab.utils.tools import error_if
 
 from .flowMC_based import FlowMCBased
@@ -161,11 +160,12 @@ class Monk(FlowMCBased):
         logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
         logger.debug("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
 
-        pmean_config = read_json(self.poisson_mean_filename)
-        _, poisson_mean_estimator, T_obs, _ = (
-            get_selection_fn_and_poisson_mean_estimator(
-                key=self.rng_key, parameters=self.parameters, **pmean_config
-            )
+        logger.info("Parsing Poisson mean configuration and initializing estimator.")
+        pmean_loader = PoissonMeanEstimationLoader.from_json(
+            self.poisson_mean_filename, self.rng_key, self.parameters
+        )
+        _, poisson_mean_estimator, T_obs, variance_of_poisson_mean_estimator = (
+            pmean_loader.get_estimators()
         )
 
         logpdf = analytical_likelihood(
