@@ -2,10 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Any, Dict, Literal, Optional, Tuple, Union
+from typing import Any, Callable, Dict, Literal, Optional, Tuple, Union
 
 from jaxtyping import Array, PRNGKeyArray
-from jedi.inference.gradual.typing import Callable
 from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
 
 from gwkanal.utils.common import read_json
@@ -22,7 +21,7 @@ class BaseLoader(BaseModel):
     """Base logic shared across all loaders."""
 
     filename: str
-    key: PRNGKeyArray
+    key: Any
     parameters: Tuple[str, ...]
 
     def get_estimators(self):
@@ -90,7 +89,7 @@ class CustomPoissonMeanEstimationLoader(BaseLoader):
 
         spec = importlib.util.spec_from_file_location(
             "custom_module", self.python_module_path
-        )  # type: ignore
+        )
         custom_module = importlib.util.module_from_spec(spec)  # type: ignore
         spec.loader.exec_module(custom_module)  # type: ignore
 
