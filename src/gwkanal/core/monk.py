@@ -85,9 +85,6 @@ class Monk(FlowMCBased):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        minimum_mc_error: float,
-        n_checkpoints: int,
-        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -128,9 +125,6 @@ class Monk(FlowMCBased):
         )
         self.data_filename = data_filename
         self.n_samples = n_samples
-        self.minimum_mc_error = minimum_mc_error
-        self.n_checkpoints = n_checkpoints
-        self.n_max_steps = n_max_steps
         self.set_rng_key(seed=seed)
 
         super().__init__(
@@ -175,11 +169,8 @@ class Monk(FlowMCBased):
             variables_index,
             poisson_mean_estimator,
             self.rng_key,
-            n_events=n_events,
-            n_samples=self.n_samples,
-            minimum_mc_error=self.minimum_mc_error,
-            n_checkpoints=self.n_checkpoints,
-            n_max_steps=self.n_max_steps,
+            n_events,
+            self.n_samples,
         )
 
         self.driver(
@@ -227,24 +218,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Number of samples to draw from the multivariate normal distribution for each "
         "event to compute the likelihood",
         default=10_000,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--minimum-mc-error",
-        help="Minimum Monte Carlo error for the likelihood computation.",
-        default=0.01,
-        type=float,
-    )
-    likelihood_group.add_argument(
-        "--n-checkpoints",
-        help="Number of checkpoints to save during the optimization process.",
-        default=5,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--n-max-steps",
-        help="Maximum number of steps until minimum Monte Carlo error is reached.",
-        default=10,
         type=int,
     )
 
