@@ -69,3 +69,21 @@ def to_structured(data: np.ndarray, names: Sequence[str]) -> np.ndarray:
     """
     dtype = [(n, "<f8") for n in names]
     return np.core.records.fromarrays(data.T, dtype=dtype)
+
+
+def from_structured(data: np.ndarray) -> tuple[np.ndarray, Sequence[str]]:
+    """Converts a structured array to a 2D array.
+
+    Parameters
+    ----------
+    data : np.ndarray
+        Structured array.
+
+    Returns
+    -------
+    tuple[np.ndarray, Sequence[str]]
+        A tuple containing:
+        - 2D array of shape (n_samples, n_features).
+        - List of field names from the structured array.
+    """
+    return np.vstack([data[name] for name in data.dtype.names]).T, data.dtype.names

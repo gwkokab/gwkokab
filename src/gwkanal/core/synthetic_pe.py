@@ -25,7 +25,7 @@ ErrorFunctionRegistryType: TypeAlias = dict[
 
 
 class FakeDiscretePEBase(PRNGKeyMixin):
-    waveform_name = "GWKokabFakeDiscretePE"
+    waveform_name = "GWKokabSyntheticDiscretePE"
     root_dir = Path("data")
 
     def __init__(
