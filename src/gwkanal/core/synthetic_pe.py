@@ -3,8 +3,9 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, TypeAlias
+from typing import TypeAlias
 
 import h5py
 import numpy as np

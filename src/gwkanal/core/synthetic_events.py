@@ -4,7 +4,7 @@
 
 from abc import ABC, abstractmethod
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Callable, Dict
+from collections.abc import Callable
 
 import h5py
 import numpy as np
@@ -64,7 +64,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         """
         pass
 
-    def modify_model_params(self, params: Dict) -> Dict:
+    def modify_model_params(self, params: dict) -> dict:
         """Hook for subclasses to modify parameters before model instantiation."""
         return params
 
