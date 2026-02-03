@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Callable
+from collections.abc import Callable
 
 from gwkanal.core.synthetic_events import (
     injection_generator_parser,

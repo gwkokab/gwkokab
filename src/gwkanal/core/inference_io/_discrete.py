@@ -4,7 +4,7 @@
 
 import glob
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Literal, Optional
 
 import h5py
 import numpy as np
@@ -34,10 +34,10 @@ class DiscretePELoader(BaseModel):
     population inference.
     """
 
-    filenames: Tuple[Path, ...]
+    filenames: tuple[Path, ...]
     """Tuple of absolute paths to the sample files."""
 
-    parameter_aliases: Dict[str, str] = Field(default_factory=dict)
+    parameter_aliases: dict[str, str] = Field(default_factory=dict)
     """Mapping of internal parameter names to the column names used in the CSV files."""
 
     max_samples: Optional[PositiveInt] = Field(None)
@@ -46,7 +46,7 @@ class DiscretePELoader(BaseModel):
     default_waveform: str = Field("GWKokabSyntheticDiscretePE")
     """Default waveform name to use when loading samples."""
 
-    alternate_waveforms: Dict[str, str] = Field(default_factory=dict)
+    alternate_waveforms: dict[str, str] = Field(default_factory=dict)
     """Mapping of filenames to alternate waveform names, if needed."""
 
     mass_prior: Literal[
@@ -135,22 +135,22 @@ class DiscretePELoader(BaseModel):
         return df
 
     def load(
-        self, parameters: Tuple[str, ...], seed: int = 37
-    ) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+        self, parameters: tuple[str, ...], seed: int = 37
+    ) -> tuple[list[np.ndarray], list[np.ndarray]]:
         """Loads samples from disk and computes the corresponding log-prior weights.
 
         It is inspired by :func:`~gwpopulation_pipe.data_collection.evaluate_prior`.
 
         Parameters
         ----------
-        parameters : Tuple[str, ...]
+        parameters : tuple[str, ...]
             The list of parameters to extract from each file.
         seed : int, optional
             Random seed used for deterministic subsampling, by default 37
 
         Returns
         -------
-        Tuple[List[np.ndarray], List[np.ndarray]]
+        tuple[list[np.ndarray], list[np.ndarray]]
             A tuple containing:
                 - A list of arrays (one per event) containing the requested parameters.
                 - A list of arrays (one per event) containing the log-prior weights.
@@ -228,7 +228,7 @@ class DiscretePELoader(BaseModel):
         return df.sample(n=self.max_samples, random_state=seed)
 
     def _validate_columns(
-        self, df: pd.DataFrame, event: Path | str, columns: List[str]
+        self, df: pd.DataFrame, event: Path | str, columns: list[str]
     ):
         """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(df.columns)
@@ -238,7 +238,7 @@ class DiscretePELoader(BaseModel):
             f"File '{event}' is missing required columns: {missing}",
         )
 
-    def _get_q(self, df: pd.DataFrame, aliases: Dict) -> np.ndarray:
+    def _get_q(self, df: pd.DataFrame, aliases: dict) -> np.ndarray:
         """Calculates mass ratio q = m2/m1, handling various alias possibilities."""
         if aliases[P.MASS_RATIO] in df.columns:
             return df[aliases[P.MASS_RATIO]].to_numpy()
@@ -255,9 +255,9 @@ class DiscretePELoader(BaseModel):
     def _calculate_distance_prior(
         self,
         df: pd.DataFrame,
-        parameters: Tuple[str, ...],
+        parameters: tuple[str, ...],
         cosmo: Cosmology,
-        aliases: Dict,
+        aliases: dict,
         log: bool,
     ) -> np.ndarray:
         """Calculates the log-weight for the distance/redshift prior."""
@@ -285,7 +285,7 @@ class DiscretePELoader(BaseModel):
         return 0.0
 
     def _calculate_mass_prior(
-        self, df: pd.DataFrame, parameters: Tuple[str, ...], aliases: Dict, log: bool
+        self, df: pd.DataFrame, parameters: tuple[str, ...], aliases: dict, log: bool
     ) -> np.ndarray:
         """Calculates the log-weight for mass-related priors and Jacobians."""
         if self.mass_prior is None:
@@ -332,7 +332,7 @@ class DiscretePELoader(BaseModel):
         return lp
 
     def _calculate_spin_prior(
-        self, df: pd.DataFrame, parameters: Tuple[str, ...], aliases: Dict, log: bool
+        self, df: pd.DataFrame, parameters: tuple[str, ...], aliases: dict, log: bool
     ) -> np.ndarray:
         """Calculates log-weights for spin priors (effective, precessing, and
         magnitude).

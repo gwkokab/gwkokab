@@ -3,7 +3,6 @@
 
 
 from argparse import ArgumentParser
-from typing import List, Tuple
 
 from gwkanal.utils.common import expand_arguments
 from gwkokab.parameters import Parameters as P
@@ -53,7 +52,7 @@ class NPowerlawMGaussianCore:
         self.use_detection_time = use_detection_time
 
     @property
-    def parameters(self) -> Tuple[str, ...]:
+    def parameters(self) -> tuple[str, ...]:
         names = [P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE]
         if self.use_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE)
@@ -92,8 +91,8 @@ class NPowerlawMGaussianCore:
         return names
 
     @property
-    def model_parameters(self) -> List[str]:
-        all_params: List[Tuple[str, int]] = [
+    def model_parameters(self) -> list[str]:
+        all_params: list[tuple[str, int]] = [
             ("log_rate", self.N_pl + self.N_g),
             ("alpha_pl", self.N_pl),
             ("beta_pl", self.N_pl),
