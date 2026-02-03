@@ -108,16 +108,17 @@ class FakeDiscretePEBase(PRNGKeyMixin):
         data_stack = np.stack([posterior[p] for p in params], axis=-1)
         data_stack = data_stack[~np.any(np.isnan(data_stack), axis=-1)]
 
-        compound_post = to_structured(data_stack, params)
-        compound_inj = to_structured(np.array([[injection[p] for p in params]]), params)
-
+        posterior_samples = to_structured(data_stack, params)
+        injection_data = to_structured(
+            np.array([[injection[p] for p in params]]), params
+        )
 
         with h5py.File(event_path, "w") as ef:
             ef.attrs["parameters"] = np.array(params, dtype="S")
             group = ef.create_group(self.waveform_name)
             group.create_dataset("approximant", data=self.waveform_name)
-            group.create_dataset("injection_data", data=compound_inj)
-            group.create_dataset("posterior_samples", data=compound_post)
+            group.create_dataset("injection_data", data=injection_data)
+            group.create_dataset("posterior_samples", data=posterior_samples)
 
     def generate_parameter_estimates(self):
         """Generates parameter estimates based on the defined error functions.
