@@ -183,7 +183,7 @@ class DiscretePELoader(BaseModel):
         data_list, log_prior_list = [], []
 
         for i, event_path in enumerate(self.filenames):
-            event_name = event_path.name.removesuffix(".hdf5").removesuffix(".h5")
+            event_name = event_path.stem
 
             waveform_name = self.alternate_waveforms.get(
                 event_name, self.default_waveform
