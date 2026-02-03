@@ -10,7 +10,7 @@ from jaxtyping import Array, ArrayLike
 from numpyro.distributions.distribution import Distribution, enable_validation
 
 from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
-from gwkanal.core.inference_io import DiscreteParameterEstimationLoader as DataLoader
+from gwkanal.core.inference_io import DiscretePELoader as DataLoader
 from gwkanal.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from gwkanal.core.sage import Sage, sage_arg_parser
 from gwkanal.utils.checks import check_min_concentration_for_beta_dist

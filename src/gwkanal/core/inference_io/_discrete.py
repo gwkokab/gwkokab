@@ -3,15 +3,18 @@
 
 
 import glob
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from pathlib import Path
+from typing import Dict, List, Literal, Optional, Tuple
 
+import h5py
 import numpy as np
 import pandas as pd
 from loguru import logger
 from pydantic import BaseModel, Field, PositiveInt
 
+from gwkanal.core.utils import from_structured
 from gwkanal.utils.common import read_json
-from gwkokab.cosmology import PLANCK_2015_Cosmology
+from gwkokab.cosmology import Cosmology, PLANCK_2015_Cosmology
 from gwkokab.parameters import Parameters as P
 from gwkokab.poisson_mean._injection_based_helper import (
     aligned_spin_prior,
@@ -22,8 +25,8 @@ from gwkokab.poisson_mean._injection_based_helper import (
 from gwkokab.utils.tools import error_if, warn_if
 
 
-class DiscreteParameterEstimationLoader(BaseModel):
-    """Loader for discrete Parameter Estimation (PE) samples from files matching a
+class DiscretePELoader(BaseModel):
+    """Loader for Discrete PE (Parameter Estimation) samples from files matching a
     regex.
 
     This class handles the ingestion of gravitational-wave posterior samples, manages
@@ -31,7 +34,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
     population inference.
     """
 
-    filenames: Tuple[str, ...]
+    filenames: Tuple[Path, ...]
     """Tuple of absolute paths to the sample files."""
 
     parameter_aliases: Dict[str, str] = Field(default_factory=dict)
@@ -39,6 +42,12 @@ class DiscreteParameterEstimationLoader(BaseModel):
 
     max_samples: Optional[PositiveInt] = Field(None)
     """If set, limits the number of samples loaded per event to this value."""
+
+    default_waveform: str = Field("GWKokabSyntheticDiscretePE")
+    """Default waveform name to use when loading samples."""
+
+    alternate_waveforms: Dict[str, str] = Field(default_factory=dict)
+    """Mapping of filenames to alternate waveform names, if needed."""
 
     mass_prior: Literal[
         None,
@@ -55,7 +64,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
     """The distance prior assumed; used to calculate volume-sensitive weights."""
 
     @classmethod
-    def from_json(cls, config_path: str) -> "DiscreteParameterEstimationLoader":
+    def from_json(cls, config_path: str) -> "DiscretePELoader":
         """Initializes the loader from a JSON configuration file.
 
         Parameters
@@ -83,7 +92,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
         )
 
         regex = raw_data.pop("regex")
-        filenames = tuple(sorted(glob.glob(regex)))
+        filenames = tuple(map(Path, sorted(glob.glob(regex))))
 
         n_files = len(filenames)
         error_if(
@@ -95,6 +104,37 @@ class DiscreteParameterEstimationLoader(BaseModel):
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
         return cls(**raw_data, filenames=filenames)
+
+    @classmethod
+    def load_file(cls, filename: Path | str, waveform_name: str) -> pd.DataFrame:
+        """Loads a single PE sample file into a DataFrame.
+
+        Parameters
+        ----------
+        filename : Path | str
+            Path to the sample file.
+        waveform_name : str
+            Name of the waveform model used (for logging purposes).
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the samples from the file.
+        """
+        logger.info(f"Loading file '{filename}' with waveform '{waveform_name}'.")
+        with h5py.File(filename, "r") as f:
+            try:
+                group = f[waveform_name]
+            except KeyError:
+                error_if(
+                    True,
+                    KeyError,
+                    f"Waveform '{waveform_name}' not found in file '{filename}'.",
+                )
+            data_structured = group["posterior_samples"][()]
+            data_array, columns = from_structured(data_structured)
+            df = pd.DataFrame(data=data_array, columns=columns)
+        return df
 
     def load(
         self, parameters: Tuple[str, ...], seed: int = 37
@@ -118,7 +158,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
                 - A list of arrays (one per event) containing the log-prior weights.
         """
         logger.info(f"Starting load of {len(self.filenames)} events.")
-        logger.debug(f"Target physical parameters: {parameters}")
+        logger.info(f"Target physical parameters: {parameters}")
 
         aliases = {
             p: self.parameter_aliases.get(p, p)
@@ -144,13 +184,17 @@ class DiscreteParameterEstimationLoader(BaseModel):
         cosmo = PLANCK_2015_Cosmology()
         data_list, log_prior_list = [], []
 
-        for i, event in enumerate(self.filenames):
-            logger.debug(f"[{i + 1}/{len(self.filenames)}] Loading: {event}")
+        for i, event_path in enumerate(self.filenames):
+            event_name = event_path.name.removesuffix(".hdf5").removesuffix(".h5")
 
-            df = pd.read_csv(event, delimiter=" ")
-            self._validate_columns(df, event, posterior_columns)
+            waveform_name = self.alternate_waveforms.get(
+                event_name, self.default_waveform
+            )
+            df = self.load_file(event_path, waveform_name=waveform_name)
 
-            df = self._subsample(df, event, seed + i)
+            self._validate_columns(df, event_path, posterior_columns)
+
+            df = self._subsample(df, event_path, seed + i)
 
             log_prior = np.zeros(len(df))
             should_log = i == 0  # Log logic only once to avoid spam
@@ -168,7 +212,9 @@ class DiscreteParameterEstimationLoader(BaseModel):
         logger.success(f"Finished loading {len(data_list)} events.")
         return data_list, log_prior_list
 
-    def _subsample(self, df: pd.DataFrame, event: str, seed: int) -> pd.DataFrame:
+    def _subsample(
+        self, df: pd.DataFrame, event: Path | str, seed: int
+    ) -> pd.DataFrame:
         """Helper to downsample a DataFrame if it exceeds max_samples."""
         if self.max_samples is None:
             return df
@@ -183,7 +229,9 @@ class DiscreteParameterEstimationLoader(BaseModel):
 
         return df.sample(n=self.max_samples, random_state=seed)
 
-    def _validate_columns(self, df: pd.DataFrame, event: str, columns: List[str]):
+    def _validate_columns(
+        self, df: pd.DataFrame, event: Path | str, columns: List[str]
+    ):
         """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(df.columns)
         error_if(
@@ -210,7 +258,7 @@ class DiscreteParameterEstimationLoader(BaseModel):
         self,
         df: pd.DataFrame,
         parameters: Tuple[str, ...],
-        cosmo: Any,
+        cosmo: Cosmology,
         aliases: Dict,
         log: bool,
     ) -> np.ndarray:

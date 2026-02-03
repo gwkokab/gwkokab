@@ -13,10 +13,7 @@ from jaxtyping import Array, ArrayLike
 from loguru import logger
 from numpyro.distributions import Distribution
 
-from gwkanal.core.inference_io import (
-    DiscreteParameterEstimationLoader,
-    PoissonMeanEstimationLoader,
-)
+from gwkanal.core.inference_io import DiscretePELoader, PoissonMeanEstimationLoader
 from gwkanal.utils.literals import POSTERIOR_SAMPLES_FILENAME
 from gwkokab.inference.poissonlikelihood_utils import (
     variance_of_single_event_likelihood,
@@ -47,7 +44,7 @@ class Sage(Guru):
         ],
         model: Union[Distribution, Callable[..., Distribution]],
         where_fns: Optional[List[Callable[..., Array]]],
-        data_loader: DiscreteParameterEstimationLoader,
+        data_loader: DiscretePELoader,
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
