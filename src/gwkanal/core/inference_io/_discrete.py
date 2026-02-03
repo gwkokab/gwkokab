@@ -123,14 +123,12 @@ class DiscretePELoader(BaseModel):
         """
         logger.info(f"Loading file '{filename}' with waveform '{waveform_name}'.")
         with h5py.File(filename, "r") as f:
-            try:
-                group = f[waveform_name]
-            except KeyError:
-                error_if(
-                    True,
-                    KeyError,
-                    f"Waveform '{waveform_name}' not found in file '{filename}'.",
-                )
+            error_if(
+                waveform_name not in f,
+                KeyError,
+                f"Waveform '{waveform_name}' not found in file '{filename}'.",
+            )
+            group = f[waveform_name]
             data_structured = group["posterior_samples"][()]
             data_array, columns = from_structured(data_structured)
             df = pd.DataFrame(data=data_array, columns=columns)
