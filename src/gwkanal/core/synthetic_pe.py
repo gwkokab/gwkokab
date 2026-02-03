@@ -109,7 +109,8 @@ class FakeDiscretePEBase(PRNGKeyMixin):
         data_stack = data_stack[~np.any(np.isnan(data_stack), axis=-1)]
 
         compound_post = to_structured(data_stack, params)
-        compound_inj = to_structured(np.array([injection[p] for p in params]), params)
+        compound_inj = to_structured(np.array([[injection[p] for p in params]]), params)
+
 
         with h5py.File(event_path, "w") as ef:
             ef.attrs["parameters"] = np.array(params, dtype="S")
