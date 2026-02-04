@@ -10,7 +10,7 @@ import numpy as np
 from gwkanal.core.synthetic_pe import (
     ErrorFunctionRegistryType,
     fake_discrete_pe_parser,
-    FakeDiscretePEBase,
+    SyntheticDiscretePEBase,
 )
 from gwkanal.n_pls_m_gs.common import NPowerlawMGaussianCore
 from gwkanal.utils.logger import log_info
@@ -18,7 +18,7 @@ from gwkokab.errors import banana_error_m1_m2, truncated_normal_error
 from gwkokab.parameters import Parameters as P
 
 
-class NPowerlawMGaussianFakeDiscretePE(FakeDiscretePEBase, NPowerlawMGaussianCore):
+class NPowerlawMGaussianFakeDiscretePE(SyntheticDiscretePEBase, NPowerlawMGaussianCore):
     @property
     def error_function_registry(self) -> ErrorFunctionRegistryType:
         def banana_error_fn(scale_Mc, scale_eta, **kwargs):
