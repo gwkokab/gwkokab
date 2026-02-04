@@ -126,9 +126,11 @@ class AnalyticalPELoader(BaseModel):
     def load(
         self, parameters: tuple[str, ...], seed: int = 37
     ) -> dict[str, np.ndarray]:
-        """Loads samples from disk and computes the corresponding log-prior weights.
+        """Loads analytical PE data from disk.
 
-        It is inspired by :func:`~gwpopulation_pipe.data_collection.evaluate_prior`.
+        This method reads the mean, covariance, and limits for each event specified
+        in `self.event_paths`, validates that the necessary parameters are present,
+        and returns them as stacked numpy arrays.
 
         Parameters
         ----------
@@ -139,8 +141,8 @@ class AnalyticalPELoader(BaseModel):
 
         Returns
         -------
-        list[AnalyticalPEFileData]
-            A list containing NamedTuples of arrays (one per event) containing the requested parameters.
+        dict[str, np.ndarray]
+            A dictionary containing stacked arrays of mean, covariance, and limits for each event.
         """
         logger.info(f"Starting load of {len(self.event_paths)} events.")
         logger.info(f"Target physical parameters: {parameters}")
