@@ -5,6 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import List
 
+from gwkanal.core.inference_io import AnalyticalPELoader as DataLoader
 from gwkanal.core.monk import Monk, monk_arg_parser
 from gwkanal.ecc_matters.common import EccentricityMattersModel
 from gwkanal.utils.logger import log_info
@@ -29,9 +30,11 @@ def main() -> None:
 
     log_info(start=True)
 
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
     EccentricityMattersMonk(
         model=EccentricityMattersModel,
-        data_filename=args.data_filename,
+        data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
