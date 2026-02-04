@@ -159,16 +159,12 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
             )
 
         with h5py.File(self.filename, "w") as f:
+            f.create_dataset("events", data=to_structured(population, current_params))
+            f.create_dataset("indices", data=indices.astype(np.uint32))
             f.create_dataset(
-                "injection_data", data=to_structured(population, current_params)
+                "raw_events", data=to_structured(raw_population, current_params)
             )
-            f.create_dataset("injection_indices", data=indices.astype(np.uint32))
-            f.create_dataset(
-                "raw_injection_data", data=to_structured(raw_population, current_params)
-            )
-            f.create_dataset(
-                "raw_injection_indices", data=raw_indices.astype(np.uint32)
-            )
+            f.create_dataset("raw_indices", data=raw_indices.astype(np.uint32))
             f.attrs["parameters"] = np.array(current_params, dtype="S")
 
 

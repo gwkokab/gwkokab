@@ -63,12 +63,12 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         logger.error(msg)
         raise NotImplementedError(msg)
 
-    def _load_injection_data(self) -> tuple[list[str], dict[str, np.ndarray]]:
+    def _load_events(self) -> tuple[list[str], dict[str, np.ndarray]]:
         """Extracts parameters and injection data from the source HDF5."""
         with h5py.File(self.filename, "r") as f:
             parameters = f.attrs["parameters"].astype(np.str_).tolist()
-            injection_data = {p: f["injection_data"][p] for p in parameters}
-        return parameters, injection_data
+            events = {p: f["events"][p] for p in parameters}
+        return parameters, events
 
     def _apply_error_model(
         self,
@@ -113,15 +113,13 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         data_stack = data_stack[~np.any(np.isnan(data_stack), axis=-1)]
 
         posterior_samples = to_structured(data_stack, params)
-        injection_data = to_structured(
-            np.array([[injection[p] for p in params]]), params
-        )
+        event = to_structured(np.array([[injection[p] for p in params]]), params)
 
         with h5py.File(event_path, "w") as ef:
             ef.attrs["parameters"] = np.array(params, dtype="S")
             group = ef.create_group(self.waveform_name)
             group.create_dataset("approximant", data=self.waveform_name)
-            group.create_dataset("injection_data", data=injection_data)
+            group.create_dataset("injection_data", data=event)
             group.create_dataset("posterior_samples", data=posterior_samples)
 
     def generate_parameter_estimates(self):
@@ -130,8 +128,8 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         This method should be implemented in subclasses to generate parameter estimates
         using the error functions defined in the `error_function_registry` property.
         """
-        parameters, injection_data = self._load_injection_data()
-        n_injections = len(next(iter(injection_data.values())))
+        parameters, events = self._load_events()
+        n_injections = len(next(iter(events.values())))
 
         error_params = read_json(self.error_params_filename)
 
@@ -142,7 +140,7 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
             mesh = default_relation_mesh()
 
         for i in range(n_injections):
-            inj_vals = {p: injection_data[p][i] for p in parameters}
+            inj_vals = {p: events[p][i] for p in parameters}
             post_est = self._apply_error_model(parameters, inj_vals, error_params)
 
             active_params = parameters
