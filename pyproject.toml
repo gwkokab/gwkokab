@@ -125,6 +125,7 @@ gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
 gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
 # Kokab scripts
 ## Genie scripts
+synthetic_analytical_pe = "gwkanal.core.synthetic_pe:synthetic_analytical_pe_main"
 synthetic_discrete_pe_ecc_matter = "gwkanal.ecc_matters.synthetic_pe:main"
 synthetic_discrete_pe_n_pls_m_gs = "gwkanal.n_pls_m_gs.synthetic_pe:main"
 synthetic_events_ecc_matter = "gwkanal.ecc_matters.synthetic_events:main"
