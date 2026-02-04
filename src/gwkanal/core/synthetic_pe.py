@@ -5,17 +5,20 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypeAlias
+from typing import Optional, TypeAlias
 
 import h5py
 import numpy as np
+import pandas as pd
 from loguru import logger
 from numpyro.distributions.distribution import enable_validation
 
-from gwkanal.core.utils import PRNGKeyMixin, to_structured
+from gwkanal.core.utils import from_structured, PRNGKeyMixin, to_structured
 from gwkanal.utils.common import read_json
+from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
 from gwkokab.parameters import default_relation_mesh, Parameters
+from gwkokab.utils.tools import warn_if
 
 
 ErrorFunctionRegistryType: TypeAlias = dict[
@@ -201,3 +204,98 @@ def fake_discrete_pe_parser() -> ArgumentParser:
     )
 
     return parser
+
+
+class SyntheticAnalyticalPE(PRNGKeyMixin):
+    waveform_name = "GWKokabSyntheticAnalyticalPE"
+
+    def __init__(
+        self,
+        filename: str,
+        discrete_waveform: str,
+        coords: Optional[tuple[str, ...]] = None,
+    ) -> None:
+        self.filename = filename
+        self.discrete_waveform = discrete_waveform
+        self.coords = coords
+
+    def generate_parameter_estimates(self):
+        with h5py.File(self.filename, "r") as ef:
+            group = ef[self.discrete_waveform]
+            posterior_samples = group["posterior_samples"][:]
+
+        posterior_samples, parameters = from_structured(posterior_samples)
+
+        df = pd.DataFrame(posterior_samples, columns=parameters)
+        if self.coords is not None:
+            df = df[list(self.coords)]
+
+        cov = df.cov().to_numpy()
+        mean = df.mean().to_numpy()
+        cor = df.corr().to_numpy()
+        std = np.sqrt(np.diag(cov))
+        limits = np.array((df.min().to_numpy(), df.max().to_numpy())).T
+
+        with h5py.File(self.filename, "a") as ef:
+            if self.waveform_name in ef:
+                warn_if(
+                    True,
+                    msg=f"Group '{self.waveform_name}' already exists in {self.filename}. "
+                    "Overwriting existing data.",
+                )
+                del ef[self.waveform_name]
+
+            group = ef.create_group(self.waveform_name)
+            group.create_dataset("approximant", data=self.waveform_name)
+            group.attrs["discrete_waveform"] = self.discrete_waveform
+            group.attrs["coords"] = self.coords
+            group.create_dataset("mu", data=mean)
+            group.create_dataset("std", data=std)
+            group.create_dataset("cov", data=cov)
+            group.create_dataset("cor", data=cor)
+            group.create_dataset("limits", data=limits)
+
+
+def synthetic_analytical_pe_main():
+    parser = ArgumentParser(
+        formatter_class=ArgumentDefaultsHelpFormatter,
+        description="Generate synthetic analytical parameter estimation samples.",
+        epilog="This tool generates synthetic parameter estimation samples based on "
+        "injection data and a specified error model.",
+    )
+
+    parser.add_argument(
+        "filename",
+        help="Path to the output HDF5 file to store the generated injections.",
+        type=str,
+    )
+    parser.add_argument(
+        "--discrete-waveform",
+        help="Name of the discrete waveform used to generate the analytical PE.",
+        type=str,
+        default=FakeDiscretePEBase.waveform_name,
+    )
+    parser.add_argument(
+        "--coords",
+        help="Comma-separated list of coords to include in the output. "
+        "If not provided, all coords will be included.",
+        type=lambda s: tuple(s.split(",")),
+        default=None,
+    )
+    parser.add_argument(
+        "--seed", help="Random seed for reproducibility.", default=37, type=int
+    )
+
+    args = parser.parse_args()
+
+    log_info(start=True)
+
+    SyntheticAnalyticalPE.set_rng_key(seed=args.seed)
+
+    pe = SyntheticAnalyticalPE(
+        filename=args.filename,
+        discrete_waveform=args.discrete_waveform,
+        coords=args.coords,
+    )
+
+    pe.generate_parameter_estimates()

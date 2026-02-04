@@ -5,6 +5,7 @@
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Dict, List, Tuple, Union
 
+from gwkanal.core.inference_io import AnalyticalPELoader as DataLoader
 from gwkanal.core.monk import Monk, monk_arg_parser
 from gwkanal.utils.common import expand_arguments
 from gwkanal.utils.logger import log_info
@@ -34,7 +35,7 @@ class NPowerlawMGaussianMonk(Monk):
         has_right_ascension: bool,
         has_sin_declination: bool,
         has_detection_time: bool,
-        data_filename: str,
+        data_loader: DataLoader,
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -69,7 +70,7 @@ class NPowerlawMGaussianMonk(Monk):
 
         super().__init__(
             NPowerlawMGaussian,
-            data_filename,
+            data_loader,
             seed,
             prior_filename,
             poisson_mean_filename,
@@ -578,6 +579,8 @@ def main() -> None:
 
     log_info(start=True)
 
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
     NPowerlawMGaussianMonk(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -598,7 +601,7 @@ def main() -> None:
         has_right_ascension=args.add_right_ascension,
         has_sin_declination=args.add_sin_declination,
         has_detection_time=args.add_detection_time,
-        data_filename=args.data_filename,
+        data_loader=data_loader,
         seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
