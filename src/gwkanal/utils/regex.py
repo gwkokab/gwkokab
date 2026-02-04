@@ -4,7 +4,7 @@
 
 import re
 import warnings
-from typing import Dict, List
+from typing import Dict, Sequence
 
 
 def matches_regex(pattern: str, string: str) -> bool:
@@ -26,7 +26,7 @@ def matches_regex(pattern: str, string: str) -> bool:
 
 
 def match_all(
-    strings: List[str], pattern_dict_with_val: Dict[str, str | int | float | None]
+    strings: Sequence[str], pattern_dict_with_val: Dict[str, str | int | float | None]
 ) -> Dict[str, int | float | None]:
     """Match all strings in a list with a dictionary of regex patterns.
 

@@ -4,81 +4,27 @@
 
 from argparse import ArgumentParser
 from collections.abc import Callable
-from typing import List, Tuple, Union
+from typing import Union
 
-import h5py
 import jax
 import numpy as np
-from jax import numpy as jnp
 from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
 
-from gwkanal.core.inference_io import PoissonMeanEstimationLoader
+from gwkanal.core.inference_io import AnalyticalPELoader, PoissonMeanEstimationLoader
 from gwkokab.inference import analytical_likelihood
-from gwkokab.utils.tools import error_if
 
 from .flowMC_based import FlowMCBased
 from .guru import guru_arg_parser as guru_parser
-
-
-def _read_mean_covariances(filename: str) -> Tuple[List[np.ndarray], List[np.ndarray]]:
-    """Reads means and covariances from a file.
-
-    Args:
-        filename (str): The path to the file containing means and covariances.
-
-    Returns:
-        Tuple[List[np.ndarray], List[np.ndarray]]: A tuple containing two lists:
-            - list_of_means: List of mean arrays.
-            - list_of_covariances: List of covariance arrays.
-    """
-    assert filename.endswith(".hdf5") or filename.endswith(".h5"), (
-        "The filename must end with '.hdf5' or '.h5'."
-    )
-
-    logger.info("Reading means and covariances from {filename}", filename=filename)
-
-    list_of_means = []
-    list_of_covariances = []
-
-    with h5py.File(filename, "r") as f:
-        for key in f.keys():
-            if not key.startswith("event_"):
-                continue
-
-            group = f[key]
-            error_if(
-                "mean" not in group,
-                msg=f"Key 'mean' not found in group {key} of file {filename}.",
-            )
-            error_if(
-                "cov" not in group,
-                msg=f"Key 'cov' not found in group {key} of file {filename}.",
-            )
-
-            mean = group["mean"][:]
-            cov = group["cov"][:]
-
-            n_dim = mean.shape[0]
-            error_if(
-                cov.shape != (n_dim, n_dim),
-                msg=f"Covariance shape {cov.shape} does not match mean shape "
-                f"{mean.shape} in group {key} of file {filename}.",
-            )
-
-            list_of_means.append(mean)
-            list_of_covariances.append(cov)
-
-    return list_of_means, list_of_covariances
 
 
 class Monk(FlowMCBased):
     def __init__(
         self,
         model: Union[Distribution, Callable[..., Distribution]],
-        data_filename: str,
+        data_loader: AnalyticalPELoader,
         seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -99,8 +45,8 @@ class Monk(FlowMCBased):
         model : Union[Distribution, Callable[..., Distribution]]
             model to be used in the Monk class. It can be a Distribution or a callable
             that returns a Distribution.
-        data_filename : str
-            path to the HDF5 file containing the data.
+        data_loader : AnalyticalPELoader
+            data loader for the analytical PE data.
         seed : int
             seed for the random number generator.
         prior_filename : str
@@ -125,7 +71,7 @@ class Monk(FlowMCBased):
         assert all(letter.isalpha() or letter == "_" for letter in analysis_name), (
             "Analysis name must be alphabetic characters only."
         )
-        self.data_filename = data_filename
+        self.data_loader = data_loader
         self.n_samples = n_samples
         self.minimum_mc_error = minimum_mc_error
         self.n_checkpoints = n_checkpoints
@@ -147,18 +93,19 @@ class Monk(FlowMCBased):
         """Runs the Monk analysis."""
         constants, priors, variables, variables_index = self.classify_model_parameters()
 
-        list_of_means, list_of_covariances = _read_mean_covariances(self.data_filename)
+        data = self.data_loader.load(parameters=sorted(variables.keys()))
 
-        n_events = len(list_of_means)
-        mean_stack: Array = jax.block_until_ready(
-            jax.device_put(jnp.stack(list_of_means, axis=0))
-        )
-        cov_stack = np.stack(list_of_covariances, axis=0)
-        scale_tril_stack: Array = jax.device_put(jnp.linalg.cholesky(cov_stack))
+        mean_stack: Array = jax.device_put(data["mean"])
+        limits_stack = jax.device_put(data["limits"])
+        cov_stack = data["cov"]
+        scale_tril_stack: Array = jax.device_put(np.linalg.cholesky(cov_stack))
         del cov_stack  # We don't need the covariance matrices anymore
+
+        n_events = mean_stack.shape[0]
 
         logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
         logger.debug("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
+        logger.debug("limits_stack.shape: {shape}", shape=limits_stack.shape)
 
         logger.info("Parsing Poisson mean configuration and initializing estimator.")
         pmean_loader = PoissonMeanEstimationLoader.from_json(
@@ -188,6 +135,7 @@ class Monk(FlowMCBased):
             data={
                 "mean_stack": mean_stack,
                 "scale_tril_stack": scale_tril_stack,
+                "limits_stack": limits_stack,
                 "T_obs": T_obs,
             },
             labels=sorted(variables.keys()),
@@ -215,10 +163,10 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
     monk_group = parser.add_argument_group("Monk Options")
     monk_group.add_argument(
-        "--data-filename",
-        help="Path to the HDF5 file containing the data.",
+        "--data-loader-cfg",
         type=str,
         required=True,
+        help="Path to JSON configuration for the AnalyticalPELoader.",
     )
 
     likelihood_group = parser.add_argument_group("Likelihood Options")

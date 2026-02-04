@@ -2,170 +2,108 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from argparse import ArgumentParser
 
-from jax import numpy as jnp
-from jaxtyping import Array, ArrayLike
-from numpyro.distributions.distribution import Distribution, enable_validation
-
-from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
-from gwkanal.core.inference_io import DiscretePELoader as DataLoader
-from gwkanal.core.numpyro_based import numpyro_arg_parser, NumpyroBased
-from gwkanal.core.sage import Sage, sage_arg_parser
-from gwkanal.utils.checks import check_min_concentration_for_beta_dist
 from gwkanal.utils.common import expand_arguments
-from gwkanal.utils.logger import log_info
-from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
-from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
-from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 
 
-def where_fns_list(
-    use_beta_spin_magnitude: bool,
-) -> Optional[List[Callable[..., Array]]]:
-    where_fns = []
-
-    if use_beta_spin_magnitude:
-
-        def positive_concentration(**kwargs) -> Array:
-            N_pl: int = kwargs.get("N_pl")  # type: ignore
-            N_g: int = kwargs.get("N_g")  # type: ignore
-            mask = jnp.ones((), dtype=bool)
-            for n_pl in range(N_pl):
-                chi_mean: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_mean_pl_" + str(n_pl)
-                )  # type: ignore
-                chi_variance: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_variance_pl_" + str(n_pl)
-                )  # type: ignore
-                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
-            for n_g in range(N_g):
-                chi_mean: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_mean_g_" + str(n_g)
-                )  # type: ignore
-                chi_variance: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_variance_g_" + str(n_g)
-                )  # type: ignore
-                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
-            return mask
-
-        where_fns.append(positive_concentration)
-
-    return where_fns if len(where_fns) > 0 else None
-
-
-class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
+class NPowerlawMGaussianCore:
     def __init__(
         self,
         N_pl: int,
         N_g: int,
         use_beta_spin_magnitude: bool,
         use_spin_magnitude_mixture: bool,
+        use_truncated_normal_spin_x: bool,
+        use_truncated_normal_spin_y: bool,
+        use_truncated_normal_spin_z: bool,
         use_chi_eff_mixture: bool,
         use_skew_normal_chi_eff: bool,
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_redshift: bool,
-        likelihood_fn: Callable[
-            [
-                Callable[..., Distribution],
-                JointDistribution,
-                Dict[str, Distribution],
-                Dict[str, int],
-                ArrayLike,
-                Callable[[ScaledMixture], Array],
-                Optional[List[Callable[..., Array]]],
-                Dict[str, Array],
-            ],
-            Callable,
-        ],
-        data_loader: DataLoader,
-        seed: int,
-        prior_filename: str,
-        poisson_mean_filename: str,
-        sampler_settings_filename: str,
-        variance_cut_threshold: Optional[float],
-        n_buckets: int,
-        threshold: float,
-        debug_nans: bool = False,
-        profile_memory: bool = False,
-        check_leaks: bool = False,
+        use_cos_iota: bool,
+        use_phi_12: bool,
+        use_polarization_angle: bool,
+        use_right_ascension: bool,
+        use_sin_declination: bool,
+        use_detection_time: bool,
     ) -> None:
         self.N_pl = N_pl
         self.N_g = N_g
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
         self.use_spin_magnitude_mixture = use_spin_magnitude_mixture
+        self.use_truncated_normal_spin_x = use_truncated_normal_spin_x
+        self.use_truncated_normal_spin_y = use_truncated_normal_spin_y
+        self.use_truncated_normal_spin_z = use_truncated_normal_spin_z
         self.use_chi_eff_mixture = use_chi_eff_mixture
         self.use_skew_normal_chi_eff = use_skew_normal_chi_eff
         self.use_truncated_normal_chi_p = use_truncated_normal_chi_p
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_redshift = use_redshift
-
-        super().__init__(
-            likelihood_fn=likelihood_fn,
-            model=NSmoothedPowerlawMSmoothedGaussian,
-            data_loader=data_loader,
-            seed=seed,
-            prior_filename=prior_filename,
-            poisson_mean_filename=poisson_mean_filename,
-            sampler_settings_filename=sampler_settings_filename,
-            variance_cut_threshold=variance_cut_threshold,
-            analysis_name="othree_n_pls_m_gs",
-            n_buckets=n_buckets,
-            threshold=threshold,
-            debug_nans=debug_nans,
-            profile_memory=profile_memory,
-            check_leaks=check_leaks,
-            where_fns=where_fns_list(use_beta_spin_magnitude=use_beta_spin_magnitude),
-        )
+        self.use_cos_iota = use_cos_iota
+        self.use_phi_12 = use_phi_12
+        self.use_polarization_angle = use_polarization_angle
+        self.use_right_ascension = use_right_ascension
+        self.use_sin_declination = use_sin_declination
+        self.use_detection_time = use_detection_time
 
     @property
-    def constants(self) -> Dict[str, Union[int, float, bool]]:
-        return {
-            "N_pl": self.N_pl,
-            "N_g": self.N_g,
-            "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
-            "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
-            "use_chi_eff_mixture": self.use_chi_eff_mixture,
-            "use_skew_normal_chi_eff": self.use_skew_normal_chi_eff,
-            "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
-            "use_tilt": self.use_tilt,
-            "use_eccentricity_mixture": self.use_eccentricity_mixture,
-            "use_redshift": self.use_redshift,
-        }
-
-    @property
-    def parameters(self) -> List[str]:
-        names = [P.PRIMARY_MASS_SOURCE]
+    def parameters(self) -> tuple[str, ...]:
+        names = [P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE]
         if self.use_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE)
             names.append(P.SECONDARY_SPIN_MAGNITUDE)
+        if self.use_truncated_normal_spin_x:
+            names.append(P.PRIMARY_SPIN_X)
+            names.append(P.SECONDARY_SPIN_X)
+        if self.use_truncated_normal_spin_y:
+            names.append(P.PRIMARY_SPIN_Y)
+            names.append(P.SECONDARY_SPIN_Y)
+        if self.use_truncated_normal_spin_z:
+            names.append(P.PRIMARY_SPIN_Z)
+            names.append(P.SECONDARY_SPIN_Z)
         if self.use_chi_eff_mixture or self.use_skew_normal_chi_eff:
             names.append(P.EFFECTIVE_SPIN)
         if self.use_truncated_normal_chi_p:
             names.append(P.PRECESSING_SPIN)
         if self.use_tilt:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
+        if self.use_phi_12:
+            names.append(P.PHI_12)
         if self.use_eccentricity_mixture:
             names.append(P.ECCENTRICITY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
-        names.append(P.MASS_RATIO)
+        if self.use_right_ascension:
+            names.append(P.RIGHT_ASCENSION)
+        if self.use_sin_declination:
+            names.append(P.SIN_DECLINATION)
+        if self.use_detection_time:
+            names.append(P.DETECTION_TIME)
+        if self.use_cos_iota:
+            names.append(P.COS_IOTA)
+        if self.use_polarization_angle:
+            names.append(P.POLARIZATION_ANGLE)
         return names
 
     @property
-    def model_parameters(self) -> List[str]:
-        all_params: List[Tuple[str, int]] = [
+    def model_parameters(self) -> list[str]:
+        all_params: list[tuple[str, int]] = [
+            ("log_rate", self.N_pl + self.N_g),
             ("alpha_pl", self.N_pl),
-            ("lambda", self.N_pl + self.N_g - 1),
-            ("m1_high_g", self.N_g),
+            ("beta_pl", self.N_pl),
             ("m1_loc_g", self.N_g),
-            ("m1_low_g", self.N_g),
+            ("m2_loc_g", self.N_g),
             ("m1_scale_g", self.N_g),
+            ("m2_scale_g", self.N_g),
+            ("m1_low_g", self.N_g),
+            ("m2_low_g", self.N_g),
+            ("m1_high_g", self.N_g),
+            ("m2_high_g", self.N_g),
             ("mmax_pl", self.N_pl),
             ("mmin_pl", self.N_pl),
         ]
@@ -224,6 +162,72 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
                 ]
             )
 
+        if self.use_truncated_normal_spin_x:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_X + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_X + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_X + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_X + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_X + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_X + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_X + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_X + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_X + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_X + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_X + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_truncated_normal_spin_y:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_Y + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Y + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_Y + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Y + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_Y + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_truncated_normal_spin_z:
+            all_params.extend(
+                [
+                    (P.PRIMARY_SPIN_Z + "_high_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z + "_high_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z + "_loc_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z + "_loc_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z + "_low_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z + "_low_pl", self.N_pl),
+                    (P.PRIMARY_SPIN_Z + "_scale_g", self.N_g),
+                    (P.PRIMARY_SPIN_Z + "_scale_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z + "_high_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z + "_high_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z + "_loc_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z + "_loc_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z + "_low_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z + "_low_pl", self.N_pl),
+                    (P.SECONDARY_SPIN_Z + "_scale_g", self.N_g),
+                    (P.SECONDARY_SPIN_Z + "_scale_pl", self.N_pl),
+                ]
+            )
+
         if self.use_chi_eff_mixture:
             all_params.extend(
                 [
@@ -279,18 +283,24 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
                 [
                     ("cos_tilt_zeta_g", self.N_g),
                     ("cos_tilt_zeta_pl", self.N_pl),
-                    (P.COS_TILT_1 + "_loc_pl", self.N_pl),
-                    (P.COS_TILT_1 + "_loc_g", self.N_g),
-                    (P.COS_TILT_1 + "_minimum_pl", self.N_pl),
-                    (P.COS_TILT_1 + "_minimum_g", self.N_g),
-                    (P.COS_TILT_1 + "_scale_pl", self.N_pl),
                     (P.COS_TILT_1 + "_scale_g", self.N_g),
-                    (P.COS_TILT_2 + "_loc_pl", self.N_pl),
-                    (P.COS_TILT_2 + "_loc_g", self.N_g),
-                    (P.COS_TILT_2 + "_minimum_pl", self.N_pl),
-                    (P.COS_TILT_2 + "_minimum_g", self.N_g),
-                    (P.COS_TILT_2 + "_scale_pl", self.N_pl),
+                    (P.COS_TILT_1 + "_scale_pl", self.N_pl),
                     (P.COS_TILT_2 + "_scale_g", self.N_g),
+                    (P.COS_TILT_2 + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_phi_12:
+            all_params.extend(
+                [
+                    (P.PHI_12 + "_high_g", self.N_g),
+                    (P.PHI_12 + "_high_pl", self.N_pl),
+                    (P.PHI_12 + "_loc_g", self.N_g),
+                    (P.PHI_12 + "_loc_pl", self.N_pl),
+                    (P.PHI_12 + "_low_g", self.N_g),
+                    (P.PHI_12 + "_low_pl", self.N_pl),
+                    (P.PHI_12 + "_scale_g", self.N_g),
+                    (P.PHI_12 + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -328,13 +338,73 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
                 ]
             )
 
-        extended_params = [
-            "beta",
-            "delta_m",
-            "log_rate",
-            "mmax",
-            "mmin",
-        ]
+        if self.use_right_ascension:
+            all_params.extend(
+                [
+                    (P.RIGHT_ASCENSION + "_high_g", self.N_g),
+                    (P.RIGHT_ASCENSION + "_high_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION + "_loc_g", self.N_g),
+                    (P.RIGHT_ASCENSION + "_loc_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION + "_low_g", self.N_g),
+                    (P.RIGHT_ASCENSION + "_low_pl", self.N_pl),
+                    (P.RIGHT_ASCENSION + "_scale_g", self.N_g),
+                    (P.RIGHT_ASCENSION + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_sin_declination:
+            all_params.extend(
+                [
+                    (P.SIN_DECLINATION + "_high_g", self.N_g),
+                    (P.SIN_DECLINATION + "_high_pl", self.N_pl),
+                    (P.SIN_DECLINATION + "_loc_g", self.N_g),
+                    (P.SIN_DECLINATION + "_loc_pl", self.N_pl),
+                    (P.SIN_DECLINATION + "_low_g", self.N_g),
+                    (P.SIN_DECLINATION + "_low_pl", self.N_pl),
+                    (P.SIN_DECLINATION + "_scale_g", self.N_g),
+                    (P.SIN_DECLINATION + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_detection_time:
+            all_params.extend(
+                [
+                    (P.DETECTION_TIME + "_high_g", self.N_g),
+                    (P.DETECTION_TIME + "_high_pl", self.N_pl),
+                    (P.DETECTION_TIME + "_low_g", self.N_g),
+                    (P.DETECTION_TIME + "_low_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_cos_iota:
+            all_params.extend(
+                [
+                    (P.COS_IOTA + "_high_g", self.N_g),
+                    (P.COS_IOTA + "_high_pl", self.N_pl),
+                    (P.COS_IOTA + "_loc_g", self.N_g),
+                    (P.COS_IOTA + "_loc_pl", self.N_pl),
+                    (P.COS_IOTA + "_low_g", self.N_g),
+                    (P.COS_IOTA + "_low_pl", self.N_pl),
+                    (P.COS_IOTA + "_scale_g", self.N_g),
+                    (P.COS_IOTA + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_polarization_angle:
+            all_params.extend(
+                [
+                    (P.POLARIZATION_ANGLE + "_high_g", self.N_g),
+                    (P.POLARIZATION_ANGLE + "_high_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE + "_loc_g", self.N_g),
+                    (P.POLARIZATION_ANGLE + "_loc_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE + "_low_g", self.N_g),
+                    (P.POLARIZATION_ANGLE + "_low_pl", self.N_pl),
+                    (P.POLARIZATION_ANGLE + "_scale_g", self.N_g),
+                    (P.POLARIZATION_ANGLE + "_scale_pl", self.N_pl),
+                ]
+            )
+
+        extended_params = []
         for params in all_params:
             extended_params.extend(expand_arguments(*params))
         return extended_params
@@ -357,12 +427,28 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     spin_group.add_argument(
         "--add-beta-spin-magnitude",
         action="store_true",
-        help="Include beta spin magnitude parameters in the model.",
+        help="Include beta spin parameters in the model.",
     )
     spin_group.add_argument(
         "--add-spin-magnitude-mixture",
         action="store_true",
-        help="Include truncated normal spin magnitude parameters in the model.",
+        help="Include spin parameters mixture in the model.",
+    )
+
+    model_group.add_argument(
+        "--add-truncated-normal-spin-x",
+        action="store_true",
+        help="Include truncated normal spin x parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin-y",
+        action="store_true",
+        help="Include truncated normal spin y parameters in the model.",
+    )
+    model_group.add_argument(
+        "--add-truncated-normal-spin-z",
+        action="store_true",
+        help="Include truncated normal spin z parameters in the model.",
     )
 
     chi_eff_group = model_group.add_mutually_exclusive_group()
@@ -388,102 +474,43 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include tilt parameters in the model.",
     )
     model_group.add_argument(
-        "--add-eccentricity-mixture",
-        action="store_true",
-        help="Include eccentricity mixture in the model.",
-    )
-    model_group.add_argument(
         "--add-redshift",
         action="store_true",
         help="Include redshift parameter in the model",
     )
-
+    model_group.add_argument(
+        "--add-eccentricity-mixture",
+        action="store_true",
+        help="Include truncated normal eccentricity in the model.",
+    )
+    model_group.add_argument(
+        "--add-cos-iota",
+        action="store_true",
+        help="Include cos_iota parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-12",
+        action="store_true",
+        help="Include phi_12 parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-polarization-angle",
+        action="store_true",
+        help="Include polarization_angle parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-right-ascension",
+        action="store_true",
+        help="Include right_ascension parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-sin-declination",
+        action="store_true",
+        help="Include sin_declination parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-detection-time",
+        action="store_true",
+        help="Include detection_time parameter in the model",
+    )
     return parser
-
-
-def f_main() -> None:
-    enable_validation()
-
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = model_arg_parser(parser)
-    parser = sage_arg_parser(parser)
-    parser = flowMC_arg_parser(parser)
-
-    args = parser.parse_args()
-
-    log_info(start=True)
-
-    data_loader = DataLoader.from_json(args.data_loader_cfg)
-
-    class NSmoothedPowerlawMSmoothedGaussianFSage(
-        NSmoothedPowerlawMSmoothedGaussianCore, FlowMCBased
-    ):
-        pass
-
-    NSmoothedPowerlawMSmoothedGaussianFSage(
-        N_pl=args.n_pl,
-        N_g=args.n_g,
-        use_beta_spin_magnitude=args.add_beta_spin_magnitude,
-        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
-        use_chi_eff_mixture=args.add_chi_eff_mixture,
-        use_skew_normal_chi_eff=args.add_skew_normal_chi_eff,
-        use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
-        use_tilt=args.add_tilt,
-        use_eccentricity_mixture=args.add_eccentricity_mixture,
-        use_redshift=args.add_redshift,
-        likelihood_fn=flowMC_poisson_likelihood,
-        data_loader=data_loader,
-        seed=args.seed,
-        prior_filename=args.prior_json,
-        poisson_mean_filename=args.pmean_cfg,
-        sampler_settings_filename=args.sampler_config,
-        variance_cut_threshold=args.variance_cut_threshold,
-        n_buckets=args.n_buckets,
-        threshold=args.threshold,
-        debug_nans=args.debug_nans,
-        profile_memory=args.profile_memory,
-        check_leaks=args.check_leaks,
-    ).run()
-
-
-def n_main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = model_arg_parser(parser)
-    parser = sage_arg_parser(parser)
-    parser = numpyro_arg_parser(parser)
-
-    args = parser.parse_args()
-
-    log_info(start=True)
-
-    data_loader = DataLoader.from_json(args.data_loader_cfg)
-
-    class NSmoothedPowerlawMSmoothedGaussianNSage(
-        NSmoothedPowerlawMSmoothedGaussianCore, NumpyroBased
-    ):
-        pass
-
-    NSmoothedPowerlawMSmoothedGaussianNSage(
-        N_pl=args.n_pl,
-        N_g=args.n_g,
-        use_beta_spin_magnitude=args.add_beta_spin_magnitude,
-        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
-        use_chi_eff_mixture=args.add_chi_eff_mixture,
-        use_skew_normal_chi_eff=args.add_skew_normal_chi_eff,
-        use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
-        use_tilt=args.add_tilt,
-        use_eccentricity_mixture=args.add_eccentricity_mixture,
-        use_redshift=args.add_redshift,
-        likelihood_fn=numpyro_poisson_likelihood,
-        data_loader=data_loader,
-        seed=args.seed,
-        prior_filename=args.prior_json,
-        poisson_mean_filename=args.pmean_cfg,
-        sampler_settings_filename=args.sampler_config,
-        variance_cut_threshold=args.variance_cut_threshold,
-        n_buckets=args.n_buckets,
-        threshold=args.threshold,
-        debug_nans=args.debug_nans,
-        profile_memory=args.profile_memory,
-        check_leaks=args.check_leaks,
-    ).run()
