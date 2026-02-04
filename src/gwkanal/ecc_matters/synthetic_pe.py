@@ -7,7 +7,7 @@ from numpyro import distributions as dist
 
 from gwkanal.core.synthetic_pe import (
     ErrorFunctionRegistryType,
-    fake_discrete_pe_parser,
+    synthetic_discrete_pe_parser,
     SyntheticDiscretePEBase,
 )
 from gwkanal.ecc_matters.common import EccentricityMattersCore
@@ -53,7 +53,7 @@ class EccentricityMattersFakeDiscretePE(
 
 
 def main() -> None:
-    parser = fake_discrete_pe_parser()
+    parser = synthetic_discrete_pe_parser()
     args = parser.parse_args()
 
     log_info(start=True)

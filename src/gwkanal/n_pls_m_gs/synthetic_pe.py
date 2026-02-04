@@ -9,7 +9,7 @@ import numpy as np
 
 from gwkanal.core.synthetic_pe import (
     ErrorFunctionRegistryType,
-    fake_discrete_pe_parser,
+    synthetic_discrete_pe_parser,
     SyntheticDiscretePEBase,
 )
 from gwkanal.n_pls_m_gs.common import NPowerlawMGaussianCore
@@ -109,7 +109,7 @@ class NPowerlawMGaussianFakeDiscretePE(SyntheticDiscretePEBase, NPowerlawMGaussi
 
 
 def main() -> None:
-    parser = fake_discrete_pe_parser()
+    parser = synthetic_discrete_pe_parser()
     args = parser.parse_args()
 
     log_info(start=True)

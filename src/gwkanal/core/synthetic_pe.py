@@ -111,6 +111,13 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         # Stack and clean NaNs
         data_stack = np.stack([posterior[p] for p in params], axis=-1)
         data_stack = data_stack[~np.any(np.isnan(data_stack), axis=-1)]
+        if data_stack.shape[0] == 0:
+            warn_if(
+                True,
+                msg=f"All posterior samples for event {index} contain NaNs. "
+                "No data will be saved for this event.",
+            )
+            return
 
         posterior_samples = to_structured(data_stack, params)
         event = to_structured(np.array([[injection[p] for p in params]]), params)
@@ -152,7 +159,7 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
             self._save_event(i, active_params, post_est, inj_vals, width)
 
 
-def fake_discrete_pe_parser() -> ArgumentParser:
+def synthetic_discrete_pe_parser() -> ArgumentParser:
     """Create the command line argument parser.
 
     This function creates the command line argument parser and returns it.
@@ -167,8 +174,8 @@ def fake_discrete_pe_parser() -> ArgumentParser:
 
     parser = ArgumentParser(
         formatter_class=ArgumentDefaultsHelpFormatter,
-        description="Generate fake discrete parameter estimation samples.",
-        epilog="This tool generates fake parameter estimation samples based on "
+        description="Generate synthetic discrete parameter estimation samples.",
+        epilog="This tool generates synthetic parameter estimation samples based on "
         "injection data and a specified error model.",
     )
     parser.add_argument(
