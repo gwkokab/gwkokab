@@ -192,12 +192,32 @@ def save_probs(
     )
 
     with h5py.File(filename, "w") as f:
-        f.create_dataset("domains", data=np.array(domains))
-        f.create_dataset("headers", data=np.array(headers, dtype="S"))
-        f.create_dataset("ppd", data=ppd_array)
+        f.create_dataset(
+            "domains",
+            data=np.array(domains),
+            compression="gzip",
+            compression_opts=9,
+        )
+        f.create_dataset(
+            "headers",
+            data=np.array(headers, dtype="S"),
+            compression="gzip",
+            compression_opts=9,
+        )
+        f.create_dataset(
+            "ppd",
+            data=ppd_array,
+            compression="gzip",
+            compression_opts=9,
+        )
         marginal_probs_group = f.create_group("marginals")
         for marginal_prob, head in zip(marginal_probs, headers):
-            marginal_probs_group.create_dataset(head, data=marginal_prob)
+            marginal_probs_group.create_dataset(
+                head,
+                data=marginal_prob,
+                compression="gzip",
+                compression_opts=9,
+            )
 
 
 def compute_and_save_ppd(

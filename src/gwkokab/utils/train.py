@@ -111,17 +111,40 @@ def save_model(
         for key, value in attr.items():
             f.attrs[key] = value
         if names is not None:
-            f.create_dataset("names", data=np.array(names, dtype="S"))
-        f.create_dataset("in_size", data=model.in_size)  # type: ignore
-        f.create_dataset("out_size", data=model.out_size)  # type: ignore
-        f.create_dataset("width_size", data=model.width_size)  # type: ignore
-        f.create_dataset("depth", data=model.depth)  # type: ignore
+            f.create_dataset(
+                "names",
+                data=np.array(names, dtype="S"),
+                compression="gzip",
+                compression_opts=9,
+            )
+        f.create_dataset(
+            "in_size", data=model.in_size, compression="gzip", compression_opts=9
+        )  # type: ignore
+        f.create_dataset(
+            "out_size", data=model.out_size, compression="gzip", compression_opts=9
+        )  # type: ignore
+        f.create_dataset(
+            "width_size", data=model.width_size, compression="gzip", compression_opts=9
+        )  # type: ignore
+        f.create_dataset(
+            "depth", data=model.depth, compression="gzip", compression_opts=9
+        )  # type: ignore
         f.attrs["is_log"] = is_log
         num_layers = len(model.layers)  # type: ignore
         for i in range(num_layers):
             layer_i = f.create_group(f"layer_{i}")
-            layer_i.create_dataset(f"weight_{i}", data=model.layers[i].weight)  # type: ignore
-            layer_i.create_dataset(f"bias_{i}", data=model.layers[i].bias)  # type: ignore
+            layer_i.create_dataset(
+                f"weight_{i}",
+                data=model.layers[i].weight,
+                compression="gzip",
+                compression_opts=9,
+            )  # type: ignore
+            layer_i.create_dataset(
+                f"bias_{i}",
+                data=model.layers[i].bias,
+                compression="gzip",
+                compression_opts=9,
+            )  # type: ignore
 
 
 def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:

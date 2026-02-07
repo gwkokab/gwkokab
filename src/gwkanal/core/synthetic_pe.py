@@ -125,9 +125,24 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         with h5py.File(event_path, "w") as ef:
             ef.attrs["parameters"] = np.array(params, dtype="S")
             group = ef.create_group(self.waveform_name)
-            group.create_dataset("approximant", data=self.waveform_name)
-            group.create_dataset("injection_data", data=event)
-            group.create_dataset("posterior_samples", data=posterior_samples)
+            group.create_dataset(
+                "approximant",
+                data=self.waveform_name,
+                compression="gzip",
+                compression_opts=9,
+            )
+            group.create_dataset(
+                "injection_data",
+                data=event,
+                compression="gzip",
+                compression_opts=9,
+            )
+            group.create_dataset(
+                "posterior_samples",
+                data=posterior_samples,
+                compression="gzip",
+                compression_opts=9,
+            )
 
     def generate_parameter_estimates(self):
         """Generates parameter estimates based on the defined error functions.
@@ -251,14 +266,29 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
                 del ef[self.waveform_name]
 
             group = ef.create_group(self.waveform_name)
-            group.create_dataset("approximant", data=self.waveform_name)
+            group.create_dataset(
+                "approximant",
+                data=self.waveform_name,
+                compression="gzip",
+                compression_opts=9,
+            )
             group.attrs["discrete_waveform"] = self.discrete_waveform
             group.attrs["coords"] = self.coords
-            group.create_dataset("mu", data=mean)
-            group.create_dataset("std", data=std)
-            group.create_dataset("cov", data=cov)
-            group.create_dataset("cor", data=cor)
-            group.create_dataset("limits", data=limits)
+            group.create_dataset(
+                "mu", data=mean, compression="gzip", compression_opts=9
+            )
+            group.create_dataset(
+                "std", data=std, compression="gzip", compression_opts=9
+            )
+            group.create_dataset(
+                "cov", data=cov, compression="gzip", compression_opts=9
+            )
+            group.create_dataset(
+                "cor", data=cor, compression="gzip", compression_opts=9
+            )
+            group.create_dataset(
+                "limits", data=limits, compression="gzip", compression_opts=9
+            )
 
 
 def synthetic_analytical_pe_main():
