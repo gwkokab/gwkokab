@@ -2,139 +2,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Any, Callable, Dict, Tuple, TypeAlias
+import functools as ft
+from typing import Any, Callable, Dict, Tuple
 
-import equinox as eqx
 import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
-from jax.scipy.linalg import cho_solve
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Distribution
 from numpyro.distributions.continuous import _batch_mahalanobis, tri_logabsdet
-from numpyro.distributions.util import cholesky_of_inverse
 
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
 
-StateT: TypeAlias = Tuple[
-    Array,  # old monte-carlo-estimate
-    Array,  # old error square
-    Array,  # old size
-    PRNGKeyArray,  # old key
-]
-"""State of the Monte Carlo estimation process:
-   (log_estimate, error_sq, sample_count, rng_key)."""
-
-
-@jax.jit
-def monte_carlo_log_estimate_and_error_sq(
-    log_probs: Array, N: Array
-) -> Tuple[Array, Array]:
-    """Computes the Monte Carlo estimate and error for the given log probabilities.
-
-    Parameters
-    ----------
-    log_probs : Array
-        Log probabilities of the samples.
-    N : Array
-        Number of samples used for the estimate.
-
-    Returns
-    -------
-    Tuple[Array, Array]
-        Monte Carlo logarithm of estimate, and square of the Monte Carlo error.
-    """
-    mask = ~jnp.isneginf(log_probs)
-    log_moment_1 = jnn.logsumexp(log_probs, where=mask, axis=-1) - jnp.log(N)
-    moment_2 = jnp.exp(jnn.logsumexp(2.0 * log_probs, where=mask, axis=-1)) / N
-    error_sq = (moment_2 - jnp.exp(2.0 * log_moment_1)) / (N - 1.0)
-    return log_moment_1, error_sq
-
-
-@jax.jit
-def combine_monte_carlo_log_estimates(
-    log_estimates_1: Array, log_estimates_2: Array, N_1: Array, N_2: Array
-) -> Array:
-    r"""Combine two Monte Carlo estimates into a single estimate using the formula:
-
-    .. math::
-
-        \hat{\mu} = \frac{N_1 \hat{\mu}_1 + N_2 \hat{\mu}_2}{N_1 + N_2}
-
-    Parameters
-    ----------
-    estimates_1 : Array
-        First Monte Carlo estimate :math:`\ln\hat{\mu}_1`.
-    estimates_2 : Array
-        Second Monte Carlo estimate :math:`\ln\hat{\mu}_2`.
-    N_1 : Array
-        Number of samples used for the first estimate :math:`N_1`.
-    N_2 : Array
-        Number of samples used for the second estimate :math:`N_2`.
-
-    Returns
-    -------
-    Array
-        Combined Monte Carlo estimate :math:`\ln\hat{\mu}`.
-    """
-    combined_log_estimate = jnp.logaddexp(
-        jnp.log(N_1) + log_estimates_1, jnp.log(N_2) + log_estimates_2
-    ) - jnp.log(N_1 + N_2)
-    return combined_log_estimate
-
-
-@jax.jit
-def combine_monte_carlo_errors_sq(
-    error_1_sq: Array,
-    error_2_sq: Array,
-    log_estimate_1: Array,
-    log_estimate_2: Array,
-    log_estimate_3: Array,
-    N_1: Array,
-    N_2: Array,
-) -> Array:
-    r"""Combine two Monte Carlo errors into a single error estimate using the formula:
-
-    .. math::
-
-        \hat{\epsilon}^2=\frac{1}{N_3(N_3-1)}\sum_{k=1}^{2}\left\{N_k(N_k-1)\hat{\epsilon}_k^2+N_k\hat{\mu}^2_k\right\}-\frac{1}{N_3-1}\hat{\mu}^2
-
-    where, :math:`N_3 = N_1 + N_2` is the total number of samples.
-
-    Parameters
-    ----------
-    error_1_sq : Array
-        Square of error of the first Monte Carlo estimate :math:`\hat{\epsilon}_1^2`.
-    error_2_sq : Array
-        Square of error of the second Monte Carlo estimate :math:`\hat{\epsilon}_2^2`.
-    log_estimate_1 : Array
-        Estimate of the first Monte Carlo estimate :math:`\ln\hat{\mu}_1`.
-    log_estimate_2 : Array
-        Estimate of the second Monte Carlo estimate :math:`\ln\hat{\mu}_2`.
-    log_estimate_3 : Array
-        Estimate of the combined Monte Carlo estimate :math:`\ln\hat{\mu}`.
-    N_1 : Array
-        Number of samples used for the first estimate :math:`N_1`.
-    N_2 : Array
-        Number of samples used for the second estimate :math:`N_2`.
-
-    Returns
-    -------
-    Array
-        Combined Monte Carlo squared error estimate :math:`\hat{\epsilon}^2`.
-    """
-    N_3 = N_1 + N_2
-
-    sum_prob_sq_1 = N_1 * ((N_1 - 1.0) * error_1_sq + jnp.exp(2.0 * log_estimate_1))
-    sum_prob_sq_2 = N_2 * ((N_2 - 1.0) * error_2_sq + jnp.exp(2.0 * log_estimate_2))
-
-    combined_error_sq = -jnp.exp(2.0 * log_estimate_3) / (N_3 - 1.0)
-    combined_error_sq += (sum_prob_sq_1 + sum_prob_sq_2) / N_3 / (N_3 - 1.0)
-
-    return combined_error_sq
-
-
-@eqx.filter_jit
 def mvn_samples(
     loc: Array, scale_tril: Array, n_samples: int, key: PRNGKeyArray
 ) -> Array:
@@ -145,8 +24,8 @@ def mvn_samples(
     ----------
     loc : Array
         Mean vector of the multivariate normal distribution.
-    cov : Array
-        Covariance matrix of the multivariate normal distribution.
+    scale_tril : Array
+        Lower-triangular Cholesky factor of the covariance matrix of the multivariate normal distribution.
     n_samples : int
         Number of samples to generate.
     key : PRNGKeyArray
@@ -162,42 +41,45 @@ def mvn_samples(
     return samples
 
 
-@jax.jit
-def mvn_log_prob_scaled(loc: Array, scale_tril: Array, value: Array) -> Array:
-    # removing the constant term -0.5 * D * log(2pi), where D is the dimension,
-    # because it is being cancelled out in the importance sampling weights
-    M = _batch_mahalanobis(scale_tril, value - loc)
-    return -0.5 * M - tri_logabsdet(scale_tril)
-
-
-@jax.jit
-def covariance_matrix(scale_tril: Array) -> Array:
-    return jnp.matmul(scale_tril, jnp.swapaxes(scale_tril, -1, -2))
-
-
-@jax.jit
-def precision_matrix(scale_tril: Array) -> Array:
-    identity = jnp.broadcast_to(jnp.eye(scale_tril.shape[-1]), scale_tril.shape)
-    return cho_solve((scale_tril, True), identity)
-
-
-@jax.jit
-def is_positive_semi_definite(matrix: Array) -> Array:
-    """Check if a matrix is positive semi-definite, by verifying that all its
-    eigenvalues are non-negative.
+@ft.partial(jax.vmap, in_axes=(0, 0, 1), out_axes=1)
+def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
+    """Compute log probability of a multivariate normal distribution using method from
+    `numpyro.distributions.MultivariateNormal`.
 
     Parameters
     ----------
-    matrix : Array
-        The matrix of shape (..., N, N) to be checked.
+    loc : Array
+        Mean vector of the multivariate normal distribution.
+    scale_tril : Array
+        Lower-triangular Cholesky factor of the covariance matrix of the multivariate normal distribution.
+    value : Array
+        Value at which to evaluate the log probability.
 
     Returns
     -------
     Array
-        Boolean array of shape (...) indicating whether each matrix is positive
-        semi-definite.
+        Log probability of the multivariate normal distribution at the given value.
     """
-    return jnp.all(jnp.linalg.eigvals(matrix) >= 0, axis=-1)
+    M = _batch_mahalanobis(scale_tril, value - loc)
+    half_log_det = tri_logabsdet(scale_tril)
+    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * jnp.log(2 * jnp.pi)
+    return -0.5 * M - normalize_term
+
+
+def cholesky_decomposition(covariance_matrix: Array) -> Array:
+    """Compute the Cholesky decomposition of a covariance matrix.
+
+    Parameters
+    ----------
+    covariance_matrix : Array
+        Covariance matrix to decompose.
+
+    Returns
+    -------
+    Array
+        Lower-triangular Cholesky factor of the covariance matrix.
+    """
+    return jnp.linalg.cholesky(covariance_matrix)
 
 
 def analytical_likelihood(
@@ -208,11 +90,11 @@ def analytical_likelihood(
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     key: PRNGKeyArray,
     n_events: int,
-    minimum_mc_error: float = 1e-2,
-    n_samples: int = 100,
-    n_checkpoints: int = 10,
-    n_max_steps: int = 20,
-) -> Callable[[Array, Dict[str, Array]], Array]:
+    n_samples: int = 500,
+    n_mom_samples: int = 500,
+    max_iter_mean: int = 10,
+    max_iter_cov: int = 3,
+) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
     .. math::
@@ -227,210 +109,192 @@ def analytical_likelihood(
         \exp{\left(-\mu(\Lambda,\kappa)\right)}\prod_{i=1}^{N}\bigg<
         \rho(\theta_{i,j},z_{i,j}\mid\Lambda,\kappa)
         \bigg>_{\theta_{i,j},z_{i,j}\sim\mathcal{G}(\theta,z|\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i)}
-
-
-    First we are optimizing the mean vector and covariance matrix of the multivariate
-    normal distribution that approximates the product of event distributions (also a
-    multivariate normal distribution) and phenomenological model distribution by
-    Importance Sampling and Moment Matching. After that, we perform Variational
-    Inference to optimize the mean vector of the multivariate normal distribution to
-    minimize the Reverse KL divergence between the product of event distributions and
-    the phenomenological model distribution.
-
-    Parameters
-    ----------
-    dist_fn : Callable[..., Distribution]
-        function that returns a Distribution instance
-    priors : JointDistribution
-        priors for the model parameters
-    variables_index : Dict[str, int]
-        mapping of variable names to their indices in the input array
-    poisson_mean_estimator : Callable[[ScaledMixture], Array]
-        function to compute the expected event rates
-    n_events : int
-        number of events
-    key : PRNGKeyArray
-        JAX random key for sampling
-    minimum_mc_error : float, optional
-        Minimum threshold for Monte Carlo error, by default 1e-2
-    n_samples : int, optional
-        Number of samples to draw from the multivariate normal distribution for each
-        event to compute the likelihood, by default 100
-    n_vi_steps: int, optional
-        Number of steps for the variational inference optimization, by default 5
-    learning_rate : float, optional
-        Learning rate for the Adam optimizer used in the variational inference
-        optimization, by default 1e-2
-    n_checkpoints : int, optional
-        Checkpoint interval for the checkpointed while-loop, by default 10. For more
-        details, see
-        [`equinox.internal.while_loop`](https://github.com/patrick-kidger/equinox/blob/main/equinox/internal/_loop/loop.py)
-        and its [`"checkpointed"` variant](https://github.com/patrick-kidger/equinox/blob/main/equinox/internal/_loop/checkpointed.py).
-    n_max_steps : int, optional
-        Maximum number of steps for the optimization process, by default 20
-
-    Returns
-    -------
-    Callable[[Array, Array], Array]
-        A function that computes the log posterior probability of the model parameters
-        given the data. The function takes two arguments: an array of model parameters
-        and a second array (not used in this implementation).
     """
-    minimum_mc_error_sq = minimum_mc_error**2
 
-    def log_likelihood_fn(x: Array, data: Dict[str, Array]) -> Array:
-        mean_stack = data["mean_stack"]
-        scale_tril_stack = data["scale_tril_stack"]
-        T_obs = data["T_obs"]
+    @jax.jit
+    def likelihood_fn(x: Array, data: Dict[str, Any]) -> Array:
+        mean_stack: Array = data["mean_stack"]
+        scale_tril_stack: Array = data["scale_tril_stack"]
+        lower_bounds: Array = data["lower_bounds"]
+        upper_bounds: Array = data["upper_bounds"]
+        ln_offsets: Array = data["ln_offsets"]
+        T_obs: Array = data["T_obs"]
 
-        mapped_params = {
-            name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
-            for name, i in variables_index.items()
-        }
+        mapped_params = {name: x[i] for name, i in variables_index.items()}
 
         model_instance: Distribution = dist_fn(**constant_params, **mapped_params)
 
-        # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = poisson_mean_estimator(model_instance)
-
         rng_key = key
 
-        hessian_log_prob = jax.jit(
-            jax.vmap(jax.hessian(model_instance.log_prob), axis_size=n_events)
-        )
-        grad_log_prob = jax.jit(
-            jax.vmap(jax.grad(model_instance.log_prob), axis_size=n_events)
-        )
+        def normalized_weights_fn(
+            mean: Array,
+            scale_tril: Array,
+            samples: Array,
+            lb: Array,
+            ub: Array,
+            ln_offsets: Array,
+        ) -> Array:
+            log_p_model = model_instance.log_prob(samples)
+            log_p_event = mvn_log_prob(mean, scale_tril, samples) + ln_offsets
+            is_inside = jnp.all((samples >= lb) & (samples <= ub), axis=-1)
+            log_p_model = jnp.where(is_inside, log_p_event, -jnp.inf)
+            log_weights = log_p_model + log_p_event
+            log_weights = jnp.expand_dims(log_weights, axis=-1)
+            return jax.nn.softmax(log_weights, axis=0)
 
-        fit_precision_matrix = precision_matrix(scale_tril_stack) - hessian_log_prob(
-            mean_stack
-        )
-        fit_covariance_matrix = jnp.linalg.inv(fit_precision_matrix)
-
-        is_psd = is_positive_semi_definite(fit_covariance_matrix)
-
-        safe_fit_covariance_matrix = jnp.where(
-            is_psd[..., jnp.newaxis, jnp.newaxis],
-            fit_covariance_matrix,
-            jnp.broadcast_to(
-                jnp.eye(scale_tril_stack.shape[-1]),
-                scale_tril_stack.shape,
-            ),
-        )
-
-        fit_mean = mean_stack + jnp.where(
-            is_psd[..., jnp.newaxis],
-            jnp.squeeze(
-                safe_fit_covariance_matrix
-                @ jnp.expand_dims(grad_log_prob(mean_stack), axis=-1),
-                axis=-1,
-            ),
-            jnp.zeros_like(mean_stack),
-        )
-        fit_scale_tril = jnp.where(
-            is_psd[..., jnp.newaxis, jnp.newaxis],
-            cholesky_of_inverse(fit_precision_matrix),
-            scale_tril_stack,
-        )
-
-        mvn_log_prob_while_body = jax.vmap(
-            mvn_log_prob_scaled, in_axes=(None, None, 0), axis_size=n_samples
-        )
-
-        def scan_fn(
-            carry: Array, loop_data: Tuple[Array, Array, Array, Array, PRNGKeyArray]
-        ) -> Tuple[Array, None]:
-            mean, scale_tril, fit_mean_i, fit_scale_tril_i, rng_key_i = loop_data
-
-            def while_body_fn(state: StateT) -> StateT:
-                log_estimate_1, error_1_sq, N_1, rng_key = state
-                N_2 = n_samples
-                rng_key, subkey = jrd.split(rng_key)
-
-                # data ~ G(θ, z | μ_f, Σ_f)
-                data = mvn_samples(
-                    loc=fit_mean_i,
-                    scale_tril=fit_scale_tril_i,
-                    n_samples=N_2,
-                    key=subkey,
-                )
-
-                # log ρ(data | Λ, κ)
-                model_instance_log_prob = jax.vmap(
-                    model_instance.log_prob, axis_size=N_2
-                )(data)
-
-                # log G(θ, z | μ_i, Σ_i)
-                event_mvn_log_prob = mvn_log_prob_while_body(mean, scale_tril, data)
-
-                # log G(θ, z | μ_f, Σ_i)
-                fit_mvn_log_prob = mvn_log_prob_while_body(
-                    fit_mean_i, fit_scale_tril_i, data
-                )
-
-                log_prob = (
-                    model_instance_log_prob + event_mvn_log_prob - fit_mvn_log_prob
-                )
-                log_estimate_2, error_2_sq = monte_carlo_log_estimate_and_error_sq(
-                    log_prob,
-                    N_2,  # type: ignore[arg-type]
-                )
-                log_estimate_3 = combine_monte_carlo_log_estimates(
-                    log_estimate_1,
-                    log_estimate_2,
-                    N_1,
-                    N_2,  # type: ignore[arg-type]
-                )
-                error_3_sq = combine_monte_carlo_errors_sq(
-                    error_1_sq,
-                    error_2_sq,
-                    log_estimate_1,
-                    log_estimate_2,
-                    log_estimate_3,
-                    N_1,
-                    N_2,  # type: ignore[arg-type]
-                )
-                return log_estimate_3, error_3_sq, N_1 + N_2, rng_key
-
-            state_0 = (
-                -jnp.inf,  # starting log estimate is -inf
-                jnp.zeros(()),  # starting error is zero
-                0.0,  # starting size is zero
-                rng_key_i,
+        @jax.jit
+        def scan_moment_matching_mean_fn(
+            carry_in: tuple[Any, Array, Any, Any, Any], key: PRNGKeyArray
+        ) -> Tuple[tuple[Any, Array, Any, Any, Any], None]:
+            (
+                moment_matching_mean_i,
+                scale_tril_stack,
+                lower_bounds,
+                upper_bounds,
+                ln_offsets,
+            ) = carry_in
+            samples = mvn_samples(
+                loc=moment_matching_mean_i,
+                scale_tril=scale_tril_stack,
+                n_samples=n_mom_samples,
+                key=key,
             )
 
-            log_likelihood_i, _, _, _ = eqx.internal.while_loop(
-                lambda state: jnp.less_equal(state[1], minimum_mc_error_sq),
-                while_body_fn,
-                while_body_fn(state_0),  # this makes it a do-while loop
-                kind="checkpointed",
-                checkpoints=n_checkpoints,
-                max_steps=n_max_steps - 1,  # already did one step
+            # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
+            weights = normalized_weights_fn(
+                moment_matching_mean_i,
+                scale_tril_stack,
+                samples,
+                lower_bounds,
+                upper_bounds,
+                ln_offsets,
             )
 
-            return carry + log_likelihood_i, None
+            # μ_f = sum(weights * samples)
+            new_fit_mean = jnp.sum(samples * weights, axis=0)
 
-        keys = jrd.split(rng_key, (n_events,))
+            carry_out = (
+                new_fit_mean,
+                scale_tril_stack,
+                lower_bounds,
+                upper_bounds,
+                ln_offsets,
+            )
 
-        total_log_likelihood, _ = jax.lax.scan(
-            scan_fn,  # type: ignore[arg-type]
-            n_events * jnp.log(T_obs),
-            (mean_stack, scale_tril_stack, fit_mean, fit_scale_tril, keys),
-            length=n_events,
+            return carry_out, None
+
+        rng_key, subkey = jrd.split(rng_key)
+
+        (fit_mean_stack, _, _, _, _), _ = jax.lax.scan(
+            scan_moment_matching_mean_fn,  # type: ignore[arg-type]
+            (
+                mean_stack,
+                scale_tril_stack,
+                lower_bounds,
+                upper_bounds,
+                ln_offsets,
+            ),
+            jrd.split(subkey, max_iter_mean),
+            length=max_iter_mean,
         )
 
-        # log L(Λ,κ) = -μ + Σ log Σ exp (log ρ(data_n|Λ,κ)) - Σ log(M_i)
+        @jax.jit
+        def scan_moment_matching_scale_tril_fn(
+            carry_in: tuple[Any, Array, Any, Any, Any], key: PRNGKeyArray
+        ) -> Tuple[tuple[Any, Array, Any, Any, Any], None]:
+            (
+                mean_stack,
+                moment_matching_scale_tril_i,
+                lower_bounds,
+                upper_bounds,
+                ln_offsets,
+            ) = carry_in
+            samples = mvn_samples(
+                loc=mean_stack,
+                scale_tril=moment_matching_scale_tril_i,
+                n_samples=n_mom_samples,
+                key=key,
+            )
+
+            # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
+            weights = normalized_weights_fn(
+                mean_stack,
+                moment_matching_scale_tril_i,
+                samples,
+                lower_bounds,
+                upper_bounds,
+                ln_offsets,
+            )
+
+            # Σ_f = sum(weights * (samples - μ_f) * (samples - μ_f).T)
+            centered = samples - mean_stack
+
+            new_fit_cov = jnp.einsum("sei,sej->eij", weights * centered, centered)
+
+            carry_out = (
+                mean_stack,
+                cholesky_decomposition(new_fit_cov),
+                lower_bounds,
+                upper_bounds,
+                ln_offsets,
+            )
+
+            return carry_out, None
+
+        rng_key, subkey = jrd.split(rng_key)
+
+        (_, fit_scale_tril_stack, _, _, _), _ = jax.lax.scan(
+            scan_moment_matching_scale_tril_fn,  # type: ignore[arg-type]
+            (
+                fit_mean_stack,
+                scale_tril_stack,
+                lower_bounds,
+                upper_bounds,
+                ln_offsets,
+            ),
+            jrd.split(subkey, max_iter_cov),
+            length=max_iter_cov,
+        )
+
+        samples: Array = mvn_samples(
+            fit_mean_stack, fit_scale_tril_stack, n_samples, key
+        )
+
+        is_inside = jnp.all(
+            (samples >= lower_bounds) & (samples <= upper_bounds), axis=-1
+        )
+
+        # log ρ(data | Λ, κ)
+        log_p_model = model_instance.log_prob(samples)
+
+        # log G(θ, z | μ_i, Σ_i)
+        log_p_event = mvn_log_prob(mean_stack, scale_tril_stack, samples)
+
+        # log G(θ, z | μ_f, Σ_i)
+        log_q_fit = mvn_log_prob(fit_mean_stack, fit_scale_tril_stack, samples)
+
+        log_weights = log_p_model + log_p_event - log_q_fit
+
+        # Mask points outside the hypercube by setting log_prob to -inf
+        log_weights = jnp.where(is_inside, log_weights, -jnp.inf)
+
+        # Perform logsumexp over the samples (axis -1 of the generated samples)
+        log_estimates = jnn.logsumexp(
+            log_weights + ln_offsets, where=~jnp.isneginf(log_weights), axis=0
+        )
+
+        total_log_likelihood = jnp.sum(log_estimates) - n_events * (
+            jnp.log(n_samples) - jnp.log(T_obs)
+        )
+
+        expected_rates = poisson_mean_estimator(model_instance)
+
         log_likelihood = total_log_likelihood - expected_rates
-        # log p(Λ,κ|data) = log π(Λ,κ) + log L(Λ,κ)
+
         log_posterior = priors.log_prob(x) + log_likelihood
 
-        log_posterior = jnp.nan_to_num(
-            log_posterior,
-            nan=-jnp.inf,
-            posinf=-jnp.inf,
-            neginf=-jnp.inf,
+        return jnp.nan_to_num(
+            log_posterior, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
         )
 
-        return log_posterior
-
-    return eqx.filter_jit(log_likelihood_fn)
+    return likelihood_fn
