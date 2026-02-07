@@ -9,10 +9,32 @@ body:
     attributes:
       label: Check for existing issues
       description: >-
-        Check the backlog of issues to reduce the chances of creating duplicates; if an  issue already exists, place a `+1` (👍) on it. If you prefer a non-templated  issue report, click [here](https://github.com/gwkokab/gwkokab/issues/new).
+        Check the backlog of issues to reduce the chances of creating duplicates; if an issue already exists, place a `+1` (👍) on it. If you prefer a non-templated issue report, click [here](https://github.com/gwkokab/gwkokab/issues/new).
       options:
         - label: Completed
           required: true
+  - type: dropdown
+    id: bug-type
+    attributes:
+      label: What kind of bug is this?
+      description: Select the category that best describes the issue.
+      options:
+        - Numerical/Physics Error (Inaccurate results)
+        - JAX/XLA Compilation Error
+        - Performance/Memory Leak (ulimit/OOM)
+        - Installation/Dependency Issue
+        - Documentation Error
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: other-bug-type
+    attributes:
+      label: Other Bug Category
+      description: If you selected "Other" above, please specify the category here.
+      placeholder: e.g., Visualization bug, API inconsistency, etc.
+    validations:
+      required: false
   - type: textarea
     attributes:
       label: Description
@@ -29,12 +51,22 @@ body:
     attributes:
       label: What gwkokab version are you using?
       description: >
-        Include the output of `import gwkokab; print(gwkokab.__version__)`
-      placeholder: For example gwkokab v0.0.2
-  - type: input
+        Include the output of `from importlib.metadata import version; version('gwkokab')`
+      placeholder: For example 0.2.1 or 0.2.1+gbae3ab8f9cd815f135f095da8e3d0cef82a8d827 (for bleeding edge builds)
+
+  # Changed from 'input' to 'dropdown' for a button-like selection
+  - type: dropdown
+    id: accelerator
     attributes:
       label: Which accelerator(s) are you using?
-      placeholder: CPU/GPU/TPU
+      description: Select the hardware accelerator used during the bug.
+      options:
+        - CPU
+        - GPU
+        - TPU
+    validations:
+      required: true
+
   - type: input
     attributes:
       label: Additional system info?
