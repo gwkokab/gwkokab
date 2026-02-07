@@ -167,7 +167,7 @@ class AnalyticalPELoader(BaseModel):
 
         mean_stack = np.stack([data.mu for data in data_list], axis=0)
         cov_stack = np.stack([data.cov for data in data_list], axis=0)
-        limits_stack = np.stack([data.limits for data in data_list], axis=0)
+        limits_stack = np.stack([data.limits.T for data in data_list], axis=0)
 
         return {"mean": mean_stack, "cov": cov_stack, "limits": limits_stack}
 

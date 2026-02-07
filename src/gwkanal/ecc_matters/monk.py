@@ -44,7 +44,4 @@ def main() -> None:
         check_leaks=args.check_leaks,
         analysis_name="ecc_matters",
         n_samples=args.n_samples,
-        minimum_mc_error=args.minimum_mc_error,
-        n_checkpoints=args.n_checkpoints,
-        n_max_steps=args.n_max_steps,
     ).run()

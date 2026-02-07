@@ -12,6 +12,7 @@ from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
+from scipy.stats import multivariate_normal
 
 from gwkanal.core.inference_io import AnalyticalPELoader, PoissonMeanEstimationLoader
 from gwkokab.inference import analytical_likelihood
@@ -30,9 +31,6 @@ class Monk(FlowMCBased):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        minimum_mc_error: float,
-        n_checkpoints: int,
-        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -73,9 +71,6 @@ class Monk(FlowMCBased):
         )
         self.data_loader = data_loader
         self.n_samples = n_samples
-        self.minimum_mc_error = minimum_mc_error
-        self.n_checkpoints = n_checkpoints
-        self.n_max_steps = n_max_steps
         self.set_rng_key(seed=seed)
 
         super().__init__(
@@ -93,13 +88,13 @@ class Monk(FlowMCBased):
         """Runs the Monk analysis."""
         constants, priors, variables, variables_index = self.classify_model_parameters()
 
-        data = self.data_loader.load(parameters=sorted(variables.keys()))
+        data = self.data_loader.load(self.parameters)
 
         mean_stack: Array = jax.device_put(data["mean"])
         limits_stack = jax.device_put(data["limits"])
         cov_stack = data["cov"]
         scale_tril_stack: Array = jax.device_put(np.linalg.cholesky(cov_stack))
-        del cov_stack  # We don't need the covariance matrices anymore
+        # del cov_stack  # We don't need the covariance matrices anymore
 
         n_events = mean_stack.shape[0]
 
@@ -122,12 +117,32 @@ class Monk(FlowMCBased):
             variables_index,
             poisson_mean_estimator,
             self.rng_key,
-            n_events=n_events,
-            n_samples=self.n_samples,
-            minimum_mc_error=self.minimum_mc_error,
-            n_checkpoints=self.n_checkpoints,
-            n_max_steps=self.n_max_steps,
+            n_events,
+            self.n_samples,
         )
+
+        lower_bounds = jax.lax.dynamic_index_in_dim(limits_stack, 0, 1, keepdims=False)
+        upper_bounds = jax.lax.dynamic_index_in_dim(limits_stack, 1, 1, keepdims=False)
+
+        lower_cdf = np.array(
+            [
+                multivariate_normal.cdf(
+                    lower_bounds[i], mean=mean_stack[i], cov=cov_stack[i]
+                )
+                for i in range(n_events)
+            ]
+        )
+
+        upper_cdf = np.array(
+            [
+                multivariate_normal.cdf(
+                    upper_bounds[i], mean=mean_stack[i], cov=cov_stack[i]
+                )
+                for i in range(n_events)
+            ]
+        )
+
+        ln_offsets = -np.log(np.maximum(upper_cdf - lower_cdf, 1e-10))
 
         self.driver(
             logpdf=logpdf,
@@ -135,8 +150,10 @@ class Monk(FlowMCBased):
             data={
                 "mean_stack": mean_stack,
                 "scale_tril_stack": scale_tril_stack,
-                "limits_stack": limits_stack,
+                "lower_bounds": lower_bounds,
+                "upper_bounds": upper_bounds,
                 "T_obs": T_obs,
+                "ln_offsets": ln_offsets,
             },
             labels=sorted(variables.keys()),
         )
@@ -175,24 +192,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Number of samples to draw from the multivariate normal distribution for each "
         "event to compute the likelihood",
         default=10_000,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--minimum-mc-error",
-        help="Minimum Monte Carlo error for the likelihood computation.",
-        default=0.01,
-        type=float,
-    )
-    likelihood_group.add_argument(
-        "--n-checkpoints",
-        help="Number of checkpoints to save during the optimization process.",
-        default=5,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--n-max-steps",
-        help="Maximum number of steps until minimum Monte Carlo error is reached.",
-        default=10,
         type=int,
     )
 

@@ -41,9 +41,6 @@ class NPowerlawMGaussianMonk(Monk):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        minimum_mc_error: float,
-        n_checkpoints: int,
-        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -80,9 +77,6 @@ class NPowerlawMGaussianMonk(Monk):
             check_leaks=check_leaks,
             analysis_name="n_pls_m_gs",
             n_samples=n_samples,
-            minimum_mc_error=minimum_mc_error,
-            n_checkpoints=n_checkpoints,
-            n_max_steps=n_max_steps,
         )
 
     @property
@@ -607,9 +601,6 @@ def main() -> None:
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
         n_samples=args.n_samples,
-        minimum_mc_error=args.minimum_mc_error,
-        n_checkpoints=args.n_checkpoints,
-        n_max_steps=args.n_max_steps,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
