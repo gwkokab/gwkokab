@@ -158,30 +158,23 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
                 raw_population, self.parameters
             )
 
+        compression_args = {"compression": "gzip", "compression_opts": 9}
         with h5py.File(self.filename, "w") as f:
             f.create_dataset(
                 "events",
                 data=to_structured(population, current_params),
-                compression="gzip",
-                compression_opts=9,
+                **compression_args,
             )
             f.create_dataset(
-                "indices",
-                data=indices.astype(np.uint32),
-                compression="gzip",
-                compression_opts=9,
+                "indices", data=indices.astype(np.uint32), **compression_args
             )
             f.create_dataset(
                 "raw_events",
                 data=to_structured(raw_population, current_params),
-                compression="gzip",
-                compression_opts=9,
+                **compression_args,
             )
             f.create_dataset(
-                "raw_indices",
-                data=raw_indices.astype(np.uint32),
-                compression="gzip",
-                compression_opts=9,
+                "raw_indices", data=raw_indices.astype(np.uint32), **compression_args
             )
             f.attrs["parameters"] = np.array(current_params, dtype="S")
 
