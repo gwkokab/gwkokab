@@ -31,6 +31,8 @@ class Monk(FlowMCBased):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
+        max_iter_mean: int,
+        max_iter_cov: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -72,6 +74,8 @@ class Monk(FlowMCBased):
         self.data_loader = data_loader
         self.n_samples = n_samples
         self.set_rng_key(seed=seed)
+        self.max_iter_mean = max_iter_mean
+        self.max_iter_cov = max_iter_cov
 
         super().__init__(
             analysis_name=analysis_name or model.__name__,
@@ -119,6 +123,8 @@ class Monk(FlowMCBased):
             self.rng_key,
             n_events,
             self.n_samples,
+            self.max_iter_mean,
+            self.max_iter_cov,
         )
 
         lower_bounds = jax.lax.dynamic_index_in_dim(limits_stack, 0, 1, keepdims=False)
@@ -173,26 +179,36 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         the command line argument parser
     """
 
-    # Global enable validation for all distributions
     enable_validation()
-
     parser = guru_parser(parser)
 
-    monk_group = parser.add_argument_group("Monk Options")
-    monk_group.add_argument(
+    # Monk Options
+    monk = parser.add_argument_group("Monk Options")
+    monk.add_argument(
         "--data-loader-cfg",
         type=str,
         required=True,
-        help="Path to JSON configuration for the AnalyticalPELoader.",
+        help="Path to JSON config for AnalyticalPELoader.",
     )
 
-    likelihood_group = parser.add_argument_group("Likelihood Options")
-    likelihood_group.add_argument(
+    tune = parser.add_argument_group("Tuning Options")
+    tune.add_argument(
         "--n-samples",
-        help="Number of samples to draw from the multivariate normal distribution for each "
-        "event to compute the likelihood",
-        default=10_000,
         type=int,
+        default=10_000,
+        help="Samples for MVN distribution likelihood.",
+    )
+    tune.add_argument(
+        "--max-iter-mean",
+        type=int,
+        default=10,
+        help="Max iterations for Moment of Matching mean estimation.",
+    )
+    tune.add_argument(
+        "--max-iter-cov",
+        type=int,
+        default=4,
+        help="Max iterations for Moment of Matching covariance estimation.",
     )
 
     return parser
