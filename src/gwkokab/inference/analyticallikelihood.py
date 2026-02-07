@@ -14,9 +14,28 @@ from numpyro.distributions.continuous import _batch_mahalanobis, tri_logabsdet
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
 
-def mvn_samples_from_cholesky_decomposition(
+def mvn_samples(
     loc: Array, scale_tril: Array, n_samples: int, key: PRNGKeyArray
 ) -> Array:
+    """Generate samples from a multivariate normal distribution using method from
+    `numpyro.distributions.MultivariateNormal`.
+
+    Parameters
+    ----------
+    loc : Array
+        Mean vector of the multivariate normal distribution.
+    scale_tril : Array
+        Lower-triangular Cholesky factor of the covariance matrix of the multivariate normal distribution.
+    n_samples : int
+        Number of samples to generate.
+    key : PRNGKeyArray
+        JAX random key for sampling.
+
+    Returns
+    -------
+    Array
+        Samples drawn from the multivariate normal distribution.
+    """
     eps = jrd.normal(key, shape=(n_samples, *loc.shape))
     samples = loc + jnp.squeeze(jnp.matmul(scale_tril, eps[..., jnp.newaxis]), axis=-1)
     return samples
@@ -24,6 +43,23 @@ def mvn_samples_from_cholesky_decomposition(
 
 @ft.partial(jax.vmap, in_axes=(0, 0, 1), out_axes=1)
 def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
+    """Compute log probability of a multivariate normal distribution using method from
+    `numpyro.distributions.MultivariateNormal`.
+
+    Parameters
+    ----------
+    loc : Array
+        Mean vector of the multivariate normal distribution.
+    scale_tril : Array
+        Lower-triangular Cholesky factor of the covariance matrix of the multivariate normal distribution.
+    value : Array
+        Value at which to evaluate the log probability.
+
+    Returns
+    -------
+    Array
+        Log probability of the multivariate normal distribution at the given value.
+    """
     M = _batch_mahalanobis(scale_tril, value - loc)
     half_log_det = tri_logabsdet(scale_tril)
     normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * jnp.log(2 * jnp.pi)
@@ -31,6 +67,18 @@ def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
 
 
 def cholesky_decomposition(covariance_matrix: Array) -> Array:
+    """Compute the Cholesky decomposition of a covariance matrix.
+
+    Parameters
+    ----------
+    covariance_matrix : Array
+        Covariance matrix to decompose.
+
+    Returns
+    -------
+    Array
+        Lower-triangular Cholesky factor of the covariance matrix.
+    """
     return jnp.linalg.cholesky(covariance_matrix)
 
 
@@ -43,9 +91,26 @@ def analytical_likelihood(
     key: PRNGKeyArray,
     n_events: int,
     n_samples: int = 500,
+    n_mom_samples: int = 500,
     max_iter_mean: int = 10,
     max_iter_cov: int = 3,
 ) -> Callable[[Array, Dict[str, Any]], Array]:
+    r"""Compute the analytical likelihood function for a model given its parameters.
+
+    .. math::
+
+        \mathcal{L}_{\mathrm{analytical}}(\Lambda,\kappa)\propto
+        \exp\left(-\mu(\Lambda,\kappa)\right)
+        \prod_{i=1}^{N}
+        \iint\mathcal{G}(\theta,z|\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i)
+        \rho(\theta,z\mid\Lambda,\kappa)d\theta dz
+
+        \mathcal{L}_{\mathrm{analytical}}(\Lambda,\kappa)\propto
+        \exp{\left(-\mu(\Lambda,\kappa)\right)}\prod_{i=1}^{N}\bigg<
+        \rho(\theta_{i,j},z_{i,j}\mid\Lambda,\kappa)
+        \bigg>_{\theta_{i,j},z_{i,j}\sim\mathcal{G}(\theta,z|\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i)}
+    """
+
     @jax.jit
     def likelihood_fn(x: Array, data: Dict[str, Any]) -> Array:
         mean_stack: Array = data["mean_stack"]
@@ -79,7 +144,7 @@ def analytical_likelihood(
 
         @jax.jit
         def scan_moment_matching_mean_fn(
-            carry: tuple[Any, Array, Any, Any, Any], key: PRNGKeyArray
+            carry_in: tuple[Any, Array, Any, Any, Any], key: PRNGKeyArray
         ) -> Tuple[tuple[Any, Array, Any, Any, Any], None]:
             (
                 moment_matching_mean_i,
@@ -87,11 +152,11 @@ def analytical_likelihood(
                 lower_bounds,
                 upper_bounds,
                 ln_offsets,
-            ) = carry
-            samples = mvn_samples_from_cholesky_decomposition(
+            ) = carry_in
+            samples = mvn_samples(
                 loc=moment_matching_mean_i,
                 scale_tril=scale_tril_stack,
-                n_samples=1_000,
+                n_samples=n_mom_samples,
                 key=key,
             )
 
@@ -108,7 +173,7 @@ def analytical_likelihood(
             # μ_f = sum(weights * samples)
             new_fit_mean = jnp.sum(samples * weights, axis=0)
 
-            carry = (
+            carry_out = (
                 new_fit_mean,
                 scale_tril_stack,
                 lower_bounds,
@@ -116,7 +181,7 @@ def analytical_likelihood(
                 ln_offsets,
             )
 
-            return carry, None
+            return carry_out, None
 
         rng_key, subkey = jrd.split(rng_key)
 
@@ -135,7 +200,7 @@ def analytical_likelihood(
 
         @jax.jit
         def scan_moment_matching_scale_tril_fn(
-            carry: tuple[Any, Array, Any, Any, Any], key: PRNGKeyArray
+            carry_in: tuple[Any, Array, Any, Any, Any], key: PRNGKeyArray
         ) -> Tuple[tuple[Any, Array, Any, Any, Any], None]:
             (
                 mean_stack,
@@ -143,11 +208,11 @@ def analytical_likelihood(
                 lower_bounds,
                 upper_bounds,
                 ln_offsets,
-            ) = carry
-            samples = mvn_samples_from_cholesky_decomposition(
+            ) = carry_in
+            samples = mvn_samples(
                 loc=mean_stack,
                 scale_tril=moment_matching_scale_tril_i,
-                n_samples=1_000,
+                n_samples=n_mom_samples,
                 key=key,
             )
 
@@ -166,7 +231,7 @@ def analytical_likelihood(
 
             new_fit_cov = jnp.einsum("sei,sej->eij", weights * centered, centered)
 
-            carry = (
+            carry_out = (
                 mean_stack,
                 cholesky_decomposition(new_fit_cov),
                 lower_bounds,
@@ -174,7 +239,7 @@ def analytical_likelihood(
                 ln_offsets,
             )
 
-            return carry, None
+            return carry_out, None
 
         rng_key, subkey = jrd.split(rng_key)
 
@@ -191,7 +256,7 @@ def analytical_likelihood(
             length=max_iter_cov,
         )
 
-        samples: Array = mvn_samples_from_cholesky_decomposition(
+        samples: Array = mvn_samples(
             fit_mean_stack, fit_scale_tril_stack, n_samples, key
         )
 

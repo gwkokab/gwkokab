@@ -31,6 +31,7 @@ class Monk(FlowMCBased):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
+        n_mom_samples: int,
         max_iter_mean: int,
         max_iter_cov: int,
         debug_nans: bool = False,
@@ -73,6 +74,7 @@ class Monk(FlowMCBased):
         )
         self.data_loader = data_loader
         self.n_samples = n_samples
+        self.n_mom_samples = n_mom_samples
         self.set_rng_key(seed=seed)
         self.max_iter_mean = max_iter_mean
         self.max_iter_cov = max_iter_cov
@@ -123,6 +125,7 @@ class Monk(FlowMCBased):
             self.rng_key,
             n_events,
             self.n_samples,
+            self.n_mom_samples,
             self.max_iter_mean,
             self.max_iter_cov,
         )
@@ -195,8 +198,14 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     tune.add_argument(
         "--n-samples",
         type=int,
-        default=10_000,
-        help="Samples for MVN distribution likelihood.",
+        default=1_000,
+        help="Number of samples of Multivariate Normal per event during likelihood estimation.",
+    )
+    tune.add_argument(
+        "--n-mom-samples",
+        type=int,
+        default=1_000,
+        help="Number of samples of Multivariate Normal per event during Moment of Matching estimation.",
     )
     tune.add_argument(
         "--max-iter-mean",
