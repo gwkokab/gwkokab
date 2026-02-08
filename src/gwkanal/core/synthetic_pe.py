@@ -122,26 +122,14 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         posterior_samples = to_structured(data_stack, params)
         event = to_structured(np.array([[injection[p] for p in params]]), params)
 
+        compression_args = {"compression": "gzip", "compression_opts": 9}
         with h5py.File(event_path, "w") as ef:
             ef.attrs["parameters"] = np.array(params, dtype="S")
             group = ef.create_group(self.waveform_name)
+            group.create_dataset("approximant", data=self.waveform_name)
+            group.create_dataset("injection_data", data=event, **compression_args)
             group.create_dataset(
-                "approximant",
-                data=self.waveform_name,
-                compression="gzip",
-                compression_opts=9,
-            )
-            group.create_dataset(
-                "injection_data",
-                data=event,
-                compression="gzip",
-                compression_opts=9,
-            )
-            group.create_dataset(
-                "posterior_samples",
-                data=posterior_samples,
-                compression="gzip",
-                compression_opts=9,
+                "posterior_samples", data=posterior_samples, **compression_args
             )
 
     def generate_parameter_estimates(self):
@@ -267,9 +255,7 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
                 del ef[self.waveform_name]
 
             group = ef.create_group(self.waveform_name)
-            group.create_dataset(
-                "approximant", data=self.waveform_name, **compression_args
-            )
+            group.create_dataset("approximant", data=self.waveform_name)
             group.attrs["discrete_waveform"] = self.discrete_waveform
             group.attrs["coords"] = self.coords
             group.create_dataset("mu", data=mean, **compression_args)
