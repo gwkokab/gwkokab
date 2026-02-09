@@ -147,7 +147,7 @@ def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:
             width_size=width_size,
             depth=depth,
             activation=jnn.relu,
-            key=jrd.PRNGKey(0),
+            key=jrd.key(0),
         )
 
         i = 0
@@ -282,7 +282,7 @@ def train_regressor(
     # Model & Optimizer
     # --------------------------
     model = make_model(
-        key=jrd.PRNGKey(np.random.randint(0, 2**32 - 1)),
+        key=jrd.key(np.random.randint(0, 2**32 - 1)),
         input_layer=len(input_keys),
         output_layer=len(output_keys),
         width_size=width_size,

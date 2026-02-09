@@ -24,14 +24,14 @@ class ScaledMixture(Distribution):
        >>> import jax.random as jrd
        >>> import numpyro.distributions as dist
        >>> from gwkokab.models.utils import ScaledMixture
-       >>> log_scales = jrd.uniform(jrd.PRNGKey(42), (3,), minval=0, maxval=5)
+       >>> log_scales = jrd.uniform(jrd.key(42), (3,), minval=0, maxval=5)
        >>> component_dists = [
        ...     dist.Normal(loc=0.0, scale=1.0),
        ...     dist.Normal(loc=-0.5, scale=0.3),
        ...     dist.Normal(loc=0.6, scale=1.2),
        ... ]
        >>> mixture = ScaledMixture(log_scales, component_dists)
-       >>> mixture.sample(jax.random.PRNGKey(42)).shape
+       >>> mixture.sample(jax.random.key(42)).shape
        ()
     """
 

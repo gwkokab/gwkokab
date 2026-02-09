@@ -349,7 +349,7 @@ CONTINUOUS = [
 ]
 
 
-def gen_values_within_bounds(constraint, size, key=jrd.PRNGKey(11)):
+def gen_values_within_bounds(constraint, size, key=jrd.key(11)):
     eps = 1e-6
 
     if constraint is constraints.boolean:
@@ -455,7 +455,7 @@ def gen_values_within_bounds(constraint, size, key=jrd.PRNGKey(11)):
         raise NotImplementedError("{} not implemented.".format(constraint))
 
 
-def gen_values_outside_bounds(constraint, size, key=jrd.PRNGKey(11)):
+def gen_values_outside_bounds(constraint, size, key=jrd.key(11)):
     if constraint is constraints.boolean:
         return jrd.bernoulli(key, shape=size) - 2
     elif isinstance(constraint, constraints.greater_than):
@@ -555,7 +555,7 @@ def test_dist_shape(jax_dist_cls, params, prepend_shape):
                 reason=f"{jax_dist_cls.__name__} does not provide sample method"
             )
     jax_dist = jax_dist_cls(**params)
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     expected_shape = prepend_shape + jax_dist.batch_shape + jax_dist.event_shape
     samples = jax_dist.sample(key=rng_key, sample_shape=prepend_shape)
     assert jnp.shape(samples) == expected_shape
@@ -579,10 +579,10 @@ def test_has_rsample(jax_dist, params):
             assert jax_dist.base_dist.has_rsample
         else:
             assert set(jax_dist.arg_constraints) == set(jax_dist.reparametrized_params)
-        jax_dist.rsample(jrd.PRNGKey(0))
+        jax_dist.rsample(jrd.key(0))
     else:
         with pytest.raises(NotImplementedError):
-            jax_dist.rsample(jrd.PRNGKey(0))
+            jax_dist.rsample(jrd.key(0))
 
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
@@ -606,7 +606,7 @@ def test_sample_gradient(jax_dist, params):
     }
     repara_params = tuple(v for k, v in params.items() if k in reparametrized_params)
 
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
 
     def fn(args):
         args_dict = dict(zip(reparametrized_params, args))
@@ -653,7 +653,7 @@ def test_jit_log_likelihood(jax_dist, params):
         if jax_dist.__name__ in ("NPowerlawMGaussian",):
             pytest.xfail(reason=f"{jax_dist.__name__} have shape broadcasting issues")
 
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     samples = jax_dist(**params).sample(key=rng_key, sample_shape=(5,))
 
     def log_likelihood(**params):
@@ -673,7 +673,7 @@ def test_entropy_samples(jax_dist, params):
     except NotImplementedError:
         pytest.skip(reason=f"distribution {jax_dist} does not implement `entropy`")
 
-    samples = jax_dist.sample(jrd.PRNGKey(8), (1000,))
+    samples = jax_dist.sample(jrd.key(8), (1000,))
     neg_log_probs = -jax_dist.log_prob(samples)
     mean = neg_log_probs.mean(axis=0)
     stderr = neg_log_probs.std(axis=0) / jnp.sqrt(neg_log_probs.shape[-1] - 1)
@@ -694,7 +694,7 @@ def test_cdf_and_icdf(jax_dist, params):
     d = jax_dist(**params)
     if d.event_dim > 0:
         pytest.skip("skip testing cdf/icdf methods of multivariate distributions")
-    key1, key2 = jrd.split(jrd.PRNGKey(0))
+    key1, key2 = jrd.split(jrd.key(0))
     try:
         samples = d.sample(key=key1, sample_shape=(100,))
     except NotImplementedError:
@@ -736,7 +736,7 @@ def test_gof(jax_dist, params):
     if jax_dist.__name__ in ("PowerlawRedshift", "MadauDickinsonRedshift"):
         pytest.skip(f"{jax_dist.__name__} is not a valid probability distribution")
     num_samples = 10000
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     d = jax_dist(**params)
     try:
         samples = d.sample(key=rng_key, sample_shape=(num_samples,))
@@ -765,7 +765,7 @@ def test_log_prob_gradient(jax_dist, params):
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
             pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     value = jax_dist(**params).sample(rng_key)
 
     if isinstance(jax_dist, dist.Distribution):
@@ -815,7 +815,7 @@ def test_distribution_constraints(jax_dist, params, prepend_shape):
         pytest.skip(f"skipping test for {jax_dist.__name__}")
     valid_params = {}
     oob_params = {}
-    key = jrd.PRNGKey(1)
+    key = jrd.key(1)
     dependent_constraint = False
     for name, value in params.items():
         if value is None:
@@ -889,7 +889,7 @@ def test_expand(jax_dist, params, prepend_shape, sample_shape):
     jax_dist = jax_dist(**params)
     new_batch_shape = prepend_shape + jax_dist.batch_shape
     expanded_dist = jax_dist.expand(new_batch_shape)
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     samples = expanded_dist.sample(rng_key, sample_shape)
     assert expanded_dist.batch_shape == new_batch_shape
     assert jnp.shape(samples) == sample_shape + new_batch_shape + jax_dist.event_shape
@@ -930,8 +930,8 @@ def test_dist_pytree(jax_dist, params):
                 and actual_arg.dtype == expected_arg.dtype
             )
     try:
-        expected_sample = expected_dist.sample(jrd.PRNGKey(0))
-        actual_sample = actual_dist.sample(jrd.PRNGKey(0))
+        expected_sample = expected_dist.sample(jrd.key(0))
+        actual_sample = actual_dist.sample(jrd.key(0))
         expected_log_prob = expected_dist.log_prob(expected_sample)
         actual_log_prob = actual_dist.log_prob(actual_sample)
         assert_allclose(actual_sample, expected_sample, rtol=1e-6)
@@ -994,7 +994,7 @@ def test_vmap_dist(jax_dist, params):
         return jax_dist(**params)
 
     def sample(d: dist.Distribution):
-        return d.sample(jrd.PRNGKey(0))
+        return d.sample(jrd.key(0))
 
     d = make_jax_dist(**params)
 
