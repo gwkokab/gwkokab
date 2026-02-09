@@ -16,6 +16,7 @@ from numpyro.diagnostics import print_summary
 from numpyro.infer import MCMC, NUTS
 
 from gwkanal.core.guru import Guru, guru_arg_parser
+from gwkanal.core.utils import PRNGKeyMixin
 from gwkanal.utils.common import read_json
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
@@ -101,7 +102,7 @@ def _run_mcmc(
         _run_batch_and_save(key, chain_idx)
 
 
-class NumpyroBased(Guru):
+class NumpyroBased(Guru, PRNGKeyMixin):
     output_directory: str = _INFERENCE_DIRECTORY
 
     def driver(

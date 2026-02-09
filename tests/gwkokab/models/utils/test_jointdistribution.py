@@ -153,6 +153,6 @@ class TestJointDistribution(parameterized.TestCase):
                 flatten_method=flatten_method,
                 validate_args=True,
             )
-            return jd.sample(jrd.PRNGKey(0))
+            return jd.sample(jrd.key(0))
 
         create_joint_distribution()

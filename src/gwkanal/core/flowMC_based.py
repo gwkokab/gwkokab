@@ -29,6 +29,7 @@ from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
 from loguru import logger
 
 from gwkanal.core.guru import Guru, guru_arg_parser
+from gwkanal.core.utils import PRNGKeyMixin
 from gwkanal.utils.common import read_json
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
@@ -403,16 +404,14 @@ class Local_Global_Sampler_Bundle(ResourceStrategyBundle):
         )
 
         update_global_step = Lambda(
-            lambda rng_key,
-            resources,
-            initial_position,
-            data: global_stepper.set_current_position(local_stepper.current_position)
+            lambda rng_key, resources, initial_position, data: (
+                global_stepper.set_current_position(local_stepper.current_position)
+            )
         )
         update_local_step = Lambda(
-            lambda rng_key,
-            resources,
-            initial_position,
-            data: local_stepper.set_current_position(global_stepper.current_position)
+            lambda rng_key, resources, initial_position, data: (
+                local_stepper.set_current_position(global_stepper.current_position)
+            )
         )
 
         def update_model(
@@ -785,8 +784,10 @@ def _save_samples(
 
     selected_indices = list(
         filter(
-            lambda idx: (idx % (n_local_steps_per_loop + n_global_steps_per_loop))
-            < n_local_steps_per_loop,
+            lambda idx: (
+                (idx % (n_local_steps_per_loop + n_global_steps_per_loop))
+                < n_local_steps_per_loop
+            ),
             range(n_production_steps),
         )
     )
@@ -817,7 +818,7 @@ def _save_loss(resources: dict) -> None:
     )
 
 
-class FlowMCBased(Guru):
+class FlowMCBased(Guru, PRNGKeyMixin):
     output_directory: str = _INFERENCE_DIRECTORY
 
     def driver(
