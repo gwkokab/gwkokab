@@ -9,11 +9,10 @@ from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import jax
-from jax import lax, random as jrd
-from jaxtyping import Array, PRNGKeyArray
+from jax import lax
+from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions.distribution import Distribution
-from numpyro.util import is_prng_key
 
 from gwkanal.utils.common import read_json, write_json
 from gwkanal.utils.priors import get_processed_priors
@@ -201,7 +200,6 @@ class Guru:
     Guru classes.
     """
 
-    _rng_key: PRNGKeyArray
     output_directory: str
 
     def __init__(
@@ -226,39 +224,6 @@ class Guru:
         self.check_leaks = check_leaks
         self.poisson_mean_filename = poisson_mean_filename
         self.variance_cut_threshold = variance_cut_threshold
-
-    @property
-    def rng_key(self) -> PRNGKeyArray:
-        self._rng_key, subkey = jrd.split(self._rng_key)
-        return subkey
-
-    def set_rng_key(
-        self, *, key: Optional[PRNGKeyArray] = None, seed: Optional[int] = None
-    ) -> None:
-        error_if(
-            key is None and seed is None,
-            msg="Either 'key' or 'seed' must be provided to set the random number generator key.",
-        )
-        if key is not None:
-            error_if(
-                not is_prng_key(key),
-                msg=f"Expected a PRNGKeyArray, got {type(key)}.",
-            )
-            logger.info(f"Setting the random number generator key to {key}.")
-            self._rng_key = key
-        elif seed is not None:
-            error_if(
-                not isinstance(seed, int),
-                msg=f"Expected an integer seed, got {type(seed)}.",
-            )
-            error_if(
-                seed < 0,
-                msg=f"Seed must be a non-negative integer, got {seed}.",
-            )
-            logger.info(f"Setting the random number generator key with seed {seed}.")
-            key = jrd.PRNGKey(seed)
-            self._rng_key = key
-        self.seed = seed
 
     def classify_model_parameters(
         self,
