@@ -9,7 +9,6 @@ from typing import Optional, TypeAlias
 
 import h5py
 import numpy as np
-import pandas as pd
 from loguru import logger
 from numpyro.distributions.distribution import enable_validation
 
@@ -18,7 +17,7 @@ from gwkanal.utils.common import read_json
 from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
 from gwkokab.parameters import default_relation_mesh, Parameters
-from gwkokab.utils.tools import warn_if
+from gwkokab.utils.tools import error_if, warn_if
 
 
 ErrorFunctionRegistryType: TypeAlias = dict[
@@ -234,15 +233,26 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
 
         posterior_samples, parameters = from_structured(posterior_samples)
 
-        df = pd.DataFrame(posterior_samples, columns=parameters)
+        filtered_posterior_samples = posterior_samples
         if self.coords is not None:
-            df = df[list(self.coords)]
+            idxs = [parameters.index(p) for p in self.coords]
+            error_if(
+                not idxs,
+                f"No matching parameters found for coords: {self.coords}. "
+                f"Available parameters: {parameters}.",
+            )
+            filtered_posterior_samples = posterior_samples[:, idxs]
 
-        cov = df.cov().to_numpy()
-        mean = df.mean().to_numpy()
-        cor = df.corr().to_numpy()
+        cov = np.cov(filtered_posterior_samples, rowvar=False)
+        mean = np.mean(filtered_posterior_samples, axis=0)
+        cor = np.corrcoef(filtered_posterior_samples, rowvar=False)
         std = np.sqrt(np.diag(cov))
-        limits = np.array((df.min().to_numpy(), df.max().to_numpy())).T
+        limits = np.array(
+            (
+                np.min(filtered_posterior_samples, axis=0),
+                np.max(filtered_posterior_samples, axis=0),
+            )
+        ).T
 
         compression_args = {"compression": "gzip", "compression_opts": 9}
         with h5py.File(self.filename, "a") as ef:
