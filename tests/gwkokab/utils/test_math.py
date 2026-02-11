@@ -99,8 +99,9 @@ class TestVariants(parameterized.TestCase):
                     ),
                     axis=-1,
                 ),
-                lambda x: (3.0 / 8.0) ** 3
-                * jnp.square(x[..., 0] * x[..., 1] * x[..., 2]),
+                lambda x: (
+                    (3.0 / 8.0) ** 3 * jnp.square(x[..., 0] * x[..., 1] * x[..., 2])
+                ),
                 lambda x: jnp.power(x[..., 0] * x[..., 1] * x[..., 2], 3.0) / 8**3,
             ),
         ]
