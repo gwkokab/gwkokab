@@ -8,7 +8,6 @@ from jaxtyping import Array, PRNGKeyArray
 from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
 
 from gwkanal.utils.common import read_json
-from gwkokab.models.utils import ScaledMixture
 from gwkokab.poisson_mean import (
     poisson_mean_from_neural_pdet,
     poisson_mean_from_neural_vt,
@@ -137,8 +136,8 @@ class PoissonMeanEstimationLoader(BaseModel):
         self,
     ) -> Tuple[
         Optional[Callable[[Array], Array]],
-        Callable[[ScaledMixture], Array],
-        float | Array,
-        Callable[[ScaledMixture], Array],
+        Callable[..., Array],
+        Callable[..., Array],
+        dict[str, Any],
     ]:
         return self.loader.get_estimators()

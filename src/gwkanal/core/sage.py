@@ -91,6 +91,8 @@ class Sage(Guru):
         parameters = [p.value if isinstance(p, P) else p for p in self.parameters]
 
         data, log_ref_priors = self.data_loader.load(parameters, self.seed)
+        sum_log_size = sum([np.log(d.shape[0]) for d in data])
+        log_constants = -sum_log_size
 
         n_events = len(data)
         error_if(
@@ -147,9 +149,6 @@ class Sage(Guru):
                 f"Bucket {i}: Shape {group.shape} | Padding elements: {mask_count}"
             )
 
-        sum_log_size = sum([np.log(d.shape[0]) for d in data])
-        log_constants = -sum_log_size
-
         return n_events, log_constants, data_group, log_ref_priors_group, masks_group
 
     def run(self) -> None:
@@ -169,11 +168,11 @@ class Sage(Guru):
         pmean_loader = PoissonMeanEstimationLoader.from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
-        _, poisson_mean_estimator, T_obs, variance_of_poisson_mean_estimator = (
+        _, poisson_mean_estimator, variance_of_poisson_mean_estimator, pmean_kwargs = (
             pmean_loader.get_estimators()
         )
 
-        log_constants += n_events * np.log(T_obs)
+        log_constants += n_events * np.log(pmean_kwargs["T_obs"])
 
         logger.info(
             "Constructing likelihood function and preparing for sampler execution."
@@ -196,6 +195,7 @@ class Sage(Guru):
                 "data_group": data_group,
                 "log_ref_priors_group": log_ref_priors_group,
                 "masks_group": masks_group,
+                "pmean_kwargs": pmean_kwargs,
             },
             labels=sorted(variables.keys()),
         )

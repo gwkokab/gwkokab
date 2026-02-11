@@ -3,9 +3,8 @@
 
 
 from collections.abc import Callable, Sequence
-from typing import Optional, Tuple, Union
+from typing import Any, Optional, Tuple, Union
 
-import equinox as eqx
 import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
@@ -25,9 +24,9 @@ def poisson_mean_from_neural_pdet(
     time_scale: Union[int, float, Array] = 1.0,
 ) -> Tuple[
     Optional[Callable[[Array], Array]],
-    Callable[[ScaledMixture], Array],
-    float | Array,
-    Callable[[ScaledMixture], Array],
+    Callable[..., Array],
+    Callable[..., Array],
+    dict[str, Any],
 ]:
     error_if(not parameters, msg="parameters sequence cannot be empty")
     error_if(
@@ -70,7 +69,7 @@ def poisson_mean_from_neural_pdet(
         safe_y_new = jnp.where(mask, 1.0, y_new)
         return jnp.where(mask, -jnp.inf, jnp.log(safe_y_new))
 
-    def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
+    def _poisson_mean(scaled_mixture: ScaledMixture, time_scale: Array) -> Array:
         component_sample = scaled_mixture.component_sample(key, (num_samples,))
         # vmapping over components
         log_pdet_values = jax.vmap(log_pdet, in_axes=1)(component_sample)
@@ -94,8 +93,9 @@ def poisson_mean_from_neural_pdet(
         )
         return (time_scale / num_samples) * jnp.sum(mean_per_component, axis=-1)
 
-    @eqx.filter_jit
-    def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
+    def _variance_of_estimator(
+        scaled_mixture: ScaledMixture, time_scale: Array
+    ) -> Array:
         component_sample = scaled_mixture.component_sample(key, (num_samples,))
         # vmapping over components
         log_pdet_values = jax.vmap(log_pdet, in_axes=1)(component_sample)
@@ -129,4 +129,9 @@ def poisson_mean_from_neural_pdet(
         variance_per_component = term1 - term2
         return jnp.sum(variance_per_component, axis=-1)
 
-    return log_pdet, _poisson_mean, time_scale, _variance_of_estimator
+    return (
+        log_pdet,
+        _poisson_mean,
+        _variance_of_estimator,
+        {"T_obs": time_scale},
+    )

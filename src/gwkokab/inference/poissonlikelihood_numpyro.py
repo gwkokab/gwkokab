@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import jax
 import numpyro
@@ -41,6 +41,7 @@ def numpyro_poisson_likelihood(
         log_ref_priors_group_: Tuple[Array, ...],
         masks_group_: Tuple[Array, ...],
         variables_samples_: List[Array],
+        pmean_kwargs: Dict[str, Any],
     ) -> Array:
         mapped_params = {
             name: variables_samples_[i] for name, i in variables_index.items()
@@ -79,7 +80,7 @@ def numpyro_poisson_likelihood(
             )
 
         # μ(Λ) = E_{θ|Λ}[ VT(θ) ]
-        expected_rates = poisson_mean_estimator(model_instance)
+        expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
 
         # log L(Λ) = - μ + Σ_n log Σ_i (...)
         log_likelihood = total_log_likelihood - expected_rates

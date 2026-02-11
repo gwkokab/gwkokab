@@ -118,7 +118,8 @@ def analytical_likelihood(
         lower_bounds: Array = data["lower_bounds"]
         upper_bounds: Array = data["upper_bounds"]
         ln_offsets: Array = data["ln_offsets"]
-        T_obs: Array = data["T_obs"]
+        pmean_kwargs: Dict[str, Any] = data["pmean_kwargs"]
+        T_obs: Array = pmean_kwargs["T_obs"]
 
         mapped_params = {name: x[i] for name, i in variables_index.items()}
 
@@ -287,7 +288,7 @@ def analytical_likelihood(
             jnp.log(n_samples) - jnp.log(T_obs)
         )
 
-        expected_rates = poisson_mean_estimator(model_instance)
+        expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
 
         log_likelihood = total_log_likelihood - expected_rates
 
