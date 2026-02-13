@@ -83,7 +83,6 @@ class NBrokenPowerlawMGaussianCore(Sage):
             Callable,
         ],
         data_loader: DataLoader,
-        seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
@@ -109,7 +108,6 @@ class NBrokenPowerlawMGaussianCore(Sage):
             likelihood_fn=likelihood_fn,
             model=NBrokenPowerlawMGaussian,
             data_loader=data_loader,
-            seed=seed,
             prior_filename=prior_filename,
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
@@ -422,6 +420,8 @@ def f_main() -> None:
     class NBrokenPowerlawMGaussianFSage(NBrokenPowerlawMGaussianCore, FlowMCBased):
         pass
 
+    NBrokenPowerlawMGaussianFSage.init_rng_seed(seed=args.seed)
+
     NBrokenPowerlawMGaussianFSage(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
@@ -435,7 +435,6 @@ def f_main() -> None:
         use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
         data_loader=data_loader,
-        seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
@@ -463,6 +462,8 @@ def n_main() -> None:
     class NBrokenPowerlawMGaussianNSage(NBrokenPowerlawMGaussianCore, NumpyroBased):
         pass
 
+    NBrokenPowerlawMGaussianNSage.init_rng_seed(seed=args.seed)
+
     NBrokenPowerlawMGaussianNSage(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
@@ -476,7 +477,6 @@ def n_main() -> None:
         use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
         data_loader=data_loader,
-        seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,

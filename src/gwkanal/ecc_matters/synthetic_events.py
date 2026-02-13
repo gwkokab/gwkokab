@@ -22,7 +22,7 @@ def main() -> None:
     ):
         pass
 
-    EccentricityMattersInjectionGenerator.set_rng_key(seed=args.seed)
+    EccentricityMattersInjectionGenerator.init_rng_seed(seed=args.seed)
 
     generator = EccentricityMattersInjectionGenerator(
         filename=args.output_filename,

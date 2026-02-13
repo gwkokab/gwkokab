@@ -29,7 +29,6 @@ from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
 from loguru import logger
 
 from gwkanal.core.guru import Guru, guru_arg_parser
-from gwkanal.core.utils import PRNGKeyMixin
 from gwkanal.utils.common import read_json
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
@@ -818,7 +817,7 @@ def _save_loss(resources: dict) -> None:
     )
 
 
-class FlowMCBased(Guru, PRNGKeyMixin):
+class FlowMCBased(Guru):
     output_directory: str = _INFERENCE_DIRECTORY
 
     def driver(

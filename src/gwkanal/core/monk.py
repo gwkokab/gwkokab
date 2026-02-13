@@ -26,7 +26,6 @@ class Monk(FlowMCBased):
         self,
         model: Union[Distribution, Callable[..., Distribution]],
         data_loader: AnalyticalPELoader,
-        seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
@@ -75,7 +74,6 @@ class Monk(FlowMCBased):
         self.data_loader = data_loader
         self.n_samples = n_samples
         self.n_mom_samples = n_mom_samples
-        self.set_rng_key(seed=seed)
         self.max_iter_mean = max_iter_mean
         self.max_iter_cov = max_iter_cov
 

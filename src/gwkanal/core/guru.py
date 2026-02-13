@@ -14,6 +14,7 @@ from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions.distribution import Distribution
 
+from gwkanal.core.utils import PRNGKeyMixin
 from gwkanal.utils.common import read_json, write_json
 from gwkanal.utils.priors import get_processed_priors
 from gwkokab.models.utils import JointDistribution, LazyJointDistribution
@@ -195,7 +196,7 @@ def _classify_model_parameters(
     )
 
 
-class Guru:
+class Guru(PRNGKeyMixin):
     """Guru is a class which contains all the common functionality among Genie, Sage and
     Guru classes.
     """
