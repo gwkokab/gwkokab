@@ -97,6 +97,7 @@ def numpyro_poisson_likelihood(
         data_group: Tuple[Array, ...],
         log_ref_priors_group: Tuple[Array, ...],
         masks_group: Tuple[Array, ...],
+        pmean_kwargs: Dict[str, Any],
     ):
         if is_lazy_prior:
             partial_variables_samples = [
@@ -133,6 +134,7 @@ def numpyro_poisson_likelihood(
             log_ref_priors_group,
             masks_group,
             variables_samples,
+            pmean_kwargs,
         )
 
         if where_fns is not None and len(where_fns) > 0:
