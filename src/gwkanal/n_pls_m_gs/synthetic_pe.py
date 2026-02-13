@@ -114,7 +114,7 @@ def main() -> None:
 
     log_info(start=True)
 
-    NPowerlawMGaussianFakeDiscretePE.set_rng_key(seed=args.seed)
+    NPowerlawMGaussianFakeDiscretePE.init_rng_seed(seed=args.seed)
 
     generator = NPowerlawMGaussianFakeDiscretePE(
         filename=args.filename,

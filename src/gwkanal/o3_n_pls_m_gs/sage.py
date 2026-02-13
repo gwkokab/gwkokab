@@ -83,7 +83,6 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             Callable,
         ],
         data_loader: DataLoader,
-        seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
@@ -109,7 +108,6 @@ class NSmoothedPowerlawMSmoothedGaussianCore(Sage):
             likelihood_fn=likelihood_fn,
             model=NSmoothedPowerlawMSmoothedGaussian,
             data_loader=data_loader,
-            seed=seed,
             prior_filename=prior_filename,
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
@@ -420,6 +418,8 @@ def f_main() -> None:
     ):
         pass
 
+    NSmoothedPowerlawMSmoothedGaussianFSage.init_rng_seed(seed=args.seed)
+
     NSmoothedPowerlawMSmoothedGaussianFSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -433,7 +433,6 @@ def f_main() -> None:
         use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
         data_loader=data_loader,
-        seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
@@ -463,6 +462,8 @@ def n_main() -> None:
     ):
         pass
 
+    NSmoothedPowerlawMSmoothedGaussianNSage.init_rng_seed(seed=args.seed)
+
     NSmoothedPowerlawMSmoothedGaussianNSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -476,7 +477,6 @@ def n_main() -> None:
         use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
         data_loader=data_loader,
-        seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,

@@ -109,7 +109,7 @@ def main() -> None:
             )
             return params
 
-    NPowerlawMGaussianInjectionGenerator.set_rng_key(seed=args.seed)
+    NPowerlawMGaussianInjectionGenerator.init_rng_seed(seed=args.seed)
 
     generator = NPowerlawMGaussianInjectionGenerator(
         N_pl=args.n_pl,

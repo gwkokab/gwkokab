@@ -106,7 +106,6 @@ class NPowerlawMGaussianCore(Sage):
             Callable,
         ],
         data_loader: DataLoader,
-        seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
@@ -141,7 +140,6 @@ class NPowerlawMGaussianCore(Sage):
             likelihood_fn=likelihood_fn,
             model=NPowerlawMGaussian,
             data_loader=data_loader,
-            seed=seed,
             prior_filename=prior_filename,
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
@@ -666,6 +664,8 @@ def f_main() -> None:
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
+    NPowerlawMGaussianFSage.init_rng_seed(seed=args.seed)
+
     NPowerlawMGaussianFSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -688,7 +688,6 @@ def f_main() -> None:
         has_detection_time=args.add_detection_time,
         likelihood_fn=flowMC_poisson_likelihood,
         data_loader=data_loader,
-        seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
@@ -713,6 +712,8 @@ def n_main() -> None:
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
+    NPowerlawMGaussianNSage.init_rng_seed(seed=args.seed)
+
     NPowerlawMGaussianNSage(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -735,7 +736,6 @@ def n_main() -> None:
         has_detection_time=args.add_detection_time,
         likelihood_fn=numpyro_poisson_likelihood,
         data_loader=data_loader,
-        seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,

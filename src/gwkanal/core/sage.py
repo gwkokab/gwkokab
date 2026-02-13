@@ -45,7 +45,6 @@ class Sage(Guru):
         model: Union[Distribution, Callable[..., Distribution]],
         where_fns: Optional[List[Callable[..., Array]]],
         data_loader: DiscretePELoader,
-        seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
@@ -67,7 +66,6 @@ class Sage(Guru):
         self.data_loader = data_loader
         self.threshold = threshold
         self.where_fns = where_fns
-        self.set_rng_key(seed=seed)
 
         logger.info(
             f"Initializing Sage class for analysis identifier: '{analysis_name}'"

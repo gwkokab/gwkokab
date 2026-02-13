@@ -36,7 +36,6 @@ class NPowerlawMGaussianMonk(Monk):
         has_sin_declination: bool,
         has_detection_time: bool,
         data_loader: DataLoader,
-        seed: int,
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
@@ -71,7 +70,6 @@ class NPowerlawMGaussianMonk(Monk):
         super().__init__(
             NPowerlawMGaussian,
             data_loader,
-            seed,
             prior_filename,
             poisson_mean_filename,
             sampler_settings_filename,
@@ -581,6 +579,8 @@ def main() -> None:
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
+    NPowerlawMGaussianMonk.init_rng_seed(seed=args.seed)
+
     NPowerlawMGaussianMonk(
         N_pl=args.n_pl,
         N_g=args.n_g,
@@ -602,7 +602,6 @@ def main() -> None:
         has_sin_declination=args.add_sin_declination,
         has_detection_time=args.add_detection_time,
         data_loader=data_loader,
-        seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
