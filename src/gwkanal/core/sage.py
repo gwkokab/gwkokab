@@ -214,7 +214,7 @@ class Sage(Guru):
                     data_group,
                     log_ref_priors_group,
                     masks_group,
-                ) + variance_of_poisson_mean_estimator(scaled_mixture)
+                ) + variance_of_poisson_mean_estimator(scaled_mixture, **pmean_kwargs)
                 return variance
 
             mask = None

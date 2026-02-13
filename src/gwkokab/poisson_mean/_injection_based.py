@@ -95,7 +95,7 @@ def poisson_mean_from_sensitivity_injections(
         return (T_obs * jnp.exp(logsumexp_log_prob)) / total_injections
 
     def _variance_of_estimator(
-        scaled_mixture: ScaledMixture, samples: Array, log_weights: Array
+        scaled_mixture: ScaledMixture, samples: Array, log_weights: Array, T_obs: float
     ) -> Array:
         """See equation 9 and 11 of https://arxiv.org/abs/2406.16813."""
         model_log_prob = jax.lax.map(
@@ -124,14 +124,12 @@ def poisson_mean_from_sensitivity_injections(
         )
 
         term2 = jnp.exp(
-            2.0 * jnp.log(analysis_time_years)
+            2.0 * jnp.log(T_obs)
             - 3.0 * jnp.log(total_injections)
             + 2.0 * logsumexp_log_prob
         )
         term1 = jnp.exp(
-            2.0 * jnp.log(analysis_time_years)
-            - 2.0 * jnp.log(total_injections)
-            + logsumexp_log_prob2
+            2.0 * jnp.log(T_obs) - 2.0 * jnp.log(total_injections) + logsumexp_log_prob2
         )
         return term1 - term2
 
