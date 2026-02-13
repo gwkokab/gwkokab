@@ -61,18 +61,20 @@ def flowMC_poisson_likelihood(
     """
     del variables
 
-    log_constants = jnp.asarray(log_constants)
-
     def _map_params(x: Array) -> Dict[str, Array]:
         return {
             name: jax.lax.dynamic_index_in_dim(x, i, keepdims=False)
             for name, i in variables_index.items()
         }
 
-    def likelihood_fn(x: Array, data: Dict[str, Tuple[Array, ...]]) -> Array:
-        data_group: Tuple[Array, ...] = data["data_group"]
-        log_ref_priors_group: Tuple[Array, ...] = data["log_ref_priors_group"]
-        masks_group: Tuple[Array, ...] = data["masks_group"]
+    def likelihood_fn(
+        x: Array, data: Dict[str, Tuple[Array, ...] | Dict[str, Any]]
+    ) -> Array:
+        data_group: Tuple[Array, ...] = data["data_group"]  # type: ignore
+        log_ref_priors_group: Tuple[Array, ...] = data["log_ref_priors_group"]  # type: ignore
+        masks_group: Tuple[Array, ...] = data["masks_group"]  # type: ignore
+        pmean_kwargs: Dict[str, Any] = data["pmean_kwargs"]  # type: ignore
+
         mapped_params = _map_params(x)
 
         model_instance = dist_fn(**constants, **mapped_params)
@@ -104,7 +106,7 @@ def flowMC_poisson_likelihood(
             )
 
         # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = poisson_mean_estimator(model_instance)
+        expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
         # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
         log_likelihood = total_log_likelihood - expected_rates
         # log p(ω|data) = log π(ω) + log L(ω)

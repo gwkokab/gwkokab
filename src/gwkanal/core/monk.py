@@ -110,9 +110,7 @@ class Monk(FlowMCBased):
         pmean_loader = PoissonMeanEstimationLoader.from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
-        _, poisson_mean_estimator, T_obs, variance_of_poisson_mean_estimator = (
-            pmean_loader.get_estimators()
-        )
+        _, poisson_mean_estimator, _, pmean_kwargs = pmean_loader.get_estimators()
 
         logpdf = analytical_likelihood(
             self.model,
@@ -159,7 +157,7 @@ class Monk(FlowMCBased):
                 "scale_tril_stack": scale_tril_stack,
                 "lower_bounds": lower_bounds,
                 "upper_bounds": upper_bounds,
-                "T_obs": T_obs,
+                "pmean_kwargs": pmean_kwargs,
                 "ln_offsets": ln_offsets,
             },
             labels=sorted(variables.keys()),

@@ -3,7 +3,7 @@
 
 
 from collections.abc import Callable
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import jax
 import numpy as np
@@ -25,9 +25,9 @@ def poisson_mean_from_sensitivity_injections(
     snr_cut: float = 10.0,
 ) -> Tuple[
     Optional[Callable[[Array], Array]],
-    Callable[[ScaledMixture], Array],
-    float | Array,
-    Callable[[ScaledMixture], Array],
+    Callable[..., Array],
+    Callable[..., Array],
+    dict[str, Any],
 ]:
     del key  # Unused.
 
@@ -68,7 +68,9 @@ def poisson_mean_from_sensitivity_injections(
         snr_cut,
     )
 
-    def _poisson_mean(scaled_mixture: ScaledMixture) -> Array:
+    def _poisson_mean(
+        scaled_mixture: ScaledMixture, samples: Array, log_weights: Array, T_obs: float
+    ) -> Array:
         model_log_prob = jax.lax.map(
             scaled_mixture.log_prob,
             samples,
@@ -90,9 +92,11 @@ def poisson_mean_from_sensitivity_injections(
         )
 
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (analysis_time_years * jnp.exp(logsumexp_log_prob)) / total_injections
+        return (T_obs * jnp.exp(logsumexp_log_prob)) / total_injections
 
-    def _variance_of_estimator(scaled_mixture: ScaledMixture) -> Array:
+    def _variance_of_estimator(
+        scaled_mixture: ScaledMixture, samples: Array, log_weights: Array, T_obs: float
+    ) -> Array:
         """See equation 9 and 11 of https://arxiv.org/abs/2406.16813."""
         model_log_prob = jax.lax.map(
             scaled_mixture.log_prob,
@@ -120,15 +124,22 @@ def poisson_mean_from_sensitivity_injections(
         )
 
         term2 = jnp.exp(
-            2.0 * jnp.log(analysis_time_years)
+            2.0 * jnp.log(T_obs)
             - 3.0 * jnp.log(total_injections)
             + 2.0 * logsumexp_log_prob
         )
         term1 = jnp.exp(
-            2.0 * jnp.log(analysis_time_years)
-            - 2.0 * jnp.log(total_injections)
-            + logsumexp_log_prob2
+            2.0 * jnp.log(T_obs) - 2.0 * jnp.log(total_injections) + logsumexp_log_prob2
         )
         return term1 - term2
 
-    return None, _poisson_mean, analysis_time_years, _variance_of_estimator
+    return (
+        None,
+        _poisson_mean,
+        _variance_of_estimator,
+        {
+            "samples": samples,
+            "log_weights": log_weights,
+            "T_obs": analysis_time_years,
+        },
+    )
