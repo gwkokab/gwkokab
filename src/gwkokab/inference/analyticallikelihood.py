@@ -88,6 +88,7 @@ def analytical_likelihood(
     constant_params: Dict[str, Any],
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
+    analytical_to_model_coord_fn: Callable[[Array], Array],
     key: PRNGKeyArray,
     n_events: int,
     n_samples: int = 500,
@@ -135,7 +136,8 @@ def analytical_likelihood(
             ub: Array,
             ln_offsets: Array,
         ) -> Array:
-            log_p_model = model_instance.log_prob(samples)
+            transformed_samples = analytical_to_model_coord_fn(samples)
+            log_p_model = model_instance.log_prob(transformed_samples)
             log_p_event = mvn_log_prob(mean, scale_tril, samples) + ln_offsets
             is_inside = jnp.all((samples >= lb) & (samples <= ub), axis=-1)
             log_p_model = jnp.where(is_inside, log_p_event, -jnp.inf)
@@ -265,8 +267,10 @@ def analytical_likelihood(
             (samples >= lower_bounds) & (samples <= upper_bounds), axis=-1
         )
 
+        transformed_samples = analytical_to_model_coord_fn(samples)
+
         # log ρ(data | Λ, κ)
-        log_p_model = model_instance.log_prob(samples)
+        log_p_model = model_instance.log_prob(transformed_samples)
 
         # log G(θ, z | μ_i, Σ_i)
         log_p_event = mvn_log_prob(mean_stack, scale_tril_stack, samples)

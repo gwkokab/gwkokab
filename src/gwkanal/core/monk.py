@@ -118,6 +118,7 @@ class Monk(FlowMCBased):
             constants,
             variables_index,
             poisson_mean_estimator,
+            self.data_loader.analytical_to_model_coord_fn,
             self.rng_key,
             n_events,
             self.n_samples,
