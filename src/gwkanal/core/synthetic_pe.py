@@ -309,7 +309,7 @@ def synthetic_analytical_pe_main():
 
     log_info(start=True)
 
-    SyntheticAnalyticalPE.set_rng_key(seed=args.seed)
+    SyntheticAnalyticalPE.init_rng_seed(seed=args.seed)
 
     pe = SyntheticAnalyticalPE(
         filename=args.filename,

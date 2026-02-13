@@ -58,7 +58,7 @@ def main() -> None:
 
     log_info(start=True)
 
-    EccentricityMattersFakeDiscretePE.set_rng_key(seed=args.seed)
+    EccentricityMattersFakeDiscretePE.init_rng_seed(seed=args.seed)
 
     generator = EccentricityMattersFakeDiscretePE(
         filename=args.filename,

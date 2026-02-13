@@ -32,10 +32,11 @@ def main() -> None:
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
+    EccentricityMattersMonk.init_rng_seed(seed=args.seed)
+
     EccentricityMattersMonk(
         model=EccentricityMattersModel,
         data_loader=data_loader,
-        seed=args.seed,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
