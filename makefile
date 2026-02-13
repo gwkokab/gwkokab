@@ -1,48 +1,34 @@
-PIP=pip
-UV=uv
-PIP_FLAGS?=
-TARGET?=gwkokab
-EXTRA?=
+PIP       := pip
+UV        := uv
+TARGET    := gwkokab
+PIP_FLAGS ?=
+EXTRA     ?=
 
-ifeq ($(EXTRA),)
-	_EXTRA=.
-else
-	_EXTRA=.[$(EXTRA)]
-endif
+INSTALL_TARGET := .$(if $(EXTRA),[$(EXTRA)])
 
-ifeq ($(PIP_FLAGS),)
-	_PIP_FLAGS=
-else
-	_PIP_FLAGS=$(PIP_FLAGS)
-endif
+.PHONY: all install uninstall cache_clean help doc
 
-.PHONY: install uninstall cache_clean help
-
-# Verify UV installation
-UV_CHECK := $(shell command -v $(UV) 2> /dev/null)
-ifndef UV_CHECK
-	$(error "uv is not installed. Please install uv and try again.")
-endif
+all: help
 
 help:
-	@echo "Available targets:"
-	@echo "  install EXTRA=... - Install package"
-	@echo "  uninstall         - Remove package"
-	@echo "  cache_clean       - Clean pip and uv cache"
-	@echo "  docs		   - Generate documentation"
+	@echo "Usage: make [target] [EXTRA=feature1,feature2]"
+	@echo ""
+	@echo "Targets:"
+	@grep -E '^## [-a-zA-Z_]+: .*' $(MAKEFILE_LIST) | sed 's/^## //' | column -t -s ':'
 
-install: uninstall
-	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(_PIP_FLAGS) $(_EXTRA)
+install: uninstall check-uv
+	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS) "$(INSTALL_TARGET)"
 
+uninstall: check-uv
+	$(UV) $(PIP) uninstall $(TARGET) || true
 
-uninstall:
-	$(UV) $(PIP) uninstall $(TARGET)
-
-cache_clean: uninstall
-	$(PIP) cache purge
+cache_clean: check-uv
 	$(UV) cache clean
 
 doc: install
-	cp -r examples docs/source
-	cd docs && make html
-	cd ..
+	@mkdir -p docs/source
+	cp -r examples docs/source/
+	$(MAKE) -C docs html
+
+check-uv:
+	@command -v $(UV) >/dev/null 2>&1 || { echo >&2 "Error: $(UV) is not installed."; exit 1; }
