@@ -69,7 +69,7 @@ def poisson_mean_from_sensitivity_injections(
     )
 
     def _poisson_mean(
-        scaled_mixture: ScaledMixture, samples: Array, log_weights: Array
+        scaled_mixture: ScaledMixture, samples: Array, log_weights: Array, T_obs: float
     ) -> Array:
         model_log_prob = jax.lax.map(
             scaled_mixture.log_prob,
@@ -92,7 +92,7 @@ def poisson_mean_from_sensitivity_injections(
         )
 
         # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (analysis_time_years * jnp.exp(logsumexp_log_prob)) / total_injections
+        return (T_obs * jnp.exp(logsumexp_log_prob)) / total_injections
 
     def _variance_of_estimator(
         scaled_mixture: ScaledMixture, samples: Array, log_weights: Array
