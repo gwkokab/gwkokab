@@ -83,32 +83,6 @@ def main() -> None:
                 derive_parameters=derive_parameters,
             )
 
-        def modify_model_params(self, params: dict) -> dict:
-            params.update(
-                {
-                    "N_pl": self.N_pl,
-                    "N_g": self.N_g,
-                    "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
-                    "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
-                    "use_truncated_normal_spin_x": self.use_truncated_normal_spin_x,
-                    "use_truncated_normal_spin_y": self.use_truncated_normal_spin_y,
-                    "use_truncated_normal_spin_z": self.use_truncated_normal_spin_z,
-                    "use_chi_eff_mixture": self.use_chi_eff_mixture,
-                    "use_skew_normal_chi_eff": self.use_skew_normal_chi_eff,
-                    "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
-                    "use_tilt": self.use_tilt,
-                    "use_eccentricity_mixture": self.use_eccentricity_mixture,
-                    "use_redshift": self.use_redshift,
-                    "use_cos_iota": self.use_cos_iota,
-                    "use_phi_12": self.use_phi_12,
-                    "use_polarization_angle": self.use_polarization_angle,
-                    "use_right_ascension": self.use_right_ascension,
-                    "use_sin_declination": self.use_sin_declination,
-                    "use_detection_time": self.use_detection_time,
-                }
-            )
-            return params
-
     NPowerlawMGaussianInjectionGenerator.init_rng_seed(seed=args.seed)
 
     generator = NPowerlawMGaussianInjectionGenerator(
