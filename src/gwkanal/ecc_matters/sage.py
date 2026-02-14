@@ -7,7 +7,6 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from numpyro.distributions.distribution import enable_validation
 
 from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
-from gwkanal.core.guru import guru_arg_parser as guru_parser
 from gwkanal.core.inference_io import DiscretePELoader as DataLoader
 from gwkanal.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from gwkanal.core.sage import Sage, sage_arg_parser as sage_parser
@@ -28,7 +27,6 @@ def f_main() -> None:
     enable_validation()
 
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = guru_parser(parser)
     parser = sage_parser(parser)
     parser = flowMC_arg_parser(parser)
 
