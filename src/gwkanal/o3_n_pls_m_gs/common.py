@@ -106,7 +106,7 @@ class NSmoothedPowerlawMSmoothedGaussianCore:
         if self.use_redshift:
             names.append(P.REDSHIFT)
         names.append(P.MASS_RATIO)
-        return [name.value for name in names]
+        return names
 
     @property
     def model_parameters(self) -> List[str]:
