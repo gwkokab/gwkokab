@@ -226,6 +226,10 @@ class Guru(PRNGKeyMixin):
         self.poisson_mean_filename = poisson_mean_filename
         self.variance_cut_threshold = variance_cut_threshold
 
+    def modify_model_params(self, params: dict) -> dict:
+        """Hook for subclasses to modify parameters before model instantiation."""
+        return params
+
     def classify_model_parameters(
         self,
     ) -> Tuple[
@@ -243,14 +247,14 @@ class Guru(PRNGKeyMixin):
             distribution, and the variables index.
         """
         prior_dict = read_json(self.prior_filename)
-        model_prior_param = get_processed_priors(self.model_parameters, prior_dict)
+        model_prior_param = self.modify_model_params(
+            get_processed_priors(self.model_parameters, prior_dict)
+        )
 
         logger.debug("Classifying model parameters into constants and variables.")
         constants, variables, duplicates, lazy_deps, lazy_order = (
             _classify_model_parameters(**model_prior_param)
         )  # type: ignore
-
-        constants |= self.constants
 
         variables_index: dict[str, int] = {
             key: i for i, key in enumerate(sorted(variables.keys()))
@@ -300,13 +304,13 @@ class Guru(PRNGKeyMixin):
         return constants, priors, variables, variables_index
 
     @property
-    def parameters(self) -> List[str]:
+    def parameters(self) -> Union[List[str], Tuple[str, ...]]:
         """Returns the parameters (intrinsic + extrinsic).
 
         Returns
         -------
-        List[str]
-            List of parameters.
+        Union[List[str], Tuple[str, ...]]
+            List or tuple of parameter names.
 
         Raises
         ------
