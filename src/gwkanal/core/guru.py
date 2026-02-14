@@ -347,17 +347,6 @@ class Guru(PRNGKeyMixin):
         logger.error(msg)
         raise NotImplementedError(msg)
 
-    @property
-    def constants(self) -> Dict[str, Union[int, float, bool]]:
-        """Returns the constants used in the model.
-
-        Returns
-        -------
-        Dict[str, Union[int, float, bool]]
-            A dictionary containing the constants used in the model.
-        """
-        return {}
-
     @abstractmethod
     def driver(
         self,
