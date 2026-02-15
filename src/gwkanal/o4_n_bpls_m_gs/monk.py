@@ -11,10 +11,10 @@ from gwkanal.o4_n_bpls_m_gs.common import (
     NBrokenPowerlawMGaussianCore,
 )
 from gwkanal.utils.logger import log_info
-from gwkokab.models import NSmoothedPowerlawMSmoothedGaussian
+from gwkokab.models import NBrokenPowerlawMGaussian
 
 
-class NSmoothedPowerlawMSmoothedGaussianMonk(NBrokenPowerlawMGaussianCore, Monk):
+class NBrokenPowerlawMGaussianMonk(NBrokenPowerlawMGaussianCore, Monk):
     def __init__(
         self,
         N_bpl: int,
@@ -55,7 +55,7 @@ class NSmoothedPowerlawMSmoothedGaussianMonk(NBrokenPowerlawMGaussianCore, Monk)
 
         Monk.__init__(
             self,
-            NSmoothedPowerlawMSmoothedGaussian,
+            NBrokenPowerlawMGaussian,
             data_loader,
             prior_filename,
             poisson_mean_filename,
@@ -82,9 +82,9 @@ def main() -> None:
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
-    NSmoothedPowerlawMSmoothedGaussianMonk.init_rng_seed(seed=args.seed)
+    NBrokenPowerlawMGaussianMonk.init_rng_seed(seed=args.seed)
 
-    NSmoothedPowerlawMSmoothedGaussianMonk(
+    NBrokenPowerlawMGaussianMonk(
         N_bpl=args.n_bpl,
         N_g=args.n_g,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
