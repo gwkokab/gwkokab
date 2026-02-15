@@ -221,8 +221,7 @@ class AnalyticalPELoader(BaseModel):
     ):
         """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(coords)
-        error_if(
+        warn_if(
             missing != set(),
-            KeyError,
-            f"File '{event}' is missing required columns: {missing}",
+            msg=f"File '{event}' is missing required columns: {missing}",
         )
