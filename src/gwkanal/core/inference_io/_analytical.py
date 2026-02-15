@@ -32,7 +32,6 @@ def _extract_transform(path: Optional[str]) -> Callable:
         f"Could not load spec for module at {path}",
     )
 
-    spec = importlib.util.spec_from_file_location("custom_module", path)
     custom_module = importlib.util.module_from_spec(spec)  # type: ignore
     spec.loader.exec_module(custom_module)  # type: ignore
 
@@ -121,7 +120,7 @@ class AnalyticalPELoader(BaseModel):
 
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
-        transform_module_path = raw_data.pop("transform_module_path")
+        transform_module_path = raw_data.pop("transform_module_path", None)
         transform = _extract_transform(transform_module_path)
 
         return cls(
