@@ -144,6 +144,8 @@ n_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:n_main"
 ## Monk scripts
 f_monk_ecc_matters = "gwkanal.ecc_matters.monk:main"
 f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
+f_monk_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.monk:main"
+f_monk_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.monk:main"
 # These scripts are for developer/user experience.
 gwk_diag_mass_matrix = "gwkokab_scripts.diag_mass_matrix:main"
 gwk_flowMC_info = "gwkokab_scripts.flowMC_info:main"
