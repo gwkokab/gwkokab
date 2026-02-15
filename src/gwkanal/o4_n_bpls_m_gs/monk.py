@@ -63,7 +63,7 @@ class NBrokenPowerlawMGaussianMonk(NBrokenPowerlawMGaussianCore, Monk):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            analysis_name="othree_n_pls_m_gs",
+            analysis_name="ofour_n_pls_m_gs",
             n_samples=n_samples,
             n_mom_samples=n_mom_samples,
             max_iter_mean=max_iter_mean,
