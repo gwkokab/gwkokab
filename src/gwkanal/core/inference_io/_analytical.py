@@ -4,7 +4,7 @@
 
 import glob
 from pathlib import Path
-from typing import NamedTuple
+from typing import Callable, NamedTuple, Optional
 
 import h5py
 import numpy as np
@@ -13,6 +13,35 @@ from pydantic import BaseModel, Field
 
 from gwkanal.utils.common import read_json
 from gwkokab.utils.tools import error_if, warn_if
+
+
+def _extract_transform(path: Optional[str]) -> Callable:
+    if path is None:
+        warn_if(
+            True,
+            msg="No 'transform_module_path' provided. Using identity transform.",
+        )
+        return lambda x: x
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("custom_module", path)
+    error_if(
+        spec is None or spec.loader is None,
+        ImportError,
+        f"Could not load spec for module at {path}",
+    )
+
+    custom_module = importlib.util.module_from_spec(spec)  # type: ignore
+    spec.loader.exec_module(custom_module)  # type: ignore
+
+    error_if(
+        not hasattr(custom_module, "transform"),
+        msg="The custom module must have a 'transform' function.",
+    )
+
+    transform: Callable = getattr(custom_module, "transform")
+    return transform
 
 
 class AnalyticalPEFileData(NamedTuple):
@@ -42,6 +71,14 @@ class AnalyticalPELoader(BaseModel):
 
     alternate_waveforms: dict[str, str] = Field(default_factory=dict)
     """Mapping of filenames to alternate waveform names, if needed."""
+
+    analytical_to_model_coord_fn: Callable = Field(lambda x: x)
+    """A function that transforms coordinates from the analytical PE format to the
+    model's expected format.
+
+    This allows for flexibility in handling different coordinate systems or
+    parameterizations used in the PE samples.
+    """
 
     @classmethod
     def from_json(cls, config_path: str) -> "AnalyticalPELoader":
@@ -83,7 +120,14 @@ class AnalyticalPELoader(BaseModel):
 
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
-        return cls(**raw_data, event_paths=filenames)
+        transform_module_path = raw_data.pop("transform_module_path", None)
+        transform = _extract_transform(transform_module_path)
+
+        return cls(
+            **raw_data,
+            event_paths=filenames,
+            analytical_to_model_coord_fn=transform,
+        )
 
     @classmethod
     def load_file(
