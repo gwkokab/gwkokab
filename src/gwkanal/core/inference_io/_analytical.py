@@ -12,7 +12,7 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from gwkanal.utils.common import read_json
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.tools import error_if, warn_if
 
 
 class AnalyticalPEFileData(NamedTuple):
@@ -176,8 +176,7 @@ class AnalyticalPELoader(BaseModel):
     ):
         """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(coords)
-        error_if(
+        warn_if(
             missing != set(),
-            KeyError,
-            f"File '{event}' is missing required columns: {missing}",
+            msg=f"File '{event}' is missing required columns: {missing}",
         )
