@@ -3,7 +3,7 @@
 
 
 import functools as ft
-from typing import Any, Callable, Dict, Tuple
+from typing import Any, Callable, Dict
 
 import jax
 from jax import nn as jnn, numpy as jnp, random as jrd
@@ -119,6 +119,7 @@ def analytical_likelihood(
         lower_bounds: Array = data["lower_bounds"]
         upper_bounds: Array = data["upper_bounds"]
         ln_offsets: Array = data["ln_offsets"]
+        scale_stack: Array = data["scale_stack"]
         pmean_kwargs: Dict[str, Any] = data["pmean_kwargs"]
         T_obs: Array = pmean_kwargs["T_obs"]
 
@@ -134,11 +135,12 @@ def analytical_likelihood(
             samples: Array,
             lb: Array,
             ub: Array,
+            scale: Array,
             ln_offsets: Array,
         ) -> Array:
             transformed_samples = analytical_to_model_coord_fn(samples)
             log_p_model = model_instance.log_prob(transformed_samples)
-            log_p_event = mvn_log_prob(mean, scale_tril, samples) + ln_offsets
+            log_p_event = mvn_log_prob(mean, scale_tril, scale * samples) + ln_offsets
             is_inside = jnp.all((samples >= lb) & (samples <= ub), axis=-1)
             log_p_model = jnp.where(is_inside, log_p_event, -jnp.inf)
             log_weights = log_p_model + log_p_event
@@ -147,13 +149,14 @@ def analytical_likelihood(
 
         @jax.jit
         def scan_moment_matching_mean_fn(
-            carry_in: tuple[Any, Array, Any, Any, Any], key: PRNGKeyArray
-        ) -> Tuple[tuple[Any, Array, Any, Any, Any], None]:
+            carry_in: tuple[Array, ...], key: PRNGKeyArray
+        ) -> tuple[tuple[Array, ...], None]:
             (
                 moment_matching_mean_i,
                 scale_tril_stack,
                 lower_bounds,
                 upper_bounds,
+                scale_stack,
                 ln_offsets,
             ) = carry_in
             samples = mvn_samples(
@@ -170,6 +173,7 @@ def analytical_likelihood(
                 samples,
                 lower_bounds,
                 upper_bounds,
+                scale_stack,
                 ln_offsets,
             )
 
@@ -181,6 +185,7 @@ def analytical_likelihood(
                 scale_tril_stack,
                 lower_bounds,
                 upper_bounds,
+                scale_stack,
                 ln_offsets,
             )
 
@@ -188,13 +193,14 @@ def analytical_likelihood(
 
         rng_key, subkey = jrd.split(rng_key)
 
-        (fit_mean_stack, _, _, _, _), _ = jax.lax.scan(
+        (fit_mean_stack, *_), _ = jax.lax.scan(
             scan_moment_matching_mean_fn,  # type: ignore[arg-type]
             (
                 mean_stack,
                 scale_tril_stack,
                 lower_bounds,
                 upper_bounds,
+                scale_stack,
                 ln_offsets,
             ),
             jrd.split(subkey, max_iter_mean),
@@ -203,13 +209,14 @@ def analytical_likelihood(
 
         @jax.jit
         def scan_moment_matching_scale_tril_fn(
-            carry_in: tuple[Any, Array, Any, Any, Any], key: PRNGKeyArray
-        ) -> Tuple[tuple[Any, Array, Any, Any, Any], None]:
+            carry_in: tuple[Array, ...], key: PRNGKeyArray
+        ) -> tuple[tuple[Array, ...], None]:
             (
                 mean_stack,
                 moment_matching_scale_tril_i,
                 lower_bounds,
                 upper_bounds,
+                scale_stack,
                 ln_offsets,
             ) = carry_in
             samples = mvn_samples(
@@ -226,6 +233,7 @@ def analytical_likelihood(
                 samples,
                 lower_bounds,
                 upper_bounds,
+                scale_stack,
                 ln_offsets,
             )
 
@@ -239,6 +247,7 @@ def analytical_likelihood(
                 cholesky_decomposition(new_fit_cov),
                 lower_bounds,
                 upper_bounds,
+                scale_stack,
                 ln_offsets,
             )
 
@@ -246,13 +255,14 @@ def analytical_likelihood(
 
         rng_key, subkey = jrd.split(rng_key)
 
-        (_, fit_scale_tril_stack, _, _, _), _ = jax.lax.scan(
+        (_, fit_scale_tril_stack, *_), _ = jax.lax.scan(
             scan_moment_matching_scale_tril_fn,  # type: ignore[arg-type]
             (
                 fit_mean_stack,
                 scale_tril_stack,
                 lower_bounds,
                 upper_bounds,
+                scale_stack,
                 ln_offsets,
             ),
             jrd.split(subkey, max_iter_cov),
@@ -273,7 +283,7 @@ def analytical_likelihood(
         log_p_model = model_instance.log_prob(transformed_samples)
 
         # log G(θ, z | μ_i, Σ_i)
-        log_p_event = mvn_log_prob(mean_stack, scale_tril_stack, samples)
+        log_p_event = mvn_log_prob(mean_stack, scale_tril_stack, scale_stack * samples)
 
         # log G(θ, z | μ_f, Σ_i)
         log_q_fit = mvn_log_prob(fit_mean_stack, fit_scale_tril_stack, samples)
