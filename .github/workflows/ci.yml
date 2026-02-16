@@ -56,7 +56,14 @@ jobs:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
       - name: Install the project
-        run: uv sync --all-extras --dev
+        run: |
+          uv sync \
+            --all-extras \
+            --dev \
+            --no-extra cuda12 \
+            --no-extra cuda13 \
+            --no-extra tpu \
+            --no-extra dev
       - name: Run tests
         run: |
           uv run pytest tests
