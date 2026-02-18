@@ -129,7 +129,7 @@ def analytical_likelihood(
 
         rng_key = key
 
-        def normalized_weights_fn(
+        def log_integrand_fn(
             mean: Array,
             scale_tril: Array,
             samples: Array,
@@ -138,14 +138,22 @@ def analytical_likelihood(
             scale: Array,
             ln_offsets: Array,
         ) -> Array:
-            transformed_samples = analytical_to_model_coord_fn(samples)
-            log_p_model = model_instance.log_prob(transformed_samples)
-            log_p_event = mvn_log_prob(mean, scale_tril, scale * samples) + ln_offsets
             is_inside = jnp.all((samples >= lb) & (samples <= ub), axis=-1)
-            log_p_model = jnp.where(is_inside, log_p_event, -jnp.inf)
-            log_weights = log_p_model + log_p_event
-            log_weights = jnp.expand_dims(log_weights, axis=-1)
-            return jax.nn.softmax(log_weights, axis=0)
+
+            safe_samples = jnp.where(
+                is_inside[..., jnp.newaxis],
+                samples,
+                jnp.clip(samples, lb, ub),
+            )
+
+            transformed_samples = analytical_to_model_coord_fn(safe_samples)
+
+            log_p_model = model_instance.log_prob(transformed_samples)
+            log_p_event = (
+                mvn_log_prob(mean, scale_tril, scale * safe_samples) + ln_offsets
+            )
+            log_weights = jnp.where(is_inside, log_p_model + log_p_event, -jnp.inf)
+            return log_weights
 
         @jax.jit
         def scan_moment_matching_mean_fn(
@@ -167,7 +175,7 @@ def analytical_likelihood(
             )
 
             # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
-            weights = normalized_weights_fn(
+            log_weights = log_integrand_fn(
                 moment_matching_mean_i,
                 scale_tril_stack,
                 samples,
@@ -176,6 +184,7 @@ def analytical_likelihood(
                 scale_stack,
                 ln_offsets,
             )
+            weights = jax.nn.softmax(jnp.expand_dims(log_weights, axis=-1), axis=0)
 
             # μ_f = sum(weights * samples)
             new_fit_mean = jnp.sum(samples * weights, axis=0)
@@ -227,7 +236,7 @@ def analytical_likelihood(
             )
 
             # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
-            weights = normalized_weights_fn(
+            log_weights = log_integrand_fn(
                 mean_stack,
                 moment_matching_scale_tril_i,
                 samples,
@@ -236,6 +245,7 @@ def analytical_likelihood(
                 scale_stack,
                 ln_offsets,
             )
+            weights = jax.nn.softmax(jnp.expand_dims(log_weights, axis=-1), axis=0)
 
             # Σ_f = sum(weights * (samples - μ_f) * (samples - μ_f).T)
             centered = samples - mean_stack
@@ -273,25 +283,22 @@ def analytical_likelihood(
             fit_mean_stack, fit_scale_tril_stack, n_samples, key
         )
 
-        is_inside = jnp.all(
-            (samples >= lower_bounds) & (samples <= upper_bounds), axis=-1
-        )
-
-        transformed_samples = analytical_to_model_coord_fn(samples)
-
-        # log ρ(data | Λ, κ)
-        log_p_model = model_instance.log_prob(transformed_samples)
-
-        # log G(θ, z | μ_i, Σ_i)
-        log_p_event = mvn_log_prob(mean_stack, scale_tril_stack, scale_stack * samples)
-
         # log G(θ, z | μ_f, Σ_i)
         log_q_fit = mvn_log_prob(fit_mean_stack, fit_scale_tril_stack, samples)
 
-        log_weights = log_p_model + log_p_event - log_q_fit
-
-        # Mask points outside the hypercube by setting log_prob to -inf
-        log_weights = jnp.where(is_inside, log_weights, -jnp.inf)
+        log_weights = (
+            # log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i)
+            log_integrand_fn(
+                fit_mean_stack,
+                fit_scale_tril_stack,
+                samples,
+                lower_bounds,
+                upper_bounds,
+                scale_stack,
+                ln_offsets,
+            )
+            - log_q_fit
+        )
 
         # Perform logsumexp over the samples (axis -1 of the generated samples)
         log_estimates = jnn.logsumexp(
