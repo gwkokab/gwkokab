@@ -160,7 +160,14 @@ class AnalyticalPELoader(BaseModel):
             mu = group["mu"][()]
             limits = group["limits"][()]
             coords = group.attrs["coords"].tolist()
-            scale = group["scale"][()]
+            try:
+                scale = group["scale"][()]
+            except KeyError:
+                warn_if(
+                    True,
+                    msg=f"'scale' dataset not found in '{filename}'. Defaulting to ones.",
+                )
+                scale = np.ones_like(mu)
 
         return AnalyticalPEFileData(
             coords=coords,
