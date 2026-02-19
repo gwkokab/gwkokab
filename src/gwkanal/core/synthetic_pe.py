@@ -235,10 +235,18 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
 
         filtered_posterior_samples = posterior_samples
         if self.coords is not None:
-            idxs = [parameters.index(p) for p in self.coords]
+            idxs = []
+            for p in self.coords:
+                try:
+                    idxs.append(parameters.index(p))
+                except ValueError:
+                    error_if(
+                        True,
+                        msg=f"Parameter '{p}' not found in available parameters: {parameters}.",
+                    )
             error_if(
                 not idxs,
-                f"No matching parameters found for coords: {self.coords}. "
+                msg=f"No matching parameters found for coords: {self.coords}. "
                 f"Available parameters: {parameters}.",
             )
             filtered_posterior_samples = posterior_samples[:, idxs]
