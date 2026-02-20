@@ -29,9 +29,6 @@ class Monk(FlowMCBased):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        n_mom_samples: int,
-        max_iter_mean: int,
-        max_iter_cov: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -72,9 +69,6 @@ class Monk(FlowMCBased):
         )
         self.data_loader = data_loader
         self.n_samples = n_samples
-        self.n_mom_samples = n_mom_samples
-        self.max_iter_mean = max_iter_mean
-        self.max_iter_cov = max_iter_cov
 
         super().__init__(
             analysis_name=analysis_name or model.__name__,
@@ -116,12 +110,7 @@ class Monk(FlowMCBased):
             variables_index,
             poisson_mean_estimator,
             self.data_loader.analytical_to_model_coord_fn,
-            self.rng_key,
-            n_events,
             self.n_samples,
-            self.n_mom_samples,
-            self.max_iter_mean,
-            self.max_iter_cov,
         )
 
         lower_bounds = jax.lax.dynamic_index_in_dim(limits_stack, 0, 1, keepdims=False)
@@ -171,6 +160,7 @@ class Monk(FlowMCBased):
                 "scale_stack": jax.device_put(scale_stack),
                 "scale_tril_stack": jax.device_put(scale_tril_stack),
                 "upper_bounds": jax.device_put(upper_bounds),
+                "key": self.rng_key,
             },
             labels=sorted(variables.keys()),
         )
@@ -208,24 +198,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         type=int,
         default=1_000,
         help="Number of samples of Multivariate Normal per event during likelihood estimation.",
-    )
-    tune.add_argument(
-        "--n-mom-samples",
-        type=int,
-        default=1_000,
-        help="Number of samples of Multivariate Normal per event during Moment of Matching estimation.",
-    )
-    tune.add_argument(
-        "--max-iter-mean",
-        type=int,
-        default=10,
-        help="Max iterations for Moment of Matching mean estimation.",
-    )
-    tune.add_argument(
-        "--max-iter-cov",
-        type=int,
-        default=4,
-        help="Max iterations for Moment of Matching covariance estimation.",
     )
 
     return parser
