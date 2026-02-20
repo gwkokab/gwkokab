@@ -6,12 +6,16 @@ import functools as ft
 from typing import Any, Callable, Dict
 
 import jax
+import numpy as np
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Distribution
 from numpyro.distributions.continuous import _batch_mahalanobis, tri_logabsdet
 
 from gwkokab.models.utils import JointDistribution, ScaledMixture
+
+
+LOG_2PI = np.log(2.0 * np.pi)
 
 
 def mvn_samples(
@@ -36,9 +40,9 @@ def mvn_samples(
     Array
         Samples drawn from the multivariate normal distribution.
     """
-    eps = jrd.normal(key, shape=(n_samples, *loc.shape))
-    samples = loc + jnp.squeeze(jnp.matmul(scale_tril, eps[..., jnp.newaxis]), axis=-1)
-    return samples
+    num_events, dim = loc.shape
+    eps = jrd.normal(key, shape=(n_samples, num_events, dim))
+    return loc + jnp.einsum("eij,sej->sei", scale_tril, eps)
 
 
 @ft.partial(jax.vmap, in_axes=(0, 0, 1), out_axes=1)
@@ -62,7 +66,7 @@ def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
     """
     M = _batch_mahalanobis(scale_tril, value - loc)
     half_log_det = tri_logabsdet(scale_tril)
-    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * jnp.log(2 * jnp.pi)
+    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * LOG_2PI
     return -0.5 * M - normalize_term
 
 
@@ -82,6 +86,36 @@ def cholesky_decomposition(covariance_matrix: Array) -> Array:
     return jnp.linalg.cholesky(covariance_matrix)
 
 
+def _importance_sample_log_prob(
+    model_instance: Distribution,
+    samples: Array,
+    ms: Array,
+    sts: Array,
+    ss: Array,
+    log_q: Array,
+    coord_fn: Callable[[Array], Array],
+) -> Array:
+    """Helper to compute model log-probs and importance weights for a given sample
+    set.
+    """
+    transformed = coord_fn(samples)
+    mask = model_instance.support.check(transformed)
+
+    # Safe evaluation of model log-prob
+    safe_transformed = jnp.where(
+        mask[..., jnp.newaxis],
+        transformed,
+        model_instance.support.feasible_like(transformed),
+    )
+    log_p_model = jnp.where(mask, model_instance.log_prob(safe_transformed), -jnp.inf)
+
+    # Event-specific log-prob (MVN)
+    log_p_event = mvn_log_prob(ms, sts, ss * samples)
+
+    # Importance weights: log(p_model * p_event / q)
+    return log_p_model + log_p_event - log_q
+
+
 def analytical_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
@@ -89,12 +123,7 @@ def analytical_likelihood(
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     analytical_to_model_coord_fn: Callable[[Array], Array],
-    key: PRNGKeyArray,
-    n_events: int,
     n_samples: int = 500,
-    n_mom_samples: int = 500,
-    max_iter_mean: int = 10,
-    max_iter_cov: int = 3,
 ) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
 
@@ -112,211 +141,45 @@ def analytical_likelihood(
         \bigg>_{\theta_{i,j},z_{i,j}\sim\mathcal{G}(\theta,z|\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i)}
     """
 
-    @jax.jit
     def likelihood_fn(x: Array, data: Dict[str, Any]) -> Array:
-        mean_stack: Array = data["mean_stack"]
-        scale_tril_stack: Array = data["scale_tril_stack"]
-        lower_bounds: Array = data["lower_bounds"]
-        upper_bounds: Array = data["upper_bounds"]
-        ln_offsets: Array = data["ln_offsets"]
-        scale_stack: Array = data["scale_stack"]
-        pmean_kwargs: Dict[str, Any] = data["pmean_kwargs"]
-        T_obs: Array = pmean_kwargs["T_obs"]
+        mean_stack = data["mean_stack"]
+        scale_tril_stack = data["scale_tril_stack"]
+        lb = data["lower_bounds"]
+        ub = data["upper_bounds"]
+        scale_stack = data["scale_stack"]
+        ln_offsets = data["ln_offsets"]
+        pmean_kwargs = data["pmean_kwargs"]
+        T_obs = pmean_kwargs["T_obs"]
+        master_key = data["key"]
 
-        mapped_params = {name: x[i] for name, i in variables_index.items()}
+        n_events, n_dim = mean_stack.shape
 
-        model_instance: Distribution = dist_fn(**constant_params, **mapped_params)
+        params = {name: x[i] for name, i in variables_index.items()}
+        model_instance = dist_fn(**constant_params, **params)
 
-        rng_key = key
-
-        def log_integrand_fn(
-            mean: Array,
-            scale_tril: Array,
-            samples: Array,
-            lb: Array,
-            ub: Array,
-            scale: Array,
-            ln_offsets: Array,
-        ) -> Array:
-            is_inside = jnp.all((samples >= lb) & (samples <= ub), axis=-1)
-
-            safe_samples = jnp.where(
-                is_inside[..., jnp.newaxis],
-                samples,
-                jnp.clip(samples, lb, ub),
-            )
-
-            transformed_samples = analytical_to_model_coord_fn(safe_samples)
-
-            log_p_model = model_instance.log_prob(transformed_samples)
-            log_p_event = (
-                mvn_log_prob(mean, scale_tril, scale * safe_samples) + ln_offsets
-            )
-            log_weights = jnp.where(is_inside, log_p_model + log_p_event, -jnp.inf)
-            return log_weights
-
-        @jax.jit
-        def scan_moment_matching_mean_fn(
-            carry_in: tuple[Array, ...], key: PRNGKeyArray
-        ) -> tuple[tuple[Array, ...], None]:
-            (
-                moment_matching_mean_i,
-                scale_tril_stack,
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            ) = carry_in
-            samples = mvn_samples(
-                loc=moment_matching_mean_i,
-                scale_tril=scale_tril_stack,
-                n_samples=n_mom_samples,
-                key=key,
-            )
-
-            # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
-            log_weights = log_integrand_fn(
-                moment_matching_mean_i,
-                scale_tril_stack,
-                samples,
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            )
-            weights = jax.nn.softmax(jnp.expand_dims(log_weights, axis=-1), axis=0)
-
-            # μ_f = sum(weights * samples)
-            new_fit_mean = jnp.sum(samples * weights, axis=0)
-
-            carry_out = (
-                new_fit_mean,
-                scale_tril_stack,
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            )
-
-            return carry_out, None
-
-        rng_key, subkey = jrd.split(rng_key)
-
-        (fit_mean_stack, *_), _ = jax.lax.scan(
-            scan_moment_matching_mean_fn,  # type: ignore[arg-type]
-            (
-                mean_stack,
-                scale_tril_stack,
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            ),
-            jrd.split(subkey, max_iter_mean),
-            length=max_iter_mean,
+        u1_samples = jrd.uniform(
+            master_key, (n_samples, n_events, n_dim), minval=lb, maxval=ub
         )
+        log_q1 = -jnp.log(ub - lb).sum(axis=-1)
 
-        @jax.jit
-        def scan_moment_matching_scale_tril_fn(
-            carry_in: tuple[Array, ...], key: PRNGKeyArray
-        ) -> tuple[tuple[Array, ...], None]:
-            (
-                mean_stack,
-                moment_matching_scale_tril_i,
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            ) = carry_in
-            samples = mvn_samples(
-                loc=mean_stack,
-                scale_tril=moment_matching_scale_tril_i,
-                n_samples=n_mom_samples,
-                key=key,
-            )
-
-            # Normalized weights = softmax(log ρ(samples | Λ, κ) + log G(θ, z | μ_i, Σ_i)))
-            log_weights = log_integrand_fn(
-                mean_stack,
-                moment_matching_scale_tril_i,
-                samples,
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            )
-            weights = jax.nn.softmax(jnp.expand_dims(log_weights, axis=-1), axis=0)
-
-            # Σ_f = sum(weights * (samples - μ_f) * (samples - μ_f).T)
-            centered = samples - mean_stack
-
-            new_fit_cov = jnp.einsum("sei,sej->eij", weights * centered, centered)
-
-            carry_out = (
-                mean_stack,
-                cholesky_decomposition(new_fit_cov),
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            )
-
-            return carry_out, None
-
-        rng_key, subkey = jrd.split(rng_key)
-
-        (_, fit_scale_tril_stack, *_), _ = jax.lax.scan(
-            scan_moment_matching_scale_tril_fn,  # type: ignore[arg-type]
-            (
-                fit_mean_stack,
-                scale_tril_stack,
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            ),
-            jrd.split(subkey, max_iter_cov),
-            length=max_iter_cov,
+        log_w1 = _importance_sample_log_prob(
+            model_instance,
+            u1_samples,
+            mean_stack,
+            scale_tril_stack,
+            scale_stack,
+            log_q1,
+            analytical_to_model_coord_fn,
         )
+        log_est_u1 = jnn.logsumexp(log_w1, axis=0, where=jnp.isfinite(log_w1))
 
-        samples: Array = mvn_samples(
-            fit_mean_stack, fit_scale_tril_stack, n_samples, key
-        )
+        total_ln_l = jnp.sum(jnn.logsumexp(log_est_u1, axis=0) + ln_offsets)
 
-        # log G(θ, z | μ_f, Σ_i)
-        log_q_fit = mvn_log_prob(fit_mean_stack, fit_scale_tril_stack, samples)
-
-        log_weights = (
-            # log ρ(data | Λ, κ) + log G(θ, z | μ_i, Σ_i)
-            log_integrand_fn(
-                fit_mean_stack,
-                fit_scale_tril_stack,
-                samples,
-                lower_bounds,
-                upper_bounds,
-                scale_stack,
-                ln_offsets,
-            )
-            - log_q_fit
-        )
-
-        # Perform logsumexp over the samples (axis -1 of the generated samples)
-        log_estimates = jnn.logsumexp(
-            log_weights + ln_offsets, where=~jnp.isneginf(log_weights), axis=0
-        )
-
-        total_log_likelihood = jnp.sum(log_estimates) - n_events * (
-            jnp.log(n_samples) - jnp.log(T_obs)
-        )
-
+        log_norm = n_events * (jnp.log(n_samples) - jnp.log(T_obs))
         expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
 
-        log_likelihood = total_log_likelihood - expected_rates
+        ln_post = priors.log_prob(x) + total_ln_l - log_norm - expected_rates
 
-        log_posterior = priors.log_prob(x) + log_likelihood
-
-        return jnp.nan_to_num(
-            log_posterior, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
-        )
+        return jnp.nan_to_num(ln_post, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf)
 
     return likelihood_fn
