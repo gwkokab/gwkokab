@@ -173,7 +173,7 @@ def analytical_likelihood(
         )
         log_est_u1 = jnn.logsumexp(log_w1, axis=0, where=jnp.isfinite(log_w1))
 
-        total_ln_l = jnp.sum(jnn.logsumexp(log_est_u1, axis=0) + ln_offsets)
+        total_ln_l = jnp.sum(log_est_u1 + ln_offsets)
 
         log_norm = n_events * (jnp.log(n_samples) - jnp.log(T_obs))
         expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
