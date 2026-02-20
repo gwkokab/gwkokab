@@ -249,6 +249,6 @@ class AnalyticalPELoader(BaseModel):
         missing = set(columns) - set(coords)
         warn_if(
             missing != set(),
-            msg=f"File '{event}' is missing required columns: {missing}"
+            msg=f"File '{event}' is missing required columns: {missing}. "
             "Use transform to map existing columns to the required ones or check the file format.",
         )
