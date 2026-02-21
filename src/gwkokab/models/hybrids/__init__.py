@@ -7,6 +7,9 @@ from ._bp2pmultispinfull import (
     BrokenPowerlawTwoPeakMultiSpinMultiTilt as BrokenPowerlawTwoPeakMultiSpinMultiTilt,
     BrokenPowerlawTwoPeakMultiSpinMultiTiltFull as BrokenPowerlawTwoPeakMultiSpinMultiTiltFull,
 )
+from ._n_sbpls_m_sgs import (
+    NSmoothedBrokenPowerlawMSmoothedGaussian as NSmoothedBrokenPowerlawMSmoothedGaussian,
+)
 from ._npowerlawmgaussian import NPowerlawMGaussian as NPowerlawMGaussian
 from ._o3_n_pls_m_gs import (
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,

@@ -15,7 +15,12 @@ from numpyro.distributions import (
 )
 
 from ...parameters import Parameters as P
-from ..mass import BrokenPowerlaw, PowerlawPrimaryMassRatio
+from ..mass import (
+    BrokenPowerlaw,
+    PowerlawPrimaryMassRatio,
+    SmoothedBrokenPowerlawMassRatioPowerlaw,
+    SmoothedGaussianPrimaryMassRatio,
+)
 from ..redshift import PowerlawRedshift
 from ..spin import (
     BetaFromMeanVar,
@@ -34,9 +39,12 @@ __all__ = [
     "create_broken_powerlaws",
     "create_gwtc4_effective_spin_skew_normal_models",
     "create_independent_spin_orientation_gaussian_isotropic",
+    "create_minimum_tilt_model",
     "create_powerlaw_primary_mass_ratios",
     "create_powerlaw_redshift",
     "create_powerlaws",
+    "create_smoothed_broken_powerlaws_mass_ratio_powerlaw",
+    "create_smoothed_gaussian_primary_mass_ratio",
     "create_spin_magnitude_mixture_models",
     "create_truncated_normal_distributions",
     "create_two_truncated_normal_mixture",
@@ -844,3 +852,90 @@ def create_gwtc4_effective_spin_skew_normal_models(
         )
 
     return dist_collection
+
+
+def create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    collection = []
+
+    alpha1_name = "alpha1_sbpl"
+    alpha2_name = "alpha2_sbpl"
+    beta_name = "beta_sbpl"
+    delta_m1_name = "delta_m1_sbpl"
+    delta_m2_name = "delta_m2_sbpl"
+    m1min_name = "m1min_sbpl"
+    m2min_name = "m2min_sbpl"
+    mbreak_name = "mbreak_sbpl"
+    mmax_name = "mmax_sbpl"
+
+    for i in range(N):
+        alpha1 = _get_parameter(params, alpha1_name + f"_{i}")
+        alpha2 = _get_parameter(params, alpha2_name + f"_{i}")
+        beta = _get_parameter(params, beta_name + f"_{i}")
+        delta_m1 = _get_parameter(params, delta_m1_name + f"_{i}")
+        delta_m2 = _get_parameter(params, delta_m2_name + f"_{i}")
+        m1min = _get_parameter(params, m1min_name + f"_{i}")
+        m2min = _get_parameter(params, m2min_name + f"_{i}")
+        mbreak = _get_parameter(params, mbreak_name + f"_{i}")
+        mmax = _get_parameter(params, mmax_name + f"_{i}")
+
+        broken_powerlaw = SmoothedBrokenPowerlawMassRatioPowerlaw(
+            alpha1=alpha1,
+            alpha2=alpha2,
+            beta=beta,
+            delta_m1=delta_m1,
+            delta_m2=delta_m2,
+            m1min=m1min,
+            m2min=m2min,
+            mbreak=mbreak,
+            mmax=mmax,
+            validate_args=validate_args,
+        )
+
+        collection.append(broken_powerlaw)
+    return collection
+
+
+def create_smoothed_gaussian_primary_mass_ratio(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    collection = []
+
+    loc_name = "loc_sg"
+    scale_name = "scale_sg"
+    beta_name = "beta_sg"
+    m1min_name = "m1min_sg"
+    m2min_name = "m2min_sg"
+    mmax_name = "mmax_sg"
+    delta_m1_name = "delta_m1_sg"
+    delta_m2_name = "delta_m2_sg"
+
+    for i in range(N):
+        loc = _get_parameter(params, loc_name + f"_{i}")
+        scale = _get_parameter(params, scale_name + f"_{i}")
+        beta = _get_parameter(params, beta_name + f"_{i}")
+        m1min = _get_parameter(params, m1min_name + f"_{i}")
+        m2min = _get_parameter(params, m2min_name + f"_{i}")
+        mmax = _get_parameter(params, mmax_name + f"_{i}")
+        delta_m1 = _get_parameter(params, delta_m1_name + f"_{i}")
+        delta_m2 = _get_parameter(params, delta_m2_name + f"_{i}")
+
+        broken_powerlaw = SmoothedGaussianPrimaryMassRatio(
+            loc=loc,
+            scale=scale,
+            beta=beta,
+            m1min=m1min,
+            m2min=m2min,
+            mmax=mmax,
+            delta_m1=delta_m1,
+            delta_m2=delta_m2,
+            validate_args=validate_args,
+        )
+
+        collection.append(broken_powerlaw)
+    return collection

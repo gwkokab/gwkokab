@@ -18,6 +18,7 @@ from .hybrids import (
     BrokenPowerlawTwoPeakMultiSpinMultiTiltFull as BrokenPowerlawTwoPeakMultiSpinMultiTiltFull,
     NBrokenPowerlawMGaussian as NBrokenPowerlawMGaussian,
     NPowerlawMGaussian as NPowerlawMGaussian,
+    NSmoothedBrokenPowerlawMSmoothedGaussian as NSmoothedBrokenPowerlawMSmoothedGaussian,
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPeak as PowerlawPeak,
 )
