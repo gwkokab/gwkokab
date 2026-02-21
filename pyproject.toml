@@ -134,7 +134,7 @@ synthetic_events_n_pls_m_gs = "gwkanal.n_pls_m_gs.synthetic_events:main"
 ## FSage scripts
 f_sage_ecc_matters = "gwkanal.ecc_matters.sage:f_main"
 f_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:f_main"
-f_sage_n_spls_m_sgs = "gwkanal.n_spls_m_sgs.sage:f_main"
+f_sage_n_sbpls_m_sgs = "gwkanal.n_sbpls_m_sgs.sage:f_main"
 f_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:f_main"
 f_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:f_main"
 ## NSage scripts
