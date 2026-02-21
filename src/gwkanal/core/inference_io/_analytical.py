@@ -49,6 +49,7 @@ class AnalyticalPEFileData(NamedTuple):
     cov: np.ndarray
     limits: np.ndarray
     mu: np.ndarray
+    scale: np.ndarray
 
 
 class AnalyticalPELoader(BaseModel):
@@ -159,12 +160,21 @@ class AnalyticalPELoader(BaseModel):
             mu = group["mu"][()]
             limits = group["limits"][()]
             coords = group.attrs["coords"].tolist()
+            try:
+                scale = group["scale"][()]
+            except KeyError:
+                warn_if(
+                    True,
+                    msg=f"'scale' dataset not found in '{filename}'. Defaulting to ones.",
+                )
+                scale = np.ones_like(mu)
 
         return AnalyticalPEFileData(
             coords=coords,
             cov=cov,
             limits=limits,
             mu=mu,
+            scale=scale,
         )
 
     def load(
@@ -203,6 +213,17 @@ class AnalyticalPELoader(BaseModel):
             )
             df = self.load_file(event_path, waveform_name=waveform_name)
 
+            error_if(
+                df.coords is None,
+                ValueError,
+                f"File '{event_path}' is missing 'coords' attribute. Cannot proceed.",
+            )
+            error_if(
+                np.any(df.scale <= 0),
+                ValueError,
+                f"File '{event_path}' contains non-positive scale values, which are invalid.",
+            )
+
             self._validate_columns(df.coords, event_path, posterior_columns)
 
             data_list.append(df)
@@ -212,8 +233,14 @@ class AnalyticalPELoader(BaseModel):
         mean_stack = np.stack([data.mu for data in data_list], axis=0)
         cov_stack = np.stack([data.cov for data in data_list], axis=0)
         limits_stack = np.stack([data.limits.T for data in data_list], axis=0)
+        scale_stack = np.stack([data.scale for data in data_list], axis=0)
 
-        return {"mean": mean_stack, "cov": cov_stack, "limits": limits_stack}
+        return {
+            "mean": mean_stack,
+            "cov": cov_stack,
+            "limits": limits_stack,
+            "scale": scale_stack,
+        }
 
     def _validate_columns(
         self, coords: list[str], event: Path | str, columns: list[str]
@@ -222,5 +249,6 @@ class AnalyticalPELoader(BaseModel):
         missing = set(columns) - set(coords)
         warn_if(
             missing != set(),
-            msg=f"File '{event}' is missing required columns: {missing}",
+            msg=f"File '{event}' is missing required columns: {missing}. "
+            "Use transform to map existing columns to the required ones or check the file format.",
         )

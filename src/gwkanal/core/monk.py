@@ -8,7 +8,6 @@ from typing import Union
 
 import jax
 import numpy as np
-from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
@@ -30,9 +29,6 @@ class Monk(FlowMCBased):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        n_mom_samples: int,
-        max_iter_mean: int,
-        max_iter_cov: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -73,9 +69,6 @@ class Monk(FlowMCBased):
         )
         self.data_loader = data_loader
         self.n_samples = n_samples
-        self.n_mom_samples = n_mom_samples
-        self.max_iter_mean = max_iter_mean
-        self.max_iter_cov = max_iter_cov
 
         super().__init__(
             analysis_name=analysis_name or model.__name__,
@@ -94,17 +87,15 @@ class Monk(FlowMCBased):
 
         data = self.data_loader.load(self.parameters)
 
-        mean_stack: Array = jax.device_put(data["mean"])
-        limits_stack = jax.device_put(data["limits"])
-        cov_stack = data["cov"]
-        scale_tril_stack: Array = jax.device_put(np.linalg.cholesky(cov_stack))
-        # del cov_stack  # We don't need the covariance matrices anymore
+        scale_stack = data["scale"]
+        mean_stack = data["mean"] * scale_stack
+        limits_stack = data["limits"]
+        cov_stack = data["cov"] * np.apply_along_axis(
+            lambda x: np.outer(x, x), 1, scale_stack
+        )
+        scale_tril_stack = np.linalg.cholesky(cov_stack)
 
         n_events = mean_stack.shape[0]
-
-        logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
-        logger.debug("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
-        logger.debug("limits_stack.shape: {shape}", shape=limits_stack.shape)
 
         logger.info("Parsing Poisson mean configuration and initializing estimator.")
         pmean_loader = PoissonMeanEstimationLoader.from_json(
@@ -119,12 +110,7 @@ class Monk(FlowMCBased):
             variables_index,
             poisson_mean_estimator,
             self.data_loader.analytical_to_model_coord_fn,
-            self.rng_key,
-            n_events,
             self.n_samples,
-            self.n_mom_samples,
-            self.max_iter_mean,
-            self.max_iter_cov,
         )
 
         lower_bounds = jax.lax.dynamic_index_in_dim(limits_stack, 0, 1, keepdims=False)
@@ -133,7 +119,9 @@ class Monk(FlowMCBased):
         lower_cdf = np.array(
             [
                 multivariate_normal.cdf(
-                    lower_bounds[i], mean=mean_stack[i], cov=cov_stack[i]
+                    scale_stack[i] * lower_bounds[i],
+                    mean=mean_stack[i],
+                    cov=cov_stack[i],
                 )
                 for i in range(n_events)
             ]
@@ -142,24 +130,37 @@ class Monk(FlowMCBased):
         upper_cdf = np.array(
             [
                 multivariate_normal.cdf(
-                    upper_bounds[i], mean=mean_stack[i], cov=cov_stack[i]
+                    scale_stack[i] * upper_bounds[i],
+                    mean=mean_stack[i],
+                    cov=cov_stack[i],
                 )
                 for i in range(n_events)
             ]
         )
 
-        ln_offsets = -np.log(np.maximum(upper_cdf - lower_cdf, 1e-10))
+        log_det_scale = np.sum(np.log(scale_stack), axis=1)
+
+        ln_offsets = log_det_scale - np.log(np.maximum(upper_cdf - lower_cdf, 1e-10))
+
+        logger.info("ln_offsets.shape: {shape}", shape=ln_offsets.shape)
+        logger.info("lower_bounds.shape: {shape}", shape=lower_bounds.shape)
+        logger.info("mean_stack.shape: {shape}", shape=mean_stack.shape)
+        logger.info("scale_stack.shape: {shape}", shape=scale_stack.shape)
+        logger.info("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
+        logger.info("upper_bounds.shape: {shape}", shape=upper_bounds.shape)
 
         self.driver(
             logpdf=logpdf,
             priors=priors,
             data={
-                "mean_stack": mean_stack,
-                "scale_tril_stack": scale_tril_stack,
-                "lower_bounds": lower_bounds,
-                "upper_bounds": upper_bounds,
-                "pmean_kwargs": pmean_kwargs,
-                "ln_offsets": ln_offsets,
+                "ln_offsets": jax.device_put(ln_offsets),
+                "lower_bounds": jax.device_put(lower_bounds),
+                "mean_stack": jax.device_put(mean_stack),
+                "pmean_kwargs": jax.device_put(pmean_kwargs),
+                "scale_stack": jax.device_put(scale_stack),
+                "scale_tril_stack": jax.device_put(scale_tril_stack),
+                "upper_bounds": jax.device_put(upper_bounds),
+                "key": self.rng_key,
             },
             labels=sorted(variables.keys()),
         )
@@ -197,24 +198,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         type=int,
         default=1_000,
         help="Number of samples of Multivariate Normal per event during likelihood estimation.",
-    )
-    tune.add_argument(
-        "--n-mom-samples",
-        type=int,
-        default=1_000,
-        help="Number of samples of Multivariate Normal per event during Moment of Matching estimation.",
-    )
-    tune.add_argument(
-        "--max-iter-mean",
-        type=int,
-        default=10,
-        help="Max iterations for Moment of Matching mean estimation.",
-    )
-    tune.add_argument(
-        "--max-iter-cov",
-        type=int,
-        default=4,
-        help="Max iterations for Moment of Matching covariance estimation.",
     )
 
     return parser

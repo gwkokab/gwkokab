@@ -32,9 +32,6 @@ class NBrokenPowerlawMGaussianMonk(NBrokenPowerlawMGaussianCore, Monk):
         poisson_mean_filename: str,
         sampler_settings_filename: str,
         n_samples: int,
-        n_mom_samples: int,
-        max_iter_mean: int,
-        max_iter_cov: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -65,9 +62,6 @@ class NBrokenPowerlawMGaussianMonk(NBrokenPowerlawMGaussianCore, Monk):
             check_leaks=check_leaks,
             analysis_name="ofour_n_pls_m_gs",
             n_samples=n_samples,
-            n_mom_samples=n_mom_samples,
-            max_iter_mean=max_iter_mean,
-            max_iter_cov=max_iter_cov,
         )
 
 
@@ -100,9 +94,6 @@ def main() -> None:
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
         n_samples=args.n_samples,
-        n_mom_samples=args.n_mom_samples,
-        max_iter_mean=args.max_iter_mean,
-        max_iter_cov=args.max_iter_cov,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
