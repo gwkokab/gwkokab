@@ -126,7 +126,8 @@ class DiscretePELoader(BaseModel):
             error_if(
                 waveform_name not in f,
                 KeyError,
-                f"Waveform '{waveform_name}' not found in file '{filename}'.",
+                f"Waveform '{waveform_name}' not found in file '{filename}'. "
+                "Available waveforms: " + ", ".join(f.keys()),
             )
             group = f[waveform_name]
             data_structured = group["posterior_samples"][()]
