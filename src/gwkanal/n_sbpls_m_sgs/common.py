@@ -159,18 +159,23 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianCore:
     def model_parameters(self) -> list[str]:
         all_params: list[tuple[str, int]] = [
             ("log_rate", self.N_sbpl + self.N_sg),
-            ("alpha_sbpl", self.N_sbpl),
+            ("alpha1_sbpl", self.N_sbpl),
+            ("alpha2_sbpl", self.N_sbpl),
             ("beta_sbpl", self.N_sbpl),
-            ("m1_loc_sg", self.N_sg),
-            ("m2_loc_sg", self.N_sg),
-            ("m1_scale_sg", self.N_sg),
-            ("m2_scale_sg", self.N_sg),
-            ("m1_low_sg", self.N_sg),
-            ("m2_low_sg", self.N_sg),
-            ("m1_high_sg", self.N_sg),
-            ("m2_high_sg", self.N_sg),
+            ("beta_sg", self.N_sg),
+            ("delta_m1_sbpl", self.N_sbpl),
+            ("delta_m1_sg", self.N_sg),
+            ("delta_m2_sbpl", self.N_sbpl),
+            ("delta_m2_sg", self.N_sg),
+            ("loc_sg", self.N_sg),
+            ("m1min_sbpl", self.N_sbpl),
+            ("m1min_sg", self.N_sg),
+            ("m2min_sbpl", self.N_sbpl),
+            ("m2min_sg", self.N_sg),
+            ("mbreak_sbpl", self.N_sbpl),
             ("mmax_sbpl", self.N_sbpl),
-            ("mmin_sbpl", self.N_sbpl),
+            ("mmax_sg", self.N_sg),
+            ("scale_sg", self.N_sg),
         ]
 
         if self.use_spin_magnitude_mixture:
