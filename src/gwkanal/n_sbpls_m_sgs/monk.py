@@ -80,7 +80,7 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianMonk(
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            analysis_name="n_pls_m_gs",
+            analysis_name="n_sbpls_m_sgs",
             n_samples=n_samples,
         )
 

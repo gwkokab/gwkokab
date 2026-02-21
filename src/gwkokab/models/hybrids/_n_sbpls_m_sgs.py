@@ -383,8 +383,8 @@ def _build_g_component_distributions(
 
 
 def NSmoothedBrokenPowerlawMSmoothedGaussian(
-    N_pl: int,
-    N_g: int,
+    N_sbpl: int,
+    N_sg: int,
     use_beta_spin_magnitude: bool = False,
     use_spin_magnitude_mixture: bool = False,
     use_truncated_normal_spin_x: bool = False,
@@ -529,9 +529,9 @@ def NSmoothedBrokenPowerlawMSmoothedGaussian(
     ScaledMixture
         scaled mixture of distributions
     """
-    if N_pl > 0:
+    if N_sbpl > 0:
         pl_component_dist = _build_pl_component_distributions(
-            N=N_pl,
+            N=N_sbpl,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_spin_magnitude_mixture=use_spin_magnitude_mixture,
             use_truncated_normal_spin_x=use_truncated_normal_spin_x,
@@ -557,9 +557,9 @@ def NSmoothedBrokenPowerlawMSmoothedGaussian(
             validate_args=validate_args,
         )
 
-    if N_g > 0:
+    if N_sg > 0:
         g_component_dist = _build_g_component_distributions(
-            N=N_g,
+            N=N_sg,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_spin_magnitude_mixture=use_spin_magnitude_mixture,
             use_truncated_normal_spin_x=use_truncated_normal_spin_x,
@@ -585,14 +585,14 @@ def NSmoothedBrokenPowerlawMSmoothedGaussian(
             validate_args=validate_args,
         )
 
-    if N_pl == 0 and N_g != 0:
+    if N_sbpl == 0 and N_sg != 0:
         component_dists = g_component_dist
-    elif N_g == 0 and N_pl != 0:
+    elif N_sg == 0 and N_sbpl != 0:
         component_dists = pl_component_dist
     else:
         component_dists = pl_component_dist + g_component_dist
 
-    N = N_pl + N_g
+    N = N_sbpl + N_sg
     log_rates = jnp.stack([params[f"log_rate_{i}"] for i in range(N)], axis=-1)
 
     return ScaledMixture(

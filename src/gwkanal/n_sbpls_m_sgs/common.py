@@ -26,10 +26,10 @@ def where_fns_list(
             mask = jnp.ones((), dtype=bool)
             for n_pl in range(N_pl):
                 chi_mean: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_mean_spl_" + str(n_pl)
+                    P.PRIMARY_SPIN_MAGNITUDE + "_mean_sbpl_" + str(n_pl)
                 )  # type: ignore
                 chi_variance: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_variance_spl_" + str(n_pl)
+                    P.PRIMARY_SPIN_MAGNITUDE + "_variance_sbpl_" + str(n_pl)
                 )  # type: ignore
                 mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
             for n_g in range(N_g):
@@ -118,7 +118,7 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianCore:
 
     @property
     def parameters(self) -> tuple[str, ...]:
-        names = [P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE]
+        names = [P.PRIMARY_MASS_SOURCE, P.MASS_RATIO]
         if self.use_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE)
             names.append(P.SECONDARY_SPIN_MAGNITUDE)

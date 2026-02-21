@@ -925,7 +925,7 @@ def create_smoothed_gaussian_primary_mass_ratio(
         delta_m1 = _get_parameter(params, delta_m1_name + f"_{i}")
         delta_m2 = _get_parameter(params, delta_m2_name + f"_{i}")
 
-        broken_powerlaw = SmoothedGaussianPrimaryMassRatio(
+        distribution = SmoothedGaussianPrimaryMassRatio(
             loc=loc,
             scale=scale,
             beta=beta,
@@ -937,5 +937,5 @@ def create_smoothed_gaussian_primary_mass_ratio(
             validate_args=validate_args,
         )
 
-        collection.append(broken_powerlaw)
+        collection.append(distribution)
     return collection

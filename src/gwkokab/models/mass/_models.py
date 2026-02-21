@@ -376,12 +376,12 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
         "_support",
         "_Z_q_given_m1",
         "beta",
-        "delta",
-        "loc",
         "delta_m1",
         "delta_m2",
+        "loc",
         "m1min",
         "m2min",
+        "mmax",
         "scale",
     )
 

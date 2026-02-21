@@ -411,7 +411,7 @@ class SmoothedBrokenPowerlawMassRatioPowerlaw(Distribution):
         )
 
         self._support = mass_ratio_mass_sandwich(m2min, mmax)
-        super(BrokenPowerlaw, self).__init__(
+        super(SmoothedBrokenPowerlawMassRatioPowerlaw, self).__init__(
             batch_shape=batch_shape, validate_args=validate_args
         )
 
