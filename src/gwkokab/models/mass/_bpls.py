@@ -412,7 +412,7 @@ class SmoothedBrokenPowerlawMassRatioPowerlaw(Distribution):
 
         self._support = mass_ratio_mass_sandwich(m2min, mmax)
         super(SmoothedBrokenPowerlawMassRatioPowerlaw, self).__init__(
-            batch_shape=batch_shape, validate_args=validate_args
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
 
         m1min = jnp.broadcast_to(m1min, batch_shape)
