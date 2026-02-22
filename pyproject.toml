@@ -133,26 +133,26 @@ synthetic_events_ecc_matter = "gwkanal.ecc_matters.synthetic_events:main"
 synthetic_events_n_pls_m_gs = "gwkanal.n_pls_m_gs.synthetic_events:main"
 ## FSage scripts
 f_sage_ecc_matters = "gwkanal.ecc_matters.sage:f_main"
-f_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:f_main"
 f_sage_multisource = "gwkanal.multisource.sage:f_main"
-f_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:f_main"
+f_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:f_main"
 f_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:f_main"
+f_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:f_main"
 ## NSage scripts
 n_sage_ecc_matters = "gwkanal.ecc_matters.sage:n_main"
-n_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:n_main"
 n_sage_multisource = "gwkanal.multisource.sage:n_main"
-n_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:n_main"
+n_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:n_main"
 n_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:n_main"
+n_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:n_main"
 ## Monk scripts
 f_monk_ecc_matters = "gwkanal.ecc_matters.monk:main"
-f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
 f_monk_multisource = "gwkanal.multisource.monk:main"
+f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
 f_monk_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.monk:main"
 f_monk_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.monk:main"
 # These scripts are for developer/user experience.
 gwk_diag_mass_matrix = "gwkokab_scripts.diag_mass_matrix:main"
-gwk_flowMC_info = "gwkokab_scripts.flowMC_info:main"
 gwk_flowMC_cfg_template = "gwkokab_scripts.flowMC_cfg_template:main"
+gwk_flowMC_info = "gwkokab_scripts.flowMC_info:main"
 gwk_numpyro_cfg_template = "gwkokab_scripts.numpyro_cfg_template:main"
 
 [tool.pytest.ini_options]
