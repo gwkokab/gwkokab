@@ -47,7 +47,7 @@ def where_fns_list(
     return where_fns if len(where_fns) > 0 else None
 
 
-class NSmoothedBrokenPowerlawMSmoothedGaussianCore:
+class MultiSourceModelCore:
     def __init__(
         self,
         N_sbpl: int,

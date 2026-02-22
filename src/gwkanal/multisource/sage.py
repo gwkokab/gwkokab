@@ -12,20 +12,18 @@ from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from gwkanal.core.inference_io import DiscretePELoader as DataLoader
 from gwkanal.core.numpyro_based import numpyro_arg_parser, NumpyroBased
 from gwkanal.core.sage import Sage, sage_arg_parser
-from gwkanal.n_sbpls_m_sgs.common import (
+from gwkanal.multisource.common import (
     model_arg_parser,
-    NSmoothedBrokenPowerlawMSmoothedGaussianCore,
+    MultiSourceModelCore,
     where_fns_list,
 )
 from gwkanal.utils.logger import log_info
 from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
-from gwkokab.models import NSmoothedBrokenPowerlawMSmoothedGaussian
+from gwkokab.models import MultiSourceModel
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
 
-class NSmoothedBrokenPowerlawMSmoothedGaussianSage(
-    NSmoothedBrokenPowerlawMSmoothedGaussianCore, Sage
-):
+class MultiSourceModelSage(MultiSourceModelCore, Sage):
     def __init__(
         self,
         N_sbpl: int,
@@ -72,7 +70,7 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianSage(
         profile_memory: bool = False,
         check_leaks: bool = False,
     ) -> None:
-        NSmoothedBrokenPowerlawMSmoothedGaussianCore.__init__(
+        MultiSourceModelCore.__init__(
             self,
             N_sbpl=N_sbpl,
             N_sgpl=N_sgpl,
@@ -99,7 +97,7 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianSage(
         Sage.__init__(
             self,
             likelihood_fn=likelihood_fn,
-            model=NSmoothedBrokenPowerlawMSmoothedGaussian,
+            model=MultiSourceModel,
             data_loader=data_loader,
             prior_filename=prior_filename,
             poisson_mean_filename=poisson_mean_filename,
@@ -115,15 +113,11 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianSage(
         )
 
 
-class NSmoothedBrokenPowerlawMSmoothedGaussianFSage(
-    NSmoothedBrokenPowerlawMSmoothedGaussianSage, FlowMCBased
-):
+class MultiSourceModelFSage(MultiSourceModelSage, FlowMCBased):
     pass
 
 
-class NSmoothedBrokenPowerlawMSmoothedGaussianNSage(
-    NSmoothedBrokenPowerlawMSmoothedGaussianSage, NumpyroBased
-):
+class MultiSourceModelNSage(MultiSourceModelSage, NumpyroBased):
     pass
 
 
@@ -141,9 +135,9 @@ def f_main() -> None:
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
-    NSmoothedBrokenPowerlawMSmoothedGaussianFSage.init_rng_seed(seed=args.seed)
+    MultiSourceModelFSage.init_rng_seed(seed=args.seed)
 
-    NSmoothedBrokenPowerlawMSmoothedGaussianFSage(
+    MultiSourceModelFSage(
         N_sbpl=args.n_sbpl,
         N_sgpl=args.n_sgpl,
         N_gg=args.n_gg,
@@ -190,9 +184,9 @@ def n_main() -> None:
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
-    NSmoothedBrokenPowerlawMSmoothedGaussianNSage.init_rng_seed(seed=args.seed)
+    MultiSourceModelNSage.init_rng_seed(seed=args.seed)
 
-    NSmoothedBrokenPowerlawMSmoothedGaussianNSage(
+    MultiSourceModelNSage(
         N_sbpl=args.n_sbpl,
         N_sgpl=args.n_sgpl,
         N_gg=args.n_gg,

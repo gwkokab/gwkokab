@@ -6,17 +6,12 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from gwkanal.core.inference_io import AnalyticalPELoader as DataLoader
 from gwkanal.core.monk import Monk, monk_arg_parser
-from gwkanal.n_sbpls_m_sgs.common import (
-    model_arg_parser,
-    NSmoothedBrokenPowerlawMSmoothedGaussianCore,
-)
+from gwkanal.multisource.common import model_arg_parser, MultiSourceModelCore
 from gwkanal.utils.logger import log_info
-from gwkokab.models import NSmoothedBrokenPowerlawMSmoothedGaussian
+from gwkokab.models import MultiSourceModel
 
 
-class NSmoothedBrokenPowerlawMSmoothedGaussianMonk(
-    NSmoothedBrokenPowerlawMSmoothedGaussianCore, Monk
-):
+class MultiSourceModelMonk(MultiSourceModelCore, Monk):
     def __init__(
         self,
         N_sbpl: int,
@@ -48,7 +43,7 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianMonk(
         profile_memory: bool = False,
         check_leaks: bool = False,
     ) -> None:
-        NSmoothedBrokenPowerlawMSmoothedGaussianCore.__init__(
+        MultiSourceModelCore.__init__(
             self,
             N_sbpl=N_sbpl,
             N_sgpl=N_sgpl,
@@ -74,7 +69,7 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianMonk(
 
         Monk.__init__(
             self,
-            NSmoothedBrokenPowerlawMSmoothedGaussian,
+            MultiSourceModel,
             data_loader,
             prior_filename,
             poisson_mean_filename,
@@ -98,9 +93,9 @@ def main() -> None:
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
-    NSmoothedBrokenPowerlawMSmoothedGaussianMonk.init_rng_seed(seed=args.seed)
+    MultiSourceModelMonk.init_rng_seed(seed=args.seed)
 
-    NSmoothedBrokenPowerlawMSmoothedGaussianMonk(
+    MultiSourceModelMonk(
         N_sbpl=args.n_sbpl,
         N_sgpl=args.n_sgpl,
         N_gg=args.n_gg,

@@ -307,7 +307,7 @@ def _build_component_distributions(
     ]
 
 
-def NSmoothedBrokenPowerlawMSmoothedGaussian(
+def MultiSourceModel(
     N_sbpl: int,
     N_sgpl: int,
     N_gg: int,
