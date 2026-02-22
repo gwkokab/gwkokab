@@ -338,3 +338,166 @@ class SmoothedTwoComponentPrimaryMassRatio(Distribution):
         log_Z_q = jnp.where(_Z_q <= 0, 0.0, jnp.log(safe_Z_q))
         log_prob_q = self._log_prob_q_unnorm(value) - log_Z_q
         return log_prob_m1 + log_prob_q
+
+
+class SmoothedGaussianPrimaryMassRatio(Distribution):
+    r""":class:`~numpyro.distributions.continuous.Normal` with smoothing kernel on the
+    lower edge.
+
+    .. math::
+        p(m_1,q\mid\mu,\sigma^2,\beta,m_{\text{min}},m_{\text{max}},\delta) = \mathcal{N}(m_1\mid\mu,\sigma^2)S\left(\frac{m_1 - m_{\text{min}}}{\delta}\right)p(q \mid m_1,\beta,m_{\text{min}},\delta)
+
+    .. math::
+        p(q\mid m_1,\beta) \propto q^{\beta}S\left(\frac{m_1q - m_{\text{min}}}{\delta}\right),\qquad \frac{m_{\text{min}}}{m_1}\leq q\leq 1
+
+    Logarithm of smoothing kernel is :func:`~gwkokab.utils.kernel.log_planck_taper_window`.
+
+    .. attention::
+
+        If :code:`low` or :code:`high` are not provided to the `TruncatedNormal`, they
+        default to  :math:`-\infty` or :math:`+\infty`, respectively. This class relies
+        on this behavior to produce the desired distribution when bounds are
+        unspecified.
+    """
+
+    arg_constraints = {
+        "loc": constraints.positive,
+        "scale": constraints.positive,
+        "beta": constraints.real,
+        "delta_m1": constraints.positive,
+        "delta_m2": constraints.positive,
+        "m1min": constraints.positive,
+        "m2min": constraints.positive,
+        "mmax": constraints.positive,
+    }
+    pytree_data_fields = (
+        "_logZ",
+        "_m1s",
+        "_support",
+        "_Z_q_given_m1",
+        "beta",
+        "delta_m1",
+        "delta_m2",
+        "loc",
+        "m1min",
+        "m2min",
+        "mmax",
+        "scale",
+    )
+
+    def __init__(
+        self,
+        loc,
+        scale,
+        beta,
+        m1min,
+        m2min,
+        mmax,
+        delta_m1,
+        delta_m2,
+        *,
+        validate_args=None,
+    ) -> None:
+        (
+            self.beta,
+            self.delta_m1,
+            self.delta_m2,
+            self.loc,
+            self.m1min,
+            self.m2min,
+            self.mmax,
+            self.scale,
+        ) = promote_shapes(
+            beta,
+            delta_m1,
+            delta_m2,
+            loc,
+            m1min,
+            m2min,
+            mmax,
+            scale,
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(loc),
+            jnp.shape(scale),
+            jnp.shape(beta),
+            jnp.shape(m1min),
+            jnp.shape(m2min),
+            jnp.shape(mmax),
+            jnp.shape(delta_m1),
+            jnp.shape(delta_m2),
+        )
+        self._support = mass_ratio_mass_sandwich(m2min, mmax)
+        super(SmoothedGaussianPrimaryMassRatio, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+        m1min = jnp.broadcast_to(m1min, batch_shape)
+        mmax = jnp.broadcast_to(mmax, batch_shape)
+
+        # Compute the normalization constant for primary mass distribution
+
+        self._m1s = jnp.linspace(m1min, mmax, 1000, dtype=jnp.result_type(float))
+
+        _Z = jnp.trapezoid(jnp.exp(self._log_prob_m1(self._m1s)), self._m1s, axis=0)
+        self._logZ = jnp.where(
+            jnp.isnan(_Z) | jnp.isinf(_Z) | jnp.less(_Z, 0.0), 0.0, jnp.log(_Z)
+        )
+
+        # Compute the normalization constant for mass ratio distribution
+
+        _qs = jnp.linspace(0.005, 1.0, 500, dtype=jnp.result_type(float))
+        _m1qs_grid = jnp.stack(jnp.meshgrid(self._m1s, _qs, indexing="ij"), axis=-1)
+
+        _prob_q = jnp.exp(self._log_prob_q(jnp.expand_dims(_m1qs_grid, axis=-2)))
+
+        self._Z_q_given_m1 = jnp.clip(
+            jnp.trapezoid(_prob_q, _qs, axis=1).reshape(
+                *(self._m1s.shape + batch_shape)
+            ),
+            min=jnp.finfo(jnp.result_type(float)).tiny,
+            max=jnp.finfo(jnp.result_type(float)).max,
+        )
+        del _m1qs_grid, _qs, _prob_q
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    def _log_prob_m1(self, m1: Array, logZ: ArrayLike = 0.0) -> Array:
+        log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / self.delta_m1)
+        log_prob_norm = norm.logpdf(m1, loc=self.loc, scale=self.scale)
+        log_prob_m1 = log_prob_norm + log_smoothing_m1 - logZ
+        return jnp.nan_to_num(
+            log_prob_m1,
+            nan=-jnp.inf,
+            posinf=-jnp.inf,
+            neginf=-jnp.inf,
+        )
+
+    def _log_prob_q(self, value: Array, logZ: ArrayLike = 0.0) -> Array:
+        m1, q = jnp.unstack(value, axis=-1)
+        m2 = m1 * q
+        log_smoothing_q = log_planck_taper_window((m2 - self.m2min) / self.delta_m2)
+        log_prob_q = self.beta * jnp.log(q) + log_smoothing_q - logZ
+        mask = self.support.check(value)
+        log_prob_q = jnp.where(mask, log_prob_q, -jnp.inf)
+        return jnp.nan_to_num(
+            log_prob_q,
+            nan=-jnp.inf,
+            posinf=-jnp.inf,
+            neginf=-jnp.inf,
+        )
+
+    @validate_sample
+    def log_prob(self, value: ArrayLike) -> ArrayLike:
+        m1, _ = jnp.unstack(value, axis=-1)
+        log_prob_m1 = self._log_prob_m1(m1, self._logZ)
+        _Z_q = jnp.interp(m1, self._m1s, self._Z_q_given_m1)
+        log_Z_q = jnp.where(
+            jnp.isnan(_Z_q) | jnp.isinf(_Z_q) | jnp.less(_Z_q, 0.0),
+            0.0,
+            jnp.log(_Z_q),
+        )
+        log_prob_q = self._log_prob_q(value, log_Z_q)
+        return log_prob_m1 + log_prob_q
