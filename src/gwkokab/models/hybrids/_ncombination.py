@@ -895,7 +895,13 @@ def create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
             validate_args=validate_args,
         )
 
-        collection.append(broken_powerlaw)
+        distribution = ExtendedSupportTransformedDistribution(
+            base_distribution=broken_powerlaw,
+            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            validate_args=validate_args,
+        )
+
+        collection.append(distribution)
     return collection
 
 
@@ -906,14 +912,14 @@ def create_smoothed_gaussian_primary_mass_ratio(
 ) -> List[Distribution]:
     collection = []
 
-    loc_name = "loc_sg"
-    scale_name = "scale_sg"
-    beta_name = "beta_sg"
-    m1min_name = "m1min_sg"
-    m2min_name = "m2min_sg"
-    mmax_name = "mmax_sg"
-    delta_m1_name = "delta_m1_sg"
-    delta_m2_name = "delta_m2_sg"
+    loc_name = "loc_sgpl"
+    scale_name = "scale_sgpl"
+    beta_name = "beta_sgpl"
+    m1min_name = "m1min_sgpl"
+    m2min_name = "m2min_sgpl"
+    mmax_name = "mmax_sgpl"
+    delta_m1_name = "delta_m1_sgpl"
+    delta_m2_name = "delta_m2_sgpl"
 
     for i in range(N):
         loc = _get_parameter(params, loc_name + f"_{i}")
@@ -925,7 +931,7 @@ def create_smoothed_gaussian_primary_mass_ratio(
         delta_m1 = _get_parameter(params, delta_m1_name + f"_{i}")
         delta_m2 = _get_parameter(params, delta_m2_name + f"_{i}")
 
-        distribution = SmoothedGaussianPrimaryMassRatio(
+        smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
             loc=loc,
             scale=scale,
             beta=beta,
@@ -934,6 +940,12 @@ def create_smoothed_gaussian_primary_mass_ratio(
             mmax=mmax,
             delta_m1=delta_m1,
             delta_m2=delta_m2,
+            validate_args=validate_args,
+        )
+
+        distribution = ExtendedSupportTransformedDistribution(
+            base_distribution=smoothed_gaussian,
+            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,
         )
 

@@ -29,7 +29,8 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianSage(
     def __init__(
         self,
         N_sbpl: int,
-        N_sg: int,
+        N_sgpl: int,
+        N_gg: int,
         use_beta_spin_magnitude: bool,
         use_spin_magnitude_mixture: bool,
         use_truncated_normal_spin_x: bool,
@@ -74,7 +75,8 @@ class NSmoothedBrokenPowerlawMSmoothedGaussianSage(
         NSmoothedBrokenPowerlawMSmoothedGaussianCore.__init__(
             self,
             N_sbpl=N_sbpl,
-            N_sg=N_sg,
+            N_sgpl=N_sgpl,
+            N_gg=N_gg,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_spin_magnitude_mixture=use_spin_magnitude_mixture,
             use_truncated_normal_spin_x=use_truncated_normal_spin_x,
@@ -143,7 +145,8 @@ def f_main() -> None:
 
     NSmoothedBrokenPowerlawMSmoothedGaussianFSage(
         N_sbpl=args.n_sbpl,
-        N_sg=args.n_sg,
+        N_sgpl=args.n_sgpl,
+        N_gg=args.n_gg,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         use_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
@@ -191,7 +194,8 @@ def n_main() -> None:
 
     NSmoothedBrokenPowerlawMSmoothedGaussianNSage(
         N_sbpl=args.n_sbpl,
-        N_sg=args.n_sg,
+        N_sgpl=args.n_sgpl,
+        N_gg=args.n_gg,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         use_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
