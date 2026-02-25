@@ -142,7 +142,10 @@ def truncated_normal_error(
 
     r0 = jrd.normal(key=key_r0)
     r = jrd.normal(key=key_r, shape=(size,))
-    rho = 9.0 * jnp.power(jrd.uniform(key=key_rho), -1.0 / 3.0)
+    rho = 9.0 * jnp.power(
+        jrd.uniform(key=key_rho, minval=jnp.finfo(jnp.result_type(float)).tiny),
+        -1.0 / 3.0,
+    )
 
     samples = x + scale * (r0 + r) * (12.0 / rho)
 
