@@ -32,7 +32,7 @@ from ._ncombination import (
 
 def _build_non_mass_distributions(
     N: int,
-    component_type: Literal["sbpl", "sg"],
+    component_type: Literal["sbpl", "sgpl", "gg"],
     mass_distributions: List[Distribution],
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
@@ -64,8 +64,8 @@ def _build_non_mass_distributions(
     ----------
     N : int
         Number of components
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
+    component_type : Literal["sbpl", "sgpl", "gg"]
+        type of component, either "sbpl", "sgpl", or "gg"
     mass_distributions : List[Distribution]
         list of mass distributions
     use_spin : bool
