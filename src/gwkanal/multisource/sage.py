@@ -103,7 +103,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
             variance_cut_threshold=variance_cut_threshold,
-            analysis_name="n_sbpls_m_sgs",
+            analysis_name="multisource",
             n_buckets=n_buckets,
             threshold=threshold,
             debug_nans=debug_nans,

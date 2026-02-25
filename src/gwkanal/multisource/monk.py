@@ -77,7 +77,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            analysis_name="n_sbpls_m_sgs",
+            analysis_name="multisource",
             n_samples=n_samples,
         )
 
