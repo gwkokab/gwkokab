@@ -4,7 +4,6 @@
 
 from typing import Optional
 
-import numpy as np
 import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
