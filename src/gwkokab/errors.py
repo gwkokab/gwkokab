@@ -147,8 +147,8 @@ def truncated_normal_error(
     samples = x + scale * (r0 + r) * (12.0 / rho)
 
     if low is not None:
-        samples = jnp.where(samples < low, np.nan, samples)
+        samples = jnp.where(samples < low, jnp.nan, samples)
     if high is not None:
-        samples = jnp.where(samples > high, np.nan, samples)
+        samples = jnp.where(samples > high, jnp.nan, samples)
 
     return samples
