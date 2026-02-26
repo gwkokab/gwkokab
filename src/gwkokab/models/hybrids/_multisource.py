@@ -266,7 +266,7 @@ def _build_component_distributions(
         )
 
         mass_distributions = jtr.map(
-            lambda m1, m2: [m1, m2],
+            lambda m1, m2: [JointDistribution(m1, m2, validate_args=validate_args)],
             m1_dists,
             m2_dists,
             is_leaf=lambda x: isinstance(x, Distribution),
