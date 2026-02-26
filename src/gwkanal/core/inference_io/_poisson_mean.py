@@ -128,7 +128,17 @@ class PoissonMeanEstimationLoader(BaseModel):
     ):
         raw_data = read_json(config_path)
 
-        payload = {"loader": {**raw_data, "key": key, "parameters": parameters}}
+        aliases = raw_data.pop(raw_data["parameter_aliases"], {})
+
+        parameters_modified = [aliases.get(p, p) for p in parameters]
+
+        payload = {
+            "loader": {
+                **raw_data,
+                "key": key,
+                "parameters": parameters_modified,
+            }
+        }
 
         return cls(**payload)
 
