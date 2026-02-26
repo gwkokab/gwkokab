@@ -260,6 +260,15 @@ def load_injection_data(
             gwpop_data[f"cos_tilt_{ii}"] = (
                 np.asarray(data[f"spin{ii}z"][()][found]) / gwpop_data[f"a_{ii}"]
             )
+            gwpop_data[f"spin{ii}x"] = data.get(f"spin{ii}x", np.zeros(n_found))[()][
+                found
+            ]
+            gwpop_data[f"spin{ii}y"] = data.get(f"spin{ii}y", np.zeros(n_found))[()][
+                found
+            ]
+            gwpop_data[f"spin{ii}z"] = data.get(f"spin{ii}z", np.zeros(n_found))[()][
+                found
+            ]
         if (
             "sampling_pdf" in data
         ):  # O1+O2+O3 mixture and endO3 injections (https://dcc.ligo.org/LIGO-T2100377, https://dcc.ligo.org/LIGO-T2100113)
