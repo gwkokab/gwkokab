@@ -148,9 +148,10 @@ def truncated_normal_error(
 
     samples = x + scale * (r0 + r) * (12.0 / rho)
 
+    # reflect samples that are out of bounds back into the allowed range
     if low is not None:
-        samples = jnp.where(samples < low, jnp.nan, samples)
+        samples = jnp.where(samples < low, 2.0 * low - samples, samples)
     if high is not None:
-        samples = jnp.where(samples > high, jnp.nan, samples)
+        samples = jnp.where(samples > high, 2.0 * high - samples, samples)
 
     return samples
