@@ -53,7 +53,7 @@ dependencies = [
     "mplcursors>=0.6",
     "numpy<3",
     "numpyro>=0.19.0",
-    "optax<0.2.7",
+    "optax<0.2.8",
     "pandas>=2.2.0",
     "pydantic>=2.12.0",
     "quadax>=0.2.5",
