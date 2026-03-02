@@ -35,24 +35,14 @@ class NPowerlawMGaussianFakeDiscretePE(SyntheticDiscretePEBase, NPowerlawMGaussi
 
         def generic_truncated_normal_error_fn(
             parameter: P,
-            cut_low: Optional[float] = None,
-            cut_high: Optional[float] = None,
+            low: Optional[float] = None,
+            high: Optional[float] = None,
         ) -> tuple[tuple[str, ...], Callable]:
-            def error_fn(**kwargs):
+            def error_fn(default_low=low, default_high=high, **kwargs):
                 x = kwargs[parameter]
                 scale = kwargs[parameter + "_scale"]
-                low = kwargs.get(parameter + "_low")
-                high = kwargs.get(parameter + "_high")
-
-                if cut_low is None:
-                    cut_low_value = kwargs.get(parameter + "_cut_low")
-                else:
-                    cut_low_value = cut_low
-
-                if cut_high is None:
-                    cut_high_value = kwargs.get(parameter + "_cut_high")
-                else:
-                    cut_high_value = cut_high
+                low = kwargs.get(parameter + "_low", default_low)
+                high = kwargs.get(parameter + "_high", default_high)
 
                 return truncated_normal_error(
                     x=x,
@@ -61,8 +51,6 @@ class NPowerlawMGaussianFakeDiscretePE(SyntheticDiscretePEBase, NPowerlawMGaussi
                     scale=scale,
                     low=low,
                     high=high,
-                    cut_low=cut_low_value,
-                    cut_high=cut_high_value,
                 )
 
             error_parameters: tuple[str, ...] = (
@@ -70,10 +58,6 @@ class NPowerlawMGaussianFakeDiscretePE(SyntheticDiscretePEBase, NPowerlawMGaussi
                 parameter + "_low",
                 parameter + "_high",
             )
-            if cut_low is None:
-                error_parameters += (parameter + "_cut_low",)
-            if cut_high is None:
-                error_parameters += (parameter + "_cut_high",)
 
             return error_parameters, error_fn
 
@@ -83,7 +67,7 @@ class NPowerlawMGaussianFakeDiscretePE(SyntheticDiscretePEBase, NPowerlawMGaussi
                 banana_error_fn,
             )
         }
-        for param, cut_low, cut_high in [
+        for param, default_low, default_high in [
             (P.PRIMARY_SPIN_MAGNITUDE, 0.0, 1.0),
             (P.SECONDARY_SPIN_MAGNITUDE, 0.0, 1.0),
             (P.PRIMARY_SPIN_X, -1.0, 1.0),
@@ -102,7 +86,7 @@ class NPowerlawMGaussianFakeDiscretePE(SyntheticDiscretePEBase, NPowerlawMGaussi
             (P.COS_IOTA, -1.0, 1.0),
         ]:
             error_fns[param] = generic_truncated_normal_error_fn(
-                param, cut_low=cut_low, cut_high=cut_high
+                param, low=default_low, high=default_high
             )
 
         return error_fns

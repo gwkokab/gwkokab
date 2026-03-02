@@ -7,7 +7,6 @@ from typing import Optional
 import RIFT.lalsimutils as lalsimutils
 from jax import numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
-from numpyro import distributions as dist
 
 from .utils.transformations import chirp_mass, symmetric_mass_ratio
 
@@ -100,11 +99,9 @@ def truncated_normal_error(
     size: int,
     key: PRNGKeyArray,
     *,
-    scale: Optional[float] = None,
+    scale: float,
     low: Optional[float] = None,
     high: Optional[float] = None,
-    cut_low: Optional[float] = None,
-    cut_high: Optional[float] = None,
 ) -> Array:
     """Adds truncated normal error to the given values. The error is sampled from a
     truncated normal distribution with the given parameters. The function will resample
@@ -128,56 +125,33 @@ def truncated_normal_error(
         Number of samples to generate.
     key : PRNGKeyArray
         JAX random key for sampling.
-    scale : Optional[float], optional
-        Scale parameter for the truncated normal distribution, by default None
+    scale : float
+        Scale parameter for the truncated normal distribution.
     low : Optional[float], optional
-        Lower bound for the truncated normal distribution, by default None
+        Lower bound for the truncation, defaults to None (no lower bound).
     high : Optional[float], optional
-        Upper bound for the truncated normal distribution, by default None
-    cut_low : Optional[float], optional
-        Lower bound for the final values, by default None
-    cut_high : Optional[float], optional
-        Upper bound for the final values, by default None
+        Upper bound for the truncation, defaults to None (no upper bound).
 
     Returns
     -------
     Array
         Array of values with added truncated normal error.
-
-    Raises
-    ------
-    ValueError
-        If the scale parameter is not provided.
     """
-    if scale is None:
-        raise ValueError("Scale parameter is required.")
+    key_r0, key_r, key_rho = jrd.split(key, 3)
 
-    err_dist = dist.TruncatedNormal(loc=x, scale=scale, low=low, high=high)
+    r0 = jrd.normal(key=key_r0)
+    r = jrd.normal(key=key_r, shape=(size,))
+    rho = 9.0 * jnp.power(
+        jrd.uniform(key=key_rho, minval=jnp.finfo(jnp.result_type(float)).tiny),
+        -1.0 / 3.0,
+    )
 
-    # Initial sampling from the truncated normal distribution.
-    err_x = err_dist.sample(key=key, sample_shape=(size,))
+    samples = x + scale * (r0 + r) * (12.0 / rho)
 
-    if cut_low is None and cut_high is None:
-        return err_x
+    # reflect samples that are out of bounds back into the allowed range
+    if low is not None:
+        samples = jnp.where(samples < low, 2.0 * low - samples, samples)
+    if high is not None:
+        samples = jnp.where(samples > high, 2.0 * high - samples, samples)
 
-    # Resample until all values are within the allowed range
-    while True:
-        mask = jnp.zeros_like(err_x, dtype=bool)
-        if cut_low is not None:
-            mask = mask | (err_x < cut_low)
-        if cut_high is not None:
-            mask = mask | (err_x > cut_high)
-
-        # If no values are outside the allowed range, break the loop
-        # This is important to avoid infinite loops
-        if not jnp.any(mask).item():
-            break
-
-        # Split the key for a new random seed
-        key, _ = jrd.split(key)
-        num_invalid = int(jnp.sum(mask))
-        new_samples = err_dist.sample(key=key, sample_shape=(num_invalid,))
-        invalid_indices = jnp.where(mask)[0]
-        err_x = err_x.at[invalid_indices].set(new_samples)
-
-    return err_x
+    return samples
