@@ -10,19 +10,65 @@ body:
     attributes:
       label: Check for existing issues
       description: >-
-        Check the backlog of issues to reduce the chances of creating duplicates; if an  issue already exists, place a `+1` (👍) on it. If you prefer a non-templated  issue report, click [here](https://github.com/gwkokab/gwkokab/issues/new).
+        Check the backlog of issues to reduce the chances of creating duplicates; if an issue already exists, place a `+1` (👍) on it. If you prefer a non-templated issue report, click [here](https://github.com/gwkokab/gwkokab/issues/new).
       options:
         - label: Completed
           required: true
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: What kind of feature is this?
+      description: Select the category that best describes your request.
+      options:
+        - New Phenomelogical Model
+        - New Likelihood
+        - New Mock Error
+        - Performance Optimization (JAX/Hardware)
+        - Data Loading & I/O
+        - Documentation Improvement
+        - Develepor/User Experience
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: other-feature-type
+    attributes:
+      label: Other Feature Category
+      description: If you selected "Other" above, please specify the category here.
+      placeholder: e.g., Visualization tools, CLI improvements, etc.
+    validations:
+      required: false
+
   - type: textarea
     attributes:
       label: Description
       description: >-
-        A concise description of the feature.
+        A concise description of the feature. What should the new functionality do?
       placeholder: |
-        Text may use markdown formatting.
+        I would like GWKokab to support...
         ```python
-        # for codeblocks, use triple backticks
+        # Example of how the API might look:
+        import gwkokab
+        # gwkokab.new_feature()
         ```
     validations:
       required: true
+
+  - type: textarea
+    attributes:
+      label: Motivation / Use Case
+      description: >-
+        Why is this feature necessary? What problem does it solve for your research or workflow?
+      placeholder: |
+        This would allow me to analyze GWTC-3 events with...
+    validations:
+      required: true
+
+  - type: checkboxes
+    attributes:
+      label: Contribution
+      description: Would you be willing to help implement this feature?
+      options:
+        - label: I am interested in submitting a Pull Request for this.
