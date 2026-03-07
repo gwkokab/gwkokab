@@ -135,7 +135,6 @@ class DiscretePELoader(BaseModel):
         """
         if isinstance(datasets, str):
             datasets = (datasets,)
-        logger.info(f"Loading file '{filename}' with dataset '{datasets}'.")
 
         with h5py.File(filename, "r") as f:
             for dataset in datasets:
@@ -143,6 +142,9 @@ class DiscretePELoader(BaseModel):
                     data_structured = f[dataset][()]
                     data_array, columns = from_structured(data_structured)
                     df = pd.DataFrame(data=data_array, columns=columns)
+
+                    logger.info(f"Loading file '{filename}' with dataset '{dataset}'.")
+
                     return df
 
             raise LoggedKeyError(
