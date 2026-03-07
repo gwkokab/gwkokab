@@ -97,12 +97,13 @@ class LoggedMixinException:
         self,
         msg: str,
         *args,
-        loguru_kwargs: dict[str, Any] = {},
+        loguru_opt: dict[str, Any] = {"depth": 1},
         **kwargs,
     ):
+
         formatted = _format(msg, args, kwargs)
-        logger.opt(depth=1).error(formatted, **loguru_kwargs)
-        super().__init__(formatted)
+        logger.opt(**loguru_opt).error(msg, *args, **kwargs)
+        super().__init__(formatted)  # type: ignore[call-arg]
 
 
 class LoggedMixinWarning:
@@ -114,10 +115,12 @@ class LoggedMixinWarning:
     message is logged at the warning level.
     """
 
-    def __init__(self, msg: str, *args, loguru_kwargs: dict[str, Any] = {}, **kwargs):
+    def __init__(
+        self, msg: str, *args, loguru_opt: dict[str, Any] = {"depth": 1}, **kwargs
+    ):
         formatted = _format(msg, args, kwargs)
-        logger.opt(depth=1).warning(formatted, **loguru_kwargs)
-        super().__init__(formatted)
+        logger.opt(**loguru_opt).warning(msg, *args, **kwargs)
+        super().__init__(formatted)  # type: ignore[call-arg]
 
 
 # fmt: off
