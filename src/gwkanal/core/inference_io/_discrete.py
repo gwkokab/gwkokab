@@ -106,7 +106,7 @@ class DiscretePELoader(BaseModel):
         )
 
         default_datasets = raw_data.pop(
-            "default_datasets", ("GWKokabSyntheticDiscretePE",)
+            "default_datasets", ("GWKokabSyntheticDiscretePE/posterior_samples",)
         )
         if isinstance(default_datasets, list):
             default_datasets = tuple(default_datasets)
