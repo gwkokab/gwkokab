@@ -22,6 +22,7 @@ from gwkokab.poisson_mean._injection_based_helper import (
     primary_mass_to_chirp_mass_jacobian,
     prior_chieff_chip_isotropic,
 )
+from gwkokab.utils.exceptions import LoggedKeyError
 from gwkokab.utils.tools import error_if, warn_if
 
 
@@ -143,11 +144,11 @@ class DiscretePELoader(BaseModel):
                     data_array, columns = from_structured(data_structured)
                     df = pd.DataFrame(data=data_array, columns=columns)
                     return df
-        error_if(
-            True,
-            KeyError,
-            f"None of the specified datasets {datasets} found in file '{filename}'.",
-        )
+
+            raise LoggedKeyError(
+                f"None of the specified datasets {datasets} found in file '{filename}'."
+                f" Available datasets: {list(f.keys())}"
+            )
 
     def load(
         self, parameters: tuple[str, ...], seed: int = 37
