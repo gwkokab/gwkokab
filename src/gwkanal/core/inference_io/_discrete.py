@@ -43,11 +43,13 @@ class DiscretePELoader(BaseModel):
     max_samples: Optional[PositiveInt] = Field(None)
     """If set, limits the number of samples loaded per event to this value."""
 
-    default_waveform: str = Field("GWKokabSyntheticDiscretePE")
-    """Default waveform name to use when loading samples."""
+    default_datasets: tuple[str, ...] = Field(("GWKokabSyntheticDiscretePE",))
+    """Default dataset separated by forward slashes to look for in the HDF5 files."""
 
-    alternate_waveforms: dict[str, str] = Field(default_factory=dict)
-    """Mapping of filenames to alternate waveform names, if needed."""
+    alternate_datasets: dict[str, str] = Field(default_factory=dict)
+    """Mapping of filenames to alternate dataset names separated by forward slashes,
+    overriding the default dataset.
+    """
 
     mass_prior: Literal[
         None,
@@ -101,36 +103,50 @@ class DiscretePELoader(BaseModel):
             msg=f"No files matched the regex pattern: {regex}",
         )
 
-        logger.info(f"Initialized loader with {n_files} files found via: {regex}")
+        default_datasets = raw_data.pop(
+            "default_datasets", ("GWKokabSyntheticDiscretePE",)
+        )
+        if isinstance(default_datasets, str):
+            default_datasets = tuple(default_datasets)
 
-        return cls(**raw_data, filenames=filenames)
+        logger.info(f"Initialized loader with {n_files} files found via: {regex}")
+        return cls(**raw_data, default_datasets=default_datasets, filenames=filenames)
 
     @classmethod
-    def load_file(cls, filename: Path | str, waveform_name: str) -> pd.DataFrame:
+    def load_file(
+        cls, filename: Path | str, datasets: str | tuple[str, ...]
+    ) -> pd.DataFrame:
         """Loads a single PE sample file into a DataFrame.
 
         Parameters
         ----------
         filename : Path | str
             Path to the sample file.
-        waveform_name : str
-            Name of the waveform model used (for logging purposes).
+        datasets : str | tuple[str, ...]
+            Name or tuple of names of the dataset(s) to load from the HDF5 file, in order of preference.
 
         Returns
         -------
         pd.DataFrame
             DataFrame containing the samples from the file.
         """
-        logger.info(f"Loading file '{filename}' with waveform '{waveform_name}'.")
+        if isinstance(datasets, str):
+            datasets = (datasets,)
+        logger.info(f"Loading file '{filename}' with dataset '{datasets}'.")
+        idx = 0
         with h5py.File(filename, "r") as f:
-            error_if(
-                waveform_name not in f,
-                KeyError,
-                f"Waveform '{waveform_name}' not found in file '{filename}'. "
-                "Available waveforms: " + ", ".join(f.keys()),
-            )
-            group = f[waveform_name]
-            data_structured = group["posterior_samples"][()]
+            while True:
+                if datasets[idx] in f:
+                    break
+                idx += 1
+                error_if(
+                    idx >= len(datasets),
+                    KeyError,
+                    f"None of the specified datasets {datasets} found in file '{filename}'.",
+                )
+
+            found_dataset = datasets[idx]
+            data_structured = f[found_dataset][()]
             data_array, columns = from_structured(data_structured)
             df = pd.DataFrame(data=data_array, columns=columns)
         return df
@@ -186,10 +202,8 @@ class DiscretePELoader(BaseModel):
         for i, event_path in enumerate(self.filenames):
             event_name = event_path.stem
 
-            waveform_name = self.alternate_waveforms.get(
-                event_name, self.default_waveform
-            )
-            df = self.load_file(event_path, waveform_name=waveform_name)
+            datasets = self.alternate_datasets.get(event_name, self.default_datasets)
+            df = self.load_file(event_path, datasets=datasets)
 
             self._validate_columns(df, event_path, posterior_columns)
 
