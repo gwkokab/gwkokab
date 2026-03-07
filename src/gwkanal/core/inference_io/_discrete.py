@@ -106,8 +106,8 @@ class DiscretePELoader(BaseModel):
         default_datasets = raw_data.pop(
             "default_datasets", ("GWKokabSyntheticDiscretePE",)
         )
-        if isinstance(default_datasets, str):
-            default_datasets = (default_datasets,)
+        if isinstance(default_datasets, list):
+            default_datasets = tuple(default_datasets)
 
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
         return cls(**raw_data, default_datasets=default_datasets, filenames=filenames)
@@ -133,23 +133,19 @@ class DiscretePELoader(BaseModel):
         if isinstance(datasets, str):
             datasets = (datasets,)
         logger.info(f"Loading file '{filename}' with dataset '{datasets}'.")
-        idx = 0
-        with h5py.File(filename, "r") as f:
-            while True:
-                if datasets[idx] in f:
-                    break
-                idx += 1
-                error_if(
-                    idx >= len(datasets),
-                    KeyError,
-                    f"None of the specified datasets {datasets} found in file '{filename}'.",
-                )
 
-            found_dataset = datasets[idx]
-            data_structured = f[found_dataset][()]
-            data_array, columns = from_structured(data_structured)
-            df = pd.DataFrame(data=data_array, columns=columns)
-        return df
+        with h5py.File(filename, "r") as f:
+            for dataset in datasets:
+                if dataset in f:
+                    data_structured = f[dataset][()]
+                    data_array, columns = from_structured(data_structured)
+                    df = pd.DataFrame(data=data_array, columns=columns)
+                    return df
+        error_if(
+            True,
+            KeyError,
+            f"None of the specified datasets {datasets} found in file '{filename}'.",
+        )
 
     def load(
         self, parameters: tuple[str, ...], seed: int = 37
