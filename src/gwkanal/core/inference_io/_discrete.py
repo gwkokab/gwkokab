@@ -107,7 +107,7 @@ class DiscretePELoader(BaseModel):
             "default_datasets", ("GWKokabSyntheticDiscretePE",)
         )
         if isinstance(default_datasets, str):
-            default_datasets = tuple(default_datasets)
+            default_datasets = (default_datasets,)
 
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
         return cls(**raw_data, default_datasets=default_datasets, filenames=filenames)
