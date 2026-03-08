@@ -47,7 +47,7 @@ def poisson_mean_from_neural_vt(
     names, neural_vt_model = load_model(filename)
     if any(name not in parameters for name in names):
         raise LoggedValueError(
-            "Model in {filename} expects parameters {names}, but received "
+            f"Model in {filename} expects parameters {names}, but received "
             f"{parameters}. Missing: {set(names) - set(parameters)}"
         )
 
