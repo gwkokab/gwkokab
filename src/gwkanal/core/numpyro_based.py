@@ -20,8 +20,7 @@ from gwkanal.core.guru import Guru, guru_arg_parser
 from gwkanal.utils.common import read_json
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
-from gwkokab.utils.exceptions import LoggedUserWarning
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 
 _INFERENCE_DIRECTORY = "numpyro_" + INFERENCE_DIRECTORY
@@ -118,14 +117,12 @@ class NumpyroBased(Guru):
 
         sampler_cfg = read_json(self.sampler_settings_filename)
 
-        error_if(
-            (kernel_cfg := sampler_cfg.pop("kernel", None)) is None,
-            msg="Kernel configuration not found in sampler settings.",
-        )
-        error_if(
-            (mcmc_cfg := sampler_cfg.pop("mcmc", None)) is None,
-            msg="MCMC configuration not found in sampler settings.",
-        )
+        if (kernel_cfg := sampler_cfg.pop("kernel", None)) is None:
+            raise LoggedValueError(
+                "Kernel configuration not found in sampler settings."
+            )
+        if (mcmc_cfg := sampler_cfg.pop("mcmc", None)) is None:
+            raise LoggedValueError("MCMC configuration not found in sampler settings.")
 
         dense_mass: Union[List[Tuple[str, ...]], bool] = kernel_cfg.pop(
             "dense_mass", False

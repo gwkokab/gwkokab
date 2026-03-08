@@ -12,7 +12,7 @@ from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions.distribution import Distribution
 
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedValueError
 
 
 def wipe_log_rate(
@@ -180,16 +180,14 @@ def save_probs(
     headers : List[str]
         List of headers for the PPD and marginal probabilities
     """
-    error_if(
-        ppd_array.ndim != len(domains),
-        ValueError,
-        "Number of ranges must match the number of dimensions of the PPD array.",
-    )
-    error_if(
-        ppd_array.ndim != len(headers),
-        ValueError,
-        "Number of headers must match the number of dimensions of the PPD array.",
-    )
+    if ppd_array.ndim != len(domains):
+        raise LoggedValueError(
+            "Number of ranges must match the number of dimensions of the PPD array.",
+        )
+    if ppd_array.ndim != len(headers):
+        raise LoggedValueError(
+            "Number of headers must match the number of dimensions of the PPD array.",
+        )
 
     compression_args = {"compression": "gzip", "compression_opts": 9}
     with h5py.File(filename, "w") as f:

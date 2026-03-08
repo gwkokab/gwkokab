@@ -21,8 +21,8 @@ from gwkokab.inference.poissonlikelihood_utils import (
 )
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
-from gwkokab.utils.exceptions import LoggedUserWarning
-from gwkokab.utils.tools import batch_and_remainder, error_if
+from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
+from gwkokab.utils.tools import batch_and_remainder
 
 from ..utils.jenks import pad_and_stack
 from .guru import Guru
@@ -58,10 +58,10 @@ class Sage(Guru):
         check_leaks: bool = False,
         analysis_name: str = "",
     ) -> None:
-        error_if(
-            not (all(letter.isalpha() or letter == "_" for letter in analysis_name)),
-            msg="Analysis name must contain only letters and underscores.",
-        )
+        if not (all(letter.isalpha() or letter == "_" for letter in analysis_name)):
+            raise LoggedValueError(
+                "Analysis name must contain only letters and underscores.",
+            )
 
         self.likelihood_fn = likelihood_fn
         self.n_buckets = n_buckets
@@ -95,11 +95,10 @@ class Sage(Guru):
         log_constants = -sum_log_size
 
         n_events = len(data)
-        error_if(
-            len(data) != len(log_ref_priors),
-            AssertionError,
-            msg="Number of data events does not match number of log reference priors.",
-        )
+        if len(data) != len(log_ref_priors):
+            raise LoggedValueError(
+                "Number of data events does not match number of log reference priors.",
+            )
 
         logger.info("Commencing data partitioning into buckets.")
         _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(

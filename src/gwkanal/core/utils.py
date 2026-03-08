@@ -9,7 +9,7 @@ from jax import random as jrd
 from jaxtyping import PRNGKeyArray
 from loguru import logger
 
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedValueError
 
 
 class PRNGKeyMixin:
@@ -53,14 +53,10 @@ class PRNGKeyMixin:
 
     @classmethod
     def init_rng_seed(cls, seed: int) -> None:
-        error_if(
-            not isinstance(seed, int),
-            msg=f"Expected an integer seed, got {type(seed)}.",
-        )
-        error_if(
-            seed < 0,
-            msg=f"Seed must be a non-negative integer, got {seed}.",
-        )
+        if not isinstance(seed, int):
+            raise LoggedValueError(f"Expected an integer seed, got {type(seed)}.")
+        if seed < 0:
+            raise LoggedValueError(f"Seed must be a non-negative integer, got {seed}.")
         logger.info(f"Initializing the random number generator key with seed {seed}.")
         key = jrd.key(seed)
         cls._rng_key = key

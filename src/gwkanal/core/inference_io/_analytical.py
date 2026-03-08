@@ -13,8 +13,13 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from gwkanal.utils.common import read_json
-from gwkokab.utils.exceptions import LoggedUserWarning
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import (
+    LoggedFileNotFoundError,
+    LoggedImportError,
+    LoggedKeyError,
+    LoggedUserWarning,
+    LoggedValueError,
+)
 
 
 def _extract_transform(path: Optional[str]) -> Callable:
@@ -28,19 +33,14 @@ def _extract_transform(path: Optional[str]) -> Callable:
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("custom_module", path)
-    error_if(
-        spec is None or spec.loader is None,
-        ImportError,
-        f"Could not load spec for module at {path}",
-    )
+    if spec is None or spec.loader is None:
+        raise LoggedImportError(f"Could not load spec for module at {path}")
 
     custom_module = importlib.util.module_from_spec(spec)  # type: ignore
     spec.loader.exec_module(custom_module)  # type: ignore
 
-    error_if(
-        not hasattr(custom_module, "transform"),
-        msg="The custom module must have a 'transform' function.",
-    )
+    if not hasattr(custom_module, "transform"):
+        raise LoggedValueError("The custom module must have a 'transform' function.")
 
     transform: Callable = getattr(custom_module, "transform")
     return transform
@@ -105,21 +105,17 @@ class AnalyticalPELoader(BaseModel):
             If no files match the provided regex pattern.
         """
         raw_data = read_json(config_path)
-        error_if(
-            "regex" not in raw_data,
-            KeyError,
-            msg="Config error: 'regex' field is required.",
-        )
+        if "regex" not in raw_data:
+            raise LoggedKeyError("Config error: 'regex' field is required.")
 
         regex = raw_data.pop("regex")
         filenames = tuple(map(Path, sorted(glob.glob(regex))))
 
         n_files = len(filenames)
-        error_if(
-            n_files == 0,
-            FileNotFoundError,
-            msg=f"No files matched the regex pattern: {regex}",
-        )
+        if n_files == 0:
+            raise LoggedFileNotFoundError(
+                f"No files matched the regex pattern: {regex}"
+            )
 
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
@@ -152,12 +148,11 @@ class AnalyticalPELoader(BaseModel):
         """
         logger.info(f"Loading file '{filename}' with waveform '{waveform_name}'.")
         with h5py.File(filename, "r") as f:
-            error_if(
-                waveform_name not in f,
-                KeyError,
-                f"Waveform '{waveform_name}' not found in file '{filename}'. "
-                "Available waveforms: " + ", ".join(f.keys()),
-            )
+            if waveform_name not in f:
+                raise LoggedKeyError(
+                    f"Waveform '{waveform_name}' not found in file '{filename}'. "
+                    "Available waveforms: " + ", ".join(f.keys())
+                )
             group = f[waveform_name]
             cov = group["cov"][()]
             mu = group["mu"][()]
@@ -216,16 +211,14 @@ class AnalyticalPELoader(BaseModel):
             )
             df = self.load_file(event_path, waveform_name=waveform_name)
 
-            error_if(
-                df.coords is None,
-                ValueError,
-                f"File '{event_path}' is missing 'coords' attribute. Cannot proceed.",
-            )
-            error_if(
-                np.any(df.scale <= 0),
-                ValueError,
-                f"File '{event_path}' contains non-positive scale values, which are invalid.",
-            )
+            if df.coords is None:
+                raise LoggedValueError(
+                    f"File '{event_path}' is missing 'coords' attribute. Cannot proceed."
+                )
+            if np.any(df.scale <= 0):
+                raise LoggedValueError(
+                    f"File '{event_path}' contains non-positive scale values, which are invalid."
+                )
 
             self._validate_columns(df.coords, event_path, posterior_columns)
 

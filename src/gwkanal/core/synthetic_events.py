@@ -18,7 +18,7 @@ from gwkanal.utils.common import read_json
 from gwkanal.utils.regex import match_all
 from gwkokab.models.utils import ScaledMixture
 from gwkokab.parameters import default_relation_mesh, Parameters as P
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedValueError
 
 
 class SyntheticEventsBase(PRNGKeyMixin, ABC):
@@ -135,9 +135,10 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
 
         logger.info(f"Expected rate: {exp_rate:.2f} | Realized size: {size}")
 
-        error_if(
-            size <= 0, msg=f"Population size is {size}. Check your VT or model configs."
-        )
+        if size <= 0:
+            raise LoggedValueError(
+                f"Population size is {size}. Check your VT or model configs."
+            )
 
         raw_pop, raw_idx, pop, idx = self._generate_population(size, log_selection_fn)
         self.save_population(pop, idx, raw_pop, raw_idx)

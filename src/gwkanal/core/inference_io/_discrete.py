@@ -23,8 +23,12 @@ from gwkokab.poisson_mean._injection_based_helper import (
     primary_mass_to_chirp_mass_jacobian,
     prior_chieff_chip_isotropic,
 )
-from gwkokab.utils.exceptions import LoggedKeyError, LoggedUserWarning
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import (
+    LoggedFileNotFoundError,
+    LoggedKeyError,
+    LoggedUserWarning,
+    LoggedValueError,
+)
 
 
 class DiscretePELoader(BaseModel):
@@ -91,21 +95,17 @@ class DiscretePELoader(BaseModel):
             If no files match the provided regex pattern.
         """
         raw_data = read_json(config_path)
-        error_if(
-            "regex" not in raw_data,
-            KeyError,
-            msg="Config error: 'regex' field is required.",
-        )
+        if "regex" not in raw_data:
+            raise LoggedKeyError("Config error: 'regex' field is required.")
 
         regex = raw_data.pop("regex")
         filenames = tuple(map(Path, sorted(glob.glob(regex))))
 
         n_files = len(filenames)
-        error_if(
-            n_files == 0,
-            FileNotFoundError,
-            msg=f"No files matched the regex pattern: {regex}",
-        )
+        if n_files == 0:
+            raise LoggedFileNotFoundError(
+                f"No files matched the regex pattern: {regex}"
+            )
 
         default_datasets = raw_data.pop(
             "default_datasets", ["/GWKokabSyntheticDiscretePE/posterior_samples"]
@@ -271,11 +271,10 @@ class DiscretePELoader(BaseModel):
     ):
         """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(df.columns)
-        error_if(
-            missing != set(),
-            KeyError,
-            f"File '{event}' is missing required columns: {missing}",
-        )
+        if missing != set():
+            raise LoggedValueError(
+                f"File '{event}' is missing required columns: {missing}"
+            )
 
     def _get_q(self, df: pd.DataFrame, aliases: dict) -> np.ndarray:
         """Calculates mass ratio q = m2/m1, handling various alias possibilities."""
@@ -303,11 +302,8 @@ class DiscretePELoader(BaseModel):
         if self.distance_prior is None:
             return 0.0
 
-        error_if(
-            P.REDSHIFT not in parameters,
-            ValueError,
-            "Distance prior requires Redshift.",
-        )
+        if P.REDSHIFT not in parameters:
+            raise LoggedValueError("Distance prior requires Redshift.")
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
         if self.distance_prior == "comoving":
@@ -332,11 +328,8 @@ class DiscretePELoader(BaseModel):
 
         lp = np.zeros(len(df))
         q = self._get_q(df, aliases)
-        error_if(
-            P.REDSHIFT not in parameters,
-            ValueError,
-            "Mass prior reweighting requires Redshift.",
-        )
+        if P.REDSHIFT not in parameters:
+            raise LoggedValueError("Mass prior reweighting requires Redshift.")
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
 

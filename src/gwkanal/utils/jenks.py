@@ -20,7 +20,7 @@ from jax import numpy as jnp
 from jaxtyping import Array
 from loguru import logger
 
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedValueError
 
 
 __all__ = ["pad_and_stack"]
@@ -103,10 +103,10 @@ def _right_most_index(data: Sequence[int], value: int) -> int:
     """
     idx = np.searchsorted(data, value, side="right")
 
-    error_if(
-        idx == 0 or data[idx - 1] != value,  # type: ignore
-        msg=f"Value {value} not found in the list.",
-    )
+    if idx == 0 or data[idx - 1] != value:  # type: ignore
+        raise LoggedValueError(
+            f"Value {value} not found in the list.",
+        )
 
     # The index of the last occurrence is idx - 1.
     return int(idx - 1)
@@ -133,10 +133,10 @@ def _jenks_natural_breaks(
         A sequence of indices representing the rightmost index of each bucket's break
         value in the sorted data.
     """
-    error_if(
-        n_buckets < 1 or n_buckets > len(data),
-        msg=f"Number of buckets {n_buckets} must be between 1 and {len(data)}",
-    )
+    if n_buckets < 1 or n_buckets > len(data):
+        raise LoggedValueError(
+            f"Number of buckets {n_buckets} must be between 1 and {len(data)}",
+        )
 
     # Optimization: if n_buckets == len(data), each element is its own bucket,
     # but the logic for breaks still holds.
@@ -204,7 +204,8 @@ def _partition_data_for_bucket(
     indexes = _jenks_natural_breaks(data, n_buckets, verbose=verbose)
     subsets = _get_subsets(data, indexes)
 
-    error_if(not subsets, msg="Partitioning resulted in no subsets.")
+    if not subsets:
+        raise LoggedValueError("Partitioning resulted in no subsets.")
 
     total_loss = _total_loss(subsets)
     if verbose:
@@ -285,10 +286,10 @@ def _partition_data(
     else:
         n_buckets = int(below_thresh_idx[0] + 1)
 
-    error_if(
-        n_buckets < 1,
-        msg="Calculated number of buckets is less than 1. This should not happen.",
-    )
+    if n_buckets < 1:
+        raise LoggedValueError(
+            "Calculated number of buckets is less than 1. This should not happen."
+        )
 
     logger.info(
         f"By first derivative of total loss with {threshold}% threshold, "
@@ -392,19 +393,13 @@ def pad_and_stack(
         The last element of the returned tuple is the list of mask arrays (one mask array
         per bucket).
     """
-    error_if(
-        not (0.0 <= threshold <= 100.0),
-        msg="Threshold must be between 0 and 100.",
-    )
-    error_if(
-        not arrays,
-        msg="Input array sequences cannot be empty.",
-    )
+    if not (0.0 <= threshold <= 100.0):
+        raise LoggedValueError("Threshold must be between 0 and 100.")
+    if not arrays:
+        raise LoggedValueError("Input array sequences cannot be empty.")
     n_total_elements = len(arrays[0])
-    error_if(
-        not all(n_total_elements == len(arr) for arr in arrays),
-        msg="All arrays must have the same length.",
-    )
+    if not all(n_total_elements == len(arr) for arr in arrays):
+        raise LoggedValueError("All arrays must have the same length.")
 
     if n_total_elements == 0:
         # Return a tuple of empty lists, plus an empty list for masks
