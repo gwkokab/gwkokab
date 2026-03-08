@@ -3,6 +3,7 @@
 
 
 import glob
+import warnings
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -22,7 +23,7 @@ from gwkokab.poisson_mean._injection_based_helper import (
     primary_mass_to_chirp_mass_jacobian,
     prior_chieff_chip_isotropic,
 )
-from gwkokab.utils.exceptions import LoggedKeyError
+from gwkokab.utils.exceptions import LoggedKeyError, LoggedUserWarning
 from gwkokab.utils.tools import error_if, warn_if
 
 
@@ -45,7 +46,7 @@ class DiscretePELoader(BaseModel):
     """If set, limits the number of samples loaded per event to this value."""
 
     default_datasets: tuple[str, ...] = Field(
-        ("GWKokabSyntheticDiscretePE/posterior_samples",)
+        ("/GWKokabSyntheticDiscretePE/posterior_samples",)
     )
     """Default dataset names to look for in HDF5 files, in order of preference."""
 
@@ -107,13 +108,35 @@ class DiscretePELoader(BaseModel):
         )
 
         default_datasets = raw_data.pop(
-            "default_datasets", ("GWKokabSyntheticDiscretePE/posterior_samples",)
+            "default_datasets", ["/GWKokabSyntheticDiscretePE/posterior_samples"]
         )
+        for i in range(len(default_datasets)):
+            dataset = default_datasets[i]
+            if not dataset.startswith("/"):
+                warnings.warn(
+                    f"Dataset '{dataset}' does not start with '/'. Prepending '/' to ensure valid HDF5 path.",
+                    LoggedUserWarning,
+                )
+                default_datasets[i] = "/" + dataset
         if isinstance(default_datasets, list):
             default_datasets = tuple(default_datasets)
 
+        alternate_datasets = raw_data.pop("alternate_datasets", {})
+        for event, dataset in alternate_datasets.items():
+            if not dataset.startswith("/"):
+                warnings.warn(
+                    f"Dataset '{dataset}' for event '{event}' does not start with '/'. Prepending '/' to ensure valid HDF5 path.",
+                    LoggedUserWarning,
+                )
+                alternate_datasets[event] = "/" + dataset
+
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
-        return cls(**raw_data, default_datasets=default_datasets, filenames=filenames)
+        return cls(
+            **raw_data,
+            default_datasets=default_datasets,
+            filenames=filenames,
+            alternate_datasets=alternate_datasets,
+        )
 
     @classmethod
     def load_file(
