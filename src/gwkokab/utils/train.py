@@ -116,12 +116,12 @@ def save_model(
             f.create_dataset(
                 "names", data=np.array(names, dtype="S"), **compression_args
             )
-        f.create_dataset("in_size", data=model.in_size, **compression_args)  # type: ignore
-        f.create_dataset("out_size", data=model.out_size, **compression_args)  # type: ignore
-        f.create_dataset("width_size", data=model.width_size, **compression_args)  # type: ignore
-        f.create_dataset("depth", data=model.depth, **compression_args)  # type: ignore
+        f.create_dataset("in_size", data=model.in_size)
+        f.create_dataset("out_size", data=model.out_size)
+        f.create_dataset("width_size", data=model.width_size)
+        f.create_dataset("depth", data=model.depth)
         f.attrs["is_log"] = is_log
-        num_layers = len(model.layers)  # type: ignore
+        num_layers = len(model.layers)
         for i in range(num_layers):
             layer_i = f.create_group(f"layer_{i}")
             layer_i.create_dataset(
