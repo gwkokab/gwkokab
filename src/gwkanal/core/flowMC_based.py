@@ -890,11 +890,7 @@ class FlowMCBased(Guru):
                 raise LoggedTypeError(
                     f"expected a {expected_type}, got {type(var)} for {var_name}"
                 )
-            if (
-                isinstance(expected_type, int)
-                and var < 1
-                and var_name != "chain_batch_size"
-            ):
+            if (expected_type is int) and var < 1 and var_name != "chain_batch_size":
                 raise LoggedValueError(
                     f"expected a positive integer, got {var} for {var_name}"
                 )
