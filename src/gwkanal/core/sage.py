@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import warnings
 from argparse import ArgumentParser
 from collections.abc import Callable
 from typing import Dict, List, Optional, Tuple, Union
@@ -20,7 +21,8 @@ from gwkokab.inference.poissonlikelihood_utils import (
 )
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
-from gwkokab.utils.tools import batch_and_remainder, error_if, warn_if
+from gwkokab.utils.exceptions import LoggedUserWarning
+from gwkokab.utils.tools import batch_and_remainder, error_if
 
 from ..utils.jenks import pad_and_stack
 from .guru import Guru
@@ -111,10 +113,10 @@ class Sage(Guru):
             )
         elif self.n_buckets != len(_data_group):
             overridden_buckets = len(_data_group)
-            warn_if(
-                True,
-                msg=f"Specified n_buckets ({self.n_buckets}) differs from partitioning results. "
+            warnings.warn(
+                f"Specified n_buckets ({self.n_buckets}) differs from partitioning results. "
                 f"Overriding to {overridden_buckets} buckets for computational alignment.",
+                LoggedUserWarning,
             )
             self.n_buckets = overridden_buckets
 

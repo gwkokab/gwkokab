@@ -24,7 +24,7 @@ from gwkokab.poisson_mean._injection_based_helper import (
     prior_chieff_chip_isotropic,
 )
 from gwkokab.utils.exceptions import LoggedKeyError, LoggedUserWarning
-from gwkokab.utils.tools import error_if, warn_if
+from gwkokab.utils.tools import error_if
 
 
 class DiscretePELoader(BaseModel):
@@ -258,9 +258,9 @@ class DiscretePELoader(BaseModel):
 
         n_total = len(df)
         if self.max_samples >= n_total:
-            warn_if(
-                True,
-                msg=f"Subsampling skipped: {event} has {n_total} samples (requested {self.max_samples}).",
+            warnings.warn(
+                f"Subsampling skipped: {event} has {n_total} samples (requested {self.max_samples}).",
+                LoggedUserWarning,
             )
             return df
 

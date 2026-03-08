@@ -3,6 +3,7 @@
 
 
 import os
+import warnings
 from typing import Any, Callable, Dict, List, Literal, Optional, Sequence
 
 import equinox as eqx
@@ -32,7 +33,8 @@ from gwkanal.core.guru import Guru, guru_arg_parser
 from gwkanal.utils.common import read_json
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
-from gwkokab.utils.tools import error_if, warn_if
+from gwkokab.utils.exceptions import LoggedUserWarning
+from gwkokab.utils.tools import error_if
 
 
 _INFERENCE_DIRECTORY = "flowMC_" + INFERENCE_DIRECTORY
@@ -695,11 +697,11 @@ def _save_acceptances(resources: dict) -> None:
             else np.array([])
         )
 
-        max_len = max(len(train_data), len(prod_data))
-        warn_if(
-            max_len == 0,
-            msg=f"No data found for {acc_type} acceptance rates in both phases.",
-        )
+        if (max_len := max(len(train_data), len(prod_data))) == 0:
+            warnings.warn(
+                f"No data found for {acc_type} acceptance rates in both phases.",
+                LoggedUserWarning,
+            )
 
         np.savetxt(
             f"{_INFERENCE_DIRECTORY}/{acc_type}_accs.dat",

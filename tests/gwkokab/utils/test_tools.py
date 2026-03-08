@@ -4,7 +4,7 @@
 
 import pytest
 
-from gwkokab.utils.tools import error_if, warn_if
+from gwkokab.utils.tools import error_if
 
 
 def test_error_if():
@@ -16,14 +16,3 @@ def test_error_if():
         error_if(True, ValueError, "message")
     with pytest.raises(TypeError):
         error_if(True, TypeError, "message")
-
-
-def test_warn_if():
-    with pytest.warns(UserWarning):
-        warn_if(True)
-    with pytest.warns(UserWarning):
-        warn_if(True, UserWarning)
-    with pytest.warns(UserWarning):
-        warn_if(True, UserWarning, "message")
-    with pytest.warns(UserWarning):
-        warn_if(True, UserWarning, "message")
