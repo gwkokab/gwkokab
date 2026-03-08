@@ -18,8 +18,7 @@ from gwkanal.utils.common import read_json
 from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
 from gwkokab.parameters import default_relation_mesh, Parameters
-from gwkokab.utils.exceptions import LoggedUserWarning
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 
 ErrorFunctionRegistryType: TypeAlias = dict[
@@ -242,15 +241,14 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
                 try:
                     idxs.append(parameters.index(p))
                 except ValueError:
-                    error_if(
-                        True,
-                        msg=f"Parameter '{p}' not found in available parameters: {parameters}.",
+                    raise LoggedValueError(
+                        f"Parameter '{p}' not found in available parameters: {parameters}.",
                     )
-            error_if(
-                not idxs,
-                msg=f"No matching parameters found for coords: {self.coords}. "
-                f"Available parameters: {parameters}.",
-            )
+            if not idxs:
+                raise LoggedValueError(
+                    f"No matching parameters found for coords: {self.coords}. "
+                    f"Available parameters: {parameters}.",
+                )
             filtered_posterior_samples = posterior_samples[:, idxs]
 
         cov = np.cov(filtered_posterior_samples, rowvar=False)

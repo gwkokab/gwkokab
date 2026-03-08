@@ -33,8 +33,11 @@ from gwkanal.core.guru import Guru, guru_arg_parser
 from gwkanal.utils.common import read_json
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
-from gwkokab.utils.exceptions import LoggedUserWarning
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import (
+    LoggedTypeError,
+    LoggedUserWarning,
+    LoggedValueError,
+)
 
 
 _INFERENCE_DIRECTORY = "flowMC_" + INFERENCE_DIRECTORY
@@ -883,56 +886,53 @@ class FlowMCBased(Guru):
             (rq_spline_range, "rq_spline_range", tuple),
             (verbose, "verbose", bool),
         ):
-            error_if(
-                not isinstance(var, expected_type),
-                err=TypeError,
-                msg=f"expected a {expected_type}, got {type(var)} for {var_name}",
-            )
-            if expected_type is int:
-                error_if(
-                    var < 1 and var_name != "chain_batch_size",
-                    err=ValueError,
-                    msg=f"expected a positive integer, got {var} for {var_name}",
+            if not isinstance(var, expected_type):
+                raise LoggedTypeError(
+                    f"expected a {expected_type}, got {type(var)} for {var_name}"
+                )
+            if (expected_type is int) and var < 1 and var_name != "chain_batch_size":
+                raise LoggedValueError(
+                    f"expected a positive integer, got {var} for {var_name}"
                 )
             logger.debug(f"{var_name}: {var}")
-        error_if(
-            not all(isinstance(x, int) and x > 0 for x in rq_spline_hidden_units),
-            msg=f"expected a list of positive integers, got {rq_spline_hidden_units} for rq_spline_hidden_units",
-        )
+        if not all(isinstance(x, int) and x > 0 for x in rq_spline_hidden_units):
+            raise LoggedValueError(
+                f"expected a list of positive integers, got {rq_spline_hidden_units} for rq_spline_hidden_units"
+            )
 
         valid_local_samplers = ("mala", "hmc")
-        error_if(
-            local_sampler_name.strip().lower() not in valid_local_samplers,
-            msg="local_sampler_name must be one of " + ", ".join(valid_local_samplers),
-        )
+        if local_sampler_name.strip().lower() not in valid_local_samplers:
+            raise LoggedValueError(
+                "local_sampler_name must be one of " + ", ".join(valid_local_samplers)
+            )
 
         initial_position = priors.sample(self.rng_key, (n_chains,))
 
         n_dims = initial_position.shape[1]
 
         if isinstance(mass_matrix, float) or isinstance(mass_matrix, int):
-            error_if(mass_matrix <= 0.0, msg="mass_matrix must be positive")
+            if mass_matrix <= 0.0:
+                raise LoggedValueError("mass_matrix must be positive")
             mass_matrix = jnp.eye(n_dims) * float(mass_matrix)
         elif isinstance(mass_matrix, list):
             mass_matrix = jnp.array(mass_matrix)
-            error_if(mass_matrix.ndim > 2, msg="mass_matrix must be 1D or 2D array")
+            if mass_matrix.ndim > 2:
+                raise LoggedValueError("mass_matrix must be 1D or 2D array")
             _shape = mass_matrix.shape
-            error_if(
-                _shape != (n_dims, n_dims) and _shape != (n_dims,),
-                msg=f"mass_matrix must be of shape ({n_dims}, {n_dims}) or ({n_dims},), got {_shape}",
-            )
-            if _shape == (n_dims,):
-                error_if(
-                    jnp.any(mass_matrix <= 0),
-                    msg="mass_matrix diagonal elements must be positive",
+            if _shape != (n_dims, n_dims) and _shape != (n_dims,):
+                raise LoggedValueError(
+                    f"mass_matrix must be of shape ({n_dims}, {n_dims}) or ({n_dims},), got {_shape}"
                 )
+            if _shape == (n_dims,):
+                if jnp.any(mass_matrix <= 0):
+                    raise LoggedValueError(
+                        "mass_matrix diagonal elements must be positive"
+                    )
                 mass_matrix = jnp.diag(mass_matrix)
             else:
                 eigvals = jnp.linalg.eigvalsh(mass_matrix)
-                error_if(
-                    jnp.any(eigvals <= 0),
-                    msg="mass_matrix must be positive definite",
-                )
+                if jnp.any(eigvals <= 0):
+                    raise LoggedValueError("mass_matrix must be positive definite")
 
         bundle = Local_Global_Sampler_Bundle(
             rng_key=self.rng_key,

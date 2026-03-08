@@ -11,7 +11,8 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
 
-from ...utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedValueError
+
 from ..constraints import all_constraint
 
 
@@ -91,10 +92,8 @@ class JointDistribution(Distribution):
             >>> len(jd.marginal_distributions)  # Deep flattening
             5
         """
-        error_if(
-            not marginal_distributions,
-            msg="At least one marginal distribution is required.",
-        )
+        if not marginal_distributions:
+            raise LoggedValueError("At least one marginal distribution is required.")
 
         marginal_flatten = _flatten_marginal_distributions(
             marginal_distributions, flatten_method
@@ -195,10 +194,8 @@ def _flatten_marginal_distributions(
         - flatten_method='deep'
             => (A, B, C, D, E)
     """
-    error_if(
-        flatten_method not in (None, "deep", "shallow"),
-        msg=f"Unknown flatten method: {flatten_method}",
-    )
+    if flatten_method not in (None, "deep", "shallow"):
+        raise LoggedValueError(f"Unknown flatten method: {flatten_method}")
     if flatten_method is None:
         return marginal_distributions
     flatten_dists: list[Distribution] = []
