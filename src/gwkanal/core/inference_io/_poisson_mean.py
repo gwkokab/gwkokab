@@ -94,9 +94,6 @@ class CustomPoissonMeanEstimationLoader(BaseLoader):
                 f"Could not load spec for module at {self.python_module_path}"
             )
 
-        spec = importlib.util.spec_from_file_location(
-            "custom_module", self.python_module_path
-        )
         custom_module = importlib.util.module_from_spec(spec)  # type: ignore
         spec.loader.exec_module(custom_module)  # type: ignore
 
