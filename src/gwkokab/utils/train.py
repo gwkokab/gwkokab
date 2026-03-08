@@ -418,7 +418,7 @@ def train_regressor(
     q05, q50, q95 = np.quantile(per_instance_np, [0.05, 0.5, 0.95])
     ordered = np.sort(per_instance_np)
 
-    plt.rcParams.update({"text.usetex": True, "font.size": 16})
+    plt.rcParams.update({"font.size": 16})
     plt.figure(figsize=(10, 6), dpi=300)
     colors = glasbey.create_palette(palette_size=4)
     plt.plot(ordered, label="loss per data instance", color=colors[0])
