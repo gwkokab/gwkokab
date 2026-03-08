@@ -3,6 +3,7 @@
 
 
 import os
+import warnings
 from collections.abc import Callable
 from typing import Any, Dict, List, Tuple, Union
 
@@ -19,7 +20,8 @@ from gwkanal.core.guru import Guru, guru_arg_parser
 from gwkanal.utils.common import read_json
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
-from gwkokab.utils.tools import error_if, warn_if
+from gwkokab.utils.exceptions import LoggedUserWarning
+from gwkokab.utils.tools import error_if
 
 
 _INFERENCE_DIRECTORY = "numpyro_" + INFERENCE_DIRECTORY
@@ -64,10 +66,10 @@ def _run_mcmc(
 ):
     n_devices = jax.device_count()
     if (chain_method := mcmc_cfg.pop("chain_method")) != "parallel" and n_devices > 1:
-        warn_if(
-            True,
-            msg=f"Multiple devices detected ({n_devices}), but chain_method is set to "
+        warnings.warn(
+            f"Multiple devices detected ({n_devices}), but chain_method is set to "
             f"'{chain_method}'. Overriding to 'parallel'.",
+            LoggedUserWarning,
         )
         chain_method = "parallel"
 

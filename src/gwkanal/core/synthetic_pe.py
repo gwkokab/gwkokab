@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections.abc import Callable
 from pathlib import Path
@@ -17,7 +18,8 @@ from gwkanal.utils.common import read_json
 from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
 from gwkokab.parameters import default_relation_mesh, Parameters
-from gwkokab.utils.tools import error_if, warn_if
+from gwkokab.utils.exceptions import LoggedUserWarning
+from gwkokab.utils.tools import error_if
 
 
 ErrorFunctionRegistryType: TypeAlias = dict[
@@ -111,10 +113,10 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         data_stack = np.stack([posterior[p] for p in params], axis=-1)
         data_stack = data_stack[~np.any(np.isnan(data_stack), axis=-1)]
         if data_stack.shape[0] == 0:
-            warn_if(
-                True,
-                msg=f"All posterior samples for event {index} contain NaNs. "
+            warnings.warn(
+                f"All posterior samples for event {index} contain NaNs. "
                 "No data will be saved for this event.",
+                LoggedUserWarning,
             )
             return
 
@@ -265,10 +267,10 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
         compression_args = {"compression": "gzip", "compression_opts": 9}
         with h5py.File(self.filename, "a") as ef:
             if self.waveform_name in ef:
-                warn_if(
-                    True,
-                    msg=f"Group '{self.waveform_name}' already exists in {self.filename}. "
+                warnings.warn(
+                    f"Group '{self.waveform_name}' already exists in {self.filename}. "
                     "Overwriting existing data.",
+                    LoggedUserWarning,
                 )
                 del ef[self.waveform_name]
 

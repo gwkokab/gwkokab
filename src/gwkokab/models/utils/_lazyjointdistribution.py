@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import warnings
 from collections.abc import Sequence
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
@@ -12,7 +13,8 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
 
-from ...utils.tools import error_if, warn_if
+from gwkokab.utils.exceptions import LoggedUserWarning
+from gwkokab.utils.tools import error_if
 
 
 class _LazyConstraint(constraints.Constraint):
@@ -156,11 +158,12 @@ class LazyJointDistribution(Distribution):
             len(partial_order) != len(dependencies),
             msg="`partial_order` and `dependencies` must have the same length.",
         )
-        warn_if(
-            flatten_method is not None,
-            msg="The `flatten_method` argument is not used with in "
-            "`LazyJointDistribution`. It will be ignored.",
-        )
+        if flatten_method is not None:
+            warnings.warn(
+                "The `flatten_method` argument is not used with in "
+                "`LazyJointDistribution`. It will be ignored.",
+                LoggedUserWarning,
+            )
 
         # TODO(Qazalbash): Implement flattening logic
         # marginal_flatten = _flatten_marginal_distributions(

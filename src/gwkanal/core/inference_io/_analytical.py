@@ -3,6 +3,7 @@
 
 
 import glob
+import warnings
 from pathlib import Path
 from typing import Callable, NamedTuple, Optional
 
@@ -12,14 +13,15 @@ from loguru import logger
 from pydantic import BaseModel, Field
 
 from gwkanal.utils.common import read_json
-from gwkokab.utils.tools import error_if, warn_if
+from gwkokab.utils.exceptions import LoggedUserWarning
+from gwkokab.utils.tools import error_if
 
 
 def _extract_transform(path: Optional[str]) -> Callable:
     if path is None:
-        warn_if(
-            True,
-            msg="No 'transform_module_path' provided. Using identity transform.",
+        warnings.warn(
+            "No 'transform_module_path' provided. Using identity transform.",
+            LoggedUserWarning,
         )
         return lambda x: x
 
@@ -164,9 +166,9 @@ class AnalyticalPELoader(BaseModel):
             try:
                 scale = group["scale"][()]
             except KeyError:
-                warn_if(
-                    True,
-                    msg=f"'scale' dataset not found in '{filename}'. Defaulting to ones.",
+                warnings.warn(
+                    f"'scale' dataset not found in '{filename}'. Defaulting to ones.",
+                    LoggedUserWarning,
                 )
                 scale = np.ones_like(mu)
 
@@ -248,8 +250,9 @@ class AnalyticalPELoader(BaseModel):
     ):
         """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(coords)
-        warn_if(
-            missing != set(),
-            msg=f"File '{event}' is missing required columns: {missing}. "
-            "Use transform to map existing columns to the required ones or check the file format.",
-        )
+        if missing != set():
+            warnings.warn(
+                f"File '{event}' is missing required columns: {missing}. "
+                "Use transform to map existing columns to the required ones or check the file format.",
+                LoggedUserWarning,
+            )
