@@ -62,6 +62,7 @@ class NPowerlawMGaussianCore:
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
+        use_eccentricity_powerlaw: bool,
         use_redshift: bool,
         use_cos_iota: bool,
         use_phi_12: bool,
@@ -82,6 +83,7 @@ class NPowerlawMGaussianCore:
         self.use_truncated_normal_chi_p = use_truncated_normal_chi_p
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
+        self.use_eccentricity_powerlaw = use_eccentricity_powerlaw
         self.use_redshift = use_redshift
         self.use_cos_iota = use_cos_iota
         self.use_phi_12 = use_phi_12
@@ -105,6 +107,7 @@ class NPowerlawMGaussianCore:
                 "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
                 "use_tilt": self.use_tilt,
                 "use_eccentricity_mixture": self.use_eccentricity_mixture,
+                "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
                 "use_redshift": self.use_redshift,
                 "use_cos_iota": self.use_cos_iota,
                 "use_phi_12": self.use_phi_12,
@@ -139,7 +142,7 @@ class NPowerlawMGaussianCore:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
         if self.use_phi_12:
             names.append(P.PHI_12)
-        if self.use_eccentricity_mixture:
+        if self.use_eccentricity_mixture or self.use_eccentricity_powerlaw:
             names.append(P.ECCENTRICITY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
@@ -393,6 +396,18 @@ class NPowerlawMGaussianCore:
                 ]
             )
 
+        if self.use_eccentricity_powerlaw:
+            all_params.extend(
+                [
+                    (P.ECCENTRICITY + "_alpha_g", self.N_g),
+                    (P.ECCENTRICITY + "_alpha_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_high_g", self.N_g),
+                    (P.ECCENTRICITY + "_high_pl", self.N_pl),
+                    (P.ECCENTRICITY + "_low_g", self.N_g),
+                    (P.ECCENTRICITY + "_low_pl", self.N_pl),
+                ]
+            )
+
         if self.use_redshift:
             all_params.extend(
                 [
@@ -547,6 +562,11 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         "--add-eccentricity-mixture",
         action="store_true",
         help="Include truncated normal eccentricity in the model.",
+    )
+    model_group.add_argument(
+        "--add-eccentricity-powerlaw",
+        action="store_true",
+        help="Include power-law eccentricity in the model.",
     )
     model_group.add_argument(
         "--add-cos-iota",
