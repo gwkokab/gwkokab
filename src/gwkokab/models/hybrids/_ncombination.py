@@ -656,13 +656,13 @@ def create_generic_powerlaws(
     low_name = parameter_name + "_low_" + component_type
     for i in range(N):
         alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
-        mmin = _get_parameter(params, f"{low_name}_{i}", low_name)
-        mmax = _get_parameter(params, f"{high_name}_{i}", high_name)
+        low = _get_parameter(params, f"{low_name}_{i}", low_name)
+        high = _get_parameter(params, f"{high_name}_{i}", high_name)
 
         powerlaw = DoublyTruncatedPowerLaw(
             alpha=alpha,
-            low=mmin,
-            high=mmax,
+            low=low,
+            high=high,
             validate_args=validate_args,
         )
 
