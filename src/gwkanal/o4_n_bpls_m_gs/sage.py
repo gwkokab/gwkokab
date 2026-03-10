@@ -35,6 +35,7 @@ class NBrokenPowerlawMGaussianSage(NBrokenPowerlawMGaussianCore, Sage):
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
+        use_eccentricity_powerlaw: bool,
         use_redshift: bool,
         likelihood_fn: Callable[
             [
@@ -71,6 +72,7 @@ class NBrokenPowerlawMGaussianSage(NBrokenPowerlawMGaussianCore, Sage):
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
         )
 
@@ -127,6 +129,7 @@ def f_main() -> None:
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
         data_loader=data_loader,
@@ -166,6 +169,7 @@ def n_main() -> None:
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
         data_loader=data_loader,

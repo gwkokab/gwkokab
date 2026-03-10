@@ -558,16 +558,19 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include redshift parameter in the model",
     )
-    model_group.add_argument(
+
+    eccentricity_group = model_group.add_mutually_exclusive_group()
+    eccentricity_group.add_argument(
         "--add-eccentricity-mixture",
         action="store_true",
         help="Include truncated normal eccentricity in the model.",
     )
-    model_group.add_argument(
+    eccentricity_group.add_argument(
         "--add-eccentricity-powerlaw",
         action="store_true",
-        help="Include power-law eccentricity in the model.",
+        help="Include power law eccentricity in the model.",
     )
+
     model_group.add_argument(
         "--add-cos-iota",
         action="store_true",
