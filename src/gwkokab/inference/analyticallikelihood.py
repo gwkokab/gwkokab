@@ -74,17 +74,20 @@ def analytical_likelihood(
         T_obs = pmean_kwargs["T_obs"]
         master_key = data["key"]
 
-        n_events, n_dim = mean_stack.shape
+        n_events, _ = mean_stack.shape
 
         params = {name: x[i] for name, i in variables_index.items()}
         model_instance = dist_fn(**constant_params, **params)
 
-        samples = mvn_samples(mean_stack, scale_tril_stack, n_samples, master_key)
+        samples = (
+            mvn_samples(mean_stack, scale_tril_stack, n_samples, master_key)
+            / scale_stack
+        )
 
         mask = jnp.all((lb <= samples) & (samples <= ub), axis=-1)
         safe_samples = jnp.where(mask[..., jnp.newaxis], samples, 0.5 * (lb + ub))
 
-        transformed_samples = analytical_to_model_coord_fn(safe_samples / scale_stack)
+        transformed_samples = analytical_to_model_coord_fn(safe_samples)
 
         mask &= model_instance.support.check(transformed_samples)
 
