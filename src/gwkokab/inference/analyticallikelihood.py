@@ -86,7 +86,7 @@ def analytical_likelihood(
 
         transformed_samples = analytical_to_model_coord_fn(safe_samples / scale_stack)
 
-        mask &= model_instance.support.check(samples)
+        mask &= model_instance.support.check(transformed_samples)
 
         safe_transformed = jnp.where(
             mask[..., jnp.newaxis],
