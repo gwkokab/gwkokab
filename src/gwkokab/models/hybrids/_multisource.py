@@ -18,11 +18,11 @@ from ..utils import (
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
+    create_gaussian_primary_mass_ratio,
     create_gwtc4_effective_spin_skew_normal_models,
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift,
     create_smoothed_broken_powerlaws_mass_ratio_powerlaw,
-    create_smoothed_gaussian_primary_mass_ratio,
     create_spin_magnitude_mixture_models,
     create_truncated_normal_distributions,
     create_two_truncated_normal_mixture,
@@ -32,7 +32,7 @@ from ._ncombination import (
 
 def _build_non_mass_distributions(
     N: int,
-    component_type: Literal["sbpl", "sgpl", "gg"],
+    component_type: Literal["sbpl", "gpl", "gg"],
     mass_distributions: List[Distribution],
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
@@ -64,8 +64,8 @@ def _build_non_mass_distributions(
     ----------
     N : int
         Number of components
-    component_type : Literal["sbpl", "sgpl", "gg"]
-        type of component, either "sbpl", "sgpl", or "gg"
+    component_type : Literal["sbpl", "gpl", "gg"]
+        type of component, either "sbpl", "gpl", or "gg"
     mass_distributions : List[Distribution]
         list of mass distributions
     use_spin : bool
@@ -158,7 +158,7 @@ def _build_non_mass_distributions(
 
 def _build_component_distributions(
     N: int,
-    component_type: Literal["sbpl", "sgpl", "gg"],
+    component_type: Literal["sbpl", "gpl", "gg"],
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
     use_truncated_normal_spin_x: bool,
@@ -239,8 +239,8 @@ def _build_component_distributions(
             is_leaf=lambda x: isinstance(x, ExtendedSupportTransformedDistribution),
         )
 
-    if component_type == "sgpl":
-        powerlaws = create_smoothed_gaussian_primary_mass_ratio(
+    if component_type == "gpl":
+        powerlaws = create_gaussian_primary_mass_ratio(
             N=N, params=params, validate_args=validate_args
         )
         mass_distributions = jtr.map(
@@ -309,7 +309,7 @@ def _build_component_distributions(
 
 def MultiSourceModel(
     N_sbpl: int,
-    N_sgpl: int,
+    N_gpl: int,
     N_gg: int,
     use_beta_spin_magnitude: bool = False,
     use_spin_magnitude_mixture: bool = False,
@@ -336,93 +336,37 @@ def MultiSourceModel(
     validate_args=None,
     **params,
 ) -> ScaledMixture:
-    sbpl_component_dist = _build_component_distributions(
-        N=N_sbpl,
-        component_type="sbpl",
-        use_beta_spin_magnitude=use_beta_spin_magnitude,
-        use_spin_magnitude_mixture=use_spin_magnitude_mixture,
-        use_truncated_normal_spin_x=use_truncated_normal_spin_x,
-        use_truncated_normal_spin_y=use_truncated_normal_spin_y,
-        use_truncated_normal_spin_z=use_truncated_normal_spin_z,
-        use_chi_eff_mixture=use_chi_eff_mixture,
-        use_skew_normal_chi_eff=use_skew_normal_chi_eff,
-        use_truncated_normal_chi_p=use_truncated_normal_chi_p,
-        use_tilt=use_tilt,
-        use_eccentricity_mixture=use_eccentricity_mixture,
-        use_redshift=use_redshift,
-        use_cos_iota=use_cos_iota,
-        use_phi_12=use_phi_12,
-        use_polarization_angle=use_polarization_angle,
-        use_right_ascension=use_right_ascension,
-        use_sin_declination=use_sin_declination,
-        use_detection_time=use_detection_time,
-        use_phi_1=use_phi_1,
-        use_phi_2=use_phi_2,
-        use_phi_orb=use_phi_orb,
-        use_mean_anomaly=use_mean_anomaly,
-        params=params,
-        validate_args=validate_args,
-    )
+    component_dists = []
+    for component_type, N in zip(["sbpl", "gpl", "gg"], [N_sbpl, N_gpl, N_gg]):
+        component_dists += _build_component_distributions(
+            N=N,
+            component_type=component_type,
+            use_beta_spin_magnitude=use_beta_spin_magnitude,
+            use_spin_magnitude_mixture=use_spin_magnitude_mixture,
+            use_truncated_normal_spin_x=use_truncated_normal_spin_x,
+            use_truncated_normal_spin_y=use_truncated_normal_spin_y,
+            use_truncated_normal_spin_z=use_truncated_normal_spin_z,
+            use_chi_eff_mixture=use_chi_eff_mixture,
+            use_skew_normal_chi_eff=use_skew_normal_chi_eff,
+            use_truncated_normal_chi_p=use_truncated_normal_chi_p,
+            use_tilt=use_tilt,
+            use_eccentricity_mixture=use_eccentricity_mixture,
+            use_redshift=use_redshift,
+            use_cos_iota=use_cos_iota,
+            use_phi_12=use_phi_12,
+            use_polarization_angle=use_polarization_angle,
+            use_right_ascension=use_right_ascension,
+            use_sin_declination=use_sin_declination,
+            use_detection_time=use_detection_time,
+            use_phi_1=use_phi_1,
+            use_phi_2=use_phi_2,
+            use_phi_orb=use_phi_orb,
+            use_mean_anomaly=use_mean_anomaly,
+            params=params,
+            validate_args=validate_args,
+        )
 
-    sgpl_component_dist = _build_component_distributions(
-        N=N_sgpl,
-        component_type="sgpl",
-        use_beta_spin_magnitude=use_beta_spin_magnitude,
-        use_spin_magnitude_mixture=use_spin_magnitude_mixture,
-        use_truncated_normal_spin_x=use_truncated_normal_spin_x,
-        use_truncated_normal_spin_y=use_truncated_normal_spin_y,
-        use_truncated_normal_spin_z=use_truncated_normal_spin_z,
-        use_chi_eff_mixture=use_chi_eff_mixture,
-        use_skew_normal_chi_eff=use_skew_normal_chi_eff,
-        use_truncated_normal_chi_p=use_truncated_normal_chi_p,
-        use_tilt=use_tilt,
-        use_eccentricity_mixture=use_eccentricity_mixture,
-        use_redshift=use_redshift,
-        use_cos_iota=use_cos_iota,
-        use_phi_12=use_phi_12,
-        use_polarization_angle=use_polarization_angle,
-        use_right_ascension=use_right_ascension,
-        use_sin_declination=use_sin_declination,
-        use_detection_time=use_detection_time,
-        use_phi_1=use_phi_1,
-        use_phi_2=use_phi_2,
-        use_phi_orb=use_phi_orb,
-        use_mean_anomaly=use_mean_anomaly,
-        params=params,
-        validate_args=validate_args,
-    )
-
-    gg_component_dist = _build_component_distributions(
-        N=N_gg,
-        component_type="gg",
-        use_beta_spin_magnitude=use_beta_spin_magnitude,
-        use_spin_magnitude_mixture=use_spin_magnitude_mixture,
-        use_truncated_normal_spin_x=use_truncated_normal_spin_x,
-        use_truncated_normal_spin_y=use_truncated_normal_spin_y,
-        use_truncated_normal_spin_z=use_truncated_normal_spin_z,
-        use_chi_eff_mixture=use_chi_eff_mixture,
-        use_skew_normal_chi_eff=use_skew_normal_chi_eff,
-        use_truncated_normal_chi_p=use_truncated_normal_chi_p,
-        use_tilt=use_tilt,
-        use_eccentricity_mixture=use_eccentricity_mixture,
-        use_redshift=use_redshift,
-        use_cos_iota=use_cos_iota,
-        use_phi_12=use_phi_12,
-        use_polarization_angle=use_polarization_angle,
-        use_right_ascension=use_right_ascension,
-        use_sin_declination=use_sin_declination,
-        use_detection_time=use_detection_time,
-        use_phi_1=use_phi_1,
-        use_phi_2=use_phi_2,
-        use_phi_orb=use_phi_orb,
-        use_mean_anomaly=use_mean_anomaly,
-        params=params,
-        validate_args=validate_args,
-    )
-
-    component_dists = sbpl_component_dist + sgpl_component_dist + gg_component_dist
-
-    N = N_sbpl + N_sgpl + N_gg
+    N = N_sbpl + N_gpl + N_gg
     log_rates = jnp.stack([params[f"log_rate_{i}"] for i in range(N)], axis=-1)
 
     return ScaledMixture(
