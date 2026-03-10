@@ -98,7 +98,6 @@ def set_log_level() -> None:
     logger.add(
         log_filename,
         level=log_level,
-        colorize=True,
         format=ft.partial(custom_format, show_path=GWKOKAB_DEBUG),
     )
 
