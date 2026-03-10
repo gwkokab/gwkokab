@@ -82,7 +82,7 @@ def analytical_likelihood(
         samples = mvn_samples(mean_stack, scale_tril_stack, n_samples, master_key)
 
         mask = jnp.all((lb <= samples) & (samples <= ub), axis=-1)
-        safe_samples = jnp.where(mask, samples, 0.5 * (lb + ub))
+        safe_samples = jnp.where(mask[..., jnp.newaxis], samples, 0.5 * (lb + ub))
 
         transformed_samples = analytical_to_model_coord_fn(safe_samples / scale_stack)
 
