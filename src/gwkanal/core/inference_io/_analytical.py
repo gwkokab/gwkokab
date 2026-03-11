@@ -41,7 +41,7 @@ def _extract_function(
     custom_module = importlib.util.module_from_spec(spec)  # type: ignore
     spec.loader.exec_module(custom_module)  # type: ignore
 
-    if not hasattr(custom_module, "fn_name"):
+    if not hasattr(custom_module, fn_name):
         raise LoggedValueError(f"The custom module must have a '{fn_name}' function.")
 
     fn: Callable = getattr(custom_module, fn_name)
