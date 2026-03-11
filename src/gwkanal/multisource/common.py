@@ -182,6 +182,7 @@ class MultiSourceModelCore:
             ("m1_loc_gg", self.N_gg),
             ("m1_low_gg", self.N_gg),
             ("m1_scale_gg", self.N_gg),
+            ("m1min_sbpl", self.N_sbpl),
             ("m2_high_gg", self.N_gg),
             ("m2_loc_gg", self.N_gg),
             ("m2_low_gg", self.N_gg),
