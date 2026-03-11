@@ -18,8 +18,8 @@ from ..utils import (
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
-    create_generic_powerlaws,
     create_gaussian_primary_mass_ratio,
+    create_generic_powerlaws,
     create_gwtc4_effective_spin_skew_normal_models,
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift,
