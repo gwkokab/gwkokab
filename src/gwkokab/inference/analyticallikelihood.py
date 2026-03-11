@@ -99,7 +99,7 @@ def analytical_likelihood(
         )
 
         log_abs_det_jacobian = log_abs_det_jacobian_analytical_to_model_coord_fn(
-            safe_samples, transformed_samples
+            safe_samples, safe_transformed
         )
         log_weights = jnp.where(
             mask,
