@@ -38,6 +38,7 @@ __all__ = [
     "combine_distributions",
     "create_beta_distributions",
     "create_broken_powerlaws",
+    "create_generic_powerlaws",
     "create_gaussian_primary_mass_ratio",
     "create_gwtc4_effective_spin_skew_normal_models",
     "create_independent_spin_orientation_gaussian_isotropic",
@@ -612,6 +613,58 @@ def create_powerlaws(
             alpha=-alpha,
             low=mmin,
             high=mmax,
+            validate_args=validate_args,
+        )
+
+        powerlaws_collection.append(powerlaw)
+    return powerlaws_collection
+
+
+def create_generic_powerlaws(
+    N: int,
+    parameter_name: str,
+    component_type: str,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of Distribution for powerlaws.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : str
+        The name of the parameter.
+    component_type : str
+        The type of component.
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of Distribution for powerlaws
+
+    Raises
+    ------
+    ValueError
+        if alpha, low, or high is missing
+    """
+    powerlaws_collection = []
+    alpha_name = parameter_name + "_alpha_" + component_type
+    high_name = parameter_name + "_high_" + component_type
+    low_name = parameter_name + "_low_" + component_type
+    for i in range(N):
+        alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
+        low = _get_parameter(params, f"{low_name}_{i}", low_name)
+        high = _get_parameter(params, f"{high_name}_{i}", high_name)
+
+        powerlaw = DoublyTruncatedPowerLaw(
+            alpha=alpha,
+            low=low,
+            high=high,
             validate_args=validate_args,
         )
 

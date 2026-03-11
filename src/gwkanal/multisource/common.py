@@ -72,6 +72,7 @@ class MultiSourceModelCore:
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
+        use_eccentricity_powerlaw: bool,
         use_redshift: bool,
         use_cos_iota: bool,
         use_phi_12: bool,
@@ -91,6 +92,7 @@ class MultiSourceModelCore:
         self.use_chi_eff_mixture = use_chi_eff_mixture
         self.use_skew_normal_chi_eff = use_skew_normal_chi_eff
         self.use_truncated_normal_chi_p = use_truncated_normal_chi_p
+        self.use_eccentricity_powerlaw = use_eccentricity_powerlaw
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_redshift = use_redshift
@@ -117,6 +119,7 @@ class MultiSourceModelCore:
                 "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
                 "use_tilt": self.use_tilt,
                 "use_eccentricity_mixture": self.use_eccentricity_mixture,
+                "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
                 "use_redshift": self.use_redshift,
                 "use_cos_iota": self.use_cos_iota,
                 "use_phi_12": self.use_phi_12,
@@ -151,7 +154,7 @@ class MultiSourceModelCore:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
         if self.use_phi_12:
             names.append(P.PHI_12)
-        if self.use_eccentricity_mixture:
+        if self.use_eccentricity_mixture or self.use_eccentricity_powerlaw:
             names.append(P.ECCENTRICITY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
@@ -492,6 +495,21 @@ class MultiSourceModelCore:
                 ]
             )
 
+        if self.use_eccentricity_powerlaw:
+            all_params.extend(
+                [
+                    (P.ECCENTRICITY + "_alpha_gg", self.N_gg),
+                    (P.ECCENTRICITY + "_alpha_sbpl", self.N_sbpl),
+                    (P.ECCENTRICITY + "_alpha_sgpl", self.N_sgpl),
+                    (P.ECCENTRICITY + "_high_gg", self.N_gg),
+                    (P.ECCENTRICITY + "_high_sbpl", self.N_sbpl),
+                    (P.ECCENTRICITY + "_high_sgpl", self.N_sgpl),
+                    (P.ECCENTRICITY + "_low_gg", self.N_gg),
+                    (P.ECCENTRICITY + "_low_sbpl", self.N_sbpl),
+                    (P.ECCENTRICITY + "_low_sgpl", self.N_sgpl),
+                ]
+            )
+
         if self.use_redshift:
             all_params.extend(
                 [
@@ -670,11 +688,19 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include redshift parameter in the model",
     )
-    model_group.add_argument(
+
+    eccentricity_group = model_group.add_mutually_exclusive_group()
+    eccentricity_group.add_argument(
         "--add-eccentricity-mixture",
         action="store_true",
         help="Include truncated normal eccentricity in the model.",
     )
+    eccentricity_group.add_argument(
+        "--add-eccentricity-powerlaw",
+        action="store_true",
+        help="Include power law eccentricity in the model.",
+    )
+
     model_group.add_argument(
         "--add-cos-iota",
         action="store_true",

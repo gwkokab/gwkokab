@@ -18,6 +18,7 @@ from ..utils import (
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
+    create_generic_powerlaws,
     create_gwtc4_effective_spin_skew_normal_models,
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_primary_mass_ratios,
@@ -43,6 +44,7 @@ def _build_non_mass_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
     use_redshift: bool,
     use_cos_iota: bool,
@@ -73,6 +75,8 @@ def _build_non_mass_distributions(
         whether to include tilt
     use_eccentricity_mixture : bool
         whether to include eccentricity
+    use_eccentricity_powerlaw : bool
+        whether to include eccentricity powerlaw
     use_mean_anomaly : bool
         whether to include mean_anomaly
     use_redshift : bool
@@ -127,6 +131,7 @@ def _build_non_mass_distributions(
         (use_phi_2, P.PHI_2, create_uniform_distributions),
         (use_phi_12, P.PHI_12, create_uniform_distributions),
         (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
+        (use_eccentricity_powerlaw, P.ECCENTRICITY, create_generic_powerlaws),
         (use_mean_anomaly, P.MEAN_ANOMALY, create_uniform_distributions),
         (use_redshift, P.REDSHIFT, create_powerlaw_redshift),
         (use_right_ascension, P.RIGHT_ASCENSION, create_uniform_distributions),
@@ -167,6 +172,7 @@ def _build_pl_component_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
     use_redshift: bool,
     use_cos_iota: bool,
@@ -249,6 +255,7 @@ def _build_pl_component_distributions(
         use_truncated_normal_chi_p=use_truncated_normal_chi_p,
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
+        use_eccentricity_powerlaw=use_eccentricity_powerlaw,
         use_redshift=use_redshift,
         use_cos_iota=use_cos_iota,
         use_phi_12=use_phi_12,
@@ -282,6 +289,7 @@ def _build_g_component_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
     use_redshift: bool,
     use_cos_iota: bool,
@@ -376,6 +384,7 @@ def _build_g_component_distributions(
         use_truncated_normal_chi_p=use_truncated_normal_chi_p,
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
+        use_eccentricity_powerlaw=use_eccentricity_powerlaw,
         use_redshift=use_redshift,
         use_cos_iota=use_cos_iota,
         use_phi_12=use_phi_12,
@@ -410,6 +419,7 @@ def NPowerlawMGaussian(
     use_truncated_normal_chi_p: bool = False,
     use_tilt: bool = False,
     use_eccentricity_mixture: bool = False,
+    use_eccentricity_powerlaw: bool = False,
     use_redshift: bool = False,
     use_cos_iota: bool = False,
     use_phi_12: bool = False,
@@ -557,6 +567,7 @@ def NPowerlawMGaussian(
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
@@ -585,6 +596,7 @@ def NPowerlawMGaussian(
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
