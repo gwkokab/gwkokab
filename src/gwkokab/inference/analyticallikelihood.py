@@ -107,14 +107,19 @@ def analytical_likelihood(
             -jnp.inf,
         )
 
-        log_est = jnn.logsumexp(log_weights, axis=0, where=mask)
+        log_est = (
+            jnn.logsumexp(log_weights, axis=0, where=mask)
+            + ln_offsets
+            - jnp.log(n_samples)
+        )
 
-        total_ln_l = jnp.sum(log_est + ln_offsets)
+        total_ln_l = jnp.sum(log_est)
 
-        log_norm = n_events * (jnp.log(n_samples) - jnp.log(T_obs))
         expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
 
-        ln_post = priors.log_prob(x) + total_ln_l - log_norm - expected_rates
+        ln_post = (
+            priors.log_prob(x) + total_ln_l + n_events * jnp.log(T_obs) - expected_rates
+        )
 
         return jnp.nan_to_num(ln_post, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf)
 
