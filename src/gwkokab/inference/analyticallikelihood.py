@@ -45,6 +45,7 @@ def analytical_likelihood(
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     analytical_to_model_coord_fn: Callable[[Array], Array],
+    log_abs_det_jacobian_analytical_to_model_coord_fn: Callable[[Array, Array], Array],
     n_samples: int = 500,
 ) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
@@ -96,11 +97,17 @@ def analytical_likelihood(
             transformed_samples,
             model_instance.support.feasible_like(transformed_samples),
         )
-        log_p_model = jnp.where(
-            mask, model_instance.log_prob(safe_transformed), -jnp.inf
+
+        log_abs_det_jacobian = log_abs_det_jacobian_analytical_to_model_coord_fn(
+            safe_samples, transformed_samples
+        )
+        log_weights = jnp.where(
+            mask,
+            model_instance.log_prob(safe_transformed) + log_abs_det_jacobian,
+            -jnp.inf,
         )
 
-        log_est = jnn.logsumexp(log_p_model, axis=0, where=jnp.isfinite(log_p_model))
+        log_est = jnn.logsumexp(log_weights, axis=0, where=mask)
 
         total_ln_l = jnp.sum(log_est + ln_offsets)
 
