@@ -27,7 +27,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
     def __init__(
         self,
         N_sbpl: int,
-        N_sgpl: int,
+        N_gpl: int,
         N_gg: int,
         use_beta_spin_magnitude: bool,
         use_spin_magnitude_mixture: bool,
@@ -73,7 +73,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
         MultiSourceModelCore.__init__(
             self,
             N_sbpl=N_sbpl,
-            N_sgpl=N_sgpl,
+            N_gpl=N_gpl,
             N_gg=N_gg,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_spin_magnitude_mixture=use_spin_magnitude_mixture,
@@ -139,7 +139,7 @@ def f_main() -> None:
 
     MultiSourceModelFSage(
         N_sbpl=args.n_sbpl,
-        N_sgpl=args.n_sgpl,
+        N_gpl=args.n_gpl,
         N_gg=args.n_gg,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
@@ -188,7 +188,7 @@ def n_main() -> None:
 
     MultiSourceModelNSage(
         N_sbpl=args.n_sbpl,
-        N_sgpl=args.n_sgpl,
+        N_gpl=args.n_gpl,
         N_gg=args.n_gg,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
