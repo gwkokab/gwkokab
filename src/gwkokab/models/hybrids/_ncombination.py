@@ -17,6 +17,7 @@ from numpyro.distributions import (
 from ...parameters import Parameters as P
 from ..mass import (
     BrokenPowerlaw,
+    GaussianPrimaryMassRatio,
     PowerlawPrimaryMassRatio,
     SmoothedBrokenPowerlawMassRatioPowerlaw,
     SmoothedGaussianPrimaryMassRatio,
@@ -38,6 +39,7 @@ __all__ = [
     "create_beta_distributions",
     "create_broken_powerlaws",
     "create_generic_powerlaws",
+    "create_gaussian_primary_mass_ratio",
     "create_gwtc4_effective_spin_skew_normal_models",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_minimum_tilt_model",
@@ -998,6 +1000,45 @@ def create_smoothed_gaussian_primary_mass_ratio(
 
         distribution = ExtendedSupportTransformedDistribution(
             base_distribution=smoothed_gaussian,
+            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            validate_args=validate_args,
+        )
+
+        collection.append(distribution)
+    return collection
+
+
+def create_gaussian_primary_mass_ratio(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    collection = []
+
+    loc_name = "loc_gpl"
+    scale_name = "scale_gpl"
+    beta_name = "beta_gpl"
+    mmin_name = "mmin_gpl"
+    mmax_name = "mmax_gpl"
+
+    for i in range(N):
+        loc = _get_parameter(params, loc_name + f"_{i}")
+        scale = _get_parameter(params, scale_name + f"_{i}")
+        beta = _get_parameter(params, beta_name + f"_{i}")
+        mmin = _get_parameter(params, mmin_name + f"_{i}")
+        mmax = _get_parameter(params, mmax_name + f"_{i}")
+
+        gaussian = GaussianPrimaryMassRatio(
+            loc=loc,
+            scale=scale,
+            beta=beta,
+            mmin=mmin,
+            mmax=mmax,
+            validate_args=validate_args,
+        )
+
+        distribution = ExtendedSupportTransformedDistribution(
+            base_distribution=gaussian,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,
         )
