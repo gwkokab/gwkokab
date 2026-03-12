@@ -2,13 +2,45 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import functools as ft
 from typing import Any, Callable, Dict
 
+import jax
+import numpy as np
 from jax import nn as jnn, numpy as jnp, random as jrd
 from jaxtyping import Array, PRNGKeyArray
 from numpyro.distributions import Distribution
+from numpyro.distributions.continuous import _batch_mahalanobis, tri_logabsdet
 
 from gwkokab.models.utils import JointDistribution, ScaledMixture
+
+
+LOG_2PI = np.log(2.0 * np.pi)
+
+
+@ft.partial(jax.vmap, in_axes=(0, 0, 1), out_axes=1)
+def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
+    """Compute log probability of a multivariate normal distribution using method from
+    `numpyro.distributions.MultivariateNormal`.
+
+    Parameters
+    ----------
+    loc : Array
+        Mean vector of the multivariate normal distribution.
+    scale_tril : Array
+        Lower-triangular Cholesky factor of the covariance matrix of the multivariate normal distribution.
+    value : Array
+        Value at which to evaluate the log probability.
+
+    Returns
+    -------
+    Array
+        Log probability of the multivariate normal distribution at the given value.
+    """
+    M = _batch_mahalanobis(scale_tril, value - loc)
+    half_log_det = tri_logabsdet(scale_tril)
+    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * LOG_2PI
+    return -0.5 * M - normalize_term
 
 
 def mvn_samples(
@@ -75,22 +107,19 @@ def analytical_likelihood(
         T_obs = pmean_kwargs["T_obs"]
         master_key = data["key"]
 
-        n_events, _ = mean_stack.shape
+        n_events, n_dim = mean_stack.shape
 
         params = {name: x[i] for name, i in variables_index.items()}
         model_instance = dist_fn(**constant_params, **params)
 
-        samples = (
-            mvn_samples(mean_stack, scale_tril_stack, n_samples, master_key)
-            / scale_stack
+        samples = jrd.uniform(
+            master_key, (n_samples, n_events, n_dim), minval=lb, maxval=ub
         )
+        log_prob_q = -jnp.log(ub - lb).sum(axis=-1)
 
-        mask = jnp.all((lb <= samples) & (samples <= ub), axis=-1)
-        safe_samples = jnp.where(mask[..., jnp.newaxis], samples, 0.5 * (lb + ub))
+        transformed_samples = analytical_to_model_coord_fn(samples)
 
-        transformed_samples = analytical_to_model_coord_fn(safe_samples)
-
-        mask &= model_instance.support.check(transformed_samples)
+        mask = model_instance.support.check(transformed_samples)
 
         safe_transformed = jnp.where(
             mask[..., jnp.newaxis],
@@ -99,11 +128,17 @@ def analytical_likelihood(
         )
 
         log_abs_det_jacobian = log_abs_det_jacobian_analytical_to_model_coord_fn(
-            safe_samples, safe_transformed
+            samples, safe_transformed
         )
+
+        log_prob_event = mvn_log_prob(
+            mean_stack, scale_tril_stack, scale_stack * samples
+        )
+        log_prob_model = model_instance.log_prob(safe_transformed)
+
         log_weights = jnp.where(
             mask,
-            model_instance.log_prob(safe_transformed) + log_abs_det_jacobian,
+            log_prob_event + log_prob_model + log_abs_det_jacobian - log_prob_q,
             -jnp.inf,
         )
 
