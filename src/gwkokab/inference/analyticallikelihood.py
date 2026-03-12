@@ -18,31 +18,6 @@ from gwkokab.models.utils import JointDistribution, ScaledMixture
 LOG_2PI = np.log(2.0 * np.pi)
 
 
-@ft.partial(jax.vmap, in_axes=(0, 0, 1), out_axes=1)
-def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
-    """Compute log probability of a multivariate normal distribution using method from
-    `numpyro.distributions.MultivariateNormal`.
-
-    Parameters
-    ----------
-    loc : Array
-        Mean vector of the multivariate normal distribution.
-    scale_tril : Array
-        Lower-triangular Cholesky factor of the covariance matrix of the multivariate normal distribution.
-    value : Array
-        Value at which to evaluate the log probability.
-
-    Returns
-    -------
-    Array
-        Log probability of the multivariate normal distribution at the given value.
-    """
-    M = _batch_mahalanobis(scale_tril, value - loc)
-    half_log_det = tri_logabsdet(scale_tril)
-    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * LOG_2PI
-    return -0.5 * M - normalize_term
-
-
 def mvn_samples(
     loc: Array, scale_tril: Array, n_samples: int, key: PRNGKeyArray
 ) -> Array:
@@ -68,6 +43,31 @@ def mvn_samples(
     num_events, dim = loc.shape
     eps = jrd.normal(key, shape=(n_samples, num_events, dim))
     return loc + jnp.einsum("eij,sej->sei", scale_tril, eps)
+
+
+@ft.partial(jax.vmap, in_axes=(0, 0, 1), out_axes=1)
+def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
+    """Compute log probability of a multivariate normal distribution using method from
+    `numpyro.distributions.MultivariateNormal`.
+
+    Parameters
+    ----------
+    loc : Array
+        Mean vector of the multivariate normal distribution.
+    scale_tril : Array
+        Lower-triangular Cholesky factor of the covariance matrix of the multivariate normal distribution.
+    value : Array
+        Value at which to evaluate the log probability.
+
+    Returns
+    -------
+    Array
+        Log probability of the multivariate normal distribution at the given value.
+    """
+    M = _batch_mahalanobis(scale_tril, value - loc)
+    half_log_det = tri_logabsdet(scale_tril)
+    normalize_term = half_log_det + 0.5 * scale_tril.shape[-1] * LOG_2PI
+    return -0.5 * M - normalize_term
 
 
 def analytical_likelihood(

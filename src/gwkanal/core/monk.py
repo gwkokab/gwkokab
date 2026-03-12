@@ -139,7 +139,9 @@ class Monk(FlowMCBased):
             ]
         )
 
-        ln_offsets = -np.log(np.maximum(upper_cdf - lower_cdf, 1e-10))
+        log_det_scale = np.sum(np.log(scale_stack), axis=1)
+
+        ln_offsets = log_det_scale - np.log(np.maximum(upper_cdf - lower_cdf, 1e-10))
 
         logger.info("ln_offsets.shape: {shape}", shape=ln_offsets.shape)
         logger.info("lower_bounds.shape: {shape}", shape=lower_bounds.shape)
