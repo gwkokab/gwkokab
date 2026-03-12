@@ -70,52 +70,6 @@ def mvn_log_prob(loc: Array, scale_tril: Array, value: Array) -> Array:
     return -0.5 * M - normalize_term
 
 
-def cholesky_decomposition(covariance_matrix: Array) -> Array:
-    """Compute the Cholesky decomposition of a covariance matrix.
-
-    Parameters
-    ----------
-    covariance_matrix : Array
-        Covariance matrix to decompose.
-
-    Returns
-    -------
-    Array
-        Lower-triangular Cholesky factor of the covariance matrix.
-    """
-    return jnp.linalg.cholesky(covariance_matrix)
-
-
-def _importance_sample_log_prob(
-    model_instance: Distribution,
-    samples: Array,
-    ms: Array,
-    sts: Array,
-    ss: Array,
-    log_q: Array,
-    coord_fn: Callable[[Array], Array],
-) -> Array:
-    """Helper to compute model log-probs and importance weights for a given sample
-    set.
-    """
-    transformed = coord_fn(samples)
-    mask = model_instance.support.check(transformed)
-
-    # Safe evaluation of model log-prob
-    safe_transformed = jnp.where(
-        mask[..., jnp.newaxis],
-        transformed,
-        model_instance.support.feasible_like(transformed),
-    )
-    log_p_model = jnp.where(mask, model_instance.log_prob(safe_transformed), -jnp.inf)
-
-    # Event-specific log-prob (MVN)
-    log_p_event = mvn_log_prob(ms, sts, ss * samples)
-
-    # Importance weights: log(p_model * p_event / q)
-    return log_p_model + log_p_event - log_q
-
-
 def analytical_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
@@ -123,6 +77,7 @@ def analytical_likelihood(
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     analytical_to_model_coord_fn: Callable[[Array], Array],
+    log_abs_det_jacobian_analytical_to_model_coord_fn: Callable[[Array, Array], Array],
     n_samples: int = 500,
 ) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""Compute the analytical likelihood function for a model given its parameters.
@@ -157,28 +112,49 @@ def analytical_likelihood(
         params = {name: x[i] for name, i in variables_index.items()}
         model_instance = dist_fn(**constant_params, **params)
 
-        u1_samples = jrd.uniform(
+        samples = jrd.uniform(
             master_key, (n_samples, n_events, n_dim), minval=lb, maxval=ub
         )
-        log_q1 = -jnp.log(ub - lb).sum(axis=-1)
+        log_prob_q = -jnp.log(ub - lb).sum(axis=-1)
 
-        log_w1 = _importance_sample_log_prob(
-            model_instance,
-            u1_samples,
-            mean_stack,
-            scale_tril_stack,
-            scale_stack,
-            log_q1,
-            analytical_to_model_coord_fn,
+        transformed_samples = analytical_to_model_coord_fn(samples)
+
+        mask = model_instance.support.check(transformed_samples)
+
+        safe_transformed = jnp.where(
+            mask[..., jnp.newaxis],
+            transformed_samples,
+            model_instance.support.feasible_like(transformed_samples),
         )
-        log_est_u1 = jnn.logsumexp(log_w1, axis=0, where=jnp.isfinite(log_w1))
 
-        total_ln_l = jnp.sum(log_est_u1 + ln_offsets)
+        log_abs_det_jacobian = log_abs_det_jacobian_analytical_to_model_coord_fn(
+            samples, safe_transformed
+        )
 
-        log_norm = n_events * (jnp.log(n_samples) - jnp.log(T_obs))
+        log_prob_event = mvn_log_prob(
+            mean_stack, scale_tril_stack, scale_stack * samples
+        )
+        log_prob_model = model_instance.log_prob(safe_transformed)
+
+        log_weights = jnp.where(
+            mask,
+            log_prob_event + log_prob_model + log_abs_det_jacobian - log_prob_q,
+            -jnp.inf,
+        )
+
+        log_est = (
+            jnn.logsumexp(log_weights, axis=0, where=mask)
+            + ln_offsets
+            - jnp.log(n_samples)
+        )
+
+        total_ln_l = jnp.sum(log_est)
+
         expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
 
-        ln_post = priors.log_prob(x) + total_ln_l - log_norm - expected_rates
+        ln_post = (
+            priors.log_prob(x) + total_ln_l + n_events * jnp.log(T_obs) - expected_rates
+        )
 
         return jnp.nan_to_num(ln_post, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf)
 
