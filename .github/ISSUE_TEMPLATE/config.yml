@@ -2,9 +2,9 @@ blank_issues_enabled: true
 
 contact_links:
   - name: "Questions & Support"
-    url: https://github.com/gwkokab/gwkokab/discussions
+    url: https://github.com/gwkashf/gwkokab/discussions
     about: "If you're unsure if something is a bug, please ask here first."
 
   - name: "Community Feedback"
-    url: https://github.com/gwkokab/gwkokab/discussions/139
+    url: https://github.com/gwkashf/gwkokab/discussions/139
     about: "A central location for kind words, success stories, or general feedback about GWKokab."

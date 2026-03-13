@@ -192,10 +192,10 @@ Epoch 500/500, Loss: 3.58511E-07, Val Loss: 4.70954E-07: 100%|██████
 Epoch 500/500, Loss: 3.58511E-07, Val Loss: 4.70954E-07: 100%|█████████████████████| 500/500 [03:11<00:00,  2.62epochs/s, epoch=500, loss=3.21778E-07]
 ```
 
-<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/training_mlp/model_checkpoint.hdf5_loss.png"/>
-<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/training_mlp/model_checkpoint.hdf5_total_loss.png"/>
+<img src="https://raw.githubusercontent.com/gwkashf/hello-gwkokab/refs/heads/main/training_mlp/model_checkpoint.hdf5_loss.png"/>
+<img src="https://raw.githubusercontent.com/gwkashf/hello-gwkokab/refs/heads/main/training_mlp/model_checkpoint.hdf5_total_loss.png"/>
 
 All the code and files used in this tutorial can be found in
 [hello-gwkokab/training_mlp][REPRODUCIBILITY_LINK].
 
-[REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/tree/main/training_mlp
+[REPRODUCIBILITY_LINK]: https://github.com/gwkashf/hello-gwkokab/tree/main/training_mlp

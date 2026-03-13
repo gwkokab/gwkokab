@@ -104,10 +104,10 @@ name = "jax"
 url = "https://storage.googleapis.com/jax-releases/jax_releases.html"
 
 [project.urls]
-Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
-Discussion = "https://github.com/gwkokab/gwkokab/discussions"
-Homepage = "https://github.com/gwkokab/gwkokab"
-Issues = "https://github.com/gwkokab/gwkokab/issues"
+Changelog = "https://github.com/gwkashf/gwkokab/blob/main/CHANGELOG.md"
+Discussion = "https://github.com/gwkashf/gwkokab/discussions"
+Homepage = "https://github.com/gwkashf/gwkokab"
+Issues = "https://github.com/gwkashf/gwkokab/issues"
 
 [project.scripts]
 # GWKokab plotting scripts
