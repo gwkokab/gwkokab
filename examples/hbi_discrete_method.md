@@ -45,7 +45,7 @@ $$
 
 User can provide any NumPyro distribution which takes only scalar parameters. Their json
 representation is saved in
-[`priors.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/prior.json),
+[`priors.json`](https://github.com/gwkashf/hello-gwkokab/blob/main/hbi_discrete_method/prior.json),
 
 ```json
 {
@@ -114,7 +114,7 @@ and
 for more details on the available configurations.
 
 These configurations are saved in
-[`numpyro_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/numpyro_config.json).
+[`numpyro_config.json`](https://github.com/gwkashf/hello-gwkokab/blob/main/hbi_discrete_method/numpyro_config.json).
 Then you can run the following command to perform Hierarchical Bayesian Inference using
 NumPyro NUTS sampler.
 
@@ -145,7 +145,7 @@ n_sage_n_pls_m_gs \
 
 Similarly, we can use Normalizing flows enhanced MALA (FlowMC) as the MCMC sampler.
 The configuration for FlowMC is also provided through a json file and saved in
-[`flowMC_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/flowMC_config.json).
+[`flowMC_config.json`](https://github.com/gwkashf/hello-gwkokab/blob/main/hbi_discrete_method/flowMC_config.json).
 We will talk about the various configurations in detail in another tutorial.
 
 ```json
@@ -226,15 +226,15 @@ Sat Nov  1 16:23:27 2025
 
 ### FlowMC Results
 
-<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_flowMC/nf_samples_unweighted.png"/>
+<img src="https://raw.githubusercontent.com/gwkashf/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_flowMC/nf_samples_unweighted.png"/>
 
 ### NumPyro Results
 
-<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_numpyro/samples.png"/>
+<img src="https://raw.githubusercontent.com/gwkashf/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_numpyro/samples.png"/>
 
 ---
 
 All the code and files used in this tutorial can be found in
 [hello-gwkokab/hbi_discrete_method][REPRODUCIBILITY_LINK].
 
-[REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method
+[REPRODUCIBILITY_LINK]: https://github.com/gwkashf/hello-gwkokab/blob/main/hbi_discrete_method

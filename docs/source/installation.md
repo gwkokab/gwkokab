@@ -77,7 +77,7 @@ You must have [GNU Make](https://www.gnu.org/software/make/) and [UV][UV] instal
 Clone the repository and navigate to the project directory:
 
 ```bash
-git clone https://github.com/gwkokab/gwkokab.git
+git clone https://github.com/gwkashf/gwkokab.git
 cd gwkokab
 ```
 
@@ -123,7 +123,7 @@ See [JAX's official documentation](https://docs.jax.dev/en/latest/installation.h
 :::{tab-item} TPU ☄️
 :sync: tpu
 
-TPU is the least tested hardware configuration for [GWKokab][GWKokab]. If you face any issues, please report them on our [GitHub Issues](https://github.com/gwkokab/gwkokab/issues).
+TPU is the least tested hardware configuration for [GWKokab][GWKokab]. If you face any issues, please report them on our [GitHub Issues](https://github.com/gwkashf/gwkokab/issues).
 
 ```{code-block} bash
 make install PIP_FLAGS=--upgrade EXTRA=tpu
@@ -135,6 +135,6 @@ See [JAX's official documentation](https://docs.jax.dev/en/latest/installation.h
 
 ::::
 
-[GWKokab]: https://github.com/gwkokab/gwkokab
+[GWKokab]: https://github.com/gwkashf/gwkokab
 [PyPI]: https://pypi.org/project/gwkokab/
 [UV]: https://docs.astral.sh/uv/

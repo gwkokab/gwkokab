@@ -1,3 +1,3 @@
 # Change log
 
-Best view [here](https://github.com/gwkokab/gwkokab/releases).
+Best view [here](https://github.com/gwkashf/gwkokab/releases).

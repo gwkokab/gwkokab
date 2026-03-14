@@ -3,7 +3,7 @@ sphinx-quickstart on Sun Jul  7 22:40:56 2024.
 You can adapt this file completely to your liking, but it should at least
 contain the root `toctree` directive. -->
 
-<!-- :github_url: <https://github.com/gwkokab/gwkokab> -->
+<!-- :github_url: <https://github.com/gwkashf/gwkokab> -->
 
 # GWKokab documentation
 
@@ -56,10 +56,10 @@ dev_docs
 :caption: Links
 :hidden:
 
-GitHub Repository <https://github.com/gwkokab/gwkokab>
-Changelog <https://github.com/gwkokab/gwkokab/releases>
+GitHub Repository <https://github.com/gwkashf/gwkokab>
+Changelog <https://github.com/gwkashf/gwkokab/releases>
 ```
 
-[GWKokab]: https://github.com/gwkokab/gwkokab
+[GWKokab]: https://github.com/gwkashf/gwkokab
 [JAX]: https://github.com/jax-ml/jax
 [flowMC]: https://github.com/kazewong/flowMC
