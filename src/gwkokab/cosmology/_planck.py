@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import functools
 import os
 from types import MappingProxyType
 from typing import Final
@@ -41,18 +40,15 @@ COSMOLOGY_REGISTRY: Final = MappingProxyType(
 )
 
 
-@functools.lru_cache(maxsize=1)
+if (
+    name := os.environ.get("GWKOKAB_DEFAULT_COSMOLOGY", "Planck15")
+) not in COSMOLOGY_REGISTRY:
+    raise LoggedValueError(
+        f"Invalid or unavailable cosmology: GWKOKAB_DEFAULT_COSMOLOGY={name}. "
+        f"Available options: {list(COSMOLOGY_REGISTRY.keys())}"
+    )
+
+
 def default_cosmology() -> Cosmology:
-    """Returns the default cosmology based on GWKOKAB_DEFAULT_COSMOLOGY.
-
-    Cached for JIT performance.
-    """
-    name = os.environ.get("GWKOKAB_DEFAULT_COSMOLOGY", "Planck15")
-
-    if name not in COSMOLOGY_REGISTRY:
-        raise LoggedValueError(
-            f"Invalid or unavailable cosmology: GWKOKAB_DEFAULT_COSMOLOGY={name}. "
-            f"Available options: {list(COSMOLOGY_REGISTRY.keys())}"
-        )
-
+    """Returns the default cosmology based on GWKOKAB_DEFAULT_COSMOLOGY."""
     return COSMOLOGY_REGISTRY[name]()
