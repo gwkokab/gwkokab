@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field, PositiveInt
 
 from gwkanal.core.utils import from_structured
 from gwkanal.utils.common import read_json
-from gwkokab.cosmology import Cosmology, PLANCK_2015_Cosmology
+from gwkokab.cosmology import Cosmology, default_cosmology
 from gwkokab.parameters import Parameters as P
 from gwkokab.poisson_mean._injection_based_helper import (
     aligned_spin_prior,
@@ -220,7 +220,7 @@ class DiscretePELoader(BaseModel):
         }
 
         posterior_columns = [self.parameter_aliases.get(p, p) for p in parameters]
-        cosmo = PLANCK_2015_Cosmology()
+        cosmo = default_cosmology()
         data_list, log_prior_list = [], []
 
         for i, event_path in enumerate(self.filenames):

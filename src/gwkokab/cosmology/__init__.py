@@ -7,6 +7,7 @@
 
 from ._cosmology import Cosmology as Cosmology
 from ._planck import (
+    default_cosmology as default_cosmology,
     PLANCK_2015_Cosmology as PLANCK_2015_Cosmology,
     PLANCK_2018_Cosmology as PLANCK_2018_Cosmology,
 )
