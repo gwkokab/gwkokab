@@ -5,6 +5,7 @@
 import glob
 import warnings
 from pathlib import Path
+from types import ModuleType
 from typing import Callable, NamedTuple, Optional
 
 import h5py
@@ -22,15 +23,9 @@ from gwkokab.utils.exceptions import (
 )
 
 
-def _extract_function(
-    path: Optional[str], fn_name: str, default_fn: Callable
-) -> Callable:
+def _load_module(path: Optional[str]) -> Optional[ModuleType]:
     if path is None:
-        warnings.warn(
-            "No function module path provided. Using identity transform.",
-            LoggedUserWarning,
-        )
-        return default_fn
+        return None
 
     import importlib.util
 
@@ -40,11 +35,23 @@ def _extract_function(
 
     custom_module = importlib.util.module_from_spec(spec)  # type: ignore
     spec.loader.exec_module(custom_module)  # type: ignore
+    return custom_module
 
-    if not hasattr(custom_module, fn_name):
+
+def _extract_function(
+    module: Optional[ModuleType], fn_name: str, default_fn: Callable
+) -> Callable:
+    if module is None:
+        warnings.warn(
+            "No function module path provided. Using identity transform.",
+            LoggedUserWarning,
+        )
+        return default_fn
+
+    if not hasattr(module, fn_name):
         raise LoggedValueError(f"The custom module must have a '{fn_name}' function.")
 
-    fn: Callable = getattr(custom_module, fn_name)
+    fn: Callable = getattr(module, fn_name)
     return fn
 
 
@@ -129,11 +136,12 @@ class AnalyticalPELoader(BaseModel):
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
         transform_module_path = raw_data.pop("transform_module_path", None)
+        transform_module = _load_module(transform_module_path)
         transform = _extract_function(
-            transform_module_path, "analytical_to_model_coord_fn", lambda x: x
+            transform_module, "analytical_to_model_coord_fn", lambda x: x
         )
         log_abs_det_jacobian_transform = _extract_function(
-            transform_module_path,
+            transform_module,
             "log_abs_det_jacobian_analytical_to_model_coord_fn",
             lambda x, y: 0.0,
         )
