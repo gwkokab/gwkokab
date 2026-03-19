@@ -5,6 +5,7 @@
 import glob
 import warnings
 from pathlib import Path
+from types import ModuleType
 from typing import Callable, NamedTuple, Optional
 
 import h5py
@@ -22,13 +23,9 @@ from gwkokab.utils.exceptions import (
 )
 
 
-def _extract_transform(path: Optional[str]) -> Callable:
+def _load_module(path: Optional[str]) -> Optional[ModuleType]:
     if path is None:
-        warnings.warn(
-            "No 'transform_module_path' provided. Using identity transform.",
-            LoggedUserWarning,
-        )
-        return lambda x: x
+        return None
 
     import importlib.util
 
@@ -38,12 +35,24 @@ def _extract_transform(path: Optional[str]) -> Callable:
 
     custom_module = importlib.util.module_from_spec(spec)  # type: ignore
     spec.loader.exec_module(custom_module)  # type: ignore
+    return custom_module
 
-    if not hasattr(custom_module, "transform"):
-        raise LoggedValueError("The custom module must have a 'transform' function.")
 
-    transform: Callable = getattr(custom_module, "transform")
-    return transform
+def _extract_function(
+    module: Optional[ModuleType], fn_name: str, default_fn: Callable
+) -> Callable:
+    if module is None:
+        warnings.warn(
+            "No function module path provided. Using identity transform.",
+            LoggedUserWarning,
+        )
+        return default_fn
+
+    if not hasattr(module, fn_name):
+        raise LoggedValueError(f"The custom module must have a '{fn_name}' function.")
+
+    fn: Callable = getattr(module, fn_name)
+    return fn
 
 
 class AnalyticalPEFileData(NamedTuple):
@@ -83,6 +92,13 @@ class AnalyticalPELoader(BaseModel):
     parameterizations used in the PE samples.
     """
 
+    log_abs_det_jacobian_analytical_to_model_coord_fn: Callable = Field(
+        lambda x, y: 0.0
+    )
+    """A function that computes the log absolute determinant of the Jacobian of the
+    transformation from analytical PE coordinates to model coordinates.
+    """
+
     @classmethod
     def from_json(cls, config_path: str) -> "AnalyticalPELoader":
         """Initializes the loader from a JSON configuration file.
@@ -120,12 +136,21 @@ class AnalyticalPELoader(BaseModel):
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
         transform_module_path = raw_data.pop("transform_module_path", None)
-        transform = _extract_transform(transform_module_path)
+        transform_module = _load_module(transform_module_path)
+        transform = _extract_function(
+            transform_module, "analytical_to_model_coord_fn", lambda x: x
+        )
+        log_abs_det_jacobian_transform = _extract_function(
+            transform_module,
+            "log_abs_det_jacobian_analytical_to_model_coord_fn",
+            lambda x, y: 0.0,
+        )
 
         return cls(
             **raw_data,
             event_paths=filenames,
             analytical_to_model_coord_fn=transform,
+            log_abs_det_jacobian_analytical_to_model_coord_fn=log_abs_det_jacobian_transform,
         )
 
     @classmethod
