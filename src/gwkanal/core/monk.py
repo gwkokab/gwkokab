@@ -11,13 +11,61 @@ import numpy as np
 from loguru import logger
 from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
-from scipy.stats import multivariate_normal
 
 from gwkanal.core.inference_io import AnalyticalPELoader, PoissonMeanEstimationLoader
 from gwkokab.inference import analytical_likelihood
 
 from .flowMC_based import FlowMCBased
 from .guru import guru_arg_parser as guru_parser
+
+
+def _multivariate_normal_samples(
+    N: int,
+    mean: np.ndarray,
+    cov: np.ndarray,
+    low: np.ndarray,
+    high: np.ndarray,
+    scale: np.ndarray,
+) -> tuple[np.ndarray, int]:
+    """Generate samples from a multivariate normal distribution.
+
+    Parameters
+    ----------
+    N : int
+        Number of samples to generate.
+    mean : np.ndarray
+        Mean of the multivariate normal distribution.
+    cov : np.ndarray
+        Covariance matrix of the multivariate normal distribution.
+    low : np.ndarray
+        Lower bound for the samples.
+    high : np.ndarray
+        Upper bound for the samples.
+    scale : np.ndarray
+        Scale factors to avoid numerical issues when sampling.
+
+    Returns
+    -------
+    np.ndarray
+        Samples drawn from the multivariate normal distribution.
+    int
+        Total number of samples generated.
+    """
+    samples = np.zeros((N, mean.shape[0]))
+    mask = np.zeros(N, dtype=bool)
+    N_total = 0
+    while not np.all(mask):
+        n_invalid = np.sum(~mask)
+        N_total += n_invalid
+        new_samples = (
+            np.random.multivariate_normal(
+                mean, cov, size=n_invalid, check_valid="raise"
+            )
+            / scale
+        )
+        samples[~mask] = new_samples
+        mask = np.all((samples >= low) & (samples <= high), axis=1)
+    return samples, N_total
 
 
 class Monk(FlowMCBased):
@@ -87,15 +135,13 @@ class Monk(FlowMCBased):
 
         data = self.data_loader.load(self.parameters)
 
-        scale_stack = data["scale"]
-        mean_stack = data["mean"] * scale_stack
-        limits_stack = data["limits"]
-        cov_stack = data["cov"] * np.apply_along_axis(
-            lambda x: np.outer(x, x), 1, scale_stack
-        )
-        scale_tril_stack = np.linalg.cholesky(cov_stack)
+        scale = data["scale"]
+        lower_bound = data["lower_bound"]
+        upper_bound = data["upper_bound"]
+        scaled_mean = list(map(lambda x, y: x * y, data["mean"], scale))
+        scaled_cov = list(map(lambda x, y: x * np.outer(y, y), data["cov"], scale))
 
-        n_events = mean_stack.shape[0]
+        n_events = len(scaled_mean)
 
         logger.info("Parsing Poisson mean configuration and initializing estimator.")
         pmean_loader = PoissonMeanEstimationLoader.from_json(
@@ -104,64 +150,54 @@ class Monk(FlowMCBased):
         _, poisson_mean_estimator, _, pmean_kwargs = pmean_loader.get_estimators()
 
         logpdf = analytical_likelihood(
-            self.model,
-            priors,
-            constants,
-            variables_index,
-            poisson_mean_estimator,
-            self.data_loader.analytical_to_model_coord_fn,
-            self.data_loader.log_abs_det_jacobian_analytical_to_model_coord_fn,
-            self.n_samples,
+            self.model, priors, constants, variables_index, poisson_mean_estimator
         )
 
-        lower_bounds = jax.lax.dynamic_index_in_dim(limits_stack, 0, 1, keepdims=False)
-        upper_bounds = jax.lax.dynamic_index_in_dim(limits_stack, 1, 1, keepdims=False)
+        ln_offsets = np.sum(np.log(scale), axis=1)
 
-        lower_cdf = np.array(
-            [
-                multivariate_normal.cdf(
-                    scale_stack[i] * lower_bounds[i],
-                    mean=mean_stack[i],
-                    cov=cov_stack[i],
-                )
-                for i in range(n_events)
-            ]
+        samples = []
+        for i in range(n_events):
+            event_samples, n_total = _multivariate_normal_samples(
+                self.n_samples,
+                scaled_mean[i],
+                scaled_cov[i],
+                lower_bound[i],
+                upper_bound[i],
+                scale[i],
+            )
+
+            ln_offsets -= np.log(n_total)
+
+            logger.info(
+                "Event {i}: Generated {n_samples} samples for event {i} with {n_total} total attempts.",
+                n_samples=self.n_samples,
+                i=i + 1,
+                n_total=n_total,
+            )
+            samples.append(event_samples)
+
+        samples_stack = np.stack(samples, axis=1)
+
+        transformed_samples = self.data_loader.analytical_to_model_coord_fn(
+            samples_stack
         )
 
-        upper_cdf = np.array(
-            [
-                multivariate_normal.cdf(
-                    scale_stack[i] * upper_bounds[i],
-                    mean=mean_stack[i],
-                    cov=cov_stack[i],
-                )
-                for i in range(n_events)
-            ]
+        ln_offsets += (
+            self.data_loader.log_abs_det_jacobian_analytical_to_model_coord_fn(
+                samples_stack, transformed_samples
+            )
         )
-
-        log_det_scale = np.sum(np.log(scale_stack), axis=1)
-
-        ln_offsets = log_det_scale - np.log(np.maximum(upper_cdf - lower_cdf, 1e-10))
 
         logger.info("ln_offsets.shape: {shape}", shape=ln_offsets.shape)
-        logger.info("lower_bounds.shape: {shape}", shape=lower_bounds.shape)
-        logger.info("mean_stack.shape: {shape}", shape=mean_stack.shape)
-        logger.info("scale_stack.shape: {shape}", shape=scale_stack.shape)
-        logger.info("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
-        logger.info("upper_bounds.shape: {shape}", shape=upper_bounds.shape)
+        logger.info("samples_stack.shape: {shape}", shape=transformed_samples.shape)
 
         self.driver(
             logpdf=logpdf,
             priors=priors,
             data={
                 "ln_offsets": jax.device_put(ln_offsets),
-                "lower_bounds": jax.device_put(lower_bounds),
-                "mean_stack": jax.device_put(mean_stack),
                 "pmean_kwargs": jax.device_put(pmean_kwargs),
-                "scale_stack": jax.device_put(scale_stack),
-                "scale_tril_stack": jax.device_put(scale_tril_stack),
-                "upper_bounds": jax.device_put(upper_bounds),
-                "key": self.rng_key,
+                "samples_stack": jax.device_put(transformed_samples),
             },
             labels=sorted(variables.keys()),
         )

@@ -202,7 +202,7 @@ class AnalyticalPELoader(BaseModel):
 
     def load(
         self, parameters: tuple[str, ...], seed: int = 37
-    ) -> dict[str, np.ndarray]:
+    ) -> dict[str, list[np.ndarray]]:
         """Loads analytical PE data from disk.
 
         This method reads the mean, covariance, and limits for each event specified
@@ -218,8 +218,8 @@ class AnalyticalPELoader(BaseModel):
 
         Returns
         -------
-        dict[str, np.ndarray]
-            A dictionary containing stacked arrays of mean, covariance, and limits for each event.
+        dict[str, list[np.ndarray]]
+            A dictionary containing lists of arrays of mean, covariance, and limits for each event.
         """
         logger.info(f"Starting load of {len(self.event_paths)} events.")
         logger.info(f"Target physical parameters: {parameters}")
@@ -251,16 +251,18 @@ class AnalyticalPELoader(BaseModel):
 
         logger.success(f"Finished loading {len(data_list)} events.")
 
-        mean_stack = np.stack([data.mu for data in data_list], axis=0)
-        cov_stack = np.stack([data.cov for data in data_list], axis=0)
-        limits_stack = np.stack([data.limits.T for data in data_list], axis=0)
-        scale_stack = np.stack([data.scale for data in data_list], axis=0)
+        mean_stack = [data.mu.flatten() for data in data_list]
+        cov_stack = [data.cov for data in data_list]
+        lower_bound = [data.limits[..., 0].flatten() for data in data_list]
+        upper_bound = [data.limits[..., 1].flatten() for data in data_list]
+        scale_stack = [data.scale.flatten() for data in data_list]
 
         return {
-            "mean": mean_stack,
             "cov": cov_stack,
-            "limits": limits_stack,
+            "lower_bound": lower_bound,
+            "mean": mean_stack,
             "scale": scale_stack,
+            "upper_bound": upper_bound,
         }
 
     def _validate_columns(
