@@ -4,6 +4,7 @@
 
 from typing import Any, Callable, Dict
 
+import jax
 from jax import nn as jnn, numpy as jnp
 from jaxtyping import Array
 from numpyro.distributions import Distribution
@@ -18,21 +19,9 @@ def analytical_likelihood(
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
 ) -> Callable[[Array, Dict[str, Any]], Array]:
-    r"""Compute the analytical likelihood function for a model given its parameters.
 
-    .. math::
-
-        \mathcal{L}_{\mathrm{analytical}}(\Lambda,\kappa)\propto
-        \exp\left(-\mu(\Lambda,\kappa)\right)
-        \prod_{i=1}^{N}
-        \iint\mathcal{G}(\theta,z|\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i)
-        \rho(\theta,z\mid\Lambda,\kappa)d\theta dz
-
-        \mathcal{L}_{\mathrm{analytical}}(\Lambda,\kappa)\propto
-        \exp{\left(-\mu(\Lambda,\kappa)\right)}\prod_{i=1}^{N}\bigg<
-        \rho(\theta_{i,j},z_{i,j}\mid\Lambda,\kappa)
-        \bigg>_{\theta_{i,j},z_{i,j}\sim\mathcal{G}(\theta,z|\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i)}
-    """
+    names = list(variables_index.keys())
+    indices = jnp.array([variables_index[name] for name in names])
 
     def likelihood_fn(x: Array, data: Dict[str, Any]) -> Array:
         ln_offsets = data["ln_offsets"]
@@ -42,30 +31,31 @@ def analytical_likelihood(
 
         _, n_events, _ = samples_stack.shape
 
-        params = {name: x[i] for name, i in variables_index.items()}
+        params = {name: x[idx] for name, idx in zip(names, indices)}
         model_instance = dist_fn(**constant_params, **params)
 
         mask = model_instance.support.check(samples_stack)
 
-        safe_samples = jnp.where(
-            mask[..., jnp.newaxis],
-            samples_stack,
-            model_instance.support.feasible_like(samples_stack),
+        def compute_event_log_prob(samples):
+            return model_instance.log_prob(samples)
+
+        log_prob_model = jax.vmap(compute_event_log_prob, in_axes=1, out_axes=1)(
+            samples_stack
         )
-        log_prob_model = model_instance.log_prob(safe_samples)
 
-        log_weights = jnp.where(mask, ln_offsets + log_prob_model, -jnp.inf)
-
-        log_est = jnn.logsumexp(log_weights, axis=0, where=mask)
-
-        total_ln_l = jnp.sum(log_est)
+        total_ln_l = jnp.sum(
+            jnn.logsumexp(log_prob_model + ln_offsets, axis=0, where=mask)
+        )
 
         expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
 
         ln_post = (
-            priors.log_prob(x) + total_ln_l + n_events * jnp.log(T_obs) - expected_rates
+            priors.log_prob(x)
+            + total_ln_l
+            + (n_events * jnp.log(T_obs))
+            - expected_rates
         )
 
-        return jnp.nan_to_num(ln_post, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf)
+        return jnp.where(jnp.isfinite(ln_post), ln_post, -jnp.inf)
 
     return likelihood_fn
