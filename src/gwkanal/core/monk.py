@@ -54,6 +54,10 @@ def _multivariate_normal_samples(
     samples = np.zeros((N, mean.shape[0]))
     mask = np.zeros(N, dtype=bool)
     N_total = 0
+
+    mean *= scale
+    cov *= np.outer(scale, scale)
+
     while not np.all(mask):
         n_invalid = np.sum(~mask)
         N_total += n_invalid
@@ -138,10 +142,10 @@ class Monk(FlowMCBased):
         scale = data["scale"]
         lower_bound = data["lower_bound"]
         upper_bound = data["upper_bound"]
-        scaled_mean = list(map(lambda x, y: x * y, data["mean"], scale))
-        scaled_cov = list(map(lambda x, y: x * np.outer(y, y), data["cov"], scale))
+        mean = data["mean"]
+        cov = data["cov"]
 
-        n_events = len(scaled_mean)
+        n_events = len(mean)
 
         logger.info("Parsing Poisson mean configuration and initializing estimator.")
         pmean_loader = PoissonMeanEstimationLoader.from_json(
@@ -159,8 +163,8 @@ class Monk(FlowMCBased):
         for i in range(n_events):
             event_samples, n_total = _multivariate_normal_samples(
                 self.n_samples,
-                scaled_mean[i],
-                scaled_cov[i],
+                mean[i],
+                cov[i],
                 lower_bound[i],
                 upper_bound[i],
                 scale[i],
