@@ -43,13 +43,17 @@ def _extract_function(
 ) -> Callable:
     if module is None:
         warnings.warn(
-            "No function module path provided. Using identity transform.",
+            "No module provided. Using identity transform.",
             LoggedUserWarning,
         )
         return default_fn
 
     if not hasattr(module, fn_name):
-        raise LoggedValueError(f"The custom module must have a '{fn_name}' function.")
+        warnings.warn(
+            f"The custom module must have a '{fn_name}' function. Using identity transform.",
+            LoggedUserWarning,
+        )
+        return default_fn
 
     fn: Callable = getattr(module, fn_name)
     return fn
