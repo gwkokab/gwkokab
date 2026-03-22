@@ -137,3 +137,10 @@ def test_non_string_input():
         normalize_path(None)
     with pytest.raises(TypeError):
         normalize_path(123)
+
+
+def test_path_object_input(mock_home):
+    """Ensure Path objects are handled correctly."""
+    raw = Path("~/some_dir/file.txt")
+    result = normalize_path(raw)
+    assert result == mock_home / "some_dir" / "file.txt"
