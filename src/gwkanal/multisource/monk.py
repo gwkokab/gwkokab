@@ -14,6 +14,7 @@ from gwkokab.models import MultiSourceModel
 class MultiSourceModelMonk(MultiSourceModelCore, Monk):
     def __init__(
         self,
+        N_spl: int,
         N_sbpl: int,
         N_gpl: int,
         N_gg: int,
@@ -45,6 +46,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
     ) -> None:
         MultiSourceModelCore.__init__(
             self,
+            N_spl=N_spl,
             N_sbpl=N_sbpl,
             N_gpl=N_gpl,
             N_gg=N_gg,
@@ -96,6 +98,7 @@ def main() -> None:
     MultiSourceModelMonk.init_rng_seed(seed=args.seed)
 
     MultiSourceModelMonk(
+        N_spl=args.n_spl,
         N_sbpl=args.n_sbpl,
         N_gpl=args.n_gpl,
         N_gg=args.n_gg,
