@@ -20,7 +20,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '>=1.25.4'
+          go-version: ">=1.25.4"
 
       - uses: j178/prek-action@v1
         with:
@@ -30,7 +30,7 @@ jobs:
     needs: [prek]
     name: "build (py ${{ matrix.python-version }} on ${{ matrix.os }})"
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -41,12 +41,12 @@ jobs:
           - "3.13"
     env:
       GWKOKAB_NIGHTLY_BUILD: 1
-      XLA_FLAGS: "--xla_force_host_platform_device_count=8"
-      JAX_TRACEBACK_FILTERING: "off"
+      JAX_ARRAY: 1
       JAX_ENABLE_X64: 1
       JAX_PLATFORMS: "cpu"
-      JAX_ARRAY: 1
+      JAX_TRACEBACK_FILTERING: "off"
       PY_COLORS: 1
+      XLA_FLAGS: "--xla_force_host_platform_device_count=8"
 
     steps:
       - uses: actions/checkout@v6
@@ -58,12 +58,11 @@ jobs:
       - name: Install the project
         run: |
           uv sync \
-            --all-extras \
-            --dev \
-            --no-extra cuda12 \
-            --no-extra cuda13 \
-            --no-extra tpu \
-            --no-extra dev
+            --upgrade \
+            --extra cpu \
+            --group dev \
+            --group test
+          uv pip freeze
       - name: Run tests
         run: |
           uv run pytest tests
@@ -74,31 +73,35 @@ jobs:
     needs: [prek]
     name: Documentation
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     strategy:
       matrix:
         python-version:
-          - "3.11"
+          - "3.13"
     env:
       GWKOKAB_NIGHTLY_BUILD: 1
-      XLA_FLAGS: "--xla_force_host_platform_device_count=8"
-      JAX_TRACEBACK_FILTERING: "off"
+      JAX_ARRAY: 1
       JAX_ENABLE_X64: 1
       JAX_PLATFORMS: "cpu"
-      JAX_ARRAY: 1
+      JAX_TRACEBACK_FILTERING: "off"
       PY_COLORS: 1
+      XLA_FLAGS: "--xla_force_host_platform_device_count=8"
     steps:
       - uses: actions/checkout@v6
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          uv venv
-          source .venv/bin/activate
-          uv pip install -r docs/requirements.txt
-          pip freeze
+          uv sync \
+            --upgrade \
+            --extra cpu \
+            --group dev \
+            --group doc \
+            --group test
+          uv pip freeze
       - name: Test documentation
         run: |
           uv run pytest docs --tb=short --doctest-glob='*.md' --doctest-glob='*.rst' --doctest-continue-on-failure
