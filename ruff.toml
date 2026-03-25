@@ -33,7 +33,6 @@ indent-width = 4
 target-version = "py311"
 fix = true
 
-
 [lint]
 select = ["E4", "E7", "E9", "F", "I001"]
 ignore = ["E402", "E721", "E731", "E741", "F722", "F403", "F405"]
@@ -47,6 +46,12 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 "__init__.py" = ["E402", "E501"]
 "**/{tests,docs,tools}/*" = ["E402"]
 
+[lint.isort]
+combine-as-imports = true
+extra-standard-library = []
+lines-after-imports = 2
+order-by-type = false
+
 [format]
 quote-style = "double"
 indent-style = "space"
@@ -54,10 +59,3 @@ skip-magic-trailing-comma = false
 line-ending = "auto"
 docstring-code-format = true
 docstring-code-line-length = "dynamic"
-
-
-[lint.isort]
-combine-as-imports = true
-extra-standard-library = []
-lines-after-imports = 2
-order-by-type = false
