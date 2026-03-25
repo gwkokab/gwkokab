@@ -99,7 +99,7 @@ jobs:
             --upgrade \
             --extra cpu \
             --group dev \
-            --group docs \
+            --group doc \
             --group test
           uv pip freeze
       - name: Test documentation
