@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import warnings
 from argparse import ArgumentParser
 from collections.abc import Callable
 from typing import Dict, List, Optional, Tuple, Union
@@ -20,7 +21,8 @@ from gwkokab.inference.poissonlikelihood_utils import (
 )
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
-from gwkokab.utils.tools import batch_and_remainder, error_if, warn_if
+from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
+from gwkokab.utils.tools import batch_and_remainder
 
 from ..utils.jenks import pad_and_stack
 from .guru import Guru
@@ -56,10 +58,10 @@ class Sage(Guru):
         check_leaks: bool = False,
         analysis_name: str = "",
     ) -> None:
-        error_if(
-            not (all(letter.isalpha() or letter == "_" for letter in analysis_name)),
-            msg="Analysis name must contain only letters and underscores.",
-        )
+        if not (all(letter.isalpha() or letter == "_" for letter in analysis_name)):
+            raise LoggedValueError(
+                "Analysis name must contain only letters and underscores.",
+            )
 
         self.likelihood_fn = likelihood_fn
         self.n_buckets = n_buckets
@@ -93,11 +95,10 @@ class Sage(Guru):
         log_constants = -sum_log_size
 
         n_events = len(data)
-        error_if(
-            len(data) != len(log_ref_priors),
-            AssertionError,
-            msg="Number of data events does not match number of log reference priors.",
-        )
+        if len(data) != len(log_ref_priors):
+            raise LoggedValueError(
+                "Number of data events does not match number of log reference priors.",
+            )
 
         logger.info("Commencing data partitioning into buckets.")
         _data_group, _log_ref_priors_group, _masks_group = pad_and_stack(
@@ -111,10 +112,10 @@ class Sage(Guru):
             )
         elif self.n_buckets != len(_data_group):
             overridden_buckets = len(_data_group)
-            warn_if(
-                True,
-                msg=f"Specified n_buckets ({self.n_buckets}) differs from partitioning results. "
+            warnings.warn(
+                f"Specified n_buckets ({self.n_buckets}) differs from partitioning results. "
                 f"Overriding to {overridden_buckets} buckets for computational alignment.",
+                LoggedUserWarning,
             )
             self.n_buckets = overridden_buckets
 

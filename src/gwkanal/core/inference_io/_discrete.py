@@ -3,6 +3,7 @@
 
 
 import glob
+import warnings
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -14,7 +15,7 @@ from pydantic import BaseModel, Field, PositiveInt
 
 from gwkanal.core.utils import from_structured
 from gwkanal.utils.common import read_json
-from gwkokab.cosmology import Cosmology, PLANCK_2015_Cosmology
+from gwkokab.cosmology import Cosmology, default_cosmology
 from gwkokab.parameters import Parameters as P
 from gwkokab.poisson_mean._injection_based_helper import (
     aligned_spin_prior,
@@ -22,7 +23,12 @@ from gwkokab.poisson_mean._injection_based_helper import (
     primary_mass_to_chirp_mass_jacobian,
     prior_chieff_chip_isotropic,
 )
-from gwkokab.utils.tools import error_if, warn_if
+from gwkokab.utils.exceptions import (
+    LoggedFileNotFoundError,
+    LoggedKeyError,
+    LoggedUserWarning,
+    LoggedValueError,
+)
 
 
 class DiscretePELoader(BaseModel):
@@ -43,11 +49,15 @@ class DiscretePELoader(BaseModel):
     max_samples: Optional[PositiveInt] = Field(None)
     """If set, limits the number of samples loaded per event to this value."""
 
-    default_waveform: str = Field("GWKokabSyntheticDiscretePE")
-    """Default waveform name to use when loading samples."""
+    default_datasets: tuple[str, ...] = Field(
+        ("/GWKokabSyntheticDiscretePE/posterior_samples",)
+    )
+    """Default dataset names to look for in HDF5 files, in order of preference."""
 
-    alternate_waveforms: dict[str, str] = Field(default_factory=dict)
-    """Mapping of filenames to alternate waveform names, if needed."""
+    alternate_datasets: dict[str, str] = Field(default_factory=dict)
+    """Mapping of filenames to an alternate dataset name, overriding the default
+    dataset(s).
+    """
 
     mass_prior: Literal[
         None,
@@ -85,55 +95,85 @@ class DiscretePELoader(BaseModel):
             If no files match the provided regex pattern.
         """
         raw_data = read_json(config_path)
-        error_if(
-            "regex" not in raw_data,
-            KeyError,
-            msg="Config error: 'regex' field is required.",
-        )
+        if "regex" not in raw_data:
+            raise LoggedKeyError("Config error: 'regex' field is required.")
 
         regex = raw_data.pop("regex")
         filenames = tuple(map(Path, sorted(glob.glob(regex))))
 
         n_files = len(filenames)
-        error_if(
-            n_files == 0,
-            FileNotFoundError,
-            msg=f"No files matched the regex pattern: {regex}",
+        if n_files == 0:
+            raise LoggedFileNotFoundError(
+                f"No files matched the regex pattern: {regex}"
+            )
+
+        default_datasets = raw_data.pop(
+            "default_datasets", ["/GWKokabSyntheticDiscretePE/posterior_samples"]
         )
+        for i in range(len(default_datasets)):
+            dataset = default_datasets[i]
+            if not dataset.startswith("/"):
+                warnings.warn(
+                    f"Dataset '{dataset}' does not start with '/'. Prepending '/' to ensure valid HDF5 path.",
+                    LoggedUserWarning,
+                )
+                default_datasets[i] = "/" + dataset
+        if isinstance(default_datasets, list):
+            default_datasets = tuple(default_datasets)
+
+        alternate_datasets = raw_data.pop("alternate_datasets", {})
+        for event, dataset in alternate_datasets.items():
+            if not dataset.startswith("/"):
+                warnings.warn(
+                    f"Dataset '{dataset}' for event '{event}' does not start with '/'. Prepending '/' to ensure valid HDF5 path.",
+                    LoggedUserWarning,
+                )
+                alternate_datasets[event] = "/" + dataset
 
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
-
-        return cls(**raw_data, filenames=filenames)
+        return cls(
+            **raw_data,
+            default_datasets=default_datasets,
+            filenames=filenames,
+            alternate_datasets=alternate_datasets,
+        )
 
     @classmethod
-    def load_file(cls, filename: Path | str, waveform_name: str) -> pd.DataFrame:
+    def load_file(
+        cls, filename: Path | str, datasets: str | tuple[str, ...]
+    ) -> pd.DataFrame:
         """Loads a single PE sample file into a DataFrame.
 
         Parameters
         ----------
         filename : Path | str
             Path to the sample file.
-        waveform_name : str
-            Name of the waveform model used (for logging purposes).
+        datasets : str | tuple[str, ...]
+            Name or tuple of names of the dataset(s) to load from the HDF5 file, in order of preference.
 
         Returns
         -------
         pd.DataFrame
             DataFrame containing the samples from the file.
         """
-        logger.info(f"Loading file '{filename}' with waveform '{waveform_name}'.")
+        if isinstance(datasets, str):
+            datasets = (datasets,)
+
         with h5py.File(filename, "r") as f:
-            error_if(
-                waveform_name not in f,
-                KeyError,
-                f"Waveform '{waveform_name}' not found in file '{filename}'. "
-                "Available waveforms: " + ", ".join(f.keys()),
+            for dataset in datasets:
+                if dataset in f:
+                    data_structured = f[dataset][()]
+                    data_array, columns = from_structured(data_structured)
+                    df = pd.DataFrame(data=data_array, columns=columns)
+
+                    logger.info(f"Loading file '{filename}' with dataset '{dataset}'.")
+
+                    return df
+
+            raise LoggedKeyError(
+                f"None of the specified datasets {datasets} found in file '{filename}'."
+                f" Available datasets: {list(f.keys())}"
             )
-            group = f[waveform_name]
-            data_structured = group["posterior_samples"][()]
-            data_array, columns = from_structured(data_structured)
-            df = pd.DataFrame(data=data_array, columns=columns)
-        return df
 
     def load(
         self, parameters: tuple[str, ...], seed: int = 37
@@ -180,16 +220,14 @@ class DiscretePELoader(BaseModel):
         }
 
         posterior_columns = [self.parameter_aliases.get(p, p) for p in parameters]
-        cosmo = PLANCK_2015_Cosmology()
+        cosmo = default_cosmology()
         data_list, log_prior_list = [], []
 
         for i, event_path in enumerate(self.filenames):
             event_name = event_path.stem
 
-            waveform_name = self.alternate_waveforms.get(
-                event_name, self.default_waveform
-            )
-            df = self.load_file(event_path, waveform_name=waveform_name)
+            datasets = self.alternate_datasets.get(event_name, self.default_datasets)
+            df = self.load_file(event_path, datasets=datasets)
 
             self._validate_columns(df, event_path, posterior_columns)
 
@@ -220,9 +258,9 @@ class DiscretePELoader(BaseModel):
 
         n_total = len(df)
         if self.max_samples >= n_total:
-            warn_if(
-                True,
-                msg=f"Subsampling skipped: {event} has {n_total} samples (requested {self.max_samples}).",
+            warnings.warn(
+                f"Subsampling skipped: {event} has {n_total} samples (requested {self.max_samples}).",
+                LoggedUserWarning,
             )
             return df
 
@@ -233,11 +271,10 @@ class DiscretePELoader(BaseModel):
     ):
         """Ensures all requested or required columns exist in the DataFrame."""
         missing = set(columns) - set(df.columns)
-        error_if(
-            missing != set(),
-            KeyError,
-            f"File '{event}' is missing required columns: {missing}",
-        )
+        if missing != set():
+            raise LoggedValueError(
+                f"File '{event}' is missing required columns: {missing}"
+            )
 
     def _get_q(self, df: pd.DataFrame, aliases: dict) -> np.ndarray:
         """Calculates mass ratio q = m2/m1, handling various alias possibilities."""
@@ -265,11 +302,8 @@ class DiscretePELoader(BaseModel):
         if self.distance_prior is None:
             return 0.0
 
-        error_if(
-            P.REDSHIFT not in parameters,
-            ValueError,
-            "Distance prior requires Redshift.",
-        )
+        if P.REDSHIFT not in parameters:
+            raise LoggedValueError("Distance prior requires Redshift.")
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
         if self.distance_prior == "comoving":
@@ -294,11 +328,8 @@ class DiscretePELoader(BaseModel):
 
         lp = np.zeros(len(df))
         q = self._get_q(df, aliases)
-        error_if(
-            P.REDSHIFT not in parameters,
-            ValueError,
-            "Mass prior reweighting requires Redshift.",
-        )
+        if P.REDSHIFT not in parameters:
+            raise LoggedValueError("Mass prior reweighting requires Redshift.")
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
 

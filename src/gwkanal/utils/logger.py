@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import functools as ft
 import os
 
 from loguru import logger
@@ -20,7 +21,7 @@ def time_now() -> str:
     return datetime.datetime.now().strftime(r"%Y%m%d%H%M%S")
 
 
-def custom_format(record) -> str:
+def custom_format(record, *, show_path: bool = False) -> str:
     """Custom log format function for Loguru logger.
 
     Parameters
@@ -33,20 +34,38 @@ def custom_format(record) -> str:
     str
         Formatted log string.
     """
-    path = record["file"].path
-    if "site-packages" in record["file"].path:
-        short_path = path.split("site-packages")[1][1:]
+    if not show_path:
+        path_fmt_string = None
     else:
-        short_path = os.path.relpath(path)
+        path = record["file"].path
+        if "site-packages" in record["file"].path:
+            short_path = path.split("site-packages")[1][1:]
+        else:
+            short_path = os.path.relpath(path)
 
-    record["extra"]["short_path"] = short_path
+        record["extra"]["short_path"] = short_path
+        path_fmt_string = "<cyan>{extra[short_path]:<55}</cyan>:<cyan>{line:<5}</cyan>"
 
-    return (
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-        "<cyan>{extra[short_path]:<55}</cyan>:<cyan>{line:<5}</cyan> | "
-        "<level>{level: <8}</level> | "
-        "<level>{message}</level>\n"
+    time_fmt_string = "<light-black>{time:YYYY-MM-DD HH:mm:ss.SSS}</light-black>"
+    level_fmt_string = "<level>{level: <8}</level>"
+    message_fmt_string = "<level>{message}</level>"
+
+    fmt_string = (
+        " | ".join(
+            filter(
+                None,
+                [
+                    time_fmt_string,
+                    path_fmt_string,
+                    level_fmt_string,
+                    message_fmt_string,
+                ],
+            )
+        )
+        + "\n"
     )
+
+    return fmt_string
 
 
 def set_log_level() -> None:
@@ -71,15 +90,18 @@ def set_log_level() -> None:
     GWKOKAB_LOG_FILE = os.getenv("GWKOKAB_LOG_FILE", f"gwkokab_{current_time}.log")
     log_filename = os.path.join(GWKOKAB_LOG_DIR, GWKOKAB_LOG_FILE)
 
+    GWKOKAB_DEBUG = os.getenv("GWKOKAB_DEBUG", "0").lower() in ("1", "true", "yes")
+
     os.makedirs(GWKOKAB_LOG_DIR, exist_ok=True)
 
     logger.remove()
     logger.add(
         log_filename,
         level=log_level,
-        format=custom_format,
+        format=ft.partial(custom_format, show_path=GWKOKAB_DEBUG),
     )
-    logger.debug(f"Setting LogLevel to {log_level}")
+
+    logger.info(f"Setting LogLevel to {log_level}")
 
 
 def log_gwkokab_info() -> None:

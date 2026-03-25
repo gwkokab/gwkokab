@@ -2,7 +2,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from . import kernel as kernel, math as math, transformations as transformations
+from . import (
+    exceptions as exceptions,
+    kernel as kernel,
+    math as math,
+    transformations as transformations,
+)
 from .kernel import log_planck_taper_window as log_planck_taper_window
 from .math import (
     beta_dist_concentrations_to_mean_variance as beta_dist_concentrations_to_mean_variance,

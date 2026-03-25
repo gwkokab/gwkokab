@@ -10,7 +10,7 @@ from jax.scipy.integrate import trapezoid
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ...cosmology import PLANCK_2015_Cosmology as _default_Cosmology
+from gwkokab.cosmology import default_cosmology
 
 
 class _RedshiftModel(Distribution):
@@ -36,7 +36,7 @@ class _RedshiftModel(Distribution):
 
     def log_differential_spacetime_volume(self, z: Array) -> Array:
         """Placeholder method for computing the differential spacetime volume."""
-        logdVcdz = _default_Cosmology().logdVcdz(z)
+        logdVcdz = default_cosmology().logdVcdz(z)
         log_time_dilation = -jnp.log1p(z)
         log_differential_spacetime_volume_val = (
             log_time_dilation + logdVcdz + self.log_psi_of_z(z)

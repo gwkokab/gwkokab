@@ -9,9 +9,10 @@ import jax
 from jax import numpy as jnp
 from jaxtyping import Array, PRNGKeyArray
 
+from gwkokab.utils.exceptions import LoggedTypeError, LoggedValueError
+
 from ..models import PowerlawRedshift
 from ..models.utils import JointDistribution, ScaledMixture
-from ..utils.tools import error_if
 from ..utils.train import load_model
 
 
@@ -28,34 +29,28 @@ def poisson_mean_from_neural_pdet(
     Callable[..., Array],
     dict[str, Any],
 ]:
-    error_if(not parameters, msg="parameters sequence cannot be empty")
-    error_if(
-        not isinstance(parameters, Sequence),
-        TypeError,
-        f"parameters must be a Sequence, got {type(parameters)}",
-    )
-    error_if(
-        not all(isinstance(p, str) for p in parameters),
-        TypeError,
-        "all parameters must be strings",
-    )
+    if not parameters:
+        raise LoggedValueError("parameters sequence cannot be empty")
+    if not isinstance(parameters, Sequence):
+        raise LoggedTypeError(f"parameters must be a Sequence, got {type(parameters)}")
+    if not all(isinstance(p, str) for p in parameters):
+        raise LoggedTypeError("all parameters must be strings")
     if batch_size is not None:
-        error_if(
-            not isinstance(batch_size, int),
-            TypeError,
-            f"batch_size must be an integer, got {type(batch_size)}",
-        )
-        error_if(
-            batch_size < 1,
-            msg=f"batch_size must be a positive integer, got {batch_size}",
-        )
+        if not isinstance(batch_size, int):
+            raise LoggedTypeError(
+                f"batch_size must be an integer, got {type(batch_size)}",
+            )
+        if batch_size < 1:
+            raise LoggedValueError(
+                f"batch_size must be a positive integer, got {batch_size}",
+            )
 
     names, neural_vt_model = load_model(filename)
-    error_if(
-        any(name not in parameters for name in names),
-        msg=f"Model in {filename} expects parameters {names}, but received "
-        f"{parameters}. Missing: {set(names) - set(parameters)}",
-    )
+    if any(name not in parameters for name in names):
+        raise LoggedValueError(
+            f"Model in {filename} expects parameters {names}, but received "
+            f"{parameters}. Missing: {set(names) - set(parameters)}",
+        )
 
     shuffle_indices = [parameters.index(name) for name in names]
 

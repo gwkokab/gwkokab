@@ -13,7 +13,7 @@ from gwkokab.poisson_mean import (
     poisson_mean_from_neural_vt,
     poisson_mean_from_sensitivity_injections,
 )
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedImportError, LoggedValueError
 
 
 class BaseLoader(BaseModel):
@@ -89,22 +89,18 @@ class CustomPoissonMeanEstimationLoader(BaseLoader):
         spec = importlib.util.spec_from_file_location(
             "custom_module", self.python_module_path
         )
-        error_if(
-            spec is None or spec.loader is None,
-            ImportError,
-            f"Could not load spec for module at {self.python_module_path}",
-        )
+        if spec is None or spec.loader is None:
+            raise LoggedImportError(
+                f"Could not load spec for module at {self.python_module_path}"
+            )
 
-        spec = importlib.util.spec_from_file_location(
-            "custom_module", self.python_module_path
-        )
         custom_module = importlib.util.module_from_spec(spec)  # type: ignore
         spec.loader.exec_module(custom_module)  # type: ignore
 
-        error_if(
-            not hasattr(custom_module, "custom_poisson_mean_estimator"),
-            msg="The custom module must have a 'custom_poisson_mean_estimator' function.",
-        )
+        if not hasattr(custom_module, "custom_poisson_mean_estimator"):
+            raise LoggedValueError(
+                "The custom module must have a 'custom_poisson_mean_estimator' function."
+            )
 
         return custom_module.custom_poisson_mean_estimator(
             self.key,

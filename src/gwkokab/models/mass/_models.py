@@ -6,7 +6,7 @@ from typing import Optional
 
 from jax import lax, numpy as jnp, random as jrd
 from jax.scipy import special
-from jax.scipy.stats import norm, uniform
+from jax.scipy.stats import norm, truncnorm, uniform
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
@@ -500,4 +500,79 @@ class SmoothedGaussianPrimaryMassRatio(Distribution):
             jnp.log(_Z_q),
         )
         log_prob_q = self._log_prob_q(value, log_Z_q)
+        return log_prob_m1 + log_prob_q
+
+
+class GaussianPrimaryMassRatio(Distribution):
+    arg_constraints = {
+        "loc": constraints.positive,
+        "scale": constraints.positive,
+        "beta": constraints.real,
+        "mmin": constraints.positive,
+        "mmax": constraints.positive,
+    }
+    reparametrized_params = ["loc", "scale", "beta", "mmin", "mmax"]
+    pytree_data_fields = ("_support", "loc", "scale", "beta", "mmax", "mmin")
+
+    def __init__(
+        self,
+        loc: ArrayLike,
+        scale: ArrayLike,
+        beta: ArrayLike,
+        mmin: ArrayLike,
+        mmax: ArrayLike,
+        *,
+        validate_args: Optional[bool] = None,
+    ) -> None:
+        """
+        Parameters
+        ----------
+        loc : ArrayLike
+            Location parameter for primary mass
+        scale : ArrayLike
+            Scale parameter for primary mass
+        beta : ArrayLike
+            Power law index for mass ratio
+        mmin : ArrayLike
+            Minimum mass
+        mmax : ArrayLike
+            Maximum mass
+        """
+        self.loc, self.scale, self.beta, self.mmin, self.mmax = promote_shapes(
+            loc, scale, beta, mmin, mmax
+        )
+        batch_shape = lax.broadcast_shapes(
+            jnp.shape(loc),
+            jnp.shape(scale),
+            jnp.shape(beta),
+            jnp.shape(mmin),
+            jnp.shape(mmax),
+        )
+        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        super(GaussianPrimaryMassRatio, self).__init__(
+            batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
+        )
+
+    @constraints.dependent_property(is_discrete=False, event_dim=1)
+    def support(self) -> constraints.Constraint:
+        return self._support
+
+    @validate_sample
+    def log_prob(self, value):
+        m1, q = jnp.unstack(value, axis=-1)
+        log_prob_m1 = truncnorm.logpdf(
+            m1,
+            a=(self.mmin - self.loc) / self.scale,
+            b=(self.mmax - self.loc) / self.scale,
+            loc=self.loc,
+            scale=self.scale,
+        )
+        log_prob_q = jnp.where(
+            jnp.less_equal(m1, self.mmin),
+            -jnp.inf,
+            doubly_truncated_power_law_log_prob(
+                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+            ),
+        )
+
         return log_prob_m1 + log_prob_q

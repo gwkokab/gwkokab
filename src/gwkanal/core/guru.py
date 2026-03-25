@@ -18,7 +18,7 @@ from gwkanal.core.utils import PRNGKeyMixin
 from gwkanal.utils.common import read_json, write_json
 from gwkanal.utils.priors import get_processed_priors
 from gwkokab.models.utils import JointDistribution, LazyJointDistribution
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedValueError
 
 
 def _topological_sort(graph: Dict[str, Set[str]]) -> List[str]:
@@ -133,14 +133,14 @@ def _classify_model_parameters(
 
         elif isinstance(value, tuple):
             lazy_fn, lazy_args = value
-            error_if(
-                not isinstance(lazy_fn, jax.tree_util.Partial),
-                msg=f"Lazy distribution '{name}' must be a `jax.tree_util.Partial`.",
-            )
-            error_if(
-                not isinstance(lazy_args, dict),
-                msg=f"Lazy distribution '{name}' must have a dictionary of dependencies.",
-            )
+            if not isinstance(lazy_fn, jax.tree_util.Partial):
+                raise LoggedValueError(
+                    f"Lazy distribution '{name}' must be a `jax.tree_util.Partial`.",
+                )
+            if not isinstance(lazy_args, dict):
+                raise LoggedValueError(
+                    f"Lazy distribution '{name}' must have a dictionary of dependencies."
+                )
 
             variables[name] = lazy_fn
             lazy_dependencies[name] = lazy_args
@@ -156,9 +156,8 @@ def _classify_model_parameters(
             continue
 
         else:
-            error_if(
-                True,
-                msg=f"Invalid parameter '{name}' with type {type(value)} and value {value}",
+            raise LoggedValueError(
+                f"Invalid parameter '{name}' with type {type(value)} and value {value}"
             )
 
     # Pass 2: resolve string aliases
@@ -173,11 +172,11 @@ def _classify_model_parameters(
     if lazy_dependencies:
         import pprint
 
-        error_if(
-            _check_cycles(dependency_graph),
-            msg="Cyclic dependencies detected among lazy variables. Dependency graph:\n"
-            + pprint.pformat(dependency_graph),
-        )
+        if _check_cycles(dependency_graph):
+            raise LoggedValueError(
+                "Cyclic dependencies detected among lazy variables. Dependency graph:\n"
+                + pprint.pformat(dependency_graph)
+            )
 
         lazy_order = [
             var

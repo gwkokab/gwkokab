@@ -8,6 +8,7 @@ from ._bpls import (
     SmoothedBrokenPowerlawMassRatioPowerlaw as SmoothedBrokenPowerlawMassRatioPowerlaw,
 )
 from ._models import (
+    GaussianPrimaryMassRatio as GaussianPrimaryMassRatio,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,

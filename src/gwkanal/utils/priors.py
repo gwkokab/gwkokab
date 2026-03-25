@@ -13,7 +13,11 @@ from numpyro.distributions import constraints, Delta, Distribution
 from numpyro.distributions.util import validate_sample
 
 from gwkanal.utils.regex import match_all
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import (
+    LoggedAttributeError,
+    LoggedKeyError,
+    LoggedValueError,
+)
 
 
 class _DirichletElement(Distribution):
@@ -100,19 +104,17 @@ def DirichletElement(
     KeyError
         Missing concentration parameters for `DirichletElement` of order {order}
     """
-    error_if(
-        isinstance(order, int) is False or order < 0,
-        msg="`order` must be a non-negative integer.",
-    )
-    error_if(
-        isinstance(n_dimensions, int) is False or n_dimensions < 2,
-        msg="`n_dimensions` must be an integer greater than 1. "
-        "If your problem is 1D, use a Uniform prior instead.",
-    )
+    if isinstance(order, int) is False or order < 0:
+        raise LoggedValueError("`order` must be a non-negative integer.")
+    if isinstance(n_dimensions, int) is False or n_dimensions < 2:
+        raise LoggedValueError(
+            "`n_dimensions` must be an integer greater than 1. "
+            "If your problem is 1D, use a Uniform prior instead.",
+        )
     try:
         concentrations = [kwargs["concentration" + str(i)] for i in range(order)]
     except KeyError as e:
-        raise KeyError(
+        raise LoggedKeyError(
             f"Missing concentration parameters for `DirichletElement` of order {order}"
         ) from e
 
@@ -149,12 +151,11 @@ def _available_prior(name: str) -> Distribution:
         If the prior is not found in numpyro distributions
     """
     gwkokab_priors = {"DirichletElement": DirichletElement}
-    error_if(
-        name not in dist.__all__ + list(gwkokab_priors.keys()),
-        AttributeError,
-        f"Prior {name} not found. Available priors are: "
-        + ", ".join(dist.__all__ + list(gwkokab_priors.keys())),
-    )
+    if name not in dist.__all__ + list(gwkokab_priors.keys()):
+        raise LoggedAttributeError(
+            f"Prior {name} not found. Available priors are: "
+            + ", ".join(dist.__all__ + list(gwkokab_priors.keys())),
+        )
     if name in gwkokab_priors:
         return gwkokab_priors[name]
     return getattr(dist, name)
@@ -203,7 +204,8 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
     """
     matched_prior_params = match_all(params, priors)
     for param in params:
-        error_if(param not in matched_prior_params, msg=f"Missing prior for {param}")
+        if param not in matched_prior_params:
+            raise LoggedValueError(f"Missing prior for {param}")
 
     for key, value in matched_prior_params.items():
         # if the value is not a dict, means its a constant/duplicate value
@@ -211,10 +213,10 @@ def get_processed_priors(params: List[str], priors: dict) -> dict:
             continue
         value_cpy = value.copy()
         dist_type = value_cpy.pop("dist", None)
-        error_if(
-            not isinstance(dist_type, str) or dist_type == "",
-            msg=f"Prior for '{key}' must specify a 'dist' string field.",
-        )
+        if not isinstance(dist_type, str) or dist_type == "":
+            raise LoggedValueError(
+                f"Prior for '{key}' must specify a 'dist' string field."
+            )
         prior = _available_prior(dist_type)
 
         # if there are no lazy variables, instantiate the prior
