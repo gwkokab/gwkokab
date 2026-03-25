@@ -124,7 +124,6 @@ hooks = [
         entry = "http:",
         language = "pygrep",
         types_or = ["markdown", "yaml"],
-        exclude = ".pre-commit-config.yaml"
     },
     {
         id = "no-repeated-whitespace",
