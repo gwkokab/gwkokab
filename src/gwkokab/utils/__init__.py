@@ -6,6 +6,7 @@ from . import (
     exceptions as exceptions,
     kernel as kernel,
     math as math,
+    path as path,
     transformations as transformations,
 )
 from .kernel import log_planck_taper_window as log_planck_taper_window
