@@ -23,6 +23,7 @@ from ._ncombination import (
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift,
     create_smoothed_broken_powerlaws_mass_ratio_powerlaw,
+    create_smoothed_powerlaw_primary_mass_ratio,
     create_spin_magnitude_mixture_models,
     create_truncated_normal_distributions,
     create_two_truncated_normal_mixture,
@@ -229,6 +230,15 @@ def _build_component_distributions(
     """
     if N == 0:
         return []
+    if component_type == "spl":
+        powerlaws = create_smoothed_powerlaw_primary_mass_ratio(
+            N=N, params=params, validate_args=validate_args
+        )
+        mass_distributions = jtr.map(
+            lambda powerlaw: [powerlaw],
+            powerlaws,
+            is_leaf=lambda x: isinstance(x, ExtendedSupportTransformedDistribution),
+        )
     if component_type == "sbpl":
         powerlaws = create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
             N=N, params=params, validate_args=validate_args
@@ -308,6 +318,7 @@ def _build_component_distributions(
 
 
 def MultiSourceModel(
+    N_spl: int,
     N_sbpl: int,
     N_gpl: int,
     N_gg: int,
@@ -337,7 +348,9 @@ def MultiSourceModel(
     **params,
 ) -> ScaledMixture:
     component_dists = []
-    for component_type, N in zip(["sbpl", "gpl", "gg"], [N_sbpl, N_gpl, N_gg]):
+    for component_type, N in zip(
+        ["spl", "sbpl", "gpl", "gg"], [N_spl, N_sbpl, N_gpl, N_gg]
+    ):
         component_dists += _build_component_distributions(
             N=N,
             component_type=component_type,
@@ -366,7 +379,7 @@ def MultiSourceModel(
             validate_args=validate_args,
         )
 
-    N = N_sbpl + N_gpl + N_gg
+    N = N_spl + N_sbpl + N_gpl + N_gg
     log_rates = jnp.stack([params[f"log_rate_{i}"] for i in range(N)], axis=-1)
 
     return ScaledMixture(
