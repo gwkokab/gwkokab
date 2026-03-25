@@ -102,10 +102,10 @@ doc = [
 test = ["astropy>=6.0.0", "pytest>=8.3.0", "tfp-nightly"]
 
 [project.urls]
-Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
-Discussion = "https://github.com/gwkokab/gwkokab/discussions"
-Homepage = "https://github.com/gwkokab/gwkokab"
-Issues = "https://github.com/gwkokab/gwkokab/issues"
+Changelog = "https://github.com/kokabsc/gwkokab/blob/main/CHANGELOG.md"
+Discussion = "https://github.com/kokabsc/gwkokab/discussions"
+Homepage = "https://github.com/kokabsc/gwkokab"
+Issues = "https://github.com/kokabsc/gwkokab/issues"
 
 [project.scripts]
 ## Monk scripts
