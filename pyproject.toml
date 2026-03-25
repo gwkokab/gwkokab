@@ -82,6 +82,9 @@ keywords = [
 cpu = ["jax>=0.7.0"]
 cuda12 = ["jax[cuda12]>=0.7.0"]
 cuda13 = ["jax[cuda13]>=0.7.0"]
+tpu = ["jax[tpu]>=0.7.0"]
+
+[dependency-groups]
 dev = ["prek>=0.2.30", "ruff>=0.8.0", "setuptools>=75.6.0"]
 doc = [
     "astroid<5",
@@ -89,19 +92,14 @@ doc = [
     "ipython!=8.7.0",
     "myst-nb",
     "setuptools_scm",
-    "sphinx_design",
+    "sphinx>=2.0",
     "sphinx-autoapi",
     "sphinx-copybutton",
+    "sphinx_design",
     "sphinx-togglebutton",
-    "sphinx>=2.0",
     "sphinxcontrib-bibtex",
 ]
-test = ["pytest>=8.3.0", "tfp-nightly", "astropy>=6.0.0"]
-tpu = ["jax[tpu]>=0.7.0"]
-
-[[tool.uv.index]]
-name = "jax"
-url = "https://storage.googleapis.com/jax-releases/jax_releases.html"
+test = ["astropy>=6.0.0", "pytest>=8.3.0", "tfp-nightly"]
 
 [project.urls]
 Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
