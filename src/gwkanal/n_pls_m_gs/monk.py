@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser
+
+from rich_argparse import RichHelpFormatter
 
 from gwkanal.core.inference_io import AnalyticalPELoader as DataLoader
 from gwkanal.core.monk import Monk, monk_arg_parser
@@ -81,7 +83,7 @@ class NPowerlawMGaussianMonk(NPowerlawMGaussianCore, Monk):
 
 
 def main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=RichHelpFormatter)
     parser = model_arg_parser(parser)
     parser = monk_arg_parser(parser)
 
