@@ -6,9 +6,12 @@ import argparse
 
 
 def make_parser() -> argparse.ArgumentParser:
+
+    from rich_argparse import RichHelpFormatter
+
     parser = argparse.ArgumentParser(
         description="Command line interface for plotting chains.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=RichHelpFormatter,
         epilog="This script plots chains from .dat files.",
     )
     parser.add_argument(
