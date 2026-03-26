@@ -6,9 +6,12 @@ import argparse
 
 
 def make_parser() -> argparse.ArgumentParser:
+
+    from rich_argparse import RichHelpFormatter
+
     parser = argparse.ArgumentParser(
         description="Corner plotter.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=RichHelpFormatter,
         epilog="This script plots a corner plot.",
     )
     parser.add_argument(

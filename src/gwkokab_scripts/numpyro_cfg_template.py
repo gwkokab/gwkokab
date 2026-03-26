@@ -43,8 +43,11 @@ def get_cfg() -> Dict[str, Any]:
 def main() -> None:
     import argparse
 
+    from rich_argparse import RichHelpFormatter
+
     parser = argparse.ArgumentParser(
-        description="Creates a template config for NumPyro NUTS sampler and MCMC"
+        description="Creates a template config for NumPyro NUTS sampler and MCMC",
+        formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
         "--output",

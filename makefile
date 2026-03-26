@@ -1,26 +1,29 @@
-PIP       := pip
-UV        := uv
-TARGET    := gwkokab
-PIP_FLAGS ?=
-EXTRA     ?=
+PIP             := pip
+UV              := uv
+TARGET          := gwkokab
+PIP_FLAGS       ?=
+EXTRA           ?=
+GROUP           ?=
+INSTALL_TARGET  := .
 
-INSTALL_TARGET := .$(if $(EXTRA),[$(EXTRA)])
+comma := ,
+empty :=
+space := $(empty) $(empty)
 
-.PHONY: all install uninstall cache_clean help doc
+EXTRA_FLAGS     := $(if $(EXTRA),$(addprefix --extra ,$(subst $(comma),$(space),$(EXTRA))))
+GROUP_FLAGS     := $(if $(GROUP),$(addprefix --group ,$(subst $(comma),$(space),$(GROUP))))
 
-all: help
-
-help:
-	@echo "Usage: make [target] [EXTRA=feature1,feature2]"
-	@echo ""
-	@echo "Targets:"
-	@grep -E '^## [-a-zA-Z_]+: .*' $(MAKEFILE_LIST) | sed 's/^## //' | column -t -s ':'
+.DEFAULT_GOAL   := help
+.PHONY: all install uninstall cache_clean help doc check-uv
 
 install: uninstall check-uv
-	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS) "$(INSTALL_TARGET)"
+	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS) \
+		$(INSTALL_TARGET) -r pyproject.toml \
+		$(EXTRA_FLAGS) \
+		$(GROUP_FLAGS)
 
 uninstall: check-uv
-	$(UV) $(PIP) uninstall $(TARGET) || true
+	@$(UV) $(PIP) uninstall $(TARGET) 2>/dev/null || true
 
 cache_clean: check-uv
 	$(UV) cache clean

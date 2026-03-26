@@ -34,12 +34,13 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3",
 ]
 dependencies = [
+    "RIFT>=0.0.15.11",
     "arviz>=0.20.0",
     "chex>=0.1.87",
     "equinox>=0.11.3",
@@ -58,7 +59,7 @@ dependencies = [
     "pydantic>=2.12.0",
     "quadax>=0.2.5",
     "rich>=14.0.0",
-    "RIFT>=0.0.15.11",
+    "rich-argparse>=1.7.2",
     "scipy>=1.12",
     "seaborn>=0.13.0",
     "tqdm>=4.60.0",
@@ -83,47 +84,68 @@ cpu = ["jax>=0.7.0"]
 cuda12 = ["jax[cuda12]>=0.7.0"]
 cuda13 = ["jax[cuda13]>=0.7.0"]
 tpu = ["jax[tpu]>=0.7.0"]
+
+[dependency-groups]
 dev = ["prek>=0.2.30", "ruff>=0.8.0", "setuptools>=75.6.0"]
-test = ["pytest>=8.3.0", "tfp-nightly", "astropy>=6.0.0"]
 doc = [
     "astroid<5",
     "furo",
     "ipython!=8.7.0",
     "myst-nb",
     "setuptools_scm",
-    "sphinx_design",
+    "sphinx>=2.0",
     "sphinx-autoapi",
     "sphinx-copybutton",
+    "sphinx_design",
     "sphinx-togglebutton",
-    "sphinx>=2.0",
     "sphinxcontrib-bibtex",
 ]
-
-[[tool.uv.index]]
-name = "jax"
-url = "https://storage.googleapis.com/jax-releases/jax_releases.html"
+test = ["astropy>=6.0.0", "pytest>=8.3.0", "tfp-nightly"]
 
 [project.urls]
-Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
-Discussion = "https://github.com/gwkokab/gwkokab/discussions"
-Homepage = "https://github.com/gwkokab/gwkokab"
-Issues = "https://github.com/gwkokab/gwkokab/issues"
+Changelog = "https://github.com/kokabsc/gwkokab/blob/main/CHANGELOG.md"
+Discussion = "https://github.com/kokabsc/gwkokab/discussions"
+Homepage = "https://github.com/kokabsc/gwkokab"
+Issues = "https://github.com/kokabsc/gwkokab/issues"
 
 [project.scripts]
+## Monk scripts
+f_monk_ecc_matters = "gwkanal.ecc_matters.monk:main"
+f_monk_multisource = "gwkanal.multisource.monk:main"
+f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
+f_monk_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.monk:main"
+f_monk_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.monk:main"
+## FSage scripts
+f_sage_ecc_matters = "gwkanal.ecc_matters.sage:f_main"
+f_sage_multisource = "gwkanal.multisource.sage:f_main"
+f_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:f_main"
+f_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:f_main"
+f_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:f_main"
 # GWKokab plotting scripts
 gwk_batch_scatter2d = "gwkokab_scripts.batch_scatter2d:main"
 gwk_batch_scatter3d = "gwkokab_scripts.batch_scatter3d:main"
 gwk_chain_plot = "gwkokab_scripts.chain_plot:main"
 gwk_corner_overplot = "gwkokab_scripts.corner_overplot:main"
 gwk_corner_plot = "gwkokab_scripts.corner_plot:main"
+# These scripts are for developer/user experience.
+gwk_diag_mass_matrix = "gwkokab_scripts.diag_mass_matrix:main"
 gwk_ess_evolution_plot = "gwkokab_scripts.ess_evolution_plot:main"
 gwk_ess_plot = "gwkokab_scripts.ess_plot:main"
+gwk_flowMC_cfg_template = "gwkokab_scripts.flowMC_cfg_template:main"
+gwk_flowMC_info = "gwkokab_scripts.flowMC_info:main"
 gwk_hist_overplot = "gwkokab_scripts.hist_overplot:main"
 gwk_joint_plot = "gwkokab_scripts.joint_plot:main"
+gwk_numpyro_cfg_template = "gwkokab_scripts.numpyro_cfg_template:main"
 gwk_ppd_plot = "gwkokab_scripts.ppd_plot:main"
 gwk_r_hat_plot = "gwkokab_scripts.r_hat_plot:main"
 gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
 gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
+## NSage scripts
+n_sage_ecc_matters = "gwkanal.ecc_matters.sage:n_main"
+n_sage_multisource = "gwkanal.multisource.sage:n_main"
+n_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:n_main"
+n_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:n_main"
+n_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:n_main"
 # Kokab scripts
 ## Genie scripts
 synthetic_analytical_pe = "gwkanal.core.synthetic_pe:synthetic_analytical_pe_main"
@@ -131,29 +153,6 @@ synthetic_discrete_pe_ecc_matter = "gwkanal.ecc_matters.synthetic_pe:main"
 synthetic_discrete_pe_n_pls_m_gs = "gwkanal.n_pls_m_gs.synthetic_pe:main"
 synthetic_events_ecc_matter = "gwkanal.ecc_matters.synthetic_events:main"
 synthetic_events_n_pls_m_gs = "gwkanal.n_pls_m_gs.synthetic_events:main"
-## FSage scripts
-f_sage_ecc_matters = "gwkanal.ecc_matters.sage:f_main"
-f_sage_multisource = "gwkanal.multisource.sage:f_main"
-f_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:f_main"
-f_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:f_main"
-f_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:f_main"
-## NSage scripts
-n_sage_ecc_matters = "gwkanal.ecc_matters.sage:n_main"
-n_sage_multisource = "gwkanal.multisource.sage:n_main"
-n_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:n_main"
-n_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:n_main"
-n_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:n_main"
-## Monk scripts
-f_monk_ecc_matters = "gwkanal.ecc_matters.monk:main"
-f_monk_multisource = "gwkanal.multisource.monk:main"
-f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
-f_monk_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.monk:main"
-f_monk_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.monk:main"
-# These scripts are for developer/user experience.
-gwk_diag_mass_matrix = "gwkokab_scripts.diag_mass_matrix:main"
-gwk_flowMC_cfg_template = "gwkokab_scripts.flowMC_cfg_template:main"
-gwk_flowMC_info = "gwkokab_scripts.flowMC_info:main"
-gwk_numpyro_cfg_template = "gwkokab_scripts.numpyro_cfg_template:main"
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]
