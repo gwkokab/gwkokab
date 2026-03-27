@@ -320,9 +320,9 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
     """
 
     if P.PRIMARY_SPIN_MAGNITUDE in parameters:
-        data["prior"] *= 2 * np.pi * data[P.PRIMARY_SPIN_MAGNITUDE]
+        data["prior"] *= 2 * np.pi * np.square(data[P.PRIMARY_SPIN_MAGNITUDE])
     if P.SECONDARY_SPIN_MAGNITUDE in parameters:
-        data["prior"] *= 2 * np.pi * data[P.SECONDARY_SPIN_MAGNITUDE]
+        data["prior"] *= 2 * np.pi * np.square(data[P.SECONDARY_SPIN_MAGNITUDE])
 
     if P.MASS_RATIO in parameters:
         data[P.MASS_RATIO] = data[P.SECONDARY_MASS_SOURCE] / data[P.PRIMARY_MASS_SOURCE]
