@@ -17,6 +17,7 @@ from numpyro.distributions.distribution import enable_validation
 from gwkanal.core.inference_io import AnalyticalPELoader, PoissonMeanEstimationLoader
 from gwkanal.core.utils import SampleTransformer
 from gwkokab.inference import analytical_likelihood
+from gwkokab.utils.exceptions import LoggedValueError
 
 from .flowMC_based import FlowMCBased
 from .guru import guru_arg_parser as guru_parser
@@ -49,6 +50,7 @@ def _save_samples_to_hdf5(
         "compression_opts": 9,
         "shuffle": True,
     }
+    n_samples, n_events, _ = samples.shape
     with h5py.File(filename, "w") as f:
         for i, fname in enumerate(event_filenames):
             event_group = f.create_group(fname.stem)
@@ -59,11 +61,14 @@ def _save_samples_to_hdf5(
                 data=transformed_samples[:, i, :],
                 **opts,
             )
-            if isinstance(ln_offsets[i], np.ndarray):
-                # to avoid error raised if ln_offsets[i] is a scalar
+            if ln_offsets.shape == (n_events,):
                 event_group.create_dataset("ln_offsets", data=ln_offsets[i], **opts)
+            elif ln_offsets.shape == (n_samples, n_events):
+                event_group.create_dataset("ln_offsets", data=ln_offsets[:, i])
             else:
-                event_group.create_dataset("ln_offsets", data=ln_offsets[i])
+                raise LoggedValueError(
+                    f"ln_offsets shape {ln_offsets.shape} is not compatible with expected shapes {(n_events,)} or {(n_samples, n_events)}."
+                )
 
 
 def _multivariate_normal_samples(
