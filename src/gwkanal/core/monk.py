@@ -15,6 +15,7 @@ from numpyro.distributions import Distribution
 from numpyro.distributions.distribution import enable_validation
 
 from gwkanal.core.inference_io import AnalyticalPELoader, PoissonMeanEstimationLoader
+from gwkanal.core.utils import SampleTransformer
 from gwkokab.inference import analytical_likelihood
 
 from .flowMC_based import FlowMCBased
@@ -24,7 +25,7 @@ from .guru import guru_arg_parser as guru_parser
 def _save_samples_to_hdf5(
     filename: str,
     event_filenames: tuple[Path, ...],
-    samples_stack: np.ndarray,
+    samples: np.ndarray,
     transformed_samples: np.ndarray,
     ln_offsets: np.ndarray,
 ) -> None:
@@ -36,7 +37,7 @@ def _save_samples_to_hdf5(
         The name of the HDF5 file to save the data to.
     event_filenames : tuple[Path, ...]
         Tuple of original filenames corresponding to each event.
-    samples_stack : np.ndarray
+    samples : np.ndarray
         The original samples in analytical coordinates.
     transformed_samples : np.ndarray
         The transformed samples in model coordinates.
@@ -52,7 +53,7 @@ def _save_samples_to_hdf5(
         for i, fname in enumerate(event_filenames):
             event_group = f.create_group(fname.stem)
             event_group.attrs["original_filename"] = str(fname)
-            event_group.create_dataset("samples", data=samples_stack[:, i, :], **opts)
+            event_group.create_dataset("samples", data=samples[:, i, :], **opts)
             event_group.create_dataset(
                 "transformed_samples",
                 data=transformed_samples[:, i, :],
@@ -66,17 +67,20 @@ def _save_samples_to_hdf5(
 
 
 def _multivariate_normal_samples(
+    transform: SampleTransformer,
     N: int,
     mean: np.ndarray,
     cov: np.ndarray,
     low: np.ndarray,
     high: np.ndarray,
     scale: np.ndarray,
-) -> tuple[np.ndarray, int]:
+) -> tuple[np.ndarray, np.ndarray, int]:
     """Generate samples from a multivariate normal distribution.
 
     Parameters
     ----------
+    transform : SampleTransformer
+        The transformation to apply to the samples after generation.
     N : int
         Number of samples to generate.
     mean : np.ndarray
@@ -94,10 +98,13 @@ def _multivariate_normal_samples(
     -------
     np.ndarray
         Samples drawn from the multivariate normal distribution.
+    np.ndarray
+        Transformed samples after applying the provided transformation.
     int
         Total number of samples generated.
     """
     samples = np.zeros((N, mean.shape[0]))
+    transformed_samples = transform.transform(samples)
     mask = np.zeros(N, dtype=bool)
     N_total = 0
 
@@ -113,9 +120,12 @@ def _multivariate_normal_samples(
             )
             / scale
         )
+        new_transformed_samples = transform.transform(new_samples)
         samples[~mask] = new_samples
+        transformed_samples[~mask] = new_transformed_samples
         mask = np.all((samples >= low) & (samples <= high), axis=1)
-    return samples, N_total
+        mask &= transform.check(samples, transformed_samples)
+    return samples, transformed_samples, N_total
 
 
 class Monk(FlowMCBased):
@@ -203,51 +213,59 @@ class Monk(FlowMCBased):
             self.model, priors, constants, variables_index, poisson_mean_estimator
         )
 
-        ln_offsets = np.sum(np.log(scale), axis=1)
-
         samples = []
+        transformed_samples = []
+        total_samples = []
+
         for i in range(n_events):
-            event_samples, n_total = _multivariate_normal_samples(
-                self.n_samples,
-                mean[i],
-                cov[i],
-                lower_bound[i],
-                upper_bound[i],
-                scale[i],
+            event_samples, event_transformed_samples, n_total = (
+                _multivariate_normal_samples(
+                    self.data_loader.sample_transformer,
+                    self.n_samples,
+                    mean[i],
+                    cov[i],
+                    lower_bound[i],
+                    upper_bound[i],
+                    scale[i],
+                )
             )
 
-            ln_offsets -= np.log(n_total)
-
             logger.info(
-                "Event {i}: Generated {n_samples} samples for event {i} with {n_total} total attempts.",
+                "Generated {n_samples} samples for event '{event_name}' with a total of {n_total} samples drawn to account for bounds and transformations.",
                 n_samples=self.n_samples,
-                i=i + 1,
+                event_name=self.data_loader.event_paths[i].stem,
                 n_total=n_total,
             )
             samples.append(event_samples)
+            transformed_samples.append(event_transformed_samples)
+            total_samples.append(n_total)
 
         samples_stack = np.stack(samples, axis=1)
+        transformed_samples_stack = np.stack(transformed_samples, axis=1)
+        total_samples_stack = np.stack(total_samples, axis=0)
 
-        transformed_samples = self.data_loader.analytical_to_model_coord_fn(
-            samples_stack
-        )
+        log_det_scale = np.sum(np.log(scale), axis=1)
 
-        ln_offsets += (
-            self.data_loader.log_abs_det_jacobian_analytical_to_model_coord_fn(
-                samples_stack, transformed_samples
+        ln_offsets = (
+            log_det_scale
+            - np.log(total_samples_stack)
+            + self.data_loader.sample_transformer.log_abs_det_jacobian(
+                samples_stack, transformed_samples_stack
             )
         )
 
         logger.info("ln_offsets.shape: {shape}", shape=ln_offsets.shape)
-        logger.info("samples_stack.shape: {shape}", shape=transformed_samples.shape)
+        logger.info(
+            "samples_stack.shape: {shape}", shape=transformed_samples_stack.shape
+        )
 
         filename = "monk_samples.hdf5"
 
         _save_samples_to_hdf5(
             filename=filename,
             event_filenames=self.data_loader.event_paths,
-            samples_stack=samples_stack,
-            transformed_samples=transformed_samples,
+            samples=samples_stack,
+            transformed_samples=transformed_samples_stack,
             ln_offsets=ln_offsets,
         )
 
@@ -262,7 +280,7 @@ class Monk(FlowMCBased):
             data={
                 "ln_offsets": jax.device_put(ln_offsets),
                 "pmean_kwargs": jax.device_put(pmean_kwargs),
-                "samples_stack": jax.device_put(transformed_samples),
+                "samples_stack": jax.device_put(transformed_samples_stack),
             },
             labels=sorted(variables.keys()),
         )

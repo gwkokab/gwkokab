@@ -5,14 +5,14 @@
 import glob
 import warnings
 from pathlib import Path
-from types import ModuleType
-from typing import Callable, NamedTuple, Optional
+from typing import NamedTuple, Optional
 
 import h5py
 import numpy as np
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
+from gwkanal.core.utils import IdentitySampleTransformer, SampleTransformer
 from gwkanal.utils.common import read_json
 from gwkokab.utils.exceptions import (
     LoggedFileNotFoundError,
@@ -23,9 +23,9 @@ from gwkokab.utils.exceptions import (
 )
 
 
-def _load_module(path: Optional[str]) -> Optional[ModuleType]:
+def _load_transform(path: Optional[str]) -> SampleTransformer:
     if path is None:
-        return None
+        return IdentitySampleTransformer()
 
     import importlib.util
 
@@ -35,28 +35,23 @@ def _load_module(path: Optional[str]) -> Optional[ModuleType]:
 
     custom_module = importlib.util.module_from_spec(spec)  # type: ignore
     spec.loader.exec_module(custom_module)  # type: ignore
-    return custom_module
 
-
-def _extract_function(
-    module: Optional[ModuleType], fn_name: str, default_fn: Callable
-) -> Callable:
-    if module is None:
+    if custom_module is None:
         warnings.warn(
             "No module provided. Using identity transform.",
             LoggedUserWarning,
         )
-        return default_fn
+        return IdentitySampleTransformer()
 
-    if not hasattr(module, fn_name):
+    if not hasattr(custom_module, "Transform"):
         warnings.warn(
-            f"The custom module must have a '{fn_name}' function. Using identity transform.",
+            "The custom module must have a 'Transform' method. Using identity transform.",
             LoggedUserWarning,
         )
-        return default_fn
+        return IdentitySampleTransformer()
 
-    fn: Callable = getattr(module, fn_name)
-    return fn
+    transform_cls: type[SampleTransformer] = getattr(custom_module, "Transform")
+    return transform_cls()
 
 
 class AnalyticalPEFileData(NamedTuple):
@@ -76,6 +71,8 @@ class AnalyticalPELoader(BaseModel):
     population inference.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     event_paths: tuple[Path, ...]
     """Tuple of absolute paths to the files containing PE samples."""
 
@@ -88,19 +85,14 @@ class AnalyticalPELoader(BaseModel):
     alternate_waveforms: dict[str, str] = Field(default_factory=dict)
     """Mapping of filenames to alternate waveform names, if needed."""
 
-    analytical_to_model_coord_fn: Callable = Field(lambda x: x)
-    """A function that transforms coordinates from the analytical PE format to the
-    model's expected format.
-
-    This allows for flexibility in handling different coordinate systems or
-    parameterizations used in the PE samples.
-    """
-
-    log_abs_det_jacobian_analytical_to_model_coord_fn: Callable = Field(
-        lambda x, y: 0.0
+    sample_transformer: SampleTransformer = Field(
+        default_factory=IdentitySampleTransformer
     )
-    """A function that computes the log absolute determinant of the Jacobian of the
-    transformation from analytical PE coordinates to model coordinates.
+    """An instance of a SampleTransformer that defines how to transform the samples from
+    the analytical PE format to the model's expected format.
+
+    This allows for flexible handling of different coordinate systems or
+    parameterizations used in the PE samples.
     """
 
     @classmethod
@@ -140,21 +132,12 @@ class AnalyticalPELoader(BaseModel):
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
         transform_module_path = raw_data.pop("transform_module_path", None)
-        transform_module = _load_module(transform_module_path)
-        transform = _extract_function(
-            transform_module, "analytical_to_model_coord_fn", lambda x: x
-        )
-        log_abs_det_jacobian_transform = _extract_function(
-            transform_module,
-            "log_abs_det_jacobian_analytical_to_model_coord_fn",
-            lambda x, y: 0.0,
-        )
+        transform = _load_transform(transform_module_path)
 
         return cls(
             **raw_data,
             event_paths=filenames,
-            analytical_to_model_coord_fn=transform,
-            log_abs_det_jacobian_analytical_to_model_coord_fn=log_abs_det_jacobian_transform,
+            sample_transformer=transform,
         )
 
     @classmethod

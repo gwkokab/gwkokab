@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import abc
 from collections.abc import Sequence
 
 import numpy as np
@@ -98,3 +99,57 @@ def from_structured(data: np.ndarray) -> tuple[np.ndarray, Sequence[str]]:
         - List of field names from the structured array.
     """
     return np.vstack([data[name] for name in data.dtype.names]).T, data.dtype.names
+
+
+class SampleTransformer(abc.ABC):
+    @abc.abstractmethod
+    def transform(self, samples: np.ndarray) -> np.ndarray:
+        """Transform the input samples to a new coordinate system.
+
+        Parameters
+        ----------
+        samples : np.ndarray
+            The input samples to be transformed.
+
+        Returns
+        -------
+        np.ndarray
+            The transformed samples.
+        """
+        pass
+
+    @abc.abstractmethod
+    def log_abs_det_jacobian(
+        self, samples: np.ndarray, transformed_samples: np.ndarray
+    ) -> np.ndarray:
+        """Compute the log absolute determinant of the Jacobian of the transformation.
+
+        Parameters
+        ----------
+        samples : np.ndarray
+            The original samples before transformation.
+        transformed_samples : np.ndarray
+            The transformed samples after applying the transformation.
+
+        Returns
+        -------
+        np.ndarray
+            The log absolute determinant of the Jacobian for each sample.
+        """
+        pass
+
+    def check(self, samples: np.ndarray, transformed_samples: np.ndarray) -> np.ndarray:
+        """Additional checks for the transformation, such as ensuring that the
+        transformed samples are within expected bounds.
+        """
+        return np.ones(samples.shape[0])
+
+
+class IdentitySampleTransformer(SampleTransformer):
+    def transform(self, samples: np.ndarray) -> np.ndarray:
+        return samples
+
+    def log_abs_det_jacobian(
+        self, samples: np.ndarray, transformed_samples: np.ndarray
+    ) -> np.ndarray:
+        return np.zeros(samples.shape[0])
