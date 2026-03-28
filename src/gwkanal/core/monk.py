@@ -4,8 +4,10 @@
 
 from argparse import ArgumentParser
 from collections.abc import Callable
+from pathlib import Path
 from typing import Union
 
+import h5py
 import jax
 import numpy as np
 from loguru import logger
@@ -17,6 +19,50 @@ from gwkokab.inference import analytical_likelihood
 
 from .flowMC_based import FlowMCBased
 from .guru import guru_arg_parser as guru_parser
+
+
+def _save_samples_to_hdf5(
+    filename: str,
+    event_filenames: tuple[Path, ...],
+    samples_stack: np.ndarray,
+    transformed_samples: np.ndarray,
+    ln_offsets: np.ndarray,
+) -> None:
+    """Save the generated samples and related data to an HDF5 file.
+
+    Parameters
+    ----------
+    filename : str
+        The name of the HDF5 file to save the data to.
+    event_filenames : tuple[Path, ...]
+        Tuple of original filenames corresponding to each event.
+    samples_stack : np.ndarray
+        The original samples in analytical coordinates.
+    transformed_samples : np.ndarray
+        The transformed samples in model coordinates.
+    ln_offsets : np.ndarray
+        The log offsets for each event.
+    """
+    opts = {
+        "compression": "gzip",
+        "compression_opts": 9,
+        "shuffle": True,
+    }
+    with h5py.File(filename, "w") as f:
+        for i, fname in enumerate(event_filenames):
+            event_group = f.create_group(fname.stem)
+            event_group.attrs["original_filename"] = str(fname)
+            event_group.create_dataset("samples", data=samples_stack[:, i, :], **opts)
+            event_group.create_dataset(
+                "transformed_samples",
+                data=transformed_samples[:, i, :],
+                **opts,
+            )
+            if isinstance(ln_offsets[i], np.ndarray):
+                # to avoid error raised if ln_offsets[i] is a scalar
+                event_group.create_dataset("ln_offsets", data=ln_offsets[i], **opts)
+            else:
+                event_group.create_dataset("ln_offsets", data=ln_offsets[i])
 
 
 def _multivariate_normal_samples(
@@ -194,6 +240,21 @@ class Monk(FlowMCBased):
 
         logger.info("ln_offsets.shape: {shape}", shape=ln_offsets.shape)
         logger.info("samples_stack.shape: {shape}", shape=transformed_samples.shape)
+
+        filename = "monk_samples.hdf5"
+
+        _save_samples_to_hdf5(
+            filename=filename,
+            event_filenames=self.data_loader.event_paths,
+            samples_stack=samples_stack,
+            transformed_samples=transformed_samples,
+            ln_offsets=ln_offsets,
+        )
+
+        logger.info(
+            "Saved generated samples and related data to '{filename}'.",
+            filename=filename,
+        )
 
         self.driver(
             logpdf=logpdf,
