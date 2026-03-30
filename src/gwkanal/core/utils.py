@@ -152,4 +152,4 @@ class IdentitySampleTransformer(SampleTransformer):
     def log_abs_det_jacobian(
         self, samples: np.ndarray, transformed_samples: np.ndarray
     ) -> np.ndarray:
-        return np.zeros(samples.shape[0])
+        return np.zeros(samples.shape[:-1])
