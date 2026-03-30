@@ -142,7 +142,7 @@ class SampleTransformer(abc.ABC):
         """Additional checks for the transformation, such as ensuring that the
         transformed samples are within expected bounds.
         """
-        return np.ones(samples.shape[0])
+        return np.ones(samples.shape[0], dtype=bool)
 
 
 class IdentitySampleTransformer(SampleTransformer):
