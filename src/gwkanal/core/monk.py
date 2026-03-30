@@ -17,7 +17,6 @@ from numpyro.distributions.distribution import enable_validation
 from gwkanal.core.inference_io import AnalyticalPELoader, PoissonMeanEstimationLoader
 from gwkanal.core.utils import SampleTransformer
 from gwkokab.inference import analytical_likelihood
-from gwkokab.utils.exceptions import LoggedValueError
 
 from .flowMC_based import FlowMCBased
 from .guru import guru_arg_parser as guru_parser
@@ -50,25 +49,18 @@ def _save_samples_to_hdf5(
         "compression_opts": 9,
         "shuffle": True,
     }
-    n_samples, n_events, _ = samples.shape
+
     with h5py.File(filename, "w") as f:
         for i, fname in enumerate(event_filenames):
             event_group = f.create_group(fname.stem)
             event_group.attrs["original_filename"] = str(fname)
-            event_group.create_dataset("samples", data=samples[:, i, :], **opts)
+            event_group.create_dataset("samples", data=samples[i], **opts)
             event_group.create_dataset(
                 "transformed_samples",
-                data=transformed_samples[:, i, :],
+                data=transformed_samples[i],
                 **opts,
             )
-            if ln_offsets.shape == (n_events,):
-                event_group.create_dataset("ln_offsets", data=ln_offsets[i], **opts)
-            elif ln_offsets.shape == (n_samples, n_events):
-                event_group.create_dataset("ln_offsets", data=ln_offsets[:, i])
-            else:
-                raise LoggedValueError(
-                    f"ln_offsets shape {ln_offsets.shape} is not compatible with expected shapes {(n_events,)} or {(n_samples, n_events)}."
-                )
+            event_group.create_dataset("ln_offsets", data=ln_offsets[i], **opts)
 
 
 def _multivariate_normal_samples(
@@ -245,18 +237,11 @@ class Monk(FlowMCBased):
             transformed_samples.append(event_transformed_samples)
             total_samples.append(n_total)
 
-        samples_stack = np.stack(samples, axis=1)
-        transformed_samples_stack = np.stack(transformed_samples, axis=1)
-        total_samples_stack = np.stack(total_samples, axis=0)
+        samples_stack = np.stack(samples, axis=0)
+        transformed_samples_stack = np.stack(transformed_samples, axis=0)
 
-        log_det_scale = np.sum(np.log(scale), axis=1)
-
-        ln_offsets = (
-            log_det_scale
-            - np.log(total_samples_stack)
-            + self.data_loader.sample_transformer.log_abs_det_jacobian(
-                samples_stack, transformed_samples_stack
-            )
+        ln_offsets = self.data_loader.sample_transformer.log_abs_det_jacobian(
+            samples_stack, transformed_samples_stack
         )
 
         logger.info("ln_offsets.shape: {shape}", shape=ln_offsets.shape)
