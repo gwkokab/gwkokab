@@ -127,7 +127,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         pmean_loader = PoissonMeanEstimationLoader.from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
-        log_selection_fn, poisson_mean_estimator, _, pmean_kwargs = (
+        log_selection_fn, poisson_mean_estimator, pmean_kwargs = (
             pmean_loader.get_estimators()
         )
 

@@ -25,7 +25,6 @@ def poisson_mean_from_neural_vt(
 ) -> Tuple[
     Optional[Callable[[Array], Array]],
     Callable[..., Array],
-    Callable[..., Array],
     dict[str, Any],
 ]:
     if not parameters:
@@ -60,19 +59,17 @@ def poisson_mean_from_neural_vt(
             jax.lax.map(neural_vt_model, x_new, batch_size=batch_size), axis=-1
         )
 
-    def _poisson_mean(scaled_mixture: ScaledMixture, T_obs: Array) -> Array:
+    def _poisson_mean(
+        scaled_mixture: ScaledMixture, T_obs: Array
+    ) -> Tuple[Array, Array]:
         component_sample = scaled_mixture.component_sample(key, (num_samples,))
         # vmapping over components
         log_vt_values = jax.vmap(log_vt, in_axes=1)(component_sample)
         mean_per_component = jnp.exp(
             scaled_mixture.log_scales + jax.nn.logsumexp(log_vt_values, axis=-1)
         )
-        return (T_obs / num_samples) * jnp.sum(mean_per_component, axis=-1)
+        mean = (T_obs / num_samples) * jnp.sum(mean_per_component, axis=-1)
 
-    def _variance_of_estimator(scaled_mixture: ScaledMixture, T_obs: Array) -> Array:
-        component_sample = scaled_mixture.component_sample(key, (num_samples,))
-        # vmapping over components
-        log_vt_values = jax.vmap(log_vt, in_axes=1)(component_sample)
         term2 = jnp.exp(
             2.0 * jnp.log(T_obs)
             - 3.0 * jnp.log(num_samples)
@@ -85,11 +82,11 @@ def poisson_mean_from_neural_vt(
             + 2.0 * scaled_mixture.log_scales
             + jax.nn.logsumexp(2.0 * log_vt_values, axis=-1)
         )
-        return jnp.sum(term1 - term2, axis=-1)
+        variance = jnp.sum(term1 - term2, axis=-1)
+        return mean, variance
 
     return (
         log_vt,
         _poisson_mean,
-        _variance_of_estimator,
         {"T_obs": time_scale},
     )

@@ -8,8 +8,9 @@ from typing import Any, Dict, List, Optional, Tuple
 import equinox as eqx
 import jax
 from jax import Array, numpy as jnp
-from jaxtyping import ArrayLike
 from numpyro.distributions.distribution import Distribution
+
+from gwkokab.inference.poissonlikelihood_utils import discrete_poisson_likelihood_fn
 
 from ..models.utils import JointDistribution, ScaledMixture
 
@@ -22,10 +23,10 @@ def flowMC_poisson_likelihood(
     priors: JointDistribution,
     variables: Dict[str, Distribution],
     variables_index: Dict[str, int],
-    log_constants: ArrayLike,
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
+    variance_cut_threshold: float,
 ) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
@@ -67,50 +68,39 @@ def flowMC_poisson_likelihood(
             for name, i in variables_index.items()
         }
 
-    def likelihood_fn(
+    def log_posterior_fn(
         x: Array, data: Dict[str, Tuple[Array, ...] | Dict[str, Any]]
     ) -> Array:
         data_group: Tuple[Array, ...] = data["data_group"]  # type: ignore
         log_ref_priors_group: Tuple[Array, ...] = data["log_ref_priors_group"]  # type: ignore
         masks_group: Tuple[Array, ...] = data["masks_group"]  # type: ignore
         pmean_kwargs: Dict[str, Any] = data["pmean_kwargs"]  # type: ignore
+        N_pes = data["N_pes"]  # type: ignore
 
         mapped_params = _map_params(x)
 
         model_instance = dist_fn(**constants, **mapped_params)
 
-        total_log_likelihood = log_constants  # - Σ log(M_i)
+        log_likelihood, variance = discrete_poisson_likelihood_fn(
+            model_instance,
+            poisson_mean_estimator,
+            data_group,
+            log_ref_priors_group,
+            masks_group,
+            pmean_kwargs,
+            N_pes,
+        )
 
-        # Σ log Σ exp (log p(ω|data_n) - log π_n)
-        for batched_data, batched_log_ref_priors, batched_mask in zip(
-            data_group, log_ref_priors_group, masks_group
-        ):
-            feasible_point = model_instance.support.feasible_like(batched_data[0])
+        log_likelihood = jnp.where(
+            variance < variance_cut_threshold,
+            log_likelihood,
+            -jnp.inf,
+        )
 
-            safe_data = jnp.where(
-                batched_mask[..., jnp.newaxis],
-                batched_data,
-                feasible_point,
-            )
-
-            # log p(ω|data_n)
-            batch_model_log_prob: Array = model_instance.log_prob(safe_data)
-
-            # log p(ω|data_n) - log π_n
-            log_prob = batch_model_log_prob - batched_log_ref_priors
-            log_prob = jnp.where(batched_mask, log_prob, -jnp.inf)
-
-            # log Σ exp (log p(ω|data_n) - log π_n)
-            total_log_likelihood += jax.nn.logsumexp(log_prob, axis=-1).sum(
-                axis=0, initial=0.0
-            )
-
-        # μ = E_{Ω|Λ}[VT(ω)]
-        expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
-        # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
-        log_likelihood = total_log_likelihood - expected_rates
-        # log p(ω|data) = log π(ω) + log L(ω)
+        # log π(ω)
         log_prior = priors.log_prob(x)
+
+        # log p(ω|data) = log π(ω) + log L(ω)
         log_posterior = log_prior + log_likelihood
 
         log_posterior = jnp.nan_to_num(
@@ -123,9 +113,9 @@ def flowMC_poisson_likelihood(
         return log_posterior
 
     if where_fns is None:
-        return eqx.filter_jit(likelihood_fn)
+        return eqx.filter_jit(log_posterior_fn)
 
-    def likelihood_fn_with_checks(
+    def log_posterior_fn_with_checks(
         x: Array, data: Dict[str, Tuple[Array, ...]]
     ) -> Array:
         mapped_params = _map_params(x)
@@ -135,6 +125,6 @@ def flowMC_poisson_likelihood(
                 predicate, where_fn(**constants, **mapped_params)
             )
         predicate = jnp.logical_and(jnp.all(jnp.isfinite(x)), predicate)
-        return jnp.where(predicate, likelihood_fn(x, data), -jnp.inf)
+        return jnp.where(predicate, log_posterior_fn(x, data), -jnp.inf)
 
-    return eqx.filter_jit(likelihood_fn_with_checks)
+    return eqx.filter_jit(log_posterior_fn_with_checks)

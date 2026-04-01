@@ -133,7 +133,6 @@ class PoissonMeanEstimationLoader(BaseModel):
     ) -> Tuple[
         Optional[Callable[[Array], Array]],
         Callable[..., Array],
-        Callable[..., Array],
         dict[str, Any],
     ]:
         return self.loader.get_estimators()

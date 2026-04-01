@@ -6,9 +6,10 @@ from abc import abstractmethod
 from argparse import ArgumentParser
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Set, Tuple, Union
 
 import jax
+import numpy as np
 from jax import lax
 from jaxtyping import Array
 from loguru import logger
@@ -213,7 +214,7 @@ class Guru(PRNGKeyMixin):
         prior_filename: str,
         profile_memory: bool,
         sampler_settings_filename: str,
-        variance_cut_threshold: Optional[float] = None,
+        variance_cut_threshold: float,
     ) -> None:
         self.analysis_name = analysis_name
         self.prior_filename = prior_filename
@@ -396,9 +397,11 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
     sampler_group.add_argument(
         "--variance-cut-threshold",
-        help="Threshold for variance cut in the sampler.",
+        help="Threshold for variance cut in the sampler. If the variance of the "
+        "likelihood is above this threshold, the sample will be rejected. By default is"
+        " infinite (i.e., no cut by setting it to the maximum float value).",
         type=float,
-        default=None,
+        default=float(np.finfo(float).max),
     )
 
     prior_group = parser.add_argument_group("Prior Options")
