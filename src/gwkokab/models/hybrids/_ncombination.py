@@ -21,6 +21,7 @@ from ..mass import (
     PowerlawPrimaryMassRatio,
     SmoothedBrokenPowerlawMassRatioPowerlaw,
     SmoothedGaussianPrimaryMassRatio,
+    SmoothedPowerlawPrimaryMassRatio,
 )
 from ..redshift import PowerlawRedshift
 from ..spin import (
@@ -48,6 +49,7 @@ __all__ = [
     "create_powerlaws",
     "create_smoothed_broken_powerlaws_mass_ratio_powerlaw",
     "create_smoothed_gaussian_primary_mass_ratio",
+    "create_smoothed_powerlaw_primary_mass_ratio",
     "create_spin_magnitude_mixture_models",
     "create_truncated_normal_distributions",
     "create_two_truncated_normal_mixture",
@@ -1039,6 +1041,51 @@ def create_gaussian_primary_mass_ratio(
 
         distribution = ExtendedSupportTransformedDistribution(
             base_distribution=gaussian,
+            transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
+            validate_args=validate_args,
+        )
+
+        collection.append(distribution)
+    return collection
+
+
+def create_smoothed_powerlaw_primary_mass_ratio(
+    N: int,
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    collection = []
+
+    alpha_name = "alpha_spl"
+    beta_name = "beta_spl"
+    delta_m1_name = "delta_m1_spl"
+    delta_m2_name = "delta_m2_spl"
+    m1min_name = "m1min_spl"
+    m2min_name = "m2min_spl"
+    mmax_name = "mmax_spl"
+
+    for i in range(N):
+        alpha = _get_parameter(params, alpha_name + f"_{i}")
+        beta = _get_parameter(params, beta_name + f"_{i}")
+        delta_m1 = _get_parameter(params, delta_m1_name + f"_{i}")
+        delta_m2 = _get_parameter(params, delta_m2_name + f"_{i}")
+        m1min = _get_parameter(params, m1min_name + f"_{i}")
+        m2min = _get_parameter(params, m2min_name + f"_{i}")
+        mmax = _get_parameter(params, mmax_name + f"_{i}")
+
+        broken_powerlaw = SmoothedPowerlawPrimaryMassRatio(
+            alpha=alpha,
+            beta=beta,
+            delta_m1=delta_m1,
+            delta_m2=delta_m2,
+            m1min=m1min,
+            m2min=m2min,
+            mmax=mmax,
+            validate_args=validate_args,
+        )
+
+        distribution = ExtendedSupportTransformedDistribution(
+            base_distribution=broken_powerlaw,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
             validate_args=validate_args,
         )

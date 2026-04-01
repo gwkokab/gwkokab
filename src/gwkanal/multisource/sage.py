@@ -27,6 +27,7 @@ from gwkokab.models.utils import JointDistribution, ScaledMixture
 class MultiSourceModelSage(MultiSourceModelCore, Sage):
     def __init__(
         self,
+        N_spl: int,
         N_sbpl: int,
         N_gpl: int,
         N_gg: int,
@@ -74,6 +75,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
     ) -> None:
         MultiSourceModelCore.__init__(
             self,
+            N_spl=N_spl,
             N_sbpl=N_sbpl,
             N_gpl=N_gpl,
             N_gg=N_gg,
@@ -141,6 +143,7 @@ def f_main() -> None:
     MultiSourceModelFSage.init_rng_seed(seed=args.seed)
 
     MultiSourceModelFSage(
+        N_spl=args.n_spl,
         N_sbpl=args.n_sbpl,
         N_gpl=args.n_gpl,
         N_gg=args.n_gg,
@@ -191,6 +194,7 @@ def n_main() -> None:
     MultiSourceModelNSage.init_rng_seed(seed=args.seed)
 
     MultiSourceModelNSage(
+        N_spl=args.n_spl,
         N_sbpl=args.n_sbpl,
         N_gpl=args.n_gpl,
         N_gg=args.n_gg,
