@@ -16,6 +16,7 @@ from ..constraints import all_constraint
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
+    create_generic_powerlaws,
     create_gwtc4_effective_spin_skew_normal_models,
     create_minimum_tilt_model,
     create_powerlaw_redshift,
@@ -40,6 +41,7 @@ def build_non_mass_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
@@ -56,6 +58,7 @@ def build_non_mass_distributions(
         # combined tilt distribution
         (use_tilt, P.COS_TILT_1 + "_" + P.COS_TILT_2, create_minimum_tilt_model),
         (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
+        (use_eccentricity_powerlaw, P.ECCENTRICITY, create_generic_powerlaws),
         (use_redshift, P.REDSHIFT, create_powerlaw_redshift),
 
     ]
