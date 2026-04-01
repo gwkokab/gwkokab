@@ -12,5 +12,5 @@ from .poissonlikelihood_numpyro import (
     numpyro_poisson_likelihood as numpyro_poisson_likelihood,
 )
 from .poissonlikelihood_utils import (
-    variance_of_single_event_likelihood as variance_of_single_event_likelihood,
+    discrete_poisson_likelihood_fn as discrete_poisson_likelihood_fn,
 )

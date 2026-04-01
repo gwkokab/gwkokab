@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Tuple
+from collections.abc import Callable
+from typing import Any, Dict, Tuple
 
 import jax
 from jax import numpy as jnp
@@ -10,70 +11,62 @@ from jaxtyping import Array
 from numpyro.distributions.distribution import Distribution
 
 
-def variance_of_single_event_likelihood(
+def discrete_poisson_likelihood_fn(
     model_instance: Distribution,
-    n_buckets: int,
+    poisson_mean_estimator: Callable[..., Tuple[Array, Array]],
     data_group: Tuple[Array, ...],
     log_ref_priors_group: Tuple[Array, ...],
     masks_group: Tuple[Array, ...],
-) -> Array:
-    """See equation 9 and 10 in https://arxiv.org/abs/2406.16813."""
+    pmean_kwargs: Dict[str, Any],
+    N_pes: Tuple[Array, ...],
+) -> Tuple[Array, Array]:
 
-    @jax.jit
-    def _variance_of_single_event_likelihood(*args: Array):
-        data_group = args[0:n_buckets]
-        log_ref_priors_group = args[n_buckets : 2 * n_buckets]
-        masks_group = args[2 * n_buckets : 3 * n_buckets]
+    n_events = sum([masks_group.shape[0] for masks_group in data_group])
 
-        variance = jnp.zeros(())
-        # Σ log Σ exp (log p(θ|data_n) - log π_n)
-        for batched_data, batched_log_ref_priors, batched_masks in zip(
-            data_group, log_ref_priors_group, masks_group
-        ):
-            safe_data = jnp.where(
-                jnp.expand_dims(batched_masks, axis=-1),
-                batched_data,
-                model_instance.support.feasible_like(batched_data),
-            )
-            safe_log_ref_prior = jnp.where(batched_masks, batched_log_ref_priors, 0.0)
+    total_log_likelihood = -jnp.sum(jnp.log(jnp.asarray(N_pes)))  # - Σ log(M_i)
+    pe_variance = jnp.zeros(())
 
-            n_events_per_bucket, n_samples, _ = batched_data.shape
-            batched_model_log_prob = jax.vmap(
-                jax.vmap(model_instance.log_prob, axis_size=n_samples),
-                axis_size=n_events_per_bucket,
-            )(safe_data)  # type: ignore
-            safe_model_log_prob = jnp.where(
-                batched_masks, batched_model_log_prob, -jnp.inf
-            )
-            batched_log_prob: Array = safe_model_log_prob - safe_log_ref_prior
-            safe_batched_log_prob = jnp.where(
-                batched_masks & (~jnp.isnan(batched_log_prob)),
-                batched_log_prob,
-                -jnp.inf,
-            )
-            log_prob_sum = jax.nn.logsumexp(
-                safe_batched_log_prob,
-                axis=-1,
-                where=~jnp.isneginf(safe_batched_log_prob),
-            )
-            log_prob_sum_2 = jax.nn.logsumexp(
-                2.0 * safe_batched_log_prob,
-                axis=-1,
-                where=~jnp.isneginf(safe_batched_log_prob),
-            )
-            safe_prob_sum = jnp.where(
-                jnp.isneginf(log_prob_sum), 0.0, jnp.exp(log_prob_sum)
-            )
-            safe_prob_sum_2 = jnp.where(
-                jnp.isneginf(log_prob_sum_2), 0.0, jnp.exp(log_prob_sum_2)
-            )
+    # Σ log Σ exp (log p(ω|data_n) - log π_n)
+    for batched_data, batched_log_ref_priors, batched_mask, N_pe in zip(
+        data_group, log_ref_priors_group, masks_group, N_pes
+    ):
+        feasible_point = model_instance.support.feasible_like(batched_data[0])
 
-            N_pe = jnp.count_nonzero(batched_masks, axis=-1)
+        safe_data = jnp.where(
+            batched_mask[..., jnp.newaxis],
+            batched_data,
+            feasible_point,
+        )
 
-            variance += (safe_prob_sum_2 / safe_prob_sum**2 - 1.0 / N_pe).sum()
+        # log p(ω|data_n)
+        batch_model_log_prob: Array = model_instance.log_prob(safe_data)
 
-        return variance
+        # log p(ω|data_n) - log π_n
+        log_prob = batch_model_log_prob - batched_log_ref_priors
+        log_prob = jnp.where(batched_mask, log_prob, -jnp.inf)
 
-    return _variance_of_single_event_likelihood(
-        *data_group, *log_ref_priors_group, *masks_group
+        # log Σ exp (log p(ω|data_n) - log π_n)
+        log_prob_sum = jax.nn.logsumexp(log_prob, axis=-1)
+        log_prob_sum_2 = jax.nn.logsumexp(2.0 * log_prob, axis=-1)
+
+        total_log_likelihood += log_prob_sum.sum(axis=0, initial=0.0)
+
+        pe_variance += (jnp.exp(log_prob_sum_2 - 2.0 * log_prob_sum) - 1.0 / N_pe).sum()
+
+    # μ = E_{Ω|Λ}[VT(ω)]
+    expected_rate, expected_rate_variance = poisson_mean_estimator(
+        model_instance, **pmean_kwargs
     )
+    # log L(ω) = -μ + Σ log Σ exp (log p(ω|data_n) - log π_n) - Σ log(M_i)
+    log_likelihood = (
+        total_log_likelihood - expected_rate + n_events * jnp.log(pmean_kwargs["T_obs"])
+    )
+
+    total_variance = jnp.nan_to_num(
+        pe_variance + expected_rate_variance,
+        nan=jnp.inf,
+        posinf=jnp.inf,
+        neginf=jnp.inf,
+    )
+
+    return log_likelihood, total_variance

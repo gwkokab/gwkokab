@@ -26,7 +26,6 @@ def poisson_mean_from_sensitivity_injections(
 ) -> Tuple[
     Optional[Callable[[Array], Array]],
     Callable[..., Array],
-    Callable[..., Array],
     dict[str, Any],
 ]:
     del key  # Unused.
@@ -70,7 +69,7 @@ def poisson_mean_from_sensitivity_injections(
 
     def _poisson_mean(
         scaled_mixture: ScaledMixture, samples: Array, log_weights: Array, T_obs: float
-    ) -> Array:
+    ) -> tuple[Array, Array]:
         model_log_prob = jax.lax.map(
             scaled_mixture.log_prob,
             samples,
@@ -91,32 +90,6 @@ def poisson_mean_from_sensitivity_injections(
             axis=-1,
         )
 
-        # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
-        return (T_obs * jnp.exp(logsumexp_log_prob)) / total_injections
-
-    def _variance_of_estimator(
-        scaled_mixture: ScaledMixture, samples: Array, log_weights: Array, T_obs: float
-    ) -> Array:
-        """See equation 9 and 11 of https://arxiv.org/abs/2406.16813."""
-        model_log_prob = jax.lax.map(
-            scaled_mixture.log_prob,
-            samples,
-            batch_size=batch_size,
-        )
-
-        log_prob = model_log_prob - log_weights
-
-        safe_log_prob = jnp.where(
-            jnp.isneginf(log_prob) | jnp.isnan(log_prob),
-            -jnp.inf,
-            log_prob,
-        )
-
-        logsumexp_log_prob = jnn.logsumexp(
-            safe_log_prob,
-            where=~jnp.isneginf(safe_log_prob),
-            axis=-1,
-        )
         logsumexp_log_prob2 = jnn.logsumexp(
             2.0 * safe_log_prob,
             where=~jnp.isneginf(safe_log_prob),
@@ -131,12 +104,17 @@ def poisson_mean_from_sensitivity_injections(
         term1 = jnp.exp(
             2.0 * jnp.log(T_obs) - 2.0 * jnp.log(total_injections) + logsumexp_log_prob2
         )
-        return term1 - term2
+        # See equation 9 and 11 of https://arxiv.org/abs/2406.16813
+        variance = term1 - term2
+
+        # (T / n_total) * exp(log Σ exp(log p(θ_i|λ) - log w_i))
+        mean = (T_obs * jnp.exp(logsumexp_log_prob)) / total_injections
+
+        return mean, variance
 
     return (
         None,
         _poisson_mean,
-        _variance_of_estimator,
         {
             "samples": samples,
             "log_weights": log_weights,
