@@ -60,7 +60,7 @@ To recreate the model described in the introduction, we need to have only one co
 of `PowerlawPrimaryMassRatio`. Eccentricity is modeled using `TruncatedNormal` over
 $[0,1]$ with location fixed at $0$. We are providing these settings via a json file. We
 are naming it
-[`model.json`](https://github.com/gwkashf/hello-gwkokab/blob/main/generating_mock_posterior_estimates/model.json)
+[`model.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/generating_mock_posterior_estimates/model.json)
 and it looks like this:
 
 ```json
@@ -90,7 +90,7 @@ and symmetric mass ratio tuneable via `scale_Mc` and `scale_eta` respectively, a
 convert them back to component source masses. Eccentricity has truncated normal
 uncertainty with `scale` as the width of the distribution, `low` and `high` as the
 truncation limits. Lets save them in
-[`err.json`](https://github.com/gwkashf/hello-gwkokab/blob/main/generating_mock_posterior_estimates/err.json).
+[`err.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/generating_mock_posterior_estimates/err.json).
 
 ```json
 {
@@ -117,7 +117,7 @@ genie_n_pls_m_gs \
 
 This will generate one realization of where each event has at max 2000 posterior
 samples. `--seed` is used to set the random seed for reproducibility.
-[`pmean.json`](https://github.com/gwkashf/hello-gwkokab/blob/main/generating_mock_posterior_estimates/pmean.json)
+[`pmean.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/generating_mock_posterior_estimates/pmean.json)
 is configuration file for the poisson mean, see tutorial on
 [Expected Number of Detections and Sensitivity Estimation](./sensitivity.md) for more
 details. The output will be saved in the current working directory in a folder named
@@ -170,15 +170,15 @@ mass_1_source mass_2_source
 We can also visualize the injections and posterior samples. Below are two plots showing
 the injections and posterior samples in $m_1$-$m_2$ plane.
 
-<img src="https://raw.githubusercontent.com/gwkashf/hello-gwkokab/refs/heads/main/generating_mock_posterior_estimates/figs/m1m2_inj_0.png" width="49%"/>
-<img src="https://raw.githubusercontent.com/gwkashf/hello-gwkokab/refs/heads/main/generating_mock_posterior_estimates/figs/m1m2_batch_0.png" width="49%"/>
+<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/generating_mock_posterior_estimates/figs/m1m2_inj_0.png" width="49%"/>
+<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/generating_mock_posterior_estimates/figs/m1m2_batch_0.png" width="49%"/>
 
 ---
 
 All the code and files used in this tutorial can be found in
 [hello-gwkokab/generating_mock_posterior_estimates][REPRODUCIBILITY_LINK].
 
-[REPRODUCIBILITY_LINK]: https://github.com/gwkashf/hello-gwkokab/tree/main/generating_mock_posterior_estimates
+[REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/tree/main/generating_mock_posterior_estimates
 
 ## References
 

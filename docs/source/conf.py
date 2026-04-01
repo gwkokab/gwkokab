@@ -142,10 +142,10 @@ def linkcode_resolve(domain, info):
 
     if "+" in gwkokab.__version__:
         return (
-            f"https://github.com/gwkashf/gwkokab/blob/HEAD/src/gwkokab/{fn}{linespec}"
+            f"https://github.com/gwkokab/gwkokab/blob/HEAD/src/gwkokab/{fn}{linespec}"
         )
     else:
-        return f"https://github.com/gwkashf/gwkokab/blob/v{gwkokab.__version__}/src/gwkokab/{fn}{linespec}"
+        return f"https://github.com/gwkokab/gwkokab/blob/v{gwkokab.__version__}/src/gwkokab/{fn}{linespec}"
 
 
 intersphinx_mapping = {

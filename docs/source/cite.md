@@ -16,7 +16,7 @@ If you have used GWKokab in your research, please cite the following:
 @software{gwkokab2024github,
     author  = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
     title   = {{GWKokab}: A JAX-based gravitational-wave population inference toolkit for parametric models},
-    url     = {https://github.com/gwkashf/gwkokab},
+    url     = {https://github.com/gwkokab/gwkokab},
     year    = {2024}
 }
 ```

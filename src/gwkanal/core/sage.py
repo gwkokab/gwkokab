@@ -301,7 +301,7 @@ def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     optm_group.add_argument(
         "--n-buckets",
         help="Manually specify the number of data buckets for memory management. "
-        "See https://github.com/gwkashf/gwkokab/issues/568 for more details.",
+        "See https://github.com/gwkokab/gwkokab/issues/568 for more details.",
         type=int,
         default=None,
     )
