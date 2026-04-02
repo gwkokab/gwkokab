@@ -2,9 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentParser
-
-from rich_argparse import RichHelpFormatter
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from gwkanal.core.inference_io import AnalyticalPELoader as DataLoader
 from gwkanal.core.monk import Monk, monk_arg_parser
@@ -16,6 +14,7 @@ from gwkokab.models import MultiSourceModel
 class MultiSourceModelMonk(MultiSourceModelCore, Monk):
     def __init__(
         self,
+        N_spl: int,
         N_sbpl: int,
         N_gpl: int,
         N_gg: int,
@@ -29,6 +28,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
+        use_eccentricity_powerlaw: bool,
         use_redshift: bool,
         use_cos_iota: bool,
         use_phi_12: bool,
@@ -47,6 +47,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
     ) -> None:
         MultiSourceModelCore.__init__(
             self,
+            N_spl=N_spl,
             N_sbpl=N_sbpl,
             N_gpl=N_gpl,
             N_gg=N_gg,
@@ -60,6 +61,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
@@ -85,7 +87,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
 
 
 def main() -> None:
-    parser = ArgumentParser(formatter_class=RichHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = monk_arg_parser(parser)
 
@@ -98,6 +100,7 @@ def main() -> None:
     MultiSourceModelMonk.init_rng_seed(seed=args.seed)
 
     MultiSourceModelMonk(
+        N_spl=args.n_spl,
         N_sbpl=args.n_sbpl,
         N_gpl=args.n_gpl,
         N_gg=args.n_gg,
@@ -111,6 +114,7 @@ def main() -> None:
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_redshift=args.add_redshift,
         use_cos_iota=args.add_cos_iota,
         use_phi_12=args.add_phi_12,

@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional
 
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions.distribution import Distribution, enable_validation
-from rich_argparse import RichHelpFormatter
 
 from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from gwkanal.core.inference_io import DiscretePELoader as DataLoader
@@ -27,6 +26,7 @@ from gwkokab.models.utils import JointDistribution, ScaledMixture
 class MultiSourceModelSage(MultiSourceModelCore, Sage):
     def __init__(
         self,
+        N_spl: int,
         N_sbpl: int,
         N_gpl: int,
         N_gg: int,
@@ -40,6 +40,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
+        use_eccentricity_powerlaw: bool,
         use_redshift: bool,
         use_cos_iota: bool,
         use_phi_12: bool,
@@ -73,6 +74,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
     ) -> None:
         MultiSourceModelCore.__init__(
             self,
+            N_spl=N_spl,
             N_sbpl=N_sbpl,
             N_gpl=N_gpl,
             N_gg=N_gg,
@@ -86,6 +88,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
@@ -125,7 +128,7 @@ class MultiSourceModelNSage(MultiSourceModelSage, NumpyroBased):
 def f_main() -> None:
     enable_validation()
 
-    parser = ArgumentParser(formatter_class=RichHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
     parser = flowMC_arg_parser(parser)
@@ -139,6 +142,7 @@ def f_main() -> None:
     MultiSourceModelFSage.init_rng_seed(seed=args.seed)
 
     MultiSourceModelFSage(
+        N_spl=args.n_spl,
         N_sbpl=args.n_sbpl,
         N_gpl=args.n_gpl,
         N_gg=args.n_gg,
@@ -152,6 +156,7 @@ def f_main() -> None:
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_redshift=args.add_redshift,
         use_cos_iota=args.add_cos_iota,
         use_phi_12=args.add_phi_12,
@@ -174,7 +179,7 @@ def f_main() -> None:
 
 
 def n_main() -> None:
-    parser = ArgumentParser(formatter_class=RichHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
     parser = numpyro_arg_parser(parser)
@@ -188,6 +193,7 @@ def n_main() -> None:
     MultiSourceModelNSage.init_rng_seed(seed=args.seed)
 
     MultiSourceModelNSage(
+        N_spl=args.n_spl,
         N_sbpl=args.n_sbpl,
         N_gpl=args.n_gpl,
         N_gg=args.n_gg,
@@ -201,6 +207,7 @@ def n_main() -> None:
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_redshift=args.add_redshift,
         use_cos_iota=args.add_cos_iota,
         use_phi_12=args.add_phi_12,

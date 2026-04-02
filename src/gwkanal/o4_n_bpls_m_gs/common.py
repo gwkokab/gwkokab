@@ -59,6 +59,7 @@ class NBrokenPowerlawMGaussianCore:
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
+        use_eccentricity_powerlaw: bool,
         use_redshift: bool,
     ) -> None:
         self.N_bpl = N_bpl
@@ -70,6 +71,7 @@ class NBrokenPowerlawMGaussianCore:
         self.use_truncated_normal_chi_p = use_truncated_normal_chi_p
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
+        self.use_eccentricity_powerlaw = use_eccentricity_powerlaw
         self.use_redshift = use_redshift
 
     def modify_model_params(self, params: dict) -> dict:
@@ -84,6 +86,7 @@ class NBrokenPowerlawMGaussianCore:
                 "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
                 "use_tilt": self.use_tilt,
                 "use_eccentricity_mixture": self.use_eccentricity_mixture,
+                "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
                 "use_redshift": self.use_redshift,
             }
         )
@@ -101,7 +104,7 @@ class NBrokenPowerlawMGaussianCore:
             names.append(P.PRECESSING_SPIN)
         if self.use_tilt:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
-        if self.use_eccentricity_mixture:
+        if self.use_eccentricity_mixture or self.use_eccentricity_powerlaw:
             names.append(P.ECCENTRICITY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
@@ -271,6 +274,18 @@ class NBrokenPowerlawMGaussianCore:
                 ]
             )
 
+        if self.use_eccentricity_powerlaw:
+            all_params.extend(
+                [
+                    (P.ECCENTRICITY + "_alpha_bpl", self.N_bpl),
+                    (P.ECCENTRICITY + "_alpha_g", self.N_g),
+                    (P.ECCENTRICITY + "_high_bpl", self.N_bpl),
+                    (P.ECCENTRICITY + "_high_g", self.N_g),
+                    (P.ECCENTRICITY + "_low_bpl", self.N_bpl),
+                    (P.ECCENTRICITY + "_low_g", self.N_g),
+                ]
+            )
+
         if self.use_redshift:
             all_params.extend(
                 [
@@ -342,11 +357,19 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include tilt parameters in the model.",
     )
-    model_group.add_argument(
+
+    eccentricity_group = model_group.add_mutually_exclusive_group()
+    eccentricity_group.add_argument(
         "--add-eccentricity-mixture",
         action="store_true",
-        help="Include eccentricity mixture in the model.",
+        help="Include truncated normal eccentricity in the model.",
     )
+    eccentricity_group.add_argument(
+        "--add-eccentricity-powerlaw",
+        action="store_true",
+        help="Include power law eccentricity in the model.",
+    )
+
     model_group.add_argument(
         "--add-redshift",
         action="store_true",

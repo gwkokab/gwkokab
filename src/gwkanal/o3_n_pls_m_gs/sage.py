@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional
 
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions.distribution import Distribution, enable_validation
-from rich_argparse import RichHelpFormatter
 
 from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from gwkanal.core.inference_io import DiscretePELoader as DataLoader
@@ -38,6 +37,7 @@ class NSmoothedPowerlawMSmoothedGaussianSage(
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
+        use_eccentricity_powerlaw: bool,
         use_redshift: bool,
         likelihood_fn: Callable[
             [
@@ -75,6 +75,7 @@ class NSmoothedPowerlawMSmoothedGaussianSage(
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
         )
 
@@ -112,7 +113,7 @@ class NSmoothedPowerlawMSmoothedGaussianNSage(
 def f_main() -> None:
     enable_validation()
 
-    parser = ArgumentParser(formatter_class=RichHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
     parser = flowMC_arg_parser(parser)
@@ -135,6 +136,7 @@ def f_main() -> None:
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_redshift=args.add_redshift,
         likelihood_fn=flowMC_poisson_likelihood,
         data_loader=data_loader,
@@ -151,7 +153,7 @@ def f_main() -> None:
 
 
 def n_main() -> None:
-    parser = ArgumentParser(formatter_class=RichHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
     parser = numpyro_arg_parser(parser)
@@ -174,6 +176,7 @@ def n_main() -> None:
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_redshift=args.add_redshift,
         likelihood_fn=numpyro_poisson_likelihood,
         data_loader=data_loader,

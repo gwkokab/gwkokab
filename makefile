@@ -19,8 +19,7 @@ GROUP_FLAGS     := $(if $(GROUP),$(addprefix --group ,$(subst $(comma),$(space),
 install: uninstall check-uv
 	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS) \
 		$(INSTALL_TARGET) -r pyproject.toml \
-		$(EXTRA_FLAGS) \
-		$(GROUP_FLAGS)
+		$(EXTRA_FLAGS) $(GROUP_FLAGS)
 
 uninstall: check-uv
 	@$(UV) $(PIP) uninstall $(TARGET) 2>/dev/null || true

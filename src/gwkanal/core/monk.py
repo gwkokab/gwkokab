@@ -204,7 +204,7 @@ class Monk(FlowMCBased):
         pmean_loader = PoissonMeanEstimationLoader.from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
-        _, poisson_mean_estimator, _, pmean_kwargs = pmean_loader.get_estimators()
+        _, poisson_mean_estimator, pmean_kwargs = pmean_loader.get_estimators()
 
         logpdf = analytical_likelihood(
             self.model, priors, constants, variables_index, poisson_mean_estimator

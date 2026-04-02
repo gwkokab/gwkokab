@@ -26,7 +26,6 @@ def poisson_mean_from_neural_pdet(
 ) -> Tuple[
     Optional[Callable[[Array], Array]],
     Callable[..., Array],
-    Callable[..., Array],
     dict[str, Any],
 ]:
     if not parameters:
@@ -64,7 +63,9 @@ def poisson_mean_from_neural_pdet(
         safe_y_new = jnp.where(mask, 1.0, y_new)
         return jnp.where(mask, -jnp.inf, jnp.log(safe_y_new))
 
-    def _poisson_mean(scaled_mixture: ScaledMixture, T_obs: Array) -> Array:
+    def _poisson_mean(
+        scaled_mixture: ScaledMixture, T_obs: Array
+    ) -> Tuple[Array, Array]:
         component_sample = scaled_mixture.component_sample(key, (num_samples,))
         # vmapping over components
         log_pdet_values = jax.vmap(log_pdet, in_axes=1)(component_sample)
@@ -86,24 +87,7 @@ def poisson_mean_from_neural_pdet(
             + jnp.stack(redshift_log_norm, axis=-1)
             + jax.nn.logsumexp(log_pdet_values, axis=-1)
         )
-        return (T_obs / num_samples) * jnp.sum(mean_per_component, axis=-1)
-
-    def _variance_of_estimator(scaled_mixture: ScaledMixture, T_obs: Array) -> Array:
-        component_sample = scaled_mixture.component_sample(key, (num_samples,))
-        # vmapping over components
-        log_pdet_values = jax.vmap(log_pdet, in_axes=1)(component_sample)
-
-        redshift_log_norm = []
-        for component_dist in scaled_mixture.component_distributions:
-            if isinstance(component_dist, JointDistribution):
-                for m_dist in component_dist.marginal_distributions:
-                    if isinstance(m_dist, PowerlawRedshift):
-                        redshift_log_norm.append(m_dist.log_norm())
-                        break
-                else:
-                    redshift_log_norm.append(jnp.zeros(()))
-            else:
-                redshift_log_norm.append(jnp.zeros(()))
+        mean = (T_obs / num_samples) * jnp.sum(mean_per_component, axis=-1)
 
         term2 = jnp.exp(
             2.0 * jnp.log(T_obs)
@@ -120,11 +104,11 @@ def poisson_mean_from_neural_pdet(
             + jax.nn.logsumexp(2.0 * log_pdet_values, axis=-1)
         )
         variance_per_component = term1 - term2
-        return jnp.sum(variance_per_component, axis=-1)
+        variance = jnp.sum(variance_per_component, axis=-1)
+        return mean, variance
 
     return (
         log_pdet,
         _poisson_mean,
-        _variance_of_estimator,
         {"T_obs": time_scale},
     )

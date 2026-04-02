@@ -19,10 +19,12 @@ from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
     create_gaussian_primary_mass_ratio,
+    create_generic_powerlaws,
     create_gwtc4_effective_spin_skew_normal_models,
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift,
     create_smoothed_broken_powerlaws_mass_ratio_powerlaw,
+    create_smoothed_powerlaw_primary_mass_ratio,
     create_spin_magnitude_mixture_models,
     create_truncated_normal_distributions,
     create_two_truncated_normal_mixture,
@@ -44,6 +46,7 @@ def _build_non_mass_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
     use_redshift: bool,
     use_cos_iota: bool,
@@ -128,6 +131,7 @@ def _build_non_mass_distributions(
         (use_phi_2, P.PHI_2, create_uniform_distributions),
         (use_phi_12, P.PHI_12, create_uniform_distributions),
         (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
+        (use_eccentricity_powerlaw, P.ECCENTRICITY, create_generic_powerlaws),
         (use_mean_anomaly, P.MEAN_ANOMALY, create_uniform_distributions),
         (use_redshift, P.REDSHIFT, create_powerlaw_redshift),
         (use_right_ascension, P.RIGHT_ASCENSION, create_uniform_distributions),
@@ -169,6 +173,7 @@ def _build_component_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
     use_redshift: bool,
     use_cos_iota: bool,
@@ -229,6 +234,15 @@ def _build_component_distributions(
     """
     if N == 0:
         return []
+    if component_type == "spl":
+        powerlaws = create_smoothed_powerlaw_primary_mass_ratio(
+            N=N, params=params, validate_args=validate_args
+        )
+        mass_distributions = jtr.map(
+            lambda powerlaw: [powerlaw],
+            powerlaws,
+            is_leaf=lambda x: isinstance(x, ExtendedSupportTransformedDistribution),
+        )
     if component_type == "sbpl":
         powerlaws = create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
             N=N, params=params, validate_args=validate_args
@@ -286,6 +300,7 @@ def _build_component_distributions(
         use_truncated_normal_chi_p=use_truncated_normal_chi_p,
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
+        use_eccentricity_powerlaw=use_eccentricity_powerlaw,
         use_redshift=use_redshift,
         use_cos_iota=use_cos_iota,
         use_phi_12=use_phi_12,
@@ -308,6 +323,7 @@ def _build_component_distributions(
 
 
 def MultiSourceModel(
+    N_spl: int,
     N_sbpl: int,
     N_gpl: int,
     N_gg: int,
@@ -321,6 +337,7 @@ def MultiSourceModel(
     use_truncated_normal_chi_p: bool = False,
     use_tilt: bool = False,
     use_eccentricity_mixture: bool = False,
+    use_eccentricity_powerlaw: bool = False,
     use_redshift: bool = False,
     use_cos_iota: bool = False,
     use_phi_12: bool = False,
@@ -337,7 +354,9 @@ def MultiSourceModel(
     **params,
 ) -> ScaledMixture:
     component_dists = []
-    for component_type, N in zip(["sbpl", "gpl", "gg"], [N_sbpl, N_gpl, N_gg]):
+    for component_type, N in zip(
+        ["spl", "sbpl", "gpl", "gg"], [N_spl, N_sbpl, N_gpl, N_gg]
+    ):
         component_dists += _build_component_distributions(
             N=N,
             component_type=component_type,
@@ -351,6 +370,7 @@ def MultiSourceModel(
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
@@ -366,7 +386,7 @@ def MultiSourceModel(
             validate_args=validate_args,
         )
 
-    N = N_sbpl + N_gpl + N_gg
+    N = N_spl + N_sbpl + N_gpl + N_gg
     log_rates = jnp.stack([params[f"log_rate_{i}"] for i in range(N)], axis=-1)
 
     return ScaledMixture(

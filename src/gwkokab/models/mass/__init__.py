@@ -11,6 +11,7 @@ from ._models import (
     GaussianPrimaryMassRatio as GaussianPrimaryMassRatio,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
+    SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )

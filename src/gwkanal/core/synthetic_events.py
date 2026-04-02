@@ -3,7 +3,7 @@
 
 
 from abc import ABC, abstractmethod
-from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections.abc import Callable
 
 import h5py
@@ -11,7 +11,6 @@ import numpy as np
 from jax import nn as jnn, numpy as jnp, random as jrd
 from loguru import logger
 from numpyro.distributions.distribution import enable_validation
-from rich_argparse import RichHelpFormatter
 
 from gwkanal.core.inference_io import PoissonMeanEstimationLoader
 from gwkanal.core.utils import PRNGKeyMixin, to_structured
@@ -127,7 +126,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         pmean_loader = PoissonMeanEstimationLoader.from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
-        log_selection_fn, poisson_mean_estimator, _, pmean_kwargs = (
+        log_selection_fn, poisson_mean_estimator, pmean_kwargs = (
             pmean_loader.get_estimators()
         )
 
@@ -186,7 +185,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
 def injection_generator_parser() -> ArgumentParser:
     enable_validation()
     parser = ArgumentParser(
-        formatter_class=RichHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         description="Generate a population of CBCs",
     )
     # Grouping arguments for better --help readability

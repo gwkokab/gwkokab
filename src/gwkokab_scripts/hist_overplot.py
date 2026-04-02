@@ -6,11 +6,11 @@ import argparse
 
 
 def make_parser() -> argparse.ArgumentParser:
-    from rich_argparse import RichHelpFormatter
+    from argparse import ArgumentDefaultsHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="Joint plot",
-        formatter_class=RichHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         epilog="This script creates over plots of histograms for multiple columns in a data file.",
     )
     parser.add_argument(

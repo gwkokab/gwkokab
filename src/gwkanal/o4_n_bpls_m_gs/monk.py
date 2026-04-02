@@ -2,9 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentParser
-
-from rich_argparse import RichHelpFormatter
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from gwkanal.core.inference_io import AnalyticalPELoader as DataLoader
 from gwkanal.core.monk import Monk, monk_arg_parser
@@ -28,6 +26,7 @@ class NBrokenPowerlawMGaussianMonk(NBrokenPowerlawMGaussianCore, Monk):
         use_truncated_normal_chi_p: bool,
         use_tilt: bool,
         use_eccentricity_mixture: bool,
+        use_eccentricity_powerlaw: bool,
         use_redshift: bool,
         data_loader: DataLoader,
         prior_filename: str,
@@ -49,6 +48,7 @@ class NBrokenPowerlawMGaussianMonk(NBrokenPowerlawMGaussianCore, Monk):
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
         )
 
@@ -68,7 +68,7 @@ class NBrokenPowerlawMGaussianMonk(NBrokenPowerlawMGaussianCore, Monk):
 
 
 def main() -> None:
-    parser = ArgumentParser(formatter_class=RichHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = monk_arg_parser(parser)
 
@@ -90,6 +90,7 @@ def main() -> None:
         use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_redshift=args.add_redshift,
         data_loader=data_loader,
         prior_filename=args.prior_json,
