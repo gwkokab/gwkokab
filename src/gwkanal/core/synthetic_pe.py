@@ -3,7 +3,7 @@
 
 
 import warnings
-from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections.abc import Callable
 from pathlib import Path
 from typing import Optional, TypeAlias
@@ -12,7 +12,6 @@ import h5py
 import numpy as np
 from loguru import logger
 from numpyro.distributions.distribution import enable_validation
-from rich_argparse import RichHelpFormatter
 
 from gwkanal.core.utils import from_structured, PRNGKeyMixin, to_structured
 from gwkanal.utils.common import read_json
@@ -177,7 +176,7 @@ def synthetic_discrete_pe_parser() -> ArgumentParser:
     enable_validation()
 
     parser = ArgumentParser(
-        formatter_class=RichHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         description="Generate synthetic discrete parameter estimation samples.",
         epilog="This tool generates synthetic parameter estimation samples based on "
         "injection data and a specified error model.",
@@ -286,7 +285,7 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
 
 def synthetic_analytical_pe_main():
     parser = ArgumentParser(
-        formatter_class=RichHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         description="Generate synthetic analytical parameter estimation samples.",
         epilog="This tool generates synthetic parameter estimation samples based on "
         "injection data and a specified error model.",

@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentParser
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable, Dict, List, Optional
 
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions.distribution import Distribution, enable_validation
-from rich_argparse import RichHelpFormatter
 
 from gwkanal.core.flowMC_based import flowMC_arg_parser, FlowMCBased
 from gwkanal.core.inference_io import DiscretePELoader as DataLoader
@@ -129,7 +128,7 @@ class MultiSourceModelNSage(MultiSourceModelSage, NumpyroBased):
 def f_main() -> None:
     enable_validation()
 
-    parser = ArgumentParser(formatter_class=RichHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
     parser = flowMC_arg_parser(parser)
@@ -180,7 +179,7 @@ def f_main() -> None:
 
 
 def n_main() -> None:
-    parser = ArgumentParser(formatter_class=RichHelpFormatter)
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
     parser = numpyro_arg_parser(parser)

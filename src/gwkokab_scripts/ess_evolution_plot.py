@@ -16,11 +16,11 @@ def make_parser() -> argparse.ArgumentParser:
         the command line argument parser
     """
 
-    from rich_argparse import RichHelpFormatter
+    from argparse import ArgumentDefaultsHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="Effective Sample Size (ESS) Evolution Plotter",
-        formatter_class=RichHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         epilog="This script plots the evolution of the effective sample size (ESS) over iterations.",
     )
     parser.add_argument(

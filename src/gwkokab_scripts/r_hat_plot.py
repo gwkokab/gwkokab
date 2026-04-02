@@ -16,12 +16,12 @@ def make_parser() -> argparse.ArgumentParser:
         the command line argument parser
     """
 
-    from rich_argparse import RichHelpFormatter
+    from argparse import ArgumentDefaultsHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="Pearson correlation coefficient plotter. "
         "source: https://github.com/kazewong/flowMC/blob/main/example/notebook/dualmoon.ipynb (last cell)",
-        formatter_class=RichHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         epilog="This script plots a Pearson correlation coefficients of the chains.",
     )
     parser.add_argument(

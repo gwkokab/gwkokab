@@ -7,11 +7,11 @@ import argparse
 
 def make_parser() -> argparse.ArgumentParser:
 
-    from rich_argparse import RichHelpFormatter
+    from argparse import ArgumentDefaultsHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="Joint plot",
-        formatter_class=RichHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         epilog="This script plots a joint plot of two columns of a data file.",
     )
     parser.add_argument(
