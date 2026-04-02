@@ -128,6 +128,10 @@ def _classify_model_parameters(
         if value is None:
             constants[name] = None
 
+        elif isinstance(value, str):
+            # string aliases handled later
+            continue
+
         elif isinstance(value, Distribution):
             variables[name] = value
             variable_roots.append(name)
@@ -152,10 +156,6 @@ def _classify_model_parameters(
         elif isinstance(value, (int, float)):
             constants[name] = lax.stop_gradient(value)
 
-        elif isinstance(value, str):
-            # string aliases handled later
-            continue
-
         else:
             raise LoggedValueError(
                 f"Invalid parameter '{name}' with type {type(value)} and value {value}"
@@ -169,11 +169,12 @@ def _classify_model_parameters(
             elif value in variables:
                 aliases[name] = value
 
-    # Compute lazy evaluation order
-    if lazy_dependencies:
-        import pprint
-
+    if not lazy_dependencies:
+        lazy_order = []
+    else:  # Compute lazy evaluation order
         if _check_cycles(dependency_graph):
+            import pprint
+
             raise LoggedValueError(
                 "Cyclic dependencies detected among lazy variables. Dependency graph:\n"
                 + pprint.pformat(dependency_graph)
@@ -184,8 +185,6 @@ def _classify_model_parameters(
             for var in _topological_sort(dependency_graph)
             if var not in variable_roots
         ]
-    else:
-        lazy_order = []
 
     return (
         constants,
@@ -304,6 +303,7 @@ class Guru(PRNGKeyMixin):
         return constants, priors, variables, variables_index
 
     @property
+    @logger.catch(reraise=True)
     def parameters(self) -> Union[List[str], Tuple[str, ...]]:
         """Returns the parameters (intrinsic + extrinsic).
 
@@ -318,14 +318,13 @@ class Guru(PRNGKeyMixin):
             If the Guru class is used directly, this method raises a NotImplementedError.
             It is expected that subclasses of Guru will implement this method.
         """
-        msg = (
+        raise NotImplementedError(
             "The Guru class should not be used directly. Please use a subclass that "
             "implements the parameters property."
         )
-        logger.error(msg)
-        raise NotImplementedError(msg)
 
     @property
+    @logger.catch(reraise=True)
     def model_parameters(self) -> List[str]:
         """Returns the model parameters.
 
@@ -340,12 +339,10 @@ class Guru(PRNGKeyMixin):
             If the Guru class is used directly, this method raises a NotImplementedError.
             It is expected that subclasses of Guru will implement this method.
         """
-        msg = (
+        raise NotImplementedError(
             "The Guru class should not be used directly. Please use a subclass that "
             "implements the model_parameters property."
         )
-        logger.error(msg)
-        raise NotImplementedError(msg)
 
     @abstractmethod
     def driver(

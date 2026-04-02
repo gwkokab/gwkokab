@@ -71,6 +71,8 @@ def _run_mcmc(
             LoggedUserWarning,
         )
         chain_method = "parallel"
+    else:
+        logger.info(f"Using chain method: '{chain_method}' with {n_devices} device(s).")
 
     n_chains = mcmc_cfg.pop("num_chains", 1)
     batch_size: int = (
@@ -80,6 +82,7 @@ def _run_mcmc(
 
     if batch_size == 1:
         chain_method = "sequential"
+        logger.info("Batch size of 1 detected. Switching to 'sequential' chain method.")
 
     mcmc = MCMC(kernel, num_chains=batch_size, chain_method=chain_method, **mcmc_cfg)
 
@@ -115,7 +118,9 @@ class NumpyroBased(Guru):
     ) -> None:
         del priors
 
+        logger.info("Reading sampler configuration.")
         sampler_cfg = read_json(self.sampler_settings_filename)
+        logger.success("Sampler configuration loaded.")
 
         if (kernel_cfg := sampler_cfg.pop("kernel", None)) is None:
             raise LoggedValueError(
@@ -133,6 +138,7 @@ class NumpyroBased(Guru):
                 dense_mass[i] = tuple(dense_mass[i])
 
         kernel = NUTS(logpdf, dense_mass=dense_mass, **kernel_cfg)
+        logger.success("NUTS Kernel initialized.")
 
         if self.debug_nans:
             with jax.debug_nans(True):
@@ -151,7 +157,7 @@ class NumpyroBased(Guru):
         else:
             _run_mcmc(self.rng_key, kernel, mcmc_cfg, data, labels)
 
-        logger.info("Sampling and data saving complete.")
+        logger.success("Sampling and data saving complete.")
 
 
 numpyro_arg_parser = guru_arg_parser

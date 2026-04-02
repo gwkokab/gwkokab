@@ -5,16 +5,15 @@
 import warnings
 from argparse import ArgumentParser
 from collections.abc import Callable
-from typing import Dict, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import jax
 import numpy as np
-from jaxtyping import Array, ArrayLike
+from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions import Distribution
 
 from gwkanal.core.inference_io import DiscretePELoader, PoissonMeanEstimationLoader
-from gwkokab.models.utils import JointDistribution, ScaledMixture
 from gwkokab.parameters import Parameters as P
 from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
@@ -25,19 +24,7 @@ from .guru import Guru
 class Sage(Guru):
     def __init__(
         self,
-        likelihood_fn: Callable[
-            [
-                Callable[..., Distribution],
-                JointDistribution,
-                Dict[str, Distribution],
-                Dict[str, int],
-                ArrayLike,
-                Callable[[ScaledMixture], Array],
-                Optional[List[Callable[..., Array]]],
-                Dict[str, Array],
-            ],
-            Callable,
-        ],
+        likelihood_fn: Callable[..., Callable[..., Array]],
         model: Union[Distribution, Callable[..., Distribution]],
         where_fns: Optional[List[Callable[..., Array]]],
         data_loader: DiscretePELoader,
@@ -193,11 +180,6 @@ class Sage(Guru):
                 "N_pes": N_pes,
             },
             labels=sorted(variables.keys()),
-        )
-
-        logger.success(
-            "Inference pipeline completed successfully for model: {model_name}",
-            model_name=model_name,
         )
 
 
