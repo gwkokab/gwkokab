@@ -674,7 +674,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
 
-        log_prob_m1 = self.alpha * jnp.log(m1) + log_smoothing_m1
+        log_prob_m1 = -self.alpha * jnp.log(m1) + log_smoothing_m1
 
         return jnp.where(self.delta_m1 <= 0.0, -jnp.inf, log_prob_m1)
 
