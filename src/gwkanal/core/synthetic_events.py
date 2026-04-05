@@ -130,7 +130,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
             pmean_loader.get_estimators()
         )
 
-        exp_rate = poisson_mean_estimator(self.model_fn, **pmean_kwargs)
+        exp_rate, _ = poisson_mean_estimator(self.model_fn, **pmean_kwargs)
         size = int(jrd.poisson(self.rng_key, exp_rate))
 
         logger.info(f"Expected rate: {exp_rate:.2f} | Realized size: {size}")
