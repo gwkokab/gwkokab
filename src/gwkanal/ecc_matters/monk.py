@@ -37,4 +37,5 @@ def main() -> None:
         check_leaks=args.check_leaks,
         analysis_name="ecc_matters",
         n_samples=args.n_samples,
+        variance_cut_threshold=args.variance_cut_threshold,
     ).run()
