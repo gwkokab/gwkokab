@@ -40,6 +40,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
+        variance_cut_threshold: float,
         n_samples: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
@@ -83,6 +84,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
             check_leaks=check_leaks,
             analysis_name="multisource",
             n_samples=n_samples,
+            variance_cut_threshold=variance_cut_threshold,
         )
 
 
@@ -126,6 +128,7 @@ def main() -> None:
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
         sampler_settings_filename=args.sampler_config,
+        variance_cut_threshold=args.variance_cut_threshold,
         n_samples=args.n_samples,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,

@@ -28,6 +28,7 @@ class Monk(FlowMCBased):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
+        variance_cut_threshold: float,
         n_samples: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
@@ -79,6 +80,7 @@ class Monk(FlowMCBased):
             prior_filename=prior_filename,
             profile_memory=profile_memory,
             sampler_settings_filename=sampler_settings_filename,
+            variance_cut_threshold=variance_cut_threshold,
         )
 
     def run(self) -> None:
