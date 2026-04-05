@@ -84,6 +84,10 @@ class NPowerlawMGaussianFakeDiscretePE(SyntheticDiscretePEBase, NPowerlawMGaussi
             (P.REDSHIFT, 1e-3, None),
             (P.SIN_DECLINATION, -1.0, 1.0),
             (P.COS_IOTA, -1.0, 1.0),
+            (P.PHI_1, 0.0, 2 * np.pi),
+            (P.PHI_2, 0.0, 2 * np.pi),
+            (P.PHI_ORB, 0.0, 2 * np.pi),
+            (P.MEAN_ANOMALY, 0.0, 2 * np.pi),
         ]:
             error_fns[param] = generic_truncated_normal_error_fn(
                 param, low=default_low, high=default_high
