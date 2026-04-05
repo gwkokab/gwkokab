@@ -621,4 +621,24 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include detection_time parameter in the model",
     )
+    model_group.add_argument(
+        "--add-phi-1",
+        action="store_true",
+        help="Include phi_1 parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-2",
+        action="store_true",
+        help="Include phi_2 parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-orb",
+        action="store_true",
+        help="Include phi_orb parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-mean-anomaly",
+        action="store_true",
+        help="Include mean_anomaly parameter in the model",
+    )
     return parser
