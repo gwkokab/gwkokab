@@ -26,8 +26,10 @@ from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 _INFERENCE_DIRECTORY = "numpyro_" + INFERENCE_DIRECTORY
 
 
-def _save_inference_data(samples: Any, start_chain_idx: int, labels: List[str]) -> None:
+def _save_inference_data(samples: Any, start_chain_idx: int) -> None:
     os.makedirs(_INFERENCE_DIRECTORY, exist_ok=True)
+
+    labels = tuple(samples.keys())
 
     samples_per_chain = np.stack([samples[key] for key in labels], axis=-1)
     combined_samples = np.concat(samples_per_chain, axis=0)
@@ -61,7 +63,6 @@ def _run_mcmc(
     kernel: numpyro.infer.NUTS,
     mcmc_cfg: Dict[str, Any],
     data: Dict[str, Any],
-    labels: List[str],
 ):
     n_devices = jax.device_count()
     if (chain_method := mcmc_cfg.pop("chain_method")) != "parallel" and n_devices > 1:
@@ -92,7 +93,7 @@ def _run_mcmc(
         mcmc.run(subkey, **data)
         samples = mcmc.get_samples(group_by_chain=True)
         print_summary(samples)
-        _save_inference_data(samples=samples, start_chain_idx=chain_idx, labels=labels)
+        _save_inference_data(samples=samples, start_chain_idx=chain_idx)
         return key
 
     chain_idx: int = 0
@@ -116,6 +117,7 @@ class NumpyroBased(Guru):
         data: Dict[str, Any],
         labels: List[str],
     ) -> None:
+        del labels
         del priors
 
         logger.info("Reading sampler configuration.")
@@ -142,9 +144,9 @@ class NumpyroBased(Guru):
 
         if self.debug_nans:
             with jax.debug_nans(True):
-                _run_mcmc(self.rng_key, kernel, mcmc_cfg, data, labels)
+                _run_mcmc(self.rng_key, kernel, mcmc_cfg, data)
         elif self.profile_memory:
-            _run_mcmc(self.rng_key, kernel, mcmc_cfg, data, labels)
+            _run_mcmc(self.rng_key, kernel, mcmc_cfg, data)
 
             import datetime
 
@@ -153,9 +155,9 @@ class NumpyroBased(Guru):
             jax.profiler.save_device_memory_profile(filename)
         elif self.check_leaks:
             with jax.checking_leaks():
-                _run_mcmc(self.rng_key, kernel, mcmc_cfg, data, labels)
+                _run_mcmc(self.rng_key, kernel, mcmc_cfg, data)
         else:
-            _run_mcmc(self.rng_key, kernel, mcmc_cfg, data, labels)
+            _run_mcmc(self.rng_key, kernel, mcmc_cfg, data)
 
         logger.success("Sampling and data saving complete.")
 
