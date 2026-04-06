@@ -378,17 +378,33 @@ class NPowerlawMGaussianCore:
                 ]
             )
 
+        if self.use_phi_1:
+            all_params.extend(
+                [
+                    (P.PHI_1 + "_high_g", self.N_g),
+                    (P.PHI_1 + "_high_pl", self.N_pl),
+                    (P.PHI_1 + "_low_g", self.N_g),
+                    (P.PHI_1 + "_low_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_phi_2:
+            all_params.extend(
+                [
+                    (P.PHI_2 + "_high_g", self.N_g),
+                    (P.PHI_2 + "_high_pl", self.N_pl),
+                    (P.PHI_2 + "_low_g", self.N_g),
+                    (P.PHI_2 + "_low_pl", self.N_pl),
+                ]
+            )
+
         if self.use_phi_12:
             all_params.extend(
                 [
                     (P.PHI_12 + "_high_g", self.N_g),
                     (P.PHI_12 + "_high_pl", self.N_pl),
-                    (P.PHI_12 + "_loc_g", self.N_g),
-                    (P.PHI_12 + "_loc_pl", self.N_pl),
                     (P.PHI_12 + "_low_g", self.N_g),
                     (P.PHI_12 + "_low_pl", self.N_pl),
-                    (P.PHI_12 + "_scale_g", self.N_g),
-                    (P.PHI_12 + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -428,6 +444,16 @@ class NPowerlawMGaussianCore:
                 ]
             )
 
+        if self.use_mean_anomaly:
+            all_params.extend(
+                [
+                    (P.MEAN_ANOMALY + "_high_g", self.N_g),
+                    (P.MEAN_ANOMALY + "_high_pl", self.N_pl),
+                    (P.MEAN_ANOMALY + "_low_g", self.N_g),
+                    (P.MEAN_ANOMALY + "_low_pl", self.N_pl),
+                ]
+            )
+
         if self.use_redshift:
             all_params.extend(
                 [
@@ -443,12 +469,8 @@ class NPowerlawMGaussianCore:
                 [
                     (P.RIGHT_ASCENSION + "_high_g", self.N_g),
                     (P.RIGHT_ASCENSION + "_high_pl", self.N_pl),
-                    (P.RIGHT_ASCENSION + "_loc_g", self.N_g),
-                    (P.RIGHT_ASCENSION + "_loc_pl", self.N_pl),
                     (P.RIGHT_ASCENSION + "_low_g", self.N_g),
                     (P.RIGHT_ASCENSION + "_low_pl", self.N_pl),
-                    (P.RIGHT_ASCENSION + "_scale_g", self.N_g),
-                    (P.RIGHT_ASCENSION + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -457,12 +479,8 @@ class NPowerlawMGaussianCore:
                 [
                     (P.SIN_DECLINATION + "_high_g", self.N_g),
                     (P.SIN_DECLINATION + "_high_pl", self.N_pl),
-                    (P.SIN_DECLINATION + "_loc_g", self.N_g),
-                    (P.SIN_DECLINATION + "_loc_pl", self.N_pl),
                     (P.SIN_DECLINATION + "_low_g", self.N_g),
                     (P.SIN_DECLINATION + "_low_pl", self.N_pl),
-                    (P.SIN_DECLINATION + "_scale_g", self.N_g),
-                    (P.SIN_DECLINATION + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -481,12 +499,8 @@ class NPowerlawMGaussianCore:
                 [
                     (P.COS_IOTA + "_high_g", self.N_g),
                     (P.COS_IOTA + "_high_pl", self.N_pl),
-                    (P.COS_IOTA + "_loc_g", self.N_g),
-                    (P.COS_IOTA + "_loc_pl", self.N_pl),
                     (P.COS_IOTA + "_low_g", self.N_g),
                     (P.COS_IOTA + "_low_pl", self.N_pl),
-                    (P.COS_IOTA + "_scale_g", self.N_g),
-                    (P.COS_IOTA + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -495,12 +509,17 @@ class NPowerlawMGaussianCore:
                 [
                     (P.POLARIZATION_ANGLE + "_high_g", self.N_g),
                     (P.POLARIZATION_ANGLE + "_high_pl", self.N_pl),
-                    (P.POLARIZATION_ANGLE + "_loc_g", self.N_g),
-                    (P.POLARIZATION_ANGLE + "_loc_pl", self.N_pl),
                     (P.POLARIZATION_ANGLE + "_low_g", self.N_g),
                     (P.POLARIZATION_ANGLE + "_low_pl", self.N_pl),
-                    (P.POLARIZATION_ANGLE + "_scale_g", self.N_g),
-                    (P.POLARIZATION_ANGLE + "_scale_pl", self.N_pl),
+                ]
+            )
+        if self.use_phi_orb:
+            all_params.extend(
+                [
+                    (P.PHI_ORB + "_high_g", self.N_g),
+                    (P.PHI_ORB + "_high_pl", self.N_pl),
+                    (P.PHI_ORB + "_low_g", self.N_g),
+                    (P.PHI_ORB + "_low_pl", self.N_pl),
                 ]
             )
 
