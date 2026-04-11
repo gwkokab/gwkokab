@@ -74,7 +74,7 @@ def banana_error(
         1.5 * 0.3 * (v_PN_param / v_PN_param_max) ** (7.0) / snr_fac
     )
 
-    beta = np.min(np.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
+    beta = np.minimum(0.07 / snr_fac, ln_mc_error_pseudo_fisher)
 
     Mc = Mc_true * (1.0 + beta * (r0 + r))
     eta = eta_true * (1.0 + 0.03 * (12.0 / rho) * (r0p + rp))
