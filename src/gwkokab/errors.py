@@ -67,7 +67,7 @@ def banana_error(
         1.0 / 3.0
     )  # 'v' parameter
     v_PN_param_max = 0.2
-    v_PN_param = np.min(np.array([v_PN_param, v_PN_param_max]))
+    v_PN_param = np.minimum(v_PN_param, v_PN_param_max)
     snr_fac = rho / 12.0
     # this ignores range due to redshift / distance, based on a low-order est
     ln_mc_error_pseudo_fisher = (
