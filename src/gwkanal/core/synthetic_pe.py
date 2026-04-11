@@ -212,19 +212,20 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         This method should be implemented in subclasses to generate parameter estimates
         using the error functions defined in the `error_function_registry` property.
         """
-        coords, events = self._load_events()
+        available_coords, events = self._load_events()
+        coords = available_coords
         if self.coords is not None:
-            coords = [c for c in self.coords if c in coords]
+            coords = [c for c in self.coords if c in available_coords]
             if not coords:
                 raise LoggedValueError(
                     f"None of the specified coordinates were found in the events. "
-                    f"Available coordinates: {coords}.",
+                    f"Available coordinates: {available_coords}.",
                 )
             if len(coords) < len(self.coords):
                 missing = set(self.coords) - set(coords)
                 warnings.warn(
                     f"The following specified coordinates were not found in the events and will be ignored: {missing}. "
-                    f"Available coordinates: {coords}.",
+                    f"Available coordinates: {available_coords}.",
                     LoggedUserWarning,
                 )
         n_injections = len(next(iter(events.values())))
