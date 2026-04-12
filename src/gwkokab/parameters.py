@@ -13,16 +13,20 @@ from .utils.transformations import (
     chi_p_from_components,
     chieff,
     chirp_mass,
+    chirp_mass_from_m1_q,
     delta_m,
     delta_m_to_symmetric_mass_ratio,
     eta_from_q,
     m1_m2_chi1_chi2_costilt1_costilt2_to_chieff,
+    m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus,
     m1_m2_chi1z_chi2z_to_chiminus,
+    m1_m2_chieff_chiminus_to_chi1z_chi2z,
     m1_q_to_m2,
     m2_q_to_m1,
     m_det_z_to_m_source,
     m_source_z_to_m_det,
     mass_ratio,
+    q_from_eta,
     reduced_mass,
     spin_costilt_from_components,
     spin_magnitude_from_components,
@@ -191,6 +195,10 @@ def default_relation_mesh() -> RelationMesh:
     """Constructs the default relation mesh with common gravitational wave parameter
     relations.
     """
+    from gwkokab.cosmology import default_cosmology
+
+    cosmo = default_cosmology()
+
     relation_mesh = RelationMesh()
 
     P = Parameters
@@ -200,6 +208,7 @@ def default_relation_mesh() -> RelationMesh:
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE), P.TOTAL_MASS, total_mass)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE), P.MASS_RATIO, mass_ratio)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE), P.CHIRP_MASS, chirp_mass)
+    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.MASS_RATIO), P.CHIRP_MASS, chirp_mass_from_m1_q)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE), P.SYMMETRIC_MASS_RATIO, symmetric_mass_ratio)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE), P.REDUCED_MASS, reduced_mass)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE), P.DELTA_M, delta_m)
@@ -212,6 +221,7 @@ def default_relation_mesh() -> RelationMesh:
 
     # --- Symmetry/Ratio Conversions ---
     relation_mesh.add_rule((P.MASS_RATIO,), P.SYMMETRIC_MASS_RATIO, eta_from_q)
+    relation_mesh.add_rule((P.SYMMETRIC_MASS_RATIO,), P.MASS_RATIO, q_from_eta)
     relation_mesh.add_rule((P.DELTA_M, ), P.SYMMETRIC_MASS_RATIO, delta_m_to_symmetric_mass_ratio)
     relation_mesh.add_rule((P.SYMMETRIC_MASS_RATIO,), P.DELTA_M, symmetric_mass_ratio_to_delta_m)
 
@@ -224,18 +234,24 @@ def default_relation_mesh() -> RelationMesh:
     # --- Spin Relations ---
     relation_mesh.add_rule((P.PRIMARY_SPIN_X, P.PRIMARY_SPIN_Y, P.PRIMARY_SPIN_Z), P.PRIMARY_SPIN_MAGNITUDE, spin_magnitude_from_components)
     relation_mesh.add_rule((P.SECONDARY_SPIN_X, P.SECONDARY_SPIN_Y, P.SECONDARY_SPIN_Z), P.SECONDARY_SPIN_MAGNITUDE, spin_magnitude_from_components)
-    relation_mesh.add_rule((P.PRIMARY_SPIN_X, P.PRIMARY_SPIN_Y, P.PRIMARY_SPIN_Z), P.CHI_1,spin_costilt_from_components)
+    relation_mesh.add_rule((P.PRIMARY_SPIN_X, P.PRIMARY_SPIN_Y, P.PRIMARY_SPIN_Z), P.CHI_1, spin_costilt_from_components)
     relation_mesh.add_rule((P.SECONDARY_SPIN_X, P.SECONDARY_SPIN_Y, P.SECONDARY_SPIN_Z), P.CHI_2, spin_costilt_from_components)
     relation_mesh.add_rule((P.CHI_1, P.COS_TILT_1), P.PRIMARY_SPIN_Z, chi_costilt_to_chiz)
     relation_mesh.add_rule((P.CHI_2, P.COS_TILT_2), P.SECONDARY_SPIN_Z, chi_costilt_to_chiz)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z), P.EFFECTIVE_SPIN, chieff)
-    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z), P.CHI_MINUS,  m1_m2_chi1z_chi2z_to_chiminus)
+    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z), P.CHI_MINUS, m1_m2_chi1z_chi2z_to_chiminus)
+    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.EFFECTIVE_SPIN, P.CHI_MINUS), (P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z), m1_m2_chieff_chiminus_to_chi1z_chi2z)
+    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.CHI_1, P.CHI_2, P.COS_TILT_1, P.COS_TILT_2), P.CHI_MINUS, m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus)
 
     # Combined Spin (Effective)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.CHI_1, P.CHI_2, P.COS_TILT_1, P.COS_TILT_2), P.EFFECTIVE_SPIN, m1_m2_chi1_chi2_costilt1_costilt2_to_chieff)
 
     # Precessing Spin
     relation_mesh.add_rule((P.CHI_1, P.COS_TILT_1, P.CHI_2, P.COS_TILT_2, P.MASS_RATIO), P.PRECESSING_SPIN, chi_p_from_components)
+
+    # Redshift-Luminosity Distance Relation
+    relation_mesh.add_rule((P.REDSHIFT,), P.LUMINOSITY_DISTANCE, lambda z: cosmo.z_to_DL(z))
+    relation_mesh.add_rule((P.LUMINOSITY_DISTANCE,), P.REDSHIFT, lambda dL: cosmo.DL_to_z(dL))
     # fmt: on
 
     return relation_mesh

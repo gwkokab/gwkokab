@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import jax
 from jax import numpy as jnp
 from jaxtyping import ArrayLike
 
@@ -23,23 +22,12 @@ def total_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
     return m1 + m2
 
 
-def _mass_ratio(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
-    safe_m1 = jnp.where(m1 == 0.0, 1.0, m1)
-    return jnp.where(m1 == 0.0, jnp.inf, m2 / safe_m1)
-
-
 def mass_ratio(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
     r"""
     .. math::
         q(m_1, m_2) = \frac{m_2}{m_1}
     """
-    return jax.jit(_mass_ratio, inline=True)(m1=m1, m2=m2)
-
-
-def _chirp_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
-    M = total_mass(m1=m1, m2=m2)
-    m1m2 = m1_times_m2(m1=m1, m2=m2)
-    return jnp.power(m1m2, 0.6) * jnp.power(M, -0.2)
+    return m2 / m1
 
 
 def chirp_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
@@ -47,12 +35,7 @@ def chirp_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
     .. math::
         M_c(m_1, m_2) = \frac{(m_1m_2)^{3/5}}{(m_1 + m_2)^{1/5}}
     """
-    return jax.jit(_chirp_mass, inline=True)(m1=m1, m2=m2)
-
-
-def _log_chirp_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
-    M = total_mass(m1=m1, m2=m2)
-    return 0.6 * (jnp.log(m1) + jnp.log(m2)) - 0.2 * jnp.log(M)
+    return jnp.power(m1 * m2, 0.6) / jnp.power(m1 + m2, 0.2)
 
 
 def log_chirp_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
@@ -60,13 +43,7 @@ def log_chirp_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
     .. math::
         \log(M_c(m_1, m_2)) = 3/5\times (\log(m_1) + \log(m_2)) - \log(m_1 + m_2)/5
     """
-    return jax.jit(_log_chirp_mass, inline=True)(m1=m1, m2=m2)
-
-
-def _symmetric_mass_ratio(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
-    M = total_mass(m1=m1, m2=m2)
-    m1m2 = m1_times_m2(m1=m1, m2=m2)
-    return m1m2 * jnp.power(M, -2.0)
+    return 0.6 * (jnp.log(m1) + jnp.log(m2)) - 0.2 * jnp.log(m1 + m2)
 
 
 def symmetric_mass_ratio(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
@@ -74,13 +51,7 @@ def symmetric_mass_ratio(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
     .. math::
         \eta(m_1, m_2) = \frac{m_1m_2}{(m_1 + m_2)^2}
     """
-    return jax.jit(_symmetric_mass_ratio, inline=True)(m1=m1, m2=m2)
-
-
-def _reduced_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
-    M = total_mass(m1=m1, m2=m2)
-    m1m2 = m1_times_m2(m1=m1, m2=m2)
-    return jnp.where(M == 0.0, jnp.inf, m1m2 / M)
+    return m1 * m2 * jnp.power(m1 + m2, -2.0)
 
 
 def reduced_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
@@ -88,13 +59,7 @@ def reduced_mass(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
     .. math::
         M_r(m_1, m_2) = \frac{m_1m_2}{m_1 + m_2}
     """
-    return jax.jit(_reduced_mass, inline=True)(m1=m1, m2=m2)
-
-
-def _delta_m(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
-    diff = m1 - m2
-    M = total_mass(m1=m1, m2=m2)
-    return jnp.where(M == 0.0, jnp.inf, diff / M)
+    return m1 * m2 / (m1 + m2)
 
 
 def delta_m(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
@@ -102,13 +67,7 @@ def delta_m(m1: ArrayLike, m2: ArrayLike) -> ArrayLike:
     .. math::
         \delta_m(m_1, m_2) = \frac{m_1 - m_2}{m_1 + m_2}
     """
-    return jax.jit(_delta_m, inline=True)(m1=m1, m2=m2)
-
-
-def _delta_m_to_symmetric_mass_ratio(delta_m: ArrayLike) -> ArrayLike:
-    delta_m_sq = jnp.square(delta_m)  # delta_m^2
-    eta = 0.25 * (1 - delta_m_sq)  # (1 - delta_m^2) / 4
-    return eta
+    return (m1 - m2) / (m1 + m2)
 
 
 def delta_m_to_symmetric_mass_ratio(delta_m: ArrayLike) -> ArrayLike:
@@ -116,13 +75,9 @@ def delta_m_to_symmetric_mass_ratio(delta_m: ArrayLike) -> ArrayLike:
     .. math::
         \eta(\delta_m) = \frac{1 - \delta_m^2}{4}
     """
-    return jax.jit(_delta_m_to_symmetric_mass_ratio, inline=True)(delta_m=delta_m)
-
-
-def _symmetric_mass_ratio_to_delta_m(eta: ArrayLike) -> ArrayLike:
-    eta_4 = jnp.multiply(eta, 4)  #  eta*4
-    delta_m = jnp.sqrt(jnp.subtract(1, eta_4))  # sqrt(1 - 4 * eta)
-    return delta_m
+    delta_m_sq = jnp.square(delta_m)  # delta_m^2
+    eta = 0.25 * (1 - delta_m_sq)  # (1 - delta_m^2) / 4
+    return eta
 
 
 def symmetric_mass_ratio_to_delta_m(eta: ArrayLike) -> ArrayLike:
@@ -130,13 +85,9 @@ def symmetric_mass_ratio_to_delta_m(eta: ArrayLike) -> ArrayLike:
     .. math::
         \delta_m(\eta) = \sqrt{1 - 4\eta}
     """
-    return jax.jit(_symmetric_mass_ratio_to_delta_m, inline=True)(eta=eta)
-
-
-def _m_det_z_to_m_source(m_det: ArrayLike, z: ArrayLike) -> ArrayLike:
-    safe_one_more_z = jnp.where(z == -1.0, 1.0, jnp.add(1.0, z))
-    m_source = jnp.where(z == -1.0, jnp.inf, m_det / safe_one_more_z)
-    return m_source
+    eta_4 = jnp.multiply(eta, 4)  #  eta*4
+    delta_m = jnp.sqrt(jnp.subtract(1, eta_4))  # sqrt(1 - 4 * eta)
+    return delta_m
 
 
 def m_det_z_to_m_source(m_det: ArrayLike, z: ArrayLike) -> ArrayLike:
@@ -144,11 +95,7 @@ def m_det_z_to_m_source(m_det: ArrayLike, z: ArrayLike) -> ArrayLike:
     .. math::
         m_{\text{source}}(m_{\text{det}}, z) = \frac{m_{\text{det}}}{1 + z}
     """
-    return jax.jit(_m_det_z_to_m_source, inline=True)(m_det=m_det, z=z)
-
-
-def _m_source_z_to_m_det(m_source: ArrayLike, z: ArrayLike) -> ArrayLike:
-    return m_source * (1.0 + z)
+    return m_det / (1.0 + z)
 
 
 def m_source_z_to_m_det(m_source: ArrayLike, z: ArrayLike) -> ArrayLike:
@@ -156,7 +103,7 @@ def m_source_z_to_m_det(m_source: ArrayLike, z: ArrayLike) -> ArrayLike:
     .. math::
         m_{\text{det}}(m_{\text{source}}, z) = m_{\text{source}}(1 + z)
     """
-    return jax.jit(_m_source_z_to_m_det, inline=True)(m_source=m_source, z=z)
+    return m_source * (1.0 + z)
 
 
 def m1_q_to_m2(m1: ArrayLike, q: ArrayLike) -> ArrayLike:
@@ -167,18 +114,12 @@ def m1_q_to_m2(m1: ArrayLike, q: ArrayLike) -> ArrayLike:
     return m1 * q
 
 
-def _m2_q_to_m1(m2: ArrayLike, q: ArrayLike) -> ArrayLike:
-    safe_q = jnp.where(q == 0.0, 1.0, q)
-    m1 = jnp.where(q == 0.0, jnp.inf, m2 / safe_q)
-    return m1
-
-
 def m2_q_to_m1(m2: ArrayLike, q: ArrayLike) -> ArrayLike:
     r"""
     .. math::
         m_1(m_2, q) = \frac{m_2}{q}
     """
-    return jax.jit(_m2_q_to_m1, inline=True)(m2=m2, q=q)
+    return m2 / q
 
 
 def chi_costilt_to_chiz(chi: ArrayLike, costilt: ArrayLike) -> ArrayLike:
@@ -189,16 +130,6 @@ def chi_costilt_to_chiz(chi: ArrayLike, costilt: ArrayLike) -> ArrayLike:
     return chi * costilt
 
 
-def _m1_m2_chi1z_chi2z_to_chiminus(
-    m1: ArrayLike, m2: ArrayLike, chi1z: ArrayLike, chi2z: ArrayLike
-) -> ArrayLike:
-    m1_chi1z = m1 * chi1z
-    m2_chi2z = m2 * chi2z
-    M = total_mass(m1=m1, m2=m2)
-    diff = m1_chi1z - m2_chi2z
-    return jnp.where(M == 0, jnp.inf, diff / M)
-
-
 def m1_m2_chi1z_chi2z_to_chiminus(
     m1: ArrayLike, m2: ArrayLike, chi1z: ArrayLike, chi2z: ArrayLike
 ) -> ArrayLike:
@@ -206,19 +137,11 @@ def m1_m2_chi1z_chi2z_to_chiminus(
     .. math::
         \chi_{\text{minus}}(m_1, m_2, \chi_{1z}, \chi_{2z}) = \frac{m_1\chi_{1z} - m_2\chi_{2z}}{m_1 + m_2}
     """
-    return jax.jit(_m1_m2_chi1z_chi2z_to_chiminus, inline=True)(
-        m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z
-    )
-
-
-def _chieff(
-    m1: ArrayLike, m2: ArrayLike, chi1z: ArrayLike, chi2z: ArrayLike
-) -> ArrayLike:
     m1_chi1z = m1 * chi1z
     m2_chi2z = m2 * chi2z
-    M = total_mass(m1=m1, m2=m2)
-    m_dot_chi = m1_chi1z + m2_chi2z
-    return jnp.where(M == 0, jnp.inf, m_dot_chi / M)
+    M = m1 + m2
+    diff = m1_chi1z - m2_chi2z
+    return diff / M
 
 
 def chieff(
@@ -228,7 +151,11 @@ def chieff(
     .. math::
         \chi_{\text{eff}}(m_1, m_2, \chi_{1z}, \chi_{2z}) = \frac{m_1\chi_{1z} + m_2\chi_{2z}}{m_1 + m_2}
     """
-    return jax.jit(_chieff, inline=True)(m1=m1, m2=m2, chi1z=chi1z, chi2z=chi2z)
+    m1_chi1z = m1 * chi1z
+    m2_chi2z = m2 * chi2z
+    M = m1 + m2
+    m_dot_chi = m1_chi1z + m2_chi2z
+    return m_dot_chi / M
 
 
 def m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
@@ -318,20 +245,31 @@ def Mc_eta_to_m1_m2(Mc: ArrayLike, eta: ArrayLike) -> tuple[ArrayLike, ArrayLike
     return m1, m2
 
 
-def _eta_from_q(q: ArrayLike) -> ArrayLike:
-    safe_q_from_neg = jnp.where(q <= 0, 1, q)
-    log_eta = jnp.where(
-        q <= 0, -jnp.inf, jnp.log(safe_q_from_neg) - 2.0 * jnp.log1p(safe_q_from_neg)
-    )
-    return jnp.exp(log_eta)
-
-
 def eta_from_q(q: ArrayLike) -> ArrayLike:
     r"""
     .. math::
         \eta(q) = \frac{q}{(1 + q)^2}
     """
-    return jax.jit(_eta_from_q, inline=True)(q)
+    return q / (1.0 + q) ** 2.0
+
+
+def q_from_eta(eta: ArrayLike) -> ArrayLike:
+    r"""
+
+    .. math ::
+        q(\eta) = \frac{1 - 2\eta - \sqrt{1 - 4\eta}}{2\eta}
+
+    Parameters
+    ----------
+    eta : ArrayLike
+        Symmetric mass ratio
+
+    Returns
+    -------
+    ArrayLike
+        Mass ratio
+    """
+    return (1.0 - 2.0 * eta - jnp.sqrt(1.0 - 4.0 * eta)) / (2.0 * eta)
 
 
 def polar_to_cart(r: ArrayLike, theta: ArrayLike) -> tuple[ArrayLike, ArrayLike]:
@@ -452,3 +390,11 @@ def spin_costilt_from_components(
     spin_magnitude = spin_magnitude_from_components(chi_x, chi_y, chi_z)
     safe_spin_magnitude = jnp.where(spin_magnitude == 0.0, 1.0, spin_magnitude)
     return jnp.where(spin_magnitude == 0.0, jnp.inf, chi_z / safe_spin_magnitude)
+
+
+def chirp_mass_from_m1_q(m1: ArrayLike, q: ArrayLike) -> ArrayLike:
+    r"""
+    .. math::
+        M_c(m_1, q) = \frac{(m_1^3 q^3)^{1/5}}{(m_1 + m_1 q)^{1/5}} = m_1 \frac{q^{3/5}}{(1 + q)^{1/5}}
+    """
+    return m1 * jnp.power(q, 0.6) / jnp.power(1 + q, 0.2)
