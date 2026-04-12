@@ -218,6 +218,7 @@ def default_relation_mesh() -> RelationMesh:
     relation_mesh.add_rule((P.SECONDARY_MASS_SOURCE, P.MASS_RATIO), P.PRIMARY_MASS_SOURCE, m2_q_to_m1)
     relation_mesh.add_rule((P.PRIMARY_MASS_DETECTED, P.MASS_RATIO), P.SECONDARY_MASS_DETECTED, m1_q_to_m2)
     relation_mesh.add_rule((P.SECONDARY_MASS_DETECTED, P.MASS_RATIO), P.PRIMARY_MASS_DETECTED, m2_q_to_m1)
+    relation_mesh.add_rule((P.CHIRP_MASS, P.MASS_RATIO), P.PRIMARY_MASS_SOURCE, lambda Mc, q: Mc * (1 + q) ** 0.2 * q ** (-0.6))
 
     # --- Symmetry/Ratio Conversions ---
     relation_mesh.add_rule((P.MASS_RATIO,), P.SYMMETRIC_MASS_RATIO, eta_from_q)
