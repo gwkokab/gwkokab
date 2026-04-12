@@ -10,14 +10,14 @@ from typing import Optional, TypeAlias
 
 import h5py
 import numpy as np
-from loguru import logger
 from numpyro.distributions.distribution import enable_validation
 
 from gwkanal.core.utils import from_structured, PRNGKeyMixin, to_structured
 from gwkanal.utils.common import read_json
 from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
-from gwkokab.parameters import default_relation_mesh, Parameters
+from gwkokab.errors import banana_error, truncated_normal_error
+from gwkokab.parameters import default_relation_mesh, Parameters, Parameters as P
 from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 
@@ -38,11 +38,13 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         error_params_filename: str,
         size: int,
         derive_parameters: bool = False,
+        coords: Optional[list[str]] = None,
     ) -> None:
         self.filename = filename
         self.error_params_filename = error_params_filename
         self.size = size
         self.derive_parameters = derive_parameters
+        self.coords = coords
 
     @property
     def error_function_registry(self) -> ErrorFunctionRegistryType:
@@ -59,9 +61,81 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         ErrorFunctionRegistryType
             A dictionary mapping parameters to their error functions.
         """
-        msg = "Subclasses must implement error_function_registry."
-        logger.error(msg)
-        raise NotImplementedError(msg)
+
+        def banana_error_fn(scale_Mc, scale_eta, **kwargs):
+            Mc = kwargs[P.CHIRP_MASS]
+            eta = kwargs[P.SYMMETRIC_MASS_RATIO]
+            x = np.stack([Mc, eta], axis=-1)
+            return banana_error(
+                x,
+                self.size,
+                self.rng_key,
+                scale_Mc=scale_Mc,
+                scale_eta=scale_eta,
+            )
+
+        def generic_truncated_normal_error_fn(
+            parameter: P,
+            low: Optional[float] = None,
+            high: Optional[float] = None,
+        ) -> tuple[tuple[str, ...], Callable]:
+            def error_fn(default_low=low, default_high=high, **kwargs):
+                x = kwargs[parameter]
+                scale = kwargs[parameter + "_scale"]
+                low = kwargs.get(parameter + "_low", default_low)
+                high = kwargs.get(parameter + "_high", default_high)
+
+                return truncated_normal_error(
+                    x=x,
+                    size=self.size,
+                    key=self.rng_key,
+                    scale=scale,
+                    low=low,
+                    high=high,
+                )
+
+            error_parameters: tuple[str, ...] = (
+                parameter + "_scale",
+                parameter + "_low",
+                parameter + "_high",
+            )
+
+            return error_parameters, error_fn
+
+        registry: ErrorFunctionRegistryType = {
+            (P.CHIRP_MASS, P.SYMMETRIC_MASS_RATIO): (
+                ("scale_Mc", "scale_eta"),
+                banana_error_fn,
+            )
+        }
+
+        for param, default_low, default_high in [
+            (P.PRIMARY_SPIN_MAGNITUDE, 0.0, 1.0),
+            (P.SECONDARY_SPIN_MAGNITUDE, 0.0, 1.0),
+            (P.PRIMARY_SPIN_X, -1.0, 1.0),
+            (P.SECONDARY_SPIN_X, -1.0, 1.0),
+            (P.PRIMARY_SPIN_Y, -1.0, 1.0),
+            (P.SECONDARY_SPIN_Y, -1.0, 1.0),
+            (P.PRIMARY_SPIN_Z, -1.0, 1.0),
+            (P.SECONDARY_SPIN_Z, -1.0, 1.0),
+            (P.EFFECTIVE_SPIN, None, None),
+            (P.PRECESSING_SPIN, None, None),
+            (P.COS_TILT_1, -1.0, 1.0),
+            (P.COS_TILT_2, -1.0, 1.0),
+            (P.ECCENTRICITY, 0.0, 1.0),
+            (P.REDSHIFT, 1e-3, None),
+            (P.SIN_DECLINATION, -1.0, 1.0),
+            (P.COS_IOTA, -1.0, 1.0),
+            (P.PHI_1, 0.0, 2 * np.pi),
+            (P.PHI_2, 0.0, 2 * np.pi),
+            (P.PHI_ORB, 0.0, 2 * np.pi),
+            (P.MEAN_ANOMALY, 0.0, 2 * np.pi),
+        ]:
+            registry[param] = generic_truncated_normal_error_fn(
+                param, low=default_low, high=default_high
+            )
+
+        return registry
 
     def _load_events(self) -> tuple[list[str], dict[str, np.ndarray]]:
         """Extracts parameters and injection data from the source HDF5."""
@@ -72,7 +146,7 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
 
     def _apply_error_model(
         self,
-        parameters: list[str],
+        coords: list[str],
         injection_values: dict[str, np.ndarray],
         error_params: dict[str, np.ndarray],
     ) -> dict[str, np.ndarray]:
@@ -82,7 +156,7 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
             # Support both single strings and tuples of parameters
             keys = (key,) if isinstance(key, (str, Parameters)) else key
 
-            if any(k not in parameters for k in keys):
+            if any(k not in coords for k in keys):
                 continue
 
             err_vals = match_all(err_keys, error_params)  # type: ignore[arg-type]
@@ -138,7 +212,22 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         This method should be implemented in subclasses to generate parameter estimates
         using the error functions defined in the `error_function_registry` property.
         """
-        parameters, events = self._load_events()
+        available_coords, events = self._load_events()
+        coords = available_coords
+        if self.coords is not None:
+            coords = [c for c in self.coords if c in available_coords]
+            if not coords:
+                raise LoggedValueError(
+                    f"None of the specified coordinates were found in the events. "
+                    f"Available coordinates: {available_coords}.",
+                )
+            if len(coords) < len(self.coords):
+                missing = set(self.coords) - set(coords)
+                warnings.warn(
+                    f"The following specified coordinates were not found in the events and will be ignored: {missing}. "
+                    f"Available coordinates: {available_coords}.",
+                    LoggedUserWarning,
+                )
         n_injections = len(next(iter(events.values())))
 
         error_params = read_json(self.error_params_filename)
@@ -150,10 +239,10 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
             mesh = default_relation_mesh()
 
         for i in range(n_injections):
-            inj_vals = {p: events[p][i] for p in parameters}
-            post_est = self._apply_error_model(parameters, inj_vals, error_params)
+            inj_vals = {p: events[p][i] for p in coords}
+            post_est = self._apply_error_model(coords, inj_vals, error_params)
 
-            active_params = parameters
+            active_params = coords
             if self.derive_parameters:
                 post_est = mesh.resolve(initial_state=post_est)
                 inj_vals = mesh.resolve(initial_state=inj_vals)
@@ -162,15 +251,9 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
             self._save_event(i, active_params, post_est, inj_vals, width)
 
 
-def synthetic_discrete_pe_parser() -> ArgumentParser:
-    """Create the command line argument parser.
-
-    This function creates the command line argument parser and returns it.
-
-    Returns
-    -------
-    ArgumentParser
-        the command line argument parser
+def synthetic_discrete_pe_main():
+    """Command-line interface for generating synthetic discrete parameter estimation
+    samples.
     """
     # Global enable validation for all distributions
     enable_validation()
@@ -186,6 +269,12 @@ def synthetic_discrete_pe_parser() -> ArgumentParser:
         help="Path to the output HDF5 file to store the generated injections.",
         type=str,
         required=True,
+    )
+    parser.add_argument(
+        "--coords",
+        help="Comma-separated list of coordinates to add error into. If not provided, errors will be applied to all coordinates defined in the error function registry.",
+        type=lambda s: [c.strip() for c in s.split(",")],
+        default=None,
     )
     parser.add_argument(
         "--error-params",
@@ -211,7 +300,21 @@ def synthetic_discrete_pe_parser() -> ArgumentParser:
         type=int,
     )
 
-    return parser
+    args = parser.parse_args()
+
+    log_info(start=True)
+
+    SyntheticDiscretePEBase.init_rng_seed(seed=args.seed)
+
+    generator = SyntheticDiscretePEBase(
+        filename=args.filename,
+        error_params_filename=args.error_params,
+        size=args.size,
+        derive_parameters=args.derive_parameters,
+        coords=args.coords,
+    )
+
+    generator.generate_parameter_estimates()
 
 
 class SyntheticAnalyticalPE(PRNGKeyMixin):
