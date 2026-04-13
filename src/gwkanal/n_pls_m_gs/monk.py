@@ -34,6 +34,10 @@ class NPowerlawMGaussianMonk(NPowerlawMGaussianCore, Monk):
         use_right_ascension: bool,
         use_sin_declination: bool,
         use_detection_time: bool,
+        use_phi_1: bool,
+        use_phi_2: bool,
+        use_phi_orb: bool,
+        use_mean_anomaly: bool,
         data_loader: DataLoader,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -66,6 +70,10 @@ class NPowerlawMGaussianMonk(NPowerlawMGaussianCore, Monk):
             use_right_ascension=use_right_ascension,
             use_sin_declination=use_sin_declination,
             use_detection_time=use_detection_time,
+            use_phi_1=use_phi_1,
+            use_phi_2=use_phi_2,
+            use_phi_orb=use_phi_orb,
+            use_mean_anomaly=use_mean_anomaly,
         )
 
         Monk.__init__(
@@ -118,6 +126,10 @@ def main() -> None:
         use_right_ascension=args.add_right_ascension,
         use_sin_declination=args.add_sin_declination,
         use_detection_time=args.add_detection_time,
+        use_phi_1=args.add_phi_1,
+        use_phi_2=args.add_phi_2,
+        use_phi_orb=args.add_phi_orb,
+        use_mean_anomaly=args.add_mean_anomaly,
         data_loader=data_loader,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,

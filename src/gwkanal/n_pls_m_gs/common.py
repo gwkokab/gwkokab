@@ -70,6 +70,10 @@ class NPowerlawMGaussianCore:
         use_right_ascension: bool,
         use_sin_declination: bool,
         use_detection_time: bool,
+        use_phi_1: bool,
+        use_phi_2: bool,
+        use_phi_orb: bool,
+        use_mean_anomaly: bool,
     ) -> None:
         self.N_pl = N_pl
         self.N_g = N_g
@@ -91,6 +95,10 @@ class NPowerlawMGaussianCore:
         self.use_right_ascension = use_right_ascension
         self.use_sin_declination = use_sin_declination
         self.use_detection_time = use_detection_time
+        self.use_phi_1 = use_phi_1
+        self.use_phi_2 = use_phi_2
+        self.use_phi_orb = use_phi_orb
+        self.use_mean_anomaly = use_mean_anomaly
 
     def modify_model_params(self, params: dict) -> dict:
         params.update(
@@ -115,6 +123,10 @@ class NPowerlawMGaussianCore:
                 "use_right_ascension": self.use_right_ascension,
                 "use_sin_declination": self.use_sin_declination,
                 "use_detection_time": self.use_detection_time,
+                "use_phi_1": self.use_phi_1,
+                "use_phi_2": self.use_phi_2,
+                "use_phi_orb": self.use_phi_orb,
+                "use_mean_anomaly": self.use_mean_anomaly,
             }
         )
         return params
@@ -122,28 +134,34 @@ class NPowerlawMGaussianCore:
     @property
     def parameters(self) -> tuple[str, ...]:
         names = [P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE]
-        if self.use_beta_spin_magnitude or self.use_spin_magnitude_mixture:
-            names.append(P.PRIMARY_SPIN_MAGNITUDE)
-            names.append(P.SECONDARY_SPIN_MAGNITUDE)
+        if self.use_beta_spin_magnitude:
+            names.extend([P.PRIMARY_SPIN_MAGNITUDE, P.SECONDARY_SPIN_MAGNITUDE])
+        if self.use_spin_magnitude_mixture:
+            names.extend([P.PRIMARY_SPIN_MAGNITUDE, P.SECONDARY_SPIN_MAGNITUDE])
         if self.use_truncated_normal_spin_x:
-            names.append(P.PRIMARY_SPIN_X)
-            names.append(P.SECONDARY_SPIN_X)
+            names.extend([P.PRIMARY_SPIN_X, P.SECONDARY_SPIN_X])
         if self.use_truncated_normal_spin_y:
-            names.append(P.PRIMARY_SPIN_Y)
-            names.append(P.SECONDARY_SPIN_Y)
+            names.extend([P.PRIMARY_SPIN_Y, P.SECONDARY_SPIN_Y])
         if self.use_truncated_normal_spin_z:
-            names.append(P.PRIMARY_SPIN_Z)
-            names.append(P.SECONDARY_SPIN_Z)
-        if self.use_chi_eff_mixture or self.use_skew_normal_chi_eff:
+            names.extend([P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z])
+        if self.use_chi_eff_mixture:
+            names.append(P.EFFECTIVE_SPIN)
+        if self.use_skew_normal_chi_eff:
             names.append(P.EFFECTIVE_SPIN)
         if self.use_truncated_normal_chi_p:
             names.append(P.PRECESSING_SPIN)
         if self.use_tilt:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
+        if self.use_phi_1:
+            names.append(P.PHI_1)
+        if self.use_phi_2:
+            names.append(P.PHI_2)
         if self.use_phi_12:
             names.append(P.PHI_12)
         if self.use_eccentricity_mixture or self.use_eccentricity_powerlaw:
             names.append(P.ECCENTRICITY)
+        if self.use_mean_anomaly:
+            names.append(P.MEAN_ANOMALY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
         if self.use_right_ascension:
@@ -156,6 +174,8 @@ class NPowerlawMGaussianCore:
             names.append(P.COS_IOTA)
         if self.use_polarization_angle:
             names.append(P.POLARIZATION_ANGLE)
+        if self.use_phi_orb:
+            names.append(P.PHI_ORB)
         return names
 
     @property
@@ -358,17 +378,33 @@ class NPowerlawMGaussianCore:
                 ]
             )
 
+        if self.use_phi_1:
+            all_params.extend(
+                [
+                    (P.PHI_1 + "_high_g", self.N_g),
+                    (P.PHI_1 + "_high_pl", self.N_pl),
+                    (P.PHI_1 + "_low_g", self.N_g),
+                    (P.PHI_1 + "_low_pl", self.N_pl),
+                ]
+            )
+
+        if self.use_phi_2:
+            all_params.extend(
+                [
+                    (P.PHI_2 + "_high_g", self.N_g),
+                    (P.PHI_2 + "_high_pl", self.N_pl),
+                    (P.PHI_2 + "_low_g", self.N_g),
+                    (P.PHI_2 + "_low_pl", self.N_pl),
+                ]
+            )
+
         if self.use_phi_12:
             all_params.extend(
                 [
                     (P.PHI_12 + "_high_g", self.N_g),
                     (P.PHI_12 + "_high_pl", self.N_pl),
-                    (P.PHI_12 + "_loc_g", self.N_g),
-                    (P.PHI_12 + "_loc_pl", self.N_pl),
                     (P.PHI_12 + "_low_g", self.N_g),
                     (P.PHI_12 + "_low_pl", self.N_pl),
-                    (P.PHI_12 + "_scale_g", self.N_g),
-                    (P.PHI_12 + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -408,6 +444,16 @@ class NPowerlawMGaussianCore:
                 ]
             )
 
+        if self.use_mean_anomaly:
+            all_params.extend(
+                [
+                    (P.MEAN_ANOMALY + "_high_g", self.N_g),
+                    (P.MEAN_ANOMALY + "_high_pl", self.N_pl),
+                    (P.MEAN_ANOMALY + "_low_g", self.N_g),
+                    (P.MEAN_ANOMALY + "_low_pl", self.N_pl),
+                ]
+            )
+
         if self.use_redshift:
             all_params.extend(
                 [
@@ -423,12 +469,8 @@ class NPowerlawMGaussianCore:
                 [
                     (P.RIGHT_ASCENSION + "_high_g", self.N_g),
                     (P.RIGHT_ASCENSION + "_high_pl", self.N_pl),
-                    (P.RIGHT_ASCENSION + "_loc_g", self.N_g),
-                    (P.RIGHT_ASCENSION + "_loc_pl", self.N_pl),
                     (P.RIGHT_ASCENSION + "_low_g", self.N_g),
                     (P.RIGHT_ASCENSION + "_low_pl", self.N_pl),
-                    (P.RIGHT_ASCENSION + "_scale_g", self.N_g),
-                    (P.RIGHT_ASCENSION + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -437,12 +479,8 @@ class NPowerlawMGaussianCore:
                 [
                     (P.SIN_DECLINATION + "_high_g", self.N_g),
                     (P.SIN_DECLINATION + "_high_pl", self.N_pl),
-                    (P.SIN_DECLINATION + "_loc_g", self.N_g),
-                    (P.SIN_DECLINATION + "_loc_pl", self.N_pl),
                     (P.SIN_DECLINATION + "_low_g", self.N_g),
                     (P.SIN_DECLINATION + "_low_pl", self.N_pl),
-                    (P.SIN_DECLINATION + "_scale_g", self.N_g),
-                    (P.SIN_DECLINATION + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -461,12 +499,8 @@ class NPowerlawMGaussianCore:
                 [
                     (P.COS_IOTA + "_high_g", self.N_g),
                     (P.COS_IOTA + "_high_pl", self.N_pl),
-                    (P.COS_IOTA + "_loc_g", self.N_g),
-                    (P.COS_IOTA + "_loc_pl", self.N_pl),
                     (P.COS_IOTA + "_low_g", self.N_g),
                     (P.COS_IOTA + "_low_pl", self.N_pl),
-                    (P.COS_IOTA + "_scale_g", self.N_g),
-                    (P.COS_IOTA + "_scale_pl", self.N_pl),
                 ]
             )
 
@@ -475,12 +509,17 @@ class NPowerlawMGaussianCore:
                 [
                     (P.POLARIZATION_ANGLE + "_high_g", self.N_g),
                     (P.POLARIZATION_ANGLE + "_high_pl", self.N_pl),
-                    (P.POLARIZATION_ANGLE + "_loc_g", self.N_g),
-                    (P.POLARIZATION_ANGLE + "_loc_pl", self.N_pl),
                     (P.POLARIZATION_ANGLE + "_low_g", self.N_g),
                     (P.POLARIZATION_ANGLE + "_low_pl", self.N_pl),
-                    (P.POLARIZATION_ANGLE + "_scale_g", self.N_g),
-                    (P.POLARIZATION_ANGLE + "_scale_pl", self.N_pl),
+                ]
+            )
+        if self.use_phi_orb:
+            all_params.extend(
+                [
+                    (P.PHI_ORB + "_high_g", self.N_g),
+                    (P.PHI_ORB + "_high_pl", self.N_pl),
+                    (P.PHI_ORB + "_low_g", self.N_g),
+                    (P.PHI_ORB + "_low_pl", self.N_pl),
                 ]
             )
 
@@ -600,5 +639,25 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         "--add-detection-time",
         action="store_true",
         help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-1",
+        action="store_true",
+        help="Include phi_1 parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-2",
+        action="store_true",
+        help="Include phi_2 parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-orb",
+        action="store_true",
+        help="Include phi_orb parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-mean-anomaly",
+        action="store_true",
+        help="Include mean_anomaly parameter in the model",
     )
     return parser

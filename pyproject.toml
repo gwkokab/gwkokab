@@ -148,8 +148,7 @@ n_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:n_main"
 # Kokab scripts
 ## Genie scripts
 synthetic_analytical_pe = "gwkanal.core.synthetic_pe:synthetic_analytical_pe_main"
-synthetic_discrete_pe_ecc_matter = "gwkanal.ecc_matters.synthetic_pe:main"
-synthetic_discrete_pe_n_pls_m_gs = "gwkanal.n_pls_m_gs.synthetic_pe:main"
+synthetic_discrete_pe = "gwkanal.core.synthetic_pe:synthetic_discrete_pe_main"
 synthetic_events_ecc_matter = "gwkanal.ecc_matters.synthetic_events:main"
 synthetic_events_n_pls_m_gs = "gwkanal.n_pls_m_gs.synthetic_events:main"
 

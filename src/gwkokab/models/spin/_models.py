@@ -187,13 +187,14 @@ def MinimumTiltModel(
     MixtureGeneral
         Mixture model of spin orientations.
     """
+    min_stack = jnp.stack((minimum, minimum), axis=-1)
     return NDIsotropicAndTruncatedNormalMixture(
         zeta=zeta,
         loc=loc,
         scale=scale,
-        isotropic_low=minimum,
+        isotropic_low=min_stack,
         isotropic_high=jnp.ones((2,)),
-        gaussian_low=minimum,
+        gaussian_low=min_stack,
         gaussian_high=jnp.ones((2,)),
         validate_args=validate_args,
     )

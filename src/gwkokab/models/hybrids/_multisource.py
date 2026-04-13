@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Callable, Dict, List, Literal, Optional, Tuple
+from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple
 
 from jax import numpy as jnp, tree as jtr
 from jaxtyping import Array
@@ -111,7 +111,7 @@ def _build_non_mass_distributions(
     """
     build_distributions = mass_distributions
     # fmt: off
-    _info_collection: List[Tuple[bool, str, Callable[..., List[Distribution]]]] = [
+    _info_collection: Sequence[Tuple[bool, str, Callable[..., Sequence[Distribution]]]] = [
         (use_beta_spin_magnitude, P.PRIMARY_SPIN_MAGNITUDE, create_beta_distributions),
         (use_beta_spin_magnitude, P.SECONDARY_SPIN_MAGNITUDE, create_beta_distributions),
         # combined spin magnitude distribution

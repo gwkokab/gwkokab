@@ -665,7 +665,6 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         _prob_q = jnp.exp(self._log_prob_q_unnorm(_m1qs_grid))
 
         self._Z_q_given_m1 = jnp.trapezoid(_prob_q, _qs, axis=1)
-        del _m1qs_grid, _qs, _prob_q
 
     @constraints.dependent_property(is_discrete=False, event_dim=1)
     def support(self) -> constraints.Constraint:
@@ -675,11 +674,10 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         safe_delta = jnp.where(self.delta_m1 <= 0.0, 1.0, self.delta_m1)
         log_smoothing_m1 = log_planck_taper_window((m1 - self.m1min) / safe_delta)
 
-        log_prob_m1 = self.alpha * jnp.log(m1) + log_smoothing_m1
+        log_prob_m1 = -self.alpha * jnp.log(m1) + log_smoothing_m1
 
         return jnp.where(self.delta_m1 <= 0.0, -jnp.inf, log_prob_m1)
 
-    @validate_sample
     def _log_prob_q_unnorm(self, value: Array) -> Array:
         m1, q = jnp.unstack(value, axis=-1)
         m2 = m1 * q
@@ -688,7 +686,7 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         log_prob_q = self.beta * jnp.log(q) + log_smoothing_q
 
         return jnp.where(
-            (self.delta_m2 <= 0.0) & (self.m2min < m2), -jnp.inf, log_prob_q
+            (self.delta_m2 <= 0.0) | (self.m2min > m2), -jnp.inf, log_prob_q
         )
 
     @validate_sample

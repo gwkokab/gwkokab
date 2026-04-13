@@ -45,6 +45,10 @@ class NPowerlawMGaussianSage(NPowerlawMGaussianCore, Sage):
         use_right_ascension: bool,
         use_sin_declination: bool,
         use_detection_time: bool,
+        use_phi_1: bool,
+        use_phi_2: bool,
+        use_phi_orb: bool,
+        use_mean_anomaly: bool,
         likelihood_fn: Callable[
             [
                 Callable[..., Distribution],
@@ -91,6 +95,10 @@ class NPowerlawMGaussianSage(NPowerlawMGaussianCore, Sage):
             use_right_ascension=use_right_ascension,
             use_sin_declination=use_sin_declination,
             use_detection_time=use_detection_time,
+            use_phi_1=use_phi_1,
+            use_phi_2=use_phi_2,
+            use_phi_orb=use_phi_orb,
+            use_mean_anomaly=use_mean_anomaly,
         )
 
         Sage.__init__(
@@ -157,6 +165,10 @@ def f_main() -> None:
         use_right_ascension=args.add_right_ascension,
         use_sin_declination=args.add_sin_declination,
         use_detection_time=args.add_detection_time,
+        use_phi_1=args.add_phi_1,
+        use_phi_2=args.add_phi_2,
+        use_phi_orb=args.add_phi_orb,
+        use_mean_anomaly=args.add_mean_anomaly,
         likelihood_fn=flowMC_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_json,
@@ -206,6 +218,10 @@ def n_main() -> None:
         use_right_ascension=args.add_right_ascension,
         use_sin_declination=args.add_sin_declination,
         use_detection_time=args.add_detection_time,
+        use_phi_1=args.add_phi_1,
+        use_phi_2=args.add_phi_2,
+        use_phi_orb=args.add_phi_orb,
+        use_mean_anomaly=args.add_mean_anomaly,
         likelihood_fn=numpyro_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_json,
