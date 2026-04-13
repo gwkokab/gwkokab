@@ -191,7 +191,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             [coord + "_delta_threshold" for coord in coords], error_params
         )  # type: ignore[arg-type]
         delta_thresholds: dict[str, float] = {
-            k.removesuffix("_delta_threshold"): v or default_delta_threshold
+            k.removesuffix("_delta_threshold"): v if v is not None else default_delta_threshold
             for k, v in coords_err_vals.items()
         }  # type: ignore[assignment]
 
