@@ -379,7 +379,7 @@ def train_regressor(
 
     # Create subplots with shared x and y axes
 
-    plt.rcParams.update({"text.usetex": True, "font.size": 18})
+    plt.rcParams.update({"font.size": 18})
     _, axes = plt.subplots(3, 1, figsize=(15, 15), dpi=300, sharex=True, sharey=True)
 
     import glasbey
