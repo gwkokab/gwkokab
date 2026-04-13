@@ -32,7 +32,7 @@ ErrorFunctionRegistryType: TypeAlias = dict[
 """Type alias for the error function registry mapping."""
 
 
-class SyntheticDiscretePEBase(PRNGKeyMixin):
+class SyntheticDiscretePE(PRNGKeyMixin):
     waveform_name = "GWKokabSyntheticDiscretePE"
     root_dir = Path("data")
 
@@ -410,9 +410,9 @@ def synthetic_discrete_pe_main():
 
     log_info(start=True)
 
-    SyntheticDiscretePEBase.init_rng_seed(seed=args.seed)
+    SyntheticDiscretePE.init_rng_seed(seed=args.seed)
 
-    generator = SyntheticDiscretePEBase(
+    generator = SyntheticDiscretePE(
         filename=args.filename,
         error_params_filename=args.error_params,
         size=args.size,
@@ -510,7 +510,7 @@ def synthetic_analytical_pe_main():
         "--discrete-waveform",
         help="Name of the discrete waveform used to generate the analytical PE.",
         type=str,
-        default=SyntheticDiscretePEBase.waveform_name,
+        default=SyntheticDiscretePE.waveform_name,
     )
     parser.add_argument(
         "--coords",
