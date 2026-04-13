@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import pprint
 import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections.abc import Callable
@@ -10,6 +11,9 @@ from typing import Optional, TypeAlias
 
 import h5py
 import numpy as np
+import tqdm
+from jax import random as jrd
+from loguru import logger
 from numpyro.distributions.distribution import enable_validation
 
 from gwkanal.core.utils import from_structured, PRNGKeyMixin, to_structured
@@ -28,7 +32,7 @@ ErrorFunctionRegistryType: TypeAlias = dict[
 """Type alias for the error function registry mapping."""
 
 
-class SyntheticDiscretePEBase(PRNGKeyMixin):
+class SyntheticDiscretePE(PRNGKeyMixin):
     waveform_name = "GWKokabSyntheticDiscretePE"
     root_dir = Path("data")
 
@@ -39,12 +43,14 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         size: int,
         derive_parameters: bool = False,
         coords: Optional[list[str]] = None,
+        is_delta_error: bool = False,
     ) -> None:
         self.filename = filename
         self.error_params_filename = error_params_filename
         self.size = size
         self.derive_parameters = derive_parameters
         self.coords = coords
+        self.is_delta_error = is_delta_error
 
     @property
     def error_function_registry(self) -> ErrorFunctionRegistryType:
@@ -144,6 +150,88 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
             events = {p: f["events"][p] for p in parameters}
         return parameters, events
 
+    def _parse_delta_thresholds(
+        self,
+        coords: list[str],
+        error_params: dict[str, np.ndarray],
+    ) -> dict[str, float]:
+        """Parses delta error thresholds from the error parameters.
+
+        This method checks for both coordinate-specific thresholds (e.g., 'mass_delta_threshold')
+        and a default threshold ('delta_threshold'). If a coordinate-specific threshold is not provided,
+        it falls back to the default threshold. If neither is provided, it raises an error.
+
+        Parameters
+        ----------
+        coords : list[str]
+            List of coordinates for which to parse delta thresholds.
+        error_params : dict[str, np.ndarray]
+            Dictionary containing error parameters, which may include delta thresholds.
+
+        Returns
+        -------
+        dict[str, float]
+            A dictionary mapping each coordinate to its corresponding delta threshold.
+        """
+        logger.info(
+            "Parsing delta error thresholds for coordinates: {coords}", coords=coords
+        )
+        default_err_key = "delta_threshold"
+        default_delta_threshold: float = match_all(
+            (default_err_key,), error_params
+        ).pop(default_err_key, None)  # type: ignore[assignment]
+        if default_delta_threshold is None:
+            warnings.warn(
+                f"Default threshold for delta error is not provided under key '{default_err_key}'. "
+                "Each coordinate must have its own specific threshold defined as '<coord>_delta_threshold'.",
+                LoggedUserWarning,
+            )
+
+        coords_err_vals = match_all(
+            [coord + "_delta_threshold" for coord in coords], error_params
+        )  # type: ignore[arg-type]
+        delta_thresholds: dict[str, float] = {
+            k.removesuffix("_delta_threshold"): v
+            if v is not None
+            else default_delta_threshold
+            for k, v in coords_err_vals.items()
+        }  # type: ignore[assignment]
+
+        for coord in coords:
+            specific_err_key = coord + "_delta_threshold"
+            delta_threshold = delta_thresholds[coord]
+            if delta_threshold is None:
+                raise LoggedValueError(
+                    f"Threshold for delta error for coordinate '{coord}' is not provided. "
+                    f"Either provide '{default_err_key}' or '{specific_err_key}'."
+                )
+        logger.success(
+            "Successfully parsed delta error thresholds:\n{thresholds}",
+            thresholds=pprint.pformat(delta_thresholds),
+        )
+        return delta_thresholds
+
+    def _apply_delta_error(
+        self,
+        coords: list[str],
+        injection_values: dict[str, np.ndarray],
+        delta_thresholds: dict[str, float],
+    ) -> dict[str, np.ndarray]:
+        estimate = {}
+        for coord in coords:
+            delta_threshold = delta_thresholds[coord]
+            injection_val = injection_values[coord]
+
+            val = injection_val + jrd.uniform(
+                self.rng_key,
+                (self.size,),
+                minval=-delta_threshold,
+                maxval=delta_threshold,
+            )
+
+            estimate[coord] = val
+        return estimate
+
     def _apply_error_model(
         self,
         coords: list[str],
@@ -238,9 +326,24 @@ class SyntheticDiscretePEBase(PRNGKeyMixin):
         if self.derive_parameters:  # Load once
             mesh = default_relation_mesh()
 
-        for i in range(n_injections):
+        description = "Generating parameter estimates "
+        if self.is_delta_error:
+            description += "(Delta Error)"
+        else:
+            description += "(Error Model)"
+
+        delta_thresholds = None
+        for i in tqdm.tqdm(range(n_injections), desc=description):
             inj_vals = {p: events[p][i] for p in coords}
-            post_est = self._apply_error_model(coords, inj_vals, error_params)
+
+            if self.is_delta_error:
+                if delta_thresholds is None:
+                    delta_thresholds = self._parse_delta_thresholds(
+                        coords, error_params
+                    )
+                post_est = self._apply_delta_error(coords, inj_vals, delta_thresholds)
+            else:
+                post_est = self._apply_error_model(coords, inj_vals, error_params)
 
             active_params = coords
             if self.derive_parameters:
@@ -283,6 +386,11 @@ def synthetic_discrete_pe_main():
         required=True,
     )
     parser.add_argument(
+        "--delta-error",
+        help="Apply delta error.",
+        action="store_true",
+    )
+    parser.add_argument(
         "--size",
         help="Number of posterior samples to generate per event.",
         type=int,
@@ -304,14 +412,15 @@ def synthetic_discrete_pe_main():
 
     log_info(start=True)
 
-    SyntheticDiscretePEBase.init_rng_seed(seed=args.seed)
+    SyntheticDiscretePE.init_rng_seed(seed=args.seed)
 
-    generator = SyntheticDiscretePEBase(
+    generator = SyntheticDiscretePE(
         filename=args.filename,
         error_params_filename=args.error_params,
         size=args.size,
         derive_parameters=args.derive_parameters,
         coords=args.coords,
+        is_delta_error=args.delta_error,
     )
 
     generator.generate_parameter_estimates()
@@ -403,7 +512,7 @@ def synthetic_analytical_pe_main():
         "--discrete-waveform",
         help="Name of the discrete waveform used to generate the analytical PE.",
         type=str,
-        default=SyntheticDiscretePEBase.waveform_name,
+        default=SyntheticDiscretePE.waveform_name,
     )
     parser.add_argument(
         "--coords",
