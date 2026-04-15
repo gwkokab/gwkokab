@@ -166,6 +166,8 @@ def truncated_normal_error(
     return samples
 
 
+# Copyright 2023 Amanda Farah
+# SPDX-License-Identifier: CC0-1.0
 def dpsi_from_dXeff_neglect_Xa(dXeff, n):
     """Returns calculation of delta psi, which is a function of n (eta) and delta Xeff
     obtained by rearranging eq A2 of arxiv:1805.03046 (Ng et al.
@@ -180,6 +182,8 @@ def dpsi_from_dXeff_neglect_Xa(dXeff, n):
     return A * (B / C) * dXeff
 
 
+# Copyright 2023 Amanda Farah
+# SPDX-License-Identifier: CC0-1.0
 def psi_from_chi_eff_and_eta_neglect_chi_a(chi_eff, n):
     """Returns psi coefficient, neglecting chi_a term."""
     return np.power(n, -3 / 5) * (
@@ -187,6 +191,8 @@ def psi_from_chi_eff_and_eta_neglect_chi_a(chi_eff, n):
     )
 
 
+# Copyright 2023 Amanda Farah
+# SPDX-License-Identifier: CC0-1.0
 def chi_eff_from_psi_and_eta_neglect_chi_a(psi, n):
     """Returns calculation of chi_eff from psi, which is a function of n (eta) obtained
     by rearranging eq A2 of arxiv:1805.03046 (Ng et al.
@@ -201,6 +207,10 @@ def chi_eff_from_psi_and_eta_neglect_chi_a(psi, n):
     return A * (B / C)
 
 
+# This is a refactored implementation of https://git.ligo.org/amanda.farah/GWMockCat/-/blob/main/GWMockCat/posterior_utils.py?ref_type=heads#L61
+#
+# Copyright 2023 Amanda Farah
+# SPDX-License-Identifier: CC0-1.0
 def mock_spin_error(
     chi_eff: np.ndarray,
     eta: np.ndarray,
