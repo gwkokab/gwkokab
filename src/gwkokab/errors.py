@@ -220,11 +220,10 @@ def mock_spin_error(
     estimates: dict[str | P, np.ndarray],
     scale_chi_eff: np.ndarray,
 ) -> np.ndarray:
-    if P.SYMMETRIC_MASS_RATIO not in estimates.keys():
+    if (etaobs := estimates.get(P.SYMMETRIC_MASS_RATIO, None)) is None:
         raise LoggedValueError(
             "Parameter estimation of Symmetric Mass Ratio is not available."
         )
-    etaobs = estimates[P.SYMMETRIC_MASS_RATIO]
     rho_key, sample_key = jrd.split(key)
     rho = 9.0 * np.power(
         np.asarray(
