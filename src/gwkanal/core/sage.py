@@ -160,9 +160,11 @@ class Sage(Guru):
         )
         logger.success("Likelihood function construction completed successfully.")
 
-        N_pes = np.array(
-            [np.count_nonzero(batched_masks, axis=-1) for batched_masks in masks_group],
-            dtype=int,
+        N_pes = tuple(
+            [
+                np.asarray(np.count_nonzero(batched_masks, axis=-1), dtype=int)
+                for batched_masks in masks_group
+            ]
         )
         logger.info(f"Event counts per bucket (N_pe): {N_pes}")
 
