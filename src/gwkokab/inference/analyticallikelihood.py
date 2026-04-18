@@ -150,7 +150,9 @@ def analytical_likelihood(
 
         total_ln_l = jnp.sum(log_est)
 
-        expected_rates = poisson_mean_estimator(model_instance, **pmean_kwargs)
+        expected_rates, expected_rate_variance = poisson_mean_estimator(
+            model_instance, **pmean_kwargs
+        )
 
         ln_post = (
             priors.log_prob(x) + total_ln_l + n_events * jnp.log(T_obs) - expected_rates
