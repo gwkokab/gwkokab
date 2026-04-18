@@ -123,13 +123,21 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
             )
 
         # Resample based on weights
-        resample_idx = jrd.choice(
-            self.rng_key,
-            jnp.arange(buffer_size),
-            p=weights,
-            shape=(size,),
-            replace=False,
+        resample_idx = np.asarray(
+            jrd.choice(
+                self.rng_key,
+                jnp.arange(buffer_size),
+                p=weights,
+                shape=(size,),
+                replace=False,
+            )
         )
+        if np.unique(resample_idx).size < size:
+            logger.warning(
+                "Resampling resulted in duplicate indices. Consider increasing the buffer size.",
+                LoggedUserWarning,
+            )
+
         resample_prob = weights[resample_idx]
 
         return (
@@ -137,7 +145,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
             np.asarray(raw_indices),
             np.asarray(raw_pop[resample_idx]),
             np.asarray(raw_indices[resample_idx]),
-            np.asarray(resample_idx),
+            resample_idx,
             np.asarray(resample_prob),
         )
 
