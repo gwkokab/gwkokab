@@ -18,7 +18,7 @@ from gwkanal.utils.common import read_json
 from gwkanal.utils.regex import match_all
 from gwkokab.models.utils import ScaledMixture
 from gwkokab.parameters import default_relation_mesh, Parameters as P
-from gwkokab.utils.exceptions import LoggedValueError
+from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 
 class SyntheticEventsBase(PRNGKeyMixin, ABC):
@@ -97,7 +97,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
 
     def _generate_population(
         self, size: int, log_selection_fn: Callable
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate population for a realization via rejection/importance sampling."""
 
         # Oversample to account for selection effects
@@ -115,12 +115,31 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         )
         weights = jnn.softmax(log_selection)
 
+        count_nonzero = jnp.sum(weights > 0)
+        if count_nonzero < size:
+            logger.warning(
+                f"Only {count_nonzero} samples have non-zero selection probability. Consider increasing the buffer size.",
+                LoggedUserWarning,
+            )
+
         # Resample based on weights
         resample_idx = jrd.choice(
-            self.rng_key, jnp.arange(buffer_size), p=weights, shape=(size,)
+            self.rng_key,
+            jnp.arange(buffer_size),
+            p=weights,
+            shape=(size,),
+            replace=False,
         )
+        resample_prob = weights[resample_idx]
 
-        return raw_pop, raw_indices, raw_pop[resample_idx], raw_indices[resample_idx]
+        return (
+            np.asarray(raw_pop),
+            np.asarray(raw_indices),
+            np.asarray(raw_pop[resample_idx]),
+            np.asarray(raw_indices[resample_idx]),
+            np.asarray(resample_idx),
+            np.asarray(resample_prob),
+        )
 
     def from_inverse_transform_sampling(self) -> None:
         pmean_loader = PoissonMeanEstimationLoader.from_json(
@@ -140,8 +159,10 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
                 f"Population size is {size}. Check your VT or model configs."
             )
 
-        raw_pop, raw_idx, pop, idx = self._generate_population(size, log_selection_fn)
-        self.save_population(pop, idx, raw_pop, raw_idx)
+        raw_pop, raw_idx, pop, idx, resample_idx, resample_prob = (
+            self._generate_population(size, log_selection_fn)
+        )
+        self.save_population(pop, idx, raw_pop, raw_idx, resample_idx, resample_prob)
 
     def save_population(
         self,
@@ -149,6 +170,8 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         indices: np.ndarray,
         raw_population: np.ndarray,
         raw_indices: np.ndarray,
+        resample_idx: np.ndarray,
+        resample_prob: np.ndarray,
     ) -> None:
         current_params = self.parameters
 
@@ -178,6 +201,16 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
             )
             f.create_dataset(
                 "raw_indices", data=raw_indices.astype(np.uint32), **compression_args
+            )
+            f.create_dataset(
+                "resample_indices",
+                data=resample_idx.astype(np.uint32),
+                **compression_args,
+            )
+            f.create_dataset(
+                "resample_prob",
+                data=resample_prob.astype(np.float32),
+                **compression_args,
             )
             f.attrs["parameters"] = np.array(current_params, dtype="S")
 
