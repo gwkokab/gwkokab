@@ -20,7 +20,7 @@ from gwkanal.core.utils import from_structured, PRNGKeyMixin, to_structured
 from gwkanal.utils.common import read_json
 from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
-from gwkokab.errors import banana_error, truncated_normal_error
+from gwkokab.errors import banana_error, mock_spin_error, truncated_normal_error
 from gwkokab.parameters import default_relation_mesh, Parameters, Parameters as P
 from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
@@ -68,24 +68,26 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             A dictionary mapping parameters to their error functions.
         """
 
-        def banana_error_fn(scale_Mc, scale_eta, **kwargs):
+        def banana_error_fn(scale_Mc, scale_eta, estimates, **kwargs):
             Mc = kwargs[P.CHIRP_MASS]
             eta = kwargs[P.SYMMETRIC_MASS_RATIO]
-            x = np.stack([Mc, eta], axis=-1)
             return banana_error(
-                x,
+                Mc,
+                eta,
                 self.size,
                 self.rng_key,
                 scale_Mc=scale_Mc,
                 scale_eta=scale_eta,
+                estimates=estimates,
             )
 
         def generic_truncated_normal_error_fn(
             parameter: P,
+            *,
             low: Optional[float] = None,
             high: Optional[float] = None,
         ) -> tuple[tuple[str, ...], Callable]:
-            def error_fn(default_low=low, default_high=high, **kwargs):
+            def error_fn(*, estimates, default_low=low, default_high=high, **kwargs):
                 x = kwargs[parameter]
                 scale = kwargs[parameter + "_scale"]
                 low = kwargs.get(parameter + "_low", default_low)
@@ -98,6 +100,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                     scale=scale,
                     low=low,
                     high=high,
+                    estimates=estimates,
                 )
 
             error_parameters: tuple[str, ...] = (
@@ -108,11 +111,24 @@ class SyntheticDiscretePE(PRNGKeyMixin):
 
             return error_parameters, error_fn
 
+        def mock_spin_error_fn(scale_chi_eff, estimates, **kwargs):
+            chi_eff = kwargs[P.EFFECTIVE_SPIN]
+            eta = kwargs[P.SYMMETRIC_MASS_RATIO]
+            return mock_spin_error(
+                chi_eff,
+                eta,
+                self.size,
+                self.rng_key,
+                scale_chi_eff=scale_chi_eff,
+                estimates=estimates,
+            )
+
         registry: ErrorFunctionRegistryType = {
             (P.CHIRP_MASS, P.SYMMETRIC_MASS_RATIO): (
                 ("scale_Mc", "scale_eta"),
                 banana_error_fn,
-            )
+            ),
+            P.EFFECTIVE_SPIN: (("scale_chi_eff",), mock_spin_error_fn),
         }
 
         for param, default_low, default_high in [
@@ -124,7 +140,6 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             (P.SECONDARY_SPIN_Y, -1.0, 1.0),
             (P.PRIMARY_SPIN_Z, -1.0, 1.0),
             (P.SECONDARY_SPIN_Z, -1.0, 1.0),
-            (P.EFFECTIVE_SPIN, None, None),
             (P.PRECESSING_SPIN, None, None),
             (P.COS_TILT_1, -1.0, 1.0),
             (P.COS_TILT_2, -1.0, 1.0),
@@ -177,7 +192,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             "Parsing delta error thresholds for coordinates: {coords}", coords=coords
         )
         default_err_key = "delta_threshold"
-        default_delta_threshold: float = match_all(
+        default_delta_threshold: Optional[float] = match_all(
             (default_err_key,), error_params
         ).pop(default_err_key, None)  # type: ignore[assignment]
         if default_delta_threshold is None:
@@ -239,7 +254,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         error_params: dict[str, np.ndarray],
     ) -> dict[str, np.ndarray]:
         """Applies the registry functions to generate estimates."""
-        estimate = {}
+        estimates = {}
         for key, (err_keys, func) in self.error_function_registry.items():
             # Support both single strings and tuples of parameters
             keys = (key,) if isinstance(key, (str, Parameters)) else key
@@ -249,14 +264,14 @@ class SyntheticDiscretePE(PRNGKeyMixin):
 
             err_vals = match_all(err_keys, error_params)  # type: ignore[arg-type]
 
-            val = func(**injection_values, **err_vals)
+            val = func(estimates=estimates, **injection_values, **err_vals)
 
             if isinstance(key, tuple):
                 for idx, k in enumerate(key):
-                    estimate[k] = val[:, idx]
+                    estimates[k] = val[:, idx]
             else:
-                estimate[key] = val
-        return estimate
+                estimates[key] = val
+        return estimates
 
     def _save_event(
         self,
