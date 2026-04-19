@@ -6,7 +6,7 @@ from typing import Optional
 
 import numpy as np
 import RIFT.lalsimutils as lalsimutils
-from jax import numpy as jnp, random as jrd
+from jax import random as jrd
 from jaxtyping import PRNGKeyArray
 from numpyro.distributions.truncated import TruncatedNormal
 
@@ -28,6 +28,7 @@ def banana_error(
     key: PRNGKeyArray,
     *,
     estimates: dict[str | P, np.ndarray],
+    rho: np.ndarray,
     scale_Mc: float = 1.0,
     scale_eta: float = 1.0,
 ) -> np.ndarray:
@@ -58,19 +59,20 @@ def banana_error(
         scale of the symmetric mass ratio error, defaults to 1.0
     estimates : dict[str | P, np.ndarray]
         Parameter estimates performed so far
+    rho : np.ndarray
+        SNR of the event, used to scale the error
 
     Returns
     -------
     np.ndarray
         array of values with added banana error
     """
-    keys = jrd.split(key, 5)
+    r0_key, r0p_key, r_key, rp_key = jrd.split(key, 4)
 
-    r0 = np.asarray(jrd.normal(key=keys[0]))
-    r0p = np.asarray(jrd.normal(key=keys[1]))
-    r = np.asarray(jrd.normal(key=keys[2], shape=(size,))) * scale_Mc
-    rp = np.asarray(jrd.normal(key=keys[3], shape=(size,))) * scale_eta
-    rho = 9.0 * np.power(np.asarray(jrd.uniform(key=keys[4])), -1.0 / 3.0)
+    r0 = np.asarray(jrd.normal(key=r0_key))
+    r0p = np.asarray(jrd.normal(key=r0p_key))
+    r = np.asarray(jrd.normal(key=r_key, shape=(size,))) * scale_Mc
+    rp = np.asarray(jrd.normal(key=rp_key, shape=(size,))) * scale_eta
 
     v_PN_param = (np.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (
         1.0 / 3.0
@@ -101,6 +103,7 @@ def truncated_normal_error(
     *,
     scale: float,
     estimates: dict[str | P, np.ndarray],
+    rho: np.ndarray,
     low: Optional[float] = None,
     high: Optional[float] = None,
 ) -> np.ndarray:
@@ -130,6 +133,8 @@ def truncated_normal_error(
         Scale parameter for the truncated normal distribution.
     estimates : dict[str | P, np.ndarray]
         Parameter estimates performed so far
+    rho : np.ndarray
+        SNR of the event, used to scale the error
     low : Optional[float], optional
         Lower bound for the truncation, defaults to None (no lower bound).
     high : Optional[float], optional
@@ -141,16 +146,10 @@ def truncated_normal_error(
         Array of values with added truncated normal error, with all values within the
         specified bounds.
     """
-    key_r0, key_r, key_rho = jrd.split(key, 3)
+    key_r0, key_r = jrd.split(key)
 
     r0 = np.asarray(jrd.normal(key=key_r0))
     r = np.asarray(jrd.normal(key=key_r, shape=(size,)))
-    rho = 9.0 * np.power(
-        np.asarray(
-            jrd.uniform(key=key_rho, minval=jnp.finfo(jnp.result_type(float)).tiny)
-        ),
-        -1.0 / 3.0,
-    )
 
     samples = x + scale * (r0 + r) * (12.0 / rho)
 
@@ -218,19 +217,13 @@ def mock_spin_error(
     key: PRNGKeyArray,
     *,
     estimates: dict[str | P, np.ndarray],
+    rho: np.ndarray,
     scale_chi_eff: np.ndarray,
 ) -> np.ndarray:
     if (etaobs := estimates.get(P.SYMMETRIC_MASS_RATIO, None)) is None:
         raise LoggedValueError(
             "Parameter estimation of Symmetric Mass Ratio is not available."
         )
-    rho_key, sample_key = jrd.split(key)
-    rho = 9.0 * np.power(
-        np.asarray(
-            jrd.uniform(key=rho_key, minval=jnp.finfo(jnp.result_type(float)).tiny)
-        ),
-        -1.0 / 3.0,
-    )
     threshold_snr = 12.0
     uncert_psi = dpsi_from_dXeff_neglect_Xa(scale_chi_eff, eta)
     psi = psi_from_chi_eff_and_eta_neglect_chi_a(chi_eff, eta)
@@ -241,6 +234,6 @@ def mock_spin_error(
         low=-4.2,
         high=-1.2,
         validate_args=True,
-    ).sample(sample_key, (size,))
+    ).sample(key, (size,))
     Xeffobs = chi_eff_from_psi_and_eta_neglect_chi_a(psiobs, etaobs)
     return Xeffobs

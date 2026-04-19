@@ -68,7 +68,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             A dictionary mapping parameters to their error functions.
         """
 
-        def banana_error_fn(scale_Mc, scale_eta, estimates, **kwargs):
+        def banana_error_fn(scale_Mc, scale_eta, estimates, rho, **kwargs):
             Mc = kwargs[P.CHIRP_MASS]
             eta = kwargs[P.SYMMETRIC_MASS_RATIO]
             return banana_error(
@@ -79,6 +79,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                 scale_Mc=scale_Mc,
                 scale_eta=scale_eta,
                 estimates=estimates,
+                rho=rho,
             )
 
         def generic_truncated_normal_error_fn(
@@ -87,7 +88,9 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             low: Optional[float] = None,
             high: Optional[float] = None,
         ) -> tuple[tuple[str, ...], Callable]:
-            def error_fn(*, estimates, default_low=low, default_high=high, **kwargs):
+            def error_fn(
+                *, estimates, rho, default_low=low, default_high=high, **kwargs
+            ):
                 x = kwargs[parameter]
                 scale = kwargs[parameter + "_scale"]
                 low = kwargs.get(parameter + "_low", default_low)
@@ -101,6 +104,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                     low=low,
                     high=high,
                     estimates=estimates,
+                    rho=rho,
                 )
 
             error_parameters: tuple[str, ...] = (
@@ -111,7 +115,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
 
             return error_parameters, error_fn
 
-        def mock_spin_error_fn(scale_chi_eff, estimates, **kwargs):
+        def mock_spin_error_fn(scale_chi_eff, estimates, rho, **kwargs):
             chi_eff = kwargs[P.EFFECTIVE_SPIN]
             eta = kwargs[P.SYMMETRIC_MASS_RATIO]
             return mock_spin_error(
@@ -121,6 +125,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                 self.rng_key,
                 scale_chi_eff=scale_chi_eff,
                 estimates=estimates,
+                rho=rho,
             )
 
         registry: ErrorFunctionRegistryType = {
@@ -252,6 +257,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         coords: list[str],
         injection_values: dict[str, np.ndarray],
         error_params: dict[str, np.ndarray],
+        rho: float,
     ) -> dict[str, np.ndarray]:
         """Applies the registry functions to generate estimates."""
         estimates = {}
@@ -264,7 +270,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
 
             err_vals = match_all(err_keys, error_params)  # type: ignore[arg-type]
 
-            val = func(estimates=estimates, **injection_values, **err_vals)
+            val = func(estimates=estimates, rho=rho, **injection_values, **err_vals)
 
             if isinstance(key, tuple):
                 for idx, k in enumerate(key):
@@ -279,6 +285,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         params: list[str],
         posterior: dict[str, np.ndarray],
         injection: dict[str, np.ndarray],
+        rho: float,
         width: int,
     ):
         """Handles the HDF5 boilerplate for a single event."""
@@ -302,6 +309,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         compression_args = {"compression": "gzip", "compression_opts": 9}
         with h5py.File(event_path, "w") as ef:
             ef.attrs["parameters"] = np.array(params, dtype="S")
+            ef.attrs["rho"] = rho
             group = ef.create_group(self.waveform_name)
             group.create_dataset("approximant", data=self.waveform_name)
             group.create_dataset("injection_data", data=event, **compression_args)
@@ -341,11 +349,34 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         if self.derive_parameters:  # Load once
             mesh = default_relation_mesh()
 
+        rhos = [np.nan for _ in range(n_injections)]
+
         description = "Generating parameter estimates "
         if self.is_delta_error:
             description += "(Delta Error)"
+            logger.info(
+                "Delta error does not depend on rho, so all injections will have NaN rho values."
+            )
         else:
             description += "(Error Model)"
+            rhos = 9.0 * np.power(
+                np.asarray(
+                    jrd.uniform(
+                        key=self.rng_key,
+                        shape=(n_injections,),
+                        minval=np.finfo(np.result_type(float)).tiny,
+                    )
+                ),
+                -1.0 / 3.0,
+            )
+            rhos = list(map(float, rhos))
+
+        logger.info("rho values for injections: {rhos}", rhos=pprint.pformat(rhos))
+        logger.info(
+            "Starting parameter estimation generation for {n} injections using {method}.",
+            n=n_injections,
+            method="delta error" if self.is_delta_error else "error model",
+        )
 
         delta_thresholds = None
         for i in tqdm.tqdm(range(n_injections), desc=description):
@@ -358,7 +389,9 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                     )
                 post_est = self._apply_delta_error(coords, inj_vals, delta_thresholds)
             else:
-                post_est = self._apply_error_model(coords, inj_vals, error_params)
+                post_est = self._apply_error_model(
+                    coords, inj_vals, error_params, rhos[i]
+                )
 
             active_params = coords
             if self.derive_parameters:
@@ -366,7 +399,11 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                 inj_vals = mesh.resolve(initial_state=inj_vals)
                 active_params = sorted(post_est.keys())
 
-            self._save_event(i, active_params, post_est, inj_vals, width)
+            self._save_event(i, active_params, post_est, inj_vals, rhos[i], width)
+        logger.success(
+            "Successfully generated parameter estimates for {n} injections.",
+            n=n_injections,
+        )
 
 
 def synthetic_discrete_pe_main():
