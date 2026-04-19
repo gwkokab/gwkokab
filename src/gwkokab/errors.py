@@ -67,12 +67,12 @@ def banana_error(
     np.ndarray
         array of values with added banana error
     """
-    keys = jrd.split(key, 5)
+    r0_key, r0p_key, r_key, rp_key = jrd.split(key, 4)
 
-    r0 = np.asarray(jrd.normal(key=keys[0]))
-    r0p = np.asarray(jrd.normal(key=keys[1]))
-    r = np.asarray(jrd.normal(key=keys[2], shape=(size,))) * scale_Mc
-    rp = np.asarray(jrd.normal(key=keys[3], shape=(size,))) * scale_eta
+    r0 = np.asarray(jrd.normal(key=r0_key))
+    r0p = np.asarray(jrd.normal(key=r0p_key))
+    r = np.asarray(jrd.normal(key=r_key, shape=(size,))) * scale_Mc
+    rp = np.asarray(jrd.normal(key=rp_key, shape=(size,))) * scale_eta
 
     v_PN_param = (np.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (
         1.0 / 3.0
