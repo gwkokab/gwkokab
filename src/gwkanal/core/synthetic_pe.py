@@ -507,8 +507,8 @@ def js_divergence_from_histograms(p: np.ndarray, q: np.ndarray) -> np.ndarray:
     p = np.asarray(p, dtype=float)
     q = np.asarray(q, dtype=float)
 
-    p /= np.sum(p)
-    q /= np.sum(q)
+    p = p / np.sum(p)
+    q = q / np.sum(q)
 
     m = 0.5 * (p + q)
     return 0.5 * (entropy(p, m) + entropy(q, m))
