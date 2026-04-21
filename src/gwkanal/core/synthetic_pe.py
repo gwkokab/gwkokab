@@ -484,7 +484,7 @@ def histogram_pdf(
     bins: int,
     value_range: tuple[float, float],
     weights: Optional[np.ndarray] = None,
-):
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Build a normalized histogram-based discrete PDF."""
     hist, edges = np.histogram(
         samples,
