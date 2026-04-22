@@ -42,7 +42,7 @@ def get_git_commit_hash() -> Optional[str]:
 def get_version() -> str:
     """Determines the final project version string.
 
-    If the environment variable `GWKOKAB_NIGHTLY_BUILD` is set, appends the
+    If the environment variable `GWKOKAB_DEV_BUILD` is set, appends the
     latest git commit hash (or a date fallback) to the base version.
 
     Returns
@@ -51,31 +51,31 @@ def get_version() -> str:
         The version string, potentially including git commit hash or date for
         nightly builds.
     """
-    NIGHTLY_ENV_VAR = "GWKOKAB_NIGHTLY_BUILD"
+    DEV_BUILD_VAR = "GWKOKAB_DEV_BUILD"
     version = f"{MAJOR_VERSION}.{MINOR_VERSION}.{PATCH_VERSION}"
-    NIGHTLY_ENV_VAR_VAL = os.environ.get(NIGHTLY_ENV_VAR)
 
-    if NIGHTLY_ENV_VAR_VAL is not None:
-        valid_values = ("1", "0", "true", "false")
-        assert NIGHTLY_ENV_VAR_VAL.lower() in valid_values, (
-            f"Environment variable {NIGHTLY_ENV_VAR} must be set to one of "
-            f"{valid_values}, but got '{NIGHTLY_ENV_VAR_VAL}'."
-        )
-        if NIGHTLY_ENV_VAR_VAL.lower() in ("0", "false"):
-            # Explicitly disabled nightly build
-            return version
-    else:
+    if (DEV_BUILD_VAR_VAL := os.environ.get(DEV_BUILD_VAR)) is None:
         # Return the clean base version for standard release builds.
         return version
 
-    commit_hash = get_git_commit_hash()
+    valid_values = ("1", "0", "true", "false")
+    if DEV_BUILD_VAR_VAL.lower() not in valid_values:
+        raise ValueError(
+            f"Environment variable {DEV_BUILD_VAR} must be set to one of "
+            f"{valid_values}, but got '{DEV_BUILD_VAR_VAL}'."
+        )
+    if DEV_BUILD_VAR_VAL.lower() in ("0", "false"):
+        # Explicitly disabled development build
+        return version
 
-    if commit_hash:
-        version += f"+g{commit_hash}"
+    if commit_hash := get_git_commit_hash():
+        suffix = "+g" + commit_hash
     else:
         # not considering time because it changes too frequently
         utc_now = datetime.datetime.now().strftime("%Y%m%d")
-        version += f"+d{utc_now}"
+        suffix = "+d" + utc_now
+
+    version += suffix
 
     return version
 
