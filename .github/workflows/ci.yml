@@ -40,7 +40,7 @@ jobs:
           - "3.11"
           - "3.13"
     env:
-      GWKOKAB_NIGHTLY_BUILD: 1
+      GWKOKAB_DEV_BUILD: 1
       JAX_ARRAY: 1
       JAX_ENABLE_X64: 1
       JAX_PLATFORMS: "cpu"
@@ -67,7 +67,7 @@ jobs:
         run: |
           uv run pytest tests
       - name: Run build
-        run: GWKOKAB_NIGHTLY_BUILD=0 uv build
+        run: GWKOKAB_DEV_BUILD=0 uv build
 
   documentation:
     needs: [prek]
@@ -79,7 +79,7 @@ jobs:
         python-version:
           - "3.13"
     env:
-      GWKOKAB_NIGHTLY_BUILD: 1
+      GWKOKAB_DEV_BUILD: 1
       JAX_ARRAY: 1
       JAX_ENABLE_X64: 1
       JAX_PLATFORMS: "cpu"

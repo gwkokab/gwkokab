@@ -17,7 +17,7 @@ GROUP_FLAGS     := $(if $(GROUP),$(addprefix --group ,$(subst $(comma),$(space),
 .PHONY: all install uninstall cache_clean help doc check-uv
 
 install: uninstall check-uv
-	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS) \
+	GWKOKAB_DEV_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS) \
 		$(INSTALL_TARGET) -r pyproject.toml \
 		$(EXTRA_FLAGS) $(GROUP_FLAGS)
 
