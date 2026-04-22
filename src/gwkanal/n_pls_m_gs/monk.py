@@ -3,11 +3,20 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from collections.abc import Callable
 
+from numpyro.distributions.distribution import enable_validation
+
+from gwkanal.core.flowMC_based import FlowMCBased
 from gwkanal.core.inference_io import AnalyticalPELoader as DataLoader
 from gwkanal.core.monk import Monk, monk_arg_parser
+from gwkanal.core.numpyro_based import NumpyroBased
 from gwkanal.n_pls_m_gs.common import model_arg_parser, NPowerlawMGaussianCore
 from gwkanal.utils.logger import log_info
+from gwkokab.inference import (
+    flowMC_analytical_poisson_likelihood,
+    numpyro_analytical_poisson_likelihood,
+)
 from gwkokab.models import NPowerlawMGaussian
 
 
@@ -38,6 +47,7 @@ class NPowerlawMGaussianMonk(NPowerlawMGaussianCore, Monk):
         use_phi_2: bool,
         use_phi_orb: bool,
         use_mean_anomaly: bool,
+        likelihood_fn: Callable[..., Callable],
         data_loader: DataLoader,
         prior_filename: str,
         poisson_mean_filename: str,
@@ -78,6 +88,7 @@ class NPowerlawMGaussianMonk(NPowerlawMGaussianCore, Monk):
 
         Monk.__init__(
             self,
+            likelihood_fn,
             NPowerlawMGaussian,
             data_loader,
             prior_filename,
@@ -92,20 +103,30 @@ class NPowerlawMGaussianMonk(NPowerlawMGaussianCore, Monk):
         )
 
 
-def main() -> None:
+class NPowerlawMGaussianFMonk(NPowerlawMGaussianMonk, FlowMCBased):
+    pass
+
+
+class NPowerlawMGaussianNMonk(NPowerlawMGaussianMonk, NumpyroBased):
+    pass
+
+
+def f_main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = monk_arg_parser(parser)
 
     args = parser.parse_args()
 
+    enable_validation()
+
     log_info(start=True)
 
     data_loader = DataLoader.from_json(args.data_loader_cfg)
 
-    NPowerlawMGaussianMonk.init_rng_seed(seed=args.seed)
+    NPowerlawMGaussianFMonk.init_rng_seed(seed=args.seed)
 
-    NPowerlawMGaussianMonk(
+    NPowerlawMGaussianFMonk(
         N_pl=args.n_pl,
         N_g=args.n_g,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
@@ -130,6 +151,60 @@ def main() -> None:
         use_phi_2=args.add_phi_2,
         use_phi_orb=args.add_phi_orb,
         use_mean_anomaly=args.add_mean_anomaly,
+        likelihood_fn=flowMC_analytical_poisson_likelihood,
+        data_loader=data_loader,
+        prior_filename=args.prior_json,
+        poisson_mean_filename=args.pmean_cfg,
+        sampler_settings_filename=args.sampler_config,
+        variance_cut_threshold=args.variance_cut_threshold,
+        n_samples=args.n_samples,
+        debug_nans=args.debug_nans,
+        profile_memory=args.profile_memory,
+        check_leaks=args.check_leaks,
+    ).run()
+
+
+def n_main() -> None:
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = model_arg_parser(parser)
+    parser = monk_arg_parser(parser)
+
+    args = parser.parse_args()
+
+    enable_validation()
+
+    log_info(start=True)
+
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
+    NPowerlawMGaussianNMonk.init_rng_seed(seed=args.seed)
+
+    NPowerlawMGaussianNMonk(
+        N_pl=args.n_pl,
+        N_g=args.n_g,
+        use_beta_spin_magnitude=args.add_beta_spin_magnitude,
+        use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
+        use_truncated_normal_spin_x=args.add_truncated_normal_spin_x,
+        use_truncated_normal_spin_y=args.add_truncated_normal_spin_y,
+        use_truncated_normal_spin_z=args.add_truncated_normal_spin_z,
+        use_chi_eff_mixture=args.add_chi_eff_mixture,
+        use_skew_normal_chi_eff=args.add_skew_normal_chi_eff,
+        use_truncated_normal_chi_p=args.add_truncated_normal_chi_p,
+        use_tilt=args.add_tilt,
+        use_eccentricity_mixture=args.add_eccentricity_mixture,
+        use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
+        use_redshift=args.add_redshift,
+        use_cos_iota=args.add_cos_iota,
+        use_phi_12=args.add_phi_12,
+        use_polarization_angle=args.add_polarization_angle,
+        use_right_ascension=args.add_right_ascension,
+        use_sin_declination=args.add_sin_declination,
+        use_detection_time=args.add_detection_time,
+        use_phi_1=args.add_phi_1,
+        use_phi_2=args.add_phi_2,
+        use_phi_orb=args.add_phi_orb,
+        use_mean_anomaly=args.add_mean_anomaly,
+        likelihood_fn=numpyro_analytical_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,

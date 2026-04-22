@@ -12,14 +12,11 @@ import jax
 import numpy as np
 from loguru import logger
 from numpyro.distributions import Distribution
-from numpyro.distributions.distribution import enable_validation
 
 from gwkanal.core.inference_io import AnalyticalPELoader, PoissonMeanEstimationLoader
 from gwkanal.core.utils import SampleTransformer
-from gwkokab.inference import analytical_likelihood
 
-from .flowMC_based import FlowMCBased
-from .guru import guru_arg_parser as guru_parser
+from .guru import Guru, guru_arg_parser as guru_parser
 
 
 def _save_samples_to_hdf5(
@@ -125,9 +122,10 @@ def _multivariate_normal_samples(
     return samples, transformed_samples, N_total
 
 
-class Monk(FlowMCBased):
+class Monk(Guru):
     def __init__(
         self,
+        likelihood_fn: Callable[..., Callable],
         model: Union[Distribution, Callable[..., Distribution]],
         data_loader: AnalyticalPELoader,
         prior_filename: str,
@@ -144,6 +142,8 @@ class Monk(FlowMCBased):
 
         Parameters
         ----------
+        likelihood_fn : Callable[..., Callable[..., Array]]
+            A function that takes the model parameters and returns a function that computes the log-likelihood.
         model : Union[Distribution, Callable[..., Distribution]]
             model to be used in the Monk class. It can be a Distribution or a callable
             that returns a Distribution.
@@ -173,8 +173,13 @@ class Monk(FlowMCBased):
         assert all(letter.isalpha() or letter == "_" for letter in analysis_name), (
             "Analysis name must be alphabetic characters only."
         )
+        self.likelihood_fn = likelihood_fn
         self.data_loader = data_loader
         self.n_samples = n_samples
+
+        logger.info(
+            f"Initializing Monk class for analysis identifier: '{analysis_name}'"
+        )
 
         super().__init__(
             analysis_name=analysis_name or model.__name__,
@@ -208,7 +213,7 @@ class Monk(FlowMCBased):
         )
         _, poisson_mean_estimator, pmean_kwargs = pmean_loader.get_estimators()
 
-        logpdf = analytical_likelihood(
+        logpdf = self.likelihood_fn(
             self.model, priors, constants, variables_index, poisson_mean_estimator
         )
 
@@ -292,7 +297,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         the command line argument parser
     """
 
-    enable_validation()
     parser = guru_parser(parser)
 
     # Monk Options

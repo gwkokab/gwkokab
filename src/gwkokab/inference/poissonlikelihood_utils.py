@@ -11,6 +11,12 @@ from jaxtyping import Array
 from numpyro.distributions.distribution import Distribution
 
 
+__all__ = [
+    "discrete_poisson_likelihood_fn",
+    "analytical_poisson_likelihood_fn",
+]
+
+
 def discrete_poisson_likelihood_fn(
     model_instance: Distribution,
     poisson_mean_estimator: Callable[..., Tuple[Array, Array]],
@@ -72,3 +78,33 @@ def discrete_poisson_likelihood_fn(
     )
 
     return log_likelihood, total_variance
+
+
+def analytical_poisson_likelihood_fn(
+    model_instance: Distribution,
+    poisson_mean_estimator: Callable[..., tuple[Array, Array]],
+    samples_stack: Array,
+    ln_offsets: Array,
+    pmean_kwargs: Dict[str, Any],
+) -> tuple[Array, Array]:
+    mask = model_instance.support.check(samples_stack)
+
+    def compute_event_log_prob(samples):
+        return model_instance.log_prob(samples)
+
+    log_prob_model = jax.vmap(compute_event_log_prob)(samples_stack)
+
+    total_ln_l = jnp.sum(
+        jax.nn.logsumexp(log_prob_model + ln_offsets, axis=1, where=mask)
+    )
+
+    expected_rates, expected_rate_variance = poisson_mean_estimator(
+        model_instance, **pmean_kwargs
+    )
+
+    n_events, _, _ = samples_stack.shape
+    T_obs = pmean_kwargs["T_obs"]
+
+    log_likelihood = total_ln_l + n_events * jnp.log(T_obs) - expected_rates
+
+    return log_likelihood, jnp.zeros(())

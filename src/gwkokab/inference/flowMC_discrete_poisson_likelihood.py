@@ -15,10 +15,10 @@ from gwkokab.inference.poissonlikelihood_utils import discrete_poisson_likelihoo
 from ..models.utils import JointDistribution, ScaledMixture
 
 
-__all__ = ["flowMC_poisson_likelihood"]
+__all__ = ["flowMC_discrete_poisson_likelihood"]
 
 
-def flowMC_poisson_likelihood(
+def flowMC_discrete_poisson_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
     variables: Dict[str, Distribution],
