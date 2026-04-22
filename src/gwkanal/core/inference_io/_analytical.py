@@ -5,14 +5,14 @@
 import glob
 import warnings
 from pathlib import Path
-from types import ModuleType
-from typing import Callable, NamedTuple, Optional
+from typing import NamedTuple, Optional
 
 import h5py
 import numpy as np
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
+from gwkanal.core.utils import IdentitySampleTransformer, SampleTransformer
 from gwkanal.utils.common import read_json
 from gwkokab.utils.exceptions import (
     LoggedFileNotFoundError,
@@ -23,9 +23,9 @@ from gwkokab.utils.exceptions import (
 )
 
 
-def _load_module(path: Optional[str]) -> Optional[ModuleType]:
+def _load_transform(path: Optional[str]) -> SampleTransformer:
     if path is None:
-        return None
+        return IdentitySampleTransformer()
 
     import importlib.util
 
@@ -35,24 +35,23 @@ def _load_module(path: Optional[str]) -> Optional[ModuleType]:
 
     custom_module = importlib.util.module_from_spec(spec)  # type: ignore
     spec.loader.exec_module(custom_module)  # type: ignore
-    return custom_module
 
-
-def _extract_function(
-    module: Optional[ModuleType], fn_name: str, default_fn: Callable
-) -> Callable:
-    if module is None:
+    if custom_module is None:
         warnings.warn(
-            "No function module path provided. Using identity transform.",
+            "No module provided. Using identity transform.",
             LoggedUserWarning,
         )
-        return default_fn
+        return IdentitySampleTransformer()
 
-    if not hasattr(module, fn_name):
-        raise LoggedValueError(f"The custom module must have a '{fn_name}' function.")
+    if not hasattr(custom_module, "Transform"):
+        warnings.warn(
+            "The custom module must have a 'Transform' method. Using identity transform.",
+            LoggedUserWarning,
+        )
+        return IdentitySampleTransformer()
 
-    fn: Callable = getattr(module, fn_name)
-    return fn
+    transform_cls: type[SampleTransformer] = getattr(custom_module, "Transform")
+    return transform_cls()
 
 
 class AnalyticalPEFileData(NamedTuple):
@@ -72,6 +71,8 @@ class AnalyticalPELoader(BaseModel):
     population inference.
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     event_paths: tuple[Path, ...]
     """Tuple of absolute paths to the files containing PE samples."""
 
@@ -84,19 +85,14 @@ class AnalyticalPELoader(BaseModel):
     alternate_waveforms: dict[str, str] = Field(default_factory=dict)
     """Mapping of filenames to alternate waveform names, if needed."""
 
-    analytical_to_model_coord_fn: Callable = Field(lambda x: x)
-    """A function that transforms coordinates from the analytical PE format to the
-    model's expected format.
-
-    This allows for flexibility in handling different coordinate systems or
-    parameterizations used in the PE samples.
-    """
-
-    log_abs_det_jacobian_analytical_to_model_coord_fn: Callable = Field(
-        lambda x, y: 0.0
+    sample_transformer: SampleTransformer = Field(
+        default_factory=IdentitySampleTransformer
     )
-    """A function that computes the log absolute determinant of the Jacobian of the
-    transformation from analytical PE coordinates to model coordinates.
+    """An instance of a SampleTransformer that defines how to transform the samples from
+    the analytical PE format to the model's expected format.
+
+    This allows for flexible handling of different coordinate systems or
+    parameterizations used in the PE samples.
     """
 
     @classmethod
@@ -136,21 +132,12 @@ class AnalyticalPELoader(BaseModel):
         logger.info(f"Initialized loader with {n_files} files found via: {regex}")
 
         transform_module_path = raw_data.pop("transform_module_path", None)
-        transform_module = _load_module(transform_module_path)
-        transform = _extract_function(
-            transform_module, "analytical_to_model_coord_fn", lambda x: x
-        )
-        log_abs_det_jacobian_transform = _extract_function(
-            transform_module,
-            "log_abs_det_jacobian_analytical_to_model_coord_fn",
-            lambda x, y: 0.0,
-        )
+        transform = _load_transform(transform_module_path)
 
         return cls(
             **raw_data,
             event_paths=filenames,
-            analytical_to_model_coord_fn=transform,
-            log_abs_det_jacobian_analytical_to_model_coord_fn=log_abs_det_jacobian_transform,
+            sample_transformer=transform,
         )
 
     @classmethod
@@ -202,7 +189,7 @@ class AnalyticalPELoader(BaseModel):
 
     def load(
         self, parameters: tuple[str, ...], seed: int = 37
-    ) -> dict[str, np.ndarray]:
+    ) -> dict[str, list[np.ndarray]]:
         """Loads analytical PE data from disk.
 
         This method reads the mean, covariance, and limits for each event specified
@@ -218,8 +205,8 @@ class AnalyticalPELoader(BaseModel):
 
         Returns
         -------
-        dict[str, np.ndarray]
-            A dictionary containing stacked arrays of mean, covariance, and limits for each event.
+        dict[str, list[np.ndarray]]
+            A dictionary containing lists of arrays of mean, covariance, and limits for each event.
         """
         logger.info(f"Starting load of {len(self.event_paths)} events.")
         logger.info(f"Target physical parameters: {parameters}")
@@ -251,16 +238,18 @@ class AnalyticalPELoader(BaseModel):
 
         logger.success(f"Finished loading {len(data_list)} events.")
 
-        mean_stack = np.stack([data.mu for data in data_list], axis=0)
-        cov_stack = np.stack([data.cov for data in data_list], axis=0)
-        limits_stack = np.stack([data.limits.T for data in data_list], axis=0)
-        scale_stack = np.stack([data.scale for data in data_list], axis=0)
+        mean_stack = [data.mu.flatten() for data in data_list]
+        cov_stack = [data.cov for data in data_list]
+        lower_bound = [data.limits[..., 0].flatten() for data in data_list]
+        upper_bound = [data.limits[..., 1].flatten() for data in data_list]
+        scale_stack = [data.scale.flatten() for data in data_list]
 
         return {
-            "mean": mean_stack,
             "cov": cov_stack,
-            "limits": limits_stack,
+            "lower_bound": lower_bound,
+            "mean": mean_stack,
             "scale": scale_stack,
+            "upper_bound": upper_bound,
         }
 
     def _validate_columns(
