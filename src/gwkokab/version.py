@@ -59,10 +59,11 @@ def get_version() -> str:
         return version
 
     valid_values = ("1", "0", "true", "false")
-    assert DEV_BUILD_VAR_VAL.lower() in valid_values, (
-        f"Environment variable {DEV_BUILD_VAR} must be set to one of "
-        f"{valid_values}, but got '{DEV_BUILD_VAR_VAL}'."
-    )
+    if DEV_BUILD_VAR_VAL.lower() not in valid_values:
+        raise ValueError(
+            f"Environment variable {DEV_BUILD_VAR} must be set to one of "
+            f"{valid_values}, but got '{DEV_BUILD_VAR_VAL}'."
+        )
     if DEV_BUILD_VAR_VAL.lower() in ("0", "false"):
         # Explicitly disabled nightly build
         return version
