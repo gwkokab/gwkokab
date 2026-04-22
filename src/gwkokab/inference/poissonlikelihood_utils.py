@@ -44,7 +44,7 @@ def variance_tapering_fn(variance: Array, threshold: Array) -> Array:
     return jnp.where(
         variance < threshold,
         jnp.zeros_like(variance),
-        100.0 * jnp.square(jnp.square(variance) - jnp.square(threshold)),
+        100.0 * jnp.square(variance - threshold),
     )
 
 
