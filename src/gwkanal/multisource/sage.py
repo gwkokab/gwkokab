@@ -18,7 +18,10 @@ from gwkanal.multisource.common import (
     where_fns_list,
 )
 from gwkanal.utils.logger import log_info
-from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
+from gwkokab.inference import (
+    flowMC_discrete_poisson_likelihood,
+    numpyro_discrete_poisson_likelihood,
+)
 from gwkokab.models import MultiSourceModel
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
@@ -65,7 +68,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
-        variance_cut_threshold: Optional[float],
+        variance_cut_threshold: float,
         n_buckets: int,
         threshold: float,
         debug_nans: bool = False,
@@ -164,7 +167,7 @@ def f_main() -> None:
         use_right_ascension=args.add_right_ascension,
         use_sin_declination=args.add_sin_declination,
         use_detection_time=args.add_detection_time,
-        likelihood_fn=flowMC_poisson_likelihood,
+        likelihood_fn=flowMC_discrete_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
@@ -215,7 +218,7 @@ def n_main() -> None:
         use_right_ascension=args.add_right_ascension,
         use_sin_declination=args.add_sin_declination,
         use_detection_time=args.add_detection_time,
-        likelihood_fn=numpyro_poisson_likelihood,
+        likelihood_fn=numpyro_discrete_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,

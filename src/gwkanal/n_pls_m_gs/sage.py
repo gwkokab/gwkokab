@@ -17,7 +17,10 @@ from gwkanal.n_pls_m_gs.common import (
     where_fns_list,
 )
 from gwkanal.utils.logger import log_info
-from gwkokab.inference import flowMC_poisson_likelihood, numpyro_poisson_likelihood
+from gwkokab.inference import (
+    flowMC_discrete_poisson_likelihood,
+    numpyro_discrete_poisson_likelihood,
+)
 from gwkokab.models import NPowerlawMGaussian
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
@@ -66,7 +69,7 @@ class NPowerlawMGaussianSage(NPowerlawMGaussianCore, Sage):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
-        variance_cut_threshold: Optional[float],
+        variance_cut_threshold: float,
         n_buckets: int,
         threshold: float,
         debug_nans: bool = False,
@@ -169,7 +172,7 @@ def f_main() -> None:
         use_phi_2=args.add_phi_2,
         use_phi_orb=args.add_phi_orb,
         use_mean_anomaly=args.add_mean_anomaly,
-        likelihood_fn=flowMC_poisson_likelihood,
+        likelihood_fn=flowMC_discrete_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,
@@ -222,7 +225,7 @@ def n_main() -> None:
         use_phi_2=args.add_phi_2,
         use_phi_orb=args.add_phi_orb,
         use_mean_anomaly=args.add_mean_anomaly,
-        likelihood_fn=numpyro_poisson_likelihood,
+        likelihood_fn=numpyro_discrete_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_json,
         poisson_mean_filename=args.pmean_cfg,

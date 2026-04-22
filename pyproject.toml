@@ -108,12 +108,12 @@ Homepage = "https://github.com/kokabsc/gwkokab"
 Issues = "https://github.com/kokabsc/gwkokab/issues"
 
 [project.scripts]
-## Monk scripts
-f_monk_ecc_matters = "gwkanal.ecc_matters.monk:main"
-f_monk_multisource = "gwkanal.multisource.monk:main"
-f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
-f_monk_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.monk:main"
-f_monk_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.monk:main"
+## FMonk scripts
+f_monk_ecc_matters = "gwkanal.ecc_matters.monk:f_main"
+f_monk_multisource = "gwkanal.multisource.monk:f_main"
+f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:f_main"
+f_monk_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.monk:f_main"
+f_monk_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.monk:f_main"
 ## FSage scripts
 f_sage_ecc_matters = "gwkanal.ecc_matters.sage:f_main"
 f_sage_multisource = "gwkanal.multisource.sage:f_main"
@@ -139,6 +139,12 @@ gwk_ppd_plot = "gwkokab_scripts.ppd_plot:main"
 gwk_r_hat_plot = "gwkokab_scripts.r_hat_plot:main"
 gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
 gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
+## NMonk scripts
+n_monk_ecc_matters = "gwkanal.ecc_matters.monk:n_main"
+n_monk_multisource = "gwkanal.multisource.monk:n_main"
+n_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:n_main"
+n_monk_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.monk:n_main"
+n_monk_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.monk:n_main"
 ## NSage scripts
 n_sage_ecc_matters = "gwkanal.ecc_matters.sage:n_main"
 n_sage_multisource = "gwkanal.multisource.sage:n_main"

@@ -15,10 +15,10 @@ from gwkokab.inference.poissonlikelihood_utils import discrete_poisson_likelihoo
 from ..models.utils import JointDistribution, LazyJointDistribution, ScaledMixture
 
 
-__all__ = ["numpyro_poisson_likelihood"]
+__all__ = ["numpyro_discrete_poisson_likelihood"]
 
 
-def numpyro_poisson_likelihood(
+def numpyro_discrete_poisson_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
     variables: Dict[str, Distribution],
