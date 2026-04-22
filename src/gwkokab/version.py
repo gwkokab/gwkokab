@@ -65,7 +65,7 @@ def get_version() -> str:
             f"{valid_values}, but got '{DEV_BUILD_VAR_VAL}'."
         )
     if DEV_BUILD_VAR_VAL.lower() in ("0", "false"):
-        # Explicitly disabled nightly build
+        # Explicitly disabled development build
         return version
 
     if commit_hash := get_git_commit_hash():
