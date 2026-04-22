@@ -23,7 +23,9 @@ def discrete_poisson_likelihood_fn(
 
     n_events = sum([masks_group.shape[0] for masks_group in data_group])
 
-    total_log_likelihood = -jnp.sum(jnp.log(jnp.asarray(N_pes)))  # - Σ log(M_i)
+    total_log_likelihood = -jnp.sum(
+        jnp.asarray([jnp.log(N_pe).sum() for N_pe in N_pes])
+    )  # - Σ log(M_i)
     pe_variance = jnp.zeros(())
 
     # Σ log Σ exp (log p(ω|data_n) - log π_n)

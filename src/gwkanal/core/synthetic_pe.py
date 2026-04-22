@@ -15,12 +15,13 @@ import tqdm
 from jax import random as jrd
 from loguru import logger
 from numpyro.distributions.distribution import enable_validation
+from scipy.stats import entropy
 
 from gwkanal.core.utils import from_structured, PRNGKeyMixin, to_structured
 from gwkanal.utils.common import read_json
 from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
-from gwkokab.errors import banana_error, truncated_normal_error
+from gwkokab.errors import banana_error, mock_spin_error, truncated_normal_error
 from gwkokab.parameters import default_relation_mesh, Parameters, Parameters as P
 from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
@@ -68,24 +69,29 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             A dictionary mapping parameters to their error functions.
         """
 
-        def banana_error_fn(scale_Mc, scale_eta, **kwargs):
+        def banana_error_fn(scale_Mc, scale_eta, estimates, rho, **kwargs):
             Mc = kwargs[P.CHIRP_MASS]
             eta = kwargs[P.SYMMETRIC_MASS_RATIO]
-            x = np.stack([Mc, eta], axis=-1)
             return banana_error(
-                x,
+                Mc,
+                eta,
                 self.size,
                 self.rng_key,
                 scale_Mc=scale_Mc,
                 scale_eta=scale_eta,
+                estimates=estimates,
+                rho=rho,
             )
 
         def generic_truncated_normal_error_fn(
             parameter: P,
+            *,
             low: Optional[float] = None,
             high: Optional[float] = None,
         ) -> tuple[tuple[str, ...], Callable]:
-            def error_fn(default_low=low, default_high=high, **kwargs):
+            def error_fn(
+                *, estimates, rho, default_low=low, default_high=high, **kwargs
+            ):
                 x = kwargs[parameter]
                 scale = kwargs[parameter + "_scale"]
                 low = kwargs.get(parameter + "_low", default_low)
@@ -98,6 +104,8 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                     scale=scale,
                     low=low,
                     high=high,
+                    estimates=estimates,
+                    rho=rho,
                 )
 
             error_parameters: tuple[str, ...] = (
@@ -108,11 +116,25 @@ class SyntheticDiscretePE(PRNGKeyMixin):
 
             return error_parameters, error_fn
 
+        def mock_spin_error_fn(scale_chi_eff, estimates, rho, **kwargs):
+            chi_eff = kwargs[P.EFFECTIVE_SPIN]
+            eta = kwargs[P.SYMMETRIC_MASS_RATIO]
+            return mock_spin_error(
+                chi_eff,
+                eta,
+                self.size,
+                self.rng_key,
+                scale_chi_eff=scale_chi_eff,
+                estimates=estimates,
+                rho=rho,
+            )
+
         registry: ErrorFunctionRegistryType = {
             (P.CHIRP_MASS, P.SYMMETRIC_MASS_RATIO): (
                 ("scale_Mc", "scale_eta"),
                 banana_error_fn,
-            )
+            ),
+            P.EFFECTIVE_SPIN: (("scale_chi_eff",), mock_spin_error_fn),
         }
 
         for param, default_low, default_high in [
@@ -124,7 +146,6 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             (P.SECONDARY_SPIN_Y, -1.0, 1.0),
             (P.PRIMARY_SPIN_Z, -1.0, 1.0),
             (P.SECONDARY_SPIN_Z, -1.0, 1.0),
-            (P.EFFECTIVE_SPIN, None, None),
             (P.PRECESSING_SPIN, None, None),
             (P.COS_TILT_1, -1.0, 1.0),
             (P.COS_TILT_2, -1.0, 1.0),
@@ -177,7 +198,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             "Parsing delta error thresholds for coordinates: {coords}", coords=coords
         )
         default_err_key = "delta_threshold"
-        default_delta_threshold: float = match_all(
+        default_delta_threshold: Optional[float] = match_all(
             (default_err_key,), error_params
         ).pop(default_err_key, None)  # type: ignore[assignment]
         if default_delta_threshold is None:
@@ -237,9 +258,10 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         coords: list[str],
         injection_values: dict[str, np.ndarray],
         error_params: dict[str, np.ndarray],
+        rho: float,
     ) -> dict[str, np.ndarray]:
         """Applies the registry functions to generate estimates."""
-        estimate = {}
+        estimates = {}
         for key, (err_keys, func) in self.error_function_registry.items():
             # Support both single strings and tuples of parameters
             keys = (key,) if isinstance(key, (str, Parameters)) else key
@@ -249,14 +271,14 @@ class SyntheticDiscretePE(PRNGKeyMixin):
 
             err_vals = match_all(err_keys, error_params)  # type: ignore[arg-type]
 
-            val = func(**injection_values, **err_vals)
+            val = func(estimates=estimates, rho=rho, **injection_values, **err_vals)
 
             if isinstance(key, tuple):
                 for idx, k in enumerate(key):
-                    estimate[k] = val[:, idx]
+                    estimates[k] = val[:, idx]
             else:
-                estimate[key] = val
-        return estimate
+                estimates[key] = val
+        return estimates
 
     def _save_event(
         self,
@@ -264,6 +286,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         params: list[str],
         posterior: dict[str, np.ndarray],
         injection: dict[str, np.ndarray],
+        rho: float,
         width: int,
     ):
         """Handles the HDF5 boilerplate for a single event."""
@@ -287,6 +310,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         compression_args = {"compression": "gzip", "compression_opts": 9}
         with h5py.File(event_path, "w") as ef:
             ef.attrs["parameters"] = np.array(params, dtype="S")
+            ef.attrs["rho"] = rho
             group = ef.create_group(self.waveform_name)
             group.create_dataset("approximant", data=self.waveform_name)
             group.create_dataset("injection_data", data=event, **compression_args)
@@ -326,11 +350,34 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         if self.derive_parameters:  # Load once
             mesh = default_relation_mesh()
 
+        rhos = [np.nan for _ in range(n_injections)]
+
         description = "Generating parameter estimates "
         if self.is_delta_error:
             description += "(Delta Error)"
+            logger.info(
+                "Delta error does not depend on rho, so all injections will have NaN rho values."
+            )
         else:
             description += "(Error Model)"
+            rhos = 9.0 * np.power(
+                np.asarray(
+                    jrd.uniform(
+                        key=self.rng_key,
+                        shape=(n_injections,),
+                        minval=np.finfo(np.result_type(float)).tiny,
+                    )
+                ),
+                -1.0 / 3.0,
+            )
+            rhos = list(map(float, rhos))
+
+        logger.info("rho values for injections: {rhos}", rhos=pprint.pformat(rhos))
+        logger.info(
+            "Starting parameter estimation generation for {n} injections using {method}.",
+            n=n_injections,
+            method="delta error" if self.is_delta_error else "error model",
+        )
 
         delta_thresholds = None
         for i in tqdm.tqdm(range(n_injections), desc=description):
@@ -343,7 +390,9 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                     )
                 post_est = self._apply_delta_error(coords, inj_vals, delta_thresholds)
             else:
-                post_est = self._apply_error_model(coords, inj_vals, error_params)
+                post_est = self._apply_error_model(
+                    coords, inj_vals, error_params, rhos[i]
+                )
 
             active_params = coords
             if self.derive_parameters:
@@ -351,7 +400,11 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                 inj_vals = mesh.resolve(initial_state=inj_vals)
                 active_params = sorted(post_est.keys())
 
-            self._save_event(i, active_params, post_est, inj_vals, width)
+            self._save_event(i, active_params, post_est, inj_vals, rhos[i], width)
+        logger.success(
+            "Successfully generated parameter estimates for {n} injections.",
+            n=n_injections,
+        )
 
 
 def synthetic_discrete_pe_main():
@@ -426,6 +479,87 @@ def synthetic_discrete_pe_main():
     generator.generate_parameter_estimates()
 
 
+def histogram_pdf(
+    samples: np.ndarray,
+    bins: int,
+    value_range: tuple[float, float],
+    weights: Optional[np.ndarray] = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Build a normalized histogram-based discrete PDF."""
+    hist, edges = np.histogram(
+        samples,
+        bins=bins,
+        range=value_range,
+        weights=weights,
+        density=False,
+    )
+    hist = hist.astype(float) + 1e-6
+    hist /= np.sum(hist)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    return hist, centers, edges
+
+
+def js_divergence_from_histograms(p: np.ndarray, q: np.ndarray) -> np.ndarray:
+    """Jensen-Shannon divergence using natural log.
+
+    Range: [0, ln(2)].
+    """
+    p = np.asarray(p, dtype=float)
+    q = np.asarray(q, dtype=float)
+
+    p = p / np.sum(p)
+    q = q / np.sum(q)
+
+    m = 0.5 * (p + q)
+    return 0.5 * (entropy(p, m) + entropy(q, m))
+
+
+def calculate_js_metrics(
+    discrete_samples: np.ndarray,
+    analytical_samples: np.ndarray,
+    bins: int,
+) -> np.ndarray:
+    """Calculates the Jensen-Shannon divergence between the discrete and analytical
+    samples for each parameter.
+
+    Parameters
+    ----------
+    discrete_samples : np.ndarray
+        Discrete samples from the parameter estimation, shape (num_samples, num_parameters).
+    analytical_samples : np.ndarray
+        Analytical samples generated from the error model, shape (num_samples, num_parameters).
+    bins : int
+        Number of bins to use for the histogram estimation of the PDFs.
+
+    Returns
+    -------
+    np.ndarray
+        Array of Jensen-Shannon divergences for each parameter.
+    """
+    num_params = discrete_samples.shape[1]
+
+    js_divs = []
+
+    for i in range(num_params):
+        d_sub = discrete_samples[:, i]
+        a_sub = analytical_samples[:, i]
+
+        low = min(np.min(d_sub), np.min(a_sub))
+        high = max(np.max(d_sub), np.max(a_sub))
+
+        pad = 0.03 * (high - low)
+        value_range = (low - pad, high + pad)
+
+        p_hist, *_ = histogram_pdf(d_sub, bins=bins, value_range=value_range)
+        q_hist, *_ = histogram_pdf(a_sub, bins=bins, value_range=value_range)
+
+        js_div = js_divergence_from_histograms(p_hist, q_hist)
+
+        js_divs.append(js_div)
+
+    return np.array(js_divs)
+
+
 class SyntheticAnalyticalPE(PRNGKeyMixin):
     waveform_name = "GWKokabSyntheticAnalyticalPE"
 
@@ -444,22 +578,22 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
             group = ef[self.discrete_waveform]
             posterior_samples = group["posterior_samples"][:]
 
-        posterior_samples, parameters = from_structured(posterior_samples)
+        posterior_samples, coords = from_structured(posterior_samples)
 
         filtered_posterior_samples = posterior_samples
         if self.coords is not None:
             idxs = []
             for p in self.coords:
                 try:
-                    idxs.append(parameters.index(p))
+                    idxs.append(coords.index(p))
                 except ValueError:
                     raise LoggedValueError(
-                        f"Parameter '{p}' not found in available parameters: {parameters}.",
+                        f"Coordinate '{p}' not found in available parameters: {coords}.",
                     )
             if not idxs:
                 raise LoggedValueError(
-                    f"No matching parameters found for coords: {self.coords}. "
-                    f"Available parameters: {parameters}.",
+                    f"No matching coordinates found for coords: {self.coords}. "
+                    f"Available coordinates: {coords}.",
                 )
             filtered_posterior_samples = posterior_samples[:, idxs]
 
@@ -467,12 +601,35 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
         mean = np.mean(filtered_posterior_samples, axis=0)
         cor = np.corrcoef(filtered_posterior_samples, rowvar=False)
         std = np.sqrt(np.diag(cov))
-        limits = np.array(
-            (
-                np.min(filtered_posterior_samples, axis=0),
-                np.max(filtered_posterior_samples, axis=0),
-            )
-        ).T
+        low = np.min(filtered_posterior_samples, axis=0)
+        high = np.max(filtered_posterior_samples, axis=0)
+        limits = np.array((low, high)).T
+
+        analytical_samples = np.random.multivariate_normal(
+            mean, cov, size=filtered_posterior_samples.shape[0]
+        )
+        mask = np.all(
+            (analytical_samples >= low) & (analytical_samples <= high), axis=1
+        )
+        analytical_samples = analytical_samples[mask]
+
+        js_divs = calculate_js_metrics(
+            discrete_samples=filtered_posterior_samples,
+            analytical_samples=analytical_samples,
+            bins=50,
+        )
+        mean_js_div = np.mean(js_divs)
+        min_js_div = np.min(js_divs)
+        max_js_div = np.max(js_divs)
+
+        logger.info(
+            "Jensen-Shannon divergences for {coords}: {js_divs}",
+            coords=self.coords or coords,
+            js_divs=pprint.pformat(dict(zip(self.coords or coords, js_divs))),
+        )
+        logger.info("Mean JS divergence: {mean_js_div:.6f}", mean_js_div=mean_js_div)
+        logger.info("Min  JS divergence: {min_js_div:.6f}", min_js_div=min_js_div)
+        logger.info("Max  JS divergence: {max_js_div:.6f}", max_js_div=max_js_div)
 
         compression_args = {"compression": "gzip", "compression_opts": 9}
         with h5py.File(self.filename, "a") as ef:
@@ -488,6 +645,10 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
             group.create_dataset("approximant", data=self.waveform_name)
             group.attrs["discrete_waveform"] = self.discrete_waveform
             group.attrs["coords"] = self.coords
+            group.attrs["js_divs"] = js_divs
+            group.attrs["mean_js_div"] = mean_js_div
+            group.attrs["min_js_div"] = min_js_div
+            group.attrs["max_js_div"] = max_js_div
             group.create_dataset("mu", data=mean, **compression_args)
             group.create_dataset("std", data=std, **compression_args)
             group.create_dataset("cov", data=cov, **compression_args)
