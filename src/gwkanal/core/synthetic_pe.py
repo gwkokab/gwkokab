@@ -15,6 +15,7 @@ import tqdm
 from jax import random as jrd
 from loguru import logger
 from numpyro.distributions.distribution import enable_validation
+from scipy.stats import entropy
 
 from gwkanal.core.utils import from_structured, PRNGKeyMixin, to_structured
 from gwkanal.utils.common import read_json
@@ -478,6 +479,87 @@ def synthetic_discrete_pe_main():
     generator.generate_parameter_estimates()
 
 
+def histogram_pdf(
+    samples: np.ndarray,
+    bins: int,
+    value_range: tuple[float, float],
+    weights: Optional[np.ndarray] = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Build a normalized histogram-based discrete PDF."""
+    hist, edges = np.histogram(
+        samples,
+        bins=bins,
+        range=value_range,
+        weights=weights,
+        density=False,
+    )
+    hist = hist.astype(float) + 1e-6
+    hist /= np.sum(hist)
+    centers = 0.5 * (edges[:-1] + edges[1:])
+    return hist, centers, edges
+
+
+def js_divergence_from_histograms(p: np.ndarray, q: np.ndarray) -> np.ndarray:
+    """Jensen-Shannon divergence using natural log.
+
+    Range: [0, ln(2)].
+    """
+    p = np.asarray(p, dtype=float)
+    q = np.asarray(q, dtype=float)
+
+    p = p / np.sum(p)
+    q = q / np.sum(q)
+
+    m = 0.5 * (p + q)
+    return 0.5 * (entropy(p, m) + entropy(q, m))
+
+
+def calculate_js_metrics(
+    discrete_samples: np.ndarray,
+    analytical_samples: np.ndarray,
+    bins: int,
+) -> np.ndarray:
+    """Calculates the Jensen-Shannon divergence between the discrete and analytical
+    samples for each parameter.
+
+    Parameters
+    ----------
+    discrete_samples : np.ndarray
+        Discrete samples from the parameter estimation, shape (num_samples, num_parameters).
+    analytical_samples : np.ndarray
+        Analytical samples generated from the error model, shape (num_samples, num_parameters).
+    bins : int
+        Number of bins to use for the histogram estimation of the PDFs.
+
+    Returns
+    -------
+    np.ndarray
+        Array of Jensen-Shannon divergences for each parameter.
+    """
+    num_params = discrete_samples.shape[1]
+
+    js_divs = []
+
+    for i in range(num_params):
+        d_sub = discrete_samples[:, i]
+        a_sub = analytical_samples[:, i]
+
+        low = min(np.min(d_sub), np.min(a_sub))
+        high = max(np.max(d_sub), np.max(a_sub))
+
+        pad = 0.03 * (high - low)
+        value_range = (low - pad, high + pad)
+
+        p_hist, *_ = histogram_pdf(d_sub, bins=bins, value_range=value_range)
+        q_hist, *_ = histogram_pdf(a_sub, bins=bins, value_range=value_range)
+
+        js_div = js_divergence_from_histograms(p_hist, q_hist)
+
+        js_divs.append(js_div)
+
+    return np.array(js_divs)
+
+
 class SyntheticAnalyticalPE(PRNGKeyMixin):
     waveform_name = "GWKokabSyntheticAnalyticalPE"
 
@@ -496,22 +578,22 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
             group = ef[self.discrete_waveform]
             posterior_samples = group["posterior_samples"][:]
 
-        posterior_samples, parameters = from_structured(posterior_samples)
+        posterior_samples, coords = from_structured(posterior_samples)
 
         filtered_posterior_samples = posterior_samples
         if self.coords is not None:
             idxs = []
             for p in self.coords:
                 try:
-                    idxs.append(parameters.index(p))
+                    idxs.append(coords.index(p))
                 except ValueError:
                     raise LoggedValueError(
-                        f"Parameter '{p}' not found in available parameters: {parameters}.",
+                        f"Coordinate '{p}' not found in available parameters: {coords}.",
                     )
             if not idxs:
                 raise LoggedValueError(
-                    f"No matching parameters found for coords: {self.coords}. "
-                    f"Available parameters: {parameters}.",
+                    f"No matching coordinates found for coords: {self.coords}. "
+                    f"Available coordinates: {coords}.",
                 )
             filtered_posterior_samples = posterior_samples[:, idxs]
 
@@ -519,12 +601,35 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
         mean = np.mean(filtered_posterior_samples, axis=0)
         cor = np.corrcoef(filtered_posterior_samples, rowvar=False)
         std = np.sqrt(np.diag(cov))
-        limits = np.array(
-            (
-                np.min(filtered_posterior_samples, axis=0),
-                np.max(filtered_posterior_samples, axis=0),
-            )
-        ).T
+        low = np.min(filtered_posterior_samples, axis=0)
+        high = np.max(filtered_posterior_samples, axis=0)
+        limits = np.array((low, high)).T
+
+        analytical_samples = np.random.multivariate_normal(
+            mean, cov, size=filtered_posterior_samples.shape[0]
+        )
+        mask = np.all(
+            (analytical_samples >= low) & (analytical_samples <= high), axis=1
+        )
+        analytical_samples = analytical_samples[mask]
+
+        js_divs = calculate_js_metrics(
+            discrete_samples=filtered_posterior_samples,
+            analytical_samples=analytical_samples,
+            bins=50,
+        )
+        mean_js_div = np.mean(js_divs)
+        min_js_div = np.min(js_divs)
+        max_js_div = np.max(js_divs)
+
+        logger.info(
+            "Jensen-Shannon divergences for {coords}: {js_divs}",
+            coords=self.coords or coords,
+            js_divs=pprint.pformat(dict(zip(self.coords or coords, js_divs))),
+        )
+        logger.info("Mean JS divergence: {mean_js_div:.6f}", mean_js_div=mean_js_div)
+        logger.info("Min  JS divergence: {min_js_div:.6f}", min_js_div=min_js_div)
+        logger.info("Max  JS divergence: {max_js_div:.6f}", max_js_div=max_js_div)
 
         compression_args = {"compression": "gzip", "compression_opts": 9}
         with h5py.File(self.filename, "a") as ef:
@@ -540,6 +645,10 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
             group.create_dataset("approximant", data=self.waveform_name)
             group.attrs["discrete_waveform"] = self.discrete_waveform
             group.attrs["coords"] = self.coords
+            group.attrs["js_divs"] = js_divs
+            group.attrs["mean_js_div"] = mean_js_div
+            group.attrs["min_js_div"] = min_js_div
+            group.attrs["max_js_div"] = max_js_div
             group.create_dataset("mu", data=mean, **compression_args)
             group.create_dataset("std", data=std, **compression_args)
             group.create_dataset("cov", data=cov, **compression_args)
