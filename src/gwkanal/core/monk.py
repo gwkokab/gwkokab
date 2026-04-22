@@ -214,7 +214,12 @@ class Monk(Guru):
         _, poisson_mean_estimator, pmean_kwargs = pmean_loader.get_estimators()
 
         logpdf = self.likelihood_fn(
-            self.model, priors, constants, variables_index, poisson_mean_estimator
+            self.model,
+            priors,
+            constants,
+            variables_index,
+            poisson_mean_estimator,
+            self.variance_cut_threshold,
         )
 
         samples = []
