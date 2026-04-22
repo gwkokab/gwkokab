@@ -23,6 +23,7 @@ __all__ = ["numpyro_analytical_poisson_likelihood"]
 def numpyro_analytical_poisson_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
+    variables: Dict[str, Distribution],
     constant_params: Dict[str, Any],
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], tuple[Array, Array]],
@@ -34,7 +35,7 @@ def numpyro_analytical_poisson_likelihood(
         partial_order = priors.partial_order
     del priors
 
-    sorted_variables = sorted(variables_index.items(), key=lambda x: x[0])
+    sorted_variables = sorted(variables.items(), key=lambda x: x[0])
 
     def log_likelihood_fn(
         samples_stack: Array,

@@ -216,6 +216,7 @@ class Monk(Guru):
         logpdf = self.likelihood_fn(
             self.model,
             priors,
+            variables,
             constants,
             variables_index,
             poisson_mean_estimator,

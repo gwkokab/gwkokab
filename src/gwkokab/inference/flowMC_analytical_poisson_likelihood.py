@@ -21,11 +21,13 @@ __all__ = ["flowMC_analytical_poisson_likelihood"]
 def flowMC_analytical_poisson_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
+    variables: Dict[str, Distribution],
     constant_params: Dict[str, Any],
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], tuple[Array, Array]],
     variance_cut_threshold: float,
 ) -> Callable[[Array, Dict[str, Any]], Array]:
+    del variables
 
     def _map_params(x: Array) -> Dict[str, Array]:
         return {
