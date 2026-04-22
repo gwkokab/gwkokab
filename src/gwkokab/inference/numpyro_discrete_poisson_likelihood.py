@@ -79,7 +79,7 @@ def numpyro_discrete_poisson_likelihood(
             **constants, **mapped_params, validate_args=True
         )
 
-        log_likelihood, variance = discrete_poisson_likelihood_fn(
+        log_likelihood = discrete_poisson_likelihood_fn(
             model_instance,
             poisson_mean_estimator,
             data_group,
@@ -87,12 +87,7 @@ def numpyro_discrete_poisson_likelihood(
             masks_group,
             pmean_kwargs,
             N_pes,
-        )
-
-        log_likelihood = jnp.where(
-            variance < variance_cut_threshold,
-            log_likelihood,
-            -jnp.inf,
+            variance_cut_threshold,
         )
 
         if where_fns is not None and len(where_fns) > 0:

@@ -81,7 +81,7 @@ def flowMC_discrete_poisson_likelihood(
 
         model_instance = dist_fn(**constants, **mapped_params)
 
-        log_likelihood, variance = discrete_poisson_likelihood_fn(
+        log_likelihood = discrete_poisson_likelihood_fn(
             model_instance,
             poisson_mean_estimator,
             data_group,
@@ -89,12 +89,7 @@ def flowMC_discrete_poisson_likelihood(
             masks_group,
             pmean_kwargs,
             N_pes,
-        )
-
-        log_likelihood = jnp.where(
-            variance < variance_cut_threshold,
-            log_likelihood,
-            -jnp.inf,
+            variance_cut_threshold,
         )
 
         # log π(ω)

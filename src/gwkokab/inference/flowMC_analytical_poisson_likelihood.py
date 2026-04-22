@@ -43,21 +43,16 @@ def flowMC_analytical_poisson_likelihood(
         mapped_params = _map_params(x)
         model_instance = dist_fn(**constant_params, **mapped_params)
 
-        log_likelihood, variance = analytical_poisson_likelihood_fn(
+        log_likelihood = analytical_poisson_likelihood_fn(
             model_instance,
             poisson_mean_estimator,
             samples_stack,
             ln_offsets,
             pmean_kwargs,
+            variance_cut_threshold,
         )
 
         log_posterior = priors.log_prob(x) + log_likelihood
-
-        log_likelihood = jnp.where(
-            variance < variance_cut_threshold,
-            log_likelihood,
-            -jnp.inf,
-        )
 
         log_posterior = jnp.nan_to_num(
             log_posterior,
