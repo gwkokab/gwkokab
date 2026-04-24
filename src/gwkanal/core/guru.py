@@ -9,7 +9,6 @@ from collections.abc import Callable
 from typing import Any, Dict, List, Set, Tuple, Union
 
 import jax
-import numpy as np
 from jax import lax
 from jaxtyping import Array
 from loguru import logger
@@ -213,7 +212,7 @@ class Guru(PRNGKeyMixin):
         prior_filename: str,
         profile_memory: bool,
         sampler_settings_filename: str,
-        variance_cut_threshold: float,
+        variance_cut_threshold: float | None,
     ) -> None:
         self.analysis_name = analysis_name
         self.prior_filename = prior_filename
@@ -398,7 +397,7 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         "likelihood is above this threshold, the sample will be rejected. By default is"
         " infinite (i.e., no cut by setting it to the maximum float value).",
         type=float,
-        default=float(np.finfo(float).max),
+        default=None,
     )
 
     prior_group = parser.add_argument_group("Prior Options")

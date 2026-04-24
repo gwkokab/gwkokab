@@ -27,7 +27,7 @@ def numpyro_analytical_poisson_likelihood(
     constant_params: Dict[str, Any],
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], tuple[Array, Array]],
-    variance_cut_threshold: float,
+    variance_cut_threshold: float | None,
 ) -> Callable[[Array, Array, Dict[str, Any]], None]:
 
     if is_lazy_prior := isinstance(priors, LazyJointDistribution):
@@ -78,18 +78,13 @@ def numpyro_analytical_poisson_likelihood(
 
         model_instance = dist_fn(**constant_params, **mapped_params)
 
-        log_likelihood, variance = analytical_poisson_likelihood_fn(
+        log_likelihood = analytical_poisson_likelihood_fn(
             model_instance,
             poisson_mean_estimator,
             samples_stack,
             ln_offsets,
             pmean_kwargs,
-        )
-
-        log_likelihood = jnp.where(
-            variance < variance_cut_threshold,
-            log_likelihood,
-            -jnp.inf,
+            variance_cut_threshold,
         )
 
         log_likelihood = jnp.nan_to_num(

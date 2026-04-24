@@ -52,7 +52,7 @@ class NPowerlawMGaussianMonk(NPowerlawMGaussianCore, Monk):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
-        variance_cut_threshold: float,
+        variance_cut_threshold: float | None,
         n_samples: int,
         debug_nans: bool = False,
         profile_memory: bool = False,

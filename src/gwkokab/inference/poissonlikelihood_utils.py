@@ -17,6 +17,37 @@ __all__ = [
 ]
 
 
+def variance_tapering_fn(variance: Array, threshold: Array) -> Array:
+    r"""Tapering function that penalizes high variance values more aggressively as they
+    exceed the threshold.
+
+    This is a modified implementation of the original variance tapering function
+    available in Equation (12) of
+    `PixelPop: High Resolution Nonparameteric Inference of Gravitational-Wave Populations in Multiple Dimensions <https://arxiv.org/abs/2406.16813>`_
+
+    .. math::
+
+        \mathcal{T}[\sigma^2_{\ln \hat{\mathcal{L}}}]=100(\sigma^2_{\ln \hat{\mathcal{L}}}-\sigma^2_{\mathrm{threshold}})^2
+
+    Parameters
+    ----------
+    variance : Array
+        Variance of the Poisson likelihood estimator.
+    threshold : Array
+        Threshold above which the variance will be penalized.
+
+    Returns
+    -------
+    Array
+        Tapering factor that can be applied to the log-likelihood to penalize high variance values.
+    """
+    return jnp.where(
+        variance < threshold,
+        jnp.zeros_like(variance),
+        100.0 * jnp.square(variance - threshold),
+    )
+
+
 def discrete_poisson_likelihood_fn(
     model_instance: Distribution,
     poisson_mean_estimator: Callable[..., Tuple[Array, Array]],
@@ -25,7 +56,8 @@ def discrete_poisson_likelihood_fn(
     masks_group: Tuple[Array, ...],
     pmean_kwargs: Dict[str, Any],
     N_pes: Tuple[Array, ...],
-) -> Tuple[Array, Array]:
+    variance_cut_threshold: float | None,
+) -> Array:
 
     n_events = sum([masks_group.shape[0] for masks_group in data_group])
 
@@ -69,15 +101,20 @@ def discrete_poisson_likelihood_fn(
     log_likelihood = (
         total_log_likelihood - expected_rate + n_events * jnp.log(pmean_kwargs["T_obs"])
     )
+    if variance_cut_threshold is not None:
+        total_variance = jnp.nan_to_num(
+            pe_variance + expected_rate_variance,
+            nan=jnp.inf,
+            posinf=jnp.inf,
+            neginf=jnp.inf,
+        )
 
-    total_variance = jnp.nan_to_num(
-        pe_variance + expected_rate_variance,
-        nan=jnp.inf,
-        posinf=jnp.inf,
-        neginf=jnp.inf,
-    )
+        variance_tapering_factor = variance_tapering_fn(
+            total_variance, variance_cut_threshold
+        )
+        log_likelihood -= variance_tapering_factor
 
-    return log_likelihood, total_variance
+    return log_likelihood
 
 
 def analytical_poisson_likelihood_fn(
@@ -86,7 +123,8 @@ def analytical_poisson_likelihood_fn(
     samples_stack: Array,
     ln_offsets: Array,
     pmean_kwargs: Dict[str, Any],
-) -> tuple[Array, Array]:
+    variance_cut_threshold: float | None,
+) -> Array:
     mask = model_instance.support.check(samples_stack)
 
     def compute_event_log_prob(samples):
@@ -107,4 +145,17 @@ def analytical_poisson_likelihood_fn(
 
     log_likelihood = total_ln_l + n_events * jnp.log(T_obs) - expected_rates
 
-    return log_likelihood, jnp.zeros(())
+    if variance_cut_threshold is not None:
+        total_variance = jnp.nan_to_num(
+            expected_rate_variance,
+            nan=jnp.inf,
+            posinf=jnp.inf,
+            neginf=jnp.inf,
+        )
+
+        variance_tapering_factor = variance_tapering_fn(
+            total_variance, variance_cut_threshold
+        )
+        log_likelihood -= variance_tapering_factor
+
+    return log_likelihood

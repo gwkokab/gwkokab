@@ -26,7 +26,7 @@ def numpyro_discrete_poisson_likelihood(
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
-    variance_cut_threshold: float,
+    variance_cut_threshold: float | None,
 ) -> Callable[[Tuple[Array, ...], Tuple[Array, ...], Tuple[Array, ...]], Array]:
     if is_lazy_prior := isinstance(priors, LazyJointDistribution):
         dependencies = priors.dependencies
@@ -79,7 +79,7 @@ def numpyro_discrete_poisson_likelihood(
             **constants, **mapped_params, validate_args=True
         )
 
-        log_likelihood, variance = discrete_poisson_likelihood_fn(
+        log_likelihood = discrete_poisson_likelihood_fn(
             model_instance,
             poisson_mean_estimator,
             data_group,
@@ -87,12 +87,7 @@ def numpyro_discrete_poisson_likelihood(
             masks_group,
             pmean_kwargs,
             N_pes,
-        )
-
-        log_likelihood = jnp.where(
-            variance < variance_cut_threshold,
-            log_likelihood,
-            -jnp.inf,
+            variance_cut_threshold,
         )
 
         if where_fns is not None and len(where_fns) > 0:

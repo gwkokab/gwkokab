@@ -26,7 +26,7 @@ def flowMC_discrete_poisson_likelihood(
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
-    variance_cut_threshold: float,
+    variance_cut_threshold: float | None,
 ) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,
@@ -81,7 +81,7 @@ def flowMC_discrete_poisson_likelihood(
 
         model_instance = dist_fn(**constants, **mapped_params)
 
-        log_likelihood, variance = discrete_poisson_likelihood_fn(
+        log_likelihood = discrete_poisson_likelihood_fn(
             model_instance,
             poisson_mean_estimator,
             data_group,
@@ -89,12 +89,7 @@ def flowMC_discrete_poisson_likelihood(
             masks_group,
             pmean_kwargs,
             N_pes,
-        )
-
-        log_likelihood = jnp.where(
-            variance < variance_cut_threshold,
-            log_likelihood,
-            -jnp.inf,
+            variance_cut_threshold,
         )
 
         # log π(ω)
