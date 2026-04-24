@@ -26,7 +26,7 @@ def flowMC_discrete_poisson_likelihood(
     poisson_mean_estimator: Callable[[ScaledMixture], Array],
     where_fns: Optional[List[Callable[..., Array]]],
     constants: Dict[str, Array],
-    variance_cut_threshold: float,
+    variance_cut_threshold: float | None,
 ) -> Callable[[Array, Dict[str, Any]], Array]:
     r"""This class is used to provide a likelihood function for the inhomogeneous Poisson
     process. The likelihood is given by,

@@ -27,7 +27,7 @@ def numpyro_analytical_poisson_likelihood(
     constant_params: Dict[str, Any],
     variables_index: Dict[str, int],
     poisson_mean_estimator: Callable[[ScaledMixture], tuple[Array, Array]],
-    variance_cut_threshold: float,
+    variance_cut_threshold: float | None,
 ) -> Callable[[Array, Array, Dict[str, Any]], None]:
 
     if is_lazy_prior := isinstance(priors, LazyJointDistribution):

@@ -56,7 +56,7 @@ def discrete_poisson_likelihood_fn(
     masks_group: Tuple[Array, ...],
     pmean_kwargs: Dict[str, Any],
     N_pes: Tuple[Array, ...],
-    variance_cut_threshold: float,
+    variance_cut_threshold: float | None,
 ) -> Array:
 
     n_events = sum([masks_group.shape[0] for masks_group in data_group])
@@ -101,18 +101,18 @@ def discrete_poisson_likelihood_fn(
     log_likelihood = (
         total_log_likelihood - expected_rate + n_events * jnp.log(pmean_kwargs["T_obs"])
     )
+    if variance_cut_threshold is not None:
+        total_variance = jnp.nan_to_num(
+            pe_variance + expected_rate_variance,
+            nan=jnp.inf,
+            posinf=jnp.inf,
+            neginf=jnp.inf,
+        )
 
-    total_variance = jnp.nan_to_num(
-        pe_variance + expected_rate_variance,
-        nan=jnp.inf,
-        posinf=jnp.inf,
-        neginf=jnp.inf,
-    )
-
-    variance_tapering_factor = variance_tapering_fn(
-        total_variance, variance_cut_threshold
-    )
-    log_likelihood -= variance_tapering_factor
+        variance_tapering_factor = variance_tapering_fn(
+            total_variance, variance_cut_threshold
+        )
+        log_likelihood -= variance_tapering_factor
 
     return log_likelihood
 
@@ -123,7 +123,7 @@ def analytical_poisson_likelihood_fn(
     samples_stack: Array,
     ln_offsets: Array,
     pmean_kwargs: Dict[str, Any],
-    variance_cut_threshold: float,
+    variance_cut_threshold: float | None,
 ) -> Array:
     mask = model_instance.support.check(samples_stack)
 
@@ -145,16 +145,17 @@ def analytical_poisson_likelihood_fn(
 
     log_likelihood = total_ln_l + n_events * jnp.log(T_obs) - expected_rates
 
-    total_variance = jnp.nan_to_num(
-        expected_rate_variance,
-        nan=jnp.inf,
-        posinf=jnp.inf,
-        neginf=jnp.inf,
-    )
+    if variance_cut_threshold is not None:
+        total_variance = jnp.nan_to_num(
+            expected_rate_variance,
+            nan=jnp.inf,
+            posinf=jnp.inf,
+            neginf=jnp.inf,
+        )
 
-    variance_tapering_factor = variance_tapering_fn(
-        total_variance, variance_cut_threshold
-    )
-    log_likelihood -= variance_tapering_factor
+        variance_tapering_factor = variance_tapering_fn(
+            total_variance, variance_cut_threshold
+        )
+        log_likelihood -= variance_tapering_factor
 
     return log_likelihood

@@ -69,7 +69,7 @@ class NPowerlawMGaussianSage(NPowerlawMGaussianCore, Sage):
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_settings_filename: str,
-        variance_cut_threshold: float,
+        variance_cut_threshold: float | None,
         n_buckets: int,
         threshold: float,
         debug_nans: bool = False,
