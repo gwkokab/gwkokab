@@ -113,7 +113,6 @@ def _classify_model_parameters(
     ValueError
         If a parameter has an invalid type.
     """
-
     constants: Dict[str, int | float | None] = {}
     variables: Dict[str, Distribution] = {}
     aliases: Dict[str, str] = {}
@@ -368,7 +367,6 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     ArgumentParser
         the command line argument parser
     """
-
     parser.add_argument(
         "--seed",
         help="Seed for the random number generator.",

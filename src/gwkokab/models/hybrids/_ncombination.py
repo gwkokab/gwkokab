@@ -141,7 +141,6 @@ def create_beta_distributions(
     ValueError
         if mean or variance is missing
     """
-
     beta_collection = []
     mean_name = f"{parameter_name}_mean_{component_type}"
     variance_name = f"{parameter_name}_variance_{component_type}"
@@ -787,7 +786,6 @@ def create_spin_magnitude_mixture_models(
     List[MixtureGeneral]
         A list of spin magnitude mixture models.
     """
-
     # fmt: off
     zeta_name = "a_zeta_" + component_type
     a_1_comp1_high_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_" + component_type

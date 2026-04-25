@@ -318,7 +318,6 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
     """We assume the injection prior in terms of the source frame primary mass and mass
     ratio.
     """
-
     if P.PRIMARY_SPIN_MAGNITUDE in parameters:
         data["prior"] *= np.square(data[P.PRIMARY_SPIN_MAGNITUDE])
         if P.PHI_1 not in parameters:

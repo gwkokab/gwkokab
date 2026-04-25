@@ -59,8 +59,9 @@ __all__ = [
 
 
 def _format(msg: str, args: tuple, kwargs: dict) -> str:
-    """Formats the message string using the provided arguments and keyword arguments. If
-    formatting fails, it returns the original message string without formatting.
+    """Formats the message string using the provided arguments and keyword arguments.
+
+    If formatting fails, it returns the original message string without formatting.
 
     Parameters
     ----------

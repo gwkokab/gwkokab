@@ -27,8 +27,9 @@ class PRNGKeyMixin:
 
     @property
     def rng_key(self) -> PRNGKeyArray:
-        """Accessor for the current random number generator key. Each call to this
-        property will split the key and return a new subkey, ensuring that different
+        """Accessor for the current random number generator key.
+
+        Each call to this property will split the key and return a new subkey, ensuring that different
         parts of the code can use independent random keys without interfering with each
         other.
 

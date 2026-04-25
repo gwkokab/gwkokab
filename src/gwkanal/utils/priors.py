@@ -181,8 +181,9 @@ def _is_lazy_prior(prior_dict: dict[str, Union[str, float]]) -> bool:
 
 
 def get_processed_priors(params: List[str], priors: dict) -> dict:
-    """Get the processed priors from a list of parameters. A processed prior is either
-    an instantiated prior or a tuple of :code:`(jax.tree_util.Partial, lazy_vars)` where
+    """Get the processed priors from a list of parameters.
+
+    A processed prior is either an instantiated prior or a tuple of :code:`(jax.tree_util.Partial, lazy_vars)` where
     :code:`lazy_vars` is a dictionary of lazy variables.
 
     Parameters

@@ -10,7 +10,6 @@ def get_cfg() -> OrderedDict:
 
     Keys are defined in logical blocks to maintain readability.
     """
-
     from typing import Any
 
     cfg: OrderedDict[str, Any] = OrderedDict()

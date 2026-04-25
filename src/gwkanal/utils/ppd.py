@@ -79,7 +79,6 @@ def compute_probs(
     Array
         The probability density function of the model.
     """
-
     logpdf = model(
         **constants,
         **{k: params[v] for k, v in nf_samples_mapping.items()},

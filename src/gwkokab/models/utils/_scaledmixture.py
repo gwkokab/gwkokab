@@ -192,10 +192,9 @@ class ScaledMixture(Distribution):
         """The cumulative distribution function.
 
         :param value: samples from this distribution.
-        :return: output of the cumulative distribution function evaluated at
-            `value`.
-        :raises: NotImplementedError if the component distribution does not
-            implement the cdf method.
+        :return: output of the cumulative distribution function evaluated at `value`.
+        :raises: NotImplementedError if the component distribution does not implement
+            the cdf method.
         """
         cdf_components = self.component_cdf(samples)
         return jnp.sum(cdf_components * jnp.exp(self.log_scales), axis=-1)
