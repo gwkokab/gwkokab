@@ -15,7 +15,6 @@ def make_parser() -> argparse.ArgumentParser:
     argparse.ArgumentParser
         the command line argument parser
     """
-
     from argparse import ArgumentDefaultsHelpFormatter
 
     parser = argparse.ArgumentParser(

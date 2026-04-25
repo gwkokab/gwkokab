@@ -1,7 +1,6 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
-
 #
 """Provides implementation of various transformations using
 :class:`~numpyro.distributions.transforms.Transform`.
@@ -298,6 +297,7 @@ class ComponentMassesToChirpMassAndSymmetricMassRatio(Transform):
 
     domain = positive_decreasing_vector
     r""":math:`\mathcal{D}(f)=\{(m_1,m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
+
     codomain = constraints.independent(
         constraints.interval(
             jnp.zeros((2,)), jnp.array([jnp.finfo(jnp.result_type(float)).max, 0.25])
@@ -381,6 +381,7 @@ class ComponentMassesToChirpMassAndDelta(Transform):
 
     domain = positive_decreasing_vector
     r""":math:`\mathcal{D}(f)=\{(m_1,m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
+
     codomain = constraints.independent(
         constraints.interval(
             jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
@@ -510,6 +511,7 @@ class ComponentMassesToPrimaryMassAndMassRatio(Transform):
 
     domain = positive_decreasing_vector
     r""":math:`\mathcal{D}(f)=\{(m_1,m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
+
     codomain = constraints.independent(
         constraints.open_interval(
             jnp.zeros(2), jnp.array([jnp.finfo(jnp.result_type(float)).max, 1.0])
@@ -551,6 +553,7 @@ class ComponentMassesToMassRatioAndSecondaryMass(Transform):
 
     domain = positive_decreasing_vector
     r""":math:`\mathcal{D}(f)=\{(m_1,m_2)\in\mathbb{R}^2_+\mid m_1\geq m_2>0\}`"""
+
     codomain = constraints.independent(
         constraints.interval(
             jnp.zeros(2), jnp.array([1.0, jnp.finfo(jnp.result_type(float)).max])

@@ -107,8 +107,9 @@ def truncated_normal_error(
     low: Optional[float] = None,
     high: Optional[float] = None,
 ) -> np.ndarray:
-    """Adds truncated normal error to the given values. The error is sampled from a
-    truncated normal distribution with the given parameters. The function will resample
+    """Adds truncated normal error to the given values.
+
+    The error is sampled from a truncated normal distribution with the given parameters. The function will resample
     until all values are within the allowed range.
 
     .. note::

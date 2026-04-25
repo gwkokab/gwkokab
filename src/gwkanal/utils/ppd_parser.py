@@ -21,7 +21,6 @@ def get_parser(parser: ArgumentParser) -> ArgumentParser:
     ArgumentParser
         the command line argument parser
     """
-
     # Global enable validation for all distributions
     enable_validation()
 

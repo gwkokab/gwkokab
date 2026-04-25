@@ -69,14 +69,15 @@ def custom_format(record, *, show_path: bool = False) -> str:
 
 
 def set_log_level() -> None:
-    """Set the log level for the logger. The preset log level when initialising GWKokab
-    is the value of the `GWKOKAB_LOG_LEVEL` environment variable, or 'WARNING' if the
-    environment variable is unset.
+    """Set the log level for the logger.
+
+    The preset log level when initialising GWKokab is the value of the
+    `GWKOKAB_LOG_LEVEL` environment variable, or 'WARNING' if the environment variable
+    is unset.
 
     Valid options of `GWKOKAB_LOG_LEVEL` are 'TRACE', 'DEBUG', 'INFO', 'SUCCESS',
     'WARNING', 'ERROR', and 'CRITICAL'.
     """
-
     valid_levels = ("TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR", "CRITICAL")
 
     if (log_level := os.environ.get("GWKOKAB_LOG_LEVEL", "TRACE")) not in valid_levels:
@@ -106,7 +107,6 @@ def set_log_level() -> None:
 
 def log_gwkokab_info() -> None:
     """Prints the GWKokab version and the Python version."""
-
     import sys
 
     import gwkokab as gwk

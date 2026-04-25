@@ -302,7 +302,6 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     ArgumentParser
         the command line argument parser
     """
-
     parser = guru_parser(parser)
 
     # Monk Options

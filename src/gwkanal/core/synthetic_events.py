@@ -99,7 +99,6 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         self, size: int, log_selection_fn: Callable
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate population for a realization via rejection/importance sampling."""
-
         # Oversample to account for selection effects
         buffer_size = size + 10_000
         raw_pop, [raw_indices] = self.model_fn.sample_with_intermediates(

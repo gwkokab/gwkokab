@@ -580,7 +580,6 @@ class Sampler:
             initial_position (Device Array): Initial position.
             data (dict): Data to be used by the likelihood functions
         """
-
         initial_position = jnp.atleast_2d(initial_position)  # type: ignore
         rng_key = self.rng_key
         last_step = initial_position
