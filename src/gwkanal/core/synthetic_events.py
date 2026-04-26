@@ -102,14 +102,14 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate population for a realization via rejection/importance sampling."""
         # Oversample to account for selection effects
-        raw_pop, [raw_indices] = self.model_fn.sample_with_intermediates(
+        buffer_pop, [buffer_indices] = self.model_fn.sample_with_intermediates(
             self.rng_key, (self.n_buffer_events,)
         )
 
-        raw_pop = self._ensure_mass_ordering(raw_pop)
+        buffer_pop = self._ensure_mass_ordering(buffer_pop)
 
         # Compute selection weights (VT)
-        log_selection = log_selection_fn(raw_pop)
+        log_selection = log_selection_fn(buffer_pop)
         log_selection = jnp.nan_to_num(
             log_selection, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
         )
@@ -141,10 +141,10 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         resample_prob = weights[resample_idx]
 
         return (
-            np.asarray(raw_pop),
-            np.asarray(raw_indices),
-            np.asarray(raw_pop[resample_idx]),
-            np.asarray(raw_indices[resample_idx]),
+            np.asarray(buffer_pop),
+            np.asarray(buffer_indices),
+            np.asarray(buffer_pop[resample_idx]),
+            np.asarray(buffer_indices[resample_idx]),
             resample_idx,
             np.asarray(resample_prob),
         )
@@ -172,17 +172,19 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
                 f"Population size is {size}. Check your VT or model configs."
             )
 
-        raw_pop, raw_idx, pop, idx, resample_idx, resample_prob = (
+        buffer_pop, buffer_idx, pop, idx, resample_idx, resample_prob = (
             self._generate_population(size, log_selection_fn)
         )
-        self.save_population(pop, idx, raw_pop, raw_idx, resample_idx, resample_prob)
+        self.save_population(
+            pop, idx, buffer_pop, buffer_idx, resample_idx, resample_prob
+        )
 
     def save_population(
         self,
         population: np.ndarray,
         indices: np.ndarray,
-        raw_population: np.ndarray,
-        raw_indices: np.ndarray,
+        buffer_population: np.ndarray,
+        buffer_indices: np.ndarray,
         resample_idx: np.ndarray,
         resample_prob: np.ndarray,
     ) -> None:
@@ -193,8 +195,8 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
             population, current_params = mesh.resolve_from_arrays(
                 population, self.parameters
             )
-            raw_population, _ = mesh.resolve_from_arrays(
-                raw_population, self.parameters
+            buffer_population, _ = mesh.resolve_from_arrays(
+                buffer_population, self.parameters
             )
 
         compression_args = {"compression": "gzip", "compression_opts": 9}
@@ -208,12 +210,14 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
                 "indices", data=indices.astype(np.uint32), **compression_args
             )
             f.create_dataset(
-                "raw_events",
-                data=to_structured(raw_population, current_params),
+                "buffer_events",
+                data=to_structured(buffer_population, current_params),
                 **compression_args,
             )
             f.create_dataset(
-                "raw_indices", data=raw_indices.astype(np.uint32), **compression_args
+                "buffer_indices",
+                data=buffer_indices.astype(np.uint32),
+                **compression_args,
             )
             f.create_dataset(
                 "resample_indices",
