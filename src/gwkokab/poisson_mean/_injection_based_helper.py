@@ -260,19 +260,12 @@ def load_injection_data(
             gwpop_data[f"cos_tilt_{ii}"] = (
                 np.asarray(data[f"spin{ii}z"][()][found]) / gwpop_data[f"a_{ii}"]
             )
-            gwpop_data[f"spin{ii}x"] = data.get(f"spin{ii}x", np.zeros(n_found))[()][
-                found
-            ]
-            gwpop_data[f"spin{ii}y"] = data.get(f"spin{ii}y", np.zeros(n_found))[()][
-                found
-            ]
-            gwpop_data[f"spin{ii}z"] = data.get(f"spin{ii}z", np.zeros(n_found))[()][
-                found
-            ]
         if (
             "sampling_pdf" in data
         ):  # O1+O2+O3 mixture and endO3 injections (https://dcc.ligo.org/LIGO-T2100377, https://dcc.ligo.org/LIGO-T2100113)
-            gwpop_data["prior"] = np.asarray(data["sampling_pdf"][()][found])
+            gwpop_data["prior"] = np.asarray(
+                data["sampling_pdf"][()][found]
+            ) * np.square(2 * np.pi * gwpop_data["a_1"] * gwpop_data["a_2"])
         elif (
             "lnpdraw_mass1_source_mass2_source_redshift_spin1x_spin1y_spin1z_spin2x_spin2y_spin2z"
             in data
@@ -283,6 +276,7 @@ def load_injection_data(
                         "lnpdraw_mass1_source_mass2_source_redshift_spin1x_spin1y_spin1z_spin2x_spin2y_spin2z"
                     ][()][found]
                 )
+                + 2.0 * np.log(2 * np.pi * gwpop_data["a_1"] * gwpop_data["a_2"])
             )
         else:  # O4a sensitivity injections (https://dcc.ligo.org/LIGO-T2400073)
             gwpop_data["prior"] = np.exp(
@@ -318,15 +312,6 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
     """We assume the injection prior in terms of the source frame primary mass and mass
     ratio.
     """
-    if P.PRIMARY_SPIN_MAGNITUDE in parameters:
-        data["prior"] *= np.square(data[P.PRIMARY_SPIN_MAGNITUDE])
-        if P.PHI_1 not in parameters:
-            data["prior"] *= 2 * np.pi  # Assuming fixed model in phi1
-    if P.SECONDARY_SPIN_MAGNITUDE in parameters:
-        data["prior"] *= np.square(data[P.SECONDARY_SPIN_MAGNITUDE])
-        if P.PHI_2 not in parameters:
-            data["prior"] *= 2 * np.pi  # Assuming fixed model in phi2
-
     if P.MASS_RATIO in parameters:
         data[P.MASS_RATIO] = data[P.SECONDARY_MASS_SOURCE] / data[P.PRIMARY_MASS_SOURCE]
         data["prior"] *= data[P.PRIMARY_MASS_SOURCE]
