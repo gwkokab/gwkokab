@@ -270,7 +270,6 @@ class DiscretePELoader(BaseModel):
             df = self._subsample(df, event_path, seed + i)
 
             log_prior = np.zeros(len(df))
-            should_log = i == 0  # Log logic only once to avoid spam
 
             mass_prior = self.alternate_mass_priors.get(
                 event_name, self.default_mass_prior
@@ -281,17 +280,20 @@ class DiscretePELoader(BaseModel):
             distance_prior = self.alternate_distance_priors.get(
                 event_name, self.default_distance_prior
             )
+            logger.info(
+                "Event: {event_name}, mass prior: {mass_prior}, spin prior: {spin_prior}, distance prior: {distance_prior}",
+                event_name=event_name,
+                mass_prior=mass_prior,
+                spin_prior=spin_prior,
+                distance_prior=distance_prior,
+            )
 
             # Perform prior reweighting
             log_prior += self._calculate_distance_prior(
-                distance_prior, df, parameters, cosmo, aliases, should_log
+                distance_prior, df, parameters, cosmo, aliases
             )
-            log_prior += self._calculate_mass_prior(
-                mass_prior, df, parameters, aliases, should_log
-            )
-            log_prior += self._calculate_spin_prior(
-                spin_prior, df, parameters, aliases, should_log
-            )
+            log_prior += self._calculate_mass_prior(mass_prior, df, parameters, aliases)
+            log_prior += self._calculate_spin_prior(spin_prior, df, parameters, aliases)
 
             data_list.append(df[posterior_columns].to_numpy())
             log_prior_list.append(log_prior)
@@ -347,7 +349,6 @@ class DiscretePELoader(BaseModel):
         parameters: tuple[str, ...],
         cosmo: Cosmology,
         aliases: dict,
-        log: bool,
     ) -> np.ndarray:
         """Calculates the log-weight for the distance/redshift prior."""
         if prior is None:
@@ -358,13 +359,11 @@ class DiscretePELoader(BaseModel):
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
         if prior == "comoving":
-            if log:
-                logger.info("Using Comoving Distance prior.")
+            logger.info("Using Comoving Distance prior.")
             return cosmo.logdVcdz(z) + np.log(4 * np.pi) - np.log1p(z)
 
         if prior == "euclidean":
-            if log:
-                logger.info("Using Euclidean Distance prior.")
+            logger.info("Using Euclidean Distance prior.")
             dl = cosmo.z_to_DL(z)
             return 2.0 * np.log(dl) + np.log(cosmo.dDLdz(z))
 
@@ -376,7 +375,6 @@ class DiscretePELoader(BaseModel):
         df: pd.DataFrame,
         parameters: tuple[str, ...],
         aliases: dict,
-        log: bool,
     ) -> np.ndarray:
         """Calculates the log-weight for mass-related priors and Jacobians."""
         if prior is None:
@@ -388,11 +386,6 @@ class DiscretePELoader(BaseModel):
             raise LoggedValueError("Mass prior reweighting requires Redshift.")
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
-
-        if log:
-            logger.info(
-                "Applying mass prior reweighting: {prior}", prior=self.mass_prior
-            )
 
         if P.PRIMARY_MASS_SOURCE in parameters:
             m1_src = df[aliases[P.PRIMARY_MASS_SOURCE]].to_numpy()
@@ -425,15 +418,13 @@ class DiscretePELoader(BaseModel):
         df: pd.DataFrame,
         parameters: tuple[str, ...],
         aliases: dict,
-        log: bool,
     ) -> np.ndarray:
         """Calculates log-weights for spin priors (effective, precessing, and
         magnitude).
         """
         lp = 0.0
         if prior == "component":
-            if log:
-                logger.info("Reweighting with uniform component spin prior.")
+            logger.info("Reweighting with uniform component spin prior.")
             lp -= np.log(4.0)
 
         if P.EFFECTIVE_SPIN in parameters:
@@ -441,21 +432,18 @@ class DiscretePELoader(BaseModel):
             q = self._get_q(df, aliases)
 
             if P.PRECESSING_SPIN in parameters:
-                if log:
-                    logger.info(
-                        "Applying Effective Spin and Precessing Spin isotropic prior."
-                    )
+                logger.info(
+                    "Applying Effective Spin and Precessing Spin isotropic prior."
+                )
                 chi_p = df[aliases[P.PRECESSING_SPIN]].to_numpy()
                 lp += np.log(prior_chieff_chip_isotropic(chi_eff, chi_p, q))
             else:
-                if log:
-                    logger.info("Applying Effective Spin isotropic prior.")
+                logger.info("Applying Effective Spin isotropic prior.")
                 lp += np.log(chi_effective_prior_from_isotropic_spins(chi_eff, q))
 
         for key in [P.CHI_1, P.CHI_2]:
             if key in parameters:
-                if log:
-                    logger.info(f"Applying aligned spin prior for {key}")
+                logger.info(f"Applying aligned spin prior for {key}")
                 lp += np.log(aligned_spin_prior(df[aliases[key]].to_numpy()))
 
         return lp
