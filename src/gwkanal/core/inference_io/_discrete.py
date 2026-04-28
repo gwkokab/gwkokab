@@ -59,7 +59,7 @@ class DiscretePELoader(BaseModel):
     dataset(s).
     """
 
-    mass_prior: Literal[
+    default_mass_prior: Literal[
         None,
         "flat-detector-components",
         "flat-detector-chirp-mass-ratio",
@@ -67,11 +67,47 @@ class DiscretePELoader(BaseModel):
     ] = Field(None)
     """The mass prior assumed during the original PE run to be removed/reweighted."""
 
-    spin_prior: Literal[None, "component"] = Field(None)
+    default_spin_prior: Literal[None, "component"] = Field(None)
     """The spin prior assumed during the original PE run."""
 
-    distance_prior: Literal[None, "comoving", "euclidean"] = Field(None)
+    default_distance_prior: Literal[None, "comoving", "euclidean"] = Field(None)
     """The distance prior assumed; used to calculate volume-sensitive weights."""
+
+    alternate_mass_priors: dict[
+        str,
+        Literal[
+            None,
+            "flat-detector-components",
+            "flat-detector-chirp-mass-ratio",
+            "flat-source-components",
+        ],
+    ] = Field(default_factory=dict)
+    """Mapping of filenames to an alternate mass prior, overriding the default mass
+    prior.
+    """
+
+    alternate_spin_priors: dict[
+        str,
+        Literal[
+            None,
+            "component",
+        ],
+    ] = Field(default_factory=dict)
+    """Mapping of filenames to an alternate spin prior, overriding the default spin
+    prior.
+    """
+
+    alternate_distance_priors: dict[
+        str,
+        Literal[
+            None,
+            "comoving",
+            "euclidean",
+        ],
+    ] = Field(default_factory=dict)
+    """Mapping of filenames to an alternate distance prior, overriding the default
+    distance prior.
+    """
 
     @classmethod
     def from_json(cls, config_path: str) -> "DiscretePELoader":
@@ -236,12 +272,26 @@ class DiscretePELoader(BaseModel):
             log_prior = np.zeros(len(df))
             should_log = i == 0  # Log logic only once to avoid spam
 
+            mass_prior = self.alternate_mass_priors.get(
+                event_name, self.default_mass_prior
+            )
+            spin_prior = self.alternate_spin_priors.get(
+                event_name, self.default_spin_prior
+            )
+            distance_prior = self.alternate_distance_priors.get(
+                event_name, self.default_distance_prior
+            )
+
             # Perform prior reweighting
             log_prior += self._calculate_distance_prior(
-                df, parameters, cosmo, aliases, should_log
+                distance_prior, df, parameters, cosmo, aliases, should_log
             )
-            log_prior += self._calculate_mass_prior(df, parameters, aliases, should_log)
-            log_prior += self._calculate_spin_prior(df, parameters, aliases, should_log)
+            log_prior += self._calculate_mass_prior(
+                mass_prior, df, parameters, aliases, should_log
+            )
+            log_prior += self._calculate_spin_prior(
+                spin_prior, df, parameters, aliases, should_log
+            )
 
             data_list.append(df[posterior_columns].to_numpy())
             log_prior_list.append(log_prior)
@@ -292,6 +342,7 @@ class DiscretePELoader(BaseModel):
 
     def _calculate_distance_prior(
         self,
+        prior: str | None,
         df: pd.DataFrame,
         parameters: tuple[str, ...],
         cosmo: Cosmology,
@@ -299,19 +350,19 @@ class DiscretePELoader(BaseModel):
         log: bool,
     ) -> np.ndarray:
         """Calculates the log-weight for the distance/redshift prior."""
-        if self.distance_prior is None:
+        if prior is None:
             return 0.0
 
         if P.REDSHIFT not in parameters:
             raise LoggedValueError("Distance prior requires Redshift.")
 
         z = df[aliases[P.REDSHIFT]].to_numpy()
-        if self.distance_prior == "comoving":
+        if prior == "comoving":
             if log:
                 logger.info("Using Comoving Distance prior.")
             return cosmo.logdVcdz(z) + np.log(4 * np.pi) - np.log1p(z)
 
-        if self.distance_prior == "euclidean":
+        if prior == "euclidean":
             if log:
                 logger.info("Using Euclidean Distance prior.")
             dl = cosmo.z_to_DL(z)
@@ -320,10 +371,15 @@ class DiscretePELoader(BaseModel):
         return 0.0
 
     def _calculate_mass_prior(
-        self, df: pd.DataFrame, parameters: tuple[str, ...], aliases: dict, log: bool
+        self,
+        prior: str | None,
+        df: pd.DataFrame,
+        parameters: tuple[str, ...],
+        aliases: dict,
+        log: bool,
     ) -> np.ndarray:
         """Calculates the log-weight for mass-related priors and Jacobians."""
-        if self.mass_prior is None:
+        if prior is None:
             return 0.0
 
         lp = np.zeros(len(df))
@@ -340,9 +396,9 @@ class DiscretePELoader(BaseModel):
 
         if P.PRIMARY_MASS_SOURCE in parameters:
             m1_src = df[aliases[P.PRIMARY_MASS_SOURCE]].to_numpy()
-            if self.mass_prior == "flat-detector-components":
+            if prior == "flat-detector-components":
                 lp += 2.0 * np.log1p(z)
-            elif self.mass_prior == "flat-detector-chirp-mass-ratio":
+            elif prior == "flat-detector-chirp-mass-ratio":
                 lp -= (
                     np.log(m1_src)
                     - np.log1p(z)
@@ -353,7 +409,7 @@ class DiscretePELoader(BaseModel):
 
         elif P.PRIMARY_MASS_DETECTED in parameters:
             m1_det = df[aliases[P.PRIMARY_MASS_DETECTED]].to_numpy()
-            if self.mass_prior == "flat-detector-chirp-mass-ratio":
+            if prior == "flat-detector-chirp-mass-ratio":
                 lp -= np.log(m1_det) + np.log(primary_mass_to_chirp_mass_jacobian(q))
             if P.MASS_RATIO in parameters:
                 lp += np.log(m1_det)
@@ -364,13 +420,18 @@ class DiscretePELoader(BaseModel):
         return lp
 
     def _calculate_spin_prior(
-        self, df: pd.DataFrame, parameters: tuple[str, ...], aliases: dict, log: bool
+        self,
+        prior: str | None,
+        df: pd.DataFrame,
+        parameters: tuple[str, ...],
+        aliases: dict,
+        log: bool,
     ) -> np.ndarray:
         """Calculates log-weights for spin priors (effective, precessing, and
         magnitude).
         """
         lp = 0.0
-        if self.spin_prior == "component":
+        if prior == "component":
             if log:
                 logger.info("Reweighting with uniform component spin prior.")
             lp -= np.log(4.0)
