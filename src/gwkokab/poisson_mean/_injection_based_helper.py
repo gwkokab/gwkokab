@@ -17,7 +17,7 @@ from jaxtyping import Array
 from loguru import logger
 
 from ..constants import SECONDS_PER_YEAR
-from ..cosmology import default_cosmology
+from ..cosmology import PLANCK_2015_Cosmology
 from ..parameters import Parameters as P
 from ..utils.transformations import (
     chi_p_from_components,
@@ -312,6 +312,7 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
     """We assume the injection prior in terms of the source frame primary mass and mass
     ratio.
     """
+
     if P.MASS_RATIO in parameters:
         data[P.MASS_RATIO] = data[P.SECONDARY_MASS_SOURCE] / data[P.PRIMARY_MASS_SOURCE]
         data["prior"] *= data[P.PRIMARY_MASS_SOURCE]
@@ -391,7 +392,7 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
             )
             data["prior"] *= jacobian / (1 + data[P.REDSHIFT])
     if P.LUMINOSITY_DISTANCE in parameters:
-        cosmo = default_cosmology()
+        cosmo = PLANCK_2015_Cosmology()
 
         data[P.LUMINOSITY_DISTANCE] = cosmo.z_to_DL(data[P.REDSHIFT])  # type: ignore
         data["prior"] /= cosmo.dDLdz(data[P.REDSHIFT])  # type: ignore
