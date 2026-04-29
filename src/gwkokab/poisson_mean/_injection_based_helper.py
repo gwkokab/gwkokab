@@ -17,7 +17,7 @@ from jaxtyping import Array
 from loguru import logger
 
 from ..constants import SECONDS_PER_YEAR
-from ..cosmology import default_cosmology, PLANCK_2015_Cosmology
+from ..cosmology import default_cosmology
 from ..parameters import Parameters as P
 from ..utils.transformations import (
     chi_p_from_components,
@@ -312,7 +312,6 @@ def apply_injection_prior(data: Dict[str, Array], parameters: List[str]):
     """We assume the injection prior in terms of the source frame primary mass and mass
     ratio.
     """
-
     if P.MASS_RATIO in parameters:
         data[P.MASS_RATIO] = data[P.SECONDARY_MASS_SOURCE] / data[P.PRIMARY_MASS_SOURCE]
         data["prior"] *= data[P.PRIMARY_MASS_SOURCE]
