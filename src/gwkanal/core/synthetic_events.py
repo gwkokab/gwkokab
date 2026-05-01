@@ -138,15 +138,13 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
                 LoggedUserWarning,
             )
 
-        resample_prob = weights[resample_idx]
-
         return (
             np.asarray(buffer_pop),
-            np.asarray(buffer_indices),
+            np.asarray(buffer_indices, np.uint32),
             np.asarray(buffer_pop[resample_idx]),
             np.asarray(buffer_indices[resample_idx]),
-            resample_idx,
-            np.asarray(resample_prob),
+            np.asarray(resample_idx, np.uint32),
+            np.asarray(weights),
         )
 
     def from_inverse_transform_sampling(self) -> None:
