@@ -28,11 +28,13 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         model_fn: Callable[..., ScaledMixture],
         model_params_filename: str,
         poisson_mean_filename: str,
+        n_buffer_events: int,
         derive_parameters: bool = False,
     ) -> None:
         self.filename = filename
         self.poisson_mean_filename = poisson_mean_filename
         self.derive_parameters = derive_parameters
+        self.n_buffer_events = n_buffer_events
 
         # Initialize model
         raw_params = read_json(model_params_filename)
@@ -100,15 +102,14 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """Generate population for a realization via rejection/importance sampling."""
         # Oversample to account for selection effects
-        buffer_size = size + 10_000
-        raw_pop, [raw_indices] = self.model_fn.sample_with_intermediates(
-            self.rng_key, (buffer_size,)
+        buffer_pop, [buffer_indices] = self.model_fn.sample_with_intermediates(
+            self.rng_key, (self.n_buffer_events,)
         )
 
-        raw_pop = self._ensure_mass_ordering(raw_pop)
+        buffer_pop = self._ensure_mass_ordering(buffer_pop)
 
         # Compute selection weights (VT)
-        log_selection = log_selection_fn(raw_pop)
+        log_selection = log_selection_fn(buffer_pop)
         log_selection = jnp.nan_to_num(
             log_selection, nan=-jnp.inf, posinf=-jnp.inf, neginf=-jnp.inf
         )
@@ -125,7 +126,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         resample_idx = np.asarray(
             jrd.choice(
                 self.rng_key,
-                jnp.arange(buffer_size),
+                jnp.arange(self.n_buffer_events),
                 p=weights,
                 shape=(size,),
                 replace=False,
@@ -137,15 +138,13 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
                 LoggedUserWarning,
             )
 
-        resample_prob = weights[resample_idx]
-
         return (
-            np.asarray(raw_pop),
-            np.asarray(raw_indices),
-            np.asarray(raw_pop[resample_idx]),
-            np.asarray(raw_indices[resample_idx]),
-            resample_idx,
-            np.asarray(resample_prob),
+            np.asarray(buffer_pop),
+            np.asarray(buffer_indices, np.uint32),
+            np.asarray(buffer_pop[resample_idx]),
+            np.asarray(buffer_indices[resample_idx]),
+            np.asarray(resample_idx, np.uint32),
+            np.asarray(weights),
         )
 
     def from_inverse_transform_sampling(self) -> None:
@@ -159,6 +158,11 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         exp_rate, _ = poisson_mean_estimator(self.model_fn, **pmean_kwargs)
         size = int(jrd.poisson(self.rng_key, exp_rate))
 
+        if size >= self.n_buffer_events:
+            raise LoggedValueError(
+                f"Number of events to generate are greater than number of buffer events. Number of events to generate: {size}, and number of buffer events: {self.n_buffer_events}. Consider increasing the number of buffer events."
+            )
+
         logger.info(f"Expected rate: {exp_rate:.2f} | Realized size: {size}")
 
         if size <= 0:
@@ -166,17 +170,19 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
                 f"Population size is {size}. Check your VT or model configs."
             )
 
-        raw_pop, raw_idx, pop, idx, resample_idx, resample_prob = (
+        buffer_pop, buffer_idx, pop, idx, resample_idx, resample_prob = (
             self._generate_population(size, log_selection_fn)
         )
-        self.save_population(pop, idx, raw_pop, raw_idx, resample_idx, resample_prob)
+        self.save_population(
+            pop, idx, buffer_pop, buffer_idx, resample_idx, resample_prob
+        )
 
     def save_population(
         self,
         population: np.ndarray,
         indices: np.ndarray,
-        raw_population: np.ndarray,
-        raw_indices: np.ndarray,
+        buffer_population: np.ndarray,
+        buffer_indices: np.ndarray,
         resample_idx: np.ndarray,
         resample_prob: np.ndarray,
     ) -> None:
@@ -187,8 +193,8 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
             population, current_params = mesh.resolve_from_arrays(
                 population, self.parameters
             )
-            raw_population, _ = mesh.resolve_from_arrays(
-                raw_population, self.parameters
+            buffer_population, _ = mesh.resolve_from_arrays(
+                buffer_population, self.parameters
             )
 
         compression_args = {"compression": "gzip", "compression_opts": 9}
@@ -202,12 +208,14 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
                 "indices", data=indices.astype(np.uint32), **compression_args
             )
             f.create_dataset(
-                "raw_events",
-                data=to_structured(raw_population, current_params),
+                "buffer_events",
+                data=to_structured(buffer_population, current_params),
                 **compression_args,
             )
             f.create_dataset(
-                "raw_indices", data=raw_indices.astype(np.uint32), **compression_args
+                "buffer_indices",
+                data=buffer_indices.astype(np.uint32),
+                **compression_args,
             )
             f.create_dataset(
                 "resample_indices",
@@ -246,5 +254,11 @@ def injection_generator_parser() -> ArgumentParser:
     proc_group = parser.add_argument_group("Processing")
     proc_group.add_argument("--derive-parameters", action="store_true")
     proc_group.add_argument("--seed", default=37, type=int)
+    proc_group.add_argument(
+        "--n-buffer-events",
+        default=10_000,
+        type=int,
+        help="Number of extra events from which few events will be selected based on selection effects.",
+    )
 
     return parser

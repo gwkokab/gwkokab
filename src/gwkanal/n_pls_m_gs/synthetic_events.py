@@ -55,7 +55,8 @@ def main() -> None:
             model_fn: Callable[..., ScaledMixture],
             model_params_filename: str,
             poisson_mean_filename: str,
-            derive_parameters: bool = False,
+            derive_parameters: bool,
+            n_buffer_events: int,
         ):
             NPowerlawMGaussianCore.__init__(
                 self,
@@ -91,6 +92,7 @@ def main() -> None:
                 model_params_filename=model_params_filename,
                 poisson_mean_filename=poisson_mean_filename,
                 derive_parameters=derive_parameters,
+                n_buffer_events=n_buffer_events,
             )
 
     NPowerlawMGaussianInjectionGenerator.init_rng_seed(seed=args.seed)
@@ -125,6 +127,7 @@ def main() -> None:
         model_params_filename=args.model_params,
         poisson_mean_filename=args.pmean_cfg,
         derive_parameters=args.derive_parameters,
+        n_buffer_events=args.n_buffer_events,
     )
 
     generator.from_inverse_transform_sampling()

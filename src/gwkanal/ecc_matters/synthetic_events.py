@@ -30,6 +30,7 @@ def main() -> None:
         model_params_filename=args.model_params,
         poisson_mean_filename=args.pmean_cfg,
         derive_parameters=args.derive_parameters,
+        n_buffer_events=args.n_buffer_events,
     )
 
     generator.from_inverse_transform_sampling()
