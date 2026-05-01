@@ -5,7 +5,7 @@
 from typing import Any, Callable, Dict, Literal, Optional, Tuple, Union
 
 from jaxtyping import Array, PRNGKeyArray
-from pydantic import BaseModel, Field, PositiveFloat, PositiveInt
+from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
 
 from gwkanal.utils.common import read_json
 from gwkokab.poisson_mean import (
@@ -19,6 +19,10 @@ from gwkokab.utils.exceptions import LoggedImportError, LoggedValueError
 class BaseLoader(BaseModel):
     """Base logic shared across all loaders."""
 
+    # raise error whenever an extra field is passed
+    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+    model_config = ConfigDict(extra="forbid")
+
     filename: str
     key: Any
     parameters: Tuple[str, ...]
@@ -28,6 +32,10 @@ class BaseLoader(BaseModel):
 
 
 class NeuralVolumeTimeSensitivityPoissonMeanLoader(BaseLoader):
+    # raise error whenever an extra field is passed
+    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+    model_config = ConfigDict(extra="forbid")
+
     estimator_type: Literal["neural_vt"]
     batch_size: Optional[PositiveInt] = None
     num_samples: PositiveInt = 1_000
@@ -45,6 +53,10 @@ class NeuralVolumeTimeSensitivityPoissonMeanLoader(BaseLoader):
 
 
 class NeuralVolumeProbabilityOfDetectionPoissonMeanLoader(BaseLoader):
+    # raise error whenever an extra field is passed
+    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+    model_config = ConfigDict(extra="forbid")
+
     estimator_type: Literal["neural_pdet"]
     batch_size: Optional[PositiveInt] = None
     num_samples: PositiveInt = 1_000
@@ -62,6 +74,10 @@ class NeuralVolumeProbabilityOfDetectionPoissonMeanLoader(BaseLoader):
 
 
 class GWTCInjectionLoader(BaseLoader):
+    # raise error whenever an extra field is passed
+    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+    model_config = ConfigDict(extra="forbid")
+
     estimator_type: Literal["injection"]
     batch_size: Optional[PositiveInt] = None
     far_cut: PositiveFloat = 1.0
@@ -79,6 +95,10 @@ class GWTCInjectionLoader(BaseLoader):
 
 
 class CustomPoissonMeanEstimationLoader(BaseLoader):
+    # raise error whenever an extra field is passed
+    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+    model_config = ConfigDict(extra="forbid")
+
     estimator_type: Literal["custom"]
     python_module_path: str
     kwargs: Dict[str, Any]

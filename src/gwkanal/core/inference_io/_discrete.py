@@ -11,7 +11,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from loguru import logger
-from pydantic import BaseModel, Field, PositiveInt
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt
 
 from gwkanal.core.utils import from_structured
 from gwkanal.utils.common import read_json
@@ -39,6 +39,10 @@ class DiscretePELoader(BaseModel):
     parameter aliasing, performs subsampling, and calculates log-prior weights for
     population inference.
     """
+
+    # raise error whenever an extra field is passed
+    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+    model_config = ConfigDict(extra="forbid")
 
     filenames: tuple[Path, ...]
     """Tuple of absolute paths to the sample files."""

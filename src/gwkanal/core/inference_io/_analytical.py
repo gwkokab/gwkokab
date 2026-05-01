@@ -71,7 +71,12 @@ class AnalyticalPELoader(BaseModel):
     population inference.
     """
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        # raise error whenever an extra field is passed
+        # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+        extra="forbid",
+    )
 
     event_paths: tuple[Path, ...]
     """Tuple of absolute paths to the files containing PE samples."""
