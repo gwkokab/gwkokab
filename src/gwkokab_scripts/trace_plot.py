@@ -15,7 +15,7 @@ def trace_plot(
     import numpy as np
 
     # Load data
-    chains = np.stack([np.loadtxt(f) for f in filenames], axis=0)
+    chains = np.stack([np.loadtxt(f, skiprows=1) for f in filenames], axis=0)
 
     del np
 
