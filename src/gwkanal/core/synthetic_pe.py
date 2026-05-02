@@ -182,7 +182,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
                 raise LoggedKeyError(
                     f"Events file does not contain '{self.dataset}' dataset."
                 )
-            events = {p: _dataset[p] for p in parameters}
+            events = {p: _dataset[p][()] for p in parameters}
         return parameters, events
 
     def _parse_delta_thresholds(
