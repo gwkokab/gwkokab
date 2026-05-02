@@ -79,10 +79,10 @@ keywords = [
 ]
 
 [project.optional-dependencies]
-cpu = ["jax>=0.7.0,<0.10.0"]
-cuda12 = ["jax[cuda12]>=0.7.0,<0.10.0"]
-cuda13 = ["jax[cuda13]>=0.7.0,<0.10.0"]
-tpu = ["jax[tpu]>=0.7.0,<0.10.0"]
+cpu = ["jax>=0.7.0"]
+cuda12 = ["jax[cuda12]>=0.7.0"]
+cuda13 = ["jax[cuda13]>=0.7.0"]
+tpu = ["jax[tpu]>=0.7.0"]
 
 [dependency-groups]
 dev = ["prek>=0.2.30", "ruff>=0.8.0", "setuptools>=75.6.0"]
