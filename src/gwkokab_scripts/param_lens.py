@@ -53,6 +53,16 @@ def main() -> None:
         default="",
         help="Search term to filter parameters (default: show all)",
     )
+    parser.add_argument(
+        "--constants",
+        default="constants.json",
+        help="Path to constants JSON file (default: constants.json)",
+    )
+    parser.add_argument(
+        "--mapping",
+        default="nf_samples_mapping.json",
+        help="Path to mapping JSON file (default: nf_samples_mapping.json)",
+    )
     args = parser.parse_args()
 
     query = args.query
@@ -65,9 +75,9 @@ def main() -> None:
     console = Console()
 
     try:
-        with open("constants.json", "r") as f:
+        with open(args.constants, "r") as f:
             constants = json.load(f)
-        with open("nf_samples_mapping.json", "r") as f:
+        with open(args.mapping, "r") as f:
             mapping = json.load(f)
     except FileNotFoundError as e:
         console.print(
