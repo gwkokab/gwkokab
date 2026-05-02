@@ -7,7 +7,7 @@ import warnings
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections.abc import Callable
 from pathlib import Path
-from typing import Optional, TypeAlias
+from typing import Literal, Optional, TypeAlias
 
 import h5py
 import numpy as np
@@ -23,7 +23,7 @@ from gwkanal.utils.logger import log_info
 from gwkanal.utils.regex import match_all
 from gwkokab.errors import banana_error, mock_spin_error, truncated_normal_error
 from gwkokab.parameters import default_relation_mesh, Parameters, Parameters as P
-from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
+from gwkokab.utils.exceptions import LoggedKeyError, LoggedUserWarning, LoggedValueError
 
 
 ErrorFunctionRegistryType: TypeAlias = dict[
@@ -40,6 +40,7 @@ class SyntheticDiscretePE(PRNGKeyMixin):
     def __init__(
         self,
         filename: str,
+        dataset: Literal["events", "buffer_events"],
         error_params_filename: str,
         size: int,
         derive_parameters: bool = False,
@@ -47,6 +48,13 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         is_delta_error: bool = False,
     ) -> None:
         self.filename = filename
+        _valid_datasets = ("events", "buffer_events")
+        if dataset not in _valid_datasets:
+            raise LoggedValueError(
+                "Invalid dataset. Only possible options are "
+                + ", ".join(_valid_datasets)
+            )
+        self.dataset = dataset
         self.error_params_filename = error_params_filename
         self.size = size
         self.derive_parameters = derive_parameters
@@ -168,7 +176,13 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         """Extracts parameters and injection data from the source HDF5."""
         with h5py.File(self.filename, "r") as f:
             parameters = f.attrs["parameters"].astype(np.str_).tolist()
-            events = {p: f["events"][p] for p in parameters}
+            try:
+                _dataset = f[self.dataset]
+            except KeyError:
+                raise LoggedKeyError(
+                    f"Events file does not contain '{self.dataset}' dataset."
+                )
+            events = {p: _dataset[p][()] for p in parameters}
         return parameters, events
 
     def _parse_delta_thresholds(
@@ -427,6 +441,13 @@ def synthetic_discrete_pe_main():
         required=True,
     )
     parser.add_argument(
+        "--dataset",
+        help="Path of the dataset containing events.",
+        type=str,
+        default="events",
+        choices=("events", "buffer_events"),
+    )
+    parser.add_argument(
         "--coords",
         help="Comma-separated list of coordinates to add error into. If not provided, errors will be applied to all coordinates defined in the error function registry.",
         type=lambda s: [c.strip() for c in s.split(",")],
@@ -469,6 +490,7 @@ def synthetic_discrete_pe_main():
 
     generator = SyntheticDiscretePE(
         filename=args.filename,
+        dataset=args.dataset,
         error_params_filename=args.error_params,
         size=args.size,
         derive_parameters=args.derive_parameters,
