@@ -3,9 +3,9 @@
 
 
 def create_grid(data: dict[str, str], query: str, label_text: str):
+    """Filters, clusters, and builds a collection of Rich tables."""
     from rich.table import Table
 
-    """Filters, clusters, and builds a collection of Rich tables."""
     # 1. Filter and Group
     grouped: dict[str, list[str]] = {}
     for param, val in data.items():
@@ -57,11 +57,12 @@ def main() -> None:
 
     query = args.query
 
+    import json
+
+    from rich.columns import Columns
     from rich.console import Console
 
     console = Console()
-
-    import json
 
     try:
         with open("constants.json", "r") as f:
@@ -73,8 +74,6 @@ def main() -> None:
             f"[bold red]Error:[/bold red] Could not find {e.filename}", style="red"
         )
         return
-
-    from rich.columns import Columns
 
     console.print("[bold cyan]MAPPING[/bold cyan] [dim](By Index)[/dim]")
     console.print("—" * 40, style="dim")
