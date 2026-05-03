@@ -35,12 +35,21 @@ If you would like to contribute, please see the [contributing guidelines](https:
 If you use GWKokab in your research, please cite the following:
 
 ```bibtex
-@article{arxiv:2509.13638,
-    author  = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
-    title   = {GWKokab: An Implementation to Identify the Properties of Multiple Population of Gravitational Wave Sources},
-    journal = {arXiv preprint arXiv:2509.13638},
-    year    = {2025},
-    url     = {https://arxiv.org/pdf/2509.13638v1}
+@ARTICLE{2025arXiv250913638Q,
+       author = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
+        title = "{An Implementation to Identify the Properties of Multiple Population of Gravitational Wave Sources}",
+      journal = {arXiv e-prints},
+     keywords = {General Relativity and Quantum Cosmology, High Energy Astrophysical Phenomena, Instrumentation and Methods for Astrophysics},
+         year = 2025,
+        month = sep,
+          eid = {arXiv:2509.13638},
+        pages = {arXiv:2509.13638},
+          doi = {10.48550/arXiv.2509.13638},
+archivePrefix = {arXiv},
+       eprint = {2509.13638},
+ primaryClass = {gr-qc},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv250913638Q},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 ```
 
