@@ -169,9 +169,7 @@ class SubPopulationModelCore:
         )
         # fmt: on
 
-        all_params: list[tuple[str, int]] = [
-            ("log_rate", self.N_spl + self.N_bpl + self.N_g)
-        ]
+        all_params: list[tuple[str, int]] = []
 
         for ct, count in component_types_and_count:
             all_params_names = []
@@ -183,9 +181,6 @@ class SubPopulationModelCore:
                 all_params_names.extend(
                     [
                         "alpha_",
-                        "beta_",
-                        "delta_m1_",
-                        "delta_m2_",
                         "m1min_",
                         "m2min_",
                         "mmax_",
@@ -393,7 +388,15 @@ class SubPopulationModelCore:
 
             all_params.extend([(name + ct, count) for name in all_params_names])
 
-        extended_params = []
+        extended_params = [
+            "beta",
+            "delta_m1",
+            "delta_m2",
+            "log_rate",
+            "m1max",
+            "m1min",
+            "m2min",
+        ]
         for params in all_params:
             extended_params.extend(expand_arguments(*params))
         return extended_params
