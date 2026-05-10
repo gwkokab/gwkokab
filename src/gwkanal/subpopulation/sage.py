@@ -108,7 +108,7 @@ class SubPopulationModelSage(SubPopulationModelCore, Sage):
             poisson_mean_filename=poisson_mean_filename,
             sampler_settings_filename=sampler_settings_filename,
             variance_cut_threshold=variance_cut_threshold,
-            analysis_name="multisource",
+            analysis_name="subpopulation",
             n_buckets=n_buckets,
             threshold=threshold,
             debug_nans=debug_nans,
