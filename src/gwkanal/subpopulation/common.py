@@ -69,6 +69,10 @@ class SubPopulationModelCore:
         use_right_ascension: bool,
         use_sin_declination: bool,
         use_detection_time: bool,
+        use_phi_1: bool,
+        use_phi_2: bool,
+        use_phi_orb: bool,
+        use_mean_anomaly: bool,
     ) -> None:
         self.N_spl = N_spl
         self.N_bpl = N_bpl
@@ -91,6 +95,10 @@ class SubPopulationModelCore:
         self.use_right_ascension = use_right_ascension
         self.use_sin_declination = use_sin_declination
         self.use_detection_time = use_detection_time
+        self.use_phi_1 = use_phi_1
+        self.use_phi_2 = use_phi_2
+        self.use_phi_orb = use_phi_orb
+        self.use_mean_anomaly = use_mean_anomaly
 
     def modify_model_params(self, params: dict) -> dict:
         params.update(
@@ -116,6 +124,10 @@ class SubPopulationModelCore:
                 "use_right_ascension": self.use_right_ascension,
                 "use_sin_declination": self.use_sin_declination,
                 "use_detection_time": self.use_detection_time,
+                "use_phi_1": self.use_phi_1,
+                "use_phi_2": self.use_phi_2,
+                "use_phi_orb": self.use_phi_orb,
+                "use_mean_anomaly": self.use_mean_anomaly,
             }
         )
         return params
@@ -157,6 +169,14 @@ class SubPopulationModelCore:
             names.append(P.COS_IOTA)
         if self.use_polarization_angle:
             names.append(P.POLARIZATION_ANGLE)
+        if self.use_phi_1:
+            names.append(P.PHI_1)
+        if self.use_phi_2:
+            names.append(P.PHI_2)
+        if self.use_phi_orb:
+            names.append(P.PHI_ORB)
+        if self.use_mean_anomaly:
+            names.append(P.MEAN_ANOMALY)
         names.append(P.MASS_RATIO)
         return names
 
@@ -520,5 +540,25 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         "--add-detection-time",
         action="store_true",
         help="Include detection_time parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-1",
+        action="store_true",
+        help="Include phi_1 parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-2",
+        action="store_true",
+        help="Include phi_2 parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-phi-orb",
+        action="store_true",
+        help="Include phi_orb parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-mean-anomaly",
+        action="store_true",
+        help="Include mean_anomaly parameter in the model",
     )
     return parser
