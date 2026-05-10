@@ -162,25 +162,39 @@ class SubPopulationModelCore:
 
     @property
     def model_parameters(self) -> list[str]:
+        # fmt: off
         component_types_and_count = zip(
-            ("spl", "bpl", "g"),
+            ("spl"     , "bpl"     , "g"     ),
             (self.N_spl, self.N_bpl, self.N_g),
         )
+        # fmt: on
 
         all_params: list[tuple[str, int]] = [
             ("log_rate", self.N_spl + self.N_bpl + self.N_g)
         ]
 
         for ct, count in component_types_and_count:
-            all_params_names = [
-                "alpha_",
-                "beta_",
-                "delta_m1_",
-                "delta_m2_",
-                "m1min_",
-                "m2min_",
-                "mmax_",
-            ]
+            all_params_names = []
+
+            if ct == "spl":
+                all_params_names.extend(["alpha_", "mmax_", "mmin_"])
+
+            if ct == "bpl":
+                all_params_names.extend(
+                    [
+                        "alpha_",
+                        "beta_",
+                        "delta_m1_",
+                        "delta_m2_",
+                        "m1min_",
+                        "m2min_",
+                        "mmax_",
+                    ]
+                )
+
+            if ct == "g":
+                all_params_names.extend(["m1_loc_", "m1_scale_", "m1_low_", "m1_high_"])
+
             if self.use_spin_magnitude_mixture:
                 all_params_names.extend(
                     [

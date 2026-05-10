@@ -148,7 +148,12 @@ def _build_component_distributions(
     if component_type == "spl":
         mass_distributions = [
             [d]
-            for d in create_powerlaws(N=N, params=params, validate_args=validate_args)
+            for d in create_powerlaws(
+                N=N,
+                component_type=component_type,
+                params=params,
+                validate_args=validate_args,
+            )
         ]
 
     if component_type == "bpl":

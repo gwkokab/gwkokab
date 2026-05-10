@@ -39,7 +39,7 @@ def _build_pl_component_distributions(
     validate_args: Optional[bool] = None,
 ) -> Tuple[List[Distribution], List[JointDistribution]]:
     mass_distributions = create_powerlaws(
-        N=N, params=params, validate_args=validate_args
+        N=N, component_type="pl", params=params, validate_args=validate_args
     )
 
     build_distributions = build_non_mass_distributions(
