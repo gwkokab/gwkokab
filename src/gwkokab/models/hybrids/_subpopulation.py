@@ -285,7 +285,6 @@ def SubPopulationModel(
     delta_m1 = params.pop("delta_m1")
     delta_m2 = params.pop("delta_m2")
     log_rate = params.pop("log_rate")
-    log_rate = params.pop("log_rate")
     m1max = params.pop("m1max")
     m1min = params.pop("m1min")
     m2min = params.pop("m2min")
