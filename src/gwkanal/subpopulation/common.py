@@ -190,7 +190,7 @@ class SubPopulationModelCore:
         # fmt: on
 
         all_params: list[tuple[str, int]] = [
-            ("lambda", self.N_spl + self.N_bpl + self.N_g)
+            ("lambda", self.N_spl + self.N_bpl + self.N_g - 1)
         ]
 
         for ct, count in component_types_and_count:
