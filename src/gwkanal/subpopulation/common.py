@@ -62,17 +62,8 @@ class SubPopulationModelCore:
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_eccentricity_powerlaw: bool,
-        use_redshift: bool,
-        use_cos_iota: bool,
-        use_phi_12: bool,
-        use_polarization_angle: bool,
-        use_right_ascension: bool,
-        use_sin_declination: bool,
-        use_detection_time: bool,
-        use_phi_1: bool,
-        use_phi_2: bool,
-        use_phi_orb: bool,
         use_mean_anomaly: bool,
+        use_redshift: bool,
     ) -> None:
         self.N_spl = N_spl
         self.N_bpl = N_bpl
@@ -88,17 +79,8 @@ class SubPopulationModelCore:
         self.use_eccentricity_powerlaw = use_eccentricity_powerlaw
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
-        self.use_redshift = use_redshift
-        self.use_cos_iota = use_cos_iota
-        self.use_phi_12 = use_phi_12
-        self.use_polarization_angle = use_polarization_angle
-        self.use_right_ascension = use_right_ascension
-        self.use_sin_declination = use_sin_declination
-        self.use_detection_time = use_detection_time
-        self.use_phi_1 = use_phi_1
-        self.use_phi_2 = use_phi_2
-        self.use_phi_orb = use_phi_orb
         self.use_mean_anomaly = use_mean_anomaly
+        self.use_redshift = use_redshift
 
     def modify_model_params(self, params: dict) -> dict:
         params.update(
@@ -117,17 +99,8 @@ class SubPopulationModelCore:
                 "use_tilt": self.use_tilt,
                 "use_eccentricity_mixture": self.use_eccentricity_mixture,
                 "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
-                "use_redshift": self.use_redshift,
-                "use_cos_iota": self.use_cos_iota,
-                "use_phi_12": self.use_phi_12,
-                "use_polarization_angle": self.use_polarization_angle,
-                "use_right_ascension": self.use_right_ascension,
-                "use_sin_declination": self.use_sin_declination,
-                "use_detection_time": self.use_detection_time,
-                "use_phi_1": self.use_phi_1,
-                "use_phi_2": self.use_phi_2,
-                "use_phi_orb": self.use_phi_orb,
                 "use_mean_anomaly": self.use_mean_anomaly,
+                "use_redshift": self.use_redshift,
             }
         )
         return params
@@ -153,30 +126,12 @@ class SubPopulationModelCore:
             names.append(P.PRECESSING_SPIN)
         if self.use_tilt:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
-        if self.use_phi_12:
-            names.append(P.PHI_12)
         if self.use_eccentricity_mixture or self.use_eccentricity_powerlaw:
             names.append(P.ECCENTRICITY)
-        if self.use_redshift:
-            names.append(P.REDSHIFT)
-        if self.use_right_ascension:
-            names.append(P.RIGHT_ASCENSION)
-        if self.use_sin_declination:
-            names.append(P.SIN_DECLINATION)
-        if self.use_detection_time:
-            names.append(P.DETECTION_TIME)
-        if self.use_cos_iota:
-            names.append(P.COS_IOTA)
-        if self.use_polarization_angle:
-            names.append(P.POLARIZATION_ANGLE)
-        if self.use_phi_1:
-            names.append(P.PHI_1)
-        if self.use_phi_2:
-            names.append(P.PHI_2)
-        if self.use_phi_orb:
-            names.append(P.PHI_ORB)
         if self.use_mean_anomaly:
             names.append(P.MEAN_ANOMALY)
+        if self.use_redshift:
+            names.append(P.REDSHIFT)
         names.append(P.MASS_RATIO)
         return names
 
@@ -330,16 +285,6 @@ class SubPopulationModelCore:
                     ]
                 )
 
-            if self.use_phi_12:
-                all_params_names.extend(
-                    [
-                        P.PHI_12 + "_high_",
-                        P.PHI_12 + "_loc_",
-                        P.PHI_12 + "_low_",
-                        P.PHI_12 + "_scale_",
-                    ]
-                )
-
             if self.use_eccentricity_mixture:
                 all_params_names.extend(
                     [
@@ -358,54 +303,6 @@ class SubPopulationModelCore:
             if self.use_redshift:
                 all_params_names.extend(
                     [P.REDSHIFT + "_kappa_", P.REDSHIFT + "_z_max_"]
-                )
-
-            if self.use_right_ascension:
-                all_params_names.extend(
-                    [
-                        P.RIGHT_ASCENSION + "_high_",
-                        P.RIGHT_ASCENSION + "_loc_",
-                        P.RIGHT_ASCENSION + "_low_",
-                        P.RIGHT_ASCENSION + "_scale_",
-                    ]
-                )
-
-            if self.use_sin_declination:
-                all_params_names.extend(
-                    [
-                        P.SIN_DECLINATION + "_high_",
-                        P.SIN_DECLINATION + "_loc_",
-                        P.SIN_DECLINATION + "_low_",
-                        P.SIN_DECLINATION + "_scale_",
-                    ]
-                )
-
-            if self.use_detection_time:
-                all_params_names.extend(
-                    [
-                        P.DETECTION_TIME + "_high_",
-                        P.DETECTION_TIME + "_low_",
-                    ]
-                )
-
-            if self.use_cos_iota:
-                all_params_names.extend(
-                    [
-                        P.COS_IOTA + "_high_",
-                        P.COS_IOTA + "_loc_",
-                        P.COS_IOTA + "_low_",
-                        P.COS_IOTA + "_scale_",
-                    ]
-                )
-
-            if self.use_polarization_angle:
-                all_params_names.extend(
-                    [
-                        P.POLARIZATION_ANGLE + "_high_",
-                        P.POLARIZATION_ANGLE + "_loc_",
-                        P.POLARIZATION_ANGLE + "_low_",
-                        P.POLARIZATION_ANGLE + "_scale_",
-                    ]
                 )
 
             all_params.extend([(name + ct, count) for name in all_params_names])
@@ -495,11 +392,6 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include tilt parameters in the model.",
     )
-    model_group.add_argument(
-        "--add-redshift",
-        action="store_true",
-        help="Include redshift parameter in the model",
-    )
 
     eccentricity_group = model_group.add_mutually_exclusive_group()
     eccentricity_group.add_argument(
@@ -514,53 +406,13 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
 
     model_group.add_argument(
-        "--add-cos-iota",
-        action="store_true",
-        help="Include cos_iota parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-phi-12",
-        action="store_true",
-        help="Include phi_12 parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-polarization-angle",
-        action="store_true",
-        help="Include polarization_angle parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-right-ascension",
-        action="store_true",
-        help="Include right_ascension parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-sin-declination",
-        action="store_true",
-        help="Include sin_declination parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-detection-time",
-        action="store_true",
-        help="Include detection_time parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-phi-1",
-        action="store_true",
-        help="Include phi_1 parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-phi-2",
-        action="store_true",
-        help="Include phi_2 parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-phi-orb",
-        action="store_true",
-        help="Include phi_orb parameter in the model",
-    )
-    model_group.add_argument(
         "--add-mean-anomaly",
         action="store_true",
         help="Include mean_anomaly parameter in the model",
+    )
+    model_group.add_argument(
+        "--add-redshift",
+        action="store_true",
+        help="Include redshift parameter in the model",
     )
     return parser
