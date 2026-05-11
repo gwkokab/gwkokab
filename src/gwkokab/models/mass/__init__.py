@@ -9,6 +9,7 @@ from ._bpls import (
 )
 from ._models import (
     GaussianPrimaryMassRatio as GaussianPrimaryMassRatio,
+    GenericSmoothedPowerlawMassRatio as GenericSmoothedPowerlawMassRatio,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
     SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
