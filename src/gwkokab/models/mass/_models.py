@@ -705,6 +705,7 @@ class GenericSmoothedPowerlawMassRatio(Distribution):
         "beta": constraints.real,
         "delta_m1": constraints.positive,
         "delta_m2": constraints.positive,
+        "m1min": constraints.positive,
         "m2min": constraints.positive,
     }
     pytree_data_fields = (
@@ -714,7 +715,9 @@ class GenericSmoothedPowerlawMassRatio(Distribution):
         "beta",
         "delta_m1",
         "delta_m2",
+        "m1min",
         "m2min",
+        "mmax",
         "primary_mass_distribution",
     )
 
