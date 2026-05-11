@@ -35,20 +35,22 @@ If you would like to contribute, please see the [contributing guidelines](https:
 If you use GWKokab in your research, please cite the following:
 
 ```bibtex
-@ARTICLE{2025arXiv250913638Q,
-       author = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
-        title = "{An Implementation to Identify the Properties of Multiple Population of Gravitational Wave Sources}",
-      journal = {arXiv e-prints},
-     keywords = {General Relativity and Quantum Cosmology, High Energy Astrophysical Phenomena, Instrumentation and Methods for Astrophysics},
-         year = 2025,
-        month = sep,
-          eid = {arXiv:2509.13638},
-        pages = {arXiv:2509.13638},
-          doi = {10.48550/arXiv.2509.13638},
+@ARTICLE{2026PhRvD.113j3003Q,
+       author = {{Qazalbash}, M. and {Zeeshan}, M. and {O'Shaughnessy}, R.},
+        title = "{Implementation to identify the properties of multiple populations of gravitational wave sources}",
+      journal = {\prd},
+     keywords = {Astrophysics and astroparticle physics, General Relativity and Quantum Cosmology, High Energy Astrophysical Phenomena, Instrumentation and Methods for Astrophysics},
+         year = 2026,
+        month = may,
+       volume = {113},
+       number = {10},
+          eid = {103003},
+        pages = {103003},
+          doi = {10.1103/krnm-3vrf},
 archivePrefix = {arXiv},
        eprint = {2509.13638},
  primaryClass = {gr-qc},
-       adsurl = {https://ui.adsabs.harvard.edu/abs/2025arXiv250913638Q},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2026PhRvD.113j3003Q},
       adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
 ```
