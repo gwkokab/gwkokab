@@ -189,7 +189,9 @@ class SubPopulationModelCore:
         )
         # fmt: on
 
-        all_params: list[tuple[str, int]] = []
+        all_params: list[tuple[str, int]] = [
+            ("lambda_", self.N_spl + self.N_bpl + self.N_g)
+        ]
 
         for ct, count in component_types_and_count:
             all_params_names = []
