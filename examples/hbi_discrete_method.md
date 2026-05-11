@@ -126,8 +126,8 @@ n_sage_n_pls_m_gs \
     --posterior-regex "../generating_mock_posterior_estimates/data/realization_0/posteriors/event_*.dat" \
     --posterior-columns mass_1_source mass_2_source \
     --pmean-cfg pmean.json \
-    --prior-json prior.json \
-    --sampler-config numpyro_config.json \
+    --prior-cfg prior.json \
+    --sampler-cfg numpyro_config.json \
     --n-buckets 10
 ```
 
@@ -136,9 +136,9 @@ n_sage_n_pls_m_gs \
 - `posterior-columns` are the columns in the posterior samples corresponding to
   primary mass, secondary mass and eccentricity.
 - `pmean-cfg` is the json file containing the detector sensitivity information.
-- `prior-json` is the json file containing the prior distributions of the population
+- `prior-cfg` is the json file containing the prior distributions of the population
   parameters.
-- `sampler-config` is the json file containing the MCMC sampler configurations.
+- `sampler-cfg` is the json file containing the MCMC sampler configurations.
 - `n-buckets` is an optimization parameter to speed up the likelihood evaluations.
 
 ### FlowMC
@@ -192,8 +192,8 @@ f_sage_n_pls_m_gs \
     --posterior-regex "../generating_mock_posterior_estimates/data/realization_0/posteriors/event_*.dat" \
     --posterior-columns mass_1_source mass_2_source \
     --pmean-cfg pmean.json \
-    --prior-json prior.json \
-    --sampler-config flowMC_config.json \
+    --prior-cfg prior.json \
+    --sampler-cfg flowMC_config.json \
     --n-buckets 10
 ```
 
