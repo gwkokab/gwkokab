@@ -21,6 +21,7 @@ from .hybrids import (
     NPowerlawMGaussian as NPowerlawMGaussian,
     NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
     PowerlawPeak as PowerlawPeak,
+    SubPopulationModel as SubPopulationModel,
 )
 from .mass import (
     BrokenPowerlaw as BrokenPowerlaw,

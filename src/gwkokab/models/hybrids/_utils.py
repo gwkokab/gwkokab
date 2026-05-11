@@ -81,7 +81,7 @@ def build_non_mass_distributions(
     return build_distributions
 
 
-class _SmoothedPowerlawMassRatioAndRest(Distribution):
+class _GenericSubPopulationModel(Distribution):
     arg_constraints = {
         "beta": constraints.real,
         "delta_m1": constraints.positive,
@@ -157,7 +157,7 @@ class _SmoothedPowerlawMassRatioAndRest(Distribution):
             [rest_dist._support, constraints.unit_interval],
             [(0, n_dim_rest_dist), n_dim_rest_dist],
         )
-        super(_SmoothedPowerlawMassRatioAndRest, self).__init__(
+        super(_GenericSubPopulationModel, self).__init__(
             batch_shape=batch_shape,
             event_shape=(n_dim_rest_dist + 1,),
             validate_args=validate_args,

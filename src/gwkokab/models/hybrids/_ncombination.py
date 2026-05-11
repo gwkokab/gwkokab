@@ -577,6 +577,7 @@ def create_minimum_tilt_model(
 
 def create_powerlaws(
     N: int,
+    component_type: Literal["pl", "spl"],
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
@@ -602,9 +603,9 @@ def create_powerlaws(
         if alpha, mmin, or mmax is missing
     """
     powerlaws_collection = []
-    alpha_name = "alpha_pl"
-    mmax_name = "mmax_pl"
-    mmin_name = "mmin_pl"
+    alpha_name = f"alpha_{component_type}"
+    mmax_name = f"mmax_{component_type}"
+    mmin_name = f"mmin_{component_type}"
     for i in range(N):
         alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
         mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)

@@ -14,3 +14,4 @@ from ._o3_n_pls_m_gs import (
 )
 from ._o4_n_bpls_m_gs import NBrokenPowerlawMGaussian as NBrokenPowerlawMGaussian
 from ._powerlawpeak import PowerlawPeak as PowerlawPeak
+from ._subpopulation import SubPopulationModel as SubPopulationModel
