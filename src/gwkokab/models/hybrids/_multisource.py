@@ -49,15 +49,6 @@ def _build_non_mass_distributions(
     use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
     use_redshift: bool,
-    use_cos_iota: bool,
-    use_polarization_angle: bool,
-    use_right_ascension: bool,
-    use_sin_declination: bool,
-    use_detection_time: bool,
-    use_phi_1: bool,
-    use_phi_2: bool,
-    use_phi_12: bool,
-    use_phi_orb: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
@@ -81,24 +72,6 @@ def _build_non_mass_distributions(
         whether to include mean_anomaly
     use_redshift : bool
         whether to include redshift
-    use_cos_iota : bool
-        whether to include cos_iota
-    use_polarization_angle : bool
-        whether to include polarization_angle
-    use_right_ascension : bool
-        whether to include right_ascension
-    use_sin_declination : bool
-        whether to include sin_declination
-    use_detection_time : bool
-        whether to include detection_time
-    use_phi_1 : bool
-        whether to include phi_1
-    use_phi_2 : bool
-        whether to include phi_2
-    use_phi_12 : bool
-        whether to include phi_12
-    use_phi_orb : bool
-        whether to include phi_orb
     params : Dict[str, Array]
         dictionary of parameters
     validate_args : Optional[bool], optional
@@ -127,19 +100,10 @@ def _build_non_mass_distributions(
         (use_truncated_normal_chi_p, P.PRECESSING_SPIN, create_truncated_normal_distributions),
         # combined tilt distribution
         (use_tilt, P.COS_TILT_1 + "_" + P.COS_TILT_2, create_independent_spin_orientation_gaussian_isotropic),
-        (use_phi_1, P.PHI_1, create_uniform_distributions),
-        (use_phi_2, P.PHI_2, create_uniform_distributions),
-        (use_phi_12, P.PHI_12, create_uniform_distributions),
         (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
         (use_eccentricity_powerlaw, P.ECCENTRICITY, create_generic_powerlaws),
         (use_mean_anomaly, P.MEAN_ANOMALY, create_uniform_distributions),
         (use_redshift, P.REDSHIFT, create_powerlaw_redshift),
-        (use_right_ascension, P.RIGHT_ASCENSION, create_uniform_distributions),
-        (use_sin_declination, P.SIN_DECLINATION, create_uniform_distributions),
-        (use_detection_time, P.DETECTION_TIME, create_uniform_distributions),
-        (use_cos_iota, P.COS_IOTA, create_uniform_distributions),
-        (use_polarization_angle, P.POLARIZATION_ANGLE, create_uniform_distributions),
-        (use_phi_orb, P.PHI_ORB, create_uniform_distributions),
     ]
     # fmt: on
 
@@ -162,7 +126,7 @@ def _build_non_mass_distributions(
 
 def _build_component_distributions(
     N: int,
-    component_type: Literal["sbpl", "gpl", "gg"],
+    component_type: Literal["spl", "sbpl", "gpl", "gg"],
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
     use_truncated_normal_spin_x: bool,
@@ -176,62 +140,9 @@ def _build_component_distributions(
     use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
     use_redshift: bool,
-    use_cos_iota: bool,
-    use_polarization_angle: bool,
-    use_right_ascension: bool,
-    use_sin_declination: bool,
-    use_detection_time: bool,
-    use_phi_1: bool,
-    use_phi_2: bool,
-    use_phi_12: bool,
-    use_phi_orb: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
-    """Build distributions for Gaussian components.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    use_spin : bool
-        whether to include spin
-    use_tilt : bool
-        whether to include tilt
-    use_eccentricity_mixture : bool
-        whether to include eccentricity
-    use_mean_anomaly : bool
-        whether to include mean_anomaly
-    use_redshift : bool
-        whether to include redshift
-    use_cos_iota : bool
-        whether to include cos_iota
-    use_polarization_angle : bool
-        whether to include polarization_angle
-    use_right_ascension : bool
-        whether to include right_ascension
-    use_sin_declination : bool
-        whether to include sin_declination
-    use_detection_time : bool
-        whether to include detection_time
-    use_phi_1 : bool
-        whether to include phi_1
-    use_phi_2 : bool
-        whether to include phi_2
-    use_phi_12 : bool
-        whether to include phi_12
-    use_phi_orb : bool
-        whether to include phi_orb
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, by default None
-
-    Returns
-    -------
-    List[JointDistribution]
-        list of JointDistribution
-    """
     if N == 0:
         return []
     if component_type == "spl":
@@ -302,15 +213,6 @@ def _build_component_distributions(
         use_eccentricity_mixture=use_eccentricity_mixture,
         use_eccentricity_powerlaw=use_eccentricity_powerlaw,
         use_redshift=use_redshift,
-        use_cos_iota=use_cos_iota,
-        use_phi_12=use_phi_12,
-        use_polarization_angle=use_polarization_angle,
-        use_right_ascension=use_right_ascension,
-        use_sin_declination=use_sin_declination,
-        use_detection_time=use_detection_time,
-        use_phi_1=use_phi_1,
-        use_phi_2=use_phi_2,
-        use_phi_orb=use_phi_orb,
         use_mean_anomaly=use_mean_anomaly,
         params=params,
         validate_args=validate_args,
@@ -339,15 +241,6 @@ def MultiSourceModel(
     use_eccentricity_mixture: bool = False,
     use_eccentricity_powerlaw: bool = False,
     use_redshift: bool = False,
-    use_cos_iota: bool = False,
-    use_phi_12: bool = False,
-    use_polarization_angle: bool = False,
-    use_right_ascension: bool = False,
-    use_sin_declination: bool = False,
-    use_detection_time: bool = False,
-    use_phi_1: bool = False,
-    use_phi_2: bool = False,
-    use_phi_orb: bool = False,
     use_mean_anomaly: bool = False,
     *,
     validate_args=None,
@@ -372,15 +265,6 @@ def MultiSourceModel(
             use_eccentricity_mixture=use_eccentricity_mixture,
             use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_redshift=use_redshift,
-            use_cos_iota=use_cos_iota,
-            use_phi_12=use_phi_12,
-            use_polarization_angle=use_polarization_angle,
-            use_right_ascension=use_right_ascension,
-            use_sin_declination=use_sin_declination,
-            use_detection_time=use_detection_time,
-            use_phi_1=use_phi_1,
-            use_phi_2=use_phi_2,
-            use_phi_orb=use_phi_orb,
             use_mean_anomaly=use_mean_anomaly,
             params=params,
             validate_args=validate_args,

@@ -75,12 +75,6 @@ class MultiSourceModelCore:
         use_eccentricity_mixture: bool,
         use_eccentricity_powerlaw: bool,
         use_redshift: bool,
-        use_cos_iota: bool,
-        use_phi_12: bool,
-        use_polarization_angle: bool,
-        use_right_ascension: bool,
-        use_sin_declination: bool,
-        use_detection_time: bool,
     ) -> None:
         self.N_spl = N_spl
         self.N_sbpl = N_sbpl
@@ -98,12 +92,6 @@ class MultiSourceModelCore:
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_redshift = use_redshift
-        self.use_cos_iota = use_cos_iota
-        self.use_phi_12 = use_phi_12
-        self.use_polarization_angle = use_polarization_angle
-        self.use_right_ascension = use_right_ascension
-        self.use_sin_declination = use_sin_declination
-        self.use_detection_time = use_detection_time
 
     def modify_model_params(self, params: dict) -> dict:
         params.update(
@@ -124,12 +112,6 @@ class MultiSourceModelCore:
                 "use_eccentricity_mixture": self.use_eccentricity_mixture,
                 "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
                 "use_redshift": self.use_redshift,
-                "use_cos_iota": self.use_cos_iota,
-                "use_phi_12": self.use_phi_12,
-                "use_polarization_angle": self.use_polarization_angle,
-                "use_right_ascension": self.use_right_ascension,
-                "use_sin_declination": self.use_sin_declination,
-                "use_detection_time": self.use_detection_time,
             }
         )
         return params
@@ -155,22 +137,10 @@ class MultiSourceModelCore:
             names.append(P.PRECESSING_SPIN)
         if self.use_tilt:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
-        if self.use_phi_12:
-            names.append(P.PHI_12)
         if self.use_eccentricity_mixture or self.use_eccentricity_powerlaw:
             names.append(P.ECCENTRICITY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
-        if self.use_right_ascension:
-            names.append(P.RIGHT_ASCENSION)
-        if self.use_sin_declination:
-            names.append(P.SIN_DECLINATION)
-        if self.use_detection_time:
-            names.append(P.DETECTION_TIME)
-        if self.use_cos_iota:
-            names.append(P.COS_IOTA)
-        if self.use_polarization_angle:
-            names.append(P.POLARIZATION_ANGLE)
         return names
 
     @property
@@ -333,16 +303,6 @@ class MultiSourceModelCore:
                     ]
                 )
 
-            if self.use_phi_12:
-                all_params_names.extend(
-                    [
-                        P.PHI_12 + "_high_",
-                        P.PHI_12 + "_loc_",
-                        P.PHI_12 + "_low_",
-                        P.PHI_12 + "_scale_",
-                    ]
-                )
-
             if self.use_eccentricity_mixture:
                 all_params_names.extend(
                     [
@@ -361,54 +321,6 @@ class MultiSourceModelCore:
             if self.use_redshift:
                 all_params_names.extend(
                     [P.REDSHIFT + "_kappa_", P.REDSHIFT + "_z_max_"]
-                )
-
-            if self.use_right_ascension:
-                all_params_names.extend(
-                    [
-                        P.RIGHT_ASCENSION + "_high_",
-                        P.RIGHT_ASCENSION + "_loc_",
-                        P.RIGHT_ASCENSION + "_low_",
-                        P.RIGHT_ASCENSION + "_scale_",
-                    ]
-                )
-
-            if self.use_sin_declination:
-                all_params_names.extend(
-                    [
-                        P.SIN_DECLINATION + "_high_",
-                        P.SIN_DECLINATION + "_loc_",
-                        P.SIN_DECLINATION + "_low_",
-                        P.SIN_DECLINATION + "_scale_",
-                    ]
-                )
-
-            if self.use_detection_time:
-                all_params_names.extend(
-                    [
-                        P.DETECTION_TIME + "_high_",
-                        P.DETECTION_TIME + "_low_",
-                    ]
-                )
-
-            if self.use_cos_iota:
-                all_params_names.extend(
-                    [
-                        P.COS_IOTA + "_high_",
-                        P.COS_IOTA + "_loc_",
-                        P.COS_IOTA + "_low_",
-                        P.COS_IOTA + "_scale_",
-                    ]
-                )
-
-            if self.use_polarization_angle:
-                all_params_names.extend(
-                    [
-                        P.POLARIZATION_ANGLE + "_high_",
-                        P.POLARIZATION_ANGLE + "_loc_",
-                        P.POLARIZATION_ANGLE + "_low_",
-                        P.POLARIZATION_ANGLE + "_scale_",
-                    ]
                 )
 
             all_params.extend([(name + ct, count) for name in all_params_names])
@@ -496,11 +408,6 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include tilt parameters in the model.",
     )
-    model_group.add_argument(
-        "--add-redshift",
-        action="store_true",
-        help="Include redshift parameter in the model",
-    )
 
     eccentricity_group = model_group.add_mutually_exclusive_group()
     eccentricity_group.add_argument(
@@ -515,33 +422,9 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
 
     model_group.add_argument(
-        "--add-cos-iota",
+        "--add-redshift",
         action="store_true",
-        help="Include cos_iota parameter in the model",
+        help="Include redshift parameter in the model",
     )
-    model_group.add_argument(
-        "--add-phi-12",
-        action="store_true",
-        help="Include phi_12 parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-polarization-angle",
-        action="store_true",
-        help="Include polarization_angle parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-right-ascension",
-        action="store_true",
-        help="Include right_ascension parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-sin-declination",
-        action="store_true",
-        help="Include sin_declination parameter in the model",
-    )
-    model_group.add_argument(
-        "--add-detection-time",
-        action="store_true",
-        help="Include detection_time parameter in the model",
-    )
+
     return parser
