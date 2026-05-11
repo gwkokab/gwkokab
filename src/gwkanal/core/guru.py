@@ -384,7 +384,7 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
     sampler_group = parser.add_argument_group("Sampler Options")
     sampler_group.add_argument(
-        "--sampler-config",
+        "--sampler-cfg",
         help="Path to the JSON file containing the sampler configuration.",
         type=str,
         required=True,
@@ -400,7 +400,7 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
     prior_group = parser.add_argument_group("Prior Options")
     prior_group.add_argument(
-        "--prior-json",
+        "--prior-cfg",
         type=str,
         help="Path to a JSON file containing the prior distributions.",
         default="prior.json",

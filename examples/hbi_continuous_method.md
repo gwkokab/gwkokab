@@ -61,8 +61,8 @@ f_monk_n_pls_m_gs \
     --n-checkpoints 10 \
     --n-max-steps 3 \
     --pmean-cfg pmean.json \
-    --prior-json prior.json \
-    --sampler-config flowMC_config.json
+    --prior-cfg prior.json \
+    --sampler-cfg flowMC_config.json
 ```
 
 ## Analysis of Results
