@@ -74,6 +74,7 @@ class MultiSourceModelCore:
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_eccentricity_powerlaw: bool,
+        use_mean_anomaly: bool,
         use_redshift: bool,
     ) -> None:
         self.N_spl = N_spl
@@ -91,6 +92,7 @@ class MultiSourceModelCore:
         self.use_eccentricity_powerlaw = use_eccentricity_powerlaw
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
+        self.use_mean_anomaly = use_mean_anomaly
         self.use_redshift = use_redshift
 
     def modify_model_params(self, params: dict) -> dict:
@@ -111,6 +113,7 @@ class MultiSourceModelCore:
                 "use_tilt": self.use_tilt,
                 "use_eccentricity_mixture": self.use_eccentricity_mixture,
                 "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
+                "use_mean_anomaly": self.use_mean_anomaly,
                 "use_redshift": self.use_redshift,
             }
         )
@@ -139,6 +142,8 @@ class MultiSourceModelCore:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
         if self.use_eccentricity_mixture or self.use_eccentricity_powerlaw:
             names.append(P.ECCENTRICITY)
+        if self.use_mean_anomaly:
+            names.append(P.MEAN_ANOMALY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
         return names
@@ -318,6 +323,11 @@ class MultiSourceModelCore:
                     ]
                 )
 
+            if self.use_mean_anomaly:
+                all_params_names.extend(
+                    [P.MEAN_ANOMALY + "_high_", P.MEAN_ANOMALY + "_low_"]
+                )
+
             if self.use_redshift:
                 all_params_names.extend(
                     [P.REDSHIFT + "_kappa_", P.REDSHIFT + "_z_max_"]
@@ -421,6 +431,11 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Include power law eccentricity in the model.",
     )
 
+    model_group.add_argument(
+        "--add-mean-anomaly",
+        action="store_true",
+        help="Include mean_anomaly parameter in the model",
+    )
     model_group.add_argument(
         "--add-redshift",
         action="store_true",

@@ -300,6 +300,11 @@ class SubPopulationModelCore:
                     ]
                 )
 
+            if self.use_mean_anomaly:
+                all_params_names.extend(
+                    [P.MEAN_ANOMALY + "_high_", P.MEAN_ANOMALY + "_low_"]
+                )
+
             if self.use_redshift:
                 all_params_names.extend(
                     [P.REDSHIFT + "_kappa_", P.REDSHIFT + "_z_max_"]
