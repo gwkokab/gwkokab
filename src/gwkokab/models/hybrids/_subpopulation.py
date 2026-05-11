@@ -146,35 +146,29 @@ def _build_component_distributions(
         return [], []
 
     if component_type == "spl":
-        mass_distributions = [
-            [d]
-            for d in create_powerlaws(
-                N=N,
-                component_type=component_type,
-                params=params,
-                validate_args=validate_args,
-            )
-        ]
+        _mass_distributions = create_powerlaws(
+            N=N,
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        mass_distributions = [[d] for d in _mass_distributions]
 
     if component_type == "bpl":
-        mass_distributions = [
-            [d]
-            for d in create_broken_powerlaws(
-                N=N, params=params, validate_args=validate_args
-            )
-        ]
+        _mass_distributions = create_broken_powerlaws(
+            N=N, params=params, validate_args=validate_args
+        )
+        mass_distributions = [[d] for d in _mass_distributions]
 
     if component_type == "g":
-        mass_distributions = [
-            [d]
-            for d in create_truncated_normal_distributions(
-                N=N,
-                parameter_name="m1",
-                component_type=component_type,
-                params=params,
-                validate_args=validate_args,
-            )
-        ]
+        _mass_distributions = create_truncated_normal_distributions(
+            N=N,
+            parameter_name="m1",
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
+        )
+        mass_distributions = [[d] for d in _mass_distributions]
 
     build_distributions = _build_non_mass_distributions(
         N=N,
@@ -206,7 +200,7 @@ def _build_component_distributions(
         validate_args=validate_args,
     )
 
-    return mass_distributions, [
+    return _mass_distributions, [
         JointDistribution(*dists, validate_args=validate_args)
         for dists in build_distributions
     ]
