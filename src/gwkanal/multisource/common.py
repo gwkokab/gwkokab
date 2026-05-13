@@ -21,34 +21,26 @@ def where_fns_list(
     if use_beta_spin_magnitude:
 
         def positive_concentration(**kwargs) -> Array:
+            N_spl: int = kwargs.get("N_spl")  # type: ignore
             N_sbpl: int = kwargs.get("N_sbpl")  # type: ignore
             N_gpl: int = kwargs.get("N_gpl")  # type: ignore
             N_gg: int = kwargs.get("N_gg")  # type: ignore
+
             mask = jnp.ones((), dtype=bool)
-            for n_sbpl in range(N_sbpl):
-                chi_mean: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_mean_sbpl_" + str(n_sbpl)
-                )  # type: ignore
-                chi_variance: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_variance_sbpl_" + str(n_sbpl)
-                )  # type: ignore
-                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
-            for n_gpl in range(N_gpl):
-                chi_mean: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_mean_gpl_" + str(n_gpl)
-                )  # type: ignore
-                chi_variance: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_variance_gpl_" + str(n_gpl)
-                )  # type: ignore
-                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
-            for n_gg in range(N_gg):
-                chi_mean: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_mean_gg_" + str(n_gg)
-                )  # type: ignore
-                chi_variance: Array = kwargs.get(
-                    P.PRIMARY_SPIN_MAGNITUDE + "_variance_gg_" + str(n_gg)
-                )  # type: ignore
-                mask &= check_min_concentration_for_beta_dist(chi_mean, chi_variance)
+
+            for ctype, n in zip(
+                ("spl", "sbpl", "gpl", "gg"), (N_spl, N_sbpl, N_gpl, N_gg)
+            ):
+                for n_c in range(n):
+                    chi_mean: Array = kwargs.get(
+                        P.PRIMARY_SPIN_MAGNITUDE + f"_mean_{ctype}_{n_c}"
+                    )  # type: ignore
+                    chi_variance: Array = kwargs.get(
+                        P.PRIMARY_SPIN_MAGNITUDE + f"_variance_{ctype}_{n_c}"
+                    )  # type: ignore
+                    mask &= check_min_concentration_for_beta_dist(
+                        chi_mean, chi_variance
+                    )
             return mask
 
         where_fns.append(positive_concentration)
@@ -151,36 +143,7 @@ class MultiSourceModelCore:
     @property
     def model_parameters(self) -> list[str]:
         all_params: list[tuple[str, int]] = [
-            ("log_rate", self.N_spl + self.N_sbpl + self.N_gpl + self.N_gg),
-            ("alpha_spl", self.N_spl),
-            ("alpha1_sbpl", self.N_sbpl),
-            ("alpha2_sbpl", self.N_sbpl),
-            ("beta_gpl", self.N_gpl),
-            ("beta_sbpl", self.N_sbpl),
-            ("beta_spl", self.N_spl),
-            ("delta_m1_sbpl", self.N_sbpl),
-            ("delta_m1_spl", self.N_spl),
-            ("delta_m2_sbpl", self.N_sbpl),
-            ("delta_m2_spl", self.N_spl),
-            ("loc_gpl", self.N_gpl),
-            ("m1_high_gg", self.N_gg),
-            ("m1_loc_gg", self.N_gg),
-            ("m1_low_gg", self.N_gg),
-            ("m1_scale_gg", self.N_gg),
-            ("m1min_sbpl", self.N_sbpl),
-            ("m1min_spl", self.N_spl),
-            ("m2_high_gg", self.N_gg),
-            ("m2_loc_gg", self.N_gg),
-            ("m2_low_gg", self.N_gg),
-            ("m2_scale_gg", self.N_gg),
-            ("m2min_sbpl", self.N_sbpl),
-            ("m2min_spl", self.N_spl),
-            ("mbreak_sbpl", self.N_sbpl),
-            ("mmax_gpl", self.N_gpl),
-            ("mmax_sbpl", self.N_sbpl),
-            ("mmax_spl", self.N_spl),
-            ("mmin_gpl", self.N_gpl),
-            ("scale_gpl", self.N_gpl),
+            ("log_rate", self.N_spl + self.N_sbpl + self.N_gpl + self.N_gg)
         ]
 
         component_types_and_count = zip(
@@ -190,6 +153,56 @@ class MultiSourceModelCore:
 
         for ct, count in component_types_and_count:
             all_params_names = []
+            if ct == "spl":
+                all_params_names.extend(
+                    [
+                        "alpha_",
+                        "beta_",
+                        "delta_m1_",
+                        "delta_m2_",
+                        "m1min_",
+                        "m2min_",
+                        "mmax_",
+                    ]
+                )
+            if ct == "sbpl":
+                all_params_names.extend(
+                    [
+                        "alpha1_",
+                        "alpha2_",
+                        "beta_",
+                        "delta_m1_",
+                        "delta_m2_",
+                        "m1min_",
+                        "m2min_",
+                        "mbreak_",
+                        "mmax_",
+                    ]
+                )
+            if ct == "gpl":
+                all_params_names.extend(
+                    [
+                        "beta_",
+                        "loc_",
+                        "mmax_",
+                        "mmin_",
+                        "scale_",
+                    ]
+                )
+            if ct == "gg":
+                all_params_names.extend(
+                    [
+                        "m1_high_",
+                        "m1_loc_",
+                        "m1_low_",
+                        "m1_scale_",
+                        "m2_high_",
+                        "m2_loc_",
+                        "m2_low_",
+                        "m2_scale_",
+                    ]
+                )
+
             if self.use_spin_magnitude_mixture:
                 all_params_names.extend(
                     [
