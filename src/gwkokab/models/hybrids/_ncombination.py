@@ -18,6 +18,7 @@ from ...parameters import Parameters as P
 from ..mass import (
     BrokenPowerlaw,
     GaussianPrimaryMassRatio,
+    GenericSmoothedPowerlawMassRatio,
     PowerlawPrimaryMassRatio,
     SmoothedBrokenPowerlawMassRatioPowerlaw,
     SmoothedGaussianPrimaryMassRatio,
@@ -39,8 +40,9 @@ __all__ = [
     "combine_distributions",
     "create_beta_distributions",
     "create_broken_powerlaws",
-    "create_generic_powerlaws",
     "create_gaussian_primary_mass_ratio",
+    "create_generic_powerlaws",
+    "create_generic_smoothed_powerlaw_mass_ratio",
     "create_gwtc4_effective_spin_skew_normal_models",
     "create_independent_spin_orientation_gaussian_isotropic",
     "create_minimum_tilt_model",
@@ -1090,4 +1092,38 @@ def create_smoothed_powerlaw_primary_mass_ratio(
         )
 
         collection.append(distribution)
+    return collection
+
+
+def create_generic_smoothed_powerlaw_mass_ratio(
+    N: int,
+    primary_mass_distributions: List[Distribution],
+    component_type: Literal["spl", "bpl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    collection = []
+
+    beta_name = "beta_" + component_type
+    delta_m1_name = "delta_m1"
+    delta_m2_name = "delta_m2_" + component_type
+    m2min_name = "m2min_" + component_type
+
+    delta_m1 = _get_parameter(params, delta_m1_name)
+    for i in range(N):
+        beta = _get_parameter(params, f"{beta_name}_{i}", beta_name)
+        delta_m2 = _get_parameter(params, f"{delta_m2_name}_{i}", delta_m2_name)
+        m2min = _get_parameter(params, f"{m2min_name}_{i}", m2min_name)
+
+        distribution = GenericSmoothedPowerlawMassRatio(
+            primary_mass_distribution=primary_mass_distributions[i],
+            beta=beta,
+            delta_m1=delta_m1,
+            delta_m2=delta_m2,
+            m2min=m2min,
+            validate_args=validate_args,
+        )
+
+        collection.append(distribution)
+
     return collection

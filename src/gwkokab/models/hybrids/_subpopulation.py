@@ -22,6 +22,7 @@ from ._ncombination import (
     create_beta_distributions,
     create_broken_powerlaws,
     create_generic_powerlaws,
+    create_generic_smoothed_powerlaw_mass_ratio,
     create_gwtc4_effective_spin_skew_normal_models,
     create_independent_spin_orientation_gaussian_isotropic,
     create_powerlaw_redshift,
@@ -31,7 +32,7 @@ from ._ncombination import (
     create_two_truncated_normal_mixture,
     create_uniform_distributions,
 )
-from ._utils import _GenericSubPopulationModel, _M1_GRID_SIZE
+from ._utils import _M1_GRID_SIZE
 
 
 def _build_non_mass_distributions(
@@ -125,13 +126,11 @@ def _build_component_distributions(
             params=params,
             validate_args=validate_args,
         )
-        mass_distributions = [[d] for d in _mass_distributions]
 
     if component_type == "bpl":
         _mass_distributions = create_broken_powerlaws(
             N=N, params=params, validate_args=validate_args
         )
-        mass_distributions = [[d] for d in _mass_distributions]
 
     if component_type == "g":
         _mass_distributions = create_truncated_normal_distributions(
@@ -141,7 +140,16 @@ def _build_component_distributions(
             params=params,
             validate_args=validate_args,
         )
-        mass_distributions = [[d] for d in _mass_distributions]
+
+    _m1q_distributions = create_generic_smoothed_powerlaw_mass_ratio(
+        N=N,
+        primary_mass_distributions=_mass_distributions,
+        component_type=component_type,
+        params=params,
+        validate_args=validate_args,
+    )
+
+    mass_distributions = [[d] for d in _m1q_distributions]
 
     build_distributions = _build_non_mass_distributions(
         N=N,
@@ -221,13 +229,10 @@ def SubPopulationModel(
     _lambdas.append(1.0 - sum(_lambdas))
     lambdas = jnp.stack(_lambdas, axis=-1)
 
-    beta = params.pop("beta")
     delta_m1 = params.pop("delta_m1")
-    delta_m2 = params.pop("delta_m2")
     log_rate = params.pop("log_rate")
     m1max = params.pop("m1max")
     m1min = params.pop("m1min")
-    m2min = params.pop("m2min")
 
     mixing_distribution = CategoricalProbs(probs=lambdas, validate_args=validate_args)
     mass_dist_mixture = MixtureGeneral(
@@ -246,24 +251,13 @@ def SubPopulationModel(
     Z = jnp.trapezoid(_prob_m1, mm, axis=0)
     logZ = jnp.log(Z)
 
-    dist_m1_and_rest = MixtureGeneral(
-        mixing_distribution,
+    log_scales = log_rate - logZ + jnp.log(lambdas)
+
+    return ScaledMixture(
+        log_scales,
         component_dists,
         support=any_constraint(
             [component_dist._support for component_dist in component_dists]
         ),
-        validate_args=validate_args,
-    )
-
-    return _GenericSubPopulationModel(
-        rest_dist=dist_m1_and_rest,
-        beta=beta,
-        delta_m1=delta_m1,
-        delta_m2=delta_m2,
-        m1max=m1max,
-        m1min=m1min,
-        m2min=m2min,
-        log_rate=log_rate,
-        logZ=logZ,
         validate_args=validate_args,
     )

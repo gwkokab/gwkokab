@@ -149,7 +149,11 @@ class SubPopulationModelCore:
         ]
 
         for ct, count in component_types_and_count:
-            all_params_names = []
+            all_params_names = [
+                "beta_",
+                "delta_m2_",
+                "m2min_",
+            ]
 
             if ct == "spl":
                 all_params_names.extend(["alpha_", "mmax_", "mmin_"])
@@ -313,13 +317,10 @@ class SubPopulationModelCore:
             all_params.extend([(name + ct, count) for name in all_params_names])
 
         extended_params = [
-            "beta",
             "delta_m1",
-            "delta_m2",
             "log_rate",
             "m1max",
             "m1min",
-            "m2min",
         ]
         for params in all_params:
             extended_params.extend(expand_arguments(*params))
