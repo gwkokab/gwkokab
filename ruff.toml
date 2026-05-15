@@ -30,14 +30,16 @@ exclude = [
 line-length = 88
 indent-width = 4
 
-target-version = "py311"
+target-version = "py313"
 fix = true
 
+preview = true
+
 [lint]
-select = ["E4", "E7", "E9", "F", "I001"]
+select = ["E3", "E4", "E7", "E9", "F", "I001"]
 ignore = ["E402", "E721", "E731", "E741", "F722", "F403", "F405"]
 
-fixable = ["I001", "F401"]
+fixable = ["I001", "F401", "E3"]
 unfixable = []
 
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
@@ -48,7 +50,7 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 [lint.isort]
 combine-as-imports = true
-extra-standard-library = []
+extra-standard-library = ["typing_extensions"]
 lines-after-imports = 2
 order-by-type = false
 

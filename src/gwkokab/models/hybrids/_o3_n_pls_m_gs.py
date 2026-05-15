@@ -195,9 +195,9 @@ def NSmoothedPowerlawMSmoothedGaussian(
     dist_m1_and_rest = MixtureGeneral(
         mixing_distribution,
         component_dists,
-        support=any_constraint(
-            [component_dist._support for component_dist in component_dists]
-        ),
+        support=any_constraint([
+            component_dist._support for component_dist in component_dists
+        ]),
         validate_args=validate_args,
     )
 

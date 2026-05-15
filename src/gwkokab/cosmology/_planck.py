@@ -33,13 +33,11 @@ def PLANCK_2018_Cosmology() -> Cosmology:
     return Cosmology(h_0, omega_m, 0.0, 1.0 - omega_m)
 
 
-COSMOLOGY_REGISTRY: Final = MappingProxyType(
-    {
-        "Planck13": PLANCK_2013_Cosmology,
-        "Planck15": PLANCK_2015_Cosmology,
-        "Planck18": PLANCK_2018_Cosmology,
-    }
-)
+COSMOLOGY_REGISTRY: Final = MappingProxyType({
+    "Planck13": PLANCK_2013_Cosmology,
+    "Planck15": PLANCK_2015_Cosmology,
+    "Planck18": PLANCK_2018_Cosmology,
+})
 
 
 if (

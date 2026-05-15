@@ -276,8 +276,8 @@ def MultiSourceModel(
     return ScaledMixture(
         log_rates,
         component_dists,
-        support=any_constraint(
-            [component_dists.support for component_dists in component_dists]
-        ),
+        support=any_constraint([
+            component_dists.support for component_dists in component_dists
+        ]),
         validate_args=validate_args,
     )

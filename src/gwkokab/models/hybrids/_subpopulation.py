@@ -256,8 +256,8 @@ def SubPopulationModel(
     return ScaledMixture(
         log_scales,
         component_dists,
-        support=any_constraint(
-            [component_dist._support for component_dist in component_dists]
-        ),
+        support=any_constraint([
+            component_dist._support for component_dist in component_dists
+        ]),
         validate_args=validate_args,
     )

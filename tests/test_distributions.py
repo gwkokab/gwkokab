@@ -447,9 +447,10 @@ def gen_values_within_bounds(constraint, size, key=jrd.key(11)):
         x = x - jrd.normal(key, size[:-1] + (1,))
         x = jnp.reciprocal(x)
         x = jax.nn.sigmoid(x)
-        x = x * jnp.array([constraint.mmax - constraint.mmin, 1.0]) + jnp.array(
-            [constraint.mmin, 0.0]
-        )
+        x = x * jnp.array([constraint.mmax - constraint.mmin, 1.0]) + jnp.array([
+            constraint.mmin,
+            0.0,
+        ])
         return x
     else:
         raise NotImplementedError("{} not implemented.".format(constraint))
@@ -772,6 +773,7 @@ def test_log_prob_gradient(jax_dist, params):
 
         def fn(*args):
             return jnp.sum(jax_dist(*args).log_prob(value))
+
     else:
         params_mapping = {name: i for i, name in enumerate(params.keys())}
 
@@ -785,9 +787,12 @@ def test_log_prob_gradient(jax_dist, params):
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
-        if (jax_dist is NPowerlawMGaussian) and any(
-            [k.startswith("mmin"), k.startswith("mmax"), "low" in k, "high" in k]
-        ):
+        if (jax_dist is NPowerlawMGaussian) and any([
+            k.startswith("mmin"),
+            k.startswith("mmax"),
+            "low" in k,
+            "high" in k,
+        ]):
             continue
         if params[k] is None or jnp.result_type(params[k]) in (jnp.int32, jnp.int64):
             continue
@@ -950,13 +955,9 @@ def _get_vmappable_dist_init_params(jax_dist):
         vmap_over_parameters = list(
             inspect.signature(vmap_over.dispatch(jax_dist)).parameters.keys()
         )[1:]
-        return list(
-            [
-                i
-                for i, name in enumerate(init_parameters)
-                if name in vmap_over_parameters
-            ]
-        )
+        return list([
+            i for i, name in enumerate(init_parameters) if name in vmap_over_parameters
+        ])
     else:
         raise ValueError
 

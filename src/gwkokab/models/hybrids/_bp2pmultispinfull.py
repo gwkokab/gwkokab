@@ -562,22 +562,14 @@ class BrokenPowerlawTwoPeakMultiSpinMultiTilt(Distribution):
             high=self.mmax,
         )
 
-        log_prob_m1_component = jnp.asarray(
-            [
-                jnp.log(self.lambda_0)
-                + log_prob_bpl_1
-                - log_norm_bpl
-                + log_smoothing_m1,
-                jnp.log(self.lambda_0)
-                + log_prob_bpl_2
-                - log_norm_bpl
-                + log_smoothing_m1,
-                jnp.log(self.lambda_1) + log_prob_norm_0 + log_smoothing_m1,
-                jnp.log1p(-(self.lambda_0 + self.lambda_1))
-                + log_prob_norm_1
-                + log_smoothing_m1,
-            ]
-        )
+        log_prob_m1_component = jnp.asarray([
+            jnp.log(self.lambda_0) + log_prob_bpl_1 - log_norm_bpl + log_smoothing_m1,
+            jnp.log(self.lambda_0) + log_prob_bpl_2 - log_norm_bpl + log_smoothing_m1,
+            jnp.log(self.lambda_1) + log_prob_norm_0 + log_smoothing_m1,
+            jnp.log1p(-(self.lambda_0 + self.lambda_1))
+            + log_prob_norm_1
+            + log_smoothing_m1,
+        ])
 
         return jnp.where(
             (self.delta_m1 <= 0.0) | (m1 < self.m1min),

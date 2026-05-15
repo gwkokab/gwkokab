@@ -572,14 +572,12 @@ class TestResolveFromArraysMathematical:
         mesh.add_rule(("a", "b"), "c", lambda a, b: np.sqrt(a**2 + b**2))
 
         # Multiple right triangles
-        initial = np.array(
-            [
-                [3, 4],  # 3-4-5 triangle
-                [5, 12],  # 5-12-13 triangle
-                [8, 15],  # 8-15-17 triangle
-                [7, 24],  # 7-24-25 triangle
-            ]
-        )
+        initial = np.array([
+            [3, 4],  # 3-4-5 triangle
+            [5, 12],  # 5-12-13 triangle
+            [8, 15],  # 8-15-17 triangle
+            [7, 24],  # 7-24-25 triangle
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("a", "b"))
 
         assert result.shape == (4, 3)
@@ -618,13 +616,11 @@ class TestResolveFromArraysMathematical:
         )
 
         # Multiple quadratic equations
-        initial = np.array(
-            [
-                [1, -5, 6],  # x² - 5x + 6 = 0 (roots: 2, 3)
-                [1, -7, 12],  # x² - 7x + 12 = 0 (roots: 3, 4)
-                [1, -3, 2],  # x² - 3x + 2 = 0 (roots: 1, 2)
-            ]
-        )
+        initial = np.array([
+            [1, -5, 6],  # x² - 5x + 6 = 0 (roots: 2, 3)
+            [1, -7, 12],  # x² - 7x + 12 = 0 (roots: 3, 4)
+            [1, -3, 2],  # x² - 3x + 2 = 0 (roots: 1, 2)
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("a", "b", "c"))
 
         assert result.shape == (3, 6)
@@ -643,15 +639,13 @@ class TestResolveFromArraysMathematical:
         )
 
         # Multiple points
-        initial = np.array(
-            [
-                [1, 0],
-                [0, 1],
-                [1, 1],
-                [3, 4],
-                [-1, 1],
-            ]
-        )
+        initial = np.array([
+            [1, 0],
+            [0, 1],
+            [1, 1],
+            [3, 4],
+            [-1, 1],
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("x", "y"))
 
         assert result.shape == (5, 4)
@@ -673,13 +667,11 @@ class TestResolveFromArraysPhysics:
         mesh.add_rule(("u", "a", "t"), "s", lambda u, a, t: u * t + 0.5 * a * t**2)
 
         # Multiple objects with different initial conditions
-        initial = np.array(
-            [
-                [0, 10, 3],  # u=0, a=10, t=3
-                [5, 5, 2],  # u=5, a=5, t=2
-                [10, -2, 5],  # u=10, a=-2, t=5 (deceleration)
-            ]
-        )
+        initial = np.array([
+            [0, 10, 3],  # u=0, a=10, t=3
+            [5, 5, 2],  # u=5, a=5, t=2
+            [10, -2, 5],  # u=10, a=-2, t=5 (deceleration)
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("u", "a", "t"))
 
         assert result.shape == (3, 5)
@@ -703,13 +695,11 @@ class TestResolveFromArraysPhysics:
         )
 
         # Multiple objects
-        initial = np.array(
-            [
-                [1, 10, 10, 5],  # m=1, v=10, g=10, h=5
-                [2, 5, 10, 10],  # m=2, v=5, g=10, h=10
-                [5, 4, 9.8, 2],  # m=5, v=4, g=9.8, h=2
-            ]
-        )
+        initial = np.array([
+            [1, 10, 10, 5],  # m=1, v=10, g=10, h=5
+            [2, 5, 10, 10],  # m=2, v=5, g=10, h=10
+            [5, 4, 9.8, 2],  # m=5, v=4, g=9.8, h=2
+        ])
         result, params = mesh.resolve_from_arrays(
             initial, ("mass", "velocity", "g", "height")
         )
@@ -727,14 +717,12 @@ class TestResolveFromArraysPhysics:
         mesh.add_rule(("voltage", "current"), "power", lambda v, i: v * i)
 
         # Multiple circuits
-        initial = np.array(
-            [
-                [12, 4],  # V=12, R=4
-                [9, 3],  # V=9, R=3
-                [5, 10],  # V=5, R=10
-                [24, 6],  # V=24, R=6
-            ]
-        )
+        initial = np.array([
+            [12, 4],  # V=12, R=4
+            [9, 3],  # V=9, R=3
+            [5, 10],  # V=5, R=10
+            [24, 6],  # V=24, R=6
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("voltage", "resistance"))
 
         assert result.shape == (4, 4)
@@ -754,13 +742,11 @@ class TestResolveFromArraysPhysics:
         mesh.add_rule(("vy",), "max_height", lambda vy: vy**2 / (2 * g))
 
         # Multiple launches at different angles and speeds
-        initial = np.array(
-            [
-                [20, np.pi / 4],  # 45 degrees
-                [30, np.pi / 6],  # 30 degrees
-                [25, np.pi / 3],  # 60 degrees
-            ]
-        )
+        initial = np.array([
+            [20, np.pi / 4],  # 45 degrees
+            [30, np.pi / 6],  # 30 degrees
+            [25, np.pi / 3],  # 60 degrees
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("v0", "angle"))
 
         assert result.shape == (3, 7)
@@ -905,14 +891,12 @@ class TestResolveFromArraysRealWorld:
         )
 
         # Multiple investments
-        initial = np.array(
-            [
-                [1000, 0.05, 10],
-                [5000, 0.07, 5],
-                [10000, 0.04, 20],
-                [2500, 0.06, 15],
-            ]
-        )
+        initial = np.array([
+            [1000, 0.05, 10],
+            [5000, 0.07, 5],
+            [10000, 0.04, 20],
+            [2500, 0.06, 15],
+        ])
         result, params = mesh.resolve_from_arrays(
             initial, ("principal", "rate", "time")
         )
@@ -956,15 +940,13 @@ class TestResolveFromArraysRealWorld:
         # Multiple data points with same mean and std
         mean_val = 100
         std_val = 15
-        initial = np.array(
-            [
-                [85, mean_val, std_val],
-                [100, mean_val, std_val],
-                [115, mean_val, std_val],
-                [70, mean_val, std_val],
-                [130, mean_val, std_val],
-            ]
-        )
+        initial = np.array([
+            [85, mean_val, std_val],
+            [100, mean_val, std_val],
+            [115, mean_val, std_val],
+            [70, mean_val, std_val],
+            [130, mean_val, std_val],
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("value", "mean", "std"))
 
         assert result.shape == (5, 5)
@@ -1001,14 +983,12 @@ class TestResolveFromArraysRealWorld:
         )  # for squares
 
         # Multiple rectangles
-        initial = np.array(
-            [
-                [5, 3],
-                [10, 8],
-                [7, 7],  # square
-                [12, 5],
-            ]
-        )
+        initial = np.array([
+            [5, 3],
+            [10, 8],
+            [7, 7],  # square
+            [12, 5],
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("length", "width"))
 
         assert result.shape == (4, 5)
@@ -1059,13 +1039,11 @@ class TestResolveFromArraysNumerical:
         mesh = RelationMesh()
         mesh.add_rule(("x",), "y", lambda x: x / 2)
 
-        initial = np.array(
-            [
-                [np.inf],
-                [-np.inf],
-                [10],
-            ]
-        )
+        initial = np.array([
+            [np.inf],
+            [-np.inf],
+            [10],
+        ])
         result, params = mesh.resolve_from_arrays(initial, ("x",))
 
         assert result.shape == (3, 2)

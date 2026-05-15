@@ -195,13 +195,11 @@ def load_injection_data(
                 keys += [
                     key
                     for key in ff["events"].dtype.names
-                    if any(
-                        [
-                            key.startswith(f"{substr}_"),
-                            key.endswith(f"_{substr}"),
-                            f"_{substr}_" in key,
-                        ]
-                    )
+                    if any([
+                        key.startswith(f"{substr}_"),
+                        key.endswith(f"_{substr}"),
+                        f"_{substr}_" in key,
+                    ])
                 ]
 
             data = {key: np.array(ff["events"][key][()]) for key in keys}

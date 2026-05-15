@@ -71,12 +71,10 @@ def GaussianSpinModel(
     """
     return MultivariateNormal(
         loc=jnp.array([mu_eff, mu_p]),
-        covariance_matrix=jnp.array(
-            [
-                [jnp.square(sigma_eff), rho * sigma_eff * sigma_p],
-                [rho * sigma_eff * sigma_p, jnp.square(sigma_p)],
-            ]
-        ),
+        covariance_matrix=jnp.array([
+            [jnp.square(sigma_eff), rho * sigma_eff * sigma_p],
+            [rho * sigma_eff * sigma_p, jnp.square(sigma_p)],
+        ]),
         validate_args=validate_args,
     )
 

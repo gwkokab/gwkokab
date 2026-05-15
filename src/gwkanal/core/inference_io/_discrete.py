@@ -53,9 +53,9 @@ class DiscretePELoader(BaseModel):
     max_samples: Optional[PositiveInt] = Field(None)
     """If set, limits the number of samples loaded per event to this value."""
 
-    default_datasets: tuple[str, ...] = Field(
-        ("/GWKokabSyntheticDiscretePE/posterior_samples",)
-    )
+    default_datasets: tuple[str, ...] = Field((
+        "/GWKokabSyntheticDiscretePE/posterior_samples",
+    ))
     """Default dataset names to look for in HDF5 files, in order of preference."""
 
     alternate_datasets: dict[str, str] = Field(default_factory=dict)

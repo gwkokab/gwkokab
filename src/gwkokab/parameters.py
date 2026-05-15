@@ -185,9 +185,9 @@ class RelationMesh:
         resolved_dict = self.resolve(state_dict)
         # Sort keys to ensure a deterministic column order in the output
         resolved_order = tuple(sorted(resolved_dict.keys(), key=str))
-        resolved_array = np.column_stack(
-            [resolved_dict[param] for param in resolved_order]
-        )
+        resolved_array = np.column_stack([
+            resolved_dict[param] for param in resolved_order
+        ])
         return resolved_array, resolved_order
 
 

@@ -161,14 +161,12 @@ def main() -> None:
 
     file_list = glob.glob(args.data_regex)
 
-    plt.rcParams.update(
-        {
-            "text.usetex": args.use_latex,
-            "axes.prop_cycle": plt.cycler(
-                color=glasbey.create_palette(palette_size=len(file_list))
-            ),
-        }
-    )
+    plt.rcParams.update({
+        "text.usetex": args.use_latex,
+        "axes.prop_cycle": plt.cycler(
+            color=glasbey.create_palette(palette_size=len(file_list))
+        ),
+    })
     if args.font_family is not None:
         plt.rcParams.update({"font.family": args.font_family})
 

@@ -88,27 +88,25 @@ class MultiSourceModelCore:
         self.use_redshift = use_redshift
 
     def modify_model_params(self, params: dict) -> dict:
-        params.update(
-            {
-                "N_spl": self.N_spl,
-                "N_sbpl": self.N_sbpl,
-                "N_gpl": self.N_gpl,
-                "N_gg": self.N_gg,
-                "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
-                "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
-                "use_truncated_normal_spin_x": self.use_truncated_normal_spin_x,
-                "use_truncated_normal_spin_y": self.use_truncated_normal_spin_y,
-                "use_truncated_normal_spin_z": self.use_truncated_normal_spin_z,
-                "use_chi_eff_mixture": self.use_chi_eff_mixture,
-                "use_skew_normal_chi_eff": self.use_skew_normal_chi_eff,
-                "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
-                "use_tilt": self.use_tilt,
-                "use_eccentricity_mixture": self.use_eccentricity_mixture,
-                "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
-                "use_mean_anomaly": self.use_mean_anomaly,
-                "use_redshift": self.use_redshift,
-            }
-        )
+        params.update({
+            "N_spl": self.N_spl,
+            "N_sbpl": self.N_sbpl,
+            "N_gpl": self.N_gpl,
+            "N_gg": self.N_gg,
+            "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
+            "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
+            "use_truncated_normal_spin_x": self.use_truncated_normal_spin_x,
+            "use_truncated_normal_spin_y": self.use_truncated_normal_spin_y,
+            "use_truncated_normal_spin_z": self.use_truncated_normal_spin_z,
+            "use_chi_eff_mixture": self.use_chi_eff_mixture,
+            "use_skew_normal_chi_eff": self.use_skew_normal_chi_eff,
+            "use_truncated_normal_chi_p": self.use_truncated_normal_chi_p,
+            "use_tilt": self.use_tilt,
+            "use_eccentricity_mixture": self.use_eccentricity_mixture,
+            "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
+            "use_mean_anomaly": self.use_mean_anomaly,
+            "use_redshift": self.use_redshift,
+        })
         return params
 
     @property
@@ -154,197 +152,171 @@ class MultiSourceModelCore:
         for ct, count in component_types_and_count:
             all_params_names = []
             if ct == "spl":
-                all_params_names.extend(
-                    [
-                        "alpha_",
-                        "beta_",
-                        "delta_m1_",
-                        "delta_m2_",
-                        "m1min_",
-                        "m2min_",
-                        "mmax_",
-                    ]
-                )
+                all_params_names.extend([
+                    "alpha_",
+                    "beta_",
+                    "delta_m1_",
+                    "delta_m2_",
+                    "m1min_",
+                    "m2min_",
+                    "mmax_",
+                ])
             if ct == "sbpl":
-                all_params_names.extend(
-                    [
-                        "alpha1_",
-                        "alpha2_",
-                        "beta_",
-                        "delta_m1_",
-                        "delta_m2_",
-                        "m1min_",
-                        "m2min_",
-                        "mbreak_",
-                        "mmax_",
-                    ]
-                )
+                all_params_names.extend([
+                    "alpha1_",
+                    "alpha2_",
+                    "beta_",
+                    "delta_m1_",
+                    "delta_m2_",
+                    "m1min_",
+                    "m2min_",
+                    "mbreak_",
+                    "mmax_",
+                ])
             if ct == "gpl":
-                all_params_names.extend(
-                    [
-                        "beta_",
-                        "loc_",
-                        "mmax_",
-                        "mmin_",
-                        "scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    "beta_",
+                    "loc_",
+                    "mmax_",
+                    "mmin_",
+                    "scale_",
+                ])
             if ct == "gg":
-                all_params_names.extend(
-                    [
-                        "m1_high_",
-                        "m1_loc_",
-                        "m1_low_",
-                        "m1_scale_",
-                        "m2_high_",
-                        "m2_loc_",
-                        "m2_low_",
-                        "m2_scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    "m1_high_",
+                    "m1_loc_",
+                    "m1_low_",
+                    "m1_scale_",
+                    "m2_high_",
+                    "m2_loc_",
+                    "m2_low_",
+                    "m2_scale_",
+                ])
 
             if self.use_spin_magnitude_mixture:
-                all_params_names.extend(
-                    [
-                        "a_zeta_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_comp1_loc_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_comp1_low_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_comp1_scale_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_comp2_high_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_comp2_loc_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_comp2_low_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_comp2_scale_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_comp1_high_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_comp1_loc_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_comp1_low_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_comp1_scale_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_comp2_high_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_comp2_loc_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_comp2_low_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_comp2_scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    "a_zeta_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_comp1_loc_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_comp1_low_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_comp1_scale_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_comp2_high_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_comp2_loc_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_comp2_low_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_comp2_scale_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_comp1_high_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_comp1_loc_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_comp1_low_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_comp1_scale_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_comp2_high_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_comp2_loc_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_comp2_low_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_comp2_scale_",
+                ])
 
             if self.use_beta_spin_magnitude:
-                all_params_names.extend(
-                    [
-                        P.PRIMARY_SPIN_MAGNITUDE + "_mean_",
-                        P.PRIMARY_SPIN_MAGNITUDE + "_variance_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_mean_",
-                        P.SECONDARY_SPIN_MAGNITUDE + "_variance_",
-                    ]
-                )
+                all_params_names.extend([
+                    P.PRIMARY_SPIN_MAGNITUDE + "_mean_",
+                    P.PRIMARY_SPIN_MAGNITUDE + "_variance_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_mean_",
+                    P.SECONDARY_SPIN_MAGNITUDE + "_variance_",
+                ])
 
             if self.use_truncated_normal_spin_x:
-                all_params_names.extend(
-                    [
-                        P.PRIMARY_SPIN_X + "_high_",
-                        P.PRIMARY_SPIN_X + "_loc_",
-                        P.PRIMARY_SPIN_X + "_low_",
-                        P.PRIMARY_SPIN_X + "_scale_",
-                        P.SECONDARY_SPIN_X + "_high_",
-                        P.SECONDARY_SPIN_X + "_loc_",
-                        P.SECONDARY_SPIN_X + "_low_",
-                        P.SECONDARY_SPIN_X + "_scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    P.PRIMARY_SPIN_X + "_high_",
+                    P.PRIMARY_SPIN_X + "_loc_",
+                    P.PRIMARY_SPIN_X + "_low_",
+                    P.PRIMARY_SPIN_X + "_scale_",
+                    P.SECONDARY_SPIN_X + "_high_",
+                    P.SECONDARY_SPIN_X + "_loc_",
+                    P.SECONDARY_SPIN_X + "_low_",
+                    P.SECONDARY_SPIN_X + "_scale_",
+                ])
 
             if self.use_truncated_normal_spin_y:
-                all_params_names.extend(
-                    [
-                        P.PRIMARY_SPIN_Y + "_high_",
-                        P.PRIMARY_SPIN_Y + "_loc_",
-                        P.PRIMARY_SPIN_Y + "_low_",
-                        P.PRIMARY_SPIN_Y + "_scale_",
-                        P.SECONDARY_SPIN_Y + "_high_",
-                        P.SECONDARY_SPIN_Y + "_loc_",
-                        P.SECONDARY_SPIN_Y + "_low_",
-                        P.SECONDARY_SPIN_Y + "_scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    P.PRIMARY_SPIN_Y + "_high_",
+                    P.PRIMARY_SPIN_Y + "_loc_",
+                    P.PRIMARY_SPIN_Y + "_low_",
+                    P.PRIMARY_SPIN_Y + "_scale_",
+                    P.SECONDARY_SPIN_Y + "_high_",
+                    P.SECONDARY_SPIN_Y + "_loc_",
+                    P.SECONDARY_SPIN_Y + "_low_",
+                    P.SECONDARY_SPIN_Y + "_scale_",
+                ])
 
             if self.use_truncated_normal_spin_z:
-                all_params_names.extend(
-                    [
-                        P.PRIMARY_SPIN_Z + "_high_",
-                        P.PRIMARY_SPIN_Z + "_loc_",
-                        P.PRIMARY_SPIN_Z + "_low_",
-                        P.PRIMARY_SPIN_Z + "_scale_",
-                        P.SECONDARY_SPIN_Z + "_high_",
-                        P.SECONDARY_SPIN_Z + "_loc_",
-                        P.SECONDARY_SPIN_Z + "_low_",
-                        P.SECONDARY_SPIN_Z + "_scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    P.PRIMARY_SPIN_Z + "_high_",
+                    P.PRIMARY_SPIN_Z + "_loc_",
+                    P.PRIMARY_SPIN_Z + "_low_",
+                    P.PRIMARY_SPIN_Z + "_scale_",
+                    P.SECONDARY_SPIN_Z + "_high_",
+                    P.SECONDARY_SPIN_Z + "_loc_",
+                    P.SECONDARY_SPIN_Z + "_low_",
+                    P.SECONDARY_SPIN_Z + "_scale_",
+                ])
 
             if self.use_chi_eff_mixture:
-                all_params_names.extend(
-                    [
-                        P.EFFECTIVE_SPIN + "_comp1_high_",
-                        P.EFFECTIVE_SPIN + "_comp1_loc_",
-                        P.EFFECTIVE_SPIN + "_comp1_low_",
-                        P.EFFECTIVE_SPIN + "_comp1_scale_",
-                        P.EFFECTIVE_SPIN + "_comp2_high_",
-                        P.EFFECTIVE_SPIN + "_comp2_loc_",
-                        P.EFFECTIVE_SPIN + "_comp2_low_",
-                        P.EFFECTIVE_SPIN + "_comp2_scale_",
-                        P.EFFECTIVE_SPIN + "_zeta_",
-                    ]
-                )
+                all_params_names.extend([
+                    P.EFFECTIVE_SPIN + "_comp1_high_",
+                    P.EFFECTIVE_SPIN + "_comp1_loc_",
+                    P.EFFECTIVE_SPIN + "_comp1_low_",
+                    P.EFFECTIVE_SPIN + "_comp1_scale_",
+                    P.EFFECTIVE_SPIN + "_comp2_high_",
+                    P.EFFECTIVE_SPIN + "_comp2_loc_",
+                    P.EFFECTIVE_SPIN + "_comp2_low_",
+                    P.EFFECTIVE_SPIN + "_comp2_scale_",
+                    P.EFFECTIVE_SPIN + "_zeta_",
+                ])
 
             if self.use_skew_normal_chi_eff:
-                all_params_names.extend(
-                    [
-                        P.EFFECTIVE_SPIN + "_epsilon_",
-                        P.EFFECTIVE_SPIN + "_loc_",
-                        P.EFFECTIVE_SPIN + "_scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    P.EFFECTIVE_SPIN + "_epsilon_",
+                    P.EFFECTIVE_SPIN + "_loc_",
+                    P.EFFECTIVE_SPIN + "_scale_",
+                ])
 
             if self.use_truncated_normal_chi_p:
-                all_params_names.extend(
-                    [
-                        P.PRECESSING_SPIN + "_high_",
-                        P.PRECESSING_SPIN + "_loc_",
-                        P.PRECESSING_SPIN + "_low_",
-                        P.PRECESSING_SPIN + "_scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    P.PRECESSING_SPIN + "_high_",
+                    P.PRECESSING_SPIN + "_loc_",
+                    P.PRECESSING_SPIN + "_low_",
+                    P.PRECESSING_SPIN + "_scale_",
+                ])
 
             if self.use_tilt:
-                all_params_names.extend(
-                    [
-                        "cos_tilt_zeta_",
-                        P.COS_TILT_1 + "_scale_",
-                        P.COS_TILT_2 + "_scale_",
-                    ]
-                )
+                all_params_names.extend([
+                    "cos_tilt_zeta_",
+                    P.COS_TILT_1 + "_scale_",
+                    P.COS_TILT_2 + "_scale_",
+                ])
 
             if self.use_eccentricity_mixture:
-                all_params_names.extend(
-                    [
-                        P.ECCENTRICITY + "_comp1_high_",
-                        P.ECCENTRICITY + "_comp1_loc_",
-                        P.ECCENTRICITY + "_comp1_low_",
-                        P.ECCENTRICITY + "_comp1_scale_",
-                        P.ECCENTRICITY + "_comp2_high_",
-                        P.ECCENTRICITY + "_comp2_loc_",
-                        P.ECCENTRICITY + "_comp2_low_",
-                        P.ECCENTRICITY + "_comp2_scale_",
-                        P.ECCENTRICITY + "_zeta_",
-                    ]
-                )
+                all_params_names.extend([
+                    P.ECCENTRICITY + "_comp1_high_",
+                    P.ECCENTRICITY + "_comp1_loc_",
+                    P.ECCENTRICITY + "_comp1_low_",
+                    P.ECCENTRICITY + "_comp1_scale_",
+                    P.ECCENTRICITY + "_comp2_high_",
+                    P.ECCENTRICITY + "_comp2_loc_",
+                    P.ECCENTRICITY + "_comp2_low_",
+                    P.ECCENTRICITY + "_comp2_scale_",
+                    P.ECCENTRICITY + "_zeta_",
+                ])
 
             if self.use_mean_anomaly:
-                all_params_names.extend(
-                    [P.MEAN_ANOMALY + "_high_", P.MEAN_ANOMALY + "_low_"]
-                )
+                all_params_names.extend([
+                    P.MEAN_ANOMALY + "_high_",
+                    P.MEAN_ANOMALY + "_low_",
+                ])
 
             if self.use_redshift:
-                all_params_names.extend(
-                    [P.REDSHIFT + "_kappa_", P.REDSHIFT + "_z_max_"]
-                )
+                all_params_names.extend([
+                    P.REDSHIFT + "_kappa_",
+                    P.REDSHIFT + "_z_max_",
+                ])
 
             all_params.extend([(name + ct, count) for name in all_params_names])
 

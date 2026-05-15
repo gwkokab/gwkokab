@@ -684,30 +684,24 @@ def _transform_to_positive_ordered_vector(constraint):
 
 @biject_to.register(mass_sandwich)
 def _transform_to_mass_sandwich(constraint):
-    return ComposeTransform(
-        [
-            AbsTransform(),
-            OrderedTransform(),
-            PowerTransform(-1.0),
-            SigmoidTransform(),
-            AffineTransform(
-                loc=constraint.mmin, scale=constraint.mmax - constraint.mmin
-            ),
-        ]
-    )
+    return ComposeTransform([
+        AbsTransform(),
+        OrderedTransform(),
+        PowerTransform(-1.0),
+        SigmoidTransform(),
+        AffineTransform(loc=constraint.mmin, scale=constraint.mmax - constraint.mmin),
+    ])
 
 
 @biject_to.register(mass_ratio_mass_sandwich)
 def _transform_to_mass_sandwich(constraint):
-    return ComposeTransform(
-        [
-            AbsTransform(),
-            OrderedTransform(),
-            PowerTransform(-1.0),
-            SigmoidTransform(),
-            AffineTransform(
-                loc=jnp.array([constraint.mmin, 0.0]),
-                scale=jnp.array([constraint.mmax - constraint.mmin, 1.0]),
-            ),
-        ]
-    )
+    return ComposeTransform([
+        AbsTransform(),
+        OrderedTransform(),
+        PowerTransform(-1.0),
+        SigmoidTransform(),
+        AffineTransform(
+            loc=jnp.array([constraint.mmin, 0.0]),
+            scale=jnp.array([constraint.mmax - constraint.mmin, 1.0]),
+        ),
+    ])

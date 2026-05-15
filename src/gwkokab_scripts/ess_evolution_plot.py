@@ -126,13 +126,9 @@ def main() -> None:
     chains = np.array([np.loadtxt(filename) for filename in chains_filenames])
 
     n_dims = chains.shape[1]
-    plt.rcParams.update(
-        {
-            "axes.prop_cycle": plt.cycler(
-                color=glasbey.create_palette(palette_size=n_dims)
-            )
-        }
-    )
+    plt.rcParams.update({
+        "axes.prop_cycle": plt.cycler(color=glasbey.create_palette(palette_size=n_dims))
+    })
 
     ## Load data as arviz InferenceData class
     idata = az.convert_to_inference_data(chains)
@@ -149,18 +145,16 @@ def main() -> None:
     n_split = args.n_split
     draw_divisions = np.linspace(n_draws // n_split, n_draws, n_split, dtype=int)
 
-    ess_s = np.stack(
-        [
-            np.array(
-                az.ess(
-                    data.sel(draw=slice(first_draw + draw_div)),
-                    var_names=var_names,
-                    method=args.method,
-                )["x"]
-            )
-            for draw_div in draw_divisions
-        ]
-    )
+    ess_s = np.stack([
+        np.array(
+            az.ess(
+                data.sel(draw=slice(first_draw + draw_div)),
+                var_names=var_names,
+                method=args.method,
+            )["x"]
+        )
+        for draw_div in draw_divisions
+    ])
     labels = args.labels if args.labels is not None else chains_filenames
 
     plt.plot(draw_divisions, ess_s, "-o", label=labels)
