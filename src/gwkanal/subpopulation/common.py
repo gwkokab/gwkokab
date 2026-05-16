@@ -158,10 +158,11 @@ class SubPopulationModelCore:
 
             if ct == "bpl":
                 all_params_names.extend([
-                    "alpha_",
-                    "m1min_",
-                    "m2min_",
-                    "mmax_",
+                    "alpha1_bpl",
+                    "alpha2_bpl",
+                    "m1break_bpl",
+                    "m1max_bpl",
+                    "m1min_bpl",
                 ])
 
             if ct == "g":
