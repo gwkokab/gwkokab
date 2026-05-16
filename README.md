@@ -13,6 +13,7 @@
 A JAX-based gravitational-wave population inference toolkit for parametric models
 </h2>
 
+
 [**Installation**](https://gwkokab.readthedocs.io/en/latest/installation.html) |
 [**Documentation**](https://gwkokab.readthedocs.io/) |
 [**Examples/Tutorials**](https://gwkokab.readthedocs.io/en/latest/examples.html) |
@@ -29,6 +30,10 @@ A JAX-based gravitational-wave population inference toolkit for parametric model
 GWKokab is a JAX-based gravitational-wave population inference toolkit. It is designed to be a high-performance, flexible, easy-to-use library for sampling from a wide range of gravitational-wave population models. It is built on top of JAX, a high-performance numerical computing library, and is designed to be easily integrated into existing JAX workflows.
 
 If you would like to contribute, please see the [contributing guidelines](https://gwkokab.readthedocs.io/en/latest/dev_docs/contributing.html).
+
+<h2 align="center">
+[Command Line Base Example setup: Please clone this to setup your runs](https://huggingface.co/datasets/kokabsc/GWKokab_example/tree/main)
+</h2>
 
 ## Citing GWKokab
 
