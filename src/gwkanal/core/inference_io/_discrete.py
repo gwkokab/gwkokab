@@ -90,25 +90,16 @@ class DiscretePELoader(BaseModel):
     prior.
     """
 
-    alternate_spin_priors: dict[
-        str,
-        Literal[
-            None,
-            "component",
-        ],
-    ] = Field(default_factory=dict)
+    alternate_spin_priors: dict[str, Literal[None, "component"]] = Field(
+        default_factory=dict
+    )
     """Mapping of filenames to an alternate spin prior, overriding the default spin
     prior.
     """
 
-    alternate_distance_priors: dict[
-        str,
-        Literal[
-            None,
-            "comoving",
-            "euclidean",
-        ],
-    ] = Field(default_factory=dict)
+    alternate_distance_priors: dict[str, Literal[None, "comoving", "euclidean"]] = (
+        Field(default_factory=dict)
+    )
     """Mapping of filenames to an alternate distance prior, overriding the default
     distance prior.
     """
