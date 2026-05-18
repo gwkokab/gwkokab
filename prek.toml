@@ -8,7 +8,7 @@ files = "src||scripts||tests||examples"
 
 [[repos]]
 repo = "https://github.com/astral-sh/ruff-pre-commit"
-rev = "v0.15.12"
+rev = "v0.15.13"
 hooks = [
     {
         id = "ruff-check",
@@ -96,7 +96,7 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/python-jsonschema/check-jsonschema"
-rev = "0.37.1"
+rev = "0.37.2"
 hooks = [
     { id = "check-dependabot" },
     { id = "check-github-workflows" },
@@ -147,5 +147,5 @@ hooks = [
 
 [[repos]]
 repo = "https://github.com/tombi-toml/tombi-pre-commit"
-rev = "v0.9.25"
+rev = "v0.11.5"
 hooks = [{ id = "tombi-format" }, { id = "tombi-lint" }]
