@@ -110,7 +110,7 @@ genie_n_pls_m_gs \
     --error-size 10000 \
     --num-realizations 1 \
     --seed $RANDOM \
-    --model-json model.json \
+    --model-cfg model.json \
     --pmean-cfg pmean.json \
     --err-json err.json
 ```
