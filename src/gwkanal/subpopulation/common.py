@@ -105,7 +105,7 @@ class SubPopulationModelCore:
 
     @property
     def parameters(self) -> tuple[str, ...]:
-        names = [P.PRIMARY_MASS_SOURCE]
+        names = [P.PRIMARY_MASS_SOURCE, P.MASS_RATIO]
         if self.use_beta_spin_magnitude or self.use_spin_magnitude_mixture:
             names.append(P.PRIMARY_SPIN_MAGNITUDE)
             names.append(P.SECONDARY_SPIN_MAGNITUDE)
@@ -130,7 +130,6 @@ class SubPopulationModelCore:
             names.append(P.MEAN_ANOMALY)
         if self.use_redshift:
             names.append(P.REDSHIFT)
-        names.append(P.MASS_RATIO)
         return names
 
     @property
