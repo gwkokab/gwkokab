@@ -60,7 +60,7 @@ class NBrokenPowerlawMGaussianCore:
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_eccentricity_powerlaw: bool,
-        use_redshift: bool,
+        use_powerlaw_redshift: bool,
     ) -> None:
         self.N_bpl = N_bpl
         self.N_g = N_g
@@ -72,7 +72,7 @@ class NBrokenPowerlawMGaussianCore:
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_eccentricity_powerlaw = use_eccentricity_powerlaw
-        self.use_redshift = use_redshift
+        self.use_powerlaw_redshift = use_powerlaw_redshift
 
     def modify_model_params(self, params: dict) -> dict:
         params.update({
@@ -86,7 +86,7 @@ class NBrokenPowerlawMGaussianCore:
             "use_tilt": self.use_tilt,
             "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
-            "use_redshift": self.use_redshift,
+            "use_powerlaw_redshift": self.use_powerlaw_redshift,
         })
         return params
 
@@ -104,7 +104,7 @@ class NBrokenPowerlawMGaussianCore:
             names.extend([P.COS_TILT_1, P.COS_TILT_2])
         if self.use_eccentricity_mixture or self.use_eccentricity_powerlaw:
             names.append(P.ECCENTRICITY)
-        if self.use_redshift:
+        if self.use_powerlaw_redshift:
             names.append(P.REDSHIFT)
         names.append(P.MASS_RATIO)
         return names
@@ -268,7 +268,7 @@ class NBrokenPowerlawMGaussianCore:
                 (P.ECCENTRICITY + "_low_g", self.N_g),
             ])
 
-        if self.use_redshift:
+        if self.use_powerlaw_redshift:
             all_params.extend([
                 (P.REDSHIFT + "_kappa_g", self.N_g),
                 (P.REDSHIFT + "_kappa_bpl", self.N_bpl),
@@ -351,7 +351,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     )
 
     model_group.add_argument(
-        "--add-redshift",
+        "--add-powerlaw-redshift",
         action="store_true",
         help="Include redshift parameter in the model",
     )

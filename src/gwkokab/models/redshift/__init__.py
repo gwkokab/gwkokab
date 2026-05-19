@@ -3,6 +3,6 @@
 
 
 from ._models import (
-    MadauDickinsonRedshift as MadauDickinsonRedshift,
-    PowerlawRedshift as PowerlawRedshift,
+    MadauDickinsonRedshiftModel as MadauDickinsonRedshiftModel,
+    PowerlawRedshiftModel as PowerlawRedshiftModel,
 )

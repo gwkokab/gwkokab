@@ -19,7 +19,7 @@ from ._ncombination import (
     create_generic_powerlaws,
     create_gwtc4_effective_spin_skew_normal_models,
     create_minimum_tilt_model,
-    create_powerlaw_redshift,
+    create_powerlaw_redshift_model,
     create_spin_magnitude_mixture_models,
     create_truncated_normal_distributions,
     create_two_truncated_normal_mixture,
@@ -42,7 +42,7 @@ def build_non_mass_distributions(
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_eccentricity_powerlaw: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
@@ -59,7 +59,7 @@ def build_non_mass_distributions(
         (use_tilt, P.COS_TILT_1 + "_" + P.COS_TILT_2, create_minimum_tilt_model),
         (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
         (use_eccentricity_powerlaw, P.ECCENTRICITY, create_generic_powerlaws),
-        (use_redshift, P.REDSHIFT, create_powerlaw_redshift),
+        (use_powerlaw_redshift, P.REDSHIFT, create_powerlaw_redshift_model),
 
     ]
     # fmt: on

@@ -24,7 +24,7 @@ from ..mass import (
     SmoothedGaussianPrimaryMassRatio,
     SmoothedPowerlawPrimaryMassRatio,
 )
-from ..redshift import PowerlawRedshift
+from ..redshift import MadauDickinsonRedshiftModel, PowerlawRedshiftModel
 from ..spin import (
     BetaFromMeanVar,
     GWTC4EffectiveSpinSkewNormalModel,
@@ -45,9 +45,10 @@ __all__ = [
     "create_generic_smoothed_powerlaw_mass_ratio",
     "create_gwtc4_effective_spin_skew_normal_models",
     "create_independent_spin_orientation_gaussian_isotropic",
+    "create_madau_dickinson_redshift_model",
     "create_minimum_tilt_model",
     "create_powerlaw_primary_mass_ratios",
-    "create_powerlaw_redshift",
+    "create_powerlaw_redshift_model",
     "create_powerlaws",
     "create_smoothed_broken_powerlaws_mass_ratio_powerlaw",
     "create_smoothed_gaussian_primary_mass_ratio",
@@ -352,14 +353,14 @@ def create_powerlaw_primary_mass_ratios(
     return powerlaws_collection
 
 
-def create_powerlaw_redshift(
+def create_powerlaw_redshift_model(
     N: int,
     parameter_name: Literal["redshift"],
     component_type: Literal["pl", "g"],
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of PowerlawRedshift distributions.
+    """Create a list of PowerlawRedshiftModel distributions.
 
     Parameters
     ----------
@@ -377,25 +378,81 @@ def create_powerlaw_redshift(
     Returns
     -------
     List[Distribution]
-        list of PowerlawRedshift distributions
+        list of PowerlawRedshiftModel distributions
 
     Raises
     ------
     ValueError
         if :code:`kappa` or :code:`z_max` parameters are missing
     """
-    powerlaw_redshift_collection = []
+    powerlaw_redshift_model_collection = []
     kappa_name = f"{parameter_name}_kappa_{component_type}"
     z_max_name = f"{parameter_name}_z_max_{component_type}"
 
     for i in range(N):
         kappa = _get_parameter(params, f"{kappa_name}_{i}", kappa_name)
         z_max = _get_parameter(params, f"{z_max_name}_{i}", z_max_name)
-        powerlaw_redshift_collection.append(
-            PowerlawRedshift(kappa=kappa, z_max=z_max, validate_args=validate_args)
+        powerlaw_redshift_model_collection.append(
+            PowerlawRedshiftModel(kappa=kappa, z_max=z_max, validate_args=validate_args)
         )
 
-    return powerlaw_redshift_collection
+    return powerlaw_redshift_model_collection
+
+
+def create_madau_dickinson_redshift_model(
+    N: int,
+    parameter_name: Literal["redshift"],
+    component_type: Literal["pl", "g"],
+    params: Dict[str, Array],
+    validate_args: Optional[bool] = None,
+) -> List[Distribution]:
+    """Create a list of MadauDickinsonRedshiftModel distributions.
+
+    Parameters
+    ----------
+    N : int
+        Number of components
+    parameter_name : Literal[&quot;redshift&quot;]
+        name of the parameter to create distributions for
+    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
+        type of component, either "pl" or "g"
+    params : Dict[str, Array]
+        dictionary of parameters
+    validate_args : Optional[bool], optional
+        whether to validate arguments, defaults to None, by default None
+
+    Returns
+    -------
+    List[Distribution]
+        list of MadauDickinsonRedshiftModel distributions
+
+    Raises
+    ------
+    ValueError
+        if :code:`kappa` or :code:`z_max` parameters are missing
+    """
+    madau_dickinson_redshift_collection = []
+    kappa_name = f"{parameter_name}_kappa_{component_type}"
+    z_max_name = f"{parameter_name}_z_max_{component_type}"
+    gamma_name = f"{parameter_name}_gamma_{component_type}"
+    z_peak_name = f"{parameter_name}_z_peak_{component_type}"
+    for i in range(N):
+        kappa = _get_parameter(params, f"{kappa_name}_{i}", kappa_name)
+        z_max = _get_parameter(params, f"{z_max_name}_{i}", z_max_name)
+        gamma = _get_parameter(params, f"{gamma_name}_{i}", gamma_name)
+        z_peak = _get_parameter(params, f"{z_peak_name}_{i}", z_peak_name)
+
+        madau_dickinson_redshift_collection.append(
+            MadauDickinsonRedshiftModel(
+                kappa=kappa,
+                gamma=gamma,
+                z_peak=z_peak,
+                z_max=z_max,
+                validate_args=validate_args,
+            )
+        )
+
+    return madau_dickinson_redshift_collection
 
 
 def create_uniform_distributions(

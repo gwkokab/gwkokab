@@ -25,7 +25,8 @@ from ._ncombination import (
     create_generic_smoothed_powerlaw_mass_ratio,
     create_gwtc4_effective_spin_skew_normal_models,
     create_independent_spin_orientation_gaussian_isotropic,
-    create_powerlaw_redshift,
+    create_madau_dickinson_redshift_model,
+    create_powerlaw_redshift_model,
     create_powerlaws,
     create_spin_magnitude_mixture_models,
     create_truncated_normal_distributions,
@@ -51,7 +52,8 @@ def _build_non_mass_distributions(
     use_eccentricity_mixture: bool,
     use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
+    use_madau_dickinson_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
@@ -76,7 +78,8 @@ def _build_non_mass_distributions(
         (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
         (use_eccentricity_powerlaw, P.ECCENTRICITY, create_generic_powerlaws),
         (use_mean_anomaly, P.MEAN_ANOMALY, create_uniform_distributions),
-        (use_redshift, P.REDSHIFT, create_powerlaw_redshift),
+        (use_powerlaw_redshift, P.REDSHIFT, create_powerlaw_redshift_model),
+        (use_madau_dickinson_redshift, P.REDSHIFT, create_madau_dickinson_redshift_model),
     ]
     # fmt: on
 
@@ -112,7 +115,8 @@ def _build_component_distributions(
     use_eccentricity_mixture: bool,
     use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
+    use_madau_dickinson_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> Tuple[List[Distribution], List[JointDistribution]]:
@@ -166,8 +170,9 @@ def _build_component_distributions(
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
         use_eccentricity_powerlaw=use_eccentricity_powerlaw,
-        use_redshift=use_redshift,
         use_mean_anomaly=use_mean_anomaly,
+        use_powerlaw_redshift=use_powerlaw_redshift,
+        use_madau_dickinson_redshift=use_madau_dickinson_redshift,
         params=params,
         validate_args=validate_args,
     )
@@ -194,7 +199,8 @@ def SubPopulationModel(
     use_eccentricity_mixture: bool = False,
     use_eccentricity_powerlaw: bool = False,
     use_mean_anomaly: bool = False,
-    use_redshift: bool = False,
+    use_powerlaw_redshift: bool = False,
+    use_madau_dickinson_redshift: bool = False,
     *,
     validate_args=None,
     **params,
@@ -217,7 +223,8 @@ def SubPopulationModel(
             use_eccentricity_mixture=use_eccentricity_mixture,
             use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_mean_anomaly=use_mean_anomaly,
-            use_redshift=use_redshift,
+            use_powerlaw_redshift=use_powerlaw_redshift,
+            use_madau_dickinson_redshift=use_madau_dickinson_redshift,
             params=params,
             validate_args=validate_args,
         )

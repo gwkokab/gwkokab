@@ -9,7 +9,7 @@ from jaxtyping import Array
 from numpyro.distributions import HalfNormal, Independent
 
 from ..mass import SmoothedTwoComponentPrimaryMassRatio
-from ..redshift import PowerlawRedshift
+from ..redshift import PowerlawRedshiftModel
 from ..spin import BetaFromMeanVar, IndependentSpinOrientationGaussianIsotropic
 from ..utils import (
     JointDistribution,
@@ -19,7 +19,7 @@ from ..utils import (
 
 def PowerlawPeak(
     use_spin: bool = False,
-    use_redshift: bool = False,
+    use_powerlaw_redshift: bool = False,
     use_tilt: bool = False,
     use_eccentricity: bool = False,
     validate_args: Optional[bool] = None,
@@ -72,10 +72,10 @@ def PowerlawPeak(
         )
         component_distributions.append(ecc_dist)
 
-    if use_redshift:
+    if use_powerlaw_redshift:
         z_max = params["z_max"]
         kappa = params["kappa"]
-        powerlaw_z = PowerlawRedshift(
+        powerlaw_z = PowerlawRedshiftModel(
             z_max=z_max, kappa=kappa, validate_args=validate_args
         )
 

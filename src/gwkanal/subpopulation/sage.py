@@ -44,7 +44,8 @@ class SubPopulationModelSage(SubPopulationModelCore, Sage):
         use_eccentricity_mixture: bool,
         use_eccentricity_powerlaw: bool,
         use_mean_anomaly: bool,
-        use_redshift: bool,
+        use_powerlaw_redshift: bool,
+        use_madau_dickinson_redshift: bool,
         likelihood_fn: Callable[
             [
                 Callable[..., Distribution],
@@ -86,7 +87,8 @@ class SubPopulationModelSage(SubPopulationModelCore, Sage):
             use_eccentricity_mixture=use_eccentricity_mixture,
             use_eccentricity_powerlaw=use_eccentricity_powerlaw,
             use_mean_anomaly=use_mean_anomaly,
-            use_redshift=use_redshift,
+            use_powerlaw_redshift=use_powerlaw_redshift,
+            use_madau_dickinson_redshift=use_madau_dickinson_redshift,
         )
 
         Sage.__init__(
@@ -148,7 +150,8 @@ def f_main() -> None:
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_mean_anomaly=args.add_mean_anomaly,
-        use_redshift=args.add_redshift,
+        use_powerlaw_redshift=args.add_powerlaw_redshift,
+        use_madau_dickinson_redshift=args.add_madau_dickinson_redshift,
         likelihood_fn=flowMC_discrete_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_cfg,
@@ -193,7 +196,8 @@ def n_main() -> None:
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
         use_mean_anomaly=args.add_mean_anomaly,
-        use_redshift=args.add_redshift,
+        use_powerlaw_redshift=args.add_powerlaw_redshift,
+        use_madau_dickinson_redshift=args.add_madau_dickinson_redshift,
         likelihood_fn=numpyro_discrete_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_cfg,

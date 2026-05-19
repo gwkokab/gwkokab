@@ -63,7 +63,8 @@ class NPowerlawMGaussianCore:
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_eccentricity_powerlaw: bool,
-        use_redshift: bool,
+        use_powerlaw_redshift: bool,
+        use_madau_dickinson_redshift: bool,
         use_cos_iota: bool,
         use_phi_12: bool,
         use_polarization_angle: bool,
@@ -88,7 +89,8 @@ class NPowerlawMGaussianCore:
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_eccentricity_powerlaw = use_eccentricity_powerlaw
-        self.use_redshift = use_redshift
+        self.use_powerlaw_redshift = use_powerlaw_redshift
+        self.use_madau_dickinson_redshift = use_madau_dickinson_redshift
         self.use_cos_iota = use_cos_iota
         self.use_phi_12 = use_phi_12
         self.use_polarization_angle = use_polarization_angle
@@ -115,7 +117,8 @@ class NPowerlawMGaussianCore:
             "use_tilt": self.use_tilt,
             "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
-            "use_redshift": self.use_redshift,
+            "use_powerlaw_redshift": self.use_powerlaw_redshift,
+            "use_madau_dickinson_redshift": self.use_madau_dickinson_redshift,
             "use_cos_iota": self.use_cos_iota,
             "use_phi_12": self.use_phi_12,
             "use_polarization_angle": self.use_polarization_angle,
@@ -160,7 +163,7 @@ class NPowerlawMGaussianCore:
             names.append(P.ECCENTRICITY)
         if self.use_mean_anomaly:
             names.append(P.MEAN_ANOMALY)
-        if self.use_redshift:
+        if self.use_powerlaw_redshift or self.use_madau_dickinson_redshift:
             names.append(P.REDSHIFT)
         if self.use_right_ascension:
             names.append(P.RIGHT_ASCENSION)
@@ -422,12 +425,24 @@ class NPowerlawMGaussianCore:
                 (P.MEAN_ANOMALY + "_low_pl", self.N_pl),
             ])
 
-        if self.use_redshift:
+        if self.use_powerlaw_redshift:
             all_params.extend([
                 (P.REDSHIFT + "_kappa_g", self.N_g),
                 (P.REDSHIFT + "_kappa_pl", self.N_pl),
                 (P.REDSHIFT + "_z_max_g", self.N_g),
                 (P.REDSHIFT + "_z_max_pl", self.N_pl),
+            ])
+
+        if self.use_madau_dickinson_redshift:
+            all_params.extend([
+                (P.REDSHIFT + "_gamma_g", self.N_g),
+                (P.REDSHIFT + "_gamma_pl", self.N_pl),
+                (P.REDSHIFT + "_kappa_g", self.N_g),
+                (P.REDSHIFT + "_kappa_pl", self.N_pl),
+                (P.REDSHIFT + "_z_max_g", self.N_g),
+                (P.REDSHIFT + "_z_max_pl", self.N_pl),
+                (P.REDSHIFT + "_z_peak_g", self.N_g),
+                (P.REDSHIFT + "_z_peak_pl", self.N_pl),
             ])
 
         if self.use_right_ascension:
@@ -546,10 +561,17 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include tilt parameters in the model.",
     )
-    model_group.add_argument(
-        "--add-redshift",
+
+    redshift_group = model_group.add_mutually_exclusive_group()
+    redshift_group.add_argument(
+        "--add-powerlaw-redshift",
         action="store_true",
         help="Include redshift parameter in the model",
+    )
+    redshift_group.add_argument(
+        "--add-madau-dickinson-redshift",
+        action="store_true",
+        help="Redshift modeled by Madau-Dickinson Model",
     )
 
     eccentricity_group = model_group.add_mutually_exclusive_group()
