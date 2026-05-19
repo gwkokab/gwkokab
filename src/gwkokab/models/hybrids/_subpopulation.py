@@ -251,7 +251,9 @@ def SubPopulationModel(
     Z = jnp.trapezoid(_prob_m1, mm, axis=0)
     logZ = jnp.log(Z)
 
-    log_scales = log_rate - logZ + jnp.log(lambdas)
+    safe_lambdas = jnp.where(lambdas <= 0.0, 1.0, lambdas)
+    safe_log_lambdas = jnp.where(lambdas <= 0.0, -jnp.inf, jnp.log(safe_lambdas))
+    log_scales = log_rate - logZ + safe_log_lambdas
 
     return ScaledMixture(
         log_scales,
