@@ -63,7 +63,8 @@ class SubPopulationModelCore:
         use_eccentricity_mixture: bool,
         use_eccentricity_powerlaw: bool,
         use_mean_anomaly: bool,
-        use_redshift: bool,
+        use_powerlaw_redshift: bool,
+        use_madau_dickinson_redshift: bool,
     ) -> None:
         self.N_spl = N_spl
         self.N_bpl = N_bpl
@@ -80,7 +81,8 @@ class SubPopulationModelCore:
         self.use_tilt = use_tilt
         self.use_eccentricity_mixture = use_eccentricity_mixture
         self.use_mean_anomaly = use_mean_anomaly
-        self.use_redshift = use_redshift
+        self.use_powerlaw_redshift = use_powerlaw_redshift
+        self.use_madau_dickinson_redshift = use_madau_dickinson_redshift
 
     def modify_model_params(self, params: dict) -> dict:
         params.update({
@@ -99,7 +101,8 @@ class SubPopulationModelCore:
             "use_eccentricity_mixture": self.use_eccentricity_mixture,
             "use_eccentricity_powerlaw": self.use_eccentricity_powerlaw,
             "use_mean_anomaly": self.use_mean_anomaly,
-            "use_redshift": self.use_redshift,
+            "use_powerlaw_redshift": self.use_powerlaw_redshift,
+            "use_madau_dickinson_redshift": self.use_madau_dickinson_redshift,
         })
         return params
 
@@ -128,7 +131,7 @@ class SubPopulationModelCore:
             names.append(P.ECCENTRICITY)
         if self.use_mean_anomaly:
             names.append(P.MEAN_ANOMALY)
-        if self.use_redshift:
+        if self.use_powerlaw_redshift or self.use_madau_dickinson_redshift:
             names.append(P.REDSHIFT)
         return names
 
@@ -293,10 +296,18 @@ class SubPopulationModelCore:
                     P.MEAN_ANOMALY + "_low_",
                 ])
 
-            if self.use_redshift:
+            if self.use_powerlaw_redshift:
                 all_params_names.extend([
                     P.REDSHIFT + "_kappa_",
                     P.REDSHIFT + "_z_max_",
+                ])
+
+            if self.use_madau_dickinson_redshift:
+                all_params_names.extend([
+                    P.REDSHIFT + "_gamma_",
+                    P.REDSHIFT + "_kappa_",
+                    P.REDSHIFT + "_z_max_",
+                    P.REDSHIFT + "_z_peak_",
                 ])
 
             all_params.extend([(name + ct, count) for name in all_params_names])
@@ -401,9 +412,17 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help="Include mean_anomaly parameter in the model",
     )
-    model_group.add_argument(
-        "--add-redshift",
+
+    redshift_group = model_group.add_mutually_exclusive_group()
+    redshift_group.add_argument(
+        "--add-powerlaw-redshift",
         action="store_true",
         help="Include redshift parameter in the model",
     )
+    redshift_group.add_argument(
+        "--add-madau-dickinson-redshift",
+        action="store_true",
+        help="Redshift modeled by Madau-Dickinson Model",
+    )
+
     return parser

@@ -13,7 +13,7 @@ from numpyro.distributions.util import promote_shapes, validate_sample
 from ...utils.kernel import log_planck_taper_window
 from ...utils.math import truncnorm_logpdf
 from ..constraints import all_constraint, mass_ratio_mass_sandwich
-from ..redshift import PowerlawRedshift
+from ..redshift import PowerlawRedshiftModel
 from ..utils import (
     doubly_truncated_power_law_log_prob,
     JointDistribution,
@@ -820,7 +820,9 @@ def BrokenPowerlawTwoPeakMultiSpinMultiTiltFull(
 
     z_max = params["z_max"]
     kappa = params["kappa"]
-    powerlaw_z = PowerlawRedshift(z_max=z_max, kappa=kappa, validate_args=validate_args)
+    powerlaw_z = PowerlawRedshiftModel(
+        z_max=z_max, kappa=kappa, validate_args=validate_args
+    )
     component_distributions.append(powerlaw_z)
 
     component_distributions = [

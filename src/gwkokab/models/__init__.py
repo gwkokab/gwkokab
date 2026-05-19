@@ -31,8 +31,8 @@ from .mass import (
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
 from .redshift import (
-    MadauDickinsonRedshift as MadauDickinsonRedshift,
-    PowerlawRedshift as PowerlawRedshift,
+    MadauDickinsonRedshiftModel as MadauDickinsonRedshiftModel,
+    PowerlawRedshiftModel as PowerlawRedshiftModel,
 )
 from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,

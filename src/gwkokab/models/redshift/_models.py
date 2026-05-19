@@ -99,7 +99,7 @@ class _RedshiftModel(Distribution):
         return self.log_differential_spacetime_volume(value)
 
 
-class PowerlawRedshift(_RedshiftModel):
+class PowerlawRedshiftModel(_RedshiftModel):
     r"""Redshift distribution for compact binary mergers modeled as a power law modulated
     by the cosmological volume element.
 
@@ -131,7 +131,7 @@ class PowerlawRedshift(_RedshiftModel):
     ):
         z_max, self.kappa = promote_shapes(z_max, kappa)
         batch_shape = lax.broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
-        super(PowerlawRedshift, self).__init__(
+        super(PowerlawRedshiftModel, self).__init__(
             z_max=z_max, batch_shape=batch_shape, validate_args=validate_args
         )
 
@@ -155,7 +155,7 @@ class PowerlawRedshift(_RedshiftModel):
         return self.kappa * jnp.log1p(z)
 
 
-class MadauDickinsonRedshift(_RedshiftModel):
+class MadauDickinsonRedshiftModel(_RedshiftModel):
     r"""Redshift distribution for compact binary mergers modeled after the Madau-
     Dickinson star formation rate, modulated by the cosmological volume element.
 
@@ -200,7 +200,7 @@ class MadauDickinsonRedshift(_RedshiftModel):
             jnp.shape(gamma),
             jnp.shape(z_peak),
         )
-        super(MadauDickinsonRedshift, self).__init__(
+        super(MadauDickinsonRedshiftModel, self).__init__(
             z_max=z_max, batch_shape=batch_shape, validate_args=validate_args
         )
 

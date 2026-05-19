@@ -39,7 +39,7 @@ class NBrokenPowerlawMGaussianSage(NBrokenPowerlawMGaussianCore, Sage):
         use_tilt: bool,
         use_eccentricity_mixture: bool,
         use_eccentricity_powerlaw: bool,
-        use_redshift: bool,
+        use_powerlaw_redshift: bool,
         likelihood_fn: Callable[
             [
                 Callable[..., Distribution],
@@ -76,7 +76,7 @@ class NBrokenPowerlawMGaussianSage(NBrokenPowerlawMGaussianCore, Sage):
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
             use_eccentricity_powerlaw=use_eccentricity_powerlaw,
-            use_redshift=use_redshift,
+            use_powerlaw_redshift=use_powerlaw_redshift,
         )
 
         Sage.__init__(
@@ -133,7 +133,7 @@ def f_main() -> None:
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
-        use_redshift=args.add_redshift,
+        use_powerlaw_redshift=args.add_powerlaw_redshift,
         likelihood_fn=flowMC_discrete_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_cfg,
@@ -173,7 +173,7 @@ def n_main() -> None:
         use_tilt=args.add_tilt,
         use_eccentricity_mixture=args.add_eccentricity_mixture,
         use_eccentricity_powerlaw=args.add_eccentricity_powerlaw,
-        use_redshift=args.add_redshift,
+        use_powerlaw_redshift=args.add_powerlaw_redshift,
         likelihood_fn=numpyro_discrete_poisson_likelihood,
         data_loader=data_loader,
         prior_filename=args.prior_cfg,

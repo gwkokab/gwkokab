@@ -11,7 +11,7 @@ from jaxtyping import Array, PRNGKeyArray
 
 from gwkokab.utils.exceptions import LoggedTypeError, LoggedValueError
 
-from ..models import PowerlawRedshift
+from ..models import PowerlawRedshiftModel
 from ..models.utils import JointDistribution, ScaledMixture
 from ..utils.train import load_model
 
@@ -74,7 +74,7 @@ def poisson_mean_from_neural_pdet(
         for component_dist in scaled_mixture.component_distributions:
             if isinstance(component_dist, JointDistribution):
                 for m_dist in component_dist.marginal_distributions:
-                    if isinstance(m_dist, PowerlawRedshift):
+                    if isinstance(m_dist, PowerlawRedshiftModel):
                         redshift_log_norm.append(m_dist.log_norm())
                         break
                 else:

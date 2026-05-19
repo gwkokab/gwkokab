@@ -37,7 +37,7 @@ def _build_bpl_component_distributions(
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_eccentricity_powerlaw: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> Tuple[List[Distribution], List[JointDistribution]]:
@@ -58,7 +58,7 @@ def _build_bpl_component_distributions(
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
         use_eccentricity_powerlaw=use_eccentricity_powerlaw,
-        use_redshift=use_redshift,
+        use_powerlaw_redshift=use_powerlaw_redshift,
         validate_args=validate_args,
     )
 
@@ -78,7 +78,7 @@ def _build_g_component_distributions(
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_eccentricity_powerlaw: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> Tuple[List[Distribution], List[JointDistribution]]:
@@ -102,7 +102,7 @@ def _build_g_component_distributions(
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
         use_eccentricity_powerlaw=use_eccentricity_powerlaw,
-        use_redshift=use_redshift,
+        use_powerlaw_redshift=use_powerlaw_redshift,
         params=params,
         validate_args=validate_args,
     )
@@ -124,7 +124,7 @@ def NBrokenPowerlawMGaussian(
     use_tilt: bool,
     use_eccentricity_mixture: bool,
     use_eccentricity_powerlaw: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
     *,
     validate_args=None,
     **params,
@@ -154,7 +154,7 @@ def NBrokenPowerlawMGaussian(
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
             use_eccentricity_powerlaw=use_eccentricity_powerlaw,
-            use_redshift=use_redshift,
+            use_powerlaw_redshift=use_powerlaw_redshift,
             params=params,
             validate_args=validate_args,
         )
@@ -172,7 +172,7 @@ def NBrokenPowerlawMGaussian(
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
             use_eccentricity_powerlaw=use_eccentricity_powerlaw,
-            use_redshift=use_redshift,
+            use_powerlaw_redshift=use_powerlaw_redshift,
             params=params,
             validate_args=validate_args,
         )

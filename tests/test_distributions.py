@@ -26,10 +26,10 @@ from scipy.sparse import csr_matrix
 from gwkokab.models import (
     BetaFromMeanVar,
     BrokenPowerlaw,
-    MadauDickinsonRedshift,
+    MadauDickinsonRedshiftModel,
     NPowerlawMGaussian,
     PowerlawPrimaryMassRatio,
-    PowerlawRedshift,
+    PowerlawRedshiftModel,
     Wysocki2019MassModel,
 )
 from gwkokab.models.constraints import (
@@ -320,14 +320,26 @@ CONTINUOUS = [
             **generic_npmg,
         },
     ),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 1.0, "z_max": 2.3}),
-    (PowerlawRedshift, {"kappa": 2.7, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
-    (MadauDickinsonRedshift, {"kappa": 0.0, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0}),
-    (MadauDickinsonRedshift, {"kappa": 1.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0}),
-    (MadauDickinsonRedshift, {"kappa": 2.7, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0}),
-    (MadauDickinsonRedshift, {"kappa": 0.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0}),
+    (PowerlawRedshiftModel, {"kappa": 0.0, "z_max": 1.0}),
+    (PowerlawRedshiftModel, {"kappa": 1.0, "z_max": 2.3}),
+    (PowerlawRedshiftModel, {"kappa": 2.7, "z_max": 1.0}),
+    (PowerlawRedshiftModel, {"kappa": 0.0, "z_max": 2.3}),
+    (
+        MadauDickinsonRedshiftModel,
+        {"kappa": 0.0, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0},
+    ),
+    (
+        MadauDickinsonRedshiftModel,
+        {"kappa": 1.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0},
+    ),
+    (
+        MadauDickinsonRedshiftModel,
+        {"kappa": 2.7, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0},
+    ),
+    (
+        MadauDickinsonRedshiftModel,
+        {"kappa": 0.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0},
+    ),
     (BetaFromMeanVar, {"mean": 0.4, "variance": 0.02}),
     (BetaFromMeanVar, {"mean": 0.5, "variance": 0.05}),
     (
@@ -590,7 +602,7 @@ def test_has_rsample(jax_dist, params):
 def test_sample_gradient(jax_dist, params):
     if jax_dist.__name__ in ("PowerlawPeak",):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
-    if jax_dist.__name__ in ("PowerlawRedshift",):
+    if jax_dist.__name__ in ("PowerlawRedshiftModel",):
         pytest.xfail(
             reason=f"{jax_dist.__name__} uses interpolation and is not differentiable"
         )
@@ -704,7 +716,7 @@ def test_cdf_and_icdf(jax_dist, params):
     try:
         atol = 1e-5
         rtol = 1e-5
-        if jax_dist.__name__ in ["PowerlawRedshift"]:
+        if jax_dist.__name__ in ["PowerlawRedshiftModel"]:
             atol = 4e-3
             rtol = 0.02
         if d.shape() == () and not d.is_discrete:
@@ -734,7 +746,7 @@ def test_gof(jax_dist, params):
         pytest.skip("Failure rate is lower than expected.")
     if isinstance(jax_dist, ScaledMixture):
         pytest.skip("skip testing for ScaledMixture")
-    if jax_dist.__name__ in ("PowerlawRedshift", "MadauDickinsonRedshift"):
+    if jax_dist.__name__ in ("PowerlawRedshiftModel", "MadauDickinsonRedshiftModel"):
         pytest.skip(f"{jax_dist.__name__} is not a valid probability distribution")
     num_samples = 10000
     rng_key = jrd.key(0)
@@ -982,7 +994,7 @@ def _tree_equal(t1, t2):
 def test_vmap_dist(jax_dist, params):
     if isinstance(jax_dist, types.FunctionType):
         pytest.skip("skip testing for non-distribution")
-    if jax_dist.__name__ in ("PowerlawRedshift",):
+    if jax_dist.__name__ in ("PowerlawRedshiftModel",):
         pytest.xfail(f"{jax_dist.__name__} has some KeyError issues")
     param_names = list(inspect.signature(jax_dist).parameters.keys())
     vmappable_param_idxs = _get_vmappable_dist_init_params(jax_dist)
