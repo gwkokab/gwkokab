@@ -236,7 +236,11 @@ def _build_pl_component_distributions(
         list of JointDistribution
     """
     powerlaws = create_powerlaw_primary_mass_ratios(
-        N=N, params=params, validate_args=validate_args
+        N=N,
+        parameter_name=None,  # type: ignore # unused parameter
+        component_type="pl",
+        params=params,
+        validate_args=validate_args,
     )
 
     mass_distributions = jtr.map(

@@ -160,7 +160,11 @@ def _build_component_distributions(
         )
     if component_type == "sbpl":
         powerlaws = create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
-            N=N, params=params, validate_args=validate_args
+            N=N,
+            parameter_name=None,  # type: ignore # unused parameter
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
         )
         mass_distributions = jtr.map(
             lambda powerlaw: [powerlaw],
@@ -170,7 +174,11 @@ def _build_component_distributions(
 
     if component_type == "gpl":
         powerlaws = create_gaussian_primary_mass_ratio(
-            N=N, params=params, validate_args=validate_args
+            N=N,
+            parameter_name=None,  # type: ignore # unused parameter
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
         )
         mass_distributions = jtr.map(
             lambda powerlaw: [powerlaw],

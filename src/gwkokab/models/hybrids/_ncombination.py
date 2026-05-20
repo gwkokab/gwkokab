@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Dict, List, Literal, Optional, TypeVar
+from typing import Dict, List, Optional, TypeVar
 
 from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
@@ -64,43 +64,19 @@ _KT = TypeVar("_KT")
 _VT = TypeVar("_VT")
 
 
-def _fetch_first_matching_value(
-    dictionary: Dict[_KT, _VT], *keys: _KT
-) -> Optional[_VT]:
-    """Get the first value in the dictionary that matches one of the keys.
-
-    Parameters
-    ----------
-    dictionary : Dict[_KT, _VT]
-        The dictionary to search.
-    keys : _KT
-        The keys to search for.
-
-    Returns
-    -------
-    Optional[_VT]
-        The value of the first key that is found in the dictionary, or None if no key is
-        found.
-    """
-    for key in keys:
-        if key in dictionary:
-            return dictionary[key]
-    return None
-
-
 def _get_parameter(
     params: Dict[_KT, _VT],
-    *name: _KT,
+    name: _KT,
     is_necessary: bool = True,
     default: Optional[_VT] = None,
 ) -> Optional[_VT]:
-    value = _fetch_first_matching_value(params, *name)
-    if value is None:
-        if default is not None:
-            value = default
-        elif is_necessary:
-            raise ValueError(f"Missing parameter {name}")
-    return value
+    if (value := params.get(name, None)) is not None:
+        return value
+    if default is not None:
+        return default
+    if is_necessary:
+        raise ValueError(f"Missing parameter {name}")
+    return None
 
 
 def combine_distributions(
@@ -114,235 +90,93 @@ def combine_distributions(
 
 def create_beta_distributions(
     N: int,
-    parameter_name: Literal["a_1", "a_2"],
-    component_type: Literal["pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Beta]:
-    """Create a list of Beta distributions.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[&quot;a_1&quot;, &quot;a_2&quot;]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[Beta]
-        list of Beta distributions
-
-    Raises
-    ------
-    ValueError
-        if mean or variance is missing
-    """
-    beta_collection = []
     mean_name = f"{parameter_name}_mean_{component_type}"
     variance_name = f"{parameter_name}_variance_{component_type}"
-    for i in range(N):
-        mean = _get_parameter(params, f"{mean_name}_{i}", mean_name)
-        variance = _get_parameter(params, f"{variance_name}_{i}", variance_name)
 
-        beta_collection.append(
-            BetaFromMeanVar(
-                mean=mean,
-                variance=variance,
-                validate_args=validate_args,
-            )
+    return [
+        BetaFromMeanVar(
+            mean=_get_parameter(params, f"{mean_name}_{i}"),  # type: ignore
+            variance=_get_parameter(params, f"{variance_name}_{i}"),  # type: ignore
+            validate_args=validate_args,
         )
-    return beta_collection
+        for i in range(N)
+    ]
 
 
 def create_truncated_normal_distributions(
     N: int,
-    parameter_name: Literal[
-        "a_1",
-        "a_2",
-        "cos_iota",
-        "cos_tilt1",
-        "cos_tilt2",
-        "eccentricity",
-        "m1",
-        "m2",
-        "phi_12",
-        "polarization_angle",
-        "right_ascension",
-        "sin_declination",
-        "spin_1x",
-        "spin_1y",
-        "spin_1z",
-        "spin_2x",
-        "spin_2y",
-        "spin_2z",
-    ],
-    component_type: Literal["pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of TruncatedNormal distributions.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[
-        &quot;chi1&quot;,
-        &quot;chi2&quot;,
-        &quot;cos_iota&quot;,
-        &quot;cos_tilt1&quot;,
-        &quot;cos_tilt2&quot;,
-        &quot;eccentricity&quot;,
-        &quot;m1&quot;,
-        &quot;m2&quot;,
-        &quot;phi_12&quot;,
-        &quot;polarization_angle&quot;,
-        &quot;right_ascension&quot;,
-        &quot;sin_declination&quot;,
-        &quot;spin_1x&quot;,
-        &quot;spin_1y&quot;,
-        &quot;spin_1z&quot;,
-        &quot;spin_2x&quot;,
-        &quot;spin_2y&quot;,
-        &quot;spin_2z&quot;,
-    ]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[Distribution]
-        list of TruncatedNormal distributions
-
-    Raises
-    ------
-    ValueError
-        if loc, scale, low, or high is missing
-    """
-    truncated_normal_collection = []
     loc_name = f"{parameter_name}_loc_{component_type}"
     scale_name = f"{parameter_name}_scale_{component_type}"
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
-    for i in range(N):
-        loc = _get_parameter(params, f"{loc_name}_{i}", loc_name)
-        scale = _get_parameter(params, f"{scale_name}_{i}", scale_name)
-        low = _get_parameter(params, f"{low_name}_{i}", low_name, is_necessary=False)
-        high = _get_parameter(params, f"{high_name}_{i}", high_name, is_necessary=False)
 
-        truncated_normal_collection.append(
-            TruncatedNormal(
-                loc=loc, scale=scale, low=low, high=high, validate_args=validate_args
-            )
+    # fmt: off
+    return [
+        TruncatedNormal(
+            loc=_get_parameter(params, f"{loc_name}_{i}"),  # type: ignore
+            scale=_get_parameter(params, f"{scale_name}_{i}"),  # type: ignore
+            low=_get_parameter(params, f"{low_name}_{i}", is_necessary=False),  # type: ignore
+            high=_get_parameter(params, f"{high_name}_{i}", is_necessary=False),  # type: ignore
+            validate_args=validate_args,
         )
-
-    return truncated_normal_collection
+        for i in range(N)
+    ]
+    # fmt: on
 
 
 def create_independent_spin_orientation_gaussian_isotropic(
     N: int,
-    parameter_name: Literal["cos_tilt_1", "cos_tilt_2"],
-    component_type: Literal["pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[MixtureGeneral]:
-    """Create a list of :func:`IndependentSpinOrientationGaussianIsotropic`
-    distributions for tilt.
+    zeta_name = "cos_tilt_zeta_" + component_type
+    scale1_name = P.COS_TILT_1 + "_scale_" + component_type
+    scale2_name = P.COS_TILT_2 + "_scale_" + component_type
 
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[&quot;cos_tilt_1&quot;, &quot;cos_tilt_2&quot;]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[MixtureGeneral]
-        list of :func:`IndependentSpinOrientationGaussianIsotropic` distributions
-
-    Raises
-    ------
-    ValueError
-        if scale is missing
-    """
-    dist_collection = []
-    zeta_name = f"cos_tilt_zeta_{component_type}"
-    scale1_name = f"cos_tilt_1_scale_{component_type}"
-    scale2_name = f"cos_tilt_2_scale_{component_type}"
-
-    for i in range(N):
-        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
-        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
-        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
-        dist_collection.append(
-            IndependentSpinOrientationGaussianIsotropic(
-                zeta=zeta,
-                scale1=scale1,
-                scale2=scale2,
-                validate_args=validate_args,
-            )
+    return [
+        IndependentSpinOrientationGaussianIsotropic(
+            zeta=_get_parameter(params, f"{zeta_name}_{i}"),  # type: ignore
+            scale1=_get_parameter(params, f"{scale1_name}_{i}"),  # type: ignore
+            scale2=_get_parameter(params, f"{scale2_name}_{i}"),  # type: ignore
+            validate_args=validate_args,
         )
-
-    return dist_collection
+        for i in range(N)
+    ]
 
 
 def create_powerlaw_primary_mass_ratios(
     N: int,
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[ExtendedSupportTransformedDistribution]:
-    """Create a list of ExtendedSupportTransformedDistribution for powerlaws.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[ExtendedSupportTransformedDistribution]
-        list of ExtendedSupportTransformedDistribution for powerlaws
-
-    Raises
-    ------
-    ValueError
-        if alpha, beta, mmin, or mmax is missing
-    """
     powerlaws_collection = []
-    alpha_name = "alpha_pl"
-    beta_name = "beta_pl"
-    mmin_name = "mmin_pl"
-    mmax_name = "mmax_pl"
+
+    alpha_name = "alpha_" + component_type
+    beta_name = "beta_" + component_type
+    mmin_name = "mmin_" + component_type
+    mmax_name = "mmax_" + component_type
+
     for i in range(N):
-        alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
-        beta = _get_parameter(params, f"{beta_name}_{i}", beta_name)
-        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
-        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
         powerlaw = PowerlawPrimaryMassRatio(
-            alpha=alpha, beta=beta, mmin=mmin, mmax=mmax, validate_args=validate_args
+            alpha=_get_parameter(params, f"{alpha_name}_{i}"),  # type: ignore
+            beta=_get_parameter(params, f"{beta_name}_{i}"),  # type: ignore
+            mmin=_get_parameter(params, f"{mmin_name}_{i}"),  # type: ignore
+            mmax=_get_parameter(params, f"{mmax_name}_{i}"),  # type: ignore
+            validate_args=validate_args,
         )
         transformed_powerlaw = ExtendedSupportTransformedDistribution(
             base_distribution=powerlaw,
@@ -355,330 +189,142 @@ def create_powerlaw_primary_mass_ratios(
 
 def create_powerlaw_redshift_model(
     N: int,
-    parameter_name: Literal["redshift"],
-    component_type: Literal["pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of PowerlawRedshiftModel distributions.
+    kappa_name = parameter_name + "_kappa_" + component_type
+    z_max_name = parameter_name + "_z_max_" + component_type
 
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[&quot;redshift&quot;]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[Distribution]
-        list of PowerlawRedshiftModel distributions
-
-    Raises
-    ------
-    ValueError
-        if :code:`kappa` or :code:`z_max` parameters are missing
-    """
-    powerlaw_redshift_model_collection = []
-    kappa_name = f"{parameter_name}_kappa_{component_type}"
-    z_max_name = f"{parameter_name}_z_max_{component_type}"
-
-    for i in range(N):
-        kappa = _get_parameter(params, f"{kappa_name}_{i}", kappa_name)
-        z_max = _get_parameter(params, f"{z_max_name}_{i}", z_max_name)
-        powerlaw_redshift_model_collection.append(
-            PowerlawRedshiftModel(kappa=kappa, z_max=z_max, validate_args=validate_args)
+    return [
+        PowerlawRedshiftModel(
+            kappa=_get_parameter(params, f"{kappa_name}_{i}"),  # type: ignore
+            z_max=_get_parameter(params, f"{z_max_name}_{i}"),  # type: ignore
+            validate_args=validate_args,
         )
-
-    return powerlaw_redshift_model_collection
+        for i in range(N)
+    ]
 
 
 def create_madau_dickinson_redshift_model(
     N: int,
-    parameter_name: Literal["redshift"],
-    component_type: Literal["pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of MadauDickinsonRedshiftModel distributions.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[&quot;redshift&quot;]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[Distribution]
-        list of MadauDickinsonRedshiftModel distributions
-
-    Raises
-    ------
-    ValueError
-        if :code:`kappa` or :code:`z_max` parameters are missing
-    """
-    madau_dickinson_redshift_collection = []
-    kappa_name = f"{parameter_name}_kappa_{component_type}"
-    z_max_name = f"{parameter_name}_z_max_{component_type}"
-    gamma_name = f"{parameter_name}_gamma_{component_type}"
-    z_peak_name = f"{parameter_name}_z_peak_{component_type}"
-    for i in range(N):
-        kappa = _get_parameter(params, f"{kappa_name}_{i}", kappa_name)
-        z_max = _get_parameter(params, f"{z_max_name}_{i}", z_max_name)
-        gamma = _get_parameter(params, f"{gamma_name}_{i}", gamma_name)
-        z_peak = _get_parameter(params, f"{z_peak_name}_{i}", z_peak_name)
-
-        madau_dickinson_redshift_collection.append(
-            MadauDickinsonRedshiftModel(
-                kappa=kappa,
-                gamma=gamma,
-                z_peak=z_peak,
-                z_max=z_max,
-                validate_args=validate_args,
-            )
+    kappa_name = parameter_name + "_kappa_" + component_type
+    z_max_name = parameter_name + "_z_max_" + component_type
+    gamma_name = parameter_name + "_gamma_" + component_type
+    z_peak_name = parameter_name + "_z_peak_" + component_type
+    return [
+        MadauDickinsonRedshiftModel(
+            kappa=_get_parameter(params, f"{kappa_name}_{i}"),  # type: ignore
+            z_max=_get_parameter(params, f"{z_max_name}_{i}"),  # type: ignore
+            gamma=_get_parameter(params, f"{gamma_name}_{i}"),  # type: ignore
+            z_peak=_get_parameter(params, f"{z_peak_name}_{i}"),  # type: ignore
+            validate_args=validate_args,
         )
-
-    return madau_dickinson_redshift_collection
+        for i in range(N)
+    ]
 
 
 def create_uniform_distributions(
     N: int,
-    parameter_name: Literal[
-        "chi1",
-        "chi2",
-        "cos_iota",
-        "cos_tilt1",
-        "cos_tilt2",
-        "dec",
-        "detection_time",
-        "ecc",
-        "m1",
-        "m2",
-        "mean_anomaly",
-        "phi_1",
-        "phi_12",
-        "phi_2",
-        "phi_orb",
-        "psi",
-        "ra",
-        "redshift",
-    ],
-    component_type: Literal["pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of Uniform distributions.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[ &quot;chi1&quot;, &quot;chi2&quot;, &quot;cos_iota&quot;, &quot;cos_tilt1&quot;, &quot;cos_tilt2&quot;, &quot;dec&quot;, &quot;detection_time&quot;, &quot;ecc&quot;, &quot;m1&quot;, &quot;m2&quot;, &quot;mean_anomaly&quot;, &quot;phi_1&quot;, &quot;phi_12&quot;, &quot;phi_2&quot;, &quot;phi_orb&quot;, &quot;psi&quot;, &quot;ra&quot;, &quot;redshift&quot;, ]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either &quot;pl&quot; or &quot;g&quot;
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, by default None
-
-    Returns
-    -------
-    List[Distribution]
-        list of Uniform distributions
-    """
-    uniform_collection = []
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
-    for i in range(N):
-        low = _get_parameter(params, f"{low_name}_{i}", low_name)
-        high = _get_parameter(params, f"{high_name}_{i}", high_name)
-        uniform_collection.append(
-            Uniform(low=low, high=high, validate_args=validate_args)
-        )
 
-    return uniform_collection
+    return [
+        Uniform(
+            low=_get_parameter(params, f"{low_name}_{i}"),
+            high=_get_parameter(params, f"{high_name}_{i}"),
+            validate_args=validate_args,
+        )
+        for i in range(N)
+    ]
 
 
 def create_broken_powerlaws(
     N: int,
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of Distribution for broken powerlaws.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[Distribution]
-        list of Distribution for broken powerlaws
-
-    Raises
-    ------
-    ValueError
-        if alpha1, alpha2, mbreak, mmin, or mmax is missing
-    """
-    broken_powerlaws_collection = []
-    alpha1_name = "alpha1_bpl"
-    alpha2_name = "alpha2_bpl"
-    mbreak_name = "m1break_bpl"
-    mmax_name = "m1max_bpl"
-    mmin_name = "m1min_bpl"
-    for i in range(N):
-        alpha1 = _get_parameter(params, f"{alpha1_name}_{i}", alpha1_name)
-        alpha2 = _get_parameter(params, f"{alpha2_name}_{i}", alpha2_name)
-        mbreak = _get_parameter(params, f"{mbreak_name}_{i}", mbreak_name)
-        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
-        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
-        broken_powerlaw = BrokenPowerlaw(
-            alpha1=alpha1,
-            alpha2=alpha2,
-            mbreak=mbreak,
-            mmax=mmax,
-            mmin=mmin,
+    alpha1_name = "alpha1_" + component_type
+    alpha2_name = "alpha2_" + component_type
+    mbreak_name = "m1break_" + component_type
+    mmax_name = "m1max_" + component_type
+    mmin_name = "m1min_" + component_type
+    return [
+        BrokenPowerlaw(
+            alpha1=_get_parameter(params, f"{alpha1_name}_{i}"),  # type: ignore
+            alpha2=_get_parameter(params, f"{alpha2_name}_{i}"),  # type: ignore
+            mbreak=_get_parameter(params, f"{mbreak_name}_{i}"),  # type: ignore
+            mmin=_get_parameter(params, f"{mmin_name}_{i}"),  # type: ignore
+            mmax=_get_parameter(params, f"{mmax_name}_{i}"),  # type: ignore
             validate_args=validate_args,
         )
-
-        broken_powerlaws_collection.append(broken_powerlaw)
-    return broken_powerlaws_collection
+        for i in range(N)
+    ]
 
 
 def create_minimum_tilt_model(
     N: int,
-    parameter_name: Literal["cos_tilt_1", "cos_tilt_2"],
-    component_type: Literal["pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[MixtureGeneral]:
-    """Create a list of :func:`MinimumTiltModelExtended` distributions for tilt.
+    zeta_name = "cos_tilt_zeta_" + component_type
+    loc1_name = P.COS_TILT_1 + "_loc_" + component_type
+    loc2_name = P.COS_TILT_2 + "_loc_" + component_type
+    scale1_name = P.COS_TILT_1 + "_scale_" + component_type
+    scale2_name = P.COS_TILT_2 + "_scale_" + component_type
+    minimum1_name = P.COS_TILT_1 + "_minimum_" + component_type
+    minimum2_name = P.COS_TILT_2 + "_minimum_" + component_type
 
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[&quot;cos_tilt_1&quot;, &quot;cos_tilt_2&quot;]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[MixtureGeneral]
-        list of :func:`MinimumTiltModelExtended` distributions
-
-    Raises
-    ------
-    ValueError
-        if zeta, loc1, loc2, scale1, or scale2 is missing
-    """
-    dist_collection = []
-    zeta_name = f"cos_tilt_zeta_{component_type}"
-    loc1_name = f"cos_tilt_1_loc_{component_type}"
-    loc2_name = f"cos_tilt_2_loc_{component_type}"
-    scale1_name = f"cos_tilt_1_scale_{component_type}"
-    scale2_name = f"cos_tilt_2_scale_{component_type}"
-    minimum1_name = f"cos_tilt_1_minimum_{component_type}"
-    minimum2_name = f"cos_tilt_2_minimum_{component_type}"
-
-    for i in range(N):
-        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
-        loc1 = _get_parameter(params, f"{loc1_name}_{i}", loc1_name)
-        loc2 = _get_parameter(params, f"{loc2_name}_{i}", loc2_name)
-        scale1 = _get_parameter(params, f"{scale1_name}_{i}", scale1_name)
-        scale2 = _get_parameter(params, f"{scale2_name}_{i}", scale2_name)
-        minimum1 = _get_parameter(
-            params, f"{minimum1_name}_{i}", minimum1_name, default=-1.0
+    return [
+        MinimumTiltModelExtended(
+            zeta=_get_parameter(params, f"{zeta_name}_{i}"),  # type: ignore
+            loc1=_get_parameter(params, f"{loc1_name}_{i}"),  # type: ignore
+            loc2=_get_parameter(params, f"{loc2_name}_{i}"),  # type: ignore
+            scale1=_get_parameter(params, f"{scale1_name}_{i}"),  # type: ignore
+            scale2=_get_parameter(params, f"{scale2_name}_{i}"),  # type: ignore
+            minimum1=_get_parameter(params, f"{minimum1_name}_{i}", default=-1.0),  # type: ignore
+            minimum2=_get_parameter(params, f"{minimum2_name}_{i}", default=-1.0),  # type: ignore
+            validate_args=validate_args,
         )
-        minimum2 = _get_parameter(
-            params, f"{minimum2_name}_{i}", minimum2_name, default=-1.0
-        )
-        dist_collection.append(
-            MinimumTiltModelExtended(
-                zeta=zeta,
-                loc1=loc1,
-                loc2=loc2,
-                scale1=scale1,
-                scale2=scale2,
-                minimum1=minimum1,
-                minimum2=minimum2,
-                validate_args=validate_args,
-            )
-        )
-
-    return dist_collection
+        for i in range(N)
+    ]
 
 
 def create_powerlaws(
     N: int,
-    component_type: Literal["pl", "spl"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of Distribution for powerlaws.
+    alpha_name = "alpha_" + component_type
+    mmax_name = "mmax_" + component_type
+    mmin_name = "mmin_" + component_type
 
-    Parameters
-    ----------
-    N : int
-        Number of components
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[Distribution]
-        list of Distribution for powerlaws
-
-    Raises
-    ------
-    ValueError
-        if alpha, mmin, or mmax is missing
-    """
-    powerlaws_collection = []
-    alpha_name = f"alpha_{component_type}"
-    mmax_name = f"mmax_{component_type}"
-    mmin_name = f"mmin_{component_type}"
-    for i in range(N):
-        alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
-        mmin = _get_parameter(params, f"{mmin_name}_{i}", mmin_name)
-        mmax = _get_parameter(params, f"{mmax_name}_{i}", mmax_name)
-
-        powerlaw = DoublyTruncatedPowerLaw(
-            alpha=-alpha,
-            low=mmin,
-            high=mmax,
+    return [
+        DoublyTruncatedPowerLaw(
+            alpha=-_get_parameter(params, f"{alpha_name}_{i}"),  # type: ignore
+            mmin=_get_parameter(params, f"{mmin_name}_{i}"),  # type: ignore
+            mmax=_get_parameter(params, f"{mmax_name}_{i}"),  # type: ignore
             validate_args=validate_args,
         )
-
-        powerlaws_collection.append(powerlaw)
-    return powerlaws_collection
+        for i in range(N)
+    ]
 
 
 def create_generic_powerlaws(
@@ -688,78 +334,27 @@ def create_generic_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of Distribution for powerlaws.
-
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : str
-        The name of the parameter.
-    component_type : str
-        The type of component.
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[Distribution]
-        list of Distribution for powerlaws
-
-    Raises
-    ------
-    ValueError
-        if alpha, low, or high is missing
-    """
-    powerlaws_collection = []
     alpha_name = parameter_name + "_alpha_" + component_type
     high_name = parameter_name + "_high_" + component_type
     low_name = parameter_name + "_low_" + component_type
-    for i in range(N):
-        alpha = _get_parameter(params, f"{alpha_name}_{i}", alpha_name)
-        low = _get_parameter(params, f"{low_name}_{i}", low_name)
-        high = _get_parameter(params, f"{high_name}_{i}", high_name)
-
-        powerlaw = DoublyTruncatedPowerLaw(
-            alpha=alpha,
-            low=low,
-            high=high,
+    return [
+        DoublyTruncatedPowerLaw(
+            alpha=_get_parameter(params, f"{alpha_name}_{i}"),  # type: ignore
+            low=_get_parameter(params, f"{low_name}_{i}"),  # type: ignore
+            high=_get_parameter(params, f"{high_name}_{i}"),  # type: ignore
             validate_args=validate_args,
         )
-
-        powerlaws_collection.append(powerlaw)
-    return powerlaws_collection
+        for i in range(N)
+    ]
 
 
 def create_two_truncated_normal_mixture(
     N: int,
-    parameter_name: Literal["eccentricity"],
-    component_type: Literal["bpl", "pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[MixtureGeneral]:
-    """Create a list of two truncated normal mixture models.
-
-    Parameters
-    ----------
-    N : int
-        Number of components.
-    parameter_name : Literal["eccentricity"]
-        The name of the parameter.
-    component_type : Literal["bpl", "pl", "g"]
-        The type of component.
-    params : Dict[str, Array]
-        A dictionary of parameters.
-    validate_args : Optional[bool], optional
-        Whether to validate arguments, by default None.
-
-    Returns
-    -------
-    List[MixtureGeneral]
-        A list of eccentric mixture models.
-    """
     comp1_high_name = parameter_name + "_comp1_high_" + component_type
     comp2_high_name = parameter_name + "_comp2_high_" + component_type
     comp1_loc_name = parameter_name + "_comp1_loc_" + component_type
@@ -770,82 +365,32 @@ def create_two_truncated_normal_mixture(
     comp2_scale_name = parameter_name + "_comp2_scale_" + component_type
     zeta_name = parameter_name + "_zeta_" + component_type
 
-    two_truncated_normal_mixture_dist_collection = []
-
-    for i in range(N):
-        comp1_high = _get_parameter(
-            params, f"{comp1_high_name}_{i}", comp1_high_name, is_necessary=False
-        )
-        comp2_high = _get_parameter(
-            params, f"{comp2_high_name}_{i}", comp2_high_name, is_necessary=False
-        )
-        comp1_loc = _get_parameter(params, f"{comp1_loc_name}_{i}", comp1_loc_name)
-        comp2_loc = _get_parameter(params, f"{comp2_loc_name}_{i}", comp2_loc_name)
-        comp1_low = _get_parameter(
-            params, f"{comp1_low_name}_{i}", comp1_low_name, is_necessary=False
-        )
-        comp2_low = _get_parameter(
-            params, f"{comp2_low_name}_{i}", comp2_low_name, is_necessary=False
-        )
-        comp1_scale = _get_parameter(
-            params, f"{comp1_scale_name}_{i}", comp1_scale_name
-        )
-        comp2_scale = _get_parameter(
-            params, f"{comp2_scale_name}_{i}", comp2_scale_name
-        )
-        zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
-
-        two_truncated_normal_mixture_dist = TwoTruncatedNormalMixture(
-            comp1_high=comp1_high,
-            comp1_loc=comp1_loc,
-            comp1_low=comp1_low,
-            comp2_high=comp2_high,
-            comp2_loc=comp2_loc,
-            comp2_low=comp2_low,
-            comp1_scale=comp1_scale,
-            comp2_scale=comp2_scale,
-            zeta=zeta,
+    # fmt: off
+    return [
+        TwoTruncatedNormalMixture(
+            comp1_high=_get_parameter(params, f"{comp1_high_name}_{i}", is_necessary=False),  # type: ignore
+            comp2_high=_get_parameter(params, f"{comp2_high_name}_{i}", is_necessary=False),  # type: ignore
+            comp1_loc=_get_parameter(params, f"{comp1_loc_name}_{i}"),  # type: ignore
+            comp2_loc=_get_parameter(params, f"{comp2_loc_name}_{i}"),  # type: ignore
+            comp1_low=_get_parameter(params, f"{comp1_low_name}_{i}", is_necessary=False),  # type: ignore
+            comp2_low=_get_parameter(params, f"{comp2_low_name}_{i}", is_necessary=False),  # type: ignore
+            comp1_scale=_get_parameter(params, f"{comp1_scale_name}_{i}"),  # type: ignore
+            comp2_scale=_get_parameter(params, f"{comp2_scale_name}_{i}"),  # type: ignore
+            zeta=_get_parameter(params, f"{zeta_name}_{i}", zeta_name),  # type: ignore
             validate_args=validate_args,
         )
-        two_truncated_normal_mixture_dist_collection.append(
-            two_truncated_normal_mixture_dist
-        )
-
-    return two_truncated_normal_mixture_dist_collection
+        for i in range(N)
+    ]
+    # fmt: on
 
 
 def create_spin_magnitude_mixture_models(
     N: int,
     parameter_name,
-    component_type: Literal["bpl", "pl", "g"],
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ):
-    """Create a list of spin magnitude mixture models.
-
-    .. note::
-        The `parameter_name` argument is ignored. This function is
-        hardcoded to create models for primary and secondary spin magnitudes
-        ('a_1' and 'a_2').
-
-    Parameters
-    ----------
-    N : int
-        Number of components.
-    parameter_name : str
-        Unused. Kept for compatibility with the calling interface.
-    component_type : Literal["bpl", "pl", "g"]
-        The type of component.
-    params : Dict[str, Array]
-        A dictionary of parameters.
-    validate_args : Optional[bool], optional
-        Whether to validate arguments, by default None.
-
-    Returns
-    -------
-    List[MixtureGeneral]
-        A list of spin magnitude mixture models.
-    """
     # fmt: off
     zeta_name = "a_zeta_" + component_type
     a_1_comp1_high_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_" + component_type
@@ -871,22 +416,22 @@ def create_spin_magnitude_mixture_models(
     for i in range(N):
         # fmt: off
         zeta = _get_parameter(params, f"{zeta_name}_{i}", zeta_name)
-        a_1_comp1_high: ArrayLike = _get_parameter(params, f"{a_1_comp1_high_name}_{i}", a_1_comp1_high_name, default=1.0) # type: ignore
-        a_1_comp1_loc: ArrayLike = _get_parameter(params, f"{a_1_comp1_loc_name}_{i}", a_1_comp1_loc_name) # type: ignore
-        a_1_comp1_low: ArrayLike = _get_parameter(params, f"{a_1_comp1_low_name}_{i}", a_1_comp1_low_name, default=0.0) # type: ignore
-        a_1_comp1_scale: ArrayLike = _get_parameter(params, f"{a_1_comp1_scale_name}_{i}", a_1_comp1_scale_name) # type: ignore
-        a_1_comp2_high: ArrayLike = _get_parameter(params, f"{a_1_comp2_high_name}_{i}", a_1_comp2_high_name, default=1.0) # type: ignore
-        a_1_comp2_loc: ArrayLike = _get_parameter(params, f"{a_1_comp2_loc_name}_{i}", a_1_comp2_loc_name) # type: ignore
-        a_1_comp2_low: ArrayLike = _get_parameter(params, f"{a_1_comp2_low_name}_{i}", a_1_comp2_low_name, default=0.0) # type: ignore
-        a_1_comp2_scale: ArrayLike = _get_parameter(params, f"{a_1_comp2_scale_name}_{i}", a_1_comp2_scale_name) # type: ignore
-        a_2_comp1_high: ArrayLike = _get_parameter(params, f"{a_2_comp1_high_name}_{i}", a_2_comp1_high_name, default=1.0) # type: ignore
-        a_2_comp1_loc: ArrayLike = _get_parameter(params, f"{a_2_comp1_loc_name}_{i}", a_2_comp1_loc_name) # type: ignore
-        a_2_comp1_low: ArrayLike = _get_parameter(params, f"{a_2_comp1_low_name}_{i}", a_2_comp1_low_name, default=0.0) # type: ignore
-        a_2_comp1_scale: ArrayLike = _get_parameter(params, f"{a_2_comp1_scale_name}_{i}", a_2_comp1_scale_name) # type: ignore
-        a_2_comp2_high: ArrayLike = _get_parameter(params, f"{a_2_comp2_high_name}_{i}", a_2_comp2_high_name, default=1.0) # type: ignore
-        a_2_comp2_loc: ArrayLike = _get_parameter(params, f"{a_2_comp2_loc_name}_{i}", a_2_comp2_loc_name) # type: ignore
-        a_2_comp2_low: ArrayLike = _get_parameter(params, f"{a_2_comp2_low_name}_{i}", a_2_comp2_low_name, default=0.0) # type: ignore
-        a_2_comp2_scale: ArrayLike = _get_parameter(params, f"{a_2_comp2_scale_name}_{i}", a_2_comp2_scale_name) # type: ignore
+        a_1_comp1_high: ArrayLike = _get_parameter(params, f"{a_1_comp1_high_name}_{i}", default=1.0) # type: ignore
+        a_1_comp1_loc: ArrayLike = _get_parameter(params, f"{a_1_comp1_loc_name}_{i}") # type: ignore
+        a_1_comp1_low: ArrayLike = _get_parameter(params, f"{a_1_comp1_low_name}_{i}", default=0.0) # type: ignore
+        a_1_comp1_scale: ArrayLike = _get_parameter(params, f"{a_1_comp1_scale_name}_{i}") # type: ignore
+        a_1_comp2_high: ArrayLike = _get_parameter(params, f"{a_1_comp2_high_name}_{i}", default=1.0) # type: ignore
+        a_1_comp2_loc: ArrayLike = _get_parameter(params, f"{a_1_comp2_loc_name}_{i}") # type: ignore
+        a_1_comp2_low: ArrayLike = _get_parameter(params, f"{a_1_comp2_low_name}_{i}", default=0.0) # type: ignore
+        a_1_comp2_scale: ArrayLike = _get_parameter(params, f"{a_1_comp2_scale_name}_{i}") # type: ignore
+        a_2_comp1_high: ArrayLike = _get_parameter(params, f"{a_2_comp1_high_name}_{i}", default=1.0) # type: ignore
+        a_2_comp1_loc: ArrayLike = _get_parameter(params, f"{a_2_comp1_loc_name}_{i}") # type: ignore
+        a_2_comp1_low: ArrayLike = _get_parameter(params, f"{a_2_comp1_low_name}_{i}", default=0.0) # type: ignore
+        a_2_comp1_scale: ArrayLike = _get_parameter(params, f"{a_2_comp1_scale_name}_{i}") # type: ignore
+        a_2_comp2_high: ArrayLike = _get_parameter(params, f"{a_2_comp2_high_name}_{i}", default=1.0) # type: ignore
+        a_2_comp2_loc: ArrayLike = _get_parameter(params, f"{a_2_comp2_loc_name}_{i}") # type: ignore
+        a_2_comp2_low: ArrayLike = _get_parameter(params, f"{a_2_comp2_low_name}_{i}", default=0.0) # type: ignore
+        a_2_comp2_scale: ArrayLike = _get_parameter(params, f"{a_2_comp2_scale_name}_{i}") # type: ignore
         # fmt: on
 
         comp1_high = jnp.stack((a_1_comp1_high, a_2_comp1_high), axis=-1)
@@ -918,98 +463,59 @@ def create_spin_magnitude_mixture_models(
 
 def create_gwtc4_effective_spin_skew_normal_models(
     N: int,
-    parameter_name: Literal["chi_eff"],
-    component_type: Literal["bpl", "pl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Create a list of :func:`GWTC4EffectiveSpinSkewNormalModel` distributions for
-    effective spin.
+    loc_name = parameter_name + "_loc_" + component_type
+    scale_name = parameter_name + "_scale_" + component_type
+    epsilon_name = parameter_name + "_epsilon_" + component_type
 
-    Parameters
-    ----------
-    N : int
-        Number of components
-    parameter_name : Literal[&quot;chi_eff&quot;]
-        name of the parameter to create distributions for
-    component_type : Literal[&quot;bpl&quot;, &quot;pl&quot;, &quot;g&quot;]
-        type of component, either "bpl", "pl", or "g"
-    params : Dict[str, Array]
-        dictionary of parameters
-    validate_args : Optional[bool], optional
-        whether to validate arguments, defaults to None, by default None
-
-    Returns
-    -------
-    List[Distribution]
-        list of :func:`GWTC4EffectiveSpinSkewNormalModel` distributions
-    Raises
-    ------
-    ValueError
-        if loc, scale, or epsilon is missing
-    """
-    dist_collection = []
-    loc_name = f"{parameter_name}_loc_{component_type}"
-    scale_name = f"{parameter_name}_scale_{component_type}"
-    epsilon_name = f"{parameter_name}_epsilon_{component_type}"
-
-    for i in range(N):
-        loc: ArrayLike = _get_parameter(params, f"{loc_name}_{i}", loc_name)  # type: ignore
-        scale: ArrayLike = _get_parameter(params, f"{scale_name}_{i}", scale_name)  # type: ignore
-        epsilon: ArrayLike = _get_parameter(params, f"{epsilon_name}_{i}", epsilon_name)  # type: ignore
-        dist_collection.append(
-            GWTC4EffectiveSpinSkewNormalModel(
-                loc=loc,
-                scale=scale,
-                epsilon=epsilon,
-                validate_args=validate_args,
-            )
+    return [
+        GWTC4EffectiveSpinSkewNormalModel(
+            loc=_get_parameter(params, f"{loc_name}_{i}"),  # type: ignore
+            scale=_get_parameter(params, f"{scale_name}_{i}"),  # type: ignore
+            epsilon=_get_parameter(params, f"{epsilon_name}_{i}"),  # type: ignore
+            validate_args=validate_args,
         )
-
-    return dist_collection
+        for i in range(N)
+    ]
 
 
 def create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
     N: int,
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
     collection = []
 
-    alpha1_name = "alpha1_sbpl"
-    alpha2_name = "alpha2_sbpl"
-    beta_name = "beta_sbpl"
-    delta_m1_name = "delta_m1_sbpl"
-    delta_m2_name = "delta_m2_sbpl"
-    m1min_name = "m1min_sbpl"
-    m2min_name = "m2min_sbpl"
-    mbreak_name = "mbreak_sbpl"
-    mmax_name = "mmax_sbpl"
+    alpha1_name = "alpha1_" + component_type
+    alpha2_name = "alpha2_" + component_type
+    beta_name = "beta_" + component_type
+    delta_m1_name = "delta_m1_" + component_type
+    delta_m2_name = "delta_m2_" + component_type
+    m1min_name = "m1min_" + component_type
+    m2min_name = "m2min_" + component_type
+    mbreak_name = "mbreak_" + component_type
+    mmax_name = "mmax_" + component_type
 
     for i in range(N):
-        alpha1 = _get_parameter(params, alpha1_name + f"_{i}")
-        alpha2 = _get_parameter(params, alpha2_name + f"_{i}")
-        beta = _get_parameter(params, beta_name + f"_{i}")
-        delta_m1 = _get_parameter(params, delta_m1_name + f"_{i}")
-        delta_m2 = _get_parameter(params, delta_m2_name + f"_{i}")
-        m1min = _get_parameter(params, m1min_name + f"_{i}")
-        m2min = _get_parameter(params, m2min_name + f"_{i}")
-        mbreak = _get_parameter(params, mbreak_name + f"_{i}")
-        mmax = _get_parameter(params, mmax_name + f"_{i}")
-
+        suffix = f"_{i}"
         broken_powerlaw = SmoothedBrokenPowerlawMassRatioPowerlaw(
-            alpha1=alpha1,
-            alpha2=alpha2,
-            beta=beta,
-            delta_m1=delta_m1,
-            delta_m2=delta_m2,
-            m1min=m1min,
-            m2min=m2min,
-            mbreak=mbreak,
-            mmax=mmax,
+            alpha1=_get_parameter(params, alpha1_name + suffix),  # type: ignore
+            alpha2=_get_parameter(params, alpha2_name + suffix),  # type: ignore
+            beta=_get_parameter(params, beta_name + suffix),  # type: ignore
+            delta_m1=_get_parameter(params, delta_m1_name + suffix),  # type: ignore
+            delta_m2=_get_parameter(params, delta_m2_name + suffix),  # type: ignore
+            m1min=_get_parameter(params, m1min_name + suffix),  # type: ignore
+            m2min=_get_parameter(params, m2min_name + suffix),  # type: ignore
+            mbreak=_get_parameter(params, mbreak_name + suffix),  # type: ignore
+            mmax=_get_parameter(params, mmax_name + suffix),  # type: ignore
             validate_args=validate_args,
         )
-
         distribution = ExtendedSupportTransformedDistribution(
             base_distribution=broken_powerlaw,
             transforms=PrimaryMassAndMassRatioToComponentMassesTransform(),
@@ -1022,39 +528,34 @@ def create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
 
 def create_smoothed_gaussian_primary_mass_ratio(
     N: int,
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
     collection = []
 
-    loc_name = "loc_sgpl"
-    scale_name = "scale_sgpl"
-    beta_name = "beta_sgpl"
-    m1min_name = "m1min_sgpl"
-    m2min_name = "m2min_sgpl"
-    mmax_name = "mmax_sgpl"
-    delta_m1_name = "delta_m1_sgpl"
-    delta_m2_name = "delta_m2_sgpl"
+    loc_name = "loc_" + component_type
+    scale_name = "scale_" + component_type
+    beta_name = "beta_" + component_type
+    m1min_name = "m1min_" + component_type
+    m2min_name = "m2min_" + component_type
+    mmax_name = "mmax_" + component_type
+    delta_m1_name = "delta_m1_" + component_type
+    delta_m2_name = "delta_m2_" + component_type
 
     for i in range(N):
-        loc = _get_parameter(params, loc_name + f"_{i}")
-        scale = _get_parameter(params, scale_name + f"_{i}")
-        beta = _get_parameter(params, beta_name + f"_{i}")
-        m1min = _get_parameter(params, m1min_name + f"_{i}")
-        m2min = _get_parameter(params, m2min_name + f"_{i}")
-        mmax = _get_parameter(params, mmax_name + f"_{i}")
-        delta_m1 = _get_parameter(params, delta_m1_name + f"_{i}")
-        delta_m2 = _get_parameter(params, delta_m2_name + f"_{i}")
+        suffix = f"_{i}"
 
         smoothed_gaussian = SmoothedGaussianPrimaryMassRatio(
-            loc=loc,
-            scale=scale,
-            beta=beta,
-            m1min=m1min,
-            m2min=m2min,
-            mmax=mmax,
-            delta_m1=delta_m1,
-            delta_m2=delta_m2,
+            loc=_get_parameter(params, loc_name + suffix),  # type: ignore
+            scale=_get_parameter(params, scale_name + suffix),  # type: ignore
+            beta=_get_parameter(params, beta_name + suffix),  # type: ignore
+            m1min=_get_parameter(params, m1min_name + suffix),  # type: ignore
+            m2min=_get_parameter(params, m2min_name + suffix),  # type: ignore
+            mmax=_get_parameter(params, mmax_name + suffix),  # type: ignore
+            delta_m1=_get_parameter(params, delta_m1_name + suffix),  # type: ignore
+            delta_m2=_get_parameter(params, delta_m2_name + suffix),  # type: ignore
             validate_args=validate_args,
         )
 
@@ -1070,30 +571,27 @@ def create_smoothed_gaussian_primary_mass_ratio(
 
 def create_gaussian_primary_mass_ratio(
     N: int,
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
     collection = []
 
-    loc_name = "loc_gpl"
-    scale_name = "scale_gpl"
-    beta_name = "beta_gpl"
-    mmin_name = "mmin_gpl"
-    mmax_name = "mmax_gpl"
+    loc_name = "loc_" + component_type
+    scale_name = "scale_" + component_type
+    beta_name = "beta_" + component_type
+    mmin_name = "mmin_" + component_type
+    mmax_name = "mmax_" + component_type
 
     for i in range(N):
-        loc = _get_parameter(params, loc_name + f"_{i}")
-        scale = _get_parameter(params, scale_name + f"_{i}")
-        beta = _get_parameter(params, beta_name + f"_{i}")
-        mmin = _get_parameter(params, mmin_name + f"_{i}")
-        mmax = _get_parameter(params, mmax_name + f"_{i}")
-
+        suffix = f"_{i}"
         gaussian = GaussianPrimaryMassRatio(
-            loc=loc,
-            scale=scale,
-            beta=beta,
-            mmin=mmin,
-            mmax=mmax,
+            loc=_get_parameter(params, loc_name + suffix),  # type: ignore
+            scale=_get_parameter(params, scale_name + suffix),  # type: ignore
+            beta=_get_parameter(params, beta_name + suffix),  # type: ignore
+            mmin=_get_parameter(params, mmin_name + suffix),  # type: ignore
+            mmax=_get_parameter(params, mmax_name + suffix),  # type: ignore
             validate_args=validate_args,
         )
 
@@ -1109,36 +607,31 @@ def create_gaussian_primary_mass_ratio(
 
 def create_smoothed_powerlaw_primary_mass_ratio(
     N: int,
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
     collection = []
 
-    alpha_name = "alpha_spl"
-    beta_name = "beta_spl"
-    delta_m1_name = "delta_m1_spl"
-    delta_m2_name = "delta_m2_spl"
-    m1min_name = "m1min_spl"
-    m2min_name = "m2min_spl"
-    mmax_name = "mmax_spl"
+    alpha_name = "alpha_" + component_type
+    beta_name = "beta_" + component_type
+    delta_m1_name = "delta_m1_" + component_type
+    delta_m2_name = "delta_m2_" + component_type
+    m1min_name = "m1min_" + component_type
+    m2min_name = "m2min_" + component_type
+    mmax_name = "mmax_" + component_type
 
     for i in range(N):
-        alpha = _get_parameter(params, alpha_name + f"_{i}")
-        beta = _get_parameter(params, beta_name + f"_{i}")
-        delta_m1 = _get_parameter(params, delta_m1_name + f"_{i}")
-        delta_m2 = _get_parameter(params, delta_m2_name + f"_{i}")
-        m1min = _get_parameter(params, m1min_name + f"_{i}")
-        m2min = _get_parameter(params, m2min_name + f"_{i}")
-        mmax = _get_parameter(params, mmax_name + f"_{i}")
-
+        suffix = f"_{i}"
         broken_powerlaw = SmoothedPowerlawPrimaryMassRatio(
-            alpha=alpha,
-            beta=beta,
-            delta_m1=delta_m1,
-            delta_m2=delta_m2,
-            m1min=m1min,
-            m2min=m2min,
-            mmax=mmax,
+            alpha=_get_parameter(params, alpha_name + suffix),  # type: ignore
+            beta=_get_parameter(params, beta_name + suffix),  # type: ignore
+            delta_m1=_get_parameter(params, delta_m1_name + suffix),  # type: ignore
+            delta_m2=_get_parameter(params, delta_m2_name + suffix),  # type: ignore
+            m1min=_get_parameter(params, m1min_name + suffix),  # type: ignore
+            m2min=_get_parameter(params, m2min_name + suffix),  # type: ignore
+            mmax=_get_parameter(params, mmax_name + suffix),  # type: ignore
             validate_args=validate_args,
         )
 
@@ -1155,11 +648,11 @@ def create_smoothed_powerlaw_primary_mass_ratio(
 def create_generic_smoothed_powerlaw_mass_ratio(
     N: int,
     primary_mass_distributions: List[Distribution],
-    component_type: Literal["spl", "bpl", "g"],
+    parameter_name: str,
+    component_type: str,
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    collection = []
 
     beta_name = "beta_" + component_type
     delta_m1_name = "delta_m1"
@@ -1167,20 +660,15 @@ def create_generic_smoothed_powerlaw_mass_ratio(
     m2min_name = "m2min_" + component_type
 
     delta_m1 = _get_parameter(params, delta_m1_name)
-    for i in range(N):
-        beta = _get_parameter(params, f"{beta_name}_{i}", beta_name)
-        delta_m2 = _get_parameter(params, f"{delta_m2_name}_{i}", delta_m2_name)
-        m2min = _get_parameter(params, f"{m2min_name}_{i}", m2min_name)
 
-        distribution = GenericSmoothedPowerlawMassRatio(
+    return [
+        GenericSmoothedPowerlawMassRatio(
             primary_mass_distribution=primary_mass_distributions[i],
-            beta=beta,
-            delta_m1=delta_m1,
-            delta_m2=delta_m2,
-            m2min=m2min,
+            delta_m1=delta_m1,  # type: ignore
+            beta=_get_parameter(params, f"{beta_name}_{i}"),  # type: ignore
+            delta_m2=_get_parameter(params, f"{delta_m2_name}_{i}"),  # type: ignore
+            m2min=_get_parameter(params, f"{m2min_name}_{i}"),  # type: ignore
             validate_args=validate_args,
         )
-
-        collection.append(distribution)
-
-    return collection
+        for i in range(N)
+    ]
