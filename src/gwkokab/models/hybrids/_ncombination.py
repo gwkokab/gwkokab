@@ -242,8 +242,8 @@ def create_uniform_distributions(
 
     return [
         Uniform(
-            low=_get_parameter(params, f"{low_name}_{i}"),
-            high=_get_parameter(params, f"{high_name}_{i}"),
+            low=_get_parameter(params, f"{low_name}_{i}"),  # type: ignore
+            high=_get_parameter(params, f"{high_name}_{i}"),  # type: ignore
             validate_args=validate_args,
         )
         for i in range(N)
