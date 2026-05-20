@@ -126,6 +126,7 @@ def _build_component_distributions(
     if component_type == "spl":
         _mass_distributions = create_powerlaws(
             N=N,
+            parameter_name=None,  # type: ignore # unused parameter
             component_type=component_type,
             params=params,
             validate_args=validate_args,
@@ -133,7 +134,11 @@ def _build_component_distributions(
 
     if component_type == "bpl":
         _mass_distributions = create_broken_powerlaws(
-            N=N, params=params, validate_args=validate_args
+            N=N,
+            parameter_name=None,  # type: ignore # unused parameter
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
         )
 
     if component_type == "g":
@@ -148,6 +153,7 @@ def _build_component_distributions(
     _m1q_distributions = create_generic_smoothed_powerlaw_mass_ratio(
         N=N,
         primary_mass_distributions=_mass_distributions,
+        parameter_name=None,  # type: ignore # unused parameter
         component_type=component_type,
         params=params,
         validate_args=validate_args,
