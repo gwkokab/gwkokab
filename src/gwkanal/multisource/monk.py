@@ -24,7 +24,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
     def __init__(
         self,
         N_spl: int,
-        N_sbpl: int,
+        N_bpl: int,
         N_gpl: int,
         N_gg: int,
         use_beta_spin_magnitude: bool,
@@ -55,7 +55,7 @@ class MultiSourceModelMonk(MultiSourceModelCore, Monk):
         MultiSourceModelCore.__init__(
             self,
             N_spl=N_spl,
-            N_sbpl=N_sbpl,
+            N_bpl=N_bpl,
             N_gpl=N_gpl,
             N_gg=N_gg,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
@@ -116,7 +116,7 @@ def f_main() -> None:
 
     MultiSourceModelFMonk(
         N_spl=args.n_spl,
-        N_sbpl=args.n_sbpl,
+        N_bpl=args.n_bpl,
         N_gpl=args.n_gpl,
         N_gg=args.n_gg,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
@@ -163,7 +163,7 @@ def n_main() -> None:
 
     MultiSourceModelNMonk(
         N_spl=args.n_spl,
-        N_sbpl=args.n_sbpl,
+        N_bpl=args.n_bpl,
         N_gpl=args.n_gpl,
         N_gg=args.n_gg,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
