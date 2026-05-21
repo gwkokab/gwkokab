@@ -13,12 +13,8 @@ from . import (
     utils as utils,
 )
 from .hybrids import (
-    BrokenPowerlawTwoPeakFull as BrokenPowerlawTwoPeakFull,
-    BrokenPowerlawTwoPeakMultiSpinMultiTilt as BrokenPowerlawTwoPeakMultiSpinMultiTilt,
-    BrokenPowerlawTwoPeakMultiSpinMultiTiltFull as BrokenPowerlawTwoPeakMultiSpinMultiTiltFull,
     MultiSourceModel as MultiSourceModel,
     NPowerlawMGaussian as NPowerlawMGaussian,
-    PowerlawPeak as PowerlawPeak,
     SubPopulationModel as SubPopulationModel,
 )
 from .mass import (
