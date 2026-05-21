@@ -13,8 +13,8 @@ available models is accessible at :doc:`/autoapi/gwkanal/models/index`.
 from . import (
     core as core,
     ecc_matters as ecc_matters,
+    multisource as multisource,
     n_pls_m_gs as n_pls_m_gs,
-    o3_n_pls_m_gs as o3_n_pls_m_gs,
-    o4_n_bpls_m_gs as o4_n_bpls_m_gs,
+    subpopulation as subpopulation,
     utils as utils,
 )
