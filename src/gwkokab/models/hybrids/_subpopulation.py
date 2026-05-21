@@ -38,7 +38,7 @@ from ._utils import _M1_GRID_SIZE
 
 def _build_non_mass_distributions(
     N: int,
-    component_type: Literal["spl", "bpl", "g"],
+    component_type: Literal["spl", "bpl", "gpl"],
     mass_distributions: List[Distribution],
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
@@ -102,7 +102,7 @@ def _build_non_mass_distributions(
 
 def _build_component_distributions(
     N: int,
-    component_type: Literal["spl", "bpl", "g"],
+    component_type: Literal["spl", "bpl", "gpl"],
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
     use_truncated_normal_spin_x: bool,
@@ -141,7 +141,7 @@ def _build_component_distributions(
             validate_args=validate_args,
         )
 
-    if component_type == "g":
+    if component_type == "gpl":
         _mass_distributions = create_truncated_normal_distributions(
             N=N,
             parameter_name="m1",
@@ -192,7 +192,7 @@ def _build_component_distributions(
 def SubPopulationModel(
     N_spl: int,
     N_bpl: int,
-    N_g: int,
+    N_gpl: int,
     use_beta_spin_magnitude: bool = False,
     use_spin_magnitude_mixture: bool = False,
     use_truncated_normal_spin_x: bool = False,
@@ -213,7 +213,7 @@ def SubPopulationModel(
 ) -> ScaledMixture:
     component_dists = []
     mass_dist = []
-    for component_type, N in zip(("spl", "bpl", "g"), (N_spl, N_bpl, N_g)):
+    for component_type, N in zip(("spl", "bpl", "gpl"), (N_spl, N_bpl, N_gpl)):
         m_dist, _component_dists = _build_component_distributions(
             N=N,
             component_type=component_type,
@@ -237,7 +237,7 @@ def SubPopulationModel(
         mass_dist.extend(m_dist)
         component_dists.extend(_component_dists)
 
-    N = N_spl + N_bpl + N_g
+    N = N_spl + N_bpl + N_gpl
     _lambdas = [params.pop(f"lambda_{i}") for i in range(N - 1)]
     _lambdas.append(1.0 - sum(_lambdas))
     lambdas = jnp.stack(_lambdas, axis=-1)
