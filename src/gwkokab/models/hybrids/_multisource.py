@@ -35,7 +35,7 @@ from ._ncombination import (
 
 def _build_non_mass_distributions(
     N: int,
-    component_type: Literal["spl", "sbpl", "gpl", "gg"],
+    component_type: Literal["spl", "bpl", "gpl", "gg"],
     mass_distributions: List[Distribution],
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
@@ -60,8 +60,8 @@ def _build_non_mass_distributions(
     ----------
     N : int
         Number of components
-    component_type : Literal["sbpl", "gpl", "gg"]
-        type of component, either "sbpl", "gpl", or "gg"
+    component_type : Literal["bpl", "gpl", "gg"]
+        type of component, either "bpl", "gpl", or "gg"
     mass_distributions : List[Distribution]
         list of mass distributions
     use_spin : bool
@@ -129,7 +129,7 @@ def _build_non_mass_distributions(
 
 def _build_component_distributions(
     N: int,
-    component_type: Literal["spl", "sbpl", "gpl", "gg"],
+    component_type: Literal["spl", "bpl", "gpl", "gg"],
     use_beta_spin_magnitude: bool,
     use_spin_magnitude_mixture: bool,
     use_truncated_normal_spin_x: bool,
@@ -151,14 +151,18 @@ def _build_component_distributions(
         return []
     if component_type == "spl":
         powerlaws = create_smoothed_powerlaw_primary_mass_ratio(
-            N=N, params=params, validate_args=validate_args
+            N=N,
+            parameter_name=None,  # type: ignore # unused parameter
+            component_type=component_type,
+            params=params,
+            validate_args=validate_args,
         )
         mass_distributions = jtr.map(
             lambda powerlaw: [powerlaw],
             powerlaws,
             is_leaf=lambda x: isinstance(x, ExtendedSupportTransformedDistribution),
         )
-    if component_type == "sbpl":
+    if component_type == "bpl":
         powerlaws = create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
             N=N,
             parameter_name=None,  # type: ignore # unused parameter
@@ -239,7 +243,7 @@ def _build_component_distributions(
 
 def MultiSourceModel(
     N_spl: int,
-    N_sbpl: int,
+    N_bpl: int,
     N_gpl: int,
     N_gg: int,
     use_beta_spin_magnitude: bool = False,
@@ -262,7 +266,7 @@ def MultiSourceModel(
 ) -> ScaledMixture:
     component_dists = []
     for component_type, N in zip(
-        ["spl", "sbpl", "gpl", "gg"], [N_spl, N_sbpl, N_gpl, N_gg]
+        ["spl", "bpl", "gpl", "gg"], [N_spl, N_bpl, N_gpl, N_gg]
     ):
         component_dists += _build_component_distributions(
             N=N,
@@ -285,7 +289,7 @@ def MultiSourceModel(
             validate_args=validate_args,
         )
 
-    N = N_spl + N_sbpl + N_gpl + N_gg
+    N = N_spl + N_bpl + N_gpl + N_gg
     log_rates = jnp.stack([params[f"log_rate_{i}"] for i in range(N)], axis=-1)
 
     return ScaledMixture(

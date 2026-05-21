@@ -23,11 +23,11 @@ def where_fns_list(
         def positive_concentration(**kwargs) -> Array:
             N_spl: int = kwargs.get("N_spl")  # type: ignore
             N_bpl: int = kwargs.get("N_bpl")  # type: ignore
-            N_g: int = kwargs.get("N_g")  # type: ignore
+            N_gpl: int = kwargs.get("N_gpl")  # type: ignore
 
             mask = jnp.ones((), dtype=bool)
 
-            for ctype, n in zip(("spl", "bpl", "g"), (N_spl, N_bpl, N_g)):
+            for ctype, n in zip(("spl", "bpl", "gpl"), (N_spl, N_bpl, N_gpl)):
                 for n_c in range(n):
                     chi_mean: Array = kwargs.get(
                         P.PRIMARY_SPIN_MAGNITUDE + f"_mean_{ctype}_{n_c}"
@@ -50,7 +50,7 @@ class SubPopulationModelCore:
         self,
         N_spl: int,
         N_bpl: int,
-        N_g: int,
+        N_gpl: int,
         use_beta_spin_magnitude: bool,
         use_spin_magnitude_mixture: bool,
         use_truncated_normal_spin_x: bool,
@@ -68,7 +68,7 @@ class SubPopulationModelCore:
     ) -> None:
         self.N_spl = N_spl
         self.N_bpl = N_bpl
-        self.N_g = N_g
+        self.N_gpl = N_gpl
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
         self.use_spin_magnitude_mixture = use_spin_magnitude_mixture
         self.use_truncated_normal_spin_x = use_truncated_normal_spin_x
@@ -88,7 +88,7 @@ class SubPopulationModelCore:
         params.update({
             "N_spl": self.N_spl,
             "N_bpl": self.N_bpl,
-            "N_g": self.N_g,
+            "N_gpl": self.N_gpl,
             "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
             "use_spin_magnitude_mixture": self.use_spin_magnitude_mixture,
             "use_truncated_normal_spin_x": self.use_truncated_normal_spin_x,
@@ -139,13 +139,13 @@ class SubPopulationModelCore:
     def model_parameters(self) -> list[str]:
         # fmt: off
         component_types_and_count = zip(
-            ("spl"     , "bpl"     , "g"     ),
-            (self.N_spl, self.N_bpl, self.N_g),
+            ("spl"     , "bpl"     , "gpl"     ),
+            (self.N_spl, self.N_bpl, self.N_gpl),
         )
         # fmt: on
 
         all_params: list[tuple[str, int]] = [
-            ("lambda", self.N_spl + self.N_bpl + self.N_g - 1)
+            ("lambda", self.N_spl + self.N_bpl + self.N_gpl - 1)
         ]
 
         for ct, count in component_types_and_count:
@@ -167,7 +167,7 @@ class SubPopulationModelCore:
                     "m1min_",
                 ])
 
-            if ct == "g":
+            if ct == "gpl":
                 all_params_names.extend(["m1_loc_", "m1_scale_", "m1_low_", "m1_high_"])
 
             if self.use_spin_magnitude_mixture:
@@ -338,7 +338,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Number of smoothed broken power law.",
     )
     model_group.add_argument(
-        "--n-g",
+        "--n-gpl",
         type=int,
         default=0,
         help="Number of Gaussian components for primary mass.",

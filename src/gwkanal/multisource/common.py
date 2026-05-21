@@ -22,14 +22,14 @@ def where_fns_list(
 
         def positive_concentration(**kwargs) -> Array:
             N_spl: int = kwargs.get("N_spl")  # type: ignore
-            N_sbpl: int = kwargs.get("N_sbpl")  # type: ignore
+            N_bpl: int = kwargs.get("N_bpl")  # type: ignore
             N_gpl: int = kwargs.get("N_gpl")  # type: ignore
             N_gg: int = kwargs.get("N_gg")  # type: ignore
 
             mask = jnp.ones((), dtype=bool)
 
             for ctype, n in zip(
-                ("spl", "sbpl", "gpl", "gg"), (N_spl, N_sbpl, N_gpl, N_gg)
+                ("spl", "bpl", "gpl", "gg"), (N_spl, N_bpl, N_gpl, N_gg)
             ):
                 for n_c in range(n):
                     chi_mean: Array = kwargs.get(
@@ -52,7 +52,7 @@ class MultiSourceModelCore:
     def __init__(
         self,
         N_spl: int,
-        N_sbpl: int,
+        N_bpl: int,
         N_gpl: int,
         N_gg: int,
         use_beta_spin_magnitude: bool,
@@ -71,7 +71,7 @@ class MultiSourceModelCore:
         use_madau_dickinson_redshift: bool,
     ) -> None:
         self.N_spl = N_spl
-        self.N_sbpl = N_sbpl
+        self.N_bpl = N_bpl
         self.N_gpl = N_gpl
         self.N_gg = N_gg
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
@@ -92,7 +92,7 @@ class MultiSourceModelCore:
     def modify_model_params(self, params: dict) -> dict:
         params.update({
             "N_spl": self.N_spl,
-            "N_sbpl": self.N_sbpl,
+            "N_bpl": self.N_bpl,
             "N_gpl": self.N_gpl,
             "N_gg": self.N_gg,
             "use_beta_spin_magnitude": self.use_beta_spin_magnitude,
@@ -144,12 +144,12 @@ class MultiSourceModelCore:
     @property
     def model_parameters(self) -> list[str]:
         all_params: list[tuple[str, int]] = [
-            ("log_rate", self.N_spl + self.N_sbpl + self.N_gpl + self.N_gg)
+            ("log_rate", self.N_spl + self.N_bpl + self.N_gpl + self.N_gg)
         ]
 
         component_types_and_count = zip(
-            ["spl", "sbpl", "gpl", "gg"],
-            [self.N_spl, self.N_sbpl, self.N_gpl, self.N_gg],
+            ["spl", "bpl", "gpl", "gg"],
+            [self.N_spl, self.N_bpl, self.N_gpl, self.N_gg],
         )
 
         for ct, count in component_types_and_count:
@@ -164,7 +164,7 @@ class MultiSourceModelCore:
                     "m2min_",
                     "mmax_",
                 ])
-            if ct == "sbpl":
+            if ct == "bpl":
                 all_params_names.extend([
                     "alpha1_",
                     "alpha2_",
@@ -346,7 +346,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help="Number of smoothed power law primary mass ratio components in the mass model.",
     )
     model_group.add_argument(
-        "--n-sbpl",
+        "--n-bpl",
         type=int,
         default=0,
         help="Number of smoothed broken power law components in the mass model.",
