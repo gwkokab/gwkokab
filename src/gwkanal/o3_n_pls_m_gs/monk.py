@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 from typing import Callable
 
 from numpyro.distributions.distribution import enable_validation
@@ -95,7 +95,7 @@ class NSmoothedPowerlawMSmoothedGaussianNMonk(
 
 
 def f_main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser = model_arg_parser(parser)
     parser = monk_arg_parser(parser)
 
@@ -135,7 +135,7 @@ def f_main() -> None:
 
 
 def n_main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser = model_arg_parser(parser)
     parser = monk_arg_parser(parser)
 

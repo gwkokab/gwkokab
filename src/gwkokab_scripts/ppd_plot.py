@@ -10,11 +10,11 @@ import numpy as np
 
 def make_parser() -> argparse.ArgumentParser:
 
-    from argparse import ArgumentDefaultsHelpFormatter
+    from argparse import RawTextHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="PPD plot",
-        formatter_class=ArgumentDefaultsHelpFormatter,
+        formatter_class=RawTextHelpFormatter,
         epilog="This script plots ppd plots.",
     )
     parser.add_argument(

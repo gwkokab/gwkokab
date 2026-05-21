@@ -81,11 +81,11 @@ def format_json_with_gaps(cfg: OrderedDict) -> str:
 
 def main() -> None:
     import argparse
-    from argparse import ArgumentDefaultsHelpFormatter
+    from argparse import RawTextHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="Creates a template config for flowMC",
-        formatter_class=ArgumentDefaultsHelpFormatter,
+        formatter_class=RawTextHelpFormatter,
     )
     parser.add_argument(
         "--output",

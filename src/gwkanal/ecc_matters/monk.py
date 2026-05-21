@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 
 from numpyro.distributions.distribution import enable_validation
 
@@ -27,7 +27,7 @@ class EccentricityMattersNMonk(EccentricityMattersCore, Monk, NumpyroBased):
 
 
 def f_main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser = monk_arg_parser(parser)
 
     args = parser.parse_args()
@@ -57,7 +57,7 @@ def f_main() -> None:
 
 
 def n_main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser = monk_arg_parser(parser)
 
     args = parser.parse_args()

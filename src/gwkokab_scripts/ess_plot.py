@@ -5,11 +5,11 @@ import argparse
 
 
 def make_parser() -> argparse.ArgumentParser:
-    from argparse import ArgumentDefaultsHelpFormatter
+    from argparse import RawTextHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="Command line interface for plotting Effective Sample Size per draw.",
-        formatter_class=ArgumentDefaultsHelpFormatter,
+        formatter_class=RawTextHelpFormatter,
     )
     parser.add_argument(
         "--train-chain-regex",

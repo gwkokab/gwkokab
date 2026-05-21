@@ -5,11 +5,11 @@
 def main():
     """Compute diagonal mass matrix from pilot-run samples."""
     import argparse
-    from argparse import ArgumentDefaultsHelpFormatter
+    from argparse import RawTextHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="Compute diagonal mass matrix from pilot-run samples",
-        formatter_class=ArgumentDefaultsHelpFormatter,
+        formatter_class=RawTextHelpFormatter,
     )
     parser.add_argument(
         "filename", help="Path to pilot-run .dat file (rows=samples, columns=params)"

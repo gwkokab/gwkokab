@@ -4,7 +4,7 @@
 
 import pprint
 import warnings
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 from collections.abc import Callable
 from pathlib import Path
 from typing import Literal, Optional, TypeAlias
@@ -429,7 +429,7 @@ def synthetic_discrete_pe_main():
     enable_validation()
 
     parser = ArgumentParser(
-        formatter_class=ArgumentDefaultsHelpFormatter,
+        formatter_class=RawTextHelpFormatter,
         description="Generate synthetic discrete parameter estimation samples.",
         epilog="This tool generates synthetic parameter estimation samples based on "
         "injection data and a specified error model.",
@@ -680,7 +680,7 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
 
 def synthetic_analytical_pe_main():
     parser = ArgumentParser(
-        formatter_class=ArgumentDefaultsHelpFormatter,
+        formatter_class=RawTextHelpFormatter,
         description="Generate synthetic analytical parameter estimation samples.",
         epilog="This tool generates synthetic parameter estimation samples based on "
         "injection data and a specified error model.",

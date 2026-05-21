@@ -1,7 +1,7 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 from typing import Callable, Dict, List, Optional
 
 from jaxtyping import Array, ArrayLike
@@ -136,7 +136,7 @@ class NPowerlawMGaussianNSage(NPowerlawMGaussianSage, NumpyroBased):
 def f_main() -> None:
     enable_validation()
 
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
     parser = flowMC_arg_parser(parser)
@@ -190,7 +190,7 @@ def f_main() -> None:
 
 
 def n_main() -> None:
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    parser = ArgumentParser(formatter_class=RawTextHelpFormatter)
     parser = model_arg_parser(parser)
     parser = sage_arg_parser(parser)
     parser = numpyro_arg_parser(parser)

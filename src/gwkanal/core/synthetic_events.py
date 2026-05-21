@@ -3,7 +3,7 @@
 
 
 from abc import ABC, abstractmethod
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+from argparse import ArgumentParser, RawTextHelpFormatter
 from collections.abc import Callable
 
 import h5py
@@ -233,7 +233,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
 def injection_generator_parser() -> ArgumentParser:
     enable_validation()
     parser = ArgumentParser(
-        formatter_class=ArgumentDefaultsHelpFormatter,
+        formatter_class=RawTextHelpFormatter,
         description="Generate a population of CBCs",
     )
     # Grouping arguments for better --help readability

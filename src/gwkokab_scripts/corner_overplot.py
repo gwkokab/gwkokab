@@ -7,11 +7,11 @@ import argparse
 
 def make_parser() -> argparse.ArgumentParser:
 
-    from argparse import ArgumentDefaultsHelpFormatter
+    from argparse import RawTextHelpFormatter
 
     parser = argparse.ArgumentParser(
         description="Corner plotter.",
-        formatter_class=ArgumentDefaultsHelpFormatter,
+        formatter_class=RawTextHelpFormatter,
         epilog="This script plots a corner plot.",
     )
     parser.add_argument(
