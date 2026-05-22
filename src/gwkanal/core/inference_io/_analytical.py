@@ -13,7 +13,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
 
 from gwkanal.core.utils import IdentitySampleTransformer, SampleTransformer
-from gwkanal.utils.common import read_json
+from gwkanal.utils.common import read_json, write_json
 from gwkokab.utils.exceptions import (
     LoggedFileNotFoundError,
     LoggedImportError,
@@ -21,6 +21,30 @@ from gwkokab.utils.exceptions import (
     LoggedUserWarning,
     LoggedValueError,
 )
+
+
+def _data_loader_cfg_template() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Creates a template configuration for analytical data loader.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        default="analytical_data_loader_cfg_template.json",
+        help="Output JSON filename",
+    )
+    args = parser.parse_args()
+
+    cfg = {
+        "regex": "",
+        "transform_module_path": None,
+        "default_waveform": "GWKokabSyntheticAnalyticalPE",
+        "alternate_waveforms": {},
+    }
+    write_json(args.output, cfg)
 
 
 def _load_transform(path: Optional[str]) -> SampleTransformer:
