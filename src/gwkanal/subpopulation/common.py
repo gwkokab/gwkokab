@@ -266,7 +266,13 @@ class SubPopulationModelCore:
             if self.use_tilt:
                 all_params_names.extend([
                     "cos_tilt_zeta_",
+                    P.COS_TILT_1 + "_high_",
+                    P.COS_TILT_1 + "_loc_",
+                    P.COS_TILT_1 + "_low_",
                     P.COS_TILT_1 + "_scale_",
+                    P.COS_TILT_2 + "_high_",
+                    P.COS_TILT_2 + "_loc_",
+                    P.COS_TILT_2 + "_low_",
                     P.COS_TILT_2 + "_scale_",
                 ])
 

@@ -5,8 +5,6 @@
 from ._models import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
+    GenericTiltModel as GenericTiltModel,
     GWTC4EffectiveSpinSkewNormalModel as GWTC4EffectiveSpinSkewNormalModel,
-    IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
-    MinimumTiltModel as MinimumTiltModel,
-    MinimumTiltModelExtended as MinimumTiltModelExtended,
 )

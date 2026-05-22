@@ -31,8 +31,8 @@ from .redshift import (
 from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
+    GenericTiltModel as GenericTiltModel,
     GWTC4EffectiveSpinSkewNormalModel as GWTC4EffectiveSpinSkewNormalModel,
-    IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
 )
 from .sundry import (
     NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,

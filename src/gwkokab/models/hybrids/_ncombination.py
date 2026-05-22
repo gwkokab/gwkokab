@@ -25,12 +25,7 @@ from ..mass import (
     SmoothedPowerlawPrimaryMassRatio,
 )
 from ..redshift import MadauDickinsonRedshiftModel, PowerlawRedshiftModel
-from ..spin import (
-    BetaFromMeanVar,
-    GWTC4EffectiveSpinSkewNormalModel,
-    IndependentSpinOrientationGaussianIsotropic,
-    MinimumTiltModelExtended,
-)
+from ..spin import BetaFromMeanVar, GenericTiltModel, GWTC4EffectiveSpinSkewNormalModel
 from ..sundry import NDTwoTruncatedNormalMixture, TwoTruncatedNormalMixture
 from ..transformations import PrimaryMassAndMassRatioToComponentMassesTransform
 from ..utils import DoublyTruncatedPowerLaw, ExtendedSupportTransformedDistribution
@@ -44,9 +39,8 @@ __all__ = [
     "create_generic_powerlaws",
     "create_generic_smoothed_powerlaw_mass_ratio",
     "create_gwtc4_effective_spin_skew_normal_models",
-    "create_independent_spin_orientation_gaussian_isotropic",
     "create_madau_dickinson_redshift_model",
-    "create_minimum_tilt_model",
+    "create_generic_tilt_model",
     "create_powerlaw_primary_mass_ratios",
     "create_powerlaw_redshift_model",
     "create_powerlaws",
@@ -132,28 +126,6 @@ def create_truncated_normal_distributions(
         for i in range(N)
     ]
     # fmt: on
-
-
-def create_independent_spin_orientation_gaussian_isotropic(
-    N: int,
-    parameter_name: str,
-    component_type: str,
-    params: Dict[str, Array],
-    validate_args: Optional[bool] = None,
-) -> List[MixtureGeneral]:
-    zeta_name = "cos_tilt_zeta_" + component_type
-    scale1_name = P.COS_TILT_1 + "_scale_" + component_type
-    scale2_name = P.COS_TILT_2 + "_scale_" + component_type
-
-    return [
-        IndependentSpinOrientationGaussianIsotropic(
-            zeta=_get_parameter(params, f"{zeta_name}_{i}"),  # type: ignore
-            scale1=_get_parameter(params, f"{scale1_name}_{i}"),  # type: ignore
-            scale2=_get_parameter(params, f"{scale2_name}_{i}"),  # type: ignore
-            validate_args=validate_args,
-        )
-        for i in range(N)
-    ]
 
 
 def create_powerlaw_primary_mass_ratios(
@@ -275,7 +247,7 @@ def create_broken_powerlaws(
     ]
 
 
-def create_minimum_tilt_model(
+def create_generic_tilt_model(
     N: int,
     parameter_name: str,
     component_type: str,
@@ -287,18 +259,22 @@ def create_minimum_tilt_model(
     loc2_name = P.COS_TILT_2 + "_loc_" + component_type
     scale1_name = P.COS_TILT_1 + "_scale_" + component_type
     scale2_name = P.COS_TILT_2 + "_scale_" + component_type
-    minimum1_name = P.COS_TILT_1 + "_minimum_" + component_type
-    minimum2_name = P.COS_TILT_2 + "_minimum_" + component_type
+    low1_name = P.COS_TILT_1 + "_low_" + component_type
+    low2_name = P.COS_TILT_2 + "_low_" + component_type
+    high1_name = P.COS_TILT_1 + "_high_" + component_type
+    high2_name = P.COS_TILT_2 + "_high_" + component_type
 
     return [
-        MinimumTiltModelExtended(
+        GenericTiltModel(
             zeta=_get_parameter(params, f"{zeta_name}_{i}"),  # type: ignore
             loc1=_get_parameter(params, f"{loc1_name}_{i}"),  # type: ignore
             loc2=_get_parameter(params, f"{loc2_name}_{i}"),  # type: ignore
             scale1=_get_parameter(params, f"{scale1_name}_{i}"),  # type: ignore
             scale2=_get_parameter(params, f"{scale2_name}_{i}"),  # type: ignore
-            minimum1=_get_parameter(params, f"{minimum1_name}_{i}", default=-1.0),  # type: ignore
-            minimum2=_get_parameter(params, f"{minimum2_name}_{i}", default=-1.0),  # type: ignore
+            low1=_get_parameter(params, f"{low1_name}_{i}", default=-1.0),  # type: ignore
+            low2=_get_parameter(params, f"{low2_name}_{i}", default=-1.0),  # type: ignore
+            high1=_get_parameter(params, f"{high1_name}_{i}", default=1.0),  # type: ignore
+            high2=_get_parameter(params, f"{high2_name}_{i}", default=1.0),  # type: ignore
             validate_args=validate_args,
         )
         for i in range(N)
