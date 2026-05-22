@@ -35,7 +35,7 @@ def _data_loader_cfg_template() -> None:
     cfg = {
         "regex": "",
         "max_samples": 1,
-        "default_datasets": "/GWKokabSyntheticDiscretePE/posterior_samples",
+        "default_datasets": ["/GWKokabSyntheticDiscretePE/posterior_samples"],
         "alternate_datasets": {},
         "default_mass_prior": None,
         "default_spin_prior": None,
