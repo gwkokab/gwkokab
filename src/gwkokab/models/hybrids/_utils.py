@@ -17,8 +17,8 @@ from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
     create_generic_powerlaws,
+    create_generic_tilt_model,
     create_gwtc4_effective_spin_skew_normal_models,
-    create_minimum_tilt_model,
     create_powerlaw_redshift_model,
     create_spin_magnitude_mixture_models,
     create_truncated_normal_distributions,
@@ -56,7 +56,7 @@ def build_non_mass_distributions(
         (use_skew_normal_chi_eff, P.EFFECTIVE_SPIN, create_gwtc4_effective_spin_skew_normal_models),
         (use_truncated_normal_chi_p, P.PRECESSING_SPIN, create_truncated_normal_distributions),
         # combined tilt distribution
-        (use_tilt, P.COS_TILT_1 + "_" + P.COS_TILT_2, create_minimum_tilt_model),
+        (use_tilt, P.COS_TILT_1 + "_" + P.COS_TILT_2, create_generic_tilt_model),
         (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
         (use_eccentricity_powerlaw, P.ECCENTRICITY, create_generic_powerlaws),
         (use_powerlaw_redshift, P.REDSHIFT, create_powerlaw_redshift_model),
