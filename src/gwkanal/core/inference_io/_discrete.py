@@ -32,6 +32,20 @@ from gwkokab.utils.exceptions import (
 
 
 def _data_loader_cfg_template() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Creates a template configuration for discrete data loader.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        default="discrete_data_loader_cfg_template.json",
+        help="Output JSON filename",
+    )
+    args = parser.parse_args()
+
     cfg = {
         "regex": "",
         "max_samples": None,
@@ -44,7 +58,7 @@ def _data_loader_cfg_template() -> None:
         "alternate_spin_priors": {},
         "alternate_distance_priors": {},
     }
-    write_json("discrete_data_loader_cfg_template.json", cfg)
+    write_json(args.output, cfg)
 
 
 class DiscretePELoader(BaseModel):

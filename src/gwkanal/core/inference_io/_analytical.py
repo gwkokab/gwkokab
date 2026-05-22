@@ -24,13 +24,27 @@ from gwkokab.utils.exceptions import (
 
 
 def _data_loader_cfg_template() -> None:
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Creates a template configuration for analytical data loader.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        default="analytical_data_loader_cfg_template.json",
+        help="Output JSON filename",
+    )
+    args = parser.parse_args()
+
     cfg = {
         "regex": "",
         "transform_module_path": None,
         "default_waveform": "GWKokabSyntheticAnalyticalPE",
         "alternate_waveforms": {},
     }
-    write_json("analytical_data_loader_cfg_template.json", cfg)
+    write_json(args.output, cfg)
 
 
 def _load_transform(path: Optional[str]) -> SampleTransformer:
