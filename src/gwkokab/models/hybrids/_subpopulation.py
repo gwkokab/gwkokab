@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple
+from typing import Callable, Dict, Final, List, Literal, Optional, Sequence, Tuple
 
 from jax import numpy as jnp
 from jaxtyping import Array
@@ -33,7 +33,9 @@ from ._ncombination import (
     create_two_truncated_normal_mixture,
     create_uniform_distributions,
 )
-from ._utils import _M1_GRID_SIZE
+
+
+_M1_GRID_SIZE: Final[int] = 1_000
 
 
 def _build_non_mass_distributions(
