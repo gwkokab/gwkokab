@@ -14,7 +14,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt
 
 from gwkanal.core.utils import from_structured
-from gwkanal.utils.common import read_json
+from gwkanal.utils.common import read_json, write_json
 from gwkokab.cosmology import Cosmology, default_cosmology
 from gwkokab.parameters import Parameters as P
 from gwkokab.poisson_mean._injection_based_helper import (
@@ -29,6 +29,22 @@ from gwkokab.utils.exceptions import (
     LoggedUserWarning,
     LoggedValueError,
 )
+
+
+def _data_loader_cfg_template() -> None:
+    cfg = {
+        "regex": "",
+        "max_samples": 1,
+        "default_datasets": "/GWKokabSyntheticDiscretePE/posterior_samples",
+        "alternate_datasets": {},
+        "default_mass_prior": None,
+        "default_spin_prior": None,
+        "default_distance_prior": None,
+        "alternate_mass_priors": {},
+        "alternate_spin_priors": {},
+        "alternate_distance_priors": {},
+    }
+    write_json("discrete_data_loader_cfg_template.json", cfg)
 
 
 class DiscretePELoader(BaseModel):
