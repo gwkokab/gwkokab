@@ -34,7 +34,7 @@ from gwkokab.utils.exceptions import (
 def _data_loader_cfg_template() -> None:
     cfg = {
         "regex": "",
-        "max_samples": 1,
+        "max_samples": None,
         "default_datasets": ["/GWKokabSyntheticDiscretePE/posterior_samples"],
         "alternate_datasets": {},
         "default_mass_prior": None,
