@@ -14,9 +14,11 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
+    model_validator,
     PlainSerializer,
     PositiveFloat,
     PositiveInt,
+    TypeAdapter,
 )
 
 from gwkanal.utils.common import read_json
@@ -230,6 +232,25 @@ class NumpyroMCMCConfig(BaseModel):
     does not take effect for the case `num_chains > 1` and `chain_method == 'parallel'`.
     """
 
+    @model_validator(mode="after")
+    def validate_hardware_chain_method(self) -> "NumpyroMCMCConfig":
+        """Validates and overrides chain_method depending on available JAX devices."""
+        n_devices = jax.device_count()
+
+        if self.chain_method != "parallel" and n_devices > 1:
+            warnings.warn(
+                f"Multiple devices detected ({n_devices}), but chain_method is set to "
+                f"'{self.chain_method}'. Overriding to 'parallel'.",
+                LoggedUserWarning,
+            )
+            self.chain_method = "parallel"
+        else:
+            logger.info(
+                f"Using chain method: '{self.chain_method}' with {n_devices} device(s)."
+            )
+
+        return self
+
 
 class NumpyroGlobalConfig(BaseModel):
     """Configuration for the Numpyro sampler, including both kernel and MCMC
@@ -393,33 +414,22 @@ class FlowMCGlobalConfig(BaseModel):
         return cls(**sampler_cfg)
 
 
-class SamplerConfig(BaseModel):
-    """Configuration for the sampler, which can be either Numpyro or flowMC."""
+class SamplerConfig:
+    """Factory interface for generating Sampler Configs."""
 
-    # raise error whenever an extra field is passed
-    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
-    model_config = ConfigDict(extra="forbid")
-
-    loader: NumpyroGlobalConfig | FlowMCGlobalConfig = Field(
-        discriminator="sampler_name"
-    )
-
-    @classmethod
-    def from_json(cls, config_path: str) -> "SamplerConfig":
-        """Initializes the loader from a JSON configuration file.
-
-        Parameters
-        ----------
-        config_path : str
-            Path to the JSON file containing loader settings.
-
-        Returns
-        -------
-        SamplerConfig
-            An instance of SamplerConfig.
-        """
+    @staticmethod
+    def from_json(config_path: str) -> NumpyroGlobalConfig | FlowMCGlobalConfig:
+        """Initializes and returns the specific config instance directly from JSON."""
+        SamplerConfigAdapter: TypeAdapter[NumpyroGlobalConfig | FlowMCGlobalConfig] = (
+            TypeAdapter(
+                Annotated[
+                    NumpyroGlobalConfig | FlowMCGlobalConfig,
+                    Field(discriminator="sampler_name"),
+                ]
+            )
+        )
         sampler_cfg = read_json(config_path)
-        return cls(loader=sampler_cfg)  # type: ignore
+        return SamplerConfigAdapter.validate_python(sampler_cfg)
 
 
 def _dump_numpyro_cfg() -> None:
