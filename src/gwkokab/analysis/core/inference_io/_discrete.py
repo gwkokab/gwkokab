@@ -296,15 +296,27 @@ class DiscretePELoader(BaseModel):
 
             log_prior = np.zeros(len(df))
 
-            mass_prior = self.alternate_mass_priors.get(
-                event_name, self.default_mass_prior
-            )
-            spin_prior = self.alternate_spin_priors.get(
-                event_name, self.default_spin_prior
-            )
-            distance_prior = self.alternate_distance_priors.get(
-                event_name, self.default_distance_prior
-            )
+            if (mass_prior := self.alternate_mass_priors.get(event_name)) is None:
+                mass_prior = self.default_mass_prior
+                warnings.warn(
+                    f"No alternate mass prior found for {event_name}, defaulting to '{mass_prior}'.",
+                    LoggedUserWarning,
+                )
+            if spin_prior := self.alternate_spin_priors.get(event_name) is None:
+                spin_prior = self.default_spin_prior
+                warnings.warn(
+                    f"No alternate spin prior found for {event_name}, defaulting to '{spin_prior}'.",
+                    LoggedUserWarning,
+                )
+            if (
+                distance_prior := self.alternate_distance_priors.get(event_name)
+            ) is None:
+                distance_prior = self.default_distance_prior
+                warnings.warn(
+                    f"No alternate distance prior found for {event_name}, defaulting to '{distance_prior}'.",
+                    LoggedUserWarning,
+                )
+
             logger.info(
                 "Event: {event_name}, mass prior: {mass_prior}, spin prior: {spin_prior}, distance prior: {distance_prior}",
                 event_name=event_name,
