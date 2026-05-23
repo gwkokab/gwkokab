@@ -20,7 +20,7 @@ from pydantic import (
 )
 
 from gwkanal.utils.common import read_json
-from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
+from gwkokab.utils.exceptions import LoggedUserWarning
 
 
 def _nd_array_before_validator(arr: str | list | np.ndarray) -> np.ndarray:
@@ -267,40 +267,20 @@ class NumpyroGlobalConfig(BaseModel):
             An instance of NumpyroGlobalConfig.
         """
         sampler_cfg = read_json(config_path)
-        if (kernel_cfg := sampler_cfg.pop("kernel", None)) is None:
-            raise LoggedValueError(
-                "Kernel configuration not found in sampler settings."
-            )
-        if (mcmc_cfg := sampler_cfg.pop("mcmc", None)) is None:
-            raise LoggedValueError("MCMC configuration not found in sampler settings.")
-
-        dense_mass: list[tuple[str, ...]] | bool = kernel_cfg.pop("dense_mass", False)
-
-        if isinstance(dense_mass, list):
-            for i in range(len(dense_mass)):
-                dense_mass[i] = tuple(dense_mass[i])
-
-        kernel_cfg["dense_mass"] = dense_mass
-
+        instance = cls.model_validate(sampler_cfg)
         n_devices = jax.device_count()
-
-        if (
-            chain_method := mcmc_cfg.pop("chain_method")
-        ) != "parallel" and n_devices > 1:
+        if instance.mcmc.chain_method != "parallel" and n_devices > 1:
             warnings.warn(
                 f"Multiple devices detected ({n_devices}), but chain_method is set to "
-                f"'{chain_method}'. Overriding to 'parallel'.",
+                f"'{instance.mcmc.chain_method}'. Overriding to 'parallel'.",
                 LoggedUserWarning,
             )
-            chain_method = "parallel"
+            instance.mcmc.chain_method = "parallel"
         else:
             logger.info(
-                f"Using chain method: '{chain_method}' with {n_devices} device(s)."
+                f"Using chain method: '{instance.mcmc.chain_method}' with {n_devices} device(s)."
             )
-
-        mcmc_cfg["chain_method"] = chain_method
-
-        return cls(kernel=kernel_cfg, mcmc=mcmc_cfg)
+        return instance
 
 
 class FlowMCGlobalConfig(BaseModel):
