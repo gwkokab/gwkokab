@@ -10,4 +10,5 @@ from ._sampler import (
     NumpyroGlobalConfig as NumpyroGlobalConfig,
     NumpyroMCMCConfig as NumpyroMCMCConfig,
     NumpyroNUTSSamplerConfig as NumpyroNUTSSamplerConfig,
+    SamplerConfig as SamplerConfig,
 )
