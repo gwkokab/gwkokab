@@ -867,7 +867,7 @@ class FlowMCBased(Guru):
             n_epochs=sampler_cfg.n_epochs,
             local_sampler_name=sampler_cfg.local_sampler_name,
             step_size=sampler_cfg.step_size,
-            mass_matrix=sampler_cfg.mass_matrix,
+            mass_matrix=mass_matrix,
             n_leapfrog=sampler_cfg.n_leapfrog,
             chain_batch_size=sampler_cfg.chain_batch_size,
             rq_spline_hidden_units=sampler_cfg.rq_spline_hidden_units,
