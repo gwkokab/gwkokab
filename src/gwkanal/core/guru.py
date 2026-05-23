@@ -210,13 +210,13 @@ class Guru(PRNGKeyMixin):
         poisson_mean_filename: str,
         prior_filename: str,
         profile_memory: bool,
-        sampler_settings_filename: str,
+        sampler_cfg,
         variance_cut_threshold: float | None,
     ) -> None:
         self.analysis_name = analysis_name
         self.prior_filename = prior_filename
         self.model = model
-        self.sampler_settings_filename = sampler_settings_filename
+        self.sampler_cfg = sampler_cfg
         self.debug_nans = debug_nans
         self.profile_memory = profile_memory
         self.check_leaks = check_leaks

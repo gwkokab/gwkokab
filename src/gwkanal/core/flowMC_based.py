@@ -4,7 +4,7 @@
 
 import os
 import warnings
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence
+from typing import Any, Callable, Dict, List, Literal, Optional
 
 import equinox as eqx
 import jax
@@ -30,14 +30,10 @@ from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
 from loguru import logger
 
 from gwkanal.core.guru import Guru, guru_arg_parser
-from gwkanal.utils.common import read_json
+from gwkanal.core.inference_io import FlowMCGlobalConfig
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
-from gwkokab.utils.exceptions import (
-    LoggedTypeError,
-    LoggedUserWarning,
-    LoggedValueError,
-)
+from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 
 _INFERENCE_DIRECTORY = "flowMC_" + INFERENCE_DIRECTORY
@@ -832,83 +828,13 @@ class FlowMCBased(Guru):
         data: Dict[str, Any],
         labels: List[str],
     ) -> None:
-        sampler_cfg: dict = read_json(self.sampler_settings_filename)
+        sampler_cfg: FlowMCGlobalConfig = self.sampler_cfg
 
-        batch_size = sampler_cfg["batch_size"]
-        chain_batch_size = sampler_cfg["chain_batch_size"]
-        global_thinning = sampler_cfg["global_thinning"]
-        learning_rate = sampler_cfg["learning_rate"]
-        local_thinning = sampler_cfg["local_thinning"]
-        local_sampler_name: str = sampler_cfg.get("local_sampler_name", "mala")
-        step_size = sampler_cfg["step_size"]
-        mass_matrix = sampler_cfg.get("mass_matrix", 1.0)
-        n_leapfrog = sampler_cfg.get("n_leapfrog", 10)
-        n_chains = sampler_cfg["n_chains"]
-        n_epochs = sampler_cfg["n_epochs"]
-        n_global_steps = sampler_cfg["n_global_steps"]
-        n_local_steps = sampler_cfg["n_local_steps"]
-        n_max_examples = sampler_cfg["n_max_examples"]
-        history_window = sampler_cfg.get("history_window", 100)
-        n_NFproposal_batch_size = sampler_cfg["n_NFproposal_batch_size"]
-        n_production_loops = sampler_cfg["n_production_loops"]
-        n_training_loops = sampler_cfg["n_training_loops"]
-        rq_spline_hidden_units = sampler_cfg["rq_spline_hidden_units"]
-        rq_spline_n_bins = sampler_cfg["rq_spline_n_bins"]
-        rq_spline_n_layers = sampler_cfg["rq_spline_n_layers"]
-        rq_spline_range = tuple(sampler_cfg.get("rq_spline_range", (-10.0, 10.0)))
-        verbose = sampler_cfg["verbose"]
-
-        logger.debug("Validation for Sampler parameters starting")
-
-        for var, var_name, expected_type in (
-            (batch_size, "batch_size", int),
-            (chain_batch_size, "chain_batch_size", int),
-            (global_thinning, "global_thinning", int),
-            (learning_rate, "learning_rate", (int, float)),
-            (local_thinning, "local_thinning", int),
-            (local_sampler_name, "local_sampler_name", str),
-            (step_size, "step_size", (int, float)),
-            (mass_matrix, "mass_matrix", (int, float, Sequence)),
-            (n_leapfrog, "n_leapfrog", int),
-            (n_chains, "n_chains", int),
-            (n_epochs, "n_epochs", int),
-            (n_global_steps, "n_global_steps", int),
-            (n_local_steps, "n_local_steps", int),
-            (n_max_examples, "n_max_examples", int),
-            (history_window, "history_window", int),
-            (n_NFproposal_batch_size, "n_NFproposal_batch_size", int),
-            (n_production_loops, "n_production_loops", int),
-            (n_training_loops, "n_training_loops", int),
-            (rq_spline_hidden_units, "rq_spline_hidden_units", list),
-            (rq_spline_n_bins, "rq_spline_n_bins", int),
-            (rq_spline_n_layers, "rq_spline_n_layers", int),
-            (rq_spline_range, "rq_spline_range", tuple),
-            (verbose, "verbose", bool),
-        ):
-            if not isinstance(var, expected_type):
-                raise LoggedTypeError(
-                    f"expected a {expected_type}, got {type(var)} for {var_name}"
-                )
-            if (expected_type is int) and var < 1 and var_name != "chain_batch_size":
-                raise LoggedValueError(
-                    f"expected a positive integer, got {var} for {var_name}"
-                )
-            logger.debug(f"{var_name}: {var}")
-        if not all(isinstance(x, int) and x > 0 for x in rq_spline_hidden_units):
-            raise LoggedValueError(
-                f"expected a list of positive integers, got {rq_spline_hidden_units} for rq_spline_hidden_units"
-            )
-
-        valid_local_samplers = ("mala", "hmc")
-        if local_sampler_name.strip().lower() not in valid_local_samplers:
-            raise LoggedValueError(
-                "local_sampler_name must be one of " + ", ".join(valid_local_samplers)
-            )
-
+        n_chains = sampler_cfg.n_chains
         initial_position = priors.sample(self.rng_key, (n_chains,))
-
         n_dims = initial_position.shape[1]
 
+        mass_matrix = sampler_cfg.mass_matrix
         if isinstance(mass_matrix, float) or isinstance(mass_matrix, int):
             if mass_matrix <= 0.0:
                 raise LoggedValueError("mass_matrix must be positive")
@@ -928,38 +854,34 @@ class FlowMCBased(Guru):
                         "mass_matrix diagonal elements must be positive"
                     )
                 mass_matrix = jnp.diag(mass_matrix)
-            else:
-                eigvals = jnp.linalg.eigvalsh(mass_matrix)
-                if jnp.any(eigvals <= 0):
-                    raise LoggedValueError("mass_matrix must be positive definite")
 
         bundle = Local_Global_Sampler_Bundle(
             rng_key=self.rng_key,
             n_chains=n_chains,
             n_dims=n_dims,
             logpdf=logpdf,
-            n_local_steps=n_local_steps,
-            n_global_steps=n_global_steps,
-            n_training_loops=n_training_loops,
-            n_production_loops=n_production_loops,
-            n_epochs=n_epochs,
-            local_sampler_name=local_sampler_name,
-            step_size=step_size,
+            n_local_steps=sampler_cfg.n_local_steps,
+            n_global_steps=sampler_cfg.n_global_steps,
+            n_training_loops=sampler_cfg.n_training_loops,
+            n_production_loops=sampler_cfg.n_production_loops,
+            n_epochs=sampler_cfg.n_epochs,
+            local_sampler_name=sampler_cfg.local_sampler_name,
+            step_size=sampler_cfg.step_size,
             mass_matrix=mass_matrix,
-            n_leapfrog=n_leapfrog,
-            chain_batch_size=chain_batch_size,
-            rq_spline_hidden_units=rq_spline_hidden_units,
-            rq_spline_n_bins=rq_spline_n_bins,
-            rq_spline_n_layers=rq_spline_n_layers,
-            rq_spline_range=rq_spline_range,
-            learning_rate=learning_rate,
-            batch_size=batch_size,
-            n_max_examples=n_max_examples,
-            history_window=history_window,
-            local_thinning=local_thinning,
-            global_thinning=global_thinning,
-            n_NFproposal_batch_size=n_NFproposal_batch_size,
-            verbose=verbose,
+            n_leapfrog=sampler_cfg.n_leapfrog,
+            chain_batch_size=sampler_cfg.chain_batch_size,
+            rq_spline_hidden_units=sampler_cfg.rq_spline_hidden_units,
+            rq_spline_n_bins=sampler_cfg.rq_spline_n_bins,
+            rq_spline_n_layers=sampler_cfg.rq_spline_n_layers,
+            rq_spline_range=sampler_cfg.rq_spline_range,
+            learning_rate=sampler_cfg.learning_rate,
+            batch_size=sampler_cfg.batch_size,
+            n_max_examples=sampler_cfg.n_max_examples,
+            history_window=sampler_cfg.history_window,
+            local_thinning=sampler_cfg.local_thinning,
+            global_thinning=sampler_cfg.global_thinning,
+            n_NFproposal_batch_size=sampler_cfg.n_NFproposal_batch_size,
+            verbose=sampler_cfg.verbose,
         )
         logger.info("Local_Global_Sampler_Bundle created successfully.")
 
@@ -972,8 +894,10 @@ class FlowMCBased(Guru):
 
         logger.debug("Sampler initialized, starting sampling.")
 
-        n_local_steps_per_loop = n_local_steps // local_thinning
-        n_global_steps_per_loop = n_global_steps // global_thinning
+        n_local_steps_per_loop = sampler_cfg.n_local_steps // sampler_cfg.local_thinning
+        n_global_steps_per_loop = (
+            sampler_cfg.n_global_steps // sampler_cfg.global_thinning
+        )
 
         if self.debug_nans:
             with jax.debug_nans(True):

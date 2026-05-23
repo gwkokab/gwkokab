@@ -4,6 +4,7 @@
 #
 """Provides essential classes and functions for the inference module."""
 
+from . import factory as factory
 from .flowMC_analytical_poisson_likelihood import (
     flowMC_analytical_poisson_likelihood as flowMC_analytical_poisson_likelihood,
 )

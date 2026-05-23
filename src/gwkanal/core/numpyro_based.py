@@ -5,7 +5,7 @@
 import os
 import warnings
 from collections.abc import Callable
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List
 
 import jax
 import numpy as np
@@ -17,10 +17,10 @@ from numpyro.diagnostics import print_summary
 from numpyro.infer import MCMC, NUTS
 
 from gwkanal.core.guru import Guru, guru_arg_parser
-from gwkanal.utils.common import read_json
+from gwkanal.core.inference_io import NumpyroGlobalConfig, NumpyroMCMCConfig
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
-from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
+from gwkokab.utils.exceptions import LoggedUserWarning
 
 
 _INFERENCE_DIRECTORY = "numpyro_" + INFERENCE_DIRECTORY
@@ -61,11 +61,12 @@ def _save_inference_data(samples: Any, start_chain_idx: int) -> None:
 def _run_mcmc(
     key: PRNGKeyArray,
     kernel: numpyro.infer.NUTS,
-    mcmc_cfg: Dict[str, Any],
+    mcmc_cfg: NumpyroMCMCConfig,
     data: Dict[str, Any],
 ):
     n_devices = jax.device_count()
-    if (chain_method := mcmc_cfg.pop("chain_method")) != "parallel" and n_devices > 1:
+    chain_method = mcmc_cfg.chain_method
+    if chain_method != "parallel" and n_devices > 1:
         warnings.warn(
             f"Multiple devices detected ({n_devices}), but chain_method is set to "
             f"'{chain_method}'. Overriding to 'parallel'.",
@@ -75,17 +76,28 @@ def _run_mcmc(
     else:
         logger.info(f"Using chain method: '{chain_method}' with {n_devices} device(s).")
 
-    n_chains = mcmc_cfg.pop("num_chains", 1)
+    n_chains = mcmc_cfg.num_chains
     batch_size: int = (
         n_chains if chain_method == "vectorized" else min(n_chains, n_devices)
     )
-    n_batches = n_chains // batch_size
 
     if batch_size == 1:
         chain_method = "sequential"
         logger.info("Batch size of 1 detected. Switching to 'sequential' chain method.")
 
-    mcmc = MCMC(kernel, num_chains=batch_size, chain_method=chain_method, **mcmc_cfg)
+    n_batches = n_chains // batch_size
+
+    mcmc = MCMC(
+        kernel,
+        num_warmup=mcmc_cfg.num_warmup,
+        num_samples=mcmc_cfg.num_samples,
+        thinning=mcmc_cfg.thinning,
+        num_chains=batch_size,
+        chain_method=chain_method,
+        progress_bar=mcmc_cfg.progress_bar,
+        progress_rate=mcmc_cfg.progress_rate,
+        jit_model_args=mcmc_cfg.jit_model_args,
+    )
 
     def _run_batch_and_save(key: PRNGKeyArray, chain_idx: int) -> PRNGKeyArray:
         """Runs a batch of MCMC chains, prints summary, and saves the data."""
@@ -120,27 +132,25 @@ class NumpyroBased(Guru):
         del labels
         del priors
 
-        logger.info("Reading sampler configuration.")
-        sampler_cfg = read_json(self.sampler_settings_filename)
-        logger.success("Sampler configuration loaded.")
+        sampler_cfg: NumpyroGlobalConfig = self.sampler_cfg
 
-        if (kernel_cfg := sampler_cfg.pop("kernel", None)) is None:
-            raise LoggedValueError(
-                "Kernel configuration not found in sampler settings."
-            )
-        if (mcmc_cfg := sampler_cfg.pop("mcmc", None)) is None:
-            raise LoggedValueError("MCMC configuration not found in sampler settings.")
-
-        dense_mass: Union[List[Tuple[str, ...]], bool] = kernel_cfg.pop(
-            "dense_mass", False
+        logger.info("Initializing NUTS sampler with provided configuration.")
+        kernel = NUTS(
+            logpdf,
+            step_size=sampler_cfg.kernel.step_size,
+            inverse_mass_matrix=sampler_cfg.kernel.inverse_mass_matrix,
+            adapt_step_size=sampler_cfg.kernel.adapt_step_size,
+            adapt_mass_matrix=sampler_cfg.kernel.adapt_mass_matrix,
+            dense_mass=sampler_cfg.kernel.dense_mass,
+            target_accept_prob=sampler_cfg.kernel.target_accept_prob,
+            max_tree_depth=sampler_cfg.kernel.max_tree_depth,
+            find_heuristic_step_size=sampler_cfg.kernel.find_heuristic_step_size,
+            forward_mode_differentiation=sampler_cfg.kernel.forward_mode_differentiation,
+            regularize_mass_matrix=sampler_cfg.kernel.regularize_mass_matrix,
         )
-
-        if isinstance(dense_mass, list):
-            for i in range(len(dense_mass)):
-                dense_mass[i] = tuple(dense_mass[i])
-
-        kernel = NUTS(logpdf, dense_mass=dense_mass, **kernel_cfg)
         logger.success("NUTS Kernel initialized.")
+
+        mcmc_cfg = sampler_cfg.mcmc
 
         if self.debug_nans:
             with jax.debug_nans(True):
