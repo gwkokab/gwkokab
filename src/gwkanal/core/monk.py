@@ -130,7 +130,7 @@ class Monk(Guru):
         data_loader: AnalyticalPELoader,
         prior_filename: str,
         poisson_mean_filename: str,
-        sampler_settings_filename: str,
+        sampler_cfg,
         variance_cut_threshold: float | None,
         n_samples: int,
         debug_nans: bool = False,
@@ -189,7 +189,7 @@ class Monk(Guru):
             poisson_mean_filename=poisson_mean_filename,
             prior_filename=prior_filename,
             profile_memory=profile_memory,
-            sampler_settings_filename=sampler_settings_filename,
+            sampler_cfg=sampler_cfg,
             variance_cut_threshold=variance_cut_threshold,
         )
 

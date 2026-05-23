@@ -72,17 +72,6 @@ Homepage = "https://github.com/kokabsc/gwkokab"
 Issues = "https://github.com/kokabsc/gwkokab/issues"
 
 [project.scripts]
-## FMonk scripts
-f_monk_ecc_matters = "gwkanal.ecc_matters.monk:f_main"
-f_monk_multisource = "gwkanal.multisource.monk:f_main"
-f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:f_main"
-f_monk_subpopulation = "gwkanal.subpopulation.monk:f_main"
-## FSage scripts
-f_sage_ecc_matters = "gwkanal.ecc_matters.sage:f_main"
-f_sage_multisource = "gwkanal.multisource.sage:f_main"
-f_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:f_main"
-f_sage_subpopulation = "gwkanal.subpopulation.sage:f_main"
-# These scripts are for developer/user experience.
 gwk_analytical_data_loader_cfg_template = "gwkanal.core.inference_io._analytical:_data_loader_cfg_template"
 gwk_batch_scatter2d = "gwkokab_scripts.batch_scatter2d:main"
 gwk_batch_scatter3d = "gwkokab_scripts.batch_scatter3d:main"
@@ -104,18 +93,14 @@ gwk_r_hat_plot = "gwkokab_scripts.r_hat_plot:main"
 gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
 gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
 gwk_trace_plot = "gwkokab_scripts.trace_plot:main"
-## NMonk scripts
-n_monk_ecc_matters = "gwkanal.ecc_matters.monk:n_main"
-n_monk_multisource = "gwkanal.multisource.monk:n_main"
-n_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:n_main"
-n_monk_subpopulation = "gwkanal.subpopulation.monk:n_main"
-## NSage scripts
-n_sage_ecc_matters = "gwkanal.ecc_matters.sage:n_main"
-n_sage_multisource = "gwkanal.multisource.sage:n_main"
-n_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:n_main"
-n_sage_subpopulation = "gwkanal.subpopulation.sage:n_main"
-# Kokab scripts
-## Genie scripts
+monk_ecc_matters = "gwkanal.ecc_matters.monk:main"
+monk_multisource = "gwkanal.multisource.monk:main"
+monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
+monk_subpopulation = "gwkanal.subpopulation.monk:main"
+sage_ecc_matters = "gwkanal.ecc_matters.sage:main"
+sage_multisource = "gwkanal.multisource.sage:main"
+sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:main"
+sage_subpopulation = "gwkanal.subpopulation.sage:main"
 synthetic_analytical_pe = "gwkanal.core.synthetic_pe:synthetic_analytical_pe_main"
 synthetic_discrete_pe = "gwkanal.core.synthetic_pe:synthetic_discrete_pe_main"
 synthetic_events_ecc_matter = "gwkanal.ecc_matters.synthetic_events:main"
