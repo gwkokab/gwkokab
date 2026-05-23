@@ -22,8 +22,8 @@ A JAX-based gravitational-wave population inference toolkit for parametric model
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/license/gwkokab/gwkokab?logo=open-source-initiative&logoColor=white&color=blue" alt="License">
-  <img src="https://img.shields.io/github/issues/gwkokab/gwkokab" alt="Issues">
+  <img src="https://img.shields.io/github/license/kokabsc/gwkokab?logo=open-source-initiative&logoColor=white&color=blue" alt="License">
+  <img src="https://img.shields.io/github/issues/kokabsc/gwkokab" alt="Issues">
   <img src="https://img.shields.io/pypi/v/gwkokab" alt="PyPI Version">
 </p>
 
@@ -31,12 +31,10 @@ A JAX-based gravitational-wave population inference toolkit for parametric model
   <a href="https://gwkokab.readthedocs.io/en/latest/?badge=latest">
     <img src="https://img.shields.io/readthedocs/gwkokab?logo=Read-the-Docs" alt="Documentation Status">
   </a>
-  <a href="https://github.com/gwkokab/gwkokab/actions/workflows/ci.yml">
-    <img src="https://github.com/gwkokab/gwkokab/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <a href="https://github.com/kokabsc/gwkokab/actions/workflows/ci.yml">
+    <img src="https://github.com/kokabsc/gwkokab/actions/workflows/ci.yml/badge.svg" alt="CI">
   </a>
 </p>
-
----
 
 ## Overview
 
@@ -48,37 +46,39 @@ The framework is designed to support scalable hierarchical inference and rapid e
 
 We welcome contributions from the community. If you would like to contribute to GWKokab, please see the [contributing guidelines](https://gwkokab.readthedocs.io/en/latest/dev_docs/contributing.html).
 
----
-
 ## Citing GWKokab
 
 If you use GWKokab in your research, please cite the following works:
 
-### GWKokab Paper
-
 ```bibtex
 @ARTICLE{2026PhRvD.113j3003Q,
-       author = {{Qazalbash}, M. and {Zeeshan}, M. and {O'Shaughnessy}, R.},
-        title = "{Implementation to identify the properties of multiple populations of gravitational wave sources}",
-      journal = {\prd},
-     keywords = {Astrophysics and astroparticle physics, General Relativity and Quantum Cosmology, High Energy Astrophysical Phenomena, Instrumentation and Methods for Astrophysics},
-         year = 2026,
-        month = may,
-       volume = {113},
-       number = {10},
-          eid = {103003},
-        pages = {103003},
-          doi = {10.1103/krnm-3vrf},
-archivePrefix = {arXiv},
-       eprint = {2509.13638},
- primaryClass = {gr-qc},
-       adsurl = {https://ui.adsabs.harvard.edu/abs/2026PhRvD.113j3003Q},
-      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
+  author          = {{Qazalbash}, M. and {Zeeshan}, M. and {O'Shaughnessy}, R.},
+  title           = "{Implementation to identify the properties of multiple
+                  populations of gravitational wave sources}",
+  journal         = {\prd},
+  keywords        = {Astrophysics and astroparticle physics, General Relativity
+                  and Quantum Cosmology, High Energy Astrophysical Phenomena,
+                  Instrumentation and Methods for Astrophysics},
+  year            = 2026,
+  month           = may,
+  volume          = 113,
+  number          = 10,
+  eid             = 103003,
+  pages           = 103003,
+  doi             = {10.1103/krnm-3vrf},
+  archivePrefix   = {arXiv},
+  eprint          = {2509.13638},
+  primaryClass    = {gr-qc},
+  adsurl          = {https://ui.adsabs.harvard.edu/abs/2026PhRvD.113j3003Q},
+  adsnote         = {Provided by the SAO/NASA Astrophysics Data System}
 }
 
 @Misc{gwkokab2024github,
-    author  = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
-    title   = {{GWKokab}: A JAX-based gravitational-wave population inference toolkit for parametric models},
-    url     = {https://github.com/kokabsc/gwkokab},
-    year    = {2024}
+  author          = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and
+                  {O'Shaughnessy}, Richard},
+  title           = {{GWKokab}: A JAX-based gravitational-wave population
+                  inference toolkit for parametric models},
+  url             = {https://github.com/kokabsc/gwkokab},
+  year            = 2024
 }
+```
