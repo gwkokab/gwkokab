@@ -3,6 +3,7 @@
 
 
 import os
+import warnings
 from collections.abc import Callable
 from typing import Any, Dict, List
 
@@ -19,6 +20,7 @@ from gwkanal.core.guru import Guru, guru_arg_parser
 from gwkanal.core.inference_io import NumpyroGlobalConfig, NumpyroMCMCConfig
 from gwkanal.utils.literals import INFERENCE_DIRECTORY, POSTERIOR_SAMPLES_FILENAME
 from gwkokab.models.utils import JointDistribution
+from gwkokab.utils.exceptions import LoggedUserWarning
 
 
 _INFERENCE_DIRECTORY = "numpyro_" + INFERENCE_DIRECTORY
@@ -63,11 +65,22 @@ def _run_mcmc(
     data: Dict[str, Any],
 ):
     n_devices = jax.device_count()
-    n_chains = mcmc_cfg.num_chains
     chain_method = mcmc_cfg.chain_method
+    if chain_method != "parallel" and n_devices > 1:
+        warnings.warn(
+            f"Multiple devices detected ({n_devices}), but chain_method is set to "
+            f"'{chain_method}'. Overriding to 'parallel'.",
+            LoggedUserWarning,
+        )
+        chain_method = "parallel"
+    else:
+        logger.info(f"Using chain method: '{chain_method}' with {n_devices} device(s).")
+
+    n_chains = mcmc_cfg.num_chains
     batch_size: int = (
         n_chains if chain_method == "vectorized" else min(n_chains, n_devices)
     )
+
     if batch_size == 1:
         chain_method = "sequential"
         logger.info("Batch size of 1 detected. Switching to 'sequential' chain method.")

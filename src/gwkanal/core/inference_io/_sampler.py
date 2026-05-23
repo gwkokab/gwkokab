@@ -14,7 +14,6 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
-    model_validator,
     PlainSerializer,
     PositiveFloat,
     PositiveInt,
@@ -231,25 +230,6 @@ class NumpyroMCMCConfig(BaseModel):
     dataset will not result in additional compilation cost. Note that currently, this
     does not take effect for the case `num_chains > 1` and `chain_method == 'parallel'`.
     """
-
-    @model_validator(mode="after")
-    def validate_hardware_chain_method(self) -> "NumpyroMCMCConfig":
-        """Validates and overrides chain_method depending on available JAX devices."""
-        n_devices = jax.device_count()
-
-        if self.chain_method != "parallel" and n_devices > 1:
-            warnings.warn(
-                f"Multiple devices detected ({n_devices}), but chain_method is set to "
-                f"'{self.chain_method}'. Overriding to 'parallel'.",
-                LoggedUserWarning,
-            )
-            self.chain_method = "parallel"
-        else:
-            logger.info(
-                f"Using chain method: '{self.chain_method}' with {n_devices} device(s)."
-            )
-
-        return self
 
 
 class NumpyroGlobalConfig(BaseModel):
