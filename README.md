@@ -24,11 +24,7 @@ A JAX-based gravitational-wave population inference toolkit for parametric model
 
 <p align="center">
   <img src="https://img.shields.io/github/license/kokabsc/gwkokab?logo=open-source-initiative&logoColor=white&color=blue" alt="License">
-  <img src="https://img.shields.io/github/issues/kokabsc/gwkokab" alt="Issues">
   <img src="https://img.shields.io/pypi/v/gwkokab" alt="PyPI Version">
-</p>
-
-<p align="center">
   <a href="https://gwkokab.readthedocs.io/en/latest/?badge=latest">
     <img src="https://img.shields.io/readthedocs/gwkokab?logo=Read-the-Docs" alt="Documentation Status">
   </a>
