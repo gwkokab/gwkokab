@@ -1,0 +1,39 @@
+# Copyright 2023 The GWKokab Authors
+# SPDX-License-Identifier: Apache-2.0
+
+
+from gwkokab.analysis.core.synthetic_events import (
+    injection_generator_parser,
+    SyntheticEventsBase,
+)
+from gwkokab.analysis.ecc_matters.common import (
+    EccentricityMattersCore,
+    EccentricityMattersModel,
+)
+from gwkokab.analysis.utils.logger import log_info
+
+
+def main() -> None:
+    """Main function of the script."""
+    parser = injection_generator_parser()
+    args = parser.parse_args()
+
+    log_info(start=True)
+
+    class EccentricityMattersInjectionGenerator(
+        EccentricityMattersCore, SyntheticEventsBase
+    ):
+        pass
+
+    EccentricityMattersInjectionGenerator.init_rng_seed(seed=args.seed)
+
+    generator = EccentricityMattersInjectionGenerator(
+        filename=args.output_filename,
+        model_fn=EccentricityMattersModel,
+        model_params_filename=args.model_params,
+        poisson_mean_filename=args.pmean_cfg,
+        derive_parameters=args.derive_parameters,
+        n_buffer_events=args.n_buffer_events,
+    )
+
+    generator.from_inverse_transform_sampling()

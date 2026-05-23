@@ -257,7 +257,7 @@ def main() -> None:
     from matplotlib.axes import Axes
     from matplotlib.figure import Figure
 
-    from gwkanal.utils.ppd import get_all_marginals
+    from gwkokab.analysis.utils.ppd import get_all_marginals
 
     plt.rcParams.update({"text.usetex": args.use_latex})
     if args.font_family is not None:

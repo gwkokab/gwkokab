@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from gwkanal.utils.regex import match_all
+from gwkokab.analysis.utils.regex import match_all
 
 
 def test_match_all():

@@ -5,7 +5,7 @@
 import pytest
 from numpyro import distributions as dist
 
-from gwkanal.utils.priors import _available_prior
+from gwkokab.analysis.utils.priors import _available_prior
 
 
 @pytest.mark.parametrize(
