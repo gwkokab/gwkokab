@@ -13,13 +13,9 @@ from . import (
     utils as utils,
 )
 from .hybrids import (
-    BrokenPowerlawTwoPeakFull as BrokenPowerlawTwoPeakFull,
-    BrokenPowerlawTwoPeakMultiSpinMultiTilt as BrokenPowerlawTwoPeakMultiSpinMultiTilt,
-    BrokenPowerlawTwoPeakMultiSpinMultiTiltFull as BrokenPowerlawTwoPeakMultiSpinMultiTiltFull,
-    NBrokenPowerlawMGaussian as NBrokenPowerlawMGaussian,
+    MultiSourceModel as MultiSourceModel,
     NPowerlawMGaussian as NPowerlawMGaussian,
-    NSmoothedPowerlawMSmoothedGaussian as NSmoothedPowerlawMSmoothedGaussian,
-    PowerlawPeak as PowerlawPeak,
+    SubPopulationModel as SubPopulationModel,
 )
 from .mass import (
     BrokenPowerlaw as BrokenPowerlaw,
@@ -29,14 +25,14 @@ from .mass import (
     Wysocki2019MassModel as Wysocki2019MassModel,
 )
 from .redshift import (
-    MadauDickinsonRedshift as MadauDickinsonRedshift,
-    PowerlawRedshift as PowerlawRedshift,
+    MadauDickinsonRedshiftModel as MadauDickinsonRedshiftModel,
+    PowerlawRedshiftModel as PowerlawRedshiftModel,
 )
 from .spin import (
     BetaFromMeanVar as BetaFromMeanVar,
     GaussianSpinModel as GaussianSpinModel,
+    GenericTiltModel as GenericTiltModel,
     GWTC4EffectiveSpinSkewNormalModel as GWTC4EffectiveSpinSkewNormalModel,
-    IndependentSpinOrientationGaussianIsotropic as IndependentSpinOrientationGaussianIsotropic,
 )
 from .sundry import (
     NDIsotropicAndTruncatedNormalMixture as NDIsotropicAndTruncatedNormalMixture,

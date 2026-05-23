@@ -12,7 +12,7 @@ from jax import numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions.distribution import Distribution
 
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedValueError
 
 
 def wipe_log_rate(
@@ -79,7 +79,6 @@ def compute_probs(
     Array
         The probability density function of the model.
     """
-
     logpdf = model(
         **constants,
         **{k: params[v] for k, v in nf_samples_mapping.items()},
@@ -180,24 +179,27 @@ def save_probs(
     headers : List[str]
         List of headers for the PPD and marginal probabilities
     """
-    error_if(
-        ppd_array.ndim != len(domains),
-        ValueError,
-        "Number of ranges must match the number of dimensions of the PPD array.",
-    )
-    error_if(
-        ppd_array.ndim != len(headers),
-        ValueError,
-        "Number of headers must match the number of dimensions of the PPD array.",
-    )
+    if ppd_array.ndim != len(domains):
+        raise LoggedValueError(
+            "Number of ranges must match the number of dimensions of the PPD array.",
+        )
+    if ppd_array.ndim != len(headers):
+        raise LoggedValueError(
+            "Number of headers must match the number of dimensions of the PPD array.",
+        )
 
+    compression_args = {"compression": "gzip", "compression_opts": 9}
     with h5py.File(filename, "w") as f:
-        f.create_dataset("domains", data=np.array(domains))
-        f.create_dataset("headers", data=np.array(headers, dtype="S"))
-        f.create_dataset("ppd", data=ppd_array)
+        f.create_dataset("domains", data=np.array(domains), **compression_args)
+        f.create_dataset(
+            "headers", data=np.array(headers, dtype="S"), **compression_args
+        )
+        f.create_dataset("ppd", data=ppd_array, **compression_args)
         marginal_probs_group = f.create_group("marginals")
         for marginal_prob, head in zip(marginal_probs, headers):
-            marginal_probs_group.create_dataset(head, data=marginal_prob)
+            marginal_probs_group.create_dataset(
+                head, data=marginal_prob, **compression_args
+            )
 
 
 def compute_and_save_ppd(

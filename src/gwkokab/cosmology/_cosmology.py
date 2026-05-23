@@ -16,11 +16,11 @@ from gwkokab.constants import SPEED_OF_LIGHT
 class Cosmology(eqx.Module):
     """Flat ΛCDM cosmology with Mpc-based units for distances and comoving volumes."""
 
-    _Ho: ArrayLike
-    _OmegaKappa: ArrayLike
-    _OmegaLambda: ArrayLike
-    _OmegaMatter: ArrayLike
-    _OmegaRadiation: ArrayLike
+    Ho: ArrayLike
+    OmegaKappa: ArrayLike
+    OmegaLambda: ArrayLike
+    OmegaMatter: ArrayLike
+    OmegaRadiation: ArrayLike
     _z: ArrayLike
     _Dc: ArrayLike
     Vc: ArrayLike
@@ -51,12 +51,12 @@ class Cosmology(eqx.Module):
         dz : float, optional
             Redshift bin width, by default DEFAULT_DZ
         """
-        self._Ho = Ho  # Hubble constant in m/s/Mpc
-        self._OmegaMatter = omega_matter
-        self._OmegaRadiation = omega_radiation
-        self._OmegaLambda = omega_lambda
-        self._OmegaKappa = 1.0 - (
-            self._OmegaMatter + self._OmegaRadiation + self._OmegaLambda
+        self.Ho = Ho  # Hubble constant in m/s/Mpc
+        self.OmegaMatter = omega_matter
+        self.OmegaRadiation = omega_radiation
+        self.OmegaLambda = omega_lambda
+        self.OmegaKappa = 1.0 - (
+            self.OmegaMatter + self.OmegaRadiation + self.OmegaLambda
         )
 
         self._z = jnp.arange(0.0, max_z + dz, dz)
@@ -71,14 +71,14 @@ class Cosmology(eqx.Module):
     def z_to_E(self, z: ArrayLike) -> ArrayLike:
         zp1 = 1.0 + z
         return jnp.sqrt(
-            self._OmegaLambda
-            + self._OmegaKappa * zp1**2
-            + self._OmegaMatter * zp1**3
-            + self._OmegaRadiation * zp1**4
+            self.OmegaLambda
+            + self.OmegaKappa * zp1**2
+            + self.OmegaMatter * zp1**3
+            + self.OmegaRadiation * zp1**4
         )
 
     def dDcdz(self, z: ArrayLike) -> ArrayLike:
-        return (SPEED_OF_LIGHT / self._Ho) / self.z_to_E(z)
+        return (SPEED_OF_LIGHT / self.Ho) / self.z_to_E(z)
 
     def dDLdz(self, z: ArrayLike) -> ArrayLike:
         """Derivative of luminosity distance with respect to redshift."""

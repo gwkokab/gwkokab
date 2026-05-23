@@ -26,10 +26,10 @@ from scipy.sparse import csr_matrix
 from gwkokab.models import (
     BetaFromMeanVar,
     BrokenPowerlaw,
-    MadauDickinsonRedshift,
+    MadauDickinsonRedshiftModel,
     NPowerlawMGaussian,
     PowerlawPrimaryMassRatio,
-    PowerlawRedshift,
+    PowerlawRedshiftModel,
     Wysocki2019MassModel,
 )
 from gwkokab.models.constraints import (
@@ -101,6 +101,14 @@ generic_nspmsg = {
     "cos_tilt_zeta_g_1": 0.5,
     "cos_tilt_zeta_pl_0": 0.5,
     "cos_tilt_zeta_pl_1": 0.5,
+    "cos_tilt_1_loc_g_0": 0.0,
+    "cos_tilt_1_loc_g_1": 0.0,
+    "cos_tilt_1_loc_pl_0": 0.0,
+    "cos_tilt_1_loc_pl_1": 0.0,
+    "cos_tilt_2_loc_g_0": 0.0,
+    "cos_tilt_2_loc_g_1": 0.0,
+    "cos_tilt_2_loc_pl_0": 0.0,
+    "cos_tilt_2_loc_pl_1": 0.0,
     "cos_tilt_1_scale_g_0": 0.1,
     "cos_tilt_1_scale_g_1": 0.3,
     "cos_tilt_1_scale_pl_0": 0.1,
@@ -179,6 +187,14 @@ generic_npmg = {
     "cos_tilt_zeta_g_1": 0.5,
     "cos_tilt_zeta_pl_0": 0.5,
     "cos_tilt_zeta_pl_1": 0.5,
+    "cos_tilt_1_loc_g_0": 0.0,
+    "cos_tilt_1_loc_g_1": 0.0,
+    "cos_tilt_1_loc_pl_0": 0.0,
+    "cos_tilt_1_loc_pl_1": 0.0,
+    "cos_tilt_2_loc_g_0": 0.0,
+    "cos_tilt_2_loc_g_1": 0.0,
+    "cos_tilt_2_loc_pl_0": 0.0,
+    "cos_tilt_2_loc_pl_1": 0.0,
     "cos_tilt_1_scale_g_0": 0.1,
     "cos_tilt_1_scale_g_1": 0.3,
     "cos_tilt_1_scale_pl_0": 0.1,
@@ -320,14 +336,26 @@ CONTINUOUS = [
             **generic_npmg,
         },
     ),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 1.0, "z_max": 2.3}),
-    (PowerlawRedshift, {"kappa": 2.7, "z_max": 1.0}),
-    (PowerlawRedshift, {"kappa": 0.0, "z_max": 2.3}),
-    (MadauDickinsonRedshift, {"kappa": 0.0, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0}),
-    (MadauDickinsonRedshift, {"kappa": 1.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0}),
-    (MadauDickinsonRedshift, {"kappa": 2.7, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0}),
-    (MadauDickinsonRedshift, {"kappa": 0.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0}),
+    (PowerlawRedshiftModel, {"kappa": 0.0, "z_max": 1.0}),
+    (PowerlawRedshiftModel, {"kappa": 1.0, "z_max": 2.3}),
+    (PowerlawRedshiftModel, {"kappa": 2.7, "z_max": 1.0}),
+    (PowerlawRedshiftModel, {"kappa": 0.0, "z_max": 2.3}),
+    (
+        MadauDickinsonRedshiftModel,
+        {"kappa": 0.0, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0},
+    ),
+    (
+        MadauDickinsonRedshiftModel,
+        {"kappa": 1.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0},
+    ),
+    (
+        MadauDickinsonRedshiftModel,
+        {"kappa": 2.7, "z_max": 1.0, "z_peak": 0.1, "gamma": 2.0},
+    ),
+    (
+        MadauDickinsonRedshiftModel,
+        {"kappa": 0.0, "z_max": 2.3, "z_peak": 0.1, "gamma": 2.0},
+    ),
     (BetaFromMeanVar, {"mean": 0.4, "variance": 0.02}),
     (BetaFromMeanVar, {"mean": 0.5, "variance": 0.05}),
     (
@@ -349,7 +377,7 @@ CONTINUOUS = [
 ]
 
 
-def gen_values_within_bounds(constraint, size, key=jrd.PRNGKey(11)):
+def gen_values_within_bounds(constraint, size, key=jrd.key(11)):
     eps = 1e-6
 
     if constraint is constraints.boolean:
@@ -447,15 +475,16 @@ def gen_values_within_bounds(constraint, size, key=jrd.PRNGKey(11)):
         x = x - jrd.normal(key, size[:-1] + (1,))
         x = jnp.reciprocal(x)
         x = jax.nn.sigmoid(x)
-        x = x * jnp.array([constraint.mmax - constraint.mmin, 1.0]) + jnp.array(
-            [constraint.mmin, 0.0]
-        )
+        x = x * jnp.array([constraint.mmax - constraint.mmin, 1.0]) + jnp.array([
+            constraint.mmin,
+            0.0,
+        ])
         return x
     else:
         raise NotImplementedError("{} not implemented.".format(constraint))
 
 
-def gen_values_outside_bounds(constraint, size, key=jrd.PRNGKey(11)):
+def gen_values_outside_bounds(constraint, size, key=jrd.key(11)):
     if constraint is constraints.boolean:
         return jrd.bernoulli(key, shape=size) - 2
     elif isinstance(constraint, constraints.greater_than):
@@ -555,7 +584,7 @@ def test_dist_shape(jax_dist_cls, params, prepend_shape):
                 reason=f"{jax_dist_cls.__name__} does not provide sample method"
             )
     jax_dist = jax_dist_cls(**params)
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     expected_shape = prepend_shape + jax_dist.batch_shape + jax_dist.event_shape
     samples = jax_dist.sample(key=rng_key, sample_shape=prepend_shape)
     assert jnp.shape(samples) == expected_shape
@@ -579,17 +608,17 @@ def test_has_rsample(jax_dist, params):
             assert jax_dist.base_dist.has_rsample
         else:
             assert set(jax_dist.arg_constraints) == set(jax_dist.reparametrized_params)
-        jax_dist.rsample(jrd.PRNGKey(0))
+        jax_dist.rsample(jrd.key(0))
     else:
         with pytest.raises(NotImplementedError):
-            jax_dist.rsample(jrd.PRNGKey(0))
+            jax_dist.rsample(jrd.key(0))
 
 
 @pytest.mark.parametrize("jax_dist, params", CONTINUOUS)
 def test_sample_gradient(jax_dist, params):
     if jax_dist.__name__ in ("PowerlawPeak",):
         pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
-    if jax_dist.__name__ in ("PowerlawRedshift",):
+    if jax_dist.__name__ in ("PowerlawRedshiftModel",):
         pytest.xfail(
             reason=f"{jax_dist.__name__} uses interpolation and is not differentiable"
         )
@@ -606,7 +635,7 @@ def test_sample_gradient(jax_dist, params):
     }
     repara_params = tuple(v for k, v in params.items() if k in reparametrized_params)
 
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
 
     def fn(args):
         args_dict = dict(zip(reparametrized_params, args))
@@ -653,7 +682,7 @@ def test_jit_log_likelihood(jax_dist, params):
         if jax_dist.__name__ in ("NPowerlawMGaussian",):
             pytest.xfail(reason=f"{jax_dist.__name__} have shape broadcasting issues")
 
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     samples = jax_dist(**params).sample(key=rng_key, sample_shape=(5,))
 
     def log_likelihood(**params):
@@ -673,7 +702,7 @@ def test_entropy_samples(jax_dist, params):
     except NotImplementedError:
         pytest.skip(reason=f"distribution {jax_dist} does not implement `entropy`")
 
-    samples = jax_dist.sample(jrd.PRNGKey(8), (1000,))
+    samples = jax_dist.sample(jrd.key(8), (1000,))
     neg_log_probs = -jax_dist.log_prob(samples)
     mean = neg_log_probs.mean(axis=0)
     stderr = neg_log_probs.std(axis=0) / jnp.sqrt(neg_log_probs.shape[-1] - 1)
@@ -694,7 +723,7 @@ def test_cdf_and_icdf(jax_dist, params):
     d = jax_dist(**params)
     if d.event_dim > 0:
         pytest.skip("skip testing cdf/icdf methods of multivariate distributions")
-    key1, key2 = jrd.split(jrd.PRNGKey(0))
+    key1, key2 = jrd.split(jrd.key(0))
     try:
         samples = d.sample(key=key1, sample_shape=(100,))
     except NotImplementedError:
@@ -703,7 +732,7 @@ def test_cdf_and_icdf(jax_dist, params):
     try:
         atol = 1e-5
         rtol = 1e-5
-        if jax_dist.__name__ in ["PowerlawRedshift"]:
+        if jax_dist.__name__ in ["PowerlawRedshiftModel"]:
             atol = 4e-3
             rtol = 0.02
         if d.shape() == () and not d.is_discrete:
@@ -733,10 +762,10 @@ def test_gof(jax_dist, params):
         pytest.skip("Failure rate is lower than expected.")
     if isinstance(jax_dist, ScaledMixture):
         pytest.skip("skip testing for ScaledMixture")
-    if jax_dist.__name__ in ("PowerlawRedshift", "MadauDickinsonRedshift"):
+    if jax_dist.__name__ in ("PowerlawRedshiftModel", "MadauDickinsonRedshiftModel"):
         pytest.skip(f"{jax_dist.__name__} is not a valid probability distribution")
     num_samples = 10000
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     d = jax_dist(**params)
     try:
         samples = d.sample(key=rng_key, sample_shape=(num_samples,))
@@ -765,13 +794,14 @@ def test_log_prob_gradient(jax_dist, params):
     if isinstance(jax_dist, types.FunctionType):
         if jax_dist.__name__ in ("NSmoothedPowerlawMSmoothedGaussian",):
             pytest.skip(reason=f"{jax_dist.__name__} does not provide sample method")
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     value = jax_dist(**params).sample(rng_key)
 
     if isinstance(jax_dist, dist.Distribution):
 
         def fn(*args):
             return jnp.sum(jax_dist(*args).log_prob(value))
+
     else:
         params_mapping = {name: i for i, name in enumerate(params.keys())}
 
@@ -785,9 +815,12 @@ def test_log_prob_gradient(jax_dist, params):
             continue
         if jax_dist is Wysocki2019MassModel and i != 0:
             continue
-        if (jax_dist is NPowerlawMGaussian) and any(
-            [k.startswith("mmin"), k.startswith("mmax"), "low" in k, "high" in k]
-        ):
+        if (jax_dist is NPowerlawMGaussian) and any([
+            k.startswith("mmin"),
+            k.startswith("mmax"),
+            "low" in k,
+            "high" in k,
+        ]):
             continue
         if params[k] is None or jnp.result_type(params[k]) in (jnp.int32, jnp.int64):
             continue
@@ -815,7 +848,7 @@ def test_distribution_constraints(jax_dist, params, prepend_shape):
         pytest.skip(f"skipping test for {jax_dist.__name__}")
     valid_params = {}
     oob_params = {}
-    key = jrd.PRNGKey(1)
+    key = jrd.key(1)
     dependent_constraint = False
     for name, value in params.items():
         if value is None:
@@ -889,7 +922,7 @@ def test_expand(jax_dist, params, prepend_shape, sample_shape):
     jax_dist = jax_dist(**params)
     new_batch_shape = prepend_shape + jax_dist.batch_shape
     expanded_dist = jax_dist.expand(new_batch_shape)
-    rng_key = jrd.PRNGKey(0)
+    rng_key = jrd.key(0)
     samples = expanded_dist.sample(rng_key, sample_shape)
     assert expanded_dist.batch_shape == new_batch_shape
     assert jnp.shape(samples) == sample_shape + new_batch_shape + jax_dist.event_shape
@@ -930,8 +963,8 @@ def test_dist_pytree(jax_dist, params):
                 and actual_arg.dtype == expected_arg.dtype
             )
     try:
-        expected_sample = expected_dist.sample(jrd.PRNGKey(0))
-        actual_sample = actual_dist.sample(jrd.PRNGKey(0))
+        expected_sample = expected_dist.sample(jrd.key(0))
+        actual_sample = actual_dist.sample(jrd.key(0))
         expected_log_prob = expected_dist.log_prob(expected_sample)
         actual_log_prob = actual_dist.log_prob(actual_sample)
         assert_allclose(actual_sample, expected_sample, rtol=1e-6)
@@ -950,13 +983,9 @@ def _get_vmappable_dist_init_params(jax_dist):
         vmap_over_parameters = list(
             inspect.signature(vmap_over.dispatch(jax_dist)).parameters.keys()
         )[1:]
-        return list(
-            [
-                i
-                for i, name in enumerate(init_parameters)
-                if name in vmap_over_parameters
-            ]
-        )
+        return list([
+            i for i, name in enumerate(init_parameters) if name in vmap_over_parameters
+        ])
     else:
         raise ValueError
 
@@ -981,7 +1010,7 @@ def _tree_equal(t1, t2):
 def test_vmap_dist(jax_dist, params):
     if isinstance(jax_dist, types.FunctionType):
         pytest.skip("skip testing for non-distribution")
-    if jax_dist.__name__ in ("PowerlawRedshift",):
+    if jax_dist.__name__ in ("PowerlawRedshiftModel",):
         pytest.xfail(f"{jax_dist.__name__} has some KeyError issues")
     param_names = list(inspect.signature(jax_dist).parameters.keys())
     vmappable_param_idxs = _get_vmappable_dist_init_params(jax_dist)
@@ -994,7 +1023,7 @@ def test_vmap_dist(jax_dist, params):
         return jax_dist(**params)
 
     def sample(d: dist.Distribution):
-        return d.sample(jrd.PRNGKey(0))
+        return d.sample(jrd.key(0))
 
     d = make_jax_dist(**params)
 

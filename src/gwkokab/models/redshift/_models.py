@@ -10,7 +10,7 @@ from jax.scipy.integrate import trapezoid
 from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import promote_shapes, validate_sample
 
-from ...cosmology import PLANCK_2015_Cosmology as _default_Cosmology
+from gwkokab.cosmology import default_cosmology
 
 
 class _RedshiftModel(Distribution):
@@ -36,7 +36,7 @@ class _RedshiftModel(Distribution):
 
     def log_differential_spacetime_volume(self, z: Array) -> Array:
         """Placeholder method for computing the differential spacetime volume."""
-        logdVcdz = _default_Cosmology().logdVcdz(z)
+        logdVcdz = default_cosmology().logdVcdz(z)
         log_time_dilation = -jnp.log1p(z)
         log_differential_spacetime_volume_val = (
             log_time_dilation + logdVcdz + self.log_psi_of_z(z)
@@ -99,7 +99,7 @@ class _RedshiftModel(Distribution):
         return self.log_differential_spacetime_volume(value)
 
 
-class PowerlawRedshift(_RedshiftModel):
+class PowerlawRedshiftModel(_RedshiftModel):
     r"""Redshift distribution for compact binary mergers modeled as a power law modulated
     by the cosmological volume element.
 
@@ -131,7 +131,7 @@ class PowerlawRedshift(_RedshiftModel):
     ):
         z_max, self.kappa = promote_shapes(z_max, kappa)
         batch_shape = lax.broadcast_shapes(jnp.shape(z_max), jnp.shape(kappa))
-        super(PowerlawRedshift, self).__init__(
+        super(PowerlawRedshiftModel, self).__init__(
             z_max=z_max, batch_shape=batch_shape, validate_args=validate_args
         )
 
@@ -155,7 +155,7 @@ class PowerlawRedshift(_RedshiftModel):
         return self.kappa * jnp.log1p(z)
 
 
-class MadauDickinsonRedshift(_RedshiftModel):
+class MadauDickinsonRedshiftModel(_RedshiftModel):
     r"""Redshift distribution for compact binary mergers modeled after the Madau-
     Dickinson star formation rate, modulated by the cosmological volume element.
 
@@ -200,7 +200,7 @@ class MadauDickinsonRedshift(_RedshiftModel):
             jnp.shape(gamma),
             jnp.shape(z_peak),
         )
-        super(MadauDickinsonRedshift, self).__init__(
+        super(MadauDickinsonRedshiftModel, self).__init__(
             z_max=z_max, batch_shape=batch_shape, validate_args=validate_args
         )
 

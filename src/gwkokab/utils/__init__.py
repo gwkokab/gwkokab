@@ -2,7 +2,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from . import kernel as kernel, math as math, transformations as transformations
+from . import (
+    exceptions as exceptions,
+    kernel as kernel,
+    math as math,
+    path as path,
+    transformations as transformations,
+)
 from .kernel import log_planck_taper_window as log_planck_taper_window
 from .math import (
     beta_dist_concentrations_to_mean_variance as beta_dist_concentrations_to_mean_variance,
@@ -43,6 +49,8 @@ from .transformations import (
     reduced_mass as reduced_mass,
     sin_tilt as sin_tilt,
     spherical_to_cart as spherical_to_cart,
+    spin_costilt_from_components as spin_costilt_from_components,
+    spin_magnitude_from_components as spin_magnitude_from_components,
     symmetric_mass_ratio as symmetric_mass_ratio,
     symmetric_mass_ratio_to_delta_m as symmetric_mass_ratio_to_delta_m,
     total_mass as total_mass,

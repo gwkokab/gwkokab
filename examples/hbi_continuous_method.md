@@ -11,7 +11,7 @@ It is recommended to read [Introduction](./generating_mock_posterior_estimates.i
 
 Hierarchical Bayesian Inference with continuous method can only be performed on flowMC
 at the moment. The configuration for FlowMC is also provided through a json file and saved in
-[`flowMC_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_continuous_method/flowMC_config.json). We will talk about the various configurations in detail in another
+[`flowMC_config.json`](https://github.com/kokabsc/hello-gwkokab/blob/main/hbi_continuous_method/flowMC_config.json). We will talk about the various configurations in detail in another
 tutorial.
 
 ```json
@@ -60,9 +60,9 @@ f_monk_n_pls_m_gs \
     --minimum-mc-error 0.01 \
     --n-checkpoints 10 \
     --n-max-steps 3 \
-    --pmean-json pmean.json \
-    --prior-json prior.json \
-    --sampler-config flowMC_config.json
+    --pmean-cfg pmean.json \
+    --prior-cfg prior.json \
+    --sampler-cfg flowMC_config.json
 ```
 
 ## Analysis of Results
@@ -92,11 +92,11 @@ Mon Nov  3 03:38:17 2025
 +-----------------------------------------------------------------------------------------+
 ```
 
-<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/hbi_continuous_method/figs_flowMC/nf_samples_unweighted.png"/>
+<img src="https://raw.githubusercontent.com/kokabsc/hello-gwkokab/refs/heads/main/hbi_continuous_method/figs_flowMC/nf_samples_unweighted.png"/>
 
 ---
 
 All the code and files used in this tutorial can be found in
 [hello-gwkokab/hbi_continuous_method][REPRODUCIBILITY_LINK].
 
-[REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_continuous_method
+[REPRODUCIBILITY_LINK]: https://github.com/kokabsc/hello-gwkokab/blob/main/hbi_continuous_method

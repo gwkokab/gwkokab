@@ -15,9 +15,11 @@ def make_parser() -> argparse.ArgumentParser:
     argparse.ArgumentParser
         the command line argument parser
     """
+    from argparse import ArgumentDefaultsHelpFormatter
+
     parser = argparse.ArgumentParser(
         description="Scatter 2D plotter.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         epilog="This script plots a 2D scatter plot.",
     )
     parser.add_argument(
@@ -129,13 +131,11 @@ def main() -> None:
 
     file_list = glob.glob(args.data_regex)
 
-    plt.rcParams.update(
-        {
-            "axes.prop_cycle": plt.cycler(
-                color=glasbey.create_palette(palette_size=len(file_list))
-            )
-        }
-    )
+    plt.rcParams.update({
+        "axes.prop_cycle": plt.cycler(
+            color=glasbey.create_palette(palette_size=len(file_list))
+        )
+    })
 
     for file_path in file_list:
         data = pd.read_csv(file_path, delimiter=" ")

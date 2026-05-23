@@ -278,7 +278,6 @@ def chi_effective_prior_from_isotropic_spins(chi_eff, q, amax=1):
     array-like
         The prior values
     """
-
     # Ensure that `xs` is an array and take absolute value
     chi_eff = np.abs(np.array(chi_eff))
 

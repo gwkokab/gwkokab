@@ -71,57 +71,10 @@ def GaussianSpinModel(
     """
     return MultivariateNormal(
         loc=jnp.array([mu_eff, mu_p]),
-        covariance_matrix=jnp.array(
-            [
-                [jnp.square(sigma_eff), rho * sigma_eff * sigma_p],
-                [rho * sigma_eff * sigma_p, jnp.square(sigma_p)],
-            ]
-        ),
-        validate_args=validate_args,
-    )
-
-
-def IndependentSpinOrientationGaussianIsotropic(
-    zeta: ArrayLike,
-    scale1: ArrayLike,
-    scale2: ArrayLike,
-    *,
-    validate_args: Optional[bool] = None,
-) -> MixtureGeneral:
-    r"""A mixture model of spin orientations with isotropic and normally
-    distributed components. See Eq. (4) of `Determining the population
-    properties of spinning black holes <https://arxiv.org/abs/1704.08370>`_.
-
-    .. math::
-        p(z_1,z_2\mid\zeta,\sigma_1,\sigma_2) = \frac{1-\zeta}{4} +
-        \zeta\mathbb{I}_{[-1,1]}(z_1)\mathbb{I}_{[-1,1]}(z_2)
-        \mathcal{N}(z_1\mid 1,\sigma_1)\mathcal{N}(z_2\mid 1,\sigma_2)
-
-    where :math:`\mathbb{I}(\cdot)` is the indicator function.
-
-    Parameters
-    ----------
-
-    zeta : ArrayLike
-        The mixing probability of the second component.
-    scale1 : ArrayLike
-        The standard deviation of the first component.
-    scale2 : ArrayLike
-        The standard deviation of the second component.
-
-    Returns
-    -------
-    MixtureGeneral
-        Mixture model of spin orientations.
-    """
-    return NDIsotropicAndTruncatedNormalMixture(
-        zeta=zeta,
-        loc=1.0,
-        scale=jnp.stack((scale1, scale2), axis=-1),
-        isotropic_low=-1.0,
-        isotropic_high=jnp.ones((2,)),
-        gaussian_low=-1.0,
-        gaussian_high=1.0,
+        covariance_matrix=jnp.array([
+            [jnp.square(sigma_eff), rho * sigma_eff * sigma_p],
+            [rho * sigma_eff * sigma_p, jnp.square(sigma_p)],
+        ]),
         validate_args=validate_args,
     )
 
@@ -156,62 +109,21 @@ def BetaFromMeanVar(
     return Beta(alpha, beta, validate_args=validate_args)
 
 
-def MinimumTiltModel(
-    zeta: ArrayLike,
-    loc: ArrayLike,
-    scale: ArrayLike,
-    minimum: ArrayLike = -1.0,
-    *,
-    validate_args: Optional[bool] = None,
-) -> MixtureGeneral:
-    r"""Minimum tilt model introduced in
-    `GWTC-4.0: Population Properties of Merging Compact Binaries <https://arxiv.org/abs/2508.18083>`_.
-    A mixture model of spin orientations with isotropic and normally
-    distributed components, with a minimum tilt constraint.
-
-    Parameters
-    ----------
-    zeta : ArrayLike
-        Weight of the Gaussian component.
-    loc : ArrayLike
-        Location parameter of the Gaussian component.
-    scale : ArrayLike
-        Scale parameter of the Gaussian component.
-    minimum : ArrayLike, optional
-        Minimum cosine tilt angle, by default -1.0
-    validate_args : Optional[bool], optional
-        Whether to validate the arguments, by default None
-
-    Returns
-    -------
-    MixtureGeneral
-        Mixture model of spin orientations.
-    """
-    return NDIsotropicAndTruncatedNormalMixture(
-        zeta=zeta,
-        loc=loc,
-        scale=scale,
-        isotropic_low=minimum,
-        isotropic_high=jnp.ones((2,)),
-        gaussian_low=minimum,
-        gaussian_high=jnp.ones((2,)),
-        validate_args=validate_args,
-    )
-
-
-def MinimumTiltModelExtended(
+def GenericTiltModel(
     zeta: ArrayLike,
     loc1: ArrayLike,
     loc2: ArrayLike,
     scale1: ArrayLike,
     scale2: ArrayLike,
-    minimum1: ArrayLike = -1.0,
-    minimum2: ArrayLike = -1.0,
+    low1: ArrayLike = -1.0,
+    low2: ArrayLike = -1.0,
+    high1: ArrayLike = 1.0,
+    high2: ArrayLike = 1.0,
     *,
     validate_args: Optional[bool] = None,
 ) -> MixtureGeneral:
     """A mixture model of spin orientations with isotropic and normally distributed
-    components, with a minimum tilt constraint for each spin.
+    components, with a minimum and maximum tilt constraint for each spin.
 
     Parameters
     ----------
@@ -225,26 +137,33 @@ def MinimumTiltModelExtended(
         Scale parameter of the first Gaussian component.
     scale2 : ArrayLike
         Scale parameter of the second Gaussian component.
-    minimum1 : ArrayLike, optional
+    low1 : ArrayLike, optional
         Minimum cosine tilt angle of the first component, by default -1.0
-    minimum2 : ArrayLike, optional
+    low2 : ArrayLike, optional
         Minimum cosine tilt angle of the second component, by default -1.0
+    high1 : ArrayLike, optional
+        Maximum cosine tilt angle of the first component, by default 1.0
+    high2 : ArrayLike, optional
+        Maximum cosine tilt angle of the second component, by default 1.0
     validate_args : Optional[bool], optional
         Whether to validate the arguments, by default None
 
     Returns
     -------
     MixtureGeneral
-        Mixture model of spin orientations with minimum tilt constraints for each spin.
+        Mixture model of spin orientations with minimum and maximum tilt constraints for each spin.
     """
+    low_stack = jnp.stack((low1, low2), axis=-1)
+    high_stack = jnp.stack((high1, high2), axis=-1)
+
     return NDIsotropicAndTruncatedNormalMixture(
         zeta=zeta,
         loc=jnp.stack([loc1, loc2], axis=-1),
         scale=jnp.stack([scale1, scale2], axis=-1),
-        isotropic_low=jnp.stack([minimum1, minimum2], axis=-1),
-        isotropic_high=1.0,
-        gaussian_low=jnp.stack([minimum1, minimum2], axis=-1),
-        gaussian_high=1.0,
+        isotropic_low=low_stack,
+        isotropic_high=high_stack,
+        gaussian_low=low_stack,
+        gaussian_high=high_stack,
         validate_args=validate_args,
     )
 

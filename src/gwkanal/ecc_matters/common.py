@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Optional
+from typing import List, Optional, Tuple
 
 from jax import numpy as jnp
 from jaxtyping import Array
@@ -10,6 +10,7 @@ from numpyro.distributions import TruncatedNormal
 
 from gwkokab.models import Wysocki2019MassModel
 from gwkokab.models.utils import JointDistribution, ScaledMixture
+from gwkokab.parameters import Parameters as P
 
 
 def EccentricityMattersModel(
@@ -38,3 +39,13 @@ def EccentricityMattersModel(
         support=comp_dist.support,
         validate_args=validate_args,
     )
+
+
+class EccentricityMattersCore:
+    @property
+    def parameters(self) -> Tuple[str, ...]:
+        return (P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.ECCENTRICITY)
+
+    @property
+    def model_parameters(self) -> List[str]:
+        return ["log_rate", "alpha_m", "mmin", "mmax", "loc", "scale", "low", "high"]

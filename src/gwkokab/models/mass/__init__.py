@@ -5,9 +5,14 @@
 from ._bpls import (
     BrokenPowerlaw as BrokenPowerlaw,
     BrokenPowerlawTwoPeak as BrokenPowerlawTwoPeak,
+    SmoothedBrokenPowerlawMassRatioPowerlaw as SmoothedBrokenPowerlawMassRatioPowerlaw,
 )
 from ._models import (
+    GaussianPrimaryMassRatio as GaussianPrimaryMassRatio,
+    GenericSmoothedPowerlawMassRatio as GenericSmoothedPowerlawMassRatio,
     PowerlawPrimaryMassRatio as PowerlawPrimaryMassRatio,
+    SmoothedGaussianPrimaryMassRatio as SmoothedGaussianPrimaryMassRatio,
+    SmoothedPowerlawPrimaryMassRatio as SmoothedPowerlawPrimaryMassRatio,
     SmoothedTwoComponentPrimaryMassRatio as SmoothedTwoComponentPrimaryMassRatio,
     Wysocki2019MassModel as Wysocki2019MassModel,
 )

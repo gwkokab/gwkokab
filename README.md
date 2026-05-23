@@ -1,7 +1,7 @@
 <div align="center">
   <picture>
     <!-- Dark mode image -->
-    <source srcset="https://raw.githubusercontent.com/gwkokab/gwkokab/main/docs/source/_static/noBgWhite.png" media="(prefers-color-scheme: dark)">
+    <source srcset="https://raw.githubusercontent.com/kokabsc/gwkokab/main/docs/source/_static/noBgWhite.png" media="(prefers-color-scheme: dark)">
     <!-- Light mode image -->
     <source srcset="https://raw.githubusercontent.com/gwkokab/gwkokab/main/docs/source/_static/noBgBlack.png" media="(prefers-color-scheme: light)">
     <!-- Fallback image -->
@@ -44,41 +44,9 @@ GWKokab is a high-performance, flexible, and easy-to-use toolkit for **gravitati
 
 The framework is designed to support scalable hierarchical inference and rapid experimentation with astrophysical population models, including mass, spin, redshift, and eccentricity distributions of compact binary mergers.
 
----
-
-> [!IMPORTANT]
-> ## Development Branch Notice
->
-> The latest **tested features**, updates, and bug fixes are currently available on the `dev` branch.
->
-> Until the ongoing documentation updates are finalized, we recommend users install and work from the `dev` branch instead of `main`.
->
-> Clone directly using:
->
-> ```bash
-> git clone -b dev https://github.com/kokabsc/gwkokab.git
-> ```
->
-> or switch an existing clone:
->
-> ```bash
-> git checkout dev
-> git pull origin dev
-> ```
->
-> The `main` branch will be updated after the current development cycle and documentation for the `dev` branch are completed.
->
-> [!NOTE]
-> For new users, we recommend starting with the **NumPyro** sampler before using **FlowMC**.  
-> NumPyro is generally easier to configure, debug, and tune, making it a more accessible starting point for developing and validating population inference workflows.
-
----
-
 ## Contributing
 
-We welcome contributions from the community.  
-If you would like to contribute to GWKokab, please see the
-[contributing guidelines](https://gwkokab.readthedocs.io/en/latest/dev_docs/contributing.html).
+We welcome contributions from the community. If you would like to contribute to GWKokab, please see the [contributing guidelines](https://gwkokab.readthedocs.io/en/latest/dev_docs/contributing.html).
 
 ---
 
@@ -89,16 +57,28 @@ If you use GWKokab in your research, please cite the following works:
 ### GWKokab Paper
 
 ```bibtex
-@article{arxiv:2509.13638,
-    author  = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
-    title   = {GWKokab: An Implementation to Identify the Properties of Multiple Population of Gravitational Wave Sources},
-    journal = {arXiv preprint arXiv:2509.13638},
-    year    = {2025},
-    url     = {https://arxiv.org/pdf/2509.13638v1}
+@ARTICLE{2026PhRvD.113j3003Q,
+       author = {{Qazalbash}, M. and {Zeeshan}, M. and {O'Shaughnessy}, R.},
+        title = "{Implementation to identify the properties of multiple populations of gravitational wave sources}",
+      journal = {\prd},
+     keywords = {Astrophysics and astroparticle physics, General Relativity and Quantum Cosmology, High Energy Astrophysical Phenomena, Instrumentation and Methods for Astrophysics},
+         year = 2026,
+        month = may,
+       volume = {113},
+       number = {10},
+          eid = {103003},
+        pages = {103003},
+          doi = {10.1103/krnm-3vrf},
+archivePrefix = {arXiv},
+       eprint = {2509.13638},
+ primaryClass = {gr-qc},
+       adsurl = {https://ui.adsabs.harvard.edu/abs/2026PhRvD.113j3003Q},
+      adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }
+
 @Misc{gwkokab2024github,
     author  = {{Qazalbash}, Meesum and {Zeeshan}, Muhammad and {O'Shaughnessy}, Richard},
     title   = {{GWKokab}: A JAX-based gravitational-wave population inference toolkit for parametric models},
-    url     = {https://github.com/gwkokab/gwkokab},
+    url     = {https://github.com/kokabsc/gwkokab},
     year    = {2024}
 }

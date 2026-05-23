@@ -47,64 +47,61 @@ class TestVariants(parameterized.TestCase):
         without_device=True,
         with_pmap=True,
     )
-    @parameterized.named_parameters(
-        [
-            (
-                "0",
-                jnp.stack(
-                    jnp.meshgrid(
-                        jnp.linspace(0, 1, 40), jnp.linspace(0, 1, 40), indexing="ij"
-                    ),
-                    axis=-1,
+    @parameterized.named_parameters([
+        (
+            "0",
+            jnp.stack(
+                jnp.meshgrid(
+                    jnp.linspace(0, 1, 40), jnp.linspace(0, 1, 40), indexing="ij"
                 ),
-                lambda x: jnp.ones(x.shape[:-1]),
-                lambda x: x[..., 0] * x[..., 1],
+                axis=-1,
             ),
-            (
-                "1",
-                jnp.stack(
-                    jnp.meshgrid(
-                        jnp.linspace(0, 2, 40), jnp.linspace(0, 2, 40), indexing="ij"
-                    ),
-                    axis=-1,
+            lambda x: jnp.ones(x.shape[:-1]),
+            lambda x: x[..., 0] * x[..., 1],
+        ),
+        (
+            "1",
+            jnp.stack(
+                jnp.meshgrid(
+                    jnp.linspace(0, 2, 40), jnp.linspace(0, 2, 40), indexing="ij"
                 ),
-                lambda x: jnp.ones(x.shape[:-1]) * 0.25,
-                lambda x: x[..., 0] * x[..., 1] * 0.25,
+                axis=-1,
             ),
-            (
-                "2",
-                jnp.stack(
-                    jnp.meshgrid(
-                        jnp.linspace(0, 2, 40), jnp.linspace(0, 2, 40), indexing="ij"
-                    ),
-                    axis=-1,
+            lambda x: jnp.ones(x.shape[:-1]) * 0.25,
+            lambda x: x[..., 0] * x[..., 1] * 0.25,
+        ),
+        (
+            "2",
+            jnp.stack(
+                jnp.meshgrid(
+                    jnp.linspace(0, 2, 40), jnp.linspace(0, 2, 40), indexing="ij"
                 ),
-                lambda x: jnp.square((3.0 / 8.0) * x[..., 0] * x[..., 1]),
-                lambda x: jnp.power(x[..., 0] * x[..., 1] * 0.25, 3.0),
+                axis=-1,
             ),
-            (
-                "3",
-                jnp.linspace(0, 2, 40).reshape(-1, 1),
-                lambda x: (3.0 / 8.0) * x * x,
-                lambda x: jnp.power(x * 0.5, 3.0),
-            ),
-            (
-                "4",
-                jnp.stack(
-                    jnp.meshgrid(
-                        jnp.linspace(0, 2, 40),
-                        jnp.linspace(0, 2, 40),
-                        jnp.linspace(0, 2, 40),
-                        indexing="ij",
-                    ),
-                    axis=-1,
+            lambda x: jnp.square((3.0 / 8.0) * x[..., 0] * x[..., 1]),
+            lambda x: jnp.power(x[..., 0] * x[..., 1] * 0.25, 3.0),
+        ),
+        (
+            "3",
+            jnp.linspace(0, 2, 40).reshape(-1, 1),
+            lambda x: (3.0 / 8.0) * x * x,
+            lambda x: jnp.power(x * 0.5, 3.0),
+        ),
+        (
+            "4",
+            jnp.stack(
+                jnp.meshgrid(
+                    jnp.linspace(0, 2, 40),
+                    jnp.linspace(0, 2, 40),
+                    jnp.linspace(0, 2, 40),
+                    indexing="ij",
                 ),
-                lambda x: (3.0 / 8.0) ** 3
-                * jnp.square(x[..., 0] * x[..., 1] * x[..., 2]),
-                lambda x: jnp.power(x[..., 0] * x[..., 1] * x[..., 2], 3.0) / 8**3,
+                axis=-1,
             ),
-        ]
-    )
+            lambda x: (3.0 / 8.0) ** 3 * jnp.square(x[..., 0] * x[..., 1] * x[..., 2]),
+            lambda x: jnp.power(x[..., 0] * x[..., 1] * x[..., 2], 3.0) / 8**3,
+        ),
+    ])
     def test_cumtrapz(
         self,
         x: Array,

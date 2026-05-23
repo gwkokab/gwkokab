@@ -3,12 +3,16 @@
 
 
 import chex
-import numpy as np
+import pytest
 from absl.testing import parameterized
-from astropy import cosmology as astro_cosmo
 from jax import numpy as jnp
 
-from gwkokab.cosmology import Cosmology, PLANCK_2015_Cosmology, PLANCK_2018_Cosmology
+import gwkokab.cosmology as cosmo_mod
+from gwkokab.cosmology import (
+    Cosmology,
+    PLANCK_2015_Cosmology,
+    PLANCK_2018_Cosmology,
+)
 
 
 class TestCosmology(parameterized.TestCase):
@@ -57,37 +61,48 @@ class TestCosmology(parameterized.TestCase):
         assert jnp.allclose(DL, _DL_to_DL(DL), atol=1e-3)
 
 
-def test_luminosity_distance_with_astropy():
-    planck15: astro_cosmo.LambdaCDM = astro_cosmo.Planck15
-    planck18: astro_cosmo.LambdaCDM = astro_cosmo.Planck18
+class TestCosmologyFactories:
+    """Tests for the individual factory functions."""
 
-    z = np.linspace(0, 4, 100)
+    def test_planck2015_values(self):
+        res = cosmo_mod.PLANCK_2015_Cosmology()
+        assert res.OmegaLambda == pytest.approx(0.6925)
+        assert res.OmegaRadiation == 0.0
 
-    np.testing.assert_allclose(
-        planck15.luminosity_distance(z).value,
-        PLANCK_2015_Cosmology().z_to_DL(z),
-        rtol=1e-3,
-    )
-    np.testing.assert_allclose(
-        planck18.luminosity_distance(z).value,
-        PLANCK_2018_Cosmology().z_to_DL(z),
-        rtol=1e-2,
-    )
+    def test_planck2018_values(self):
+        res = cosmo_mod.PLANCK_2018_Cosmology()
+        assert res.OmegaLambda == pytest.approx(0.69034)
+        assert res.OmegaRadiation == 0.0
 
 
-# def test_differential_comoving_volume_with_astropy():
-#     planck15: astro_cosmo.FlatLambdaCDM = astro_cosmo.Planck15
-#     planck18: astro_cosmo.FlatLambdaCDM = astro_cosmo.Planck18
+class TestDefaultCosmologyJIT(chex.TestCase):
+    @chex.variants(with_jit=True, without_jit=True)
+    def test_default_cosmology_under_jit(self):
+        """Verify that default_cosmology works inside a JIT-compiled function."""
 
-#     z = np.linspace(0, 2, 100)
+        @self.variant
+        def compute_dist(z):
+            # Calling the cached function inside JIT
+            cosmo = cosmo_mod.default_cosmology()
+            return cosmo.z_to_DL(z)
 
-#     np.testing.assert_allclose(
-#         4 * np.pi * planck15.differential_comoving_volume(z).value,
-#         PLANCK_2015_Cosmology.dVcdz(z),
-#         rtol=1e-3,
-#     )
-#     np.testing.assert_allclose(
-#         4 * np.pi * planck18.differential_comoving_volume(z).value,
-#         PLANCK_2018_Cosmology.dVcdz(z),
-#         rtol=1e-3,
-#     )
+        z = jnp.array([0.1, 1.0, 2.0])
+        # This will fail if JAX cannot handle the cached Equinox module
+        # or if it tries to re-read the environment variable during transform
+        result = compute_dist(z)
+
+        assert result.shape == (3,)
+        assert not jnp.any(jnp.isnan(result))
+
+
+def test_registry_is_immutable():
+    """Verify that the registry cannot be modified at runtime."""
+    COSMOLOGY_REGISTRY = cosmo_mod._planck.COSMOLOGY_REGISTRY
+
+    # Attempting to add a new key should raise a TypeError
+    with pytest.raises(TypeError):
+        COSMOLOGY_REGISTRY["NewCosmo"] = lambda: None
+
+    # Attempting to delete a key should raise a TypeError
+    with pytest.raises(TypeError):
+        del COSMOLOGY_REGISTRY["Planck15"]

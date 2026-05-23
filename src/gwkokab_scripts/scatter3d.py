@@ -15,9 +15,11 @@ def make_parser() -> argparse.ArgumentParser:
     argparse.ArgumentParser
         the command line argument parser
     """
+    from argparse import ArgumentDefaultsHelpFormatter
+
     parser = argparse.ArgumentParser(
         description="Scatter 3D plotter.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         epilog="This script plots a 3D scatter plot.",
     )
     parser.add_argument(

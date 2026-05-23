@@ -3,22 +3,24 @@
 
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import List
 
+from numpyro.distributions.distribution import enable_validation
+
+from gwkanal.core.flowMC_based import FlowMCBased
+from gwkanal.core.inference_io import AnalyticalPELoader as DataLoader, SamplerConfig
 from gwkanal.core.monk import Monk, monk_arg_parser
-from gwkanal.ecc_matters.common import EccentricityMattersModel
+from gwkanal.core.numpyro_based import NumpyroBased
+from gwkanal.ecc_matters.common import EccentricityMattersCore, EccentricityMattersModel
 from gwkanal.utils.logger import log_info
-from gwkokab.parameters import Parameters as P
+from gwkokab.inference.factory import get_likelihood_fn
 
 
-class EccentricityMattersMonk(Monk):
-    @property
-    def parameters(self) -> List[str]:
-        return [P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.ECCENTRICITY]
+class EccentricityMattersFMonk(EccentricityMattersCore, Monk, FlowMCBased):
+    pass
 
-    @property
-    def model_parameters(self) -> List[str]:
-        return ["log_rate", "alpha_m", "mmin", "mmax", "loc", "scale", "low", "high"]
+
+class EccentricityMattersNMonk(EccentricityMattersCore, Monk, NumpyroBased):
+    pass
 
 
 def main() -> None:
@@ -27,21 +29,37 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    enable_validation()
+
     log_info(start=True)
 
-    EccentricityMattersMonk(
+    sampler_cfg = SamplerConfig.from_json(args.sampler_cfg)
+    data_loader = DataLoader.from_json(args.data_loader_cfg)
+
+    likelihood_fn = get_likelihood_fn(
+        sampler_name=sampler_cfg.sampler_name,
+        analysis_type="analytical",
+    )
+
+    AnalysisClass = (
+        EccentricityMattersFMonk
+        if sampler_cfg.sampler_name == "flowMC"
+        else EccentricityMattersNMonk
+    )
+
+    AnalysisClass.init_rng_seed(seed=args.seed)
+
+    AnalysisClass(
+        likelihood_fn=likelihood_fn,
         model=EccentricityMattersModel,
-        data_filename=args.data_filename,
-        seed=args.seed,
-        prior_filename=args.prior_json,
-        poisson_mean_filename=args.pmean_json,
-        sampler_settings_filename=args.sampler_config,
+        data_loader=data_loader,
+        prior_filename=args.prior_cfg,
+        poisson_mean_filename=args.pmean_cfg,
+        sampler_cfg=sampler_cfg,
         debug_nans=args.debug_nans,
         profile_memory=args.profile_memory,
         check_leaks=args.check_leaks,
         analysis_name="ecc_matters",
         n_samples=args.n_samples,
-        minimum_mc_error=args.minimum_mc_error,
-        n_checkpoints=args.n_checkpoints,
-        n_max_steps=args.n_max_steps,
+        variance_cut_threshold=args.variance_cut_threshold,
     ).run()

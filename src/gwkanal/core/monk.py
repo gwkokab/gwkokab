@@ -4,90 +4,135 @@
 
 from argparse import ArgumentParser
 from collections.abc import Callable
-from typing import List, Tuple, Union
+from pathlib import Path
+from typing import Union
 
 import h5py
 import jax
 import numpy as np
-from jax import numpy as jnp
-from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions import Distribution
-from numpyro.distributions.distribution import enable_validation
 
-from gwkanal.utils.common import read_json
-from gwkokab.inference import analytical_likelihood
-from gwkokab.poisson_mean import get_selection_fn_and_poisson_mean_estimator
-from gwkokab.utils.tools import error_if
+from gwkanal.core.inference_io import AnalyticalPELoader, PoissonMeanEstimationLoader
+from gwkanal.core.utils import SampleTransformer
 
-from .flowMC_based import FlowMCBased
-from .guru import guru_arg_parser as guru_parser
+from .guru import Guru, guru_arg_parser as guru_parser
 
 
-def _read_mean_covariances(filename: str) -> Tuple[List[np.ndarray], List[np.ndarray]]:
-    """Reads means and covariances from a file.
+def _save_samples_to_hdf5(
+    filename: str,
+    event_filenames: tuple[Path, ...],
+    samples: np.ndarray,
+    transformed_samples: np.ndarray,
+    ln_offsets: np.ndarray,
+) -> None:
+    """Save the generated samples and related data to an HDF5 file.
 
-    Args:
-        filename (str): The path to the file containing means and covariances.
-
-    Returns:
-        Tuple[List[np.ndarray], List[np.ndarray]]: A tuple containing two lists:
-            - list_of_means: List of mean arrays.
-            - list_of_covariances: List of covariance arrays.
+    Parameters
+    ----------
+    filename : str
+        The name of the HDF5 file to save the data to.
+    event_filenames : tuple[Path, ...]
+        Tuple of original filenames corresponding to each event.
+    samples : np.ndarray
+        The original samples in analytical coordinates.
+    transformed_samples : np.ndarray
+        The transformed samples in model coordinates.
+    ln_offsets : np.ndarray
+        The log offsets for each event.
     """
-    assert filename.endswith(".hdf5") or filename.endswith(".h5"), (
-        "The filename must end with '.hdf5' or '.h5'."
-    )
+    opts = {
+        "compression": "gzip",
+        "compression_opts": 9,
+        "shuffle": True,
+    }
 
-    logger.info("Reading means and covariances from {filename}", filename=filename)
-
-    list_of_means = []
-    list_of_covariances = []
-
-    with h5py.File(filename, "r") as f:
-        for key in f.keys():
-            if not key.startswith("event_"):
-                continue
-
-            group = f[key]
-            error_if(
-                "mean" not in group,
-                msg=f"Key 'mean' not found in group {key} of file {filename}.",
+    with h5py.File(filename, "w") as f:
+        for i, fname in enumerate(event_filenames):
+            event_group = f.create_group(fname.stem)
+            event_group.attrs["original_filename"] = str(fname)
+            event_group.create_dataset("samples", data=samples[i], **opts)
+            event_group.create_dataset(
+                "transformed_samples",
+                data=transformed_samples[i],
+                **opts,
             )
-            error_if(
-                "cov" not in group,
-                msg=f"Key 'cov' not found in group {key} of file {filename}.",
+            event_group.create_dataset("ln_offsets", data=ln_offsets[i], **opts)
+
+
+def _multivariate_normal_samples(
+    transform: SampleTransformer,
+    N: int,
+    mean: np.ndarray,
+    cov: np.ndarray,
+    low: np.ndarray,
+    high: np.ndarray,
+    scale: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, int]:
+    """Generate samples from a multivariate normal distribution.
+
+    Parameters
+    ----------
+    transform : SampleTransformer
+        The transformation to apply to the samples after generation.
+    N : int
+        Number of samples to generate.
+    mean : np.ndarray
+        Mean of the multivariate normal distribution.
+    cov : np.ndarray
+        Covariance matrix of the multivariate normal distribution.
+    low : np.ndarray
+        Lower bound for the samples.
+    high : np.ndarray
+        Upper bound for the samples.
+    scale : np.ndarray
+        Scale factors to avoid numerical issues when sampling.
+
+    Returns
+    -------
+    np.ndarray
+        Samples drawn from the multivariate normal distribution.
+    np.ndarray
+        Transformed samples after applying the provided transformation.
+    int
+        Total number of samples generated.
+    """
+    samples = np.zeros((N, mean.shape[0]))
+    transformed_samples = transform.transform(samples)
+    mask = np.zeros(N, dtype=bool)
+    N_total = 0
+
+    mean *= scale
+    cov *= np.outer(scale, scale)
+
+    while not np.all(mask):
+        n_invalid = np.sum(~mask)
+        N_total += n_invalid
+        new_samples = (
+            np.random.multivariate_normal(
+                mean, cov, size=n_invalid, check_valid="raise"
             )
-
-            mean = group["mean"][:]
-            cov = group["cov"][:]
-
-            n_dim = mean.shape[0]
-            error_if(
-                cov.shape != (n_dim, n_dim),
-                msg=f"Covariance shape {cov.shape} does not match mean shape "
-                f"{mean.shape} in group {key} of file {filename}.",
-            )
-
-            list_of_means.append(mean)
-            list_of_covariances.append(cov)
-
-    return list_of_means, list_of_covariances
+            / scale
+        )
+        new_transformed_samples = transform.transform(new_samples)
+        samples[~mask] = new_samples
+        transformed_samples[~mask] = new_transformed_samples
+        mask = np.all((samples >= low) & (samples <= high), axis=1)
+        mask &= transform.check(samples, transformed_samples)
+    return samples, transformed_samples, N_total
 
 
-class Monk(FlowMCBased):
+class Monk(Guru):
     def __init__(
         self,
+        likelihood_fn: Callable[..., Callable],
         model: Union[Distribution, Callable[..., Distribution]],
-        data_filename: str,
-        seed: int,
+        data_loader: AnalyticalPELoader,
         prior_filename: str,
         poisson_mean_filename: str,
-        sampler_settings_filename: str,
+        sampler_cfg,
+        variance_cut_threshold: float | None,
         n_samples: int,
-        minimum_mc_error: float,
-        n_checkpoints: int,
-        n_max_steps: int,
         debug_nans: bool = False,
         profile_memory: bool = False,
         check_leaks: bool = False,
@@ -97,11 +142,13 @@ class Monk(FlowMCBased):
 
         Parameters
         ----------
+        likelihood_fn : Callable[..., Callable[..., Array]]
+            A function that takes the model parameters and returns a function that computes the log-likelihood.
         model : Union[Distribution, Callable[..., Distribution]]
             model to be used in the Monk class. It can be a Distribution or a callable
             that returns a Distribution.
-        data_filename : str
-            path to the HDF5 file containing the data.
+        data_loader : AnalyticalPELoader
+            data loader for the analytical PE data.
         seed : int
             seed for the random number generator.
         prior_filename : str
@@ -126,12 +173,13 @@ class Monk(FlowMCBased):
         assert all(letter.isalpha() or letter == "_" for letter in analysis_name), (
             "Analysis name must be alphabetic characters only."
         )
-        self.data_filename = data_filename
+        self.likelihood_fn = likelihood_fn
+        self.data_loader = data_loader
         self.n_samples = n_samples
-        self.minimum_mc_error = minimum_mc_error
-        self.n_checkpoints = n_checkpoints
-        self.n_max_steps = n_max_steps
-        self.set_rng_key(seed=seed)
+
+        logger.info(
+            f"Initializing Monk class for analysis identifier: '{analysis_name}'"
+        )
 
         super().__init__(
             analysis_name=analysis_name or model.__name__,
@@ -141,54 +189,101 @@ class Monk(FlowMCBased):
             poisson_mean_filename=poisson_mean_filename,
             prior_filename=prior_filename,
             profile_memory=profile_memory,
-            sampler_settings_filename=sampler_settings_filename,
+            sampler_cfg=sampler_cfg,
+            variance_cut_threshold=variance_cut_threshold,
         )
 
     def run(self) -> None:
         """Runs the Monk analysis."""
         constants, priors, variables, variables_index = self.classify_model_parameters()
 
-        list_of_means, list_of_covariances = _read_mean_covariances(self.data_filename)
+        data = self.data_loader.load(self.parameters)
 
-        n_events = len(list_of_means)
-        mean_stack: Array = jax.block_until_ready(
-            jax.device_put(jnp.stack(list_of_means, axis=0))
+        scale = data["scale"]
+        lower_bound = data["lower_bound"]
+        upper_bound = data["upper_bound"]
+        mean = data["mean"]
+        cov = data["cov"]
+
+        n_events = len(mean)
+
+        logger.info("Parsing Poisson mean configuration and initializing estimator.")
+        pmean_loader = PoissonMeanEstimationLoader.from_json(
+            self.poisson_mean_filename, self.rng_key, self.parameters
         )
-        cov_stack = np.stack(list_of_covariances, axis=0)
-        scale_tril_stack: Array = jax.device_put(jnp.linalg.cholesky(cov_stack))
-        del cov_stack  # We don't need the covariance matrices anymore
+        _, poisson_mean_estimator, pmean_kwargs = pmean_loader.get_estimators()
 
-        logger.debug("mean_stack.shape: {shape}", shape=mean_stack.shape)
-        logger.debug("scale_tril_stack.shape: {shape}", shape=scale_tril_stack.shape)
-
-        pmean_config = read_json(self.poisson_mean_filename)
-        _, poisson_mean_estimator, T_obs, _ = (
-            get_selection_fn_and_poisson_mean_estimator(
-                key=self.rng_key, parameters=self.parameters, **pmean_config
-            )
-        )
-
-        logpdf = analytical_likelihood(
+        logpdf = self.likelihood_fn(
             self.model,
             priors,
+            variables,
             constants,
             variables_index,
             poisson_mean_estimator,
-            self.rng_key,
-            n_events=n_events,
-            n_samples=self.n_samples,
-            minimum_mc_error=self.minimum_mc_error,
-            n_checkpoints=self.n_checkpoints,
-            n_max_steps=self.n_max_steps,
+            self.variance_cut_threshold,
+        )
+
+        samples = []
+        transformed_samples = []
+        total_samples = []
+
+        for i in range(n_events):
+            event_samples, event_transformed_samples, n_total = (
+                _multivariate_normal_samples(
+                    self.data_loader.sample_transformer,
+                    self.n_samples,
+                    mean[i],
+                    cov[i],
+                    lower_bound[i],
+                    upper_bound[i],
+                    scale[i],
+                )
+            )
+
+            logger.info(
+                "Generated {n_samples} samples for event '{event_name}' with a total of {n_total} samples drawn to account for bounds and transformations.",
+                n_samples=self.n_samples,
+                event_name=self.data_loader.event_paths[i].stem,
+                n_total=n_total,
+            )
+            samples.append(event_samples)
+            transformed_samples.append(event_transformed_samples)
+            total_samples.append(n_total)
+
+        samples_stack = np.stack(samples, axis=0)
+        transformed_samples_stack = np.stack(transformed_samples, axis=0)
+
+        ln_offsets = self.data_loader.sample_transformer.log_abs_det_jacobian(
+            samples_stack, transformed_samples_stack
+        )
+
+        logger.info("ln_offsets.shape: {shape}", shape=ln_offsets.shape)
+        logger.info(
+            "samples_stack.shape: {shape}", shape=transformed_samples_stack.shape
+        )
+
+        filename = "monk_samples.hdf5"
+
+        _save_samples_to_hdf5(
+            filename=filename,
+            event_filenames=self.data_loader.event_paths,
+            samples=samples_stack,
+            transformed_samples=transformed_samples_stack,
+            ln_offsets=ln_offsets,
+        )
+
+        logger.info(
+            "Saved generated samples and related data to '{filename}'.",
+            filename=filename,
         )
 
         self.driver(
             logpdf=logpdf,
             priors=priors,
             data={
-                "mean_stack": mean_stack,
-                "scale_tril_stack": scale_tril_stack,
-                "T_obs": T_obs,
+                "ln_offsets": jax.device_put(ln_offsets),
+                "pmean_kwargs": jax.device_put(pmean_kwargs),
+                "samples_stack": jax.device_put(transformed_samples_stack),
             },
             labels=sorted(variables.keys()),
         )
@@ -207,45 +302,23 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     ArgumentParser
         the command line argument parser
     """
-
-    # Global enable validation for all distributions
-    enable_validation()
-
     parser = guru_parser(parser)
 
-    monk_group = parser.add_argument_group("Monk Options")
-    monk_group.add_argument(
-        "--data-filename",
-        help="Path to the HDF5 file containing the data.",
+    # Monk Options
+    monk = parser.add_argument_group("Monk Options")
+    monk.add_argument(
+        "--data-loader-cfg",
         type=str,
         required=True,
+        help="Path to JSON config for AnalyticalPELoader.",
     )
 
-    likelihood_group = parser.add_argument_group("Likelihood Options")
-    likelihood_group.add_argument(
+    tune = parser.add_argument_group("Tuning Options")
+    tune.add_argument(
         "--n-samples",
-        help="Number of samples to draw from the multivariate normal distribution for each "
-        "event to compute the likelihood",
-        default=10_000,
         type=int,
-    )
-    likelihood_group.add_argument(
-        "--minimum-mc-error",
-        help="Minimum Monte Carlo error for the likelihood computation.",
-        default=0.01,
-        type=float,
-    )
-    likelihood_group.add_argument(
-        "--n-checkpoints",
-        help="Number of checkpoints to save during the optimization process.",
-        default=5,
-        type=int,
-    )
-    likelihood_group.add_argument(
-        "--n-max-steps",
-        help="Maximum number of steps until minimum Monte Carlo error is reached.",
-        default=10,
-        type=int,
+        default=1_000,
+        help="Number of samples of Multivariate Normal per event during likelihood estimation.",
     )
 
     return parser

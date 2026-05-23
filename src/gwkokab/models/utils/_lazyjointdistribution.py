@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import warnings
 from collections.abc import Sequence
 from typing import Dict, List, Literal, Optional, Tuple, Union
 
@@ -12,7 +13,7 @@ from numpyro.distributions import constraints, Distribution
 from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
 
-from ...utils.tools import error_if, warn_if
+from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 
 class _LazyConstraint(constraints.Constraint):
@@ -138,29 +139,28 @@ class LazyJointDistribution(Distribution):
         ValueError
              If no marginal distributions are provided.
         """
-        error_if(
-            not marginal_distributions,
-            msg="At least one marginal distribution is required.",
-        )
-        error_if(
-            len(partial_order) == 0,
-            msg="`partial_order` must be provided. If there is not lazy "
-            "variable then use a standard `gwkokab.models.JointDistribution` instead.",
-        )
-        error_if(
-            dependencies is None,
-            msg="`dependencies` must be provided. If there is not lazy "
-            "variable then use a standard `gwkokab.models.JointDistribution` instead.",
-        )
-        error_if(
-            len(partial_order) != len(dependencies),
-            msg="`partial_order` and `dependencies` must have the same length.",
-        )
-        warn_if(
-            flatten_method is not None,
-            msg="The `flatten_method` argument is not used with in "
-            "`LazyJointDistribution`. It will be ignored.",
-        )
+        if not marginal_distributions:
+            raise LoggedValueError("At least one marginal distribution is required.")
+        if len(partial_order) == 0:
+            raise LoggedValueError(
+                "`partial_order` must be provided. If there is not lazy "
+                "variable then use a standard `gwkokab.models.JointDistribution` instead."
+            )
+        if dependencies is None:
+            raise LoggedValueError(
+                "`dependencies` must be provided. If there is not lazy "
+                "variable then use a standard `gwkokab.models.JointDistribution` instead."
+            )
+        if len(partial_order) != len(dependencies):
+            raise LoggedValueError(
+                "`partial_order` and `dependencies` must have the same length."
+            )
+        if flatten_method is not None:
+            warnings.warn(
+                "The `flatten_method` argument is not used with in "
+                "`LazyJointDistribution`. It will be ignored.",
+                LoggedUserWarning,
+            )
 
         # TODO(Qazalbash): Implement flattening logic
         # marginal_flatten = _flatten_marginal_distributions(
@@ -174,12 +174,12 @@ class LazyJointDistribution(Distribution):
         dependencies = dependencies or {}  # for type checker
         k = 0
         for i, d in enumerate(marginal_flatten):
-            error_if(
-                not isinstance(d, (Distribution, jax.tree_util.Partial)),
-                msg="All marginals must be instances of "
-                "`numpyro.distributions.Distribution` and `jax.tree_util.Partial`. "
-                f"Got {type(d)}",
-            )
+            if not isinstance(d, (Distribution, jax.tree_util.Partial)):
+                raise LoggedValueError(
+                    "All marginals must be instances of "
+                    "`numpyro.distributions.Distribution` and `jax.tree_util.Partial`. "
+                    f"Got {type(d)}"
+                )
             if isinstance(d, jax.tree_util.Partial):
                 event_shape = (
                     dependencies_event_shape[i] if dependencies_event_shape else ()

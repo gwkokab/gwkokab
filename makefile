@@ -1,48 +1,36 @@
-PIP=pip
-UV=uv
-PIP_FLAGS?=
-TARGET?=gwkokab
-EXTRA?=
+PIP             := pip
+UV              := uv
+TARGET          := gwkokab
+PIP_FLAGS       ?=
+EXTRA           ?=
+GROUP           ?=
+INSTALL_TARGET  := .
 
-ifeq ($(EXTRA),)
-	_EXTRA=.
-else
-	_EXTRA=.[$(EXTRA)]
-endif
+comma := ,
+empty :=
+space := $(empty) $(empty)
 
-ifeq ($(PIP_FLAGS),)
-	_PIP_FLAGS=
-else
-	_PIP_FLAGS=$(PIP_FLAGS)
-endif
+EXTRA_FLAGS     := $(if $(EXTRA),$(addprefix --extra ,$(subst $(comma),$(space),$(EXTRA))))
+GROUP_FLAGS     := $(if $(GROUP),$(addprefix --group ,$(subst $(comma),$(space),$(GROUP))))
 
-.PHONY: install uninstall cache_clean help
+.DEFAULT_GOAL   := help
+.PHONY: all install uninstall cache_clean help doc check-uv
 
-# Verify UV installation
-UV_CHECK := $(shell command -v $(UV) 2> /dev/null)
-ifndef UV_CHECK
-	$(error "uv is not installed. Please install uv and try again.")
-endif
+install: uninstall check-uv
+	GWKOKAB_DEV_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS) \
+		$(INSTALL_TARGET) -r pyproject.toml \
+		$(EXTRA_FLAGS) $(GROUP_FLAGS)
 
-help:
-	@echo "Available targets:"
-	@echo "  install EXTRA=... - Install package"
-	@echo "  uninstall         - Remove package"
-	@echo "  cache_clean       - Clean pip and uv cache"
-	@echo "  docs		   - Generate documentation"
+uninstall: check-uv
+	@$(UV) $(PIP) uninstall $(TARGET) 2>/dev/null || true
 
-install: uninstall
-	GWKOKAB_NIGHTLY_BUILD=1 $(UV) $(PIP) install $(_PIP_FLAGS) $(_EXTRA)
-
-
-uninstall:
-	$(UV) $(PIP) uninstall $(TARGET)
-
-cache_clean: uninstall
-	$(PIP) cache purge
+cache_clean: check-uv
 	$(UV) cache clean
 
 doc: install
-	cp -r examples docs/source
-	cd docs && make html
-	cd ..
+	@mkdir -p docs/source
+	cp -r examples docs/source/
+	$(MAKE) -C docs html
+
+check-uv:
+	@command -v $(UV) >/dev/null 2>&1 || { echo >&2 "Error: $(UV) is not installed."; exit 1; }

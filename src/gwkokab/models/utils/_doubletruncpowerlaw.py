@@ -412,7 +412,6 @@ class DoublyTruncatedPowerLaw(Distribution):
             (x^\alpha)/(log(b) - log(a))
         Derivations are calculated by Wolfram Alpha via the Jacobian matrix accordingly.
         """
-
         return doubly_truncated_power_law_log_prob(
             value, self.alpha, self.low, self.high
         )

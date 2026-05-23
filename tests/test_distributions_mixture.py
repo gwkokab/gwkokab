@@ -16,7 +16,7 @@ from numpyro.distributions import Distribution, HalfNormal, MultivariateNormal, 
 from gwkokab.models.utils import ScaledMixture
 
 
-rng_key = jax.random.PRNGKey(42)
+rng_key = jax.random.key(42)
 
 
 def get_normal(batch_shape: Tuple[int, ...]) -> Normal:

@@ -6,19 +6,19 @@ from abc import abstractmethod
 from argparse import ArgumentParser
 from collections import defaultdict
 from collections.abc import Callable
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Set, Tuple, Union
 
 import jax
-from jax import lax, random as jrd
-from jaxtyping import Array, PRNGKeyArray
+from jax import lax
+from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions.distribution import Distribution
-from numpyro.util import is_prng_key
 
+from gwkanal.core.utils import PRNGKeyMixin
 from gwkanal.utils.common import read_json, write_json
 from gwkanal.utils.priors import get_processed_priors
 from gwkokab.models.utils import JointDistribution, LazyJointDistribution
-from gwkokab.utils.tools import error_if
+from gwkokab.utils.exceptions import LoggedValueError
 
 
 def _topological_sort(graph: Dict[str, Set[str]]) -> List[str]:
@@ -113,7 +113,6 @@ def _classify_model_parameters(
     ValueError
         If a parameter has an invalid type.
     """
-
     constants: Dict[str, int | float | None] = {}
     variables: Dict[str, Distribution] = {}
     aliases: Dict[str, str] = {}
@@ -127,20 +126,24 @@ def _classify_model_parameters(
         if value is None:
             constants[name] = None
 
+        elif isinstance(value, str):
+            # string aliases handled later
+            continue
+
         elif isinstance(value, Distribution):
             variables[name] = value
             variable_roots.append(name)
 
         elif isinstance(value, tuple):
             lazy_fn, lazy_args = value
-            error_if(
-                not isinstance(lazy_fn, jax.tree_util.Partial),
-                msg=f"Lazy distribution '{name}' must be a `jax.tree_util.Partial`.",
-            )
-            error_if(
-                not isinstance(lazy_args, dict),
-                msg=f"Lazy distribution '{name}' must have a dictionary of dependencies.",
-            )
+            if not isinstance(lazy_fn, jax.tree_util.Partial):
+                raise LoggedValueError(
+                    f"Lazy distribution '{name}' must be a `jax.tree_util.Partial`.",
+                )
+            if not isinstance(lazy_args, dict):
+                raise LoggedValueError(
+                    f"Lazy distribution '{name}' must have a dictionary of dependencies."
+                )
 
             variables[name] = lazy_fn
             lazy_dependencies[name] = lazy_args
@@ -151,14 +154,9 @@ def _classify_model_parameters(
         elif isinstance(value, (int, float)):
             constants[name] = lax.stop_gradient(value)
 
-        elif isinstance(value, str):
-            # string aliases handled later
-            continue
-
         else:
-            error_if(
-                True,
-                msg=f"Invalid parameter '{name}' with type {type(value)} and value {value}",
+            raise LoggedValueError(
+                f"Invalid parameter '{name}' with type {type(value)} and value {value}"
             )
 
     # Pass 2: resolve string aliases
@@ -169,23 +167,22 @@ def _classify_model_parameters(
             elif value in variables:
                 aliases[name] = value
 
-    # Compute lazy evaluation order
-    if lazy_dependencies:
-        import pprint
+    if not lazy_dependencies:
+        lazy_order = []
+    else:  # Compute lazy evaluation order
+        if _check_cycles(dependency_graph):
+            import pprint
 
-        error_if(
-            _check_cycles(dependency_graph),
-            msg="Cyclic dependencies detected among lazy variables. Dependency graph:\n"
-            + pprint.pformat(dependency_graph),
-        )
+            raise LoggedValueError(
+                "Cyclic dependencies detected among lazy variables. Dependency graph:\n"
+                + pprint.pformat(dependency_graph)
+            )
 
         lazy_order = [
             var
             for var in _topological_sort(dependency_graph)
             if var not in variable_roots
         ]
-    else:
-        lazy_order = []
 
     return (
         constants,
@@ -196,12 +193,11 @@ def _classify_model_parameters(
     )
 
 
-class Guru:
+class Guru(PRNGKeyMixin):
     """Guru is a class which contains all the common functionality among Genie, Sage and
     Guru classes.
     """
 
-    _rng_key: PRNGKeyArray
     output_directory: str
 
     def __init__(
@@ -214,51 +210,22 @@ class Guru:
         poisson_mean_filename: str,
         prior_filename: str,
         profile_memory: bool,
-        sampler_settings_filename: str,
-        variance_cut_threshold: Optional[float] = None,
+        sampler_cfg,
+        variance_cut_threshold: float | None,
     ) -> None:
         self.analysis_name = analysis_name
         self.prior_filename = prior_filename
         self.model = model
-        self.sampler_settings_filename = sampler_settings_filename
+        self.sampler_cfg = sampler_cfg
         self.debug_nans = debug_nans
         self.profile_memory = profile_memory
         self.check_leaks = check_leaks
         self.poisson_mean_filename = poisson_mean_filename
         self.variance_cut_threshold = variance_cut_threshold
 
-    @property
-    def rng_key(self) -> PRNGKeyArray:
-        self._rng_key, subkey = jrd.split(self._rng_key)
-        return subkey
-
-    def set_rng_key(
-        self, *, key: Optional[PRNGKeyArray] = None, seed: Optional[int] = None
-    ) -> None:
-        error_if(
-            key is None and seed is None,
-            msg="Either 'key' or 'seed' must be provided to set the random number generator key.",
-        )
-        if key is not None:
-            error_if(
-                not is_prng_key(key),
-                msg=f"Expected a PRNGKeyArray, got {type(key)}.",
-            )
-            logger.info(f"Setting the random number generator key to {key}.")
-            self._rng_key = key
-        elif seed is not None:
-            error_if(
-                not isinstance(seed, int),
-                msg=f"Expected an integer seed, got {type(seed)}.",
-            )
-            error_if(
-                seed < 0,
-                msg=f"Seed must be a non-negative integer, got {seed}.",
-            )
-            logger.info(f"Setting the random number generator key with seed {seed}.")
-            key = jrd.PRNGKey(seed)
-            self._rng_key = key
-        self.seed = seed
+    def modify_model_params(self, params: dict) -> dict:
+        """Hook for subclasses to modify parameters before model instantiation."""
+        return params
 
     def classify_model_parameters(
         self,
@@ -277,14 +244,14 @@ class Guru:
             distribution, and the variables index.
         """
         prior_dict = read_json(self.prior_filename)
-        model_prior_param = get_processed_priors(self.model_parameters, prior_dict)
+        model_prior_param = self.modify_model_params(
+            get_processed_priors(self.model_parameters, prior_dict)
+        )
 
         logger.debug("Classifying model parameters into constants and variables.")
         constants, variables, duplicates, lazy_deps, lazy_order = (
             _classify_model_parameters(**model_prior_param)
         )  # type: ignore
-
-        constants |= self.constants
 
         variables_index: dict[str, int] = {
             key: i for i, key in enumerate(sorted(variables.keys()))
@@ -334,13 +301,14 @@ class Guru:
         return constants, priors, variables, variables_index
 
     @property
-    def parameters(self) -> List[str]:
+    @logger.catch(reraise=True)
+    def parameters(self) -> Union[List[str], Tuple[str, ...]]:
         """Returns the parameters (intrinsic + extrinsic).
 
         Returns
         -------
-        List[str]
-            List of parameters.
+        Union[List[str], Tuple[str, ...]]
+            List or tuple of parameter names.
 
         Raises
         ------
@@ -348,14 +316,13 @@ class Guru:
             If the Guru class is used directly, this method raises a NotImplementedError.
             It is expected that subclasses of Guru will implement this method.
         """
-        msg = (
+        raise NotImplementedError(
             "The Guru class should not be used directly. Please use a subclass that "
             "implements the parameters property."
         )
-        logger.error(msg)
-        raise NotImplementedError(msg)
 
     @property
+    @logger.catch(reraise=True)
     def model_parameters(self) -> List[str]:
         """Returns the model parameters.
 
@@ -370,23 +337,10 @@ class Guru:
             If the Guru class is used directly, this method raises a NotImplementedError.
             It is expected that subclasses of Guru will implement this method.
         """
-        msg = (
+        raise NotImplementedError(
             "The Guru class should not be used directly. Please use a subclass that "
             "implements the model_parameters property."
         )
-        logger.error(msg)
-        raise NotImplementedError(msg)
-
-    @property
-    def constants(self) -> Dict[str, Union[int, float, bool]]:
-        """Returns the constants used in the model.
-
-        Returns
-        -------
-        Dict[str, Union[int, float, bool]]
-            A dictionary containing the constants used in the model.
-        """
-        return {}
 
     @abstractmethod
     def driver(
@@ -413,7 +367,6 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     ArgumentParser
         the command line argument parser
     """
-
     parser.add_argument(
         "--seed",
         help="Seed for the random number generator.",
@@ -423,7 +376,7 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
     pmean_group = parser.add_argument_group("Poisson Mean Options")
     pmean_group.add_argument(
-        "--pmean-json",
+        "--pmean-cfg",
         help="Path to the JSON file containing the Poisson mean options.",
         type=str,
         default="pmean.json",
@@ -431,21 +384,23 @@ def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
 
     sampler_group = parser.add_argument_group("Sampler Options")
     sampler_group.add_argument(
-        "--sampler-config",
+        "--sampler-cfg",
         help="Path to the JSON file containing the sampler configuration.",
         type=str,
         required=True,
     )
     sampler_group.add_argument(
         "--variance-cut-threshold",
-        help="Threshold for variance cut in the sampler.",
+        help="Threshold for variance cut in the sampler. If the variance of the "
+        "likelihood is above this threshold, the sample will be rejected. By default is"
+        " infinite (i.e., no cut by setting it to the maximum float value).",
         type=float,
         default=None,
     )
 
     prior_group = parser.add_argument_group("Prior Options")
     prior_group.add_argument(
-        "--prior-json",
+        "--prior-cfg",
         type=str,
         help="Path to a JSON file containing the prior distributions.",
         default="prior.json",

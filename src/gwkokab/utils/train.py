@@ -107,21 +107,29 @@ def save_model(
 
     model: eqx.nn.MLP = model._fun  # type: ignore
 
+    compression_args = {"compression": "gzip", "compression_opts": 9}
+
     with h5py.File(filepath, "w") as f:
         for key, value in attr.items():
             f.attrs[key] = value
         if names is not None:
-            f.create_dataset("names", data=np.array(names, dtype="S"))
-        f.create_dataset("in_size", data=model.in_size)  # type: ignore
-        f.create_dataset("out_size", data=model.out_size)  # type: ignore
-        f.create_dataset("width_size", data=model.width_size)  # type: ignore
-        f.create_dataset("depth", data=model.depth)  # type: ignore
+            f.create_dataset(
+                "names", data=np.array(names, dtype="S"), **compression_args
+            )
+        f.create_dataset("in_size", data=model.in_size)
+        f.create_dataset("out_size", data=model.out_size)
+        f.create_dataset("width_size", data=model.width_size)
+        f.create_dataset("depth", data=model.depth)
         f.attrs["is_log"] = is_log
-        num_layers = len(model.layers)  # type: ignore
+        num_layers = len(model.layers)
         for i in range(num_layers):
             layer_i = f.create_group(f"layer_{i}")
-            layer_i.create_dataset(f"weight_{i}", data=model.layers[i].weight)  # type: ignore
-            layer_i.create_dataset(f"bias_{i}", data=model.layers[i].bias)  # type: ignore
+            layer_i.create_dataset(
+                f"weight_{i}", data=model.layers[i].weight, **compression_args
+            )  # type: ignore
+            layer_i.create_dataset(
+                f"bias_{i}", data=model.layers[i].bias, **compression_args
+            )  # type: ignore
 
 
 def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:
@@ -139,7 +147,7 @@ def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:
             width_size=width_size,
             depth=depth,
             activation=jnn.relu,
-            key=jrd.PRNGKey(0),
+            key=jrd.key(0),
         )
 
         i = 0
@@ -274,7 +282,7 @@ def train_regressor(
     # Model & Optimizer
     # --------------------------
     model = make_model(
-        key=jrd.PRNGKey(np.random.randint(0, 2**32 - 1)),
+        key=jrd.key(np.random.randint(0, 2**32 - 1)),
         input_layer=len(input_keys),
         output_layer=len(output_keys),
         width_size=width_size,
@@ -371,7 +379,7 @@ def train_regressor(
 
     # Create subplots with shared x and y axes
 
-    plt.rcParams.update({"text.usetex": True, "font.size": 18})
+    plt.rcParams.update({"font.size": 18})
     _, axes = plt.subplots(3, 1, figsize=(15, 15), dpi=300, sharex=True, sharey=True)
 
     import glasbey
@@ -410,7 +418,7 @@ def train_regressor(
     q05, q50, q95 = np.quantile(per_instance_np, [0.05, 0.5, 0.95])
     ordered = np.sort(per_instance_np)
 
-    plt.rcParams.update({"text.usetex": True, "font.size": 16})
+    plt.rcParams.update({"font.size": 16})
     plt.figure(figsize=(10, 6), dpi=300)
     colors = glasbey.create_palette(palette_size=4)
     plt.plot(ordered, label="loss per data instance", color=colors[0])

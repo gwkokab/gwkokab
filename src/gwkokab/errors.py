@@ -4,28 +4,34 @@
 
 from typing import Optional
 
+import numpy as np
 import RIFT.lalsimutils as lalsimutils
-from jax import numpy as jnp, random as jrd
-from jaxtyping import Array, PRNGKeyArray
-from numpyro import distributions as dist
+from jax import random as jrd
+from jaxtyping import PRNGKeyArray
+from numpyro.distributions.truncated import TruncatedNormal
 
-from .utils.transformations import chirp_mass, symmetric_mass_ratio
+from gwkokab.parameters import Parameters as P
+from gwkokab.utils.exceptions import LoggedValueError
 
 
 __all__ = [
-    "banana_error_m1_m2",
+    "banana_error",
+    "mock_spin_error",
     "truncated_normal_error",
 ]
 
 
-def banana_error_m1_m2(
-    x: Array,
+def banana_error(
+    Mc_true: np.ndarray,
+    eta_true: np.ndarray,
     size: int,
     key: PRNGKeyArray,
     *,
+    estimates: dict[str | P, np.ndarray],
+    rho: np.ndarray,
     scale_Mc: float = 1.0,
     scale_eta: float = 1.0,
-) -> Array:
+) -> np.ndarray:
     r"""Add banana error to the given values. Section 3 of the `Model-independent
     inference on compact-binary observations <https://doi.org/10.1093/mnras/stw2883>`_
     discusses the banana error. It adds errors in the chirp mass and symmetric mass
@@ -39,8 +45,10 @@ def banana_error_m1_m2(
         \eta = \eta^{T}
         \left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
 
-    x : Array
-        given values as m1 and m2
+    Mc_true : np.ndarray
+        True chirp mass
+    eta_true : np.ndarray
+        True symmetric mass ratio
     size : int
         number of samples
     key : PRNGKeyArray
@@ -49,65 +57,59 @@ def banana_error_m1_m2(
         scale of the chirp mass error, defaults to 1.0
     scale_eta : float
         scale of the symmetric mass ratio error, defaults to 1.0
+    estimates : dict[str | P, np.ndarray]
+        Parameter estimates performed so far
+    rho : np.ndarray
+        SNR of the event, used to scale the error
 
     Returns
     -------
-    Array
-        m1 and m2 with banana
+    np.ndarray
+        array of values with added banana error
     """
-    m1 = x[..., 0]
-    m2 = x[..., 1]
+    r0_key, r0p_key, r_key, rp_key = jrd.split(key, 4)
 
-    keys = jrd.split(key, 5)
+    r0 = np.asarray(jrd.normal(key=r0_key))
+    r0p = np.asarray(jrd.normal(key=r0p_key))
+    r = np.asarray(jrd.normal(key=r_key, shape=(size,))) * scale_Mc
+    rp = np.asarray(jrd.normal(key=rp_key, shape=(size,))) * scale_eta
 
-    r0 = jrd.normal(key=keys[0])
-    r0p = jrd.normal(key=keys[1])
-    r = jrd.normal(key=keys[2], shape=(size,)) * scale_Mc
-    rp = jrd.normal(key=keys[3], shape=(size,)) * scale_eta
-    rho = 9.0 * jnp.power(jrd.uniform(key=keys[4]), -1.0 / 3.0)
-
-    Mc_true = chirp_mass(m1=m1, m2=m2)
-    eta_true = symmetric_mass_ratio(m1=m1, m2=m2)
-
-    v_PN_param = (jnp.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (
+    v_PN_param = (np.pi * Mc_true * 20 * lalsimutils.MsunInSec) ** (
         1.0 / 3.0
     )  # 'v' parameter
     v_PN_param_max = 0.2
-    v_PN_param = jnp.min(jnp.array([v_PN_param, v_PN_param_max]))
+    v_PN_param = np.minimum(v_PN_param, v_PN_param_max)
     snr_fac = rho / 12.0
     # this ignores range due to redshift / distance, based on a low-order est
     ln_mc_error_pseudo_fisher = (
         1.5 * 0.3 * (v_PN_param / v_PN_param_max) ** (7.0) / snr_fac
     )
 
-    beta = jnp.min(jnp.array([0.07 / snr_fac, ln_mc_error_pseudo_fisher]))
+    beta = np.minimum(0.07 / snr_fac, ln_mc_error_pseudo_fisher)
 
     Mc = Mc_true * (1.0 + beta * (r0 + r))
     eta = eta_true * (1.0 + 0.03 * (12.0 / rho) * (r0p + rp))
 
-    etaV = 1.0 - 4.0 * eta
-    etaV_sqrt = jnp.where(etaV >= 0, jnp.sqrt(etaV), jnp.nan)
+    Mc = np.where(Mc <= 0.0, np.nan, Mc)
+    eta = np.where((eta <= 0.25) & (eta >= 0.0), eta, np.nan)
 
-    factor = 0.5 * Mc * jnp.power(eta, -0.6)
-    m1_final = factor * (1.0 + etaV_sqrt)
-    m2_final = factor * (1.0 - etaV_sqrt)
-
-    return jnp.column_stack([m1_final, m2_final])
+    return np.stack((Mc, eta), axis=-1)
 
 
 def truncated_normal_error(
-    x: Array,
+    x: np.ndarray,
     size: int,
     key: PRNGKeyArray,
     *,
-    scale: Optional[float] = None,
+    scale: float,
+    estimates: dict[str | P, np.ndarray],
+    rho: np.ndarray,
     low: Optional[float] = None,
     high: Optional[float] = None,
-    cut_low: Optional[float] = None,
-    cut_high: Optional[float] = None,
-) -> Array:
-    """Adds truncated normal error to the given values. The error is sampled from a
-    truncated normal distribution with the given parameters. The function will resample
+) -> np.ndarray:
+    """Adds truncated normal error to the given values.
+
+    The error is sampled from a truncated normal distribution with the given parameters. The function will resample
     until all values are within the allowed range.
 
     .. note::
@@ -122,62 +124,117 @@ def truncated_normal_error(
 
     Parameters
     ----------
-    x : Array
+    x : np.ndarray
         Given values to which the error will be added.
     size : int
         Number of samples to generate.
     key : PRNGKeyArray
         JAX random key for sampling.
-    scale : Optional[float], optional
-        Scale parameter for the truncated normal distribution, by default None
+    scale : float
+        Scale parameter for the truncated normal distribution.
+    estimates : dict[str | P, np.ndarray]
+        Parameter estimates performed so far
+    rho : np.ndarray
+        SNR of the event, used to scale the error
     low : Optional[float], optional
-        Lower bound for the truncated normal distribution, by default None
+        Lower bound for the truncation, defaults to None (no lower bound).
     high : Optional[float], optional
-        Upper bound for the truncated normal distribution, by default None
-    cut_low : Optional[float], optional
-        Lower bound for the final values, by default None
-    cut_high : Optional[float], optional
-        Upper bound for the final values, by default None
+        Upper bound for the truncation, defaults to None (no upper bound).
 
     Returns
     -------
-    Array
-        Array of values with added truncated normal error.
-
-    Raises
-    ------
-    ValueError
-        If the scale parameter is not provided.
+    np.ndarray
+        Array of values with added truncated normal error, with all values within the
+        specified bounds.
     """
-    if scale is None:
-        raise ValueError("Scale parameter is required.")
+    key_r0, key_r = jrd.split(key)
 
-    err_dist = dist.TruncatedNormal(loc=x, scale=scale, low=low, high=high)
+    r0 = np.asarray(jrd.normal(key=key_r0))
+    r = np.asarray(jrd.normal(key=key_r, shape=(size,)))
 
-    # Initial sampling from the truncated normal distribution.
-    err_x = err_dist.sample(key=key, sample_shape=(size,))
+    samples = x + scale * (r0 + r) * (12.0 / rho)
 
-    if cut_low is None and cut_high is None:
-        return err_x
+    # reflect samples that are out of bounds back into the allowed range
+    if low is not None and high is not None:
+        samples = low + np.mod(samples - low, 2 * (high - low))
+        samples = np.where(samples > high, 2.0 * high - samples, samples)
+    elif low is not None:
+        samples = np.where(samples < low, 2.0 * low - samples, samples)
+    elif high is not None:
+        samples = np.where(samples > high, 2.0 * high - samples, samples)
 
-    # Resample until all values are within the allowed range
-    while True:
-        mask = jnp.zeros_like(err_x, dtype=bool)
-        if cut_low is not None:
-            mask = mask | (err_x < cut_low)
-        if cut_high is not None:
-            mask = mask | (err_x > cut_high)
+    return samples
 
-        # If no values are outside the allowed range, break the loop
-        # This is important to avoid infinite loops
-        if not jnp.any(mask).item():
-            break
 
-        # Split the key for a new random seed
-        key, _ = jrd.split(key)
-        num_invalid = int(jnp.sum(mask))
-        new_samples = err_dist.sample(key=key, sample_shape=(num_invalid,))
-        invalid_indices = jnp.where(mask)[0]
-        err_x = err_x.at[invalid_indices].set(new_samples)
+# Copyright 2023 Amanda Farah
+# SPDX-License-Identifier: CC0-1.0
+def dpsi_from_dXeff_neglect_Xa(dXeff, n):
+    """Returns calculation of delta psi, which is a function of n (eta) and delta Xeff
+    obtained by rearranging eq A2 of arxiv:1805.03046 (Ng et al.
 
-    return err_x
+    2018), neglecting chi_a
+    psi: float or array-like of floats, the 1.5 PN phase term coefficient
+    n: float or array-like of floats, the symmetric mass ratio
+    """
+    A = np.power(n, -3 / 5)
+    B = 113 - (76 * n)
+    C = 128
+    return A * (B / C) * dXeff
+
+
+# Copyright 2023 Amanda Farah
+# SPDX-License-Identifier: CC0-1.0
+def psi_from_chi_eff_and_eta_neglect_chi_a(chi_eff, n):
+    """Returns psi coefficient, neglecting chi_a term."""
+    return np.power(n, -3 / 5) * (
+        (((113 - (76 * n)) * chi_eff) / 128) - (3 * np.pi / 8)
+    )
+
+
+# Copyright 2023 Amanda Farah
+# SPDX-License-Identifier: CC0-1.0
+def chi_eff_from_psi_and_eta_neglect_chi_a(psi, n):
+    """Returns calculation of chi_eff from psi, which is a function of n (eta) obtained
+    by rearranging eq A2 of arxiv:1805.03046 (Ng et al.
+
+    2018), assuming chi_2 = 0
+    psi: float or array-like of floats, the 1.5 PN phase term coefficient
+    n: float or array-like of floats, the symmetric mass ratio
+    """
+    A = 128
+    B = (psi * np.power(n, 3 / 5)) + (3 * np.pi / 8)
+    C = 113 - (76 * n)
+    return A * (B / C)
+
+
+# This is a refactored implementation of https://git.ligo.org/amanda.farah/GWMockCat/-/blob/main/GWMockCat/posterior_utils.py?ref_type=heads#L61
+#
+# Copyright 2023 Amanda Farah
+# SPDX-License-Identifier: CC0-1.0
+def mock_spin_error(
+    chi_eff: np.ndarray,
+    eta: np.ndarray,
+    size: int,
+    key: PRNGKeyArray,
+    *,
+    estimates: dict[str | P, np.ndarray],
+    rho: np.ndarray,
+    scale_chi_eff: np.ndarray,
+) -> np.ndarray:
+    if (etaobs := estimates.get(P.SYMMETRIC_MASS_RATIO, None)) is None:
+        raise LoggedValueError(
+            "Parameter estimation of Symmetric Mass Ratio is not available."
+        )
+    threshold_snr = 12.0
+    uncert_psi = dpsi_from_dXeff_neglect_Xa(scale_chi_eff, eta)
+    psi = psi_from_chi_eff_and_eta_neglect_chi_a(chi_eff, eta)
+    spsi = threshold_snr / rho * uncert_psi
+    psiobs = TruncatedNormal(
+        loc=psi,
+        scale=spsi,
+        low=-4.2,
+        high=-1.2,
+        validate_args=True,
+    ).sample(key, (size,))
+    Xeffobs = chi_eff_from_psi_and_eta_neglect_chi_a(psiobs, etaobs)
+    return Xeffobs

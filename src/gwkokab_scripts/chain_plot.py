@@ -6,9 +6,12 @@ import argparse
 
 
 def make_parser() -> argparse.ArgumentParser:
+
+    from argparse import ArgumentDefaultsHelpFormatter
+
     parser = argparse.ArgumentParser(
         description="Command line interface for plotting chains.",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        formatter_class=ArgumentDefaultsHelpFormatter,
         epilog="This script plots chains from .dat files.",
     )
     parser.add_argument(
@@ -121,13 +124,11 @@ def main() -> None:
         plt.rcParams.update({"font.family": args.font_family})
 
     files = glob.glob(args.data_regex)
-    plt.rcParams.update(
-        {
-            "axes.prop_cycle": plt.cycler(
-                color=glasbey.create_palette(palette_size=len(files))
-            )
-        }
-    )
+    plt.rcParams.update({
+        "axes.prop_cycle": plt.cycler(
+            color=glasbey.create_palette(palette_size=len(files))
+        )
+    })
 
     n_dim = pd.read_csv(files[0], delimiter=" ", skiprows=1).to_numpy().shape[1]
 

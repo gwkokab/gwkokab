@@ -18,10 +18,12 @@ from ..utils import (
 from ._ncombination import (
     combine_distributions,
     create_beta_distributions,
+    create_generic_powerlaws,
+    create_generic_tilt_model,
     create_gwtc4_effective_spin_skew_normal_models,
-    create_independent_spin_orientation_gaussian_isotropic,
+    create_madau_dickinson_redshift_model,
     create_powerlaw_primary_mass_ratios,
-    create_powerlaw_redshift,
+    create_powerlaw_redshift_model,
     create_spin_magnitude_mixture_models,
     create_truncated_normal_distributions,
     create_two_truncated_normal_mixture,
@@ -43,8 +45,10 @@ def _build_non_mass_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
+    use_madau_dickinson_redshift: bool,
     use_cos_iota: bool,
     use_polarization_angle: bool,
     use_right_ascension: bool,
@@ -73,9 +77,11 @@ def _build_non_mass_distributions(
         whether to include tilt
     use_eccentricity_mixture : bool
         whether to include eccentricity
+    use_eccentricity_powerlaw : bool
+        whether to include eccentricity powerlaw
     use_mean_anomaly : bool
         whether to include mean_anomaly
-    use_redshift : bool
+    use_powerlaw_redshift : bool
         whether to include redshift
     use_cos_iota : bool
         whether to include cos_iota
@@ -122,13 +128,15 @@ def _build_non_mass_distributions(
         (use_skew_normal_chi_eff, P.EFFECTIVE_SPIN, create_gwtc4_effective_spin_skew_normal_models),
         (use_truncated_normal_chi_p, P.PRECESSING_SPIN, create_truncated_normal_distributions),
         # combined tilt distribution
-        (use_tilt, P.COS_TILT_1 + "_" + P.COS_TILT_2, create_independent_spin_orientation_gaussian_isotropic),
+        (use_tilt, P.COS_TILT_1 + "_" + P.COS_TILT_2, create_generic_tilt_model),
         (use_phi_1, P.PHI_1, create_uniform_distributions),
         (use_phi_2, P.PHI_2, create_uniform_distributions),
         (use_phi_12, P.PHI_12, create_uniform_distributions),
         (use_eccentricity_mixture, P.ECCENTRICITY, create_two_truncated_normal_mixture),
+        (use_eccentricity_powerlaw, P.ECCENTRICITY, create_generic_powerlaws),
         (use_mean_anomaly, P.MEAN_ANOMALY, create_uniform_distributions),
-        (use_redshift, P.REDSHIFT, create_powerlaw_redshift),
+        (use_powerlaw_redshift, P.REDSHIFT, create_powerlaw_redshift_model),
+        (use_madau_dickinson_redshift, P.REDSHIFT, create_madau_dickinson_redshift_model),
         (use_right_ascension, P.RIGHT_ASCENSION, create_uniform_distributions),
         (use_sin_declination, P.SIN_DECLINATION, create_uniform_distributions),
         (use_detection_time, P.DETECTION_TIME, create_uniform_distributions),
@@ -167,8 +175,10 @@ def _build_pl_component_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
+    use_madau_dickinson_redshift: bool,
     use_cos_iota: bool,
     use_polarization_angle: bool,
     use_right_ascension: bool,
@@ -195,7 +205,7 @@ def _build_pl_component_distributions(
         whether to include eccentricity
     use_mean_anomaly : bool
         whether to include mean_anomaly
-    use_redshift : bool
+    use_powerlaw_redshift : bool
         whether to include redshift
     use_cos_iota : bool
         whether to include cos_iota
@@ -226,7 +236,11 @@ def _build_pl_component_distributions(
         list of JointDistribution
     """
     powerlaws = create_powerlaw_primary_mass_ratios(
-        N=N, params=params, validate_args=validate_args
+        N=N,
+        parameter_name=None,  # type: ignore # unused parameter
+        component_type="pl",
+        params=params,
+        validate_args=validate_args,
     )
 
     mass_distributions = jtr.map(
@@ -249,7 +263,9 @@ def _build_pl_component_distributions(
         use_truncated_normal_chi_p=use_truncated_normal_chi_p,
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
-        use_redshift=use_redshift,
+        use_eccentricity_powerlaw=use_eccentricity_powerlaw,
+        use_powerlaw_redshift=use_powerlaw_redshift,
+        use_madau_dickinson_redshift=use_madau_dickinson_redshift,
         use_cos_iota=use_cos_iota,
         use_phi_12=use_phi_12,
         use_polarization_angle=use_polarization_angle,
@@ -282,8 +298,10 @@ def _build_g_component_distributions(
     use_truncated_normal_chi_p: bool,
     use_tilt: bool,
     use_eccentricity_mixture: bool,
+    use_eccentricity_powerlaw: bool,
     use_mean_anomaly: bool,
-    use_redshift: bool,
+    use_powerlaw_redshift: bool,
+    use_madau_dickinson_redshift: bool,
     use_cos_iota: bool,
     use_polarization_angle: bool,
     use_right_ascension: bool,
@@ -310,7 +328,7 @@ def _build_g_component_distributions(
         whether to include eccentricity
     use_mean_anomaly : bool
         whether to include mean_anomaly
-    use_redshift : bool
+    use_powerlaw_redshift : bool
         whether to include redshift
     use_cos_iota : bool
         whether to include cos_iota
@@ -376,7 +394,9 @@ def _build_g_component_distributions(
         use_truncated_normal_chi_p=use_truncated_normal_chi_p,
         use_tilt=use_tilt,
         use_eccentricity_mixture=use_eccentricity_mixture,
-        use_redshift=use_redshift,
+        use_eccentricity_powerlaw=use_eccentricity_powerlaw,
+        use_powerlaw_redshift=use_powerlaw_redshift,
+        use_madau_dickinson_redshift=use_madau_dickinson_redshift,
         use_cos_iota=use_cos_iota,
         use_phi_12=use_phi_12,
         use_polarization_angle=use_polarization_angle,
@@ -410,7 +430,9 @@ def NPowerlawMGaussian(
     use_truncated_normal_chi_p: bool = False,
     use_tilt: bool = False,
     use_eccentricity_mixture: bool = False,
-    use_redshift: bool = False,
+    use_eccentricity_powerlaw: bool = False,
+    use_powerlaw_redshift: bool = False,
+    use_madau_dickinson_redshift: bool = False,
     use_cos_iota: bool = False,
     use_phi_12: bool = False,
     use_polarization_angle: bool = False,
@@ -516,7 +538,7 @@ def NPowerlawMGaussian(
         whether to include eccentricity, defaults to False
     use_mean_anomaly : bool
         whether to include mean_anomaly, defaults to False
-    use_redshift : bool
+    use_powerlaw_redshift : bool
         whether to include redshift, defaults to False
     use_cos_iota : bool
         whether to include cos_iota, defaults to False
@@ -557,7 +579,9 @@ def NPowerlawMGaussian(
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
-            use_redshift=use_redshift,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
+            use_powerlaw_redshift=use_powerlaw_redshift,
+            use_madau_dickinson_redshift=use_madau_dickinson_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
             use_polarization_angle=use_polarization_angle,
@@ -585,7 +609,9 @@ def NPowerlawMGaussian(
             use_truncated_normal_chi_p=use_truncated_normal_chi_p,
             use_tilt=use_tilt,
             use_eccentricity_mixture=use_eccentricity_mixture,
-            use_redshift=use_redshift,
+            use_eccentricity_powerlaw=use_eccentricity_powerlaw,
+            use_powerlaw_redshift=use_powerlaw_redshift,
+            use_madau_dickinson_redshift=use_madau_dickinson_redshift,
             use_cos_iota=use_cos_iota,
             use_phi_12=use_phi_12,
             use_polarization_angle=use_polarization_angle,
@@ -613,8 +639,8 @@ def NPowerlawMGaussian(
     return ScaledMixture(
         log_rates,
         component_dists,
-        support=any_constraint(
-            [component_dists.support for component_dists in component_dists]
-        ),
+        support=any_constraint([
+            component_dists.support for component_dists in component_dists
+        ]),
         validate_args=validate_args,
     )

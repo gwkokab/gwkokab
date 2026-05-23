@@ -38,7 +38,7 @@ Here is an example of a simple population model:
 ...     def log_prob(self, value):
 ...         return numpyro.distributions.Normal(self.loc, self.scale).log_prob(value)
 >>>
->>> samples = MyPopulationModel(0.0, 1.0).sample(jrd.PRNGKey(0), (1000,))
+>>> samples = MyPopulationModel(0.0, 1.0).sample(jrd.key(0), (1000,))
 >>> samples.shape
 (1000,)
 

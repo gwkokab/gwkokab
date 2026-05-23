@@ -5,19 +5,19 @@
 Everyone can contribute to GWKokab, and we
 value everyone's contributions. There are several ways to contribute, including:
 
-- Answering questions on GWKokab's [discussions page](https://github.com/gwkokab/gwkokab/discussions).
+- Answering questions on GWKokab's [discussions page](https://github.com/kokabsc/gwkokab/discussions).
 - Improving or expanding GWKokab's [documentation](https://gwkokab.readthedocs.io/en/latest/).
-- Contributing to GWKokab's [code base](https://github.com/gwkokab/gwkokab).
+- Contributing to GWKokab's [code base](https://github.com/kokabsc/gwkokab).
 
 ## Ways to contribute
 
 We welcome pull requests, in particular for those issues marked with
-[contributions welcome](https://github.com/gwkokab/gwkokab/issues?q=is%3Aissue+is%3Aopen+label%3A%22contributions+welcome%22)
-or [good first issue](https://github.com/gwkokab/gwkokab/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
+[contributions welcome](https://github.com/kokabsc/gwkokab/issues?q=is%3Aissue+is%3Aopen+label%3A%22contributions+welcome%22)
+or [good first issue](https://github.com/kokabsc/gwkokab/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
 For other proposals, we ask that you first open a GitHub
-[Issue](https://github.com/gwkokab/gwkokab/issues/new/choose) or
-[Discussion](https://github.com/gwkokab/gwkokab/discussions) to seek feedback on your
+[Issue](https://github.com/kokabsc/gwkokab/issues/new/choose) or
+[Discussion](https://github.com/kokabsc/gwkokab/discussions) to seek feedback on your
 planned contribution.
 
 ## Contributing code using pull requests
@@ -41,7 +41,7 @@ Follow these steps to contribute code:
    ```
 
 3. Fork the GWKokab repository by clicking the Fork button on the
-   [repository page](https://github.com/gwkokab/gwkokab). This creates a copy of the
+   [repository page](https://github.com/kokabsc/gwkokab). This creates a copy of the
    GWKokab repository in your account.
 
 4. Clone your forked repository,
@@ -69,7 +69,7 @@ Follow these steps to contribute code:
 6. Add the GWKokab repo as an upstream remote, so you can use it to sync your changes.
 
       ```bash
-      git remote add upstream https://www.github.com/gwkokab/gwkokab
+      git remote add upstream https://www.github.com/kokabsc/gwkokab
       ```
 
 7. Create a new branch for your changes:

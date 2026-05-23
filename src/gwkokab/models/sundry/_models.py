@@ -161,16 +161,14 @@ def NDTwoTruncatedNormalMixture(
             probs=mixing_probs, validate_args=validate_args
         ),
         component_distributions=[gaussian_component1, gaussian_component2],
-        support=any_constraint(
-            (
-                constraints.independent(
-                    constraints.interval(comp1_low, comp1_high), batch_dim
-                ),
-                constraints.independent(
-                    constraints.interval(comp2_low, comp2_high), batch_dim
-                ),
-            )
-        ),
+        support=any_constraint((
+            constraints.independent(
+                constraints.interval(comp1_low, comp1_high), batch_dim
+            ),
+            constraints.independent(
+                constraints.interval(comp2_low, comp2_high), batch_dim
+            ),
+        )),
         validate_args=validate_args,
     )
 
@@ -261,15 +259,13 @@ def NDIsotropicAndTruncatedNormalMixture(
             probs=mixing_probs, validate_args=validate_args
         ),
         component_distributions=[isotropic_component, gaussian_component],
-        support=any_constraint(
-            (
-                constraints.independent(
-                    constraints.interval(isotropic_low, isotropic_high), batch_dim
-                ),
-                constraints.independent(
-                    constraints.interval(gaussian_low, gaussian_high), batch_dim
-                ),
-            )
-        ),
+        support=any_constraint((
+            constraints.independent(
+                constraints.interval(isotropic_low, isotropic_high), batch_dim
+            ),
+            constraints.independent(
+                constraints.interval(gaussian_low, gaussian_high), batch_dim
+            ),
+        )),
         validate_args=validate_args,
     )

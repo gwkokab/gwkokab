@@ -1,16 +1,3 @@
-[build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.packages]
-find = { where = ["src/"] }
-
-[tool.setuptools.dynamic]
-version = { attr = "gwkokab.version.__version__" }
-
 [project]
 authors = [
     { name = "Meesum Qazalbash", email = "meesumqazalbash@gmail.com" },
@@ -34,12 +21,13 @@ classifiers = [
     "Operating System :: MacOS",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3",
 ]
 dependencies = [
+    "RIFT>=0.0.15.11",
     "arviz>=0.20.0",
     "chex>=0.1.87",
     "equinox>=0.11.3",
@@ -58,7 +46,6 @@ dependencies = [
     "pydantic>=2.12.0",
     "quadax>=0.2.5",
     "rich>=14.0.0",
-    "RIFT>=0.0.15.11",
     "scipy>=1.12",
     "seaborn>=0.13.0",
     "tqdm>=4.60.0",
@@ -78,77 +65,89 @@ keywords = [
     "population-inference",
 ]
 
+[project.urls]
+Changelog = "https://github.com/kokabsc/gwkokab/blob/main/CHANGELOG.md"
+Discussion = "https://github.com/kokabsc/gwkokab/discussions"
+Homepage = "https://github.com/kokabsc/gwkokab"
+Issues = "https://github.com/kokabsc/gwkokab/issues"
+
+[project.scripts]
+gwk_analytical_data_loader_cfg_template = "gwkanal.core.inference_io._analytical:_data_loader_cfg_template"
+gwk_batch_scatter2d = "gwkokab_scripts.batch_scatter2d:main"
+gwk_batch_scatter3d = "gwkokab_scripts.batch_scatter3d:main"
+gwk_chain_plot = "gwkokab_scripts.chain_plot:main"
+gwk_corner_overplot = "gwkokab_scripts.corner_overplot:main"
+gwk_corner_plot = "gwkokab_scripts.corner_plot:main"
+gwk_diag_mass_matrix = "gwkokab_scripts.diag_mass_matrix:main"
+gwk_discrete_data_loader_cfg_template = "gwkanal.core.inference_io._discrete:_data_loader_cfg_template"
+gwk_ess_evolution_plot = "gwkokab_scripts.ess_evolution_plot:main"
+gwk_ess_plot = "gwkokab_scripts.ess_plot:main"
+gwk_flowMC_cfg_template = "gwkanal.core.inference_io._sampler:_dump_flowMC_cfg"
+gwk_flowMC_info = "gwkokab_scripts.flowMC_info:main"
+gwk_hist_overplot = "gwkokab_scripts.hist_overplot:main"
+gwk_joint_plot = "gwkokab_scripts.joint_plot:main"
+gwk_numpyro_cfg_template = "gwkanal.core.inference_io._sampler:_dump_numpyro_cfg"
+gwk_param_lens = "gwkokab_scripts.param_lens:main"
+gwk_ppd_plot = "gwkokab_scripts.ppd_plot:main"
+gwk_r_hat_plot = "gwkokab_scripts.r_hat_plot:main"
+gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
+gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
+gwk_trace_plot = "gwkokab_scripts.trace_plot:main"
+monk_ecc_matters = "gwkanal.ecc_matters.monk:main"
+monk_multisource = "gwkanal.multisource.monk:main"
+monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
+monk_subpopulation = "gwkanal.subpopulation.monk:main"
+sage_ecc_matters = "gwkanal.ecc_matters.sage:main"
+sage_multisource = "gwkanal.multisource.sage:main"
+sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:main"
+sage_subpopulation = "gwkanal.subpopulation.sage:main"
+synthetic_analytical_pe = "gwkanal.core.synthetic_pe:synthetic_analytical_pe_main"
+synthetic_discrete_pe = "gwkanal.core.synthetic_pe:synthetic_discrete_pe_main"
+synthetic_events_ecc_matter = "gwkanal.ecc_matters.synthetic_events:main"
+synthetic_events_n_pls_m_gs = "gwkanal.n_pls_m_gs.synthetic_events:main"
+
 [project.optional-dependencies]
-cpu = ["jax>=0.4.30,<0.8.0"]
-cuda12 = ["jax[cuda12]>=0.4.30,<0.8.0"]
-cuda13 = ["jax[cuda13]>=0.4.30,<0.9.0"]
-tpu = ["jax[tpu]>=0.4.30,<0.9.0"]
+cpu = ["jax>=0.7.0"]
+cuda12 = ["jax[cuda12]>=0.7.0"]
+cuda13 = ["jax[cuda13]>=0.7.0"]
+tpu = ["jax[tpu]>=0.7.0"]
+
+[dependency-groups]
 dev = ["prek>=0.2.30", "ruff>=0.8.0", "setuptools>=75.6.0"]
-test = ["pytest>=8.3.0", "tfp-nightly", "astropy>=6.0.0"]
 doc = [
     "astroid<5",
     "furo",
     "ipython!=8.7.0",
     "myst-nb",
     "setuptools_scm",
-    "sphinx_design",
+    "sphinx>=2.0",
     "sphinx-autoapi",
     "sphinx-copybutton",
+    "sphinx_design",
     "sphinx-togglebutton",
-    "sphinx>=2.0",
     "sphinxcontrib-bibtex",
 ]
+test = ["astropy>=6.0.0", "pytest>=8.3.0", "tfp-nightly"]
 
-[[tool.uv.index]]
-name = "jax"
-url = "https://storage.googleapis.com/jax-releases/jax_releases.html"
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[project.urls]
-Changelog = "https://github.com/gwkokab/gwkokab/blob/main/CHANGELOG.md"
-Discussion = "https://github.com/gwkokab/gwkokab/discussions"
-Homepage = "https://github.com/gwkokab/gwkokab"
-Issues = "https://github.com/gwkokab/gwkokab/issues"
-
-[project.scripts]
-# GWKokab plotting scripts
-gwk_batch_scatter2d = "gwkokab_scripts.batch_scatter2d:main"
-gwk_batch_scatter3d = "gwkokab_scripts.batch_scatter3d:main"
-gwk_chain_plot = "gwkokab_scripts.chain_plot:main"
-gwk_corner_overplot = "gwkokab_scripts.corner_overplot:main"
-gwk_corner_plot = "gwkokab_scripts.corner_plot:main"
-gwk_ess_evolution_plot = "gwkokab_scripts.ess_evolution_plot:main"
-gwk_ess_plot = "gwkokab_scripts.ess_plot:main"
-gwk_hist_overplot = "gwkokab_scripts.hist_overplot:main"
-gwk_joint_plot = "gwkokab_scripts.joint_plot:main"
-gwk_ppd_plot = "gwkokab_scripts.ppd_plot:main"
-gwk_r_hat_plot = "gwkokab_scripts.r_hat_plot:main"
-gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
-gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
-# Kokab scripts
-## Genie scripts
-genie_ecc_matters = "gwkanal.ecc_matters.genie:main"
-genie_n_pls_m_gs = "gwkanal.n_pls_m_gs.genie:main"
-## FSage scripts
-f_sage_ecc_matters = "gwkanal.ecc_matters.sage:f_main"
-f_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:f_main"
-f_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:f_main"
-f_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:f_main"
-## NSage scripts
-n_sage_ecc_matters = "gwkanal.ecc_matters.sage:n_main"
-n_sage_n_pls_m_gs = "gwkanal.n_pls_m_gs.sage:n_main"
-n_sage_o4_n_bpls_m_gs = "gwkanal.o4_n_bpls_m_gs.sage:n_main"
-n_sage_o3_n_pls_m_gs = "gwkanal.o3_n_pls_m_gs.sage:n_main"
-## Monk scripts
-f_monk_ecc_matters = "gwkanal.ecc_matters.monk:main"
-f_monk_n_pls_m_gs = "gwkanal.n_pls_m_gs.monk:main"
-# These scripts are for developer/user experience.
-gwk_diag_mass_matrix = "gwkokab_scripts.diag_mass_matrix:main"
-gwk_flowMC_info = "gwkokab_scripts.flowMC_info:main"
-gwk_flowMC_cfg_template = "gwkokab_scripts.flowMC_cfg_template:main"
-gwk_numpyro_cfg_template = "gwkokab_scripts.numpyro_cfg_template:main"
+[tool.docformatter]
+# The ``summaries`` are not (yet) 75 characters because the summary lines can't be
+# automatically wrapped and must be re-written, which should be done at some point.
+recursive = true
+wrap-summaries = 88
+wrap-descriptions = 88
+syntax = "numpy"
 
 [tool.pytest.ini_options]
 addopts = ["-v", "--color=yes"]
+doctest_optionflags = [
+    "ELLIPSIS",
+    "NORMALIZE_WHITESPACE",
+    "IGNORE_EXCEPTION_DETAIL",
+]
 filterwarnings = [
     "error",
     "ignore:numpy.ufunc size changed,:RuntimeWarning",
@@ -159,16 +158,12 @@ filterwarnings = [
     "once:No GPU:UserWarning",
     "once::DeprecationWarning",
 ]
-doctest_optionflags = [
-    "ELLIPSIS",
-    "NORMALIZE_WHITESPACE",
-    "IGNORE_EXCEPTION_DETAIL",
-]
 
-[tool.docformatter]
-# The ``summaries`` are not (yet) 75 characters because the summary lines can't be
-# automatically wrapped and must be re-written, which should be done at some point.
-recursive = true
-wrap-summaries = 88
-wrap-descriptions = 88
-syntax = "numpy"
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages]
+find = { where = ["src/"] }
+
+[tool.setuptools.dynamic]
+version = { attr = "gwkokab.version.__version__" }

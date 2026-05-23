@@ -45,7 +45,7 @@ $$
 
 User can provide any NumPyro distribution which takes only scalar parameters. Their json
 representation is saved in
-[`priors.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/prior.json),
+[`priors.json`](https://github.com/kokabsc/hello-gwkokab/blob/main/hbi_discrete_method/prior.json),
 
 ```json
 {
@@ -114,7 +114,7 @@ and
 for more details on the available configurations.
 
 These configurations are saved in
-[`numpyro_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/numpyro_config.json).
+[`numpyro_config.json`](https://github.com/kokabsc/hello-gwkokab/blob/main/hbi_discrete_method/numpyro_config.json).
 Then you can run the following command to perform Hierarchical Bayesian Inference using
 NumPyro NUTS sampler.
 
@@ -125,9 +125,9 @@ n_sage_n_pls_m_gs \
     --n-g 0 \
     --posterior-regex "../generating_mock_posterior_estimates/data/realization_0/posteriors/event_*.dat" \
     --posterior-columns mass_1_source mass_2_source \
-    --pmean-json pmean.json \
-    --prior-json prior.json \
-    --sampler-config numpyro_config.json \
+    --pmean-cfg pmean.json \
+    --prior-cfg prior.json \
+    --sampler-cfg numpyro_config.json \
     --n-buckets 10
 ```
 
@@ -135,17 +135,17 @@ n_sage_n_pls_m_gs \
 - `posterior-regex` is the regex pattern to locate posterior samples of individual events.
 - `posterior-columns` are the columns in the posterior samples corresponding to
   primary mass, secondary mass and eccentricity.
-- `pmean-json` is the json file containing the detector sensitivity information.
-- `prior-json` is the json file containing the prior distributions of the population
+- `pmean-cfg` is the json file containing the detector sensitivity information.
+- `prior-cfg` is the json file containing the prior distributions of the population
   parameters.
-- `sampler-config` is the json file containing the MCMC sampler configurations.
+- `sampler-cfg` is the json file containing the MCMC sampler configurations.
 - `n-buckets` is an optimization parameter to speed up the likelihood evaluations.
 
 ### FlowMC
 
 Similarly, we can use Normalizing flows enhanced MALA (FlowMC) as the MCMC sampler.
 The configuration for FlowMC is also provided through a json file and saved in
-[`flowMC_config.json`](https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method/flowMC_config.json).
+[`flowMC_config.json`](https://github.com/kokabsc/hello-gwkokab/blob/main/hbi_discrete_method/flowMC_config.json).
 We will talk about the various configurations in detail in another tutorial.
 
 ```json
@@ -191,9 +191,9 @@ f_sage_n_pls_m_gs \
     --n-g 0 \
     --posterior-regex "../generating_mock_posterior_estimates/data/realization_0/posteriors/event_*.dat" \
     --posterior-columns mass_1_source mass_2_source \
-    --pmean-json pmean.json \
-    --prior-json prior.json \
-    --sampler-config flowMC_config.json \
+    --pmean-cfg pmean.json \
+    --prior-cfg prior.json \
+    --sampler-cfg flowMC_config.json \
     --n-buckets 10
 ```
 
@@ -226,15 +226,15 @@ Sat Nov  1 16:23:27 2025
 
 ### FlowMC Results
 
-<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_flowMC/nf_samples_unweighted.png"/>
+<img src="https://raw.githubusercontent.com/kokabsc/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_flowMC/nf_samples_unweighted.png"/>
 
 ### NumPyro Results
 
-<img src="https://raw.githubusercontent.com/gwkokab/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_numpyro/samples.png"/>
+<img src="https://raw.githubusercontent.com/kokabsc/hello-gwkokab/refs/heads/main/hbi_discrete_method/figs_numpyro/samples.png"/>
 
 ---
 
 All the code and files used in this tutorial can be found in
 [hello-gwkokab/hbi_discrete_method][REPRODUCIBILITY_LINK].
 
-[REPRODUCIBILITY_LINK]: https://github.com/gwkokab/hello-gwkokab/blob/main/hbi_discrete_method
+[REPRODUCIBILITY_LINK]: https://github.com/kokabsc/hello-gwkokab/blob/main/hbi_discrete_method
