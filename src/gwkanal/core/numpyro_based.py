@@ -146,6 +146,7 @@ class NumpyroBased(Guru):
             max_tree_depth=sampler_cfg.kernel.max_tree_depth,
             find_heuristic_step_size=sampler_cfg.kernel.find_heuristic_step_size,
             forward_mode_differentiation=sampler_cfg.kernel.forward_mode_differentiation,
+            regularize_mass_matrix=sampler_cfg.kernel.regularize_mass_matrix,
         )
         logger.success("NUTS Kernel initialized.")
 

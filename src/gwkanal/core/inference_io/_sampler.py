@@ -167,6 +167,8 @@ class NumpyroNUTSSamplerConfig(BaseModel):
     jax.lax.while_loop or jax.lax.fori_loop only supports forward-mode differentiation.
     """
 
+    regularize_mass_matrix: bool = Field(default=True)
+
 
 class NumpyroMCMCConfig(BaseModel):
     """Configuration for the Numpyro MCMC."""
