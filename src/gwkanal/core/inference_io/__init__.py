@@ -6,8 +6,8 @@ from ._analytical import AnalyticalPELoader as AnalyticalPELoader
 from ._discrete import DiscretePELoader as DiscretePELoader
 from ._poisson_mean import PoissonMeanEstimationLoader as PoissonMeanEstimationLoader
 from ._sampler import (
-    FlowMCLoader as FlowMCLoader,
-    NumpyroLoader as NumpyroLoader,
-    NumpyroMCMCLoader as NumpyroMCMCLoader,
-    NumpyroNUTSLoader as NumpyroNUTSLoader,
+    FlowMCGlobalConfig as FlowMCGlobalConfig,
+    NumpyroGlobalConfig as NumpyroGlobalConfig,
+    NumpyroMCMCConfig as NumpyroMCMCConfig,
+    NumpyroNUTSSamplerConfig as NumpyroNUTSSamplerConfig,
 )

@@ -14,7 +14,7 @@ from gwkanal.utils.common import read_json
 from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 
-class NumpyroNUTSLoader(BaseModel):
+class NumpyroNUTSSamplerConfig(BaseModel):
     """Configuration for the Numpyro NUTS."""
 
     model_config = ConfigDict(
@@ -106,7 +106,7 @@ class NumpyroNUTSLoader(BaseModel):
     """
 
 
-class NumpyroMCMCLoader(BaseModel):
+class NumpyroMCMCConfig(BaseModel):
     """Configuration for the Numpyro MCMC."""
 
     # raise error whenever an extra field is passed
@@ -170,7 +170,7 @@ class NumpyroMCMCLoader(BaseModel):
     """
 
 
-class NumpyroLoader(BaseModel):
+class NumpyroGlobalConfig(BaseModel):
     """Configuration for the Numpyro sampler, including both kernel and MCMC
     settings.
     """
@@ -179,11 +179,14 @@ class NumpyroLoader(BaseModel):
     # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
     model_config = ConfigDict(extra="forbid")
 
-    kernel: NumpyroNUTSLoader = Field(default_factory=NumpyroNUTSLoader)
-    mcmc: NumpyroMCMCLoader = Field(default_factory=NumpyroMCMCLoader)
+    kernel: NumpyroNUTSSamplerConfig = Field(default_factory=NumpyroNUTSSamplerConfig)
+    """Configuration for the NUTS sampler kernel."""
+
+    mcmc: NumpyroMCMCConfig = Field(default_factory=NumpyroMCMCConfig)
+    """Configuration for the MCMC sampling procedure."""
 
     @classmethod
-    def from_json(cls, config_path: str) -> "NumpyroLoader":
+    def from_json(cls, config_path: str) -> "NumpyroGlobalConfig":
         """Initializes the loader from a JSON configuration file.
 
         Parameters
@@ -240,7 +243,7 @@ class NumpyroLoader(BaseModel):
         return cls(kernel=kernel_cfg, mcmc=mcmc_cfg)
 
 
-class FlowMCLoader(BaseModel):
+class FlowMCGlobalConfig(BaseModel):
     """Configuration for the FlowMC sampler."""
 
     # raise error whenever an extra field is passed
@@ -324,7 +327,7 @@ class FlowMCLoader(BaseModel):
     """If True, prints execution progress logs and loss metrics to the console."""
 
     @classmethod
-    def from_json(cls, config_path: str) -> "FlowMCLoader":
+    def from_json(cls, config_path: str) -> "FlowMCGlobalConfig":
         """Initializes the loader from a JSON configuration file.
 
         Parameters
@@ -366,7 +369,7 @@ def _dump_numpyro_cfg() -> None:
 
     from pathlib import Path
 
-    cfg = NumpyroLoader()
+    cfg = NumpyroGlobalConfig()
 
     Path(args.output).write_text(cfg.model_dump_json(indent=4))
 
@@ -392,7 +395,7 @@ def _dump_flowMC_cfg() -> None:
     )
     args = parser.parse_args()
 
-    cfg = FlowMCLoader()
+    cfg = FlowMCGlobalConfig()
 
     from pathlib import Path
 
