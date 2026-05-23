@@ -179,6 +179,12 @@ class NumpyroGlobalConfig(BaseModel):
     # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
     model_config = ConfigDict(extra="forbid")
 
+    sampler_name: Literal["numpyro"] = "numpyro"
+    """The name of the sampler to use.
+
+    Currently only 'numpyro' is supported.
+    """
+
     kernel: NumpyroNUTSSamplerConfig = Field(default_factory=NumpyroNUTSSamplerConfig)
     """Configuration for the NUTS sampler kernel."""
 
@@ -249,6 +255,12 @@ class FlowMCGlobalConfig(BaseModel):
     # raise error whenever an extra field is passed
     # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
     model_config = ConfigDict(extra="forbid")
+
+    sampler_name: Literal["flowMC"] = "flowMC"
+    """The name of the sampler to use.
+
+    Currently only 'flowMC' is supported.
+    """
 
     chain_batch_size: Annotated[int, Field(ge=0)] = Field(default=0)
     """Batch size for processing chains.
@@ -349,6 +361,42 @@ class FlowMCGlobalConfig(BaseModel):
         """
         sampler_cfg = read_json(config_path)
         return cls(**sampler_cfg)
+
+
+class SamplerConfig(BaseModel):
+    """Configuration for the sampler, which can be either Numpyro or flowMC."""
+
+    # raise error whenever an extra field is passed
+    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+    model_config = ConfigDict(extra="forbid")
+
+    loader: NumpyroGlobalConfig | FlowMCGlobalConfig = Field(
+        discriminator="sampler_name"
+    )
+
+    @classmethod
+    def from_json(cls, config_path: str) -> "SamplerConfig":
+        """Initializes the loader from a JSON configuration file.
+
+        Parameters
+        ----------
+        config_path : str
+            Path to the JSON file containing loader settings.
+
+        Returns
+        -------
+        SamplerConfig
+            An instance of SamplerConfig.
+
+        Raises
+        ------
+        KeyError
+            If the 'sampler_name' field is missing in the configuration.
+        FileNotFoundError
+            If no files match the provided regex pattern.
+        """
+        sampler_cfg = read_json(config_path)
+        return cls(loader=sampler_cfg)  # type: ignore
 
 
 def _dump_numpyro_cfg() -> None:
