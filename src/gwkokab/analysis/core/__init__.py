@@ -2,4 +2,4 @@
 # SPDX-License-Identifier: Apache-2.0
 
 #
-"""Core modules of GWKobab Analyses."""
+"""Core modules of GWKobab Analysis."""
