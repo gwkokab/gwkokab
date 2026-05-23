@@ -16,9 +16,10 @@ A JAX-based gravitational-wave population inference toolkit for parametric model
 <p align="center">
   <a href="https://gwkokab.readthedocs.io/en/latest/installation.html"><b>Installation</b></a> |
   <a href="https://gwkokab.readthedocs.io/"><b>Documentation</b></a> |
-  <a href="https://gwkokab.readthedocs.io/en/latest/examples.html"><b>Examples/Tutorials</b></a> |
+  <a href="https://gwkokab.readthedocs.io/en/latest/examples.html"><b>Tutorials</b></a> |
+  <a href="https://huggingface.co/datasets/kokabsc/GWKokab_example"><b>Analysis on 🤗</b></a> |
   <a href="https://gwkokab.readthedocs.io/en/latest/FAQs.html"><b>FAQs</b></a> |
-  <a href="#citing-gwkokab"><b>Citing GWKokab</b></a>
+  <a href="https://gwkokab.readthedocs.io/en/latest/cite.html"><b>Citing GWKokab</b></a>
 </p>
 
 <p align="center">
