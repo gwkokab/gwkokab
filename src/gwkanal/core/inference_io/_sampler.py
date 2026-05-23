@@ -3,12 +3,9 @@
 
 
 import ast
-import warnings
 from typing import Annotated, Literal
 
-import jax
 import numpy as np
-from loguru import logger
 from pydantic import (
     BaseModel,
     BeforeValidator,
@@ -21,7 +18,6 @@ from pydantic import (
 )
 
 from gwkanal.utils.common import read_json
-from gwkokab.utils.exceptions import LoggedUserWarning
 
 
 def _nd_array_before_validator(arr: str | list | np.ndarray) -> np.ndarray:
@@ -270,20 +266,7 @@ class NumpyroGlobalConfig(BaseModel):
             An instance of NumpyroGlobalConfig.
         """
         sampler_cfg = read_json(config_path)
-        instance = cls.model_validate(sampler_cfg)
-        n_devices = jax.device_count()
-        if instance.mcmc.chain_method != "parallel" and n_devices > 1:
-            warnings.warn(
-                f"Multiple devices detected ({n_devices}), but chain_method is set to "
-                f"'{instance.mcmc.chain_method}'. Overriding to 'parallel'.",
-                LoggedUserWarning,
-            )
-            instance.mcmc.chain_method = "parallel"
-        else:
-            logger.info(
-                f"Using chain method: '{instance.mcmc.chain_method}' with {n_devices} device(s)."
-            )
-        return instance
+        return cls.model_validate(sampler_cfg)
 
 
 class FlowMCGlobalConfig(BaseModel):
@@ -393,7 +376,7 @@ class FlowMCGlobalConfig(BaseModel):
             An instance of FlowMCGlobalConfig.
         """
         sampler_cfg = read_json(config_path)
-        return cls(**sampler_cfg)
+        return cls.model_validate(**sampler_cfg)
 
 
 class SamplerConfig:
