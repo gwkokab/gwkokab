@@ -346,3 +346,56 @@ class FlowMCLoader(BaseModel):
         """
         sampler_cfg = read_json(config_path)
         return cls(**sampler_cfg)
+
+
+def _dump_numpyro_cfg() -> None:
+    import argparse
+    from argparse import ArgumentDefaultsHelpFormatter
+
+    parser = argparse.ArgumentParser(
+        description="Creates a template config for NumPyro NUTS sampler and MCMC",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        default="numpyro_cfg_template.json",
+        help="Output JSON filename",
+    )
+    args = parser.parse_args()
+
+    from pathlib import Path
+
+    cfg = NumpyroLoader()
+
+    Path(args.output).write_text(cfg.model_dump_json(indent=4))
+
+    print(f"Successfully generated NumPyro configuration at: {args.output}")
+    print("\nResources for these parameters:")
+    print(" - MCMC: https://num.pyro.ai/en/latest/mcmc.html#numpyro.infer.mcmc.MCMC")
+    print(" - NUTS: https://num.pyro.ai/en/latest/mcmc.html#numpyro.infer.hmc.NUTS")
+
+
+def _dump_flowMC_cfg() -> None:
+    import argparse
+    from argparse import ArgumentDefaultsHelpFormatter
+
+    parser = argparse.ArgumentParser(
+        description="Creates a template config for flowMC",
+        formatter_class=ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        "--output",
+        "-o",
+        default="flowMC_cfg_template.json",
+        help="Output JSON filename",
+    )
+    args = parser.parse_args()
+
+    cfg = FlowMCLoader()
+
+    from pathlib import Path
+
+    Path(args.output).write_text(cfg.model_dump_json(indent=4))
+
+    print(f"Successfully generated flowMC configuration at: {args.output}")
