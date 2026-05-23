@@ -302,7 +302,7 @@ class DiscretePELoader(BaseModel):
                     f"No alternate mass prior found for {event_name}, defaulting to '{mass_prior}'.",
                     LoggedUserWarning,
                 )
-            if spin_prior := self.alternate_spin_priors.get(event_name) is None:
+            if (spin_prior := self.alternate_spin_priors.get(event_name)) is None:
                 spin_prior = self.default_spin_prior
                 warnings.warn(
                     f"No alternate spin prior found for {event_name}, defaulting to '{spin_prior}'.",
