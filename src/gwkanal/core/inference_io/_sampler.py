@@ -2,16 +2,77 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import ast
 import warnings
 from typing import Annotated, Literal
 
 import jax
 import numpy as np
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, PositiveInt
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    PlainSerializer,
+    PositiveFloat,
+    PositiveInt,
+)
 
 from gwkanal.utils.common import read_json
 from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
+
+
+def _nd_array_before_validator(arr: str | list | np.ndarray) -> np.ndarray:
+    """Parses a string or list input into a NumPy array.
+
+    Parameters
+    ----------
+    arr : str | list | np.ndarray
+        The input to be parsed, which can be a JSON string representation of a list,
+        a Python list, or already a NumPy array.
+
+    Returns
+    -------
+    np.ndarray
+        The parsed NumPy array.
+    """
+    arr_converted = arr
+    if isinstance(arr, str):
+        lst = ast.literal_eval(arr)
+        arr_converted = np.array(lst)
+    if isinstance(arr, list):
+        arr_converted = np.array(arr)
+    return arr_converted  # type: ignore
+
+
+def _nd_array_serializer(arr: np.ndarray) -> list:
+    """Serializes a NumPy array to a list for JSON compatibility.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        The NumPy array to serialize.
+
+    Returns
+    -------
+    list
+        The serialized list representation of the NumPy array.
+    """
+    return arr.tolist()
+
+
+NumPyArrayTypeForPydantic = Annotated[
+    np.ndarray,
+    BeforeValidator(_nd_array_before_validator),
+    PlainSerializer(_nd_array_serializer, return_type=list),
+]
+"""Type annotation for NumPy arrays that supports parsing from JSON strings or lists,
+and serializing back to JSON-compatible lists.
+
+A Solution to handle numpy arrays in Pydantic, proposed at:
+https://www.flowphysics.com/2024/02/12/numpy-arrays-in-pydantic.html
+"""
 
 
 class NumpyroNUTSSamplerConfig(BaseModel):
@@ -31,7 +92,7 @@ class NumpyroNUTSSamplerConfig(BaseModel):
     If not specified, it will be set to 1.
     """
 
-    inverse_mass_matrix: None | np.ndarray | dict = Field(default=None)
+    inverse_mass_matrix: None | NumPyArrayTypeForPydantic | dict = Field(default=None)
     r"""Initial value for inverse mass matrix.
 
     This may be adapted during warmup if `adapt_mass_matrix = True`. If no value is
@@ -252,9 +313,12 @@ class NumpyroGlobalConfig(BaseModel):
 class FlowMCGlobalConfig(BaseModel):
     """Configuration for the FlowMC sampler."""
 
-    # raise error whenever an extra field is passed
-    # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        # raise error whenever an extra field is passed
+        # https://pydantic.dev/docs/validation/latest/concepts/models/#extra-data
+        extra="forbid",
+        arbitrary_types_allowed=True,
+    )
 
     sampler_name: Literal["flowMC"] = "flowMC"
     """The name of the sampler to use.
@@ -313,7 +377,7 @@ class FlowMCGlobalConfig(BaseModel):
     n_leapfrog: PositiveInt = Field(default=10)
     """Number of leapfrog steps per HMC trajectory (ignored if using MALA)."""
 
-    mass_matrix: PositiveFloat | list[PositiveFloat] = Field(default=1.0)
+    mass_matrix: PositiveFloat | NumPyArrayTypeForPydantic = Field(default=1.0)
     """Mass matrix diagonal elements or scalar value for HMC trajectory dynamics."""
 
     learning_rate: PositiveFloat = Field(default=1e-3)
