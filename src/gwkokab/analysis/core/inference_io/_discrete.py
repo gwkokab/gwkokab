@@ -284,6 +284,9 @@ class DiscretePELoader(BaseModel):
         cosmo = default_cosmology()
         data_list, log_prior_list = [], []
 
+        # place holder value for priors
+        _prior_placeholder = object()
+
         for i, event_path in enumerate(self.filenames):
             event_name = event_path.stem
 
@@ -296,21 +299,31 @@ class DiscretePELoader(BaseModel):
 
             log_prior = np.zeros(len(df))
 
-            if (mass_prior := self.alternate_mass_priors.get(event_name)) is None:
+            if (
+                mass_prior := self.alternate_mass_priors.get(
+                    event_name, _prior_placeholder
+                )
+            ) is _prior_placeholder:
                 mass_prior = self.default_mass_prior
                 warnings.warn(
                     f"No alternate mass prior found for {event_name}, defaulting to '{mass_prior}'.",
                     LoggedUserWarning,
                 )
-            if (spin_prior := self.alternate_spin_priors.get(event_name)) is None:
+            if (
+                spin_prior := self.alternate_spin_priors.get(
+                    event_name, _prior_placeholder
+                )
+            ) is _prior_placeholder:
                 spin_prior = self.default_spin_prior
                 warnings.warn(
                     f"No alternate spin prior found for {event_name}, defaulting to '{spin_prior}'.",
                     LoggedUserWarning,
                 )
             if (
-                distance_prior := self.alternate_distance_priors.get(event_name)
-            ) is None:
+                distance_prior := self.alternate_distance_priors.get(
+                    event_name, _prior_placeholder
+                )
+            ) is _prior_placeholder:
                 distance_prior = self.default_distance_prior
                 warnings.warn(
                     f"No alternate distance prior found for {event_name}, defaulting to '{distance_prior}'.",
