@@ -146,7 +146,7 @@ class NumpyroNUTSSamplerConfig(BaseModel):
     max_tree_depth: PositiveInt | tuple[PositiveInt, PositiveInt] = Field(default=8)
     """Max depth of the binary tree created during the doubling scheme of NUTS sampler.
 
-    Defaults to 10. This argument also accepts a tuple of integers (d1, d2), where d1 is
+    Defaults to 8. This argument also accepts a tuple of integers (d1, d2), where d1 is
     the max tree depth during warmup phase and d2 is the max tree depth during post
     warmup phase.
     """
@@ -214,7 +214,7 @@ class NumpyroMCMCConfig(BaseModel):
     Defaults to `True`.
     """
 
-    progress_rate: None | int = Field(default=None)
+    progress_rate: PositiveInt | None = Field(default=None)
     """Number of iterations per progress bar update.
 
     Defaults to `None`, which is 5% of total iterations when there are more than 20
@@ -263,15 +263,8 @@ class NumpyroGlobalConfig(BaseModel):
 
         Returns
         -------
-        NumpyroLoader
-            An instance of NumpyroLoader.
-
-        Raises
-        ------
-        KeyError
-            If the 'regex' field is missing in the configuration.
-        FileNotFoundError
-            If no files match the provided regex pattern.
+        NumpyroGlobalConfig
+            An instance of NumpyroGlobalConfig.
         """
         sampler_cfg = read_json(config_path)
         if (kernel_cfg := sampler_cfg.pop("kernel", None)) is None:
@@ -413,15 +406,8 @@ class FlowMCGlobalConfig(BaseModel):
 
         Returns
         -------
-        DiscreteParameterEstimationLoader
-            An instance of DiscreteParameterEstimationLoader.
-
-        Raises
-        ------
-        KeyError
-            If the 'regex' field is missing in the configuration.
-        FileNotFoundError
-            If no files match the provided regex pattern.
+        FlowMCGlobalConfig
+            An instance of FlowMCGlobalConfig.
         """
         sampler_cfg = read_json(config_path)
         return cls(**sampler_cfg)
@@ -451,13 +437,6 @@ class SamplerConfig(BaseModel):
         -------
         SamplerConfig
             An instance of SamplerConfig.
-
-        Raises
-        ------
-        KeyError
-            If the 'sampler_name' field is missing in the configuration.
-        FileNotFoundError
-            If no files match the provided regex pattern.
         """
         sampler_cfg = read_json(config_path)
         return cls(loader=sampler_cfg)  # type: ignore
