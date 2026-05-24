@@ -69,19 +69,19 @@ def _print_reference_prior_summary(
 
     # 1. Calculate dynamic column widths based on the longest strings
     max_name_len = max(max(len(str(name)) for name in summary_records.keys()), 10)
-    max_mass_len = max(max(len(str(p["mass"])) for p in summary_records.values()), 10)
-    max_spin_len = max(max(len(str(p["spin"])) for p in summary_records.values()), 10)
+    max_mass_len = max(max(len(str(p["mass"])) for p in summary_records.values()), 20)
+    max_spin_len = max(max(len(str(p["spin"])) for p in summary_records.values()), 20)
     max_dist_len = max(
-        max(len(str(p["distance"])) for p in summary_records.values()), 10
+        max(len(str(p["distance"])) for p in summary_records.values()), 20
     )
 
     # 2. Build the structural borders based on calculated widths
     border = f"+-{'-' * max_name_len}-+-{'-' * max_mass_len}-+-{'-' * max_spin_len}-+-{'-' * max_dist_len}-+"
     header = (
         f"| {'Event Name'.ljust(max_name_len)} "
-        f"| {'Mass Prior'.ljust(max_mass_len)} "
-        f"| {'Spin Prior'.ljust(max_spin_len)} "
-        f"| {'Dist Prior'.ljust(max_dist_len)} |"
+        f"| {'Mass Reference Prior'.ljust(max_mass_len)} "
+        f"| {'Spin Reference Prior'.ljust(max_spin_len)} "
+        f"| {'Dist Reference Prior'.ljust(max_dist_len)} |"
     )
 
     # 3. Log the Header Block line by line
