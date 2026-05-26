@@ -175,7 +175,7 @@ def save_trace_plot(param, stats, outdir):
     plt.legend(fontsize=8)
     plt.tight_layout()
     plt.savefig(
-        os.path.join(outdir, f"trace_{safe_filename(param)}.pdf"),
+        os.path.join(outdir, f"trace_{safe_filename(param)}.png"),
         bbox_inches="tight",
     )
     plt.close()
@@ -202,7 +202,7 @@ def save_hist_plot(param, stats, outdir):
     plt.legend(fontsize=8)
     plt.tight_layout()
     plt.savefig(
-        os.path.join(outdir, f"hist_{safe_filename(param)}.pdf"),
+        os.path.join(outdir, f"hist_{safe_filename(param)}.png"),
         bbox_inches="tight",
     )
     plt.close()
@@ -224,7 +224,7 @@ def save_autocorr_plot(param, stats, outdir, max_lag):
     plt.legend(fontsize=8)
     plt.tight_layout()
     plt.savefig(
-        os.path.join(outdir, f"autocorr_{safe_filename(param)}.pdf"),
+        os.path.join(outdir, f"autocorr_{safe_filename(param)}.png"),
         bbox_inches="tight",
     )
     plt.close()
