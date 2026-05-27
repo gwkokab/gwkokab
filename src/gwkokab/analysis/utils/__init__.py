@@ -6,8 +6,7 @@ from . import (
     checks as checks,
     common as common,
     genie_parser as genie_parser,
-    ppd as ppd,
-    ppd_parser as ppd_parser,
+    marginals as marginals,
     priors as priors,
     regex as regex,
 )
