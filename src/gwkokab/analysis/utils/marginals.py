@@ -5,12 +5,14 @@
 import functools as ft
 import inspect
 from pathlib import Path
+from typing import NamedTuple
 
 import h5py
 import jax
 import numpy as np
 from jax import jit, numpy as jnp
 from jaxtyping import Array
+from matplotlib import pyplot as plt
 
 from gwkokab.analysis.utils.common import read_json
 from gwkokab.cosmology import default_cosmology
@@ -448,3 +450,75 @@ def generate_marginal_probs(
         filepath=filename,
         domain_cfg=domain_cfg,
     )
+
+
+class PlotStyle(NamedTuple):
+    """A named tuple representing the style for plotting marginal densities, including
+    the color, label, and additional keyword arguments for line plots and fill-between
+    plots.
+    """
+
+    color: str
+    label: str
+    line_plot_kwargs: dict = {
+        "linewidth": 2.0,
+    }
+    fill_between_kwargs: dict = {
+        "alpha": 0.3,
+    }
+
+
+def plot_marginal_with_intervals(
+    ax: plt.Axes, filename: str, parameter: str, styles: list[PlotStyle | None]
+):
+    """Plot marginal densities with confidence intervals for a specified parameter.
+
+    Parameters
+    ----------
+    ax : plt.Axes
+        The Matplotlib Axes object on which to plot the marginal densities and confidence
+        intervals.
+    filename : str
+        The path to the HDF5 file containing the marginal density data.
+    parameter : str
+        The name of the parameter for which to plot the marginal densities. This should
+        correspond to a dataset in the HDF5 file under the "probs/component_{i}" groups.
+    styles : list[PlotStyle  |  None]
+        A list of PlotStyle objects specifying the plotting style for each component's
+        marginal density. If an element is None, the corresponding component will be
+        skipped in the plot.
+    """
+    domains = read_domains(filename)
+    domain = np.linspace(*domains[parameter])
+
+    datasets = [f"/probs/component_{i}/{parameter}" for i in range(len(styles))]
+
+    with h5py.File(filename, "r") as f:
+        data = [
+            np.asarray(f[dataset][:])
+            for style, dataset in zip(styles, datasets)
+            if style is not None
+        ]
+        data_intervals = [
+            (
+                np.quantile(d, 0.05, axis=0),
+                np.mean(d, axis=0),
+                np.quantile(d, 0.95, axis=0),
+            )
+            for d in data
+        ]
+
+    filtered_styles: list[PlotStyle] = [style for style in styles if style is not None]
+
+    for (lower, mean, upper), style in zip(data_intervals, filtered_styles):
+        ax.fill_between(
+            domain, lower, upper, color=style.color, **style.fill_between_kwargs
+        )
+        ax.plot(
+            domain,
+            mean,
+            label=style.label,
+            color=style.color,
+            **style.line_plot_kwargs,
+        )
+        ax.set_xlim(domain[0], domain[-1])
