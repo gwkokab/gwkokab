@@ -228,12 +228,11 @@ def save_results_to_hdf5(
         An array of samples used for computing the marginal densities. Each row
         corresponds to a single sample, and each column corresponds to a specific
         parameter of the model.
-    batched_results : list[list[list[Array]]]
+    batched_results : list[list[Array]]
         A nested list containing the computed marginal densities for each component of
-        the model, for each sample in the batch. The outer list corresponds to the
-        samples, the middle list corresponds to the components of the model, and the
-        innermost list corresponds to the marginal densities for each parameter of the
-        model.
+        the model. The outer list corresponds to the components of the model, the
+        inner list corresponds to the parameters of the model, and each leaf is a 2D
+        array of shape (num_samples, domain_size).
     parameters : list[str]
         A list of parameter names for the model.
     domain_cfg : dict[str, tuple[float, float, int]]
