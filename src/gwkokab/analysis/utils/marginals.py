@@ -48,7 +48,7 @@ def _derive_marginal_densities(
     for i, domain in enumerate(domains):
         if i == axis:
             continue
-        reduction_axis = (i - j) - probs_array.ndim + (i >= axis)
+        reduction_axis = i - j
         marginal_density = jnp.trapezoid(
             y=marginal_density, x=domain, axis=reduction_axis
         )
@@ -211,6 +211,58 @@ def compute_batched_marginals(
     return jax.lax.map(single_sample_fn, samples_batch, batch_size=batch_size)
 
 
+def read_domains(
+    filepath: str | Path,
+) -> dict[str, tuple[float, float, int]]:
+    """Read domain specifications from an HDF5 file.
+
+    Parameters
+    ----------
+    filepath : str | Path
+        The path to the HDF5 file containing the domain specifications.
+
+    Returns
+    -------
+    dict[str, tuple[float, float, int]]
+        A dictionary mapping parameter names to their corresponding domain specifications.
+        Each value in the dictionary is a tuple containing the start, stop, and number of
+        points for the domain of the parameter.
+    """
+    with h5py.File(filepath, "r") as f:
+        domains_array = f["probs"].attrs["domains"]
+        return {
+            param.decode("utf-8"): (float(start), float(stop), int(num_points))
+            for param, start, stop, num_points in domains_array
+        }
+
+
+def write_domains(
+    filepath: str | Path, domain_cfg: dict[str, tuple[float, float, int]]
+):
+    """Write domain specifications to an HDF5 file.
+
+    Parameters
+    ----------
+    filepath : str | Path
+        The path to the HDF5 file where the domain specifications will be saved.
+    domain_cfg : dict[str, tuple[float, float, int]]
+        A dictionary mapping parameter names to their corresponding domain specifications.
+        Each value in the dictionary is a tuple containing the start, stop, and number of
+        points for the domain of the parameter.
+    """
+    string_dt = h5py.string_dtype(encoding="utf-8")
+    with h5py.File(filepath, "a") as f:
+        f["probs"].attrs["domains"] = np.asarray(
+            [(str(param), *info) for param, info in domain_cfg.items()],
+            dtype=np.dtype([
+                ("param", string_dt),
+                ("start", np.float32),
+                ("stop", np.float32),
+                ("num_points", np.uint32),
+            ]),
+        )
+
+
 def save_results_to_hdf5(
     samples: Array,
     constants: dict,
@@ -248,16 +300,6 @@ def save_results_to_hdf5(
     with h5py.File(filepath, "w") as f:
         probs_group = f.create_group("probs")
 
-        probs_group.attrs["domains"] = np.asarray(
-            [(str(param), *info) for param, info in domain_cfg.items()],
-            dtype=np.dtype([
-                ("param", string_dt),
-                ("start", np.float32),
-                ("stop", np.float32),
-                ("num_points", np.uint32),
-            ]),
-        )
-
         flat_constants = [(str(k), v) for k, v in constants.items()]
         probs_group.attrs["constants"] = np.asarray(
             flat_constants,
@@ -279,6 +321,8 @@ def save_results_to_hdf5(
                     data=np.array(batched_results[i][idx]),
                     **compression_opts,
                 )
+
+    write_domains(filepath, domain_cfg)
 
 
 def remove_comoving_volume_factor(
