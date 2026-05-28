@@ -179,10 +179,11 @@ class MultiSourceModelCore:
             if ct == "gpl":
                 all_params_names.extend([
                     "beta_",
-                    "loc_",
-                    "mmax_",
-                    "mmin_",
-                    "scale_",
+                    "m1_loc_",
+                    "m1_m1min_",
+                    "m1_mmax_",
+                    "m1_scale_",
+                    "m2_m2min_",
                 ])
             if ct == "gg":
                 all_params_names.extend([

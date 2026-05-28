@@ -508,18 +508,20 @@ class GaussianPrimaryMassRatio(Distribution):
         "loc": constraints.positive,
         "scale": constraints.positive,
         "beta": constraints.real,
-        "mmin": constraints.positive,
+        "m1min": constraints.positive,
+        "m2min": constraints.positive,
         "mmax": constraints.positive,
     }
-    reparametrized_params = ["loc", "scale", "beta", "mmin", "mmax"]
-    pytree_data_fields = ("_support", "loc", "scale", "beta", "mmax", "mmin")
+    reparametrized_params = ["loc", "scale", "beta", "m1min", "m2min", "mmax"]
+    pytree_data_fields = ("_support", "loc", "scale", "beta", "mmax", "m1min", "m2min")
 
     def __init__(
         self,
         loc: ArrayLike,
         scale: ArrayLike,
         beta: ArrayLike,
-        mmin: ArrayLike,
+        m1min: ArrayLike,
+        m2min: ArrayLike,
         mmax: ArrayLike,
         *,
         validate_args: Optional[bool] = None,
@@ -533,22 +535,25 @@ class GaussianPrimaryMassRatio(Distribution):
             Scale parameter for primary mass
         beta : ArrayLike
             Power law index for mass ratio
-        mmin : ArrayLike
-            Minimum mass
+        m1min : ArrayLike
+            Minimum mass for primary component
+        m2min : ArrayLike
+            Minimum mass for secondary component
         mmax : ArrayLike
             Maximum mass
         """
-        self.loc, self.scale, self.beta, self.mmin, self.mmax = promote_shapes(
-            loc, scale, beta, mmin, mmax
+        self.loc, self.scale, self.beta, self.m1min, self.m2min, self.mmax = (
+            promote_shapes(loc, scale, beta, m1min, m2min, mmax)
         )
         batch_shape = lax.broadcast_shapes(
             jnp.shape(loc),
             jnp.shape(scale),
             jnp.shape(beta),
-            jnp.shape(mmin),
+            jnp.shape(m1min),
+            jnp.shape(m2min),
             jnp.shape(mmax),
         )
-        self._support = mass_ratio_mass_sandwich(mmin, mmax)
+        self._support = mass_ratio_mass_sandwich(m2min, mmax)
         super(GaussianPrimaryMassRatio, self).__init__(
             batch_shape=batch_shape, event_shape=(2,), validate_args=validate_args
         )
@@ -562,16 +567,16 @@ class GaussianPrimaryMassRatio(Distribution):
         m1, q = jnp.unstack(value, axis=-1)
         log_prob_m1 = truncnorm.logpdf(
             m1,
-            a=(self.mmin - self.loc) / self.scale,
+            a=(self.m1min - self.loc) / self.scale,
             b=(self.mmax - self.loc) / self.scale,
             loc=self.loc,
             scale=self.scale,
         )
         log_prob_q = jnp.where(
-            jnp.less_equal(m1, self.mmin),
+            jnp.less_equal(m1 * q, self.m2min),
             -jnp.inf,
             doubly_truncated_power_law_log_prob(
-                x=q, alpha=self.beta, low=self.mmin / m1, high=1.0
+                x=q, alpha=self.beta, low=self.m2min / m1, high=1.0
             ),
         )
 

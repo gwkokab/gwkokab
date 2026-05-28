@@ -554,11 +554,12 @@ def create_gaussian_primary_mass_ratio(
 ) -> List[Distribution]:
     collection = []
 
-    loc_name = "loc_" + component_type
-    scale_name = "scale_" + component_type
+    loc_name = "m1_loc_" + component_type
+    scale_name = "m1_scale_" + component_type
     beta_name = "beta_" + component_type
-    mmin_name = "mmin_" + component_type
-    mmax_name = "mmax_" + component_type
+    m1min_name = "m1_m1min_" + component_type
+    m2min_name = "m2_m2min_" + component_type
+    mmax_name = "m1_mmax_" + component_type
 
     for i in range(N):
         suffix = f"_{i}"
@@ -566,7 +567,8 @@ def create_gaussian_primary_mass_ratio(
             loc=_get_parameter(params, loc_name + suffix),  # type: ignore
             scale=_get_parameter(params, scale_name + suffix),  # type: ignore
             beta=_get_parameter(params, beta_name + suffix),  # type: ignore
-            mmin=_get_parameter(params, mmin_name + suffix),  # type: ignore
+            m1min=_get_parameter(params, m1min_name + suffix),  # type: ignore
+            m2min=_get_parameter(params, m2min_name + suffix),  # type: ignore
             mmax=_get_parameter(params, mmax_name + suffix),  # type: ignore
             validate_args=validate_args,
         )
