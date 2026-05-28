@@ -842,21 +842,18 @@ class FlowMCBased(Guru):
             if mass_matrix <= 0.0:
                 raise LoggedValueError("mass_matrix must be positive")
             mass_matrix = jnp.eye(n_dims) * float(mass_matrix)
-        elif isinstance(mass_matrix, list):
-            mass_matrix = jnp.array(mass_matrix)
-            if mass_matrix.ndim > 2:
-                raise LoggedValueError("mass_matrix must be 1D or 2D array")
-            _shape = mass_matrix.shape
-            if _shape != (n_dims, n_dims) and _shape != (n_dims,):
-                raise LoggedValueError(
-                    f"mass_matrix must be of shape ({n_dims}, {n_dims}) or ({n_dims},), got {_shape}"
-                )
-            if _shape == (n_dims,):
-                if jnp.any(mass_matrix <= 0):
-                    raise LoggedValueError(
-                        "mass_matrix diagonal elements must be positive"
-                    )
-                mass_matrix = jnp.diag(mass_matrix)
+
+        if mass_matrix.ndim > 2:
+            raise LoggedValueError("mass_matrix must be 1D or 2D array")
+        _shape = mass_matrix.shape
+        if _shape != (n_dims, n_dims) and _shape != (n_dims,):
+            raise LoggedValueError(
+                f"mass_matrix must be of shape ({n_dims}, {n_dims}) or ({n_dims},), got {_shape}"
+            )
+        if _shape == (n_dims,):
+            if jnp.any(mass_matrix <= 0):
+                raise LoggedValueError("mass_matrix diagonal elements must be positive")
+            mass_matrix = jnp.diag(mass_matrix)
 
         bundle = Local_Global_Sampler_Bundle(
             rng_key=self.rng_key,
