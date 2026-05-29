@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import os
 import warnings
 from collections.abc import Callable
 from typing import Any, Dict, List
@@ -18,46 +17,42 @@ from numpyro.infer import MCMC, NUTS
 
 from gwkokab.analysis.core.guru import Guru, guru_arg_parser
 from gwkokab.analysis.core.inference_io import NumpyroGlobalConfig, NumpyroMCMCConfig
+from gwkokab.analysis.core.utils import read_from_hdf5, write_to_hdf5
 from gwkokab.analysis.utils.literals import (
-    INFERENCE_DIRECTORY,
-    POSTERIOR_SAMPLES_FILENAME,
+    CHAIN_GROUP_FORMAT,
+    INFERENCE_OUTPUT_FILENAME,
+    SAMPLES_GROUP_NAME,
 )
 from gwkokab.models.utils import JointDistribution
 from gwkokab.utils.exceptions import LoggedUserWarning
 
 
-_INFERENCE_DIRECTORY = "numpyro_" + INFERENCE_DIRECTORY
-
-
 def _save_inference_data(samples: Any, start_chain_idx: int) -> None:
-    os.makedirs(_INFERENCE_DIRECTORY, exist_ok=True)
-
-    labels = tuple(samples.keys())
-
-    samples_per_chain = np.stack([samples[key] for key in labels], axis=-1)
-    combined_samples = np.concat(samples_per_chain, axis=0)
-
-    header = " ".join(labels)
+    samples_per_chain = np.stack([samples[key] for key in samples.keys()], axis=-1)
+    combined_samples = np.concatenate(samples_per_chain, axis=0)
 
     if start_chain_idx == 0:
-        np.savetxt(
-            _INFERENCE_DIRECTORY + "/" + POSTERIOR_SAMPLES_FILENAME,
-            combined_samples,
-            header=header,
-        )
+        samples_to_save = combined_samples
     else:
-        with open(_INFERENCE_DIRECTORY + "/" + POSTERIOR_SAMPLES_FILENAME, "a") as f:
-            np.savetxt(f, combined_samples)
+        previous_samples = read_from_hdf5(
+            filepath=INFERENCE_OUTPUT_FILENAME,
+            dataset_path=SAMPLES_GROUP_NAME,
+        )
+        samples_to_save = np.concatenate([previous_samples, combined_samples], axis=0)
+
+    write_to_hdf5(
+        filepath=INFERENCE_OUTPUT_FILENAME,
+        dataset_path=SAMPLES_GROUP_NAME,
+        data=samples_to_save,
+    )
 
     n_chains = samples_per_chain.shape[0]
-
     for i in range(n_chains):
-        np.savetxt(
-            _INFERENCE_DIRECTORY + f"/chain_{start_chain_idx + i}.dat",
-            samples_per_chain[i],
-            header=header,
-            comments="#",
-            delimiter=" ",
+        chain_number = start_chain_idx + i
+        write_to_hdf5(
+            filepath=INFERENCE_OUTPUT_FILENAME,
+            dataset_path="chains/" + CHAIN_GROUP_FORMAT.format(chain_id=chain_number),
+            data=samples_per_chain[i],
         )
 
 
@@ -122,8 +117,6 @@ def _run_mcmc(
 
 
 class NumpyroBased(Guru):
-    output_directory: str = _INFERENCE_DIRECTORY
-
     def driver(
         self,
         *,
@@ -152,6 +145,47 @@ class NumpyroBased(Guru):
             regularize_mass_matrix=sampler_cfg.kernel.regularize_mass_matrix,
         )
         logger.success("NUTS Kernel initialized.")
+
+        logger.info("Saving sampler configuration to HDF5.")
+        write_to_hdf5(
+            INFERENCE_OUTPUT_FILENAME,
+            dataset_path="sampler_cfg",
+            mode="a",
+            attrs={"sampler_name": "numpyro"},
+        )
+        write_to_hdf5(
+            INFERENCE_OUTPUT_FILENAME,
+            dataset_path="sampler_cfg/kernel",
+            mode="a",
+            attrs={
+                "adapt_mass_matrix": sampler_cfg.kernel.adapt_mass_matrix,
+                "adapt_step_size": sampler_cfg.kernel.adapt_step_size,
+                "dense_mass": sampler_cfg.kernel.dense_mass,
+                "find_heuristic_step_size": sampler_cfg.kernel.find_heuristic_step_size,
+                "forward_mode_differentiation": sampler_cfg.kernel.forward_mode_differentiation,
+                "inverse_mass_matrix": sampler_cfg.kernel.inverse_mass_matrix,
+                "max_tree_depth": sampler_cfg.kernel.max_tree_depth,
+                "regularize_mass_matrix": sampler_cfg.kernel.regularize_mass_matrix,
+                "step_size": sampler_cfg.kernel.step_size,
+                "target_accept_prob": sampler_cfg.kernel.target_accept_prob,
+            },
+        )
+        write_to_hdf5(
+            INFERENCE_OUTPUT_FILENAME,
+            dataset_path="sampler_cfg/mcmc",
+            mode="a",
+            attrs={
+                "chain_method": sampler_cfg.mcmc.chain_method,
+                "jit_model_args": sampler_cfg.mcmc.jit_model_args,
+                "num_chains": sampler_cfg.mcmc.num_chains,
+                "num_samples": sampler_cfg.mcmc.num_samples,
+                "num_warmup": sampler_cfg.mcmc.num_warmup,
+                "progress_bar": sampler_cfg.mcmc.progress_bar,
+                "progress_rate": sampler_cfg.mcmc.progress_rate,
+                "thinning": sampler_cfg.mcmc.thinning,
+            },
+        )
+        logger.success("Sampler configuration saved.")
 
         mcmc_cfg = sampler_cfg.mcmc
 
