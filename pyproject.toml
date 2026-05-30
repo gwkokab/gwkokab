@@ -30,6 +30,7 @@ dependencies = [
     "RIFT>=0.0.15.11",
     "arviz>=0.20.0",
     "chex>=0.1.87",
+    "corner>=2.2.3",
     "equinox>=0.11.3",
     "flowMC==0.4.5",
     "glasbey>=0.3.0",
