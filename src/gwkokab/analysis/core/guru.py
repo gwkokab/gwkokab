@@ -8,6 +8,7 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Any, Dict, List, Set, Tuple, Union
 
+import h5py
 import jax
 from jax import lax
 from jaxtyping import Array
@@ -274,23 +275,14 @@ class Guru(PRNGKeyMixin):
         for value in group_variables.values():  # type: ignore
             logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
-        logger.info("Saving constants to HDF5.")
-        write_to_hdf5(
-            INFERENCE_OUTPUT_FILENAME,
-            dataset_path="constants",
-            attrs=constants,
-            mode="a",
-        )
-        logger.success("Constants saved.")
+        with h5py.File(INFERENCE_OUTPUT_FILENAME, "a") as f:
+            logger.info("Saving constants to HDF5.")
+            write_to_hdf5(f, dataset_path="constants", attrs=constants)
+            logger.success("Constants saved.")
 
-        logger.info("Saving variables index to HDF5.")
-        write_to_hdf5(
-            INFERENCE_OUTPUT_FILENAME,
-            dataset_path="variables_index",
-            attrs=variables_index,
-            mode="a",
-        )
-        logger.success("Variables index saved.")
+            logger.info("Saving variables index to HDF5.")
+            write_to_hdf5(f, dataset_path="variables_index", attrs=variables_index)
+            logger.success("Variables index saved.")
 
         sorted_variables = sorted(variables.keys())
         if len(lazy_order) == 0:

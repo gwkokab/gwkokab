@@ -3,6 +3,7 @@
 
 
 import abc
+import contextlib
 from collections.abc import Sequence
 from typing import Literal
 
@@ -159,8 +160,8 @@ class IdentitySampleTransformer(SampleTransformer):
 
 
 def write_to_hdf5(
-    filepath: str,
-    dataset_path: str | None = None,
+    target: str | h5py.File | h5py.Group,
+    dataset_path: str,
     data: np.ndarray | None = None,
     attrs: dict | None = None,
     mode: Literal["r", "r+", "w", "w-", "a"] = "a",
@@ -170,9 +171,9 @@ def write_to_hdf5(
 
     Parameters
     ----------
-    filepath : str
-        Path to the HDF5 file to write to.
-    dataset_path : str | None, optional
+    target : str | h5py.File | h5py.Group
+        Path or file descriptor to the HDF5 file to write to.
+    dataset_path : str
         The path to the dataset within the HDF5 file, by default None
     data : np.ndarray | None, optional
         The data to write to the dataset, by default None
@@ -186,14 +187,17 @@ def write_to_hdf5(
     ValueError
         If either `dataset_path` or `data` is not provided when attempting to write to the HDF5 file.
     """
-    if dataset_path is None:
-        raise ValueError("`dataset_path` must be provided.")
-
     if data is None and attrs is None:
         raise ValueError("Either `data` or `attrs` must be provided.")
 
+    ctx = (
+        h5py.File(target, mode)
+        if isinstance(target, str)
+        else contextlib.nullcontext(target)
+    )
+
     obj = None
-    with h5py.File(filepath, mode) as f:
+    with ctx as f:
         if data is not None:
             if dataset_path in f:
                 del f[dataset_path]
@@ -215,13 +219,15 @@ def write_to_hdf5(
                 obj.attrs[key] = value  # type: ignore
 
 
-def read_from_hdf5(filepath: str, dataset_path: str) -> np.ndarray:
+def read_from_hdf5(
+    target: str | h5py.File | h5py.Group, dataset_path: str
+) -> np.ndarray:
     """Reads data from an HDF5 file at the specified dataset path.
 
     Parameters
     ----------
-    filepath : str
-        Path to the HDF5 file to read from.
+    target : str | h5py.File | h5py.Group
+        Path or file descriptor to the HDF5 file to read from.
     dataset_path : str
         The path to the dataset within the HDF5 file.
 
@@ -235,22 +241,29 @@ def read_from_hdf5(filepath: str, dataset_path: str) -> np.ndarray:
     ValueError
         If the specified `dataset_path` does not exist in the HDF5 file.
     """
-    with h5py.File(filepath, "r") as f:
+    ctx = (
+        h5py.File(target, "r")
+        if isinstance(target, str)
+        else contextlib.nullcontext(target)
+    )
+
+    with ctx as f:
         if dataset_path not in f:
-            raise ValueError(
-                f"Dataset path '{dataset_path}' not found in '{filepath}'."
-            )
+            raise ValueError(f"Dataset path '{dataset_path}' not found in '{target}'.")
         dataset = f[dataset_path][()]
     return np.asarray(dataset)
 
 
-def read_attrs_from_hdf5(filepath: str, dataset_path: str) -> dict:
+def read_attrs_from_hdf5(
+    target: str | h5py.File | h5py.Group,
+    dataset_path: str,
+) -> dict:
     """Reads attributes from a specified dataset in an HDF5 file.
 
     Parameters
     ----------
-    filepath : str
-        Path to the HDF5 file to read from.
+    target : str | h5py.File | h5py.Group
+        Path or file descriptor to the HDF5 file to read from.
     dataset_path : str
         The path to the dataset within the HDF5 file.
 
@@ -264,11 +277,15 @@ def read_attrs_from_hdf5(filepath: str, dataset_path: str) -> dict:
     ValueError
         If the specified `dataset_path` does not exist in the HDF5 file.
     """
-    with h5py.File(filepath, "r") as f:
+    ctx = (
+        h5py.File(target, "r")
+        if isinstance(target, str)
+        else contextlib.nullcontext(target)
+    )
+
+    with ctx as f:
         if dataset_path not in f:
-            raise ValueError(
-                f"Dataset path '{dataset_path}' not found in '{filepath}'."
-            )
+            raise ValueError(f"Dataset path '{dataset_path}' not found in '{target}'.")
         raw_attrs = dict(f[dataset_path].attrs)
 
     processed_attrs = {}  # type: ignore

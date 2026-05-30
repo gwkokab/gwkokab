@@ -653,21 +653,18 @@ class Sampler:
 
 def _save_acceptances(resources: dict) -> None:
     """Overwrites global and local acceptance rates in the HDF5 file."""
-    for acc_type in ["global", "local"]:
-        train_key = f"{acc_type}_accs_training"
-        prod_key = f"{acc_type}_accs_production"
+    with h5py.File(INFERENCE_OUTPUT_FILENAME, "a") as f:
+        for acc_type in ["global", "local"]:
+            train_key = f"{acc_type}_accs_training"
+            prod_key = f"{acc_type}_accs_production"
 
-        if train_key in resources and len(resources[train_key].data) > 0:
-            train_data = np.array(resources[train_key].data).mean(0)
-            write_to_hdf5(
-                INFERENCE_OUTPUT_FILENAME, f"acceptances/{acc_type}/train", train_data
-            )
+            if train_key in resources and len(resources[train_key].data) > 0:
+                train_data = np.array(resources[train_key].data).mean(0)
+                write_to_hdf5(f, f"acceptances/{acc_type}/train", train_data)
 
-        if prod_key in resources and len(resources[prod_key].data) > 0:
-            prod_data = np.array(resources[prod_key].data).mean(0)
-            write_to_hdf5(
-                INFERENCE_OUTPUT_FILENAME, f"acceptances/{acc_type}/prod", prod_data
-            )
+            if prod_key in resources and len(resources[prod_key].data) > 0:
+                prod_data = np.array(resources[prod_key].data).mean(0)
+                write_to_hdf5(f, f"acceptances/{acc_type}/prod", prod_data)
 
 
 def _save_chains(resources: dict, labels: list[str], *, is_training: bool) -> None:
@@ -688,21 +685,13 @@ def _save_chains(resources: dict, labels: list[str], *, is_training: bool) -> No
     with h5py.File(INFERENCE_OUTPUT_FILENAME, "a") as f:
         f.attrs["labels"] = labels
 
-    # Overwrite each chain dataset individually with the complete updated sequence
-    for n in range(n_chains):
-        dataset_suffix = (
-            f"chains/{phase}/" + CHAIN_GROUP_FORMAT.format(chain_id=n) + "/"
-        )
-        write_to_hdf5(
-            INFERENCE_OUTPUT_FILENAME,
-            dataset_suffix + "positions",
-            positions[n],
-        )
-        write_to_hdf5(
-            INFERENCE_OUTPUT_FILENAME,
-            dataset_suffix + "log_probs",
-            log_probs[n],
-        )
+        # Overwrite each chain dataset individually with the complete updated sequence
+        for n in range(n_chains):
+            dataset_suffix = (
+                f"chains/{phase}/" + CHAIN_GROUP_FORMAT.format(chain_id=n) + "/"
+            )
+            write_to_hdf5(f, dataset_suffix + "positions", positions[n])
+            write_to_hdf5(f, dataset_suffix + "log_probs", log_probs[n])
 
 
 def _save_samples(
