@@ -39,10 +39,13 @@ dependencies = [
     "loguru>=0.7.0",
     "matplotlib>=3.9.0",
     "mplcursors>=0.6",
+    "nbconvert>=7.17.1",
     "numpy<3",
     "numpyro>=0.19.0",
     "optax<0.2.7",
     "pandas>=2.2.0",
+    "papermill>=2.7.0",
+    "plotly>=6.7.0",
     "pydantic>=2.12.0",
     "quadax>=0.2.5",
     "rich>=14.0.0",
@@ -91,6 +94,7 @@ gwk_param_lens = "gwkokab_scripts.param_lens:main"
 gwk_pe_diagnostics = "gwkokab_scripts.pe_diagnostics:main"
 gwk_ppd_plot = "gwkokab_scripts.ppd_plot:main"
 gwk_r_hat_plot = "gwkokab_scripts.r_hat_plot:main"
+gwk_report = "gwkokab.analysis.report.generate_report:generate_report"
 gwk_scatter2d = "gwkokab_scripts.scatter2d:main"
 gwk_scatter3d = "gwkokab_scripts.scatter3d:main"
 gwk_trace_plot = "gwkokab_scripts.trace_plot:main"
@@ -168,3 +172,6 @@ find = { where = ["src/"] }
 
 [tool.setuptools.dynamic]
 version = { attr = "gwkokab.version.__version__" }
+
+[tool.setuptools.package-data]
+"gwkokab.analysis.report" = ["template_report.ipynb"]
