@@ -171,9 +171,9 @@ class MultiSourceModelCore:
                     "m1_alpha2_",
                     "m1_break_",
                     "m1_delta_",
-                    "m2_delta_",
                     "m1_high_",
                     "m1_low_",
+                    "m2_delta_",
                     "m2_low_",
                 ])
             if ct == "gpl":
