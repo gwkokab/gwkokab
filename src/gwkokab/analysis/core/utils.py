@@ -8,7 +8,7 @@ from typing import Literal
 
 import h5py
 import numpy as np
-from jax import random as jrd
+from jax import Array, random as jrd
 from jaxtyping import PRNGKeyArray
 from loguru import logger
 
@@ -197,6 +197,8 @@ def write_to_hdf5(
         if data is not None:
             if dataset_path in f:
                 del f[dataset_path]
+            elif isinstance(data, Array):
+                data = np.asarray(data)
             obj = f.create_dataset(dataset_path, data=data)
 
         if attrs is not None:
@@ -208,6 +210,8 @@ def write_to_hdf5(
             for key, value in attrs.items():
                 if value is None:
                     value = h5py.Empty("f8")
+                elif isinstance(value, Array):
+                    value = np.asarray(value)
                 obj.attrs[key] = value  # type: ignore
 
 
