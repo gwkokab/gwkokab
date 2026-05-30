@@ -33,7 +33,7 @@ def generate_report():
 
     MODULE_DIR = Path(__file__).resolve().parent
     notebook_path = MODULE_DIR / "template_report.ipynb"
-    output_notebook = MODULE_DIR / "executed_temporary.ipynb"
+    output_notebook = Path(args.output_html).resolve().parent / "executed_temporary.ipynb"
 
     if not notebook_path.exists():
         raise FileNotFoundError(
