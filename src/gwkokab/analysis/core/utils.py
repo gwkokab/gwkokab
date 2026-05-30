@@ -265,7 +265,7 @@ def read_attrs_from_hdf5(filepath: str, dataset_path: str) -> dict:
             raise ValueError(
                 f"Dataset path '{dataset_path}' not found in '{filepath}'."
             )
-        raw_attrs = f[dataset_path].attrs
+        raw_attrs = dict(f[dataset_path].attrs)
 
     processed_attrs = {}  # type: ignore
     for key, value in raw_attrs.items():
