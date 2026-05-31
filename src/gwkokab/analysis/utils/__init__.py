@@ -6,7 +6,7 @@ from . import (
     checks as checks,
     common as common,
     jenks as jenks,
-    literal as literal,
+    literals as literals,
     logger as logger,
     marginals as marginals,
     priors as priors,
