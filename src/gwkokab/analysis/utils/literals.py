@@ -2,13 +2,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 #
-"""Literals used in Kokab."""
+"""Literals used in GWKokab Analysis."""
 
 from typing import Final, Literal
 
 
-INFERENCE_DIRECTORY: Final[Literal["inference"]] = "inference"
-"""Name of the directory to store inference results."""
+INFERENCE_OUTPUT_FILENAME: Final[Literal["inference_data.hdf5"]] = "inference_data.hdf5"
+"""Name of the file to store inference data in HDF5 format."""
 
-POSTERIOR_SAMPLES_FILENAME: Final[Literal["samples.dat"]] = "samples.dat"
-"""Name of the file to store posterior samples."""
+SAMPLES_GROUP_NAME: Final[Literal["samples"]] = "samples"
+"""Name of the group in the HDF5 file to store samples."""
+
+CHAIN_GROUP_FORMAT: Final[Literal["chain_{chain_id}"]] = "chain_{chain_id}"
+"""Format string for the group names in the HDF5 file to store chains."""
