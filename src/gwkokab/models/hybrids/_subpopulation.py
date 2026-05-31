@@ -128,7 +128,7 @@ def _build_component_distributions(
     if component_type == "spl":
         _mass_distributions = create_powerlaws(
             N=N,
-            parameter_name=None,  # type: ignore # unused parameter
+            parameter_name="m1",
             component_type=component_type,
             params=params,
             validate_args=validate_args,
@@ -137,7 +137,7 @@ def _build_component_distributions(
     if component_type == "bpl":
         _mass_distributions = create_broken_powerlaws(
             N=N,
-            parameter_name=None,  # type: ignore # unused parameter
+            parameter_name="m1",
             component_type=component_type,
             params=params,
             validate_args=validate_args,
@@ -244,7 +244,7 @@ def SubPopulationModel(
     _lambdas.append(1.0 - sum(_lambdas))
     lambdas = jnp.stack(_lambdas, axis=-1)
 
-    delta_m1 = params.pop("delta_m1")
+    delta_m1 = params.pop("m1_delta")
     log_rate = params.pop("log_rate")
     m1max = params.pop("m1max")
     m1min = params.pop("m1min")
