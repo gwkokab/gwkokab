@@ -8,14 +8,16 @@ from collections import defaultdict
 from collections.abc import Callable
 from typing import Any, Dict, List, Set, Tuple, Union
 
+import h5py
 import jax
 from jax import lax
 from jaxtyping import Array
 from loguru import logger
 from numpyro.distributions.distribution import Distribution
 
-from gwkokab.analysis.core.utils import PRNGKeyMixin
-from gwkokab.analysis.utils.common import read_json, write_json
+from gwkokab.analysis.core.utils import PRNGKeyMixin, write_to_hdf5
+from gwkokab.analysis.utils.common import read_json
+from gwkokab.analysis.utils.literals import INFERENCE_OUTPUT_FILENAME
 from gwkokab.analysis.utils.priors import get_processed_priors
 from gwkokab.models.utils import JointDistribution, LazyJointDistribution
 from gwkokab.utils.exceptions import LoggedValueError
@@ -198,8 +200,6 @@ class Guru(PRNGKeyMixin):
     Guru classes.
     """
 
-    output_directory: str
-
     def __init__(
         self,
         *,
@@ -275,8 +275,14 @@ class Guru(PRNGKeyMixin):
         for value in group_variables.values():  # type: ignore
             logger.debug("Recovering variable: {variable}", variable=", ".join(value))
 
-        write_json("constants.json", constants)
-        write_json("nf_samples_mapping.json", variables_index)
+        with h5py.File(INFERENCE_OUTPUT_FILENAME, "a") as f:
+            logger.info("Saving constants to HDF5.")
+            write_to_hdf5(f, dataset_path="constants", attrs=constants)
+            logger.success("Constants saved.")
+
+            logger.info("Saving variables index to HDF5.")
+            write_to_hdf5(f, dataset_path="variables_index", attrs=variables_index)
+            logger.success("Variables index saved.")
 
         sorted_variables = sorted(variables.keys())
         if len(lazy_order) == 0:
