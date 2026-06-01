@@ -30,7 +30,7 @@ fi
 """
     parser = argparse.ArgumentParser(
         description=description,
-        epilog="Example usage: gwk_h5repack -f GZIP=9 -f SHUF data.h5",
+        epilog="Example usage: gwk_h5repack -- -f GZIP=9 -f SHUF data.h5",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
@@ -39,7 +39,7 @@ fi
         help="Additional options to pass to h5repack (e.g., '-f GZIP=9 -f SHUF')",
     )
     parser.add_argument("file", help="Path to the HDF5 file to repack")
-    args = parser.parse_args()
+    args, options = parser.parse_known_args()
 
     filename = args.file
 
@@ -51,7 +51,7 @@ fi
 
     temp_file = f"{filename}.tmp"
 
-    cmd = ["h5repack"] + args.options + [filename, temp_file]
+    cmd = ["h5repack"] + options + [filename, temp_file]
 
     try:
         subprocess.run(cmd, check=True)
