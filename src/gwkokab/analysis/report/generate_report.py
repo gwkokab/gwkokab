@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import papermill as pm
+
 from gwkokab.analysis.utils.literals import INFERENCE_OUTPUT_FILENAME
 
 
@@ -29,8 +31,6 @@ def generate_report():
 
     args = parser.parse_args()
 
-    import papermill as pm
-
     MODULE_DIR = Path(__file__).resolve().parent
     notebook_path = MODULE_DIR / "template_report.ipynb"
     output_notebook = (
@@ -52,7 +52,6 @@ def generate_report():
             parameters=dict(inference_data_file=str(input_data_path)),
         )
 
-        import sys
         subprocess.run(
             [
                 sys.executable,
