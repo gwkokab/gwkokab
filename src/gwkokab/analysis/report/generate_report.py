@@ -52,8 +52,11 @@ def generate_report():
             parameters=dict(inference_data_file=str(input_data_path)),
         )
 
+        import sys
         subprocess.run(
             [
+                sys.executable,
+                "-m",
                 "jupyter",
                 "nbconvert",
                 "--no-input",
