@@ -201,7 +201,7 @@ def write_to_hdf5(
         if data is not None:
             if dataset_path in f:
                 del f[dataset_path]
-            elif isinstance(data, Array):
+            if isinstance(data, Array):
                 data = np.asarray(data)
             obj = f.create_dataset(dataset_path, data=data)
 
