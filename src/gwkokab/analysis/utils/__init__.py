@@ -5,9 +5,10 @@
 from . import (
     checks as checks,
     common as common,
-    genie_parser as genie_parser,
-    ppd as ppd,
-    ppd_parser as ppd_parser,
+    jenks as jenks,
+    literals as literals,
+    logger as logger,
+    marginals as marginals,
     priors as priors,
     regex as regex,
 )

@@ -3,10 +3,13 @@
 
 
 import abc
+import contextlib
 from collections.abc import Sequence
+from typing import Literal
 
+import h5py
 import numpy as np
-from jax import random as jrd
+from jax import Array, random as jrd
 from jaxtyping import PRNGKeyArray
 from loguru import logger
 
@@ -154,3 +157,141 @@ class IdentitySampleTransformer(SampleTransformer):
         self, samples: np.ndarray, transformed_samples: np.ndarray
     ) -> np.ndarray:
         return np.zeros(samples.shape[:-1])
+
+
+def write_to_hdf5(
+    target: str | h5py.File | h5py.Group,
+    dataset_path: str,
+    data: np.ndarray | None = None,
+    attrs: dict | None = None,
+    mode: Literal["r", "r+", "w", "w-", "a"] = "a",
+) -> None:
+    """Writes data to an HDF5 file at the specified dataset path, with optional
+    attributes.
+
+    Parameters
+    ----------
+    target : str | h5py.File | h5py.Group
+        Path or file descriptor to the HDF5 file to write to.
+    dataset_path : str
+        The path to the dataset within the HDF5 file, by default None
+    data : np.ndarray | None, optional
+        The data to write to the dataset, by default None
+    attrs : dict | None, optional
+        A dictionary of attributes to set on the dataset, by default None
+    mode : Literal[&quot;r&quot;, &quot;r+&quot;, &quot;w&quot;, &quot;w-&quot;, &quot;a&quot;], optional
+        The mode in which to open the HDF5 file, by default "a"
+
+    Raises
+    ------
+    ValueError
+        If either `dataset_path` or `data` is not provided when attempting to write to the HDF5 file.
+    """
+    if data is None and attrs is None:
+        raise ValueError("Either `data` or `attrs` must be provided.")
+
+    ctx = (
+        h5py.File(target, mode)
+        if isinstance(target, str)
+        else contextlib.nullcontext(target)
+    )
+
+    obj = None
+    with ctx as f:
+        if data is not None:
+            if dataset_path in f:
+                del f[dataset_path]
+            if isinstance(data, Array):
+                data = np.asarray(data)
+            obj = f.create_dataset(dataset_path, data=data)
+
+        if attrs is not None:
+            if dataset_path in f:
+                obj = f[dataset_path]
+            else:
+                obj = f.require_group(dataset_path)
+
+            for key, value in attrs.items():
+                if value is None:
+                    value = h5py.Empty("f8")
+                elif isinstance(value, Array):
+                    value = np.asarray(value)
+                obj.attrs[key] = value  # type: ignore
+
+
+def read_from_hdf5(
+    target: str | h5py.File | h5py.Group, dataset_path: str
+) -> np.ndarray:
+    """Reads data from an HDF5 file at the specified dataset path.
+
+    Parameters
+    ----------
+    target : str | h5py.File | h5py.Group
+        Path or file descriptor to the HDF5 file to read from.
+    dataset_path : str
+        The path to the dataset within the HDF5 file.
+
+    Returns
+    -------
+    np.ndarray
+        The data read from the specified dataset in the HDF5 file.
+
+    Raises
+    ------
+    ValueError
+        If the specified `dataset_path` does not exist in the HDF5 file.
+    """
+    ctx = (
+        h5py.File(target, "r")
+        if isinstance(target, str)
+        else contextlib.nullcontext(target)
+    )
+
+    with ctx as f:
+        if dataset_path not in f:
+            raise ValueError(f"Dataset path '{dataset_path}' not found in '{target}'.")
+        dataset = f[dataset_path][()]
+    return np.asarray(dataset)
+
+
+def read_attrs_from_hdf5(
+    target: str | h5py.File | h5py.Group,
+    dataset_path: str,
+) -> dict:
+    """Reads attributes from a specified dataset in an HDF5 file.
+
+    Parameters
+    ----------
+    target : str | h5py.File | h5py.Group
+        Path or file descriptor to the HDF5 file to read from.
+    dataset_path : str
+        The path to the dataset within the HDF5 file.
+
+    Returns
+    -------
+    dict
+        A dictionary containing the attributes of the specified dataset.
+
+    Raises
+    ------
+    ValueError
+        If the specified `dataset_path` does not exist in the HDF5 file.
+    """
+    ctx = (
+        h5py.File(target, "r")
+        if isinstance(target, str)
+        else contextlib.nullcontext(target)
+    )
+
+    with ctx as f:
+        if dataset_path not in f:
+            raise ValueError(f"Dataset path '{dataset_path}' not found in '{target}'.")
+        raw_attrs = dict(f[dataset_path].attrs)
+
+    processed_attrs = {}  # type: ignore
+    for key, value in raw_attrs.items():
+        if isinstance(value, h5py.Empty):
+            processed_attrs[key] = None
+        else:
+            processed_attrs[key] = value
+    return processed_attrs

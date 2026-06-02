@@ -10,6 +10,7 @@ from jaxtyping import Array
 
 from gwkokab.analysis.utils.checks import check_min_concentration_for_beta_dist
 from gwkokab.analysis.utils.common import expand_arguments
+from gwkokab.models import SubPopulationModel
 from gwkokab.parameters import Parameters as P
 
 
@@ -46,6 +47,8 @@ def where_fns_list(
 
 
 class SubPopulationModelCore:
+    model_fn = SubPopulationModel
+
     def __init__(
         self,
         N_spl: int,
@@ -151,24 +154,33 @@ class SubPopulationModelCore:
         for ct, count in component_types_and_count:
             all_params_names = [
                 "beta_",
-                "delta_m2_",
-                "m2min_",
+                "m2_delta_",
+                "m2_low_",
             ]
 
             if ct == "spl":
-                all_params_names.extend(["alpha_", "mmax_", "mmin_"])
+                all_params_names.extend([
+                    "m1_alpha_",
+                    "m1_low_",
+                    "m1_high_",
+                ])
 
             if ct == "bpl":
                 all_params_names.extend([
-                    "alpha1_",
-                    "alpha2_",
-                    "m1break_",
-                    "m1max_",
-                    "m1min_",
+                    "m1_alpha1_",
+                    "m1_alpha2_",
+                    "m1_break_",
+                    "m1_high_",
+                    "m1_low_",
                 ])
 
             if ct == "gpl":
-                all_params_names.extend(["m1_loc_", "m1_scale_", "m1_low_", "m1_high_"])
+                all_params_names.extend([
+                    "m1_high_",
+                    "m1_loc_",
+                    "m1_low_",
+                    "m1_scale_",
+                ])
 
             if self.use_spin_magnitude_mixture:
                 all_params_names.extend([
@@ -319,7 +331,7 @@ class SubPopulationModelCore:
             all_params.extend([(name + ct, count) for name in all_params_names])
 
         extended_params = [
-            "delta_m1",
+            "m1_delta",
             "log_rate",
             "m1max",
             "m1min",

@@ -10,6 +10,7 @@ from jaxtyping import Array
 
 from gwkokab.analysis.utils.checks import check_min_concentration_for_beta_dist
 from gwkokab.analysis.utils.common import expand_arguments
+from gwkokab.models import MultiSourceModel
 from gwkokab.parameters import Parameters as P
 
 
@@ -49,6 +50,8 @@ def where_fns_list(
 
 
 class MultiSourceModelCore:
+    model_fn = MultiSourceModel
+
     def __init__(
         self,
         N_spl: int,
@@ -156,33 +159,33 @@ class MultiSourceModelCore:
             all_params_names = []
             if ct == "spl":
                 all_params_names.extend([
-                    "alpha_",
                     "beta_",
-                    "delta_m1_",
-                    "delta_m2_",
-                    "m1min_",
-                    "m2min_",
-                    "mmax_",
+                    "m1_alpha_",
+                    "m1_delta_",
+                    "m1_high_",
+                    "m1_low_",
+                    "m2_delta_",
+                    "m2_low_",
                 ])
             if ct == "bpl":
                 all_params_names.extend([
-                    "alpha1_",
-                    "alpha2_",
                     "beta_",
-                    "delta_m1_",
-                    "delta_m2_",
-                    "m1min_",
-                    "m2min_",
-                    "mbreak_",
-                    "mmax_",
+                    "m1_alpha1_",
+                    "m1_alpha2_",
+                    "m1_break_",
+                    "m1_delta_",
+                    "m1_high_",
+                    "m1_low_",
+                    "m2_delta_",
+                    "m2_low_",
                 ])
             if ct == "gpl":
                 all_params_names.extend([
                     "beta_",
-                    "loc_",
-                    "mmax_",
-                    "mmin_",
-                    "scale_",
+                    "m1_high_",
+                    "m1_loc_",
+                    "m1_low_",
+                    "m1_scale_",
                 ])
             if ct == "gg":
                 all_params_names.extend([

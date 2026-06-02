@@ -128,9 +128,8 @@ class JointDistribution(Distribution):
         """The support of the joint distribution."""
         return self._support
 
-    @validate_sample
-    def log_prob(self, value: Array) -> Array:
-        log_prob_val = jnp.zeros(value.shape[:-1], dtype=value.dtype)
+    def marginal_log_probs(self, value: Array) -> Array:
+        marginal_log_probs = []
         for m_dist, event_slice in zip(self.marginal_distributions, self.shaped_values):
             if isinstance(event_slice, int):
                 value_slice = lax.dynamic_index_in_dim(
@@ -143,8 +142,14 @@ class JointDistribution(Distribution):
                     event_slice[1] - event_slice[0],
                     axis=-1,
                 )
-            log_prob_val += m_dist.log_prob(value_slice)
-        return log_prob_val
+            log_prob = m_dist.log_prob(value_slice)
+            marginal_log_probs.append(log_prob)
+        marginal_log_probs = jnp.stack(marginal_log_probs, axis=-1)
+        return marginal_log_probs
+
+    @validate_sample
+    def log_prob(self, value: Array) -> Array:
+        return self.marginal_log_probs(value).sum(axis=-1)
 
     def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
         assert is_prng_key(key)

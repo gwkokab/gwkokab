@@ -229,11 +229,11 @@ def create_broken_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    alpha1_name = "alpha1_" + component_type
-    alpha2_name = "alpha2_" + component_type
-    mbreak_name = "m1break_" + component_type
-    mmax_name = "m1max_" + component_type
-    mmin_name = "m1min_" + component_type
+    alpha1_name = parameter_name + "_alpha1_" + component_type
+    alpha2_name = parameter_name + "_alpha2_" + component_type
+    mbreak_name = parameter_name + "_break_" + component_type
+    mmax_name = parameter_name + "_high_" + component_type
+    mmin_name = parameter_name + "_low_" + component_type
     return [
         BrokenPowerlaw(
             alpha1=_get_parameter(params, f"{alpha1_name}_{i}"),  # type: ignore
@@ -288,9 +288,9 @@ def create_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    alpha_name = "alpha_" + component_type
-    mmax_name = "mmax_" + component_type
-    mmin_name = "mmin_" + component_type
+    alpha_name = parameter_name + "_alpha_" + component_type
+    mmax_name = parameter_name + "_high_" + component_type
+    mmin_name = parameter_name + "_low_" + component_type
 
     return [
         DoublyTruncatedPowerLaw(
@@ -468,15 +468,15 @@ def create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
 ) -> List[Distribution]:
     collection = []
 
-    alpha1_name = "alpha1_" + component_type
-    alpha2_name = "alpha2_" + component_type
+    alpha1_name = "m1_alpha1_" + component_type
+    alpha2_name = "m1_alpha2_" + component_type
     beta_name = "beta_" + component_type
-    delta_m1_name = "delta_m1_" + component_type
-    delta_m2_name = "delta_m2_" + component_type
-    m1min_name = "m1min_" + component_type
-    m2min_name = "m2min_" + component_type
-    mbreak_name = "mbreak_" + component_type
-    mmax_name = "mmax_" + component_type
+    delta_m1_name = "m1_delta_" + component_type
+    delta_m2_name = "m2_delta_" + component_type
+    m1min_name = "m1_low_" + component_type
+    m2min_name = "m2_low_" + component_type
+    mbreak_name = "m1_break_" + component_type
+    mmax_name = "m1_high_" + component_type
 
     for i in range(N):
         suffix = f"_{i}"
@@ -554,11 +554,11 @@ def create_gaussian_primary_mass_ratio(
 ) -> List[Distribution]:
     collection = []
 
-    loc_name = "loc_" + component_type
-    scale_name = "scale_" + component_type
+    loc_name = "m1_loc_" + component_type
+    scale_name = "m1_scale_" + component_type
     beta_name = "beta_" + component_type
-    mmin_name = "mmin_" + component_type
-    mmax_name = "mmax_" + component_type
+    mmin_name = "m1_low_" + component_type
+    mmax_name = "m1_high_" + component_type
 
     for i in range(N):
         suffix = f"_{i}"
@@ -590,13 +590,13 @@ def create_smoothed_powerlaw_primary_mass_ratio(
 ) -> List[Distribution]:
     collection = []
 
-    alpha_name = "alpha_" + component_type
+    alpha_name = "m1_alpha_" + component_type
     beta_name = "beta_" + component_type
-    delta_m1_name = "delta_m1_" + component_type
-    delta_m2_name = "delta_m2_" + component_type
-    m1min_name = "m1min_" + component_type
-    m2min_name = "m2min_" + component_type
-    mmax_name = "mmax_" + component_type
+    delta_m1_name = "m1_delta_" + component_type
+    delta_m2_name = "m2_delta_" + component_type
+    m1min_name = "m1_low_" + component_type
+    m2min_name = "m2_low_" + component_type
+    mmax_name = "m1_high_" + component_type
 
     for i in range(N):
         suffix = f"_{i}"
@@ -631,9 +631,9 @@ def create_generic_smoothed_powerlaw_mass_ratio(
 ) -> List[Distribution]:
 
     beta_name = "beta_" + component_type
-    delta_m1_name = "delta_m1"
-    delta_m2_name = "delta_m2_" + component_type
-    m2min_name = "m2min_" + component_type
+    delta_m1_name = "m1_delta"
+    delta_m2_name = "m2_delta_" + component_type
+    m2min_name = "m2_low_" + component_type
 
     delta_m1 = _get_parameter(params, delta_m1_name)
 
