@@ -64,7 +64,8 @@ def _derive_marginal_densities(
         Z = jnp.trapezoid(marginal_density, domains[axis], axis=-1)
 
         # Avoid Division-by-Zero via safe masking
-        marginal_density = jnp.where(Z > 0, marginal_density / Z, 0.0)
+        Z_safe = jnp.where(Z > 0, Z, 1.0)
+        marginal_density = jnp.where(Z > 0, marginal_density / Z_safe, 0.0)
 
     return marginal_density
 
