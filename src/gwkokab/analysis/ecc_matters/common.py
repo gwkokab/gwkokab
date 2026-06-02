@@ -42,6 +42,8 @@ def EccentricityMattersModel(
 
 
 class EccentricityMattersCore:
+    model_fn = EccentricityMattersModel
+
     @property
     def parameters(self) -> Tuple[str, ...]:
         return (P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.ECCENTRICITY)

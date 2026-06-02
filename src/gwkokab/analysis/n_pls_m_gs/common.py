@@ -10,6 +10,7 @@ from jaxtyping import Array
 
 from gwkokab.analysis.utils.checks import check_min_concentration_for_beta_dist
 from gwkokab.analysis.utils.common import expand_arguments
+from gwkokab.models import NPowerlawMGaussian
 from gwkokab.parameters import Parameters as P
 
 
@@ -48,6 +49,8 @@ def where_fns_list(
 
 
 class NPowerlawMGaussianCore:
+    model_fn = NPowerlawMGaussian
+
     def __init__(
         self,
         N_pl: int,

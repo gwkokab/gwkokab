@@ -3,7 +3,7 @@
 
 
 import json
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 def read_json(json_file: str) -> Dict:
@@ -75,37 +75,3 @@ def expand_arguments(arg: str, n: int) -> List[str]:
         list of extended arguments
     """
     return [f"{arg}_{i}" for i in range(n)]
-
-
-def ppd_ranges(
-    parameters: List[str], ranges: List[Tuple[str, float, float, int]]
-) -> List[Tuple[float, float, int]]:
-    """Convert the PPD ranges to the format required by the PPD function.
-
-    Parameters
-    ----------
-    parameters : List[str]
-        list of parameters
-    ranges : List[Tuple[str, float, float, int]]
-        list of ranges
-
-    Returns
-    -------
-    List[Tuple[float, float, int]]
-        list of ranges
-
-    Raises
-    ------
-    ValueError
-        If the parameter is not found in the list of parameters
-    """
-    _ranges: List[Tuple[float, float, int]] = [None] * len(parameters)
-    for name, *_range in ranges:
-        if name not in parameters:
-            raise ValueError(f"Parameter {name} not found in {parameters}.")
-        _ranges[parameters.index(name)] = (
-            float(_range[0]),
-            float(_range[1]),
-            int(_range[2]),
-        )
-    return _ranges

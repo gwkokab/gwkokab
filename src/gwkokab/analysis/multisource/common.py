@@ -10,6 +10,7 @@ from jaxtyping import Array
 
 from gwkokab.analysis.utils.checks import check_min_concentration_for_beta_dist
 from gwkokab.analysis.utils.common import expand_arguments
+from gwkokab.models import MultiSourceModel
 from gwkokab.parameters import Parameters as P
 
 
@@ -49,6 +50,8 @@ def where_fns_list(
 
 
 class MultiSourceModelCore:
+    model_fn = MultiSourceModel
+
     def __init__(
         self,
         N_spl: int,
