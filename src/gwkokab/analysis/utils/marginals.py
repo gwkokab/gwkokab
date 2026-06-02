@@ -445,7 +445,7 @@ def plot_marginal_with_intervals(
     parameter: str,
     style: PlotStyle,
     component_idxs: list[int],
-    rate: float | Callable = 1.0,
+    scale: float | Callable = 1.0,
     weights: list[float | Callable] | None = None,
     normalize: bool = False,
 ):
@@ -467,7 +467,7 @@ def plot_marginal_with_intervals(
         skipped in the plot.
     component_idxs : list[int]
         A list of indices specifying which components to plot.
-    rate : float | Callable, optional
+    scale : float | Callable, optional
         A scaling factor for the marginal densities. If a callable is provided, it will
         be evaluated with the parameters from the HDF5 file, by default 1.0
     weights : list[float  |  Callable] | None, optional
@@ -506,7 +506,7 @@ def plot_marginal_with_intervals(
         Z = np.trapezoid(weighted_data, domain)[:, np.newaxis]
         weighted_data /= Z
 
-    weighted_data *= rate(params) if callable(rate) else rate
+    weighted_data *= scale(params) if callable(scale) else scale
 
     lower = np.quantile(weighted_data, 0.05, axis=0)
     mean = np.mean(weighted_data, axis=0)
