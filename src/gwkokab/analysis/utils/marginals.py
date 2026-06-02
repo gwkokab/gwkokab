@@ -5,7 +5,7 @@
 import functools as ft
 import inspect
 from pathlib import Path
-from typing import NamedTuple
+from typing import Callable, NamedTuple
 
 import h5py
 import jax
@@ -14,7 +14,11 @@ from jax import jit, numpy as jnp
 from jaxtyping import Array
 from matplotlib import pyplot as plt
 
-from gwkokab.analysis.utils.common import read_json
+from gwkokab.analysis.core.utils import (
+    read_attrs_from_hdf5,
+    read_from_hdf5,
+    write_to_hdf5,
+)
 from gwkokab.cosmology import default_cosmology
 from gwkokab.parameters import Parameters as P
 
@@ -132,7 +136,7 @@ def compute_batched_marginals(
     model_meta_cls: type,
     samples_batch: Array,
     constants: dict,
-    nf_samples_mapping: dict,
+    variables_index: dict,
     domains: list[Array],
     normalize: list[bool],
     batch_size: int | None = None,
@@ -150,7 +154,7 @@ def compute_batched_marginals(
     constants : dict
         A dictionary of constant values required for constructing the model. The keys
         should match the parameter names expected by the model's constructor.
-    nf_samples_mapping : dict
+    variables_index : dict
         A dictionary mapping parameter names to their corresponding column indices in
         the :code:`samples_batch` array. This mapping is used to extract the relevant
         parameter values from the samples when constructing the model.
@@ -169,7 +173,7 @@ def compute_batched_marginals(
     ) -> list[list[Array]]:
         model = model_meta_cls.model_fn(  # type: ignore
             **constants,
-            **{p: sample[nf_samples_mapping[p]] for p in nf_samples_mapping.keys()},
+            **{p: sample[m] for p, m in variables_index.items()},
             validate_args=True,
         )
 
@@ -267,8 +271,6 @@ def write_domains(
 
 def save_results_to_hdf5(
     samples: Array,
-    constants: dict,
-    nf_samples_mapping: dict,
     batched_results: list[list[list[Array]]],
     parameters: list[str],
     domain_cfg: dict[str, tuple[float, float, int]],
@@ -294,35 +296,19 @@ def save_results_to_hdf5(
     filepath : str | Path
         The path to the HDF5 file where the results will be saved.
     """
-    compression_opts = {"compression": "gzip", "compression_opts": 9}
     N_components = len(batched_results)
 
-    string_dt = h5py.string_dtype(encoding="utf-8")
+    with h5py.File(filepath, "a") as f:
+        if "probs" in f.keys():
+            del f["probs"]
 
-    with h5py.File(filepath, "w") as f:
         probs_group = f.create_group("probs")
-
-        flat_constants = [(str(k), v) for k, v in constants.items()]
-        probs_group.attrs["constants"] = np.asarray(
-            flat_constants,
-            dtype=np.dtype([("constant", string_dt), ("value", np.float32)]),
-        )
-
-        flat_nf_samples_mapping = [(str(k), v) for k, v in nf_samples_mapping.items()]
-        probs_group.attrs["nf_samples_mapping"] = np.asarray(
-            flat_nf_samples_mapping,
-            dtype=np.dtype([("parameter", string_dt), ("column_index", np.uint32)]),
-        )
-        probs_group.create_dataset("samples", data=samples, **compression_opts)
+        write_to_hdf5(probs_group, "samples", samples)
 
         for i in range(N_components):
             comp_i_group = probs_group.create_group(f"component_{i}")
             for idx, param in enumerate(parameters):
-                comp_i_group.create_dataset(
-                    param,
-                    data=np.array(batched_results[i][idx]),
-                    **compression_opts,
-                )
+                write_to_hdf5(comp_i_group, param, np.array(batched_results[i][idx]))
 
     write_domains(filepath, domain_cfg)
 
@@ -360,9 +346,8 @@ def remove_comoving_volume_factor(
 
 def generate_marginal_probs(
     model_meta_cls: type,
-    base_dir: str,
+    inference_data_path: str | Path,
     domain_cfg: dict[str, tuple[float, float, int]],
-    filename: str,
     max_samples: int | None = None,
     batch_size: int | None = None,
 ):
@@ -373,9 +358,9 @@ def generate_marginal_probs(
     model_meta_cls : type
         A class representing the meta-information of the model, which includes a method
         for constructing the model given specific parameters.
-    base_dir : str
-        The base directory where the constants, samples, and other necessary files are
-        located.
+    inference_data_path : str | Path
+        Path to hdf5 file containing the inference data saved by the analysis. Generated probs will be
+        saved in this file too.
     domain_cfg : dict[str, tuple[float, float, int]]
         A dictionary mapping parameter names to their corresponding domain specifications.
         Each value in the dictionary should be a tuple containing the start, stop, and
@@ -392,34 +377,22 @@ def generate_marginal_probs(
     FileNotFoundError
         If the required samples file cannot be found in the specified base directory.
     """
-    base_path = Path(base_dir)
-    constants = read_json(base_path / "constants.json")  # type: ignore
-    nf_samples_mapping = read_json(base_path / "nf_samples_mapping.json")  # type: ignore
-
     param_names = list(inspect.signature(model_meta_cls.__init__).parameters.keys())  # type: ignore
     param_names.remove("self")
+
+    with h5py.File(inference_data_path, "r") as f:
+        constants = read_attrs_from_hdf5(f, "constants")
+        variables_index = read_attrs_from_hdf5(f, "variables_index")
+        samples_arr = read_from_hdf5(f, "samples")
+
+    if max_samples is not None:
+        idx = np.random.choice(samples_arr.shape[0], size=max_samples, replace=False)
+        samples_arr = samples_arr[idx]
 
     model_meta = model_meta_cls(**{p: constants[p] for p in param_names})
 
     domains = [jnp.linspace(*domain_cfg[p]) for p in model_meta.parameters]
     normalize = [p != P.REDSHIFT for p in model_meta.parameters]
-
-    inference_dirs = ("numpyro_inference", "flowMC_inference")
-    samples_arr = None
-    for inference_dir in inference_dirs:
-        samples_path = base_path / inference_dir / "samples.dat"
-        if samples_path.exists():
-            samples_arr = np.loadtxt(samples_path, skiprows=1)
-            break
-
-    if samples_arr is None:
-        raise FileNotFoundError(
-            f"Could not locate samples.dat under search paths within: {base_dir}"
-        )
-
-    if max_samples is not None:
-        idx = np.random.choice(samples_arr.shape[0], size=max_samples, replace=False)
-        samples_arr = samples_arr[idx]
 
     all_samples = jnp.array(samples_arr)
 
@@ -427,7 +400,7 @@ def generate_marginal_probs(
         model_meta_cls,
         all_samples,
         constants,
-        nf_samples_mapping,
+        variables_index,
         domains,
         batch_size=batch_size,
         normalize=normalize,
@@ -443,11 +416,9 @@ def generate_marginal_probs(
 
     save_results_to_hdf5(
         all_samples,
-        constants,
-        nf_samples_mapping,
         batched_results,
         parameters=model_meta.parameters,
-        filepath=filename,
+        filepath=inference_data_path,
         domain_cfg=domain_cfg,
     )
 
@@ -469,7 +440,14 @@ class PlotStyle(NamedTuple):
 
 
 def plot_marginal_with_intervals(
-    ax: plt.Axes, filename: str, parameter: str, styles: list[PlotStyle | None]
+    ax: plt.Axes,
+    filename: str,
+    parameter: str,
+    style: PlotStyle,
+    component_idxs: list[int],
+    rate: float | Callable = 1.0,
+    weights: list[float | Callable] | None = None,
+    normalize: bool = False,
 ):
     """Plot marginal densities with confidence intervals for a specified parameter.
 
@@ -483,42 +461,65 @@ def plot_marginal_with_intervals(
     parameter : str
         The name of the parameter for which to plot the marginal densities. This should
         correspond to a dataset in the HDF5 file under the "probs/component_{i}" groups.
-    styles : list[PlotStyle  |  None]
+    style : PlotStyle
         A list of PlotStyle objects specifying the plotting style for each component's
         marginal density. If an element is None, the corresponding component will be
         skipped in the plot.
+    component_idxs : list[int]
+        A list of indices specifying which components to plot.
+    rate : float | Callable, optional
+        A scaling factor for the marginal densities. If a callable is provided, it will
+        be evaluated with the parameters from the HDF5 file, by default 1.0
+    weights : list[float  |  Callable] | None, optional
+        The weights for each component's marginal density. If None, equal weights are assumed, by default None
+    normalize : bool, optional
+        Whether to normalize the marginal densities, by default False
     """
     domains = read_domains(filename)
     domain = np.linspace(*domains[parameter])
 
-    datasets = [f"/probs/component_{i}/{parameter}" for i in range(len(styles))]
+    datasets = [f"/probs/component_{i}/{parameter}" for i in component_idxs]
+
+    samples = read_from_hdf5(filename, "probs/samples")
+    constants = read_attrs_from_hdf5(filename, "constants")
+    variables_index = read_attrs_from_hdf5(filename, "variables_index")
+    params = {p: samples[:, m][:, np.newaxis] for p, m in variables_index.items()}
+    params.update(constants)
+
+    weight_values = []
+    if weights is None:
+        weight_values = [1.0] * len(component_idxs)
+    else:
+        for i in range(len(component_idxs)):
+            if callable(weights[i]):
+                w = weights[i](params)
+            else:
+                w = weights[i]
+            weight_values.append(w)
 
     with h5py.File(filename, "r") as f:
-        data = [
-            np.asarray(f[dataset][:])
-            for style, dataset in zip(styles, datasets)
-            if style is not None
-        ]
-        data_intervals = [
-            (
-                np.quantile(d, 0.05, axis=0),
-                np.mean(d, axis=0),
-                np.quantile(d, 0.95, axis=0),
-            )
-            for d in data
-        ]
+        data = [np.asarray(f[dataset][:]) for dataset in datasets]
 
-    filtered_styles: list[PlotStyle] = [style for style in styles if style is not None]
+    weighted_data = np.sum([w * d for w, d in zip(weight_values, data)], axis=0)
 
-    for (lower, mean, upper), style in zip(data_intervals, filtered_styles):
-        ax.fill_between(
-            domain, lower, upper, color=style.color, **style.fill_between_kwargs
-        )
-        ax.plot(
-            domain,
-            mean,
-            label=style.label,
-            color=style.color,
-            **style.line_plot_kwargs,
-        )
-        ax.set_xlim(domain[0], domain[-1])
+    if normalize:
+        Z = np.trapezoid(weighted_data, domain)[:, np.newaxis]
+        weighted_data /= Z
+
+    weighted_data *= rate(params) if callable(rate) else rate
+
+    lower = np.quantile(weighted_data, 0.05, axis=0)
+    mean = np.mean(weighted_data, axis=0)
+    upper = np.quantile(weighted_data, 0.95, axis=0)
+
+    ax.fill_between(
+        domain, lower, upper, color=style.color, **style.fill_between_kwargs
+    )
+    ax.plot(
+        domain,
+        mean,
+        label=style.label,
+        color=style.color,
+        **style.line_plot_kwargs,
+    )
+    ax.set_xlim(domain[0], domain[-1])
