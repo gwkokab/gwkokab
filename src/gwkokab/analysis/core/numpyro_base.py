@@ -16,7 +16,7 @@ from loguru import logger
 from numpyro.diagnostics import print_summary
 from numpyro.infer import MCMC, NUTS
 
-from gwkokab.analysis.core.analysis_base import AnalysisBase, guru_arg_parser
+from gwkokab.analysis.core.analysis_base import analysis_base_arg_parser, AnalysisBase
 from gwkokab.analysis.core.inference_io import NumpyroGlobalConfig, NumpyroMCMCConfig
 from gwkokab.analysis.core.utils import read_from_hdf5, write_to_hdf5
 from gwkokab.analysis.utils.literals import (
@@ -209,4 +209,4 @@ class NumpyroBase(AnalysisBase):
         logger.success("Sampling and data saving complete.")
 
 
-numpyro_arg_parser = guru_arg_parser
+numpyro_arg_parser = analysis_base_arg_parser

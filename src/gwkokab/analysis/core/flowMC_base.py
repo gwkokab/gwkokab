@@ -28,7 +28,7 @@ from jax import numpy as jnp
 from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
 from loguru import logger
 
-from gwkokab.analysis.core.analysis_base import AnalysisBase, guru_arg_parser
+from gwkokab.analysis.core.analysis_base import analysis_base_arg_parser, AnalysisBase
 from gwkokab.analysis.core.inference_io import FlowMCGlobalConfig
 from gwkokab.analysis.core.utils import write_to_hdf5
 from gwkokab.analysis.utils.literals import (
@@ -889,4 +889,4 @@ class FlowMCBase(AnalysisBase):
         logger.info("Sampling and data saving complete.")
 
 
-flowMC_arg_parser = guru_arg_parser
+flowMC_arg_parser = analysis_base_arg_parser

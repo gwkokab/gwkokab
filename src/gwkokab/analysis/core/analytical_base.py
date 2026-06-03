@@ -19,7 +19,7 @@ from gwkokab.analysis.core.inference_io import (
 )
 from gwkokab.analysis.core.utils import SampleTransformer
 
-from .analysis_base import AnalysisBase, guru_arg_parser as guru_parser
+from .analysis_base import analysis_base_arg_parser as guru_parser, AnalysisBase
 
 
 def _save_samples_to_hdf5(

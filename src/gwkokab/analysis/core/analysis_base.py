@@ -322,11 +322,11 @@ class AnalysisBase(PRNGKeyMixin):
         Raises
         ------
         NotImplementedError
-            If the Guru class is used directly, this method raises a NotImplementedError.
-            It is expected that subclasses of Guru will implement this method.
+            If the AnalysisBase class is used directly, this method raises a NotImplementedError.
+            It is expected that subclasses of AnalysisBase will implement this method.
         """
         raise NotImplementedError(
-            "The Guru class should not be used directly. Please use a subclass that "
+            "The AnalysisBase class should not be used directly. Please use a subclass that "
             "implements the parameters property."
         )
 
@@ -343,11 +343,11 @@ class AnalysisBase(PRNGKeyMixin):
         Raises
         ------
         NotImplementedError
-            If the Guru class is used directly, this method raises a NotImplementedError.
-            It is expected that subclasses of Guru will implement this method.
+            If the AnalysisBase class is used directly, this method raises a NotImplementedError.
+            It is expected that subclasses of AnalysisBase will implement this method.
         """
         raise NotImplementedError(
-            "The Guru class should not be used directly. Please use a subclass that "
+            "The AnalysisBase class should not be used directly. Please use a subclass that "
             "implements the model_parameters property."
         )
 
@@ -363,8 +363,8 @@ class AnalysisBase(PRNGKeyMixin):
         raise NotImplementedError()
 
 
-def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the Guru script.
+def analysis_base_arg_parser(parser: ArgumentParser) -> ArgumentParser:
+    """Populate the command line argument parser with the arguments for the AnalysisBase script.
 
     Parameters
     ----------
