@@ -195,9 +195,12 @@ def _classify_model_parameters(
     )
 
 
-class Guru(PRNGKeyMixin):
-    """Guru is a class which contains all the common functionality among Genie, Sage and
-    Guru classes.
+class AnalysisBase(PRNGKeyMixin):
+    """AnalysisBase is a class which contains all the common functionality among the
+    different analyses.
+
+    It is not meant to be used directly, but rather to be subclassed by the specific
+    analyses.
     """
 
     def __init__(
@@ -319,11 +322,11 @@ class Guru(PRNGKeyMixin):
         Raises
         ------
         NotImplementedError
-            If the Guru class is used directly, this method raises a NotImplementedError.
-            It is expected that subclasses of Guru will implement this method.
+            If the AnalysisBase class is used directly, this method raises a NotImplementedError.
+            It is expected that subclasses of AnalysisBase will implement this method.
         """
         raise NotImplementedError(
-            "The Guru class should not be used directly. Please use a subclass that "
+            "The AnalysisBase class should not be used directly. Please use a subclass that "
             "implements the parameters property."
         )
 
@@ -340,11 +343,11 @@ class Guru(PRNGKeyMixin):
         Raises
         ------
         NotImplementedError
-            If the Guru class is used directly, this method raises a NotImplementedError.
-            It is expected that subclasses of Guru will implement this method.
+            If the AnalysisBase class is used directly, this method raises a NotImplementedError.
+            It is expected that subclasses of AnalysisBase will implement this method.
         """
         raise NotImplementedError(
-            "The Guru class should not be used directly. Please use a subclass that "
+            "The AnalysisBase class should not be used directly. Please use a subclass that "
             "implements the model_parameters property."
         )
 
@@ -360,8 +363,9 @@ class Guru(PRNGKeyMixin):
         raise NotImplementedError()
 
 
-def guru_arg_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the Guru script.
+def analysis_base_arg_parser(parser: ArgumentParser) -> ArgumentParser:
+    """Populate the command line argument parser with the arguments for the AnalysisBase
+    script.
 
     Parameters
     ----------

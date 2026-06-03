@@ -7,13 +7,13 @@ from typing import Callable
 
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.analysis.core.flowMC_based import flowMC_arg_parser, FlowMCBased
+from gwkokab.analysis.core.discrete_base import discrete_arg_parser, DiscreteBase
+from gwkokab.analysis.core.flowMC_base import flowMC_arg_parser, FlowMCBase
 from gwkokab.analysis.core.inference_io import (
     DiscretePELoader as DataLoader,
     SamplerConfig,
 )
-from gwkokab.analysis.core.numpyro_based import NumpyroBased
-from gwkokab.analysis.core.sage import Sage, sage_arg_parser
+from gwkokab.analysis.core.numpyro_base import NumpyroBase
 from gwkokab.analysis.multisource.common import (
     model_arg_parser,
     MultiSourceModelCore,
@@ -24,7 +24,7 @@ from gwkokab.inference.factory import get_likelihood_fn
 from gwkokab.models import MultiSourceModel
 
 
-class MultiSourceModelSage(MultiSourceModelCore, Sage):
+class MultiSourceModelDiscreteAnalysis(MultiSourceModelCore, DiscreteBase):
     def __init__(
         self,
         N_spl: int,
@@ -79,7 +79,7 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
             use_madau_dickinson_redshift=use_madau_dickinson_redshift,
         )
 
-        Sage.__init__(
+        DiscreteBase.__init__(
             self,
             likelihood_fn=likelihood_fn,
             model=MultiSourceModel,
@@ -98,18 +98,18 @@ class MultiSourceModelSage(MultiSourceModelCore, Sage):
         )
 
 
-class MultiSourceModelFSage(MultiSourceModelSage, FlowMCBased):
+class MultiSourceModelFDiscreteAnalysis(MultiSourceModelDiscreteAnalysis, FlowMCBase):
     pass
 
 
-class MultiSourceModelNSage(MultiSourceModelSage, NumpyroBased):
+class MultiSourceModelNDiscreteAnalysis(MultiSourceModelDiscreteAnalysis, NumpyroBase):
     pass
 
 
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
-    parser = sage_arg_parser(parser)
+    parser = discrete_arg_parser(parser)
     parser = flowMC_arg_parser(parser)
 
     args = parser.parse_args()
@@ -127,9 +127,9 @@ def main() -> None:
     )
 
     AnalysisClass = (
-        MultiSourceModelFSage
+        MultiSourceModelFDiscreteAnalysis
         if sampler_cfg.sampler_name == "flowMC"
-        else MultiSourceModelNSage
+        else MultiSourceModelNDiscreteAnalysis
     )
 
     AnalysisClass.init_rng_seed(seed=args.seed)

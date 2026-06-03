@@ -6,13 +6,13 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.analysis.core.flowMC_based import FlowMCBased
+from gwkokab.analysis.core.analytical_base import analytical_arg_parser, AnalyticalBase
+from gwkokab.analysis.core.flowMC_base import FlowMCBase
 from gwkokab.analysis.core.inference_io import (
     AnalyticalPELoader as DataLoader,
     SamplerConfig,
 )
-from gwkokab.analysis.core.monk import Monk, monk_arg_parser
-from gwkokab.analysis.core.numpyro_based import NumpyroBased
+from gwkokab.analysis.core.numpyro_base import NumpyroBase
 from gwkokab.analysis.ecc_matters.common import (
     EccentricityMattersCore,
     EccentricityMattersModel,
@@ -21,17 +21,21 @@ from gwkokab.analysis.utils.logger import log_info
 from gwkokab.inference.factory import get_likelihood_fn
 
 
-class EccentricityMattersFMonk(EccentricityMattersCore, Monk, FlowMCBased):
+class EccentricityMattersFAnalyticalAnalysis(
+    EccentricityMattersCore, AnalyticalBase, FlowMCBase
+):
     pass
 
 
-class EccentricityMattersNMonk(EccentricityMattersCore, Monk, NumpyroBased):
+class EccentricityMattersNAnalyticalAnalysis(
+    EccentricityMattersCore, AnalyticalBase, NumpyroBase
+):
     pass
 
 
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = monk_arg_parser(parser)
+    parser = analytical_arg_parser(parser)
 
     args = parser.parse_args()
 
@@ -48,9 +52,9 @@ def main() -> None:
     )
 
     AnalysisClass = (
-        EccentricityMattersFMonk
+        EccentricityMattersFAnalyticalAnalysis
         if sampler_cfg.sampler_name == "flowMC"
-        else EccentricityMattersNMonk
+        else EccentricityMattersNAnalyticalAnalysis
     )
 
     AnalysisClass.init_rng_seed(seed=args.seed)
