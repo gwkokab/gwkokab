@@ -364,7 +364,8 @@ class AnalysisBase(PRNGKeyMixin):
 
 
 def analysis_base_arg_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the AnalysisBase script.
+    """Populate the command line argument parser with the arguments for the AnalysisBase
+    script.
 
     Parameters
     ----------
