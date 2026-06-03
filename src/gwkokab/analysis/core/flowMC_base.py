@@ -28,7 +28,7 @@ from jax import numpy as jnp
 from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
 from loguru import logger
 
-from gwkokab.analysis.core.guru import Guru, guru_arg_parser
+from gwkokab.analysis.core.analysis_base import AnalysisBase, guru_arg_parser
 from gwkokab.analysis.core.inference_io import FlowMCGlobalConfig
 from gwkokab.analysis.core.utils import write_to_hdf5
 from gwkokab.analysis.utils.literals import (
@@ -733,7 +733,7 @@ def _save_loss(resources: dict) -> None:
     write_to_hdf5(INFERENCE_OUTPUT_FILENAME, "loss", train_loss_vals)
 
 
-class FlowMCBased(Guru):
+class FlowMCBase(AnalysisBase):
     def driver(
         self,
         *,

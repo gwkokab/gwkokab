@@ -16,7 +16,7 @@ from loguru import logger
 from numpyro.diagnostics import print_summary
 from numpyro.infer import MCMC, NUTS
 
-from gwkokab.analysis.core.guru import Guru, guru_arg_parser
+from gwkokab.analysis.core.analysis_base import AnalysisBase, guru_arg_parser
 from gwkokab.analysis.core.inference_io import NumpyroGlobalConfig, NumpyroMCMCConfig
 from gwkokab.analysis.core.utils import read_from_hdf5, write_to_hdf5
 from gwkokab.analysis.utils.literals import (
@@ -118,7 +118,7 @@ def _run_mcmc(
         _run_batch_and_save(key, chain_idx)
 
 
-class NumpyroBased(Guru):
+class NumpyroBase(AnalysisBase):
     def driver(
         self,
         *,

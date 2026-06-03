@@ -7,28 +7,26 @@ from collections.abc import Callable
 
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.analysis.core.flowMC_based import FlowMCBased
+from gwkokab.analysis.core.analytical_base import analytical_arg_parser, AnalyticalBase
+from gwkokab.analysis.core.flowMC_base import FlowMCBase
 from gwkokab.analysis.core.inference_io import (
     AnalyticalPELoader as DataLoader,
     SamplerConfig,
 )
-from gwkokab.analysis.core.monk import Monk, monk_arg_parser
-from gwkokab.analysis.core.numpyro_based import NumpyroBased
-from gwkokab.analysis.subpopulation.common import (
-    model_arg_parser,
-    SubPopulationModelCore,
-)
+from gwkokab.analysis.core.numpyro_base import NumpyroBase
+from gwkokab.analysis.multisource.common import model_arg_parser, MultiSourceModelCore
 from gwkokab.analysis.utils.logger import log_info
 from gwkokab.inference.factory import get_likelihood_fn
-from gwkokab.models import SubPopulationModel
+from gwkokab.models import MultiSourceModel
 
 
-class SubPopulationModelMonk(SubPopulationModelCore, Monk):
+class MultiSourceModelAnalyticalAnalysis(MultiSourceModelCore, AnalyticalBase):
     def __init__(
         self,
         N_spl: int,
         N_bpl: int,
         N_gpl: int,
+        N_gg: int,
         use_beta_spin_magnitude: bool,
         use_spin_magnitude_mixture: bool,
         use_truncated_normal_spin_x: bool,
@@ -54,11 +52,12 @@ class SubPopulationModelMonk(SubPopulationModelCore, Monk):
         profile_memory: bool = False,
         check_leaks: bool = False,
     ) -> None:
-        SubPopulationModelCore.__init__(
+        MultiSourceModelCore.__init__(
             self,
             N_spl=N_spl,
             N_bpl=N_bpl,
             N_gpl=N_gpl,
+            N_gg=N_gg,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_spin_magnitude_mixture=use_spin_magnitude_mixture,
             use_truncated_normal_spin_x=use_truncated_normal_spin_x,
@@ -75,10 +74,10 @@ class SubPopulationModelMonk(SubPopulationModelCore, Monk):
             use_madau_dickinson_redshift=use_madau_dickinson_redshift,
         )
 
-        Monk.__init__(
+        AnalyticalBase.__init__(
             self,
             likelihood_fn,
-            SubPopulationModel,
+            MultiSourceModel,
             data_loader,
             prior_filename,
             poisson_mean_filename,
@@ -86,24 +85,28 @@ class SubPopulationModelMonk(SubPopulationModelCore, Monk):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            analysis_name="subpopulation",
+            analysis_name="multisource",
             n_samples=n_samples,
             variance_cut_threshold=variance_cut_threshold,
         )
 
 
-class SubPopulationModelFMonk(SubPopulationModelMonk, FlowMCBased):
+class MultiSourceModelFAnalyticalAnalysis(
+    MultiSourceModelAnalyticalAnalysis, FlowMCBase
+):
     pass
 
 
-class SubPopulationModelNMonk(SubPopulationModelMonk, NumpyroBased):
+class MultiSourceModelNAnalyticalAnalysis(
+    MultiSourceModelAnalyticalAnalysis, NumpyroBase
+):
     pass
 
 
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
-    parser = monk_arg_parser(parser)
+    parser = analytical_arg_parser(parser)
 
     args = parser.parse_args()
 
@@ -120,9 +123,9 @@ def main() -> None:
     )
 
     AnalysisClass = (
-        SubPopulationModelFMonk
+        MultiSourceModelFAnalyticalAnalysis
         if sampler_cfg.sampler_name == "flowMC"
-        else SubPopulationModelNMonk
+        else MultiSourceModelNAnalyticalAnalysis
     )
 
     AnalysisClass.init_rng_seed(seed=args.seed)
@@ -131,6 +134,7 @@ def main() -> None:
         N_spl=args.n_spl,
         N_bpl=args.n_bpl,
         N_gpl=args.n_gpl,
+        N_gg=args.n_gg,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         use_truncated_normal_spin_x=args.add_truncated_normal_spin_x,

@@ -6,7 +6,7 @@ from typing import Dict, Set
 
 import pytest
 
-from gwkokab.analysis.core.guru import _check_cycles
+from gwkokab.analysis.core.analysis_base import _check_cycles
 
 
 # fmt: off

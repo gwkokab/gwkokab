@@ -19,7 +19,7 @@ from gwkokab.analysis.core.inference_io import (
 )
 from gwkokab.analysis.core.utils import SampleTransformer
 
-from .guru import Guru, guru_arg_parser as guru_parser
+from .analysis_base import AnalysisBase, guru_arg_parser as guru_parser
 
 
 def _save_samples_to_hdf5(
@@ -125,7 +125,7 @@ def _multivariate_normal_samples(
     return samples, transformed_samples, N_total
 
 
-class Monk(Guru):
+class AnalyticalBase(AnalysisBase):
     def __init__(
         self,
         likelihood_fn: Callable[..., Callable],
@@ -148,7 +148,7 @@ class Monk(Guru):
         likelihood_fn : Callable[..., Callable[..., Array]]
             A function that takes the model parameters and returns a function that computes the log-likelihood.
         model : Union[Distribution, Callable[..., Distribution]]
-            model to be used in the Monk class. It can be a Distribution or a callable
+            model to be used in the AnalyticalBase class. It can be a Distribution or a callable
             that returns a Distribution.
         data_loader : AnalyticalPELoader
             data loader for the analytical PE data.
@@ -181,7 +181,7 @@ class Monk(Guru):
         self.n_samples = n_samples
 
         logger.info(
-            f"Initializing Monk class for analysis identifier: '{analysis_name}'"
+            f"Initializing AnalyticalBase class for analysis identifier: '{analysis_name}'"
         )
 
         super().__init__(
@@ -197,7 +197,7 @@ class Monk(Guru):
         )
 
     def run(self) -> None:
-        """Runs the Monk analysis."""
+        """Runs the AnalyticalBase analysis."""
         constants, priors, variables, variables_index = self.classify_model_parameters()
 
         data = self.data_loader.load(self.parameters)
@@ -265,7 +265,7 @@ class Monk(Guru):
             "samples_stack.shape: {shape}", shape=transformed_samples_stack.shape
         )
 
-        filename = "monk_samples.hdf5"
+        filename = "analytical_samples.hdf5"
 
         _save_samples_to_hdf5(
             filename=filename,
@@ -292,8 +292,9 @@ class Monk(Guru):
         )
 
 
-def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the Monk script.
+def analytical_arg_parser(parser: ArgumentParser) -> ArgumentParser:
+    """Populate the command line argument parser with the arguments for the
+    AnalyticalBase script.
 
     Parameters
     ----------
@@ -307,9 +308,9 @@ def monk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     """
     parser = guru_parser(parser)
 
-    # Monk Options
-    monk = parser.add_argument_group("Monk Options")
-    monk.add_argument(
+    # AnalyticalBase Options
+    analytical = parser.add_argument_group("AnalyticalBase Options")
+    analytical.add_argument(
         "--data-loader-cfg",
         type=str,
         required=True,

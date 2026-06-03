@@ -6,13 +6,13 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.analysis.core.flowMC_based import flowMC_arg_parser, FlowMCBased
+from gwkokab.analysis.core.discrete_base import discrete_arg_parser, DiscreteBase
+from gwkokab.analysis.core.flowMC_base import flowMC_arg_parser, FlowMCBase
 from gwkokab.analysis.core.inference_io import (
     DiscretePELoader as DataLoader,
     SamplerConfig,
 )
-from gwkokab.analysis.core.numpyro_based import NumpyroBased
-from gwkokab.analysis.core.sage import Sage, sage_arg_parser as sage_parser
+from gwkokab.analysis.core.numpyro_base import NumpyroBase
 from gwkokab.analysis.ecc_matters.common import (
     EccentricityMattersCore,
     EccentricityMattersModel,
@@ -21,17 +21,21 @@ from gwkokab.analysis.utils.logger import log_info
 from gwkokab.inference.factory import get_likelihood_fn
 
 
-class EccentricityMattersFSage(EccentricityMattersCore, Sage, FlowMCBased):
+class EccentricityMattersFDiscreteAnalysis(
+    EccentricityMattersCore, DiscreteBase, FlowMCBase
+):
     pass
 
 
-class EccentricityMattersNSage(EccentricityMattersCore, Sage, NumpyroBased):
+class EccentricityMattersNDiscreteAnalysis(
+    EccentricityMattersCore, DiscreteBase, NumpyroBase
+):
     pass
 
 
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = sage_parser(parser)
+    parser = discrete_arg_parser(parser)
     parser = flowMC_arg_parser(parser)
 
     args = parser.parse_args()
@@ -49,9 +53,9 @@ def main() -> None:
     )
 
     AnalysisClass = (
-        EccentricityMattersFSage
+        EccentricityMattersFDiscreteAnalysis
         if sampler_cfg.sampler_name == "flowMC"
-        else EccentricityMattersNSage
+        else EccentricityMattersNDiscreteAnalysis
     )
 
     AnalysisClass.init_rng_seed(seed=args.seed)
@@ -64,7 +68,7 @@ def main() -> None:
         poisson_mean_filename=args.pmean_cfg,
         sampler_cfg=sampler_cfg,
         variance_cut_threshold=args.variance_cut_threshold,
-        analysis_name="f_sage_ecc_matters",
+        analysis_name="ecc_matters",
         n_buckets=args.n_buckets,
         threshold=args.threshold,
         debug_nans=args.debug_nans,

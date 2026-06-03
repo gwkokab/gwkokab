@@ -195,9 +195,12 @@ def _classify_model_parameters(
     )
 
 
-class Guru(PRNGKeyMixin):
-    """Guru is a class which contains all the common functionality among Genie, Sage and
-    Guru classes.
+class AnalysisBase(PRNGKeyMixin):
+    """AnalysisBase is a class which contains all the common functionality among the
+    different analyses.
+
+    It is not meant to be used directly, but rather to be subclassed by the specific
+    analyses.
     """
 
     def __init__(

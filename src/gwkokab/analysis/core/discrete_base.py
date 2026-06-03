@@ -21,10 +21,10 @@ from gwkokab.parameters import Parameters as P
 from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 from ..utils.jenks import pad_and_stack
-from .guru import Guru
+from .analysis_base import AnalysisBase
 
 
-class Sage(Guru):
+class DiscreteBase(AnalysisBase):
     def __init__(
         self,
         likelihood_fn: Callable[..., Callable[..., Array]],
@@ -54,7 +54,7 @@ class Sage(Guru):
         self.where_fns = where_fns
 
         logger.info(
-            f"Initializing Sage class for analysis identifier: '{analysis_name}'"
+            f"Initializing DiscreteBase class for analysis identifier: '{analysis_name}'"
         )
 
         super().__init__(
@@ -186,12 +186,12 @@ class Sage(Guru):
         )
 
 
-def sage_arg_parser(parser: ArgumentParser) -> ArgumentParser:
-    """Populate the command line argument parser with the arguments for the Sage
-    script.
+def discrete_arg_parser(parser: ArgumentParser) -> ArgumentParser:
+    """Populate the command line argument parser with the arguments for the discrete
+    analyses.
     """
-    sage_group = parser.add_argument_group("Sage Configuration")
-    sage_group.add_argument(
+    discrete_group = parser.add_argument_group("DiscreteBase Configuration")
+    discrete_group.add_argument(
         "--data-loader-cfg",
         type=str,
         required=True,
