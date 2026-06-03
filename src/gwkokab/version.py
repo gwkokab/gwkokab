@@ -13,7 +13,7 @@ from typing import Final, Optional
 
 MAJOR_VERSION: Final[int] = 0
 MINOR_VERSION: Final[int] = 3
-PATCH_VERSION: Final[int] = 0
+PATCH_VERSION: Final[int] = 1
 
 
 def get_git_commit_hash() -> Optional[str]:
