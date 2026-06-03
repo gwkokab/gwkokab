@@ -543,7 +543,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         help=(
             "Model the joint primary and secondary spin magnitudes using an independent "
             "2-component Truncated Normal mixture model. The distribution takes the form "
-            "zeta * comp1 + (1-zeta) * comp2, where 'a_zeta_{TYPE}_{i}' governs the mixture "
+            "(1-zeta) * comp1 + zeta * comp2, where 'a_zeta_{TYPE}_{i}' governs the mixture "
             "fraction, and each component has its own location, scale, and [0, 1] truncation bounds."
         ),
     )
@@ -582,7 +582,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help=(
             "Model the effective inspiral spin parameter (chi_eff) using a 2-component "
-            "Truncated Normal mixture distribution: zeta * comp1 + (1-zeta) * comp2. Bounded "
+            "Truncated Normal mixture distribution: (1-zeta) * comp1 + zeta * comp2. Bounded "
             "by default on [-1, 1], tracking parameters for relative weight ('_zeta_'), locations, "
             "and scales for both sub-populations."
         ),
@@ -623,7 +623,7 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
         action="store_true",
         help=(
             "Model orbital eccentricity at reference frequency using a 2-component Truncated "
-            "Normal mixture model (zeta * comp1 + (1-zeta) * comp2). Allows modeling a population "
+            "Normal mixture model ((1-zeta) * comp1 + zeta * comp2). Allows modeling a population "
             "split between highly circularized and dynamically excited eccentric binaries."
         ),
     )
