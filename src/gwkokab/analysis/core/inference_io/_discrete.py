@@ -61,47 +61,6 @@ def _data_loader_cfg_template() -> None:
     write_json(args.output, cfg)
 
 
-def _print_reference_prior_summary(
-    summary_records: dict[str, dict[Literal["mass", "spin", "distance"], str | None]],
-) -> None:
-    if not summary_records:
-        return
-
-    # 1. Calculate dynamic column widths based on the longest strings
-    max_name_len = max(max(len(str(name)) for name in summary_records.keys()), 10)
-    max_mass_len = max(max(len(str(p["mass"])) for p in summary_records.values()), 20)
-    max_spin_len = max(max(len(str(p["spin"])) for p in summary_records.values()), 20)
-    max_dist_len = max(
-        max(len(str(p["distance"])) for p in summary_records.values()), 20
-    )
-
-    # 2. Build the structural borders based on calculated widths
-    border = f"+-{'-' * max_name_len}-+-{'-' * max_mass_len}-+-{'-' * max_spin_len}-+-{'-' * max_dist_len}-+"
-    header = (
-        f"| {'Event Name'.ljust(max_name_len)} "
-        f"| {'Mass Reference Prior'.ljust(max_mass_len)} "
-        f"| {'Spin Reference Prior'.ljust(max_spin_len)} "
-        f"| {'Dist Reference Prior'.ljust(max_dist_len)} |"
-    )
-
-    # 3. Log the Header Block line by line
-    logger.info(border)
-    logger.info(header)
-    logger.info(border)
-
-    # 4. Log each data row individually using the exact column padding
-    for name, priors in summary_records.items():
-        logger.info(
-            f"| {str(name).ljust(max_name_len)} "
-            f"| {str(priors['mass']).ljust(max_mass_len)} "
-            f"| {str(priors['spin']).ljust(max_spin_len)} "
-            f"| {str(priors['distance']).ljust(max_dist_len)} |"
-        )
-
-    # 5. Log the Bottom Border
-    logger.info(border)
-
-
 class DiscretePELoader(BaseModel):
     """Loader for Discrete PE (Parameter Estimation) samples from files matching a
     regex.
@@ -328,10 +287,8 @@ class DiscretePELoader(BaseModel):
         # place holder value for priors
         _prior_placeholder = object()
 
-        # Dictionary to track configurations for the final summary table
-        summary_records = {}
-
         for i, event_path in enumerate(self.filenames):
+            logger.info("-" * 60)
             event_name = event_path.stem
 
             datasets = self.alternate_datasets.get(event_name, self.default_datasets)
@@ -373,13 +330,6 @@ class DiscretePELoader(BaseModel):
                     f"[{event_name}] Missing alternate distance reference prior; using default: '{distance_prior}'."
                 )
 
-            # Collect the assigned configurations for the final summary
-            summary_records[event_name] = {
-                "mass": mass_prior,
-                "spin": spin_prior,
-                "distance": distance_prior,
-            }
-
             # Perform prior reweighting
             log_prior += self._calculate_distance_prior(
                 distance_prior, df, parameters, cosmo, aliases
@@ -390,7 +340,7 @@ class DiscretePELoader(BaseModel):
             data_list.append(df[posterior_columns].to_numpy())
             log_prior_list.append(log_prior)
 
-        _print_reference_prior_summary(summary_records)
+        logger.info("-" * 60)
 
         logger.success(f"Finished loading {len(data_list)} events.")
         return data_list, log_prior_list
