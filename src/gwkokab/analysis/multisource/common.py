@@ -377,81 +377,140 @@ def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     spin_group.add_argument(
         "--add-beta-spin-magnitude",
         action="store_true",
-        help="Include beta spin parameters in the model.",
+        help=(
+            "Model the dimensionless spin magnitudes of both component compact objects "
+            "independently using Beta distributions. Parameters are parameterized via the "
+            "mean and variance: '{PARAM}_mean_{TYPE}_{i}' and '{PARAM}_variance_{TYPE}_{i}', "
+            "naturally bounded between 0 and 1."
+        ),
     )
     spin_group.add_argument(
         "--add-spin-magnitude-mixture",
         action="store_true",
-        help="Include spin parameters mixture in the model.",
+        help=(
+            "Model the joint primary and secondary spin magnitudes using an independent "
+            "2-component Truncated Normal mixture model. The distribution takes the form "
+            "zeta * comp1 + (1-zeta) * comp2, where 'a_zeta_{TYPE}_{i}' governs the mixture "
+            "fraction, and each component has its own location, scale, and [0, 1] truncation bounds."
+        ),
     )
 
     model_group.add_argument(
         "--add-truncated-normal-spin-x",
         action="store_true",
-        help="Include truncated normal spin x parameters in the model.",
+        help=(
+            "Include independent Cartesian spin x-component parameters modeled via "
+            "Truncated Normal distributions. Requires location, scale, and optional bounding "
+            "parameters ('_low_' and '_high_') for each mixture/population component."
+        ),
     )
     model_group.add_argument(
         "--add-truncated-normal-spin-y",
         action="store_true",
-        help="Include truncated normal spin y parameters in the model.",
+        help=(
+            "Include independent Cartesian spin y-component parameters modeled via "
+            "Truncated Normal distributions. Requires location, scale, and optional bounding "
+            "parameters ('_low_' and '_high_') for each mixture/population component."
+        ),
     )
     model_group.add_argument(
         "--add-truncated-normal-spin-z",
         action="store_true",
-        help="Include truncated normal spin z parameters in the model.",
+        help=(
+            "Include independent Cartesian spin z-component (aligned spin) parameters modeled "
+            "via Truncated Normal distributions. Requires location, scale, and optional bounding "
+            "parameters ('_low_' and '_high_') for each mixture/population component."
+        ),
     )
 
     chi_eff_group = model_group.add_mutually_exclusive_group()
     chi_eff_group.add_argument(
         "--add-chi-eff-mixture",
         action="store_true",
-        help="Include chi_eff mixture parameters in the model.",
+        help=(
+            "Model the effective inspiral spin parameter (chi_eff) using a 2-component "
+            "Truncated Normal mixture distribution: zeta * comp1 + (1-zeta) * comp2. Bounded "
+            "by default on [-1, 1], tracking parameters for relative weight ('_zeta_'), locations, "
+            "and scales for both sub-populations."
+        ),
     )
     chi_eff_group.add_argument(
         "--add-skew-normal-chi-eff",
         action="store_true",
-        help="Include skew normal chi_eff parameters in the model.",
+        help=(
+            "Model the effective inspiral spin parameter (chi_eff) using a Skew Normal distribution "
+            "truncated to [-1, 1], following the GWTC-4 population convention. Uses location ('_loc_'), "
+            "scale ('_scale_'), and asymmetry/skewness ('_epsilon_') parameters."
+        ),
     )
 
     model_group.add_argument(
         "--add-truncated-normal-chi-p",
         action="store_true",
-        help="Include truncated normal chi_p parameters in the model.",
+        help=(
+            "Model the effective precessing spin parameter (chi_p) using a Truncated Normal "
+            "distribution. Bounded by definition on [0, 1], parameterized by its location, "
+            "scale, and optional custom limits."
+        ),
     )
     model_group.add_argument(
         "--add-tilt",
         action="store_true",
-        help="Include tilt parameters in the model.",
+        help=(
+            "Model the spin tilt angles jointly via their cosines (cos_tilt_1, cos_tilt_2) using "
+            "a mixture distribution. Combines an isotropic component (uniform in cos tilt) with a "
+            "preferentially aligned component (truncated normals peaked at cos_tilt = 1), weighted "
+            "by 'cos_tilt_zeta_{TYPE}_{i}'."
+        ),
     )
 
     eccentricity_group = model_group.add_mutually_exclusive_group()
     eccentricity_group.add_argument(
         "--add-eccentricity-mixture",
         action="store_true",
-        help="Include truncated normal eccentricity in the model.",
+        help=(
+            "Model orbital eccentricity at reference frequency using a 2-component Truncated "
+            "Normal mixture model (zeta * comp1 + (1-zeta) * comp2). Allows modeling a population "
+            "split between highly circularized and dynamically excited eccentric binaries."
+        ),
     )
     eccentricity_group.add_argument(
         "--add-eccentricity-powerlaw",
         action="store_true",
-        help="Include power law eccentricity in the model.",
+        help=(
+            "Model orbital eccentricity using a doubly truncated power-law distribution. "
+            "Requires power-law index ('_alpha_') along with low and high parameter limits "
+            "to capture power-law decay profiles typical of specific astrophysical environments."
+        ),
     )
 
     model_group.add_argument(
         "--add-mean-anomaly",
         action="store_true",
-        help="Include mean_anomaly parameter in the model",
+        help=(
+            "Include orbital mean anomaly at reference frequency in the model, distributed "
+            "uniformly between specified '_low_' and '_high_' boundary parameters."
+        ),
     )
 
     redshift_group = model_group.add_mutually_exclusive_group()
     redshift_group.add_argument(
         "--add-powerlaw-redshift",
         action="store_true",
-        help="Include redshift parameter in the model",
+        help=(
+            "Model the merger rate evolution over redshift z using a standard power-law model "
+            "where dR/dz proportional to (1+z)^(kappa-1) * dV_c/dz. Parameterized by evolution "
+            "index 'kappa' and a hard cutoff maximum redshift 'z_max'."
+        ),
     )
     redshift_group.add_argument(
         "--add-madau-dickinson-redshift",
         action="store_true",
-        help="Redshift modeled by Madau-Dickinson Model",
+        help=(
+            "Model the merger rate evolution over redshift z using a Madau-Dickinson cosmic star "
+            "formation profile, modified by a power-law time delay distribution. Tracks slope parameters "
+            "'_kappa_' (low-z), '_gamma_' (high-z), turnover peak position '_z_peak_', and maximum cutoff '_z_max_'."
+        ),
     )
 
     return parser
