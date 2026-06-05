@@ -67,12 +67,27 @@ def _delete_chains_factory(f: h5py.File, chains_idx: list[int]) -> None:
 
     if sampler_name == "numpyro":
         n_chains = len(f["chains"].keys())
-        _dc_sampler_is_numpyro(f, chains_idx)
     elif sampler_name == "flowMC":
         n_chains = int(f["sampler_cfg"].attrs["n_chains"])
-        _dc_sampler_is_flowMC(f, chains_idx)
     else:
         raise ValueError(f"Unrecognized Sampler: {sampler_name}")
+
+    unique_chains_idx = set(chains_idx)
+    if not unique_chains_idx:
+        raise ValueError("No chain indices specified for deletion.")
+    if any(idx < 0 or idx >= n_chains for idx in unique_chains_idx):
+        raise ValueError(
+            f"Chain indices must be between 0 and {n_chains - 1}. Got {chains_idx}"
+        )
+    if len(unique_chains_idx) >= n_chains:
+        raise ValueError(
+            f"Cannot delete all chains. Total chains: {n_chains}, requested to delete: {len(unique_chains_idx)}"
+        )
+
+    if sampler_name == "numpyro":
+        _dc_sampler_is_numpyro(f, chains_idx)
+    elif sampler_name == "flowMC":
+        _dc_sampler_is_flowMC(f, chains_idx)
 
     _delete_chains(f, chains_idx, n_chains)
 
@@ -87,7 +102,6 @@ def main():
 
     parser.add_argument(
         "-n",
-        "--numbers",
         nargs="+",
         type=int,
         required=True,
@@ -95,14 +109,12 @@ def main():
     )
     parser.add_argument(
         "-i",
-        "--input",
         type=str,
         required=True,
         help="Name of the input HDF5 file containing the chains to be deleted.",
     )
     parser.add_argument(
         "-o",
-        "--output",
         type=str,
         required=True,
         help="Name of the output HDF5 file where the modified chains will be saved.",
@@ -123,9 +135,9 @@ def main():
 
     import shutil
 
-    input_filename = args.input
-    output_filename = args.output
-    numbers = args.numbers
+    input_filename = args.i
+    output_filename = args.o
+    numbers = args.n
 
     shutil.copy(input_filename, output_filename)
 
