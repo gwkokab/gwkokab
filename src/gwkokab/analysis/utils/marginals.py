@@ -243,34 +243,33 @@ def read_domains(
         }
 
 
-def write_domains(
-    filepath: str | Path, domain_cfg: dict[str, tuple[float, float, int]]
-):
+def write_domains(f: h5py.File, domain_cfg: dict[str, tuple[float, float, int]]):
     """Write domain specifications to an HDF5 file.
 
     Parameters
     ----------
-    filepath : str | Path
-        The path to the HDF5 file where the domain specifications will be saved.
+    f : h5py.File
+        The HDF5 file where the domain specifications will be saved.
     domain_cfg : dict[str, tuple[float, float, int]]
         A dictionary mapping parameter names to their corresponding domain specifications.
         Each value in the dictionary is a tuple containing the start, stop, and number of
         points for the domain of the parameter.
     """
     string_dt = h5py.string_dtype(encoding="utf-8")
-    with h5py.File(filepath, "a") as f:
-        f["probs"].attrs["domains"] = np.asarray(
-            [(str(param), *info) for param, info in domain_cfg.items()],
-            dtype=np.dtype([
-                ("param", string_dt),
-                ("start", np.float32),
-                ("stop", np.float32),
-                ("num_points", np.uint32),
-            ]),
-        )
+    f.attrs["domains"] = np.asarray(
+        [(str(param), *info) for param, info in domain_cfg.items()],
+        dtype=np.dtype([
+            ("param", string_dt),
+            ("start", np.float32),
+            ("stop", np.float32),
+            ("num_points", np.uint32),
+        ]),
+    )
 
 
 def save_results_to_hdf5(
+    constants: dict,
+    variables_index: dict[str, int],
     samples: Array,
     batched_results: list[list[list[Array]]],
     parameters: list[str],
@@ -281,6 +280,13 @@ def save_results_to_hdf5(
 
     Parameters
     ----------
+    constants : dict
+        A dictionary of constant values required for constructing the model. The keys
+        should match the parameter names expected by the model's constructor.
+    variables_index : dict[str, int]
+        A dictionary mapping parameter names to their corresponding column indices in
+        the samples array. This mapping is used to extract the relevant parameter values
+        from the samples when constructing the model.
     samples : Array
         An array of samples used for computing the marginal densities. Each row
         corresponds to a single sample, and each column corresponds to a specific
@@ -299,19 +305,19 @@ def save_results_to_hdf5(
     """
     N_components = len(batched_results)
 
-    with h5py.File(filepath, "a") as f:
-        if "probs" in f.keys():
-            del f["probs"]
+    with h5py.File(filepath, "w") as f:
+        write_to_hdf5(f, dataset_path="constants", attrs=constants)
+        write_to_hdf5(f, dataset_path="variables_index", attrs=variables_index)
 
         probs_group = f.create_group("probs")
+
+        write_domains(probs_group, domain_cfg)
         write_to_hdf5(probs_group, "samples", samples)
 
         for i in range(N_components):
             comp_i_group = probs_group.create_group(f"component_{i}")
             for idx, param in enumerate(parameters):
                 write_to_hdf5(comp_i_group, param, np.array(batched_results[i][idx]))
-
-    write_domains(filepath, domain_cfg)
 
 
 def remove_comoving_volume_factor(
@@ -347,7 +353,8 @@ def remove_comoving_volume_factor(
 
 def generate_marginal_probs(
     model_meta_cls: type,
-    inference_data_path: str | Path,
+    input_file_path: str | Path,
+    output_file_path: str | Path,
     domain_cfg: dict[str, tuple[float, float, int]],
     max_samples: int | None = None,
     batch_size: int | None = None,
@@ -359,9 +366,10 @@ def generate_marginal_probs(
     model_meta_cls : type
         A class representing the meta-information of the model, which includes a method
         for constructing the model given specific parameters.
-    inference_data_path : str | Path
-        Path to hdf5 file containing the inference data saved by the analysis. Generated probs will be
-        saved in this file too.
+    input_file_path : str | Path
+        Path to hdf5 file containing the input data.
+    output_file_path : str | Path
+        The path to the HDF5 file where the computed marginal densities will be saved.
     domain_cfg : dict[str, tuple[float, float, int]]
         A dictionary mapping parameter names to their corresponding domain specifications.
         Each value in the dictionary should be a tuple containing the start, stop, and
@@ -381,7 +389,7 @@ def generate_marginal_probs(
     param_names = list(inspect.signature(model_meta_cls.__init__).parameters.keys())  # type: ignore
     param_names.remove("self")
 
-    with h5py.File(inference_data_path, "r") as f:
+    with h5py.File(input_file_path, "r") as f:
         constants = read_attrs_from_hdf5(f, "constants")
         variables_index = read_attrs_from_hdf5(f, "variables_index")
         samples_arr = read_from_hdf5(f, "samples")
@@ -416,10 +424,12 @@ def generate_marginal_probs(
             )
 
     save_results_to_hdf5(
-        all_samples,
-        batched_results,
+        constants=constants,
+        variables_index=variables_index,
+        samples=all_samples,
+        batched_results=batched_results,
         parameters=model_meta.parameters,
-        filepath=inference_data_path,
+        filepath=output_file_path,
         domain_cfg=domain_cfg,
     )
 
