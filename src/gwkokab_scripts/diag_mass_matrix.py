@@ -11,35 +11,22 @@ def main():
         description="Compute diagonal mass matrix from pilot-run samples",
         formatter_class=ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
-        "filename", help="Path to pilot-run .dat file (rows=samples, columns=params)"
-    )
-    parser.add_argument(
-        "--delimiter",
-        default=" ",
-        help="Delimiter used in the .dat file (default: space)",
-    )
+    parser.add_argument("filename", help="Path to pilot-run .hdf5 file")
     parser.add_argument(
         "--eps",
         type=float,
         default=1e-12,
         help="Regularization for tiny std values (default 1e-12)",
     )
-    parser.add_argument(
-        "--skip-rows",
-        type=int,
-        default=0,
-        help="Number of rows to skip at the beginning of the file (default 0)",
-    )
 
     args = parser.parse_args()
 
+    import h5py
     import numpy as np
 
-    # Load samples
-    samples = np.loadtxt(
-        args.filename, delimiter=args.delimiter, skiprows=args.skip_rows
-    )
+    with h5py.File(args.filename) as f:
+        samples = f["samples"][:]
+
     samples = np.atleast_2d(samples)
 
     if samples.shape[0] < 2:
