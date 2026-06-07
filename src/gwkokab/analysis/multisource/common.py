@@ -318,6 +318,13 @@ class MultiSourceModelCore:
                     P.ECCENTRICITY + "_zeta_",
                 ])
 
+            if self.use_eccentricity_powerlaw:
+                all_params_names.extend([
+                    P.ECCENTRICITY + "_alpha_",
+                    P.ECCENTRICITY + "_high_",
+                    P.ECCENTRICITY + "_low_",
+                ])
+
             if self.use_mean_anomaly:
                 all_params_names.extend([
                     P.MEAN_ANOMALY + "_high_",
