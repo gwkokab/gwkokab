@@ -302,6 +302,6 @@ def read_attrs_from_hdf5(
             try:
                 _value = json.loads(value)
             except json.JSONDecodeError:
-                _value = value
+                pass
         processed_attrs[key] = _value
     return processed_attrs
