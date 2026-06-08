@@ -73,14 +73,12 @@ def main():
         good.append(np.all(np.isfinite(x)) and np.std(x) > 0)
 
     recovered_params = []
-
-    for idx, keep in zip(sorted(index_to_names), good):
-        if not keep:
+    for i in range(samples.shape[1]):
+        if not good[i]:
             continue
-        names = sorted(index_to_names[idx])
-        canonical_name = names[0]
+        names = index_to_names.get(i)
+        canonical_name = sorted(names)[0] if names else f"unnamed_param_{i}"
         recovered_params.append(canonical_name)
-
     good = np.array(good)
     samples = samples[:, good]
 
