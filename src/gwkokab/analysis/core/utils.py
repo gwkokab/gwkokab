@@ -293,8 +293,15 @@ def read_attrs_from_hdf5(
 
     processed_attrs = {}  # type: ignore
     for key, value in raw_attrs.items():
+        _value = value
         if isinstance(value, h5py.Empty):
-            processed_attrs[key] = None
-        else:
-            processed_attrs[key] = value
+            _value = None
+        elif isinstance(value, bytes):
+            _value = value.decode("utf-8")
+        elif isinstance(value, str):
+            try:
+                _value = json.loads(value)
+            except json.JSONDecodeError:
+                _value = value
+        processed_attrs[key] = _value
     return processed_attrs
