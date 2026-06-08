@@ -1,26 +1,10 @@
-#!/usr/bin/env python3
-
-import argparse
-from collections import defaultdict
-
-import h5py
-import numpy as np
-from scipy.cluster.hierarchy import fcluster, linkage
-from scipy.spatial.distance import squareform
-
-
-DEFAULT_H5_FILE = "./inference_data.hdf5"
-DEFAULT_SAMPLES_PATH = "/samples"
-DEFAULT_VARIABLES_INDEX_PATH = "/variables_index"
-DEFAULT_CORR_THRESHOLD = 0.5
-DEFAULT_MIN_BLOCK_SIZE = 2
-
-
-def source_label(args, name):
-    return "user" if name in args._provided else "default"
+# Copyright 2023 The GWKokab Authors
+# SPDX-License-Identifier: Apache-2.0
 
 
 def parse_args():
+    import argparse
+
     parser = argparse.ArgumentParser(
         description=(
             "Suggest dense_mass parameter blocks from posterior-sample correlations. "
@@ -29,108 +13,78 @@ def parse_args():
             "configuration for NumPyro/NUTS. If the model geometry and parameter "
             "dependencies are already known, manually specifying dense_mass blocks is "
             "generally preferred."
-        )
+        ),
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
-        "--posterior-file",
-        default=DEFAULT_H5_FILE,
-        help=f"HDF5 inference file containing posteriors. Default: {DEFAULT_H5_FILE}",
-    )
-
-    parser.add_argument(
-        "--samples-path",
-        default=DEFAULT_SAMPLES_PATH,
-        help=f"path to samples dataset in posterior h5 file. Default: {DEFAULT_SAMPLES_PATH}",
-    )
-
-    parser.add_argument(
-        "--variables-index-path",
-        default=DEFAULT_VARIABLES_INDEX_PATH,
-        help=f"path to variables_index group in posteriro h5 file. Default: {DEFAULT_VARIABLES_INDEX_PATH}",
+        "posterior_file",
+        type=str,
+        help=(
+            "Path to the HDF5 file containing posterior samples. The file should have a "
+            "dataset named 'samples' with shape (num_samples, num_parameters) and an "
+            "attribute 'variables_index' mapping parameter names to their column indices."
+        ),
     )
 
     parser.add_argument(
         "--corr-threshold",
         type=float,
-        default=DEFAULT_CORR_THRESHOLD,
-        help=f"Absolute correlation threshold. Default: {DEFAULT_CORR_THRESHOLD}",
+        default=0.5,
+        help="Minimum absolute correlation to consider parameters as strongly correlated"
+        " and suggest them for the same dense_mass block.",
     )
 
     parser.add_argument(
         "--min-block-size",
         type=int,
-        default=DEFAULT_MIN_BLOCK_SIZE,
-        help=f"Minimum number of parameters in a dense block. Default: {DEFAULT_MIN_BLOCK_SIZE}",
+        default=2,
+        help="Minimum number of parameters in a cluster to be suggested as a dense_mass"
+        " block. Clusters with fewer parameters will be ignored.",
     )
 
     args = parser.parse_args()
 
-    provided = set()
-
-    args._provided = provided
     return args
 
 
 def main():
     args = parse_args()
 
-    print("\nDense mass suggestion settings:")
-    print(
-        f"  posterior_file              = {args.posterior_file} ({source_label(args, 'posterior_file')})"
-    )
-    print(
-        f"  samples_path in posterior_file         = {args.samples_path} ({source_label(args, 'samples_path')})"
-    )
-    print(
-        f"  variables_index_path = {args.variables_index_path} ({source_label(args, 'variables_index_path')})"
-    )
-    print(
-        f"  correlation_threshold       = {args.corr_threshold} ({source_label(args, 'corr_threshold')})"
-    )
-    print(
-        f"  min_block_size       = {args.min_block_size} ({source_label(args, 'min_block_size')})"
-    )
+    from collections import defaultdict
+
+    import h5py
+    import numpy as np
+    from scipy.cluster.hierarchy import fcluster, linkage
+    from scipy.spatial.distance import squareform
 
     with h5py.File(args.posterior_file, "r") as f:
-        samples = np.asarray(f[args.samples_path])
-        var_index = dict(f[args.variables_index_path].attrs)
-
-    if samples.ndim > 2:
-        samples = samples.reshape(-1, samples.shape[-1])
-
-    if samples.shape[0] < samples.shape[1]:
-        samples = samples.T
+        samples = np.asarray(f["samples"])
+        var_index: dict[str, int] = dict(f["variables_index"].attrs)
 
     index_to_names = defaultdict(list)
 
     for name, idx in var_index.items():
         index_to_names[int(idx)].append(name)
 
-    recovered_params = []
-    column_indices = []
-
-    for idx in sorted(index_to_names):
-        names = sorted(index_to_names[idx])
-        canonical_name = names[0]
-
-        recovered_params.append(canonical_name)
-        column_indices.append(idx)
-
-    data = samples[:, column_indices]
-
     good = []
 
-    for i in range(data.shape[1]):
-        x = data[:, i]
+    for i in range(samples.shape[1]):
+        x = samples[:, i]
         good.append(np.all(np.isfinite(x)) and np.std(x) > 0)
 
+    recovered_params = []
+
+    for idx, keep in zip(sorted(index_to_names), good):
+        if not keep:
+            continue
+        names = sorted(index_to_names[idx])
+        canonical_name = names[0]
+        recovered_params.append(canonical_name)
+
     good = np.array(good)
+    samples = samples[:, good]
 
-    data = data[:, good]
-    recovered_params = [p for p, keep in zip(recovered_params, good) if keep]
-
-    corr = np.corrcoef(data.T)
-    corr = np.nan_to_num(corr, nan=0.0)
+    corr = np.nan_to_num(np.corrcoef(samples.T), nan=0.0)
 
     distance = 1.0 - np.abs(corr)
     distance = 0.5 * (distance + distance.T)
@@ -181,7 +135,3 @@ def main():
 
             if abs(cij) >= args.corr_threshold:
                 print(f"{pi:35s} {pj:35s} corr = {cij: .3f}")
-
-
-if __name__ == "__main__":
-    main()
