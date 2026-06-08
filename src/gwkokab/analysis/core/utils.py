@@ -4,6 +4,7 @@
 
 import abc
 import contextlib
+import json
 from collections.abc import Sequence
 from typing import Literal
 
@@ -216,6 +217,8 @@ def write_to_hdf5(
                     value = h5py.Empty("f8")
                 elif isinstance(value, Array):
                     value = np.asarray(value)
+                elif isinstance(value, (dict, list, tuple)):
+                    value = json.dumps(value)
                 obj.attrs[key] = value  # type: ignore
 
 
@@ -290,8 +293,15 @@ def read_attrs_from_hdf5(
 
     processed_attrs = {}  # type: ignore
     for key, value in raw_attrs.items():
+        _value = value
         if isinstance(value, h5py.Empty):
-            processed_attrs[key] = None
-        else:
-            processed_attrs[key] = value
+            _value = None
+        elif isinstance(value, bytes):
+            _value = value.decode("utf-8")
+        elif isinstance(value, str):
+            try:
+                _value = json.loads(value)
+            except json.JSONDecodeError:
+                pass
+        processed_attrs[key] = _value
     return processed_attrs
