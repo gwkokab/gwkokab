@@ -79,6 +79,12 @@ def main():
         names = index_to_names.get(i)
         canonical_name = sorted(names)[0] if names else f"unnamed_param_{i}"
         recovered_params.append(canonical_name)
+
+    if len(recovered_params) < 2:
+        raise ValueError(
+            "Not enough valid parameters (minimum 2 required) to suggest dense mass blocks."
+        )
+
     good = np.array(good)
     samples = samples[:, good]
 
