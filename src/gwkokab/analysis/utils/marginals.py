@@ -520,7 +520,7 @@ def plot_marginal_with_intervals(
     weighted_data *= scale(params) if callable(scale) else scale
 
     lower = np.quantile(weighted_data, 0.05, axis=0)
-    mean = np.mean(weighted_data, axis=0)
+    median = np.quantile(weighted_data, 0.5, axis=0)
     upper = np.quantile(weighted_data, 0.95, axis=0)
 
     ax.fill_between(
@@ -528,7 +528,7 @@ def plot_marginal_with_intervals(
     )
     ax.plot(
         domain,
-        mean,
+        median,
         label=style.label,
         color=style.color,
         **style.line_plot_kwargs,
