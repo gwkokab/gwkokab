@@ -15,6 +15,7 @@ __all__ = [
     "discrete_poisson_likelihood_fn",
     "analytical_poisson_likelihood_fn",
     "sampled_poisson_likelihood_fn",
+    "mixed_poisson_likelihood_fn",
     "low_ess_events",
 ]
 
@@ -297,6 +298,149 @@ def sampled_poisson_likelihood_fn(
         "log_evidence_per_event": log_I,
         "ess_per_event": ess,
         "rel_variance_per_event": rel_variance,
+        "expected_rate": expected_rate,
+    }
+    return log_likelihood, diagnostics
+
+
+def mixed_poisson_likelihood_fn(
+    # ---- sampled (continuous-L) group: broad / high-mass events --------------
+    event_log_likelihood_fns: Sequence[Callable[[Array], Array]],
+    model_samples: Array,
+    model_log_weights: Array,
+    pdet_fn: Callable[[Array], Array] | None,
+    # ---- discrete (posterior-sample) group: narrow / low-mass events ---------
+    model_instance: Distribution | None,
+    data_group: Tuple[Array, ...],
+    log_ref_priors_group: Tuple[Array, ...],
+    masks_group: Tuple[Array, ...],
+    N_pes: Tuple[Array, ...],
+    # ---- shared --------------------------------------------------------------
+    T_obs: Array,
+    variance_cut_threshold: float | None,
+) -> Tuple[Array, Dict[str, Array]]:
+    r"""Mixed-mode inhomogeneous-Poisson population likelihood.
+
+    Combines, in ONE Poisson likelihood with a SINGLE shared Poisson mean
+    ``μ(θ)``, two per-event representations of the SAME population ``θ``:
+
+    * a **sampled** group (``event_log_likelihood_fns`` evaluated at the model's
+      own draws ``model_samples`` — the :func:`sampled_poisson_likelihood_fn`
+      term), for events with a usable continuous per-event likelihood ``L_i``
+      and healthy importance ESS against the draws (broad / high-mass /
+      hierarchical events); and
+    * a **discrete** group (each event's posterior samples reweighted against the
+      model *density* ``model_instance.log_prob`` — the
+      :func:`discrete_poisson_likelihood_fn` term), for events whose continuous
+      ``L_i`` is unavailable or whose sampled ESS collapses (narrow / low-mass
+      events).
+
+    Both representations must be evaluated at the **same** ``θ``; a coagulation
+    engine supplies both natively — ``sampler_fn(θ) -> (model_samples,
+    model_log_weights)`` and ``dist_fn(θ) -> model_instance`` (its implicit-grid
+    density) — cross-calibrated to the same cascade depth.  The per-event split
+    is chosen by the **sampled-estimator ESS** (use sampled where ESS > 4·N_obs,
+    else discrete); see :func:`low_ess_events`.
+
+    The assembled likelihood mirrors both single-mode forms exactly, sharing one
+    ``μ``:
+
+    .. math::
+
+        \log\mathcal{L} = \sum_{i\in S}\log\mathcal{I}^{\mathrm{samp}}_i
+                        + \sum_{i\in D}\log\mathcal{I}^{\mathrm{disc}}_i
+                        + n_\mathrm{events}\log T_\mathrm{obs} - \mu(\theta),
+
+    with ``μ = T_obs Σ_j w_j p_det(x_j)`` computed **once** from the model draws
+    (the sample-based convention of :func:`sampled_poisson_likelihood_fn`; ``μ``
+    is a population property, independent of the event partition).  Limits:
+    an empty discrete group reproduces :func:`sampled_poisson_likelihood_fn`
+    exactly; an empty sampled group reproduces the per-event sum + shared ``μ``
+    of the discrete path (with the sample-based ``μ`` in place of the
+    estimator-based one).
+
+    Returns ``(log_likelihood, diagnostics)`` where diagnostics carries
+    ``ess_per_event_sampled`` / ``ess_per_event_discrete`` (concatenated where
+    meaningful), ``log_evidence_per_event_sampled`` /
+    ``log_evidence_per_event_discrete`` and the scalar ``expected_rate`` ``μ``.
+    """
+    # ---- sampled group: I_i = Σ_j w_j L_i(x_j)  (broad events) ---------------
+    log_w = model_log_weights
+    n_samples = log_w.shape[0]
+    n_sampled = len(event_log_likelihood_fns)
+
+    log_I_s_list = []
+    log_sq_s_list = []
+    for L_i in event_log_likelihood_fns:
+        a = log_w + L_i(model_samples)  # (n_samples,)
+        log_I_s_list.append(jax.nn.logsumexp(a))
+        log_sq_s_list.append(jax.nn.logsumexp(2.0 * a))
+    if n_sampled > 0:
+        log_I_s = jnp.stack(log_I_s_list)
+        log_sq_s = jnp.stack(log_sq_s_list)
+        ess_s = jnp.exp(2.0 * log_I_s - log_sq_s)
+        rel_var_s = jnp.exp(log_sq_s - 2.0 * log_I_s) - 1.0 / n_samples
+        total_ln_l_s = jnp.sum(log_I_s)
+    else:
+        log_I_s = jnp.zeros((0,))
+        ess_s = jnp.zeros((0,))
+        rel_var_s = jnp.zeros((0,))
+        total_ln_l_s = jnp.zeros(())
+
+    # ---- discrete group: I_i = (1/M_i) Σ_k exp(log ρ(y) − log π)  (narrow) ---
+    n_discrete = sum(int(d.shape[0]) for d in data_group)
+    total_ln_l_d = -jnp.sum(jnp.asarray([jnp.log(N_pe).sum() for N_pe in N_pes])) \
+        if len(N_pes) > 0 else jnp.zeros(())  # − Σ log M_i
+    pe_variance = jnp.zeros(())
+    log_I_d_list = []
+    if n_discrete > 0:
+        assert model_instance is not None, "discrete group requires model_instance"
+        for batched_data, batched_log_ref_priors, batched_mask, N_pe in zip(
+            data_group, log_ref_priors_group, masks_group, N_pes
+        ):
+            feasible_point = model_instance.support.feasible_like(batched_data[0])
+            safe_data = jnp.where(
+                batched_mask[..., jnp.newaxis], batched_data, feasible_point
+            )
+            batch_model_log_prob = model_instance.log_prob(safe_data)
+            log_prob = batch_model_log_prob - batched_log_ref_priors
+            log_prob = jnp.where(batched_mask, log_prob, -jnp.inf)
+            log_prob_sum = jax.nn.logsumexp(log_prob, axis=-1)  # (n_in_batch,)
+            log_prob_sum_2 = jax.nn.logsumexp(2.0 * log_prob, axis=-1)
+            total_ln_l_d += log_prob_sum.sum(axis=0, initial=0.0)
+            pe_variance += (
+                jnp.exp(log_prob_sum_2 - 2.0 * log_prob_sum) - 1.0 / N_pe
+            ).sum()
+            # per-event log evidence (incl. the −log M_i normalisation)
+            log_I_d_list.append(log_prob_sum - jnp.log(N_pe))
+    log_I_d = jnp.concatenate(log_I_d_list) if log_I_d_list else jnp.zeros((0,))
+
+    n_events = n_sampled + n_discrete
+
+    # ---- shared Poisson mean μ = T_obs Σ_j w_j pdet(x_j) (sample-based) ------
+    if pdet_fn is None:
+        log_mu = jnp.log(T_obs) + jax.nn.logsumexp(log_w)
+    else:
+        log_pdet = jnp.log(pdet_fn(model_samples))
+        log_mu = jnp.log(T_obs) + jax.nn.logsumexp(log_w + log_pdet)
+    expected_rate = jnp.exp(log_mu)
+
+    log_likelihood = (
+        total_ln_l_s + total_ln_l_d + n_events * jnp.log(T_obs) - expected_rate
+    )
+
+    if variance_cut_threshold is not None:
+        total_variance = jnp.nan_to_num(
+            jnp.sum(rel_var_s) + pe_variance,
+            nan=jnp.inf, posinf=jnp.inf, neginf=jnp.inf,
+        )
+        log_likelihood -= variance_tapering_fn(total_variance, variance_cut_threshold)
+
+    diagnostics: Dict[str, Array] = {
+        "log_evidence_per_event_sampled": log_I_s,
+        "ess_per_event_sampled": ess_s,
+        "rel_variance_per_event_sampled": rel_var_s,
+        "log_evidence_per_event_discrete": log_I_d,
         "expected_rate": expected_rate,
     }
     return log_likelihood, diagnostics
