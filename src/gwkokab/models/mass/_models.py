@@ -651,12 +651,15 @@ class SmoothedPowerlawPrimaryMassRatio(Distribution):
         # Compute the normalization constant for primary mass distribution
 
         self._m1s = jnp.linspace(mmin, mmax, 1000)
-        self._logZ = jnp.log(
-            jnp.trapezoid(
-                jnp.exp(self._log_prob_m1_unnorm(self._m1s)),
-                self._m1s,
-                axis=0,
-            )
+        _Z = jnp.trapezoid(
+            jnp.exp(self._log_prob_m1_unnorm(self._m1s)),
+            self._m1s,
+            axis=0,
+        )
+        self._logZ = jnp.where(
+            jnp.isnan(_Z) | jnp.isinf(_Z) | jnp.less_equal(_Z, 0.0),
+            0.0,
+            jnp.log(_Z),
         )
 
         # Compute the normalization constant for mass ratio distribution
