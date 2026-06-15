@@ -298,6 +298,12 @@ def read_attrs_from_hdf5(
             _value = None
         elif isinstance(value, bytes):
             _value = value.decode("utf-8")
+        elif isinstance(value, np.integer):
+            _value = int(value)
+        elif isinstance(value, np.floating):
+            _value = float(value)
+        elif isinstance(value, np.bool_):
+            _value = bool(value)
         elif isinstance(value, str):
             try:
                 _value = json.loads(value)
