@@ -8,6 +8,7 @@ import types
 
 import equinox as eqx
 import jax
+import jax.flatten_util
 import jax.numpy as jnp
 import jax.random as jrd
 import numpy as np
@@ -1062,7 +1063,7 @@ def test_vmap_dist(jax_dist, params):
     for in_axes, out_axes in in_out_axes_cases:
         batched_params = [
             (
-                jax.jax.tree.map(lambda x: jnp.expand_dims(x, ax), arg)
+                jax.tree.map(lambda x: jnp.expand_dims(x, ax), arg)
                 if isinstance(ax, int)
                 else arg
             )
