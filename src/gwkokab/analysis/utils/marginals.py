@@ -490,9 +490,9 @@ def plot_marginal_with_intervals(
                 w = weights[i]
             weight_values.append(w)
 
-    pos_and_rates: tuple[np.ndarray, np.ndarray] = [
+    pos_and_rates: list[tuple[np.ndarray, np.ndarray]] = [
         result.get_rates_on_grids(dataset) for dataset in datasets
-    ]  # type: ignore
+    ]
     data = [rate for _, rate in pos_and_rates]
 
     # assume all components share the same domain for the parameter of interest
