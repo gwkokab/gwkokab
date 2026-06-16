@@ -2,10 +2,31 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import re
+
 import h5py
 
 
-def _delete_chains(f: h5py.File, chains_idx: list[int], n_chains: int) -> None:
+def _parse_chain_names(chains: list[str]) -> list[str]:
+    """Parse chain identifiers supplied as names like chain_0."""
+    chain_names: list[str] = []
+    for chain in chains:
+        value = str(chain).strip()
+        if re.fullmatch(r"chain_\d+", value):
+            chain_names.append(value)
+            continue
+
+        raise ValueError(
+            f"Invalid chain identifier '{chain}'. Use the full chain name, for example chain_0."
+        )
+    return chain_names
+
+
+def _delete_chains(
+    f: h5py.File,
+    chains_to_delete: list[str],
+    chain_names: list[str],
+) -> None:
     import numpy as np
 
     from gwkokab.analysis.utils.literals import SAMPLES_GROUP_NAME
@@ -13,83 +34,102 @@ def _delete_chains(f: h5py.File, chains_idx: list[int], n_chains: int) -> None:
     samples = f[SAMPLES_GROUP_NAME][()]
     del f[SAMPLES_GROUP_NAME]
 
+    n_chains = len(chain_names)
     cleaned_chains_flatten = np.vstack([
         chain
-        for idx, chain in enumerate(np.array_split(samples, n_chains, axis=0))
-        if idx not in chains_idx
+        for chain_name, chain in zip(
+            chain_names, np.array_split(samples, n_chains, axis=0), strict=True
+        )
+        if chain_name not in chains_to_delete
     ])
 
     f.create_dataset(SAMPLES_GROUP_NAME, data=cleaned_chains_flatten)
 
 
-def _dc_sampler_is_numpyro(f: h5py.File, chains_idx: list[int]) -> None:
-    n_chains = f["/sampler_cfg/mcmc"].attrs["num_chains"]
-    f["/sampler_cfg/mcmc"].attrs["num_chains"] = n_chains - len(chains_idx)
-    chains = [
-        f["/chains/chain_{}".format(idx)][()]
-        for idx in range(n_chains)
-        if idx not in chains_idx
+def _dc_sampler_is_numpyro(f: h5py.File, chains_to_delete: list[str]) -> list[str]:
+    chain_names = sorted(f["/chains"].keys(), key=lambda name: int(name.split("_")[-1]))
+    remaining_chain_names = [
+        chain_name for chain_name in chain_names if chain_name not in chains_to_delete
     ]
 
-    from gwkokab.analysis.core.utils import write_to_hdf5
+    for chain_name in chains_to_delete:
+        del f[f"/chains/{chain_name}"]
 
-    del f["/chains"]
+    f["/sampler_cfg/mcmc"].attrs["num_chains"] = len(remaining_chain_names)
 
-    for idx, chain in enumerate(chains):
-        write_to_hdf5(f, f"/chains/chain_{idx}", chain)
+    return chain_names
 
 
-def _dc_sampler_is_flowMC(f: h5py.File, chains_idx: list[int]) -> None:
-    n_chains = f["sampler_cfg"].attrs["n_chains"]
-    f["sampler_cfg"].attrs["n_chains"] = n_chains - len(chains_idx)
-
-    from gwkokab.analysis.core.utils import write_to_hdf5
+def _dc_sampler_is_flowMC(f: h5py.File, chains_to_delete: list[str]) -> list[str]:
+    phase_chain_names: list[list[str]] = []
 
     for phase in ("train", "prod"):
-        chains = [
-            f[f"/chains/{phase}/chain_{idx}"]
-            for idx in range(n_chains)
-            if idx not in chains_idx
-        ]
+        phase_group = f[f"/chains/{phase}"]
+        chain_names = sorted(
+            phase_group.keys(), key=lambda name: int(name.split("_")[-1])
+        )
+        phase_chain_names.append(chain_names)
 
-        del f[f"/chains/{phase}"]
+    if phase_chain_names[0] != phase_chain_names[1]:
+        raise ValueError(
+            f"flowMC train/prod chain names do not match: {phase_chain_names}"
+        )
 
-        for idx, chain in enumerate(chains):
-            group_name = f"/chains/{phase}/chain_{idx}"
-            f.create_group(group_name)
-            for key in chain.keys():
-                write_to_hdf5(f, f"{group_name}/{key}", chain[key][()])
+    chain_names = phase_chain_names[0]
+    remaining_chain_names = [
+        chain_name for chain_name in chain_names if chain_name not in chains_to_delete
+    ]
+
+    for phase in ("train", "prod"):
+        for chain_name in chains_to_delete:
+            del f[f"/chains/{phase}/{chain_name}"]
+
+    f["sampler_cfg"].attrs["n_chains"] = len(remaining_chain_names)
+
+    return chain_names
 
 
-def _delete_chains_factory(f: h5py.File, chains_idx: list[int]) -> None:
-    n_chains = 0
+def _delete_chains_factory(f: h5py.File, chains_to_delete: list[str]) -> None:
     sampler_name = f["sampler_cfg"].attrs["sampler_name"]
 
     if sampler_name == "numpyro":
-        n_chains = len(f["chains"].keys())
+        chain_names = sorted(
+            f["/chains"].keys(), key=lambda name: int(name.split("_")[-1])
+        )
     elif sampler_name == "flowMC":
-        n_chains = int(f["sampler_cfg"].attrs["n_chains"])
+        phase_chain_names = [
+            sorted(
+                f[f"/chains/{phase}"].keys(), key=lambda name: int(name.split("_")[-1])
+            )
+            for phase in ("train", "prod")
+        ]
+        if phase_chain_names[0] != phase_chain_names[1]:
+            raise ValueError(
+                f"flowMC train/prod chain names do not match: {phase_chain_names}"
+            )
+        chain_names = phase_chain_names[0]
     else:
         raise ValueError(f"Unrecognized Sampler: {sampler_name}")
 
-    unique_chains_idx = set(chains_idx)
-    if not unique_chains_idx:
-        raise ValueError("No chain indices specified for deletion.")
-    if any(idx < 0 or idx >= n_chains for idx in unique_chains_idx):
+    unique_chains_to_delete = set(chains_to_delete)
+    if not unique_chains_to_delete:
+        raise ValueError("No chain names specified for deletion.")
+    missing_chains = sorted(unique_chains_to_delete - set(chain_names))
+    if missing_chains:
         raise ValueError(
-            f"Chain indices must be between 0 and {n_chains - 1}. Got {chains_idx}"
+            f"Requested chains do not exist: {missing_chains}. Available chains: {chain_names}"
         )
-    if len(unique_chains_idx) >= n_chains:
+    if len(unique_chains_to_delete) >= len(chain_names):
         raise ValueError(
-            f"Cannot delete all chains. Total chains: {n_chains}, requested to delete: {len(unique_chains_idx)}"
+            f"Cannot delete all chains. Total chains: {len(chain_names)}, requested to delete: {len(unique_chains_to_delete)}"
         )
 
     if sampler_name == "numpyro":
-        _dc_sampler_is_numpyro(f, chains_idx)
+        original_chain_names = _dc_sampler_is_numpyro(f, chains_to_delete)
     elif sampler_name == "flowMC":
-        _dc_sampler_is_flowMC(f, chains_idx)
+        original_chain_names = _dc_sampler_is_flowMC(f, chains_to_delete)
 
-    _delete_chains(f, chains_idx, n_chains)
+    _delete_chains(f, chains_to_delete, original_chain_names)
 
 
 def main():
@@ -102,10 +142,11 @@ def main():
 
     parser.add_argument(
         "-n",
+        "--chains",
         nargs="+",
-        type=int,
+        type=str,
         required=True,
-        help="List of chain numbers to delete. Chain numbering starts from 0.",
+        help="List of chains to delete. Use full names like chain_0 chain_2.",
     )
     parser.add_argument(
         "-i",
@@ -116,7 +157,7 @@ def main():
     parser.add_argument(
         "-o",
         type=str,
-        required=True,
+        default="clean_data.hdf5",
         help="Name of the output HDF5 file where the modified chains will be saved.",
     )
 
@@ -137,9 +178,9 @@ def main():
 
     input_filename = args.i
     output_filename = args.o
-    numbers = args.n
+    chains_to_delete = _parse_chain_names(args.chains)
 
     shutil.copy(input_filename, output_filename)
 
     with h5py.File(output_filename, "a") as f:
-        _delete_chains_factory(f, numbers)
+        _delete_chains_factory(f, chains_to_delete)

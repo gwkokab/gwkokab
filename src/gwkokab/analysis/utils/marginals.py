@@ -4,12 +4,14 @@
 
 import functools as ft
 import inspect
+from collections import defaultdict
 from pathlib import Path
 from typing import Callable, NamedTuple
 
 import h5py
 import jax
 import numpy as np
+import popsummary as ps
 from jax import jit, numpy as jnp
 from jaxtyping import Array
 from matplotlib import pyplot as plt
@@ -218,55 +220,6 @@ def compute_batched_marginals(
     return jax.lax.map(single_sample_fn, samples_batch, batch_size=batch_size)
 
 
-def read_domains(
-    filepath: str | Path,
-) -> dict[str, tuple[float, float, int]]:
-    """Read domain specifications from an HDF5 file.
-
-    Parameters
-    ----------
-    filepath : str | Path
-        The path to the HDF5 file containing the domain specifications.
-
-    Returns
-    -------
-    dict[str, tuple[float, float, int]]
-        A dictionary mapping parameter names to their corresponding domain specifications.
-        Each value in the dictionary is a tuple containing the start, stop, and number of
-        points for the domain of the parameter.
-    """
-    with h5py.File(filepath, "r") as f:
-        domains_array = f["probs"].attrs["domains"]
-        return {
-            param.decode("utf-8"): (float(start), float(stop), int(num_points))
-            for param, start, stop, num_points in domains_array
-        }
-
-
-def write_domains(f: h5py.File, domain_cfg: dict[str, tuple[float, float, int]]):
-    """Write domain specifications to an HDF5 file.
-
-    Parameters
-    ----------
-    f : h5py.File
-        The HDF5 file where the domain specifications will be saved.
-    domain_cfg : dict[str, tuple[float, float, int]]
-        A dictionary mapping parameter names to their corresponding domain specifications.
-        Each value in the dictionary is a tuple containing the start, stop, and number of
-        points for the domain of the parameter.
-    """
-    string_dt = h5py.string_dtype(encoding="utf-8")
-    f.attrs["domains"] = np.asarray(
-        [(str(param), *info) for param, info in domain_cfg.items()],
-        dtype=np.dtype([
-            ("param", string_dt),
-            ("start", np.float32),
-            ("stop", np.float32),
-            ("num_points", np.uint32),
-        ]),
-    )
-
-
 def save_results_to_hdf5(
     constants: dict,
     variables_index: dict[str, int],
@@ -303,21 +256,45 @@ def save_results_to_hdf5(
     filepath : str | Path
         The path to the HDF5 file where the results will be saved.
     """
+    # TODO(Qazalbash): save labels in numpyro sampler case and
+    # use them instead of following logic
+    inverted_variables_index = defaultdict(list)
+    for param, idx in variables_index.items():
+        inverted_variables_index[idx].append(param)
+
+    hyperparameters = [0] * len(inverted_variables_index)
+    for idx, params in inverted_variables_index.items():
+        canonical_param = sorted(params)[0]
+        hyperparameters[idx] = canonical_param
+
+    result = ps.PopulationResult(
+        fname=filepath,
+        hyperparameters=hyperparameters,
+        default_h5py_kwargs={"compression": "gzip", "compression_opts": 9},
+    )
     N_components = len(batched_results)
 
-    with h5py.File(filepath, "w") as f:
-        write_to_hdf5(f, dataset_path="constants", attrs=constants)
-        write_to_hdf5(f, dataset_path="variables_index", attrs=variables_index)
+    result.set_hyperparameter_samples(samples, overwrite=True)
 
-        probs_group = f.create_group("probs")
+    domains = {p: np.linspace(*info).reshape(1, -1) for p, info in domain_cfg.items()}
 
-        write_domains(probs_group, domain_cfg)
-        write_to_hdf5(probs_group, "samples", samples)
+    for i in range(N_components):
+        for idx, param in enumerate(parameters):
+            param = str(param)
+            rate_scaled_pdf = np.array(batched_results[i][idx])
+            result.set_rates_on_grids(
+                f"component_{i}_{param}",
+                grid_params=param,
+                positions=domains[param],
+                rates=rate_scaled_pdf,
+                overwrite=True,
+            )
 
-        for i in range(N_components):
-            comp_i_group = probs_group.create_group(f"component_{i}")
-            for idx, param in enumerate(parameters):
-                write_to_hdf5(comp_i_group, param, np.array(batched_results[i][idx]))
+    write_to_hdf5(
+        filepath,
+        dataset_path="/posterior/hyperparameter_samples",
+        attrs={"constants": constants, "variables_index": variables_index},
+    )
 
 
 def remove_comoving_volume_factor(
@@ -391,7 +368,9 @@ def generate_marginal_probs(
 
     with h5py.File(input_file_path, "r") as f:
         constants = read_attrs_from_hdf5(f, "constants")
-        variables_index = read_attrs_from_hdf5(f, "variables_index")
+        variables_index = {
+            p: int(idx) for p, idx in read_attrs_from_hdf5(f, "variables_index").items()
+        }
         samples_arr = read_from_hdf5(f, "samples")
 
     if max_samples is not None:
@@ -486,14 +465,17 @@ def plot_marginal_with_intervals(
     normalize : bool, optional
         Whether to normalize the marginal densities, by default False
     """
-    domains = read_domains(filename)
-    domain = np.linspace(*domains[parameter])
+    result = ps.PopulationResult(filename)
 
-    datasets = [f"/probs/component_{i}/{parameter}" for i in component_idxs]
+    datasets = [f"component_{i}_{parameter}" for i in component_idxs]
 
-    samples = read_from_hdf5(filename, "probs/samples")
-    constants = read_attrs_from_hdf5(filename, "constants")
-    variables_index = read_attrs_from_hdf5(filename, "variables_index")
+    samples = result.get_hyperparameter_samples()
+
+    cv_dict = read_attrs_from_hdf5(filename, "/posterior/hyperparameter_samples")
+
+    constants = cv_dict["constants"]
+    variables_index = cv_dict["variables_index"]
+
     params = {p: samples[:, m][:, np.newaxis] for p, m in variables_index.items()}
     params.update(constants)
 
@@ -508,8 +490,13 @@ def plot_marginal_with_intervals(
                 w = weights[i]
             weight_values.append(w)
 
-    with h5py.File(filename, "r") as f:
-        data = [np.asarray(f[dataset][:]) for dataset in datasets]
+    pos_and_rates: list[tuple[np.ndarray, np.ndarray]] = [
+        result.get_rates_on_grids(dataset) for dataset in datasets
+    ]
+    data = [rate for _, rate in pos_and_rates]
+
+    # assume all components share the same domain for the parameter of interest
+    domain = np.squeeze(pos_and_rates[0][0], axis=0)
 
     weighted_data = np.sum([w * d for w, d in zip(weight_values, data)], axis=0)
 
