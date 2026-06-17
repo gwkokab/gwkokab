@@ -451,12 +451,17 @@ def plot_with_intervals(
     """
     lower, median, upper = np.percentile(yy, [5, 50, 95], axis=0)
 
-    ax.fill_between(xx, lower, upper, color=style.color, **style.fill_between_kwargs)
+    fill_between_color = style.fill_between_kwargs.pop("color", style.color)
+    plot_color = style.line_plot_kwargs.pop("color", style.color)
+
+    ax.fill_between(
+        xx, lower, upper, color=fill_between_color, **style.fill_between_kwargs
+    )
     ax.plot(
         xx,
         median,
         label=style.label,
-        color=style.color,
+        color=plot_color,
         **style.line_plot_kwargs,
     )
 
