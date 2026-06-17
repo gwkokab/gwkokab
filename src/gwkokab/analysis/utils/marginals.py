@@ -456,9 +456,7 @@ def plot_with_intervals(
     line_plot_kwargs = style.line_plot_kwargs.copy()
     plot_color = line_plot_kwargs.pop("color", style.color)
 
-    ax.fill_between(
-        xx, lower, upper, color=fill_between_color, **fill_between_kwargs
-    )
+    ax.fill_between(xx, lower, upper, color=fill_between_color, **fill_between_kwargs)
     ax.plot(
         xx,
         median,
