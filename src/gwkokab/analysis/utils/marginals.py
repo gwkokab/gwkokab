@@ -429,6 +429,43 @@ class PlotStyle(NamedTuple):
     }
 
 
+def plot_with_intervals(
+    ax: plt.Axes,
+    xx: np.ndarray,
+    yy: np.ndarray,
+    style: PlotStyle,
+):
+    """Help function to plot densities with confidence intervals.
+
+    Parameters
+    ----------
+    ax : plt.Axes
+        Matplotlib Axes object on which to plot the densities and confidence
+        intervals.
+    xx : np.ndarray
+        X-axis values of shape (N,) representing the domain of the density.
+    yy : np.ndarray
+        Y-axis values of shape (N, M) representing the densities for M samples.
+    style : PlotStyle
+        A PlotStyle object specifying the plotting style for the density and confidence intervals.
+    """
+    lower, median, upper = np.percentile(yy, [5, 50, 95], axis=0)
+
+    fill_between_kwargs = style.fill_between_kwargs.copy()
+    fill_between_color = fill_between_kwargs.pop("color", style.color)
+    line_plot_kwargs = style.line_plot_kwargs.copy()
+    plot_color = line_plot_kwargs.pop("color", style.color)
+
+    ax.fill_between(xx, lower, upper, color=fill_between_color, **fill_between_kwargs)
+    ax.plot(
+        xx,
+        median,
+        label=style.label,
+        color=plot_color,
+        **line_plot_kwargs,
+    )
+
+
 def plot_marginal_with_intervals(
     ax: plt.Axes,
     filename: str,
@@ -506,18 +543,4 @@ def plot_marginal_with_intervals(
 
     weighted_data *= scale(params) if callable(scale) else scale
 
-    lower = np.quantile(weighted_data, 0.05, axis=0)
-    median = np.quantile(weighted_data, 0.5, axis=0)
-    upper = np.quantile(weighted_data, 0.95, axis=0)
-
-    ax.fill_between(
-        domain, lower, upper, color=style.color, **style.fill_between_kwargs
-    )
-    ax.plot(
-        domain,
-        median,
-        label=style.label,
-        color=style.color,
-        **style.line_plot_kwargs,
-    )
-    ax.set_xlim(domain[0], domain[-1])
+    plot_with_intervals(ax, domain, weighted_data, style)
