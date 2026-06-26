@@ -11,6 +11,7 @@ from pydantic import (
     BeforeValidator,
     ConfigDict,
     Field,
+    field_validator,
     PlainSerializer,
     PositiveFloat,
     PositiveInt,
@@ -336,8 +337,10 @@ class FlowMCGlobalConfig(BaseModel):
     n_leapfrog: PositiveInt = Field(default=10)
     """Number of leapfrog steps per HMC trajectory (ignored if using MALA)."""
 
-    mass_matrix: PositiveFloat | NumPyArrayTypeForPydantic = Field(default=1.0)
-    """Mass matrix diagonal elements or scalar value for HMC trajectory dynamics."""
+    condition_matrix: PositiveFloat | NumPyArrayTypeForPydantic = Field(default=1.0)
+    """Condition matrix diagonal elements or scalar value for HMC trajectory
+    dynamics.
+    """
 
     learning_rate: PositiveFloat = Field(default=1e-3)
     """Learning rate for the Normalizing Flow optimizer."""
@@ -360,6 +363,31 @@ class FlowMCGlobalConfig(BaseModel):
 
     verbose: bool = Field(default=False)
     """If True, prints execution progress logs and loss metrics to the console."""
+
+    @field_validator("condition_matrix")
+    @classmethod
+    def condition_matrix_validator(
+        cls, condition_matrix: PositiveFloat | NumPyArrayTypeForPydantic
+    ) -> PositiveFloat | np.ndarray:
+        if isinstance(condition_matrix, float):
+            if condition_matrix <= 0:
+                raise ValueError(
+                    "condition_matrix must be a positive float or a positive array."
+                )
+        elif isinstance(condition_matrix, list):
+            if not all(isinstance(x, (int, float)) and x > 0 for x in condition_matrix):
+                raise ValueError(
+                    "All elements of condition_matrix list must be positive numbers."
+                )
+        elif isinstance(condition_matrix, np.ndarray):
+            if condition_matrix.ndim != 1:
+                raise ValueError(
+                    "condition_matrix must be a 1D array if provided as a NumPy array."
+                )
+            if not np.all(condition_matrix > 0):
+                raise ValueError("All elements of condition_matrix must be positive.")
+
+        return condition_matrix
 
     @classmethod
     def from_json(cls, config_path: str) -> "FlowMCGlobalConfig":

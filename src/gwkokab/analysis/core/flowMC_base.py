@@ -11,11 +11,11 @@ import numpy as np
 import tqdm
 from flowMC.resource.base import Resource
 from flowMC.resource.buffers import Buffer
-from flowMC.resource.local_kernel.base import ProposalBase
-from flowMC.resource.local_kernel.MALA import MALA
+from flowMC.resource.kernel.HMC import HMC
+from flowMC.resource.kernel.MALA import MALA
+from flowMC.resource.kernel.NF_proposal import NFProposal
 from flowMC.resource.logPDF import LogPDF
-from flowMC.resource.nf_model.NF_proposal import NFProposal
-from flowMC.resource.nf_model.rqSpline import MaskedCouplingRQSpline
+from flowMC.resource.model.nf_model.rqSpline import MaskedCouplingRQSpline
 from flowMC.resource.optimizer import Optimizer
 from flowMC.resource.states import State
 from flowMC.resource_strategy_bundle.base import ResourceStrategyBundle
@@ -25,7 +25,7 @@ from flowMC.strategy.take_steps import TakeGroupSteps, TakeSerialSteps
 from flowMC.strategy.train_model import TrainModel
 from flowMC.strategy.update_state import UpdateState
 from jax import numpy as jnp
-from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
+from jaxtyping import Array, Float, PRNGKeyArray
 from loguru import logger
 
 from gwkokab.analysis.core.analysis_base import analysis_base_arg_parser, AnalysisBase
@@ -37,160 +37,6 @@ from gwkokab.analysis.utils.literals import (
     SAMPLES_GROUP_NAME,
 )
 from gwkokab.models.utils import JointDistribution
-from gwkokab.utils.exceptions import LoggedValueError
-
-
-# WARNING: do not change anything in this class
-
-
-# Copyright (c) 2022 Kaze Wong & contributor
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-class _HMC(ProposalBase):
-    """Hamiltonian Monte Carlo sampler class building the hmc_sampler method from target
-    logpdf.
-
-    Args:
-        logpdf: target logpdf function
-        jit: whether to jit the sampler
-        params: dictionary of parameters for the sampler
-    """
-
-    mass_matrix: Float[Array, " n_dim n_dim"]
-    step_size: float
-    leapfrog_coefs: Float[Array, " n_leapfrog n_dim"]
-
-    @property
-    def n_leapfrog(self) -> int:
-        return self.leapfrog_coefs.shape[0] - 2
-
-    def __init__(
-        self,
-        mass_matrix: Float[Array, " n_dim n_dim"],
-        step_size: float = 0.1,
-        n_leapfrog: int = 10,
-    ):
-        self.mass_matrix = mass_matrix
-        self.step_size = step_size
-
-        coefs = jnp.ones((n_leapfrog + 2, 2))
-        coefs = coefs.at[0].set(jnp.array([0, 0.5]))
-        coefs = coefs.at[-1].set(jnp.array([1, 0.5]))
-        self.leapfrog_coefs = coefs
-
-    def get_initial_hamiltonian(
-        self,
-        potential: Callable[[Float[Array, " n_dim"], PyTree], Float[Array, "1"]],
-        kinetic: Callable[
-            [Float[Array, " n_dim"], Float[Array, " n_dim n_dim"]], Float[Array, "1"]
-        ],
-        rng_key: PRNGKeyArray,
-        position: Float[Array, " n_dim"],
-        data: PyTree,
-    ):
-        L = jnp.linalg.cholesky(self.mass_matrix)
-        momentum = L @ jax.random.normal(rng_key, shape=position.shape)
-
-        return potential(position, data) + kinetic(momentum, self.mass_matrix)
-
-    def leapfrog_kernel(self, kinetic, potential, carry, extras):
-        position, momentum, data, metric, index = carry
-
-        # Note: jax.grad(kinetic) with respect to momentum will return M^-1 @ p
-        # which is the velocity, effectively handling the dense matrix logic.
-        position = position + self.step_size * self.leapfrog_coefs[index][0] * jax.grad(
-            kinetic
-        )(momentum, metric)
-
-        momentum = momentum - self.step_size * self.leapfrog_coefs[index][1] * jax.grad(
-            potential
-        )(position, data)
-
-        index = index + 1
-        return (position, momentum, data, metric, index), extras
-
-    def leapfrog_step(
-        self,
-        leapfrog_kernel: Callable,
-        position: Float[Array, " n_dim"],
-        momentum: Float[Array, " n_dim"],
-        data: PyTree,
-        metric: Float[Array, " n_dim n_dim"],
-    ) -> tuple[Float[Array, " n_dim"], Float[Array, " n_dim"]]:
-        (position, momentum, data, metric, _), _ = jax.lax.scan(
-            leapfrog_kernel,
-            (position, momentum, data, metric, 0),
-            jnp.arange(self.n_leapfrog + 2),
-        )
-        return position, momentum
-
-    def kernel(
-        self,
-        rng_key: PRNGKeyArray,
-        position: Float[Array, " n_dim"],
-        log_prob: Float[Array, "1"],
-        logpdf: LogPDF | Callable[[Float[Array, " n_dim"], PyTree], Float[Array, "1"]],
-        data: PyTree,
-    ) -> tuple[Float[Array, " n_dim"], Float[Array, "1"], Int[Array, "1"]]:
-        def potential(x: Float[Array, " n_dim"], data: PyTree) -> Float[Array, "1"]:
-            return -logpdf(x, data)
-
-        # CHANGED: Kinetic energy for dense mass matrix
-        # K(p) = 0.5 * p^T * M^-1 * p
-        def kinetic(
-            p: Float[Array, " n_dim"], metric: Float[Array, " n_dim n_dim"]
-        ) -> Float[Array, "1"]:
-            # We solve Mx = p for x (which is M^-1 p), then dot with p
-            velocity = jnp.linalg.solve(metric, p)
-            return 0.5 * jnp.dot(p, velocity)
-
-        leapfrog_kernel = jax.tree_util.Partial(
-            self.leapfrog_kernel, kinetic, potential
-        )
-        leapfrog_step = jax.tree_util.Partial(self.leapfrog_step, leapfrog_kernel)
-
-        key1, key2 = jax.random.split(rng_key)
-
-        # CHANGED: Correct Sampling of Momentum ~ N(0, M)
-        # We need the lower triangular matrix L such that L @ L.T = M
-        L = jnp.linalg.cholesky(self.mass_matrix)
-        momentum = L @ jax.random.normal(key1, shape=position.shape)
-
-        H = -log_prob + kinetic(momentum, self.mass_matrix)
-
-        proposed_position, proposed_momentum = leapfrog_step(
-            position, momentum, data, self.mass_matrix
-        )
-
-        proposed_PE = potential(proposed_position, data)
-        proposed_ham = proposed_PE + kinetic(proposed_momentum, self.mass_matrix)
-        log_acc = H - proposed_ham
-        log_uniform = jnp.log(jax.random.uniform(key2))
-
-        do_accept = log_uniform < log_acc
-
-        position = jnp.where(do_accept, proposed_position, position)  # type: ignore
-        log_prob = jnp.where(do_accept, -proposed_PE, log_prob)  # type: ignore
-
-        return position, log_prob, do_accept
-
-    def print_parameters(self):
-        print("HMC parameters:")
-        print(f"step_size: {self.step_size}")
-        print(f"n_leapfrog: {self.n_leapfrog}")
-        print(f"condition_matrix shape: {self.condition_matrix.shape}")
-
-    def save_resource(self, path):
-        raise NotImplementedError
-
-    def load_resource(self, path):
-        raise NotImplementedError
 
 
 # WARNING: do not change anything in this class
@@ -226,7 +72,7 @@ class Local_Global_Sampler_Bundle(ResourceStrategyBundle):
         n_epochs: int,
         local_sampler_name: Literal["mala", "hmc"] = "mala",
         step_size: float = 1e-1,
-        mass_matrix: Array = 1.0,  # type: ignore
+        condition_matrix: Array = 1.0,  # type: ignore
         n_leapfrog: int = 10,
         chain_batch_size: int = 0,
         rq_spline_hidden_units: list[int] = [32, 32],
@@ -282,8 +128,8 @@ class Local_Global_Sampler_Bundle(ResourceStrategyBundle):
         if local_sampler_name.strip().lower() == "mala":
             local_sampler = MALA(step_size=step_size)
         else:
-            local_sampler = _HMC(
-                mass_matrix=mass_matrix,
+            local_sampler = HMC(
+                condition_matrix=condition_matrix,
                 step_size=step_size,
                 n_leapfrog=n_leapfrog,
             )
@@ -748,24 +594,6 @@ class FlowMCBase(AnalysisBase):
         initial_position = priors.sample(self.rng_key, (n_chains,))
         n_dims = initial_position.shape[1]
 
-        mass_matrix = sampler_cfg.mass_matrix
-        if isinstance(mass_matrix, float) or isinstance(mass_matrix, int):
-            if mass_matrix <= 0.0:
-                raise LoggedValueError("mass_matrix must be positive")
-            mass_matrix = jnp.eye(n_dims) * float(mass_matrix)
-
-        if mass_matrix.ndim > 2:
-            raise LoggedValueError("mass_matrix must be 1D or 2D array")
-        _shape = mass_matrix.shape
-        if _shape != (n_dims, n_dims) and _shape != (n_dims,):
-            raise LoggedValueError(
-                f"mass_matrix must be of shape ({n_dims}, {n_dims}) or ({n_dims},), got {_shape}"
-            )
-        if _shape == (n_dims,):
-            if jnp.any(mass_matrix <= 0):
-                raise LoggedValueError("mass_matrix diagonal elements must be positive")
-            mass_matrix = jnp.diag(mass_matrix)
-
         bundle = Local_Global_Sampler_Bundle(
             rng_key=self.rng_key,
             n_chains=n_chains,
@@ -778,7 +606,7 @@ class FlowMCBase(AnalysisBase):
             n_epochs=sampler_cfg.n_epochs,
             local_sampler_name=sampler_cfg.local_sampler_name,
             step_size=sampler_cfg.step_size,
-            mass_matrix=mass_matrix,
+            condition_matrix=sampler_cfg.condition_matrix,
             n_leapfrog=sampler_cfg.n_leapfrog,
             chain_batch_size=sampler_cfg.chain_batch_size,
             rq_spline_hidden_units=sampler_cfg.rq_spline_hidden_units,
@@ -812,7 +640,7 @@ class FlowMCBase(AnalysisBase):
                 "n_epochs": sampler_cfg.n_epochs,
                 "local_sampler_name": sampler_cfg.local_sampler_name,
                 "step_size": sampler_cfg.step_size,
-                "mass_matrix": mass_matrix,
+                "condition_matrix": sampler_cfg.condition_matrix,
                 "n_leapfrog": sampler_cfg.n_leapfrog,
                 "chain_batch_size": sampler_cfg.chain_batch_size,
                 "rq_spline_hidden_units": sampler_cfg.rq_spline_hidden_units,
