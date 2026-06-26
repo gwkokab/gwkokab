@@ -369,15 +369,10 @@ class FlowMCGlobalConfig(BaseModel):
     def condition_matrix_validator(
         cls, condition_matrix: PositiveFloat | NumPyArrayTypeForPydantic
     ) -> PositiveFloat | np.ndarray:
-        if isinstance(condition_matrix, float):
+        if isinstance(condition_matrix, (int, float)):
             if condition_matrix <= 0:
                 raise ValueError(
                     "condition_matrix must be a positive float or a positive array."
-                )
-        elif isinstance(condition_matrix, list):
-            if not all(isinstance(x, (int, float)) and x > 0 for x in condition_matrix):
-                raise ValueError(
-                    "All elements of condition_matrix list must be positive numbers."
                 )
         elif isinstance(condition_matrix, np.ndarray):
             if condition_matrix.ndim != 1:
