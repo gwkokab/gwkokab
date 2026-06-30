@@ -78,10 +78,10 @@ def main() -> None:
 
     args = parser.parse_args()
 
+    import glasbey
     import h5py
     import numpy as np
     from matplotlib import pyplot as plt
-    import glasbey
 
     plt.rcParams["figure.constrained_layout.use"] = True
 
