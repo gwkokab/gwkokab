@@ -7,7 +7,7 @@ If you have used GWKokab in your research, please cite the following:
   author          = {{Qazalbash}, M. and {Zeeshan}, M. and {O'Shaughnessy}, R.},
   title           = "{Implementation to identify the properties of multiple
                   populations of gravitational wave sources}",
-  journal         = {\prd},
+  journal         = {Phys. Rev. D},
   keywords        = {Astrophysics and astroparticle physics, General Relativity
                   and Quantum Cosmology, High Energy Astrophysical Phenomena,
                   Instrumentation and Methods for Astrophysics},
