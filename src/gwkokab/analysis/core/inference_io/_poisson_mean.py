@@ -139,7 +139,7 @@ class PoissonMeanEstimationLoader(BaseModel):
     ] = Field(discriminator="estimator_type")
 
     @classmethod
-    def from_json(
+    def read_from_json(
         cls, config_path: str, key: PRNGKeyArray, parameters: Tuple[str, ...]
     ):
         raw_data = read_json(config_path)

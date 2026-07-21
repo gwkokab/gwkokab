@@ -125,7 +125,7 @@ class AnalyticalPELoader(BaseModel):
     """
 
     @classmethod
-    def from_json(cls, config_path: str) -> "AnalyticalPELoader":
+    def read_from_json(cls, config_path: str) -> "AnalyticalPELoader":
         """Initializes the loader from a JSON configuration file.
 
         Parameters

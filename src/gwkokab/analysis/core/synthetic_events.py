@@ -148,7 +148,7 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         )
 
     def from_inverse_transform_sampling(self) -> None:
-        pmean_loader = PoissonMeanEstimationLoader.from_json(
+        pmean_loader = PoissonMeanEstimationLoader.read_from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
         log_selection_fn, poisson_mean_estimator, pmean_kwargs = (
