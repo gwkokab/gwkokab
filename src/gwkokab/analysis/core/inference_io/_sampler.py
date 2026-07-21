@@ -253,7 +253,7 @@ class NumpyroGlobalConfig(BaseModel):
     """Configuration for the MCMC sampling procedure."""
 
     @classmethod
-    def from_json(cls, config_path: str) -> "NumpyroGlobalConfig":
+    def read_from_json(cls, config_path: str) -> "NumpyroGlobalConfig":
         """Initializes the loader from a JSON configuration file.
 
         Parameters
@@ -385,7 +385,7 @@ class FlowMCGlobalConfig(BaseModel):
         return condition_matrix
 
     @classmethod
-    def from_json(cls, config_path: str) -> "FlowMCGlobalConfig":
+    def read_from_json(cls, config_path: str) -> "FlowMCGlobalConfig":
         """Initializes the loader from a JSON configuration file.
 
         Parameters
@@ -406,7 +406,7 @@ class SamplerConfig:
     """Factory interface for generating Sampler Configs."""
 
     @staticmethod
-    def from_json(config_path: str) -> NumpyroGlobalConfig | FlowMCGlobalConfig:
+    def read_from_json(config_path: str) -> NumpyroGlobalConfig | FlowMCGlobalConfig:
         """Initializes and returns the specific config instance directly from JSON."""
         SamplerConfigAdapter: TypeAdapter[NumpyroGlobalConfig | FlowMCGlobalConfig] = (
             TypeAdapter(

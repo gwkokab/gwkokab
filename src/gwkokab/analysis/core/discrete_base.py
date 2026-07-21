@@ -143,7 +143,7 @@ class DiscreteBase(AnalysisBase):
         data_group, log_ref_priors_group, masks_group = self.read_data()
 
         logger.info("Parsing Poisson mean configuration and initializing estimator.")
-        pmean_loader = PoissonMeanEstimationLoader.from_json(
+        pmean_loader = PoissonMeanEstimationLoader.read_from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
         _, poisson_mean_estimator, pmean_kwargs = pmean_loader.get_estimators()

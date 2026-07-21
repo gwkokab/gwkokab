@@ -135,7 +135,7 @@ class DiscretePELoader(BaseModel):
     """
 
     @classmethod
-    def from_json(cls, config_path: str) -> "DiscretePELoader":
+    def read_from_json(cls, config_path: str) -> "DiscretePELoader":
         """Initializes the loader from a JSON configuration file.
 
         Parameters

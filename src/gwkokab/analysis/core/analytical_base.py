@@ -211,7 +211,7 @@ class AnalyticalBase(AnalysisBase):
         n_events = len(mean)
 
         logger.info("Parsing Poisson mean configuration and initializing estimator.")
-        pmean_loader = PoissonMeanEstimationLoader.from_json(
+        pmean_loader = PoissonMeanEstimationLoader.read_from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
         _, poisson_mean_estimator, pmean_kwargs = pmean_loader.get_estimators()

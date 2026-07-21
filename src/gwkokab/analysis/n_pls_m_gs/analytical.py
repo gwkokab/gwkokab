@@ -128,8 +128,8 @@ def main() -> None:
 
     log_info(start=True)
 
-    sampler_cfg = SamplerConfig.from_json(args.sampler_cfg)
-    data_loader = DataLoader.from_json(args.data_loader_cfg)
+    sampler_cfg = SamplerConfig.read_from_json(args.sampler_cfg)
+    data_loader = DataLoader.read_from_json(args.data_loader_cfg)
 
     likelihood_fn = get_likelihood_fn(
         sampler_name=sampler_cfg.sampler_name,
