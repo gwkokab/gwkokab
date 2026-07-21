@@ -272,67 +272,67 @@ class NumpyroGlobalConfig(BaseModel):
         sampler_cfg = read_json(config_path)
         return cls.model_validate(sampler_cfg)
 
-    def write_to_hdf5(self, path: str) -> None:
-        with h5py.File(path, "a") as f:
-            write_to_hdf5(
-                f,
-                dataset_path="sampler_cfg",
-                attrs={"sampler_name": "numpyro"},
-            )
-            write_to_hdf5(
-                f,
-                dataset_path="sampler_cfg/kernel",
-                attrs={
-                    "adapt_mass_matrix": self.kernel.adapt_mass_matrix,
-                    "adapt_step_size": self.kernel.adapt_step_size,
-                    "dense_mass": self.kernel.dense_mass,
-                    "find_heuristic_step_size": self.kernel.find_heuristic_step_size,
-                    "forward_mode_differentiation": self.kernel.forward_mode_differentiation,
-                    "inverse_mass_matrix": self.kernel.inverse_mass_matrix,
-                    "max_tree_depth": self.kernel.max_tree_depth,
-                    "regularize_mass_matrix": self.kernel.regularize_mass_matrix,
-                    "step_size": self.kernel.step_size,
-                    "target_accept_prob": self.kernel.target_accept_prob,
-                },
-            )
-            write_to_hdf5(
-                f,
-                dataset_path="sampler_cfg/mcmc",
-                attrs={
-                    "chain_method": self.mcmc.chain_method,
-                    "jit_model_args": self.mcmc.jit_model_args,
-                    "num_chains": self.mcmc.num_chains,
-                    "num_samples": self.mcmc.num_samples,
-                    "num_warmup": self.mcmc.num_warmup,
-                    "progress_bar": self.mcmc.progress_bar,
-                    "progress_rate": self.mcmc.progress_rate,
-                    "thinning": self.mcmc.thinning,
-                },
-            )
+    def write_to_hdf5(self, path: str | h5py.File | h5py.Group) -> None:
+        write_to_hdf5(
+            path,
+            dataset_path="sampler_cfg",
+            attrs={"sampler_name": "numpyro"},
+        )
+        write_to_hdf5(
+            path,
+            dataset_path="sampler_cfg/kernel",
+            attrs={
+                "adapt_mass_matrix": self.kernel.adapt_mass_matrix,
+                "adapt_step_size": self.kernel.adapt_step_size,
+                "dense_mass": self.kernel.dense_mass,
+                "find_heuristic_step_size": self.kernel.find_heuristic_step_size,
+                "forward_mode_differentiation": self.kernel.forward_mode_differentiation,
+                "inverse_mass_matrix": self.kernel.inverse_mass_matrix,
+                "max_tree_depth": self.kernel.max_tree_depth,
+                "regularize_mass_matrix": self.kernel.regularize_mass_matrix,
+                "step_size": self.kernel.step_size,
+                "target_accept_prob": self.kernel.target_accept_prob,
+            },
+        )
+        write_to_hdf5(
+            path,
+            dataset_path="sampler_cfg/mcmc",
+            attrs={
+                "chain_method": self.mcmc.chain_method,
+                "jit_model_args": self.mcmc.jit_model_args,
+                "num_chains": self.mcmc.num_chains,
+                "num_samples": self.mcmc.num_samples,
+                "num_warmup": self.mcmc.num_warmup,
+                "progress_bar": self.mcmc.progress_bar,
+                "progress_rate": self.mcmc.progress_rate,
+                "thinning": self.mcmc.thinning,
+            },
+        )
 
     @classmethod
-    def read_from_hdf5(cls, path: str) -> "NumpyroGlobalConfig":
+    def read_from_hdf5(
+        cls, path: str | h5py.File | h5py.Group
+    ) -> "NumpyroGlobalConfig":
         """Initializes the loader from an HDF5 configuration file.
 
         Parameters
         ----------
-        path : str
-            Path to the HDF5 file containing loader settings.
+        path : str | h5py.File | h5py.Group
+            Path or file descriptor to the HDF5 file containing loader settings.
 
         Returns
         -------
         NumpyroGlobalConfig
             An instance of NumpyroGlobalConfig.
         """
-        with h5py.File(path, "r") as f:
-            sampler_name = read_attrs_from_hdf5(f, "sampler_cfg")["sampler_name"]
-            if sampler_name != "numpyro":
-                raise LoggedValueError(
-                    f"Expected sampler_name 'numpyro', but got '{sampler_name}'"
-                )
+        sampler_name = read_attrs_from_hdf5(path, "sampler_cfg")["sampler_name"]
+        if sampler_name != "numpyro":
+            raise LoggedValueError(
+                f"Expected sampler_name 'numpyro', but got '{sampler_name}'"
+            )
 
-            kernel_attrs = read_attrs_from_hdf5(f, "sampler_cfg/kernel")
-            mcmc_attrs = read_attrs_from_hdf5(f, "sampler_cfg/mcmc")
+        kernel_attrs = read_attrs_from_hdf5(path, "sampler_cfg/kernel")
+        mcmc_attrs = read_attrs_from_hdf5(path, "sampler_cfg/mcmc")
 
         kernel_cfg = NumpyroNUTSSamplerConfig.model_validate(kernel_attrs)
         mcmc_cfg = NumpyroMCMCConfig.model_validate(mcmc_attrs)
@@ -471,13 +471,15 @@ class FlowMCGlobalConfig(BaseModel):
         sampler_cfg = read_json(config_path)
         return cls.model_validate(**sampler_cfg)
 
-    def write_to_hdf5(self, path: str, *, n_dims: int | None = None) -> None:
+    def write_to_hdf5(
+        self, path: str | h5py.File | h5py.Group, *, n_dims: int | None = None
+    ) -> None:
         """Writes the FlowMC configuration to an HDF5 file.
 
         Parameters
         ----------
-        path : str
-            Path to the HDF5 file where the configuration will be saved.
+        path : str | h5py.File | h5py.Group
+            Path or file descriptor to the HDF5 file where the configuration will be saved.
         n_dims : int | None, optional
             The number of dimensions in the parameter space. If not provided, it must be
             specified when calling this method, otherwise a ValueError will be raised.
@@ -520,13 +522,13 @@ class FlowMCGlobalConfig(BaseModel):
         )
 
     @classmethod
-    def read_from_hdf5(cls, path: str) -> "FlowMCGlobalConfig":
+    def read_from_hdf5(cls, path: str | h5py.File | h5py.Group) -> "FlowMCGlobalConfig":
         """Initializes the loader from an HDF5 configuration file.
 
         Parameters
         ----------
-        path : str
-            Path to the HDF5 file containing loader settings.
+        path : str | h5py.File | h5py.Group
+            Path or file descriptor to the HDF5 file containing loader settings.
 
         Returns
         -------
@@ -538,6 +540,7 @@ class FlowMCGlobalConfig(BaseModel):
             raise LoggedValueError(
                 f"Expected sampler_name 'flowMC', but got '{attrs.get('sampler_name')}'"
             )
+        attrs.pop("n_dims", None)
         return cls.model_validate(attrs)
 
 
@@ -557,6 +560,22 @@ class SamplerConfig:
         )
         sampler_cfg = read_json(config_path)
         return SamplerConfigAdapter.validate_python(sampler_cfg)
+
+    @staticmethod
+    def read_from_hdf5(
+        path: str | h5py.File | h5py.Group,
+    ) -> NumpyroGlobalConfig | FlowMCGlobalConfig:
+        """Initializes and returns the specific config instance directly from HDF5."""
+        attrs = read_attrs_from_hdf5(path, "sampler_cfg")
+        sampler_name = attrs.get("sampler_name")
+        if sampler_name == "numpyro":
+            return NumpyroGlobalConfig.read_from_hdf5(path)
+        elif sampler_name == "flowMC":
+            return FlowMCGlobalConfig.read_from_hdf5(path)
+        else:
+            raise LoggedValueError(
+                f"Unsupported or missing sampler_name '{sampler_name}' in HDF5 file."
+            )
 
 
 def _dump_numpyro_cfg() -> None:
