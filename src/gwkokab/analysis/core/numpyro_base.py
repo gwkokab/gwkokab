@@ -149,42 +149,7 @@ class NumpyroBase(AnalysisBase):
         logger.success("NUTS Kernel initialized.")
 
         logger.info("Saving sampler configuration to HDF5.")
-        with h5py.File(INFERENCE_OUTPUT_FILENAME, "a") as f:
-            write_to_hdf5(
-                f,
-                dataset_path="sampler_cfg",
-                attrs={"sampler_name": "numpyro"},
-            )
-            write_to_hdf5(
-                f,
-                dataset_path="sampler_cfg/kernel",
-                attrs={
-                    "adapt_mass_matrix": sampler_cfg.kernel.adapt_mass_matrix,
-                    "adapt_step_size": sampler_cfg.kernel.adapt_step_size,
-                    "dense_mass": sampler_cfg.kernel.dense_mass,
-                    "find_heuristic_step_size": sampler_cfg.kernel.find_heuristic_step_size,
-                    "forward_mode_differentiation": sampler_cfg.kernel.forward_mode_differentiation,
-                    "inverse_mass_matrix": sampler_cfg.kernel.inverse_mass_matrix,
-                    "max_tree_depth": sampler_cfg.kernel.max_tree_depth,
-                    "regularize_mass_matrix": sampler_cfg.kernel.regularize_mass_matrix,
-                    "step_size": sampler_cfg.kernel.step_size,
-                    "target_accept_prob": sampler_cfg.kernel.target_accept_prob,
-                },
-            )
-            write_to_hdf5(
-                f,
-                dataset_path="sampler_cfg/mcmc",
-                attrs={
-                    "chain_method": sampler_cfg.mcmc.chain_method,
-                    "jit_model_args": sampler_cfg.mcmc.jit_model_args,
-                    "num_chains": sampler_cfg.mcmc.num_chains,
-                    "num_samples": sampler_cfg.mcmc.num_samples,
-                    "num_warmup": sampler_cfg.mcmc.num_warmup,
-                    "progress_bar": sampler_cfg.mcmc.progress_bar,
-                    "progress_rate": sampler_cfg.mcmc.progress_rate,
-                    "thinning": sampler_cfg.mcmc.thinning,
-                },
-            )
+        sampler_cfg.write_to_hdf5(INFERENCE_OUTPUT_FILENAME)
         logger.success("Sampler configuration saved.")
 
         mcmc_cfg = sampler_cfg.mcmc

@@ -625,38 +625,7 @@ class FlowMCBase(AnalysisBase):
         logger.success("Local_Global_Sampler_Bundle created.")
 
         logger.info("Saving sampler configuration to HDF5.")
-        write_to_hdf5(
-            INFERENCE_OUTPUT_FILENAME,
-            dataset_path="sampler_cfg",
-            mode="a",
-            attrs={
-                "sampler_name": "flowMC",
-                "n_chains": n_chains,
-                "n_dims": n_dims,
-                "n_local_steps": sampler_cfg.n_local_steps,
-                "n_global_steps": sampler_cfg.n_global_steps,
-                "n_training_loops": sampler_cfg.n_training_loops,
-                "n_production_loops": sampler_cfg.n_production_loops,
-                "n_epochs": sampler_cfg.n_epochs,
-                "local_sampler_name": sampler_cfg.local_sampler_name,
-                "step_size": sampler_cfg.step_size,
-                "condition_matrix": sampler_cfg.condition_matrix,
-                "n_leapfrog": sampler_cfg.n_leapfrog,
-                "chain_batch_size": sampler_cfg.chain_batch_size,
-                "rq_spline_hidden_units": sampler_cfg.rq_spline_hidden_units,
-                "rq_spline_n_bins": sampler_cfg.rq_spline_n_bins,
-                "rq_spline_n_layers": sampler_cfg.rq_spline_n_layers,
-                "rq_spline_range": sampler_cfg.rq_spline_range,
-                "learning_rate": sampler_cfg.learning_rate,
-                "batch_size": sampler_cfg.batch_size,
-                "n_max_examples": sampler_cfg.n_max_examples,
-                "history_window": sampler_cfg.history_window,
-                "local_thinning": sampler_cfg.local_thinning,
-                "global_thinning": sampler_cfg.global_thinning,
-                "n_NFproposal_batch_size": sampler_cfg.n_NFproposal_batch_size,
-                "verbose": sampler_cfg.verbose,
-            },
-        )
+        sampler_cfg.write_to_hdf5(INFERENCE_OUTPUT_FILENAME, n_dims=n_dims)
         logger.success("Sampler configuration saved.")
 
         sampler = Sampler(
