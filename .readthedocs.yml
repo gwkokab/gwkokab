@@ -22,7 +22,5 @@ build:
       - uv venv "${READTHEDOCS_VIRTUALENV_PATH}"
     install:
       - UV_PROJECT_ENVIRONMENT="${READTHEDOCS_VIRTUALENV_PATH}" uv sync --upgrade --extra cpu --group dev --group doc --group test
-    pre_build:
-      - cp -r examples docs/source
 
 formats: []
