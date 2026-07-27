@@ -8,7 +8,6 @@ uv.lock
 *.synctex.gz
 playground.py
 *.zip
-docs/source/examples
 docs/source/_autosummary
 # data ignore
 *realization*
