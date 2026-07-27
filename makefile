@@ -28,8 +28,6 @@ cache_clean: check-uv
 	$(UV) cache clean
 
 doc: install
-	@mkdir -p docs/source
-	cp -r examples docs/source/
 	$(MAKE) -C docs html
 
 check-uv:
