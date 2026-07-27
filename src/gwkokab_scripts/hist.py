@@ -88,7 +88,7 @@ def main() -> None:
     for color, filename in zip(colors, args.input_files):
         with h5py.File(filename, "r") as f:
             data = np.asarray(f[dataset][variable])
-        plt.hist(data, **hist_kwargs, color=color)
+        plt.hist(data, **hist_kwargs, color=color, histtype="step")
 
     # Fallback logic using the new argument naming scheme
     x_label: str = args.xlabel or args.variable
