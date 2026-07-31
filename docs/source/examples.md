@@ -3,9 +3,9 @@
 ```{toctree}
 {maxdepth:1}
 
-examples/generating_mock_posterior_estimates
-examples/hbi_discrete_method
-examples/hbi_continuous_method
+examples/ecc_plus_spin/simulating_a_catalogue
+examples/ecc_plus_spin/inference_from_posterior_samples
+examples/ecc_plus_spin/inference_from_gaussian_summaries
 examples/sensitivity
 examples/training_mlp
 ```

@@ -59,7 +59,7 @@ hooks = [{ id = "yamlfmt", args = ["-formatter", "retain_line_breaks=true"] }]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
 rev = "v6.0.0"
 hooks = [
-    { id = "check-added-large-files" },
+    { id = "check-added-large-files", args = ["--maxkb=10000"] },
     { id = "check-case-conflict" },
     { id = "check-merge-conflict" },
     { id = "check-symlinks" },

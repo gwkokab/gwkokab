@@ -1,0 +1,24 @@
+{
+    "kernel": {
+        "step_size": 1.0,
+        "inverse_mass_matrix": null,
+        "adapt_step_size": true,
+        "adapt_mass_matrix": true,
+        "dense_mass": true,
+        "target_accept_prob": 0.8,
+        "max_tree_depth": 8,
+        "find_heuristic_step_size": false,
+        "forward_mode_differentiation": false,
+        "regularize_mass_matrix": true
+    },
+    "mcmc": {
+        "num_warmup": 5000,
+        "num_samples": 7000,
+        "num_chains": 4,
+        "thinning": 1,
+        "chain_method": "parallel",
+        "progress_bar": true,
+        "jit_model_args": true
+    },
+    "sampler_name": "numpyro"
+}

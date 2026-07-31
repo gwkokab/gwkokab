@@ -1,0 +1,7 @@
+{
+    "estimator_type": "neural_vt",
+    "filename": "../neural_calibrated_vt_aLIGO140MpcT1800545_BBH+BNS+NSBH_fine_m1_m2_s1z_s2z.hdf5",
+    "time_scale": 1.0,
+    "num_samples": 2000,
+    "batch_size": 2000
+}

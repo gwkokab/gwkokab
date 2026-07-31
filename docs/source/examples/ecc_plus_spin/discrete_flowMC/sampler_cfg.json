@@ -1,0 +1,41 @@
+{
+    "chain_batch_size": 0,
+    "n_chains": 20,
+    "batch_size": 5000,
+    "history_window": 900,
+    "n_epochs": 7,
+    "n_max_examples": 100000,
+    "n_NFproposal_batch_size": 10,
+    "n_global_steps": 20,
+    "n_local_steps": 300,
+    "global_thinning": 1,
+    "local_thinning": 1,
+    "n_production_loops": 40,
+    "n_training_loops": 30,
+    "local_sampler_name": "hmc",
+    "step_size": 0.01,
+    "n_leapfrog": 10,
+    "condition_matrix": [
+        0.092886444,
+        0.15304805,
+        0.00029991572,
+        0.038987259,
+        3.7471383,
+        0.18542411,
+        0.0011376989,
+        0.00084687465
+    ],
+    "learning_rate": 0.001,
+    "rq_spline_hidden_units": [
+        128,
+        128
+    ],
+    "rq_spline_n_bins": 8,
+    "rq_spline_n_layers": 10,
+    "rq_spline_range": [
+        -10.0,
+        10.0
+    ],
+    "verbose": false,
+    "sampler_name": "flowMC"
+}

@@ -1,0 +1,10 @@
+{
+    "spin_[1-2]z_high": 1.0,
+    "spin_[1-2]z_low": -1.0,
+    "spin_[1-2]z_scale": 0.1,
+    "eccentricity_high": 1.0,
+    "eccentricity_low": 0.0,
+    "eccentricity_scale": 0.1,
+    "scale_Mc": 1.0,
+    "scale_eta": 1.0
+}
