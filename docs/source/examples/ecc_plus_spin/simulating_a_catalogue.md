@@ -218,8 +218,9 @@ $(m_1, m_2, \chi_{1,z}, \chi_{2,z})$. The estimator is configured in
 `time_scale` is $T_{\mathrm{obs}}$, `num_samples` is the number of Monte Carlo draws used
 to evaluate the integral above and `batch_size` controls how many of them are pushed
 through the network at once. See
-[Expected Number of Detections and Sensitivity Estimation](../sensitivity.md) for the
-other estimator types, and
+[`PoissonMeanEstimationLoader`](../../inference_io/poisson_mean_estimation_loader.md) for
+these fields in full and for the three other estimator types — a $p_{\det}$ surrogate, an
+injection campaign, or your own function — and
 [Training a Multilayer Perceptron](../training_mlp.md) for how such a network is
 produced.
 
