@@ -341,19 +341,8 @@ cfg = SamplerConfig.read_from_json("sampler_cfg.json")
 print(type(cfg).__name__, cfg.n_chains)
 ```
 
-:::{admonition} Read it through `SamplerConfig`
-:class: warning
-
-`FlowMCGlobalConfig.read_from_json` currently mis-forwards its argument to Pydantic and
-raises
-
-```text
-TypeError: BaseModel.model_validate() got an unexpected keyword argument 'sampler_name'
-```
-
-`SamplerConfig.read_from_json` reads flowMC files correctly and is what every GWKokab
-analysis calls, so use it for both samplers.
-:::
+`FlowMCGlobalConfig.read_from_json` works identically when you already know the file
+describes a flowMC run.
 
 ### How a flowMC run is shaped
 
