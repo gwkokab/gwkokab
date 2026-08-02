@@ -469,7 +469,7 @@ class FlowMCGlobalConfig(BaseModel):
             An instance of FlowMCGlobalConfig.
         """
         sampler_cfg = read_json(config_path)
-        return cls.model_validate(**sampler_cfg)
+        return cls.model_validate(sampler_cfg)
 
     def write_to_hdf5(
         self, path: str | h5py.File | h5py.Group, *, n_dims: int | None = None

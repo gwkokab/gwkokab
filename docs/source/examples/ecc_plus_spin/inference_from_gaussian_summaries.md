@@ -80,8 +80,11 @@ Three of the four configuration files are shared verbatim with the discrete anal
   must be the same one used to generate the catalogue.
 - [`prior_cfg.json`](./inference_from_posterior_samples.md#priors) — the same eight free
   hyperparameters, in the same alphabetical order.
-- `sampler_cfg.json` — same structure as before; see
-  [Sampler Configurations](./inference_from_posterior_samples.md#sampler-configurations).
+- `sampler_cfg.json` — the same two samplers, selected the same way by `sampler_name`.
+  [`SamplerConfig`](../../inference_io/sampler_config.md) is the field-by-field reference;
+  the choices made for this example are explained in the
+  [discrete tutorial](./inference_from_posterior_samples.md#sampler-configurations). Only
+  one field is [re-tuned here](#re-tuning-flowmc).
 
 The fourth,
 [`data_loader_cfg.json`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/data_loader_cfg.json),
@@ -93,32 +96,40 @@ is also shared, because both loaders need only a glob pattern:
 }
 ```
 
-The analytical loader reads a different part of each file, though. Its optional fields
-are
+The two loaders read different parts of each file, though. Where the discrete loader wants
+the `posterior_samples` dataset, this one reads the `GWKokabSyntheticAnalyticalPE` group
+that `synthetic_analytical_pe` wrote alongside it, taking `mu`, `cov` and `limits` from it.
+[`AnalyticalPELoader`](../../inference_io/analytical_pe_loader.md) documents that layout
+and every field; two of them matter for this example, and in both cases we take the
+default.
 
-`default_waveform`
-: Name of the HDF5 group holding the summary. Defaults to
-  `GWKokabSyntheticAnalyticalPE`, which is what `synthetic_analytical_pe` writes.
-  Per-event overrides go in `alternate_waveforms`.
+[`default_waveform`](../../inference_io/analytical_pe_loader.md#default_waveform) names the
+group to read, and its default is exactly the group `synthetic_analytical_pe` writes.
+[`transform_module_path`](../../inference_io/analytical_pe_loader.md#transform_module_path)
+would point at the change of variables producing the $J_{n,k}$ of the likelihood above;
+left at `null` it is the identity, which is what we want since the summaries were fitted
+directly in the coordinates the population model uses.
 
-`transform_module_path`
-: Path to a Python module defining a `Transform` class (a subclass of
-  `SampleTransformer`) that maps the coordinates the Gaussian was fitted in to the
-  coordinates the population model expects, together with the Jacobian $J_{n,k}$ above.
-  Defaults to `null`, i.e. the identity.
+```{admonition} Getting the coordinates right
+:class: important
 
-`parameter_aliases`
-: Mapping from model parameter names to the coordinate names used in the files.
-
-As with the discrete loader, a fully populated template is available:
-
-```bash
-gwk_analytical_data_loader_cfg_template -o data_loader_cfg.json
+Because the loader returns $\mu_n$ and $\Sigma_n$ exactly as stored, the `coords`
+attribute of each summary must list the analysis parameters in the same order — this
+loader will not slice a five-coordinate summary down for a four-parameter run. That is
+why `synthetic_analytical_pe` was given an explicit `--coords` in the
+[first tutorial](./simulating_a_catalogue.md#summarising-the-posteriors-analytically); see
+[`D` comes from the file](../../inference_io/analytical_pe_loader.md#the-minimal-configuration).
 ```
 
-The flowMC configuration differs from the discrete one only in `condition_matrix`, which
-was re-tuned on a pilot run of *this* likelihood
-([`analytical_flowMC/sampler_cfg.json`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_flowMC/sampler_cfg.json)):
+### Re-tuning flowMC
+
+The flowMC configuration differs from the discrete one only in
+[`condition_matrix`](../../inference_io/sampler_config.md#condition_matrix-at-more-length),
+which was re-tuned on a pilot run of *this* likelihood
+([`analytical_flowMC/sampler_cfg.json`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_flowMC/sampler_cfg.json)).
+That field holds the variances of the target along each direction, and the analytical
+likelihood is a different target from the discrete one — close, but not close enough to
+reuse the numbers:
 
 ```json
     "condition_matrix": [
@@ -203,10 +214,12 @@ Keeping this file makes a run reproducible: the same draws, the same likelihood.
 ```{admonition} A harmless warning
 :class: note
 
-The loader looks for an optional per-event `scale` dataset that lets you condition badly
-scaled covariance matrices before sampling. `synthetic_analytical_pe` does not write one,
-so you will see `'scale' dataset not found ... Defaulting to ones.` once per event. That
-is the intended behaviour for this data set.
+The loader looks for an optional per-event
+[`scale`](../../inference_io/analytical_pe_loader.md#the-file-layout) dataset that
+conditions badly scaled covariance matrices before sampling.
+`synthetic_analytical_pe` does not write one, so you will see
+`'scale' dataset not found ... Defaulting to ones.` once per event. That is the intended
+behaviour for this data set.
 ```
 
 ## Comparing the Methods
@@ -388,4 +401,5 @@ method buys you speed for free; if it does not, no amount of sampling will repai
 
 - [Simulating a Gravitational-Wave Catalogue](./simulating_a_catalogue.md)
 - [Population Inference from Posterior Samples](./inference_from_posterior_samples.md)
-- [Expected Number of Detections and Sensitivity Estimation](../sensitivity.md)
+- [`PoissonMeanEstimationLoader`](../../inference_io/poisson_mean_estimation_loader.md) —
+  the four ways of estimating $\mu(\Lambda)$

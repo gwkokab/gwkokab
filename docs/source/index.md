@@ -42,7 +42,14 @@ flexibility and extensibility make it invaluable for researchers at all levels.
 installation
 FAQs
 cite
-examples
+```
+
+```{toctree}
+:maxdepth: 2
+:caption: Tutorials
+
+examples/index
+inference_io/index
 ```
 
 ```{toctree}

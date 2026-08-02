@@ -1,7 +1,5 @@
 # Training a Neural Network to Estimate Sensitivity
 
-[![Open in GitHub](https://img.shields.io/badge/Open-GitHub-black?logo=github)][REPRODUCIBILITY_LINK]
-
 GWKokab has easy to build and train APIs to train a Multilayer Perceptron (MLP) to estimate the probability of detection or sensitive spacetime volume. This notebook demonstrates how to use these APIs on toy data.
 
 Let's first create some toy data where the target is simply the sum of the input features.
