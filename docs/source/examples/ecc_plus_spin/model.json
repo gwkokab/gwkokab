@@ -1,0 +1,18 @@
+{
+    "N_g": 0,
+    "N_pl": 1,
+    "log_rate_0": 4.0,
+    "alpha_pl_[0-9]+": 1.0,
+    "beta_pl_[0-9]+": 0.0,
+    "mmax_pl_[0-9]+": 50.0,
+    "mmin_pl_[0-9]+": 5.0,
+    "spin_[1-2]z_high_(g|pl)_[0-9]+": 1.0,
+    "spin_[1-2]z_low_(g|pl)_[0-9]+": -1.0,
+    "spin_[1-2]z_loc_(g|pl)_[0-9]+": 0.0,
+    "spin_[1-2]z_scale_(g|pl)_[0-9]+": 0.4,
+    "eccentricity_comp[1-2]_high_(g|pl)_[0-9]+": 1.0,
+    "eccentricity_comp[1-2]_low_(g|pl)_[0-9]+": 0.0,
+    "eccentricity_comp[1-2]_loc_(g|pl)_[0-9]+": 0.0,
+    "eccentricity_comp[1-2]_scale_(g|pl)_[0-9]+": 0.15,
+    "eccentricity_zeta_(g|pl)_[0-9]+": 0.0
+}

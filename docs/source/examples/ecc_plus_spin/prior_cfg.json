@@ -1,0 +1,51 @@
+{
+    "log_rate_[0-9]+": {
+        "dist": "Uniform",
+        "high": 10.0,
+        "low": 0.0
+    },
+    "alpha_pl_[0-9]+": {
+        "dist": "Uniform",
+        "high": 6.0,
+        "low": -6.0
+    },
+    "beta_pl_[0-9]+": {
+        "dist": "Uniform",
+        "high": 6.0,
+        "low": -6.0
+    },
+    "mmax_pl_[0-9]+": {
+        "dist": "Uniform",
+        "high": 80.0,
+        "low": 30.0
+    },
+    "mmin_pl_[0-9]+": {
+        "dist": "Uniform",
+        "high": 20.0,
+        "low": 1.0
+    },
+    "spin_1z_loc_pl_[0-9]+": {
+        "dist": "Uniform",
+        "high": 1.0,
+        "low": -1.0
+    },
+    "spin_1z_scale_pl_[0-9]+": {
+        "dist": "Uniform",
+        "high": 1.0,
+        "low": 0.0
+    },
+    "spin_2z_loc_pl_[0-9]+": "spin_1z_loc_pl_0",
+    "spin_2z_scale_pl_[0-9]+": "spin_1z_scale_pl_0",
+    "spin_[1-2]z_high_(pl|g)_[0-9]+": 1.0,
+    "spin_[1-2]z_low_(pl|g)_[0-9]+": -1.0,
+    "eccentricity_zeta_(pl|g)_[0-9]+": 0.0,
+    "eccentricity_comp[1-2]_loc_(pl|g)_[0-9]+": 0.0,
+    "eccentricity_comp1_scale_(pl|g)_[0-9]+": {
+        "dist": "Uniform",
+        "high": 1.0,
+        "low": 0.0
+    },
+    "eccentricity_comp2_scale_(pl|g)_[0-9]+": 1.0,
+    "eccentricity_comp[1-2]_high_(pl|g)_[0-9]+": null,
+    "eccentricity_comp[1-2]_low_(pl|g)_[0-9]+": 0.0
+}
