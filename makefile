@@ -12,13 +12,14 @@ space := $(empty) $(empty)
 
 EXTRA_FLAGS     := $(if $(EXTRA),$(addprefix --extra ,$(subst $(comma),$(space),$(EXTRA))))
 GROUP_FLAGS     := $(if $(GROUP),$(addprefix --group ,$(subst $(comma),$(space),$(GROUP))))
+PIP_FLAGS_LIST  := $(subst $(comma),$(space),$(PIP_FLAGS))
 
 .DEFAULT_GOAL   := help
 .PHONY: all install uninstall cache_clean help doc check-uv
 
 install: uninstall check-uv
-	GWKOKAB_DEV_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS) \
-		$(INSTALL_TARGET) -r pyproject.toml \
+	GWKOKAB_DEV_BUILD=1 $(UV) $(PIP) install $(PIP_FLAGS_LIST) \
+		-e $(INSTALL_TARGET) -r pyproject.toml \
 		$(EXTRA_FLAGS) $(GROUP_FLAGS)
 
 uninstall: check-uv
