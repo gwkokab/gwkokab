@@ -77,11 +77,11 @@ Each event file holds one HDF5 **group per waveform**, and the group holds the s
 ```text
 event_0.hdf5
 └── GWKokabSyntheticAnalyticalGWalkPE      # the group named by `default_waveform`
-    ├── @coords                       # attribute: coordinate names, length D
-    ├── mu                            # (D,)     mean vector
-    ├── cov                           # (D, D)   covariance matrix
-    ├── limits                        # (D, 2)   [lower, upper] per coordinate
-    └── scale                         # (D,)     optional, defaults to ones
+    ├── @coords                            # attribute: coordinate names, length D
+    ├── mu                                 # (D,)     mean vector
+    ├── cov                                # (D, D)   covariance matrix
+    ├── limits                             # (D, 2)   [lower, upper] per coordinate
+    └── scale                              # (D,)     optional, defaults to ones
 ```
 
 This is what `synthetic_analytical_gwalk_pe` writes. Groups from other pipelines work equally
