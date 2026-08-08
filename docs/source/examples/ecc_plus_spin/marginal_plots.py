@@ -64,9 +64,9 @@ colors = glasbey.create_palette(4)
 
 analyses = [
     Info(
-        path="analytical_flowMC",
+        path="analytical_gwalk_flowMC",
         color=colors[0],
-        legend="Analytical Method (flowMC)",
+        legend="Analytical GWalk Method (flowMC)",
     ),
     Info(
         path="discrete_flowMC",
@@ -74,9 +74,9 @@ analyses = [
         legend="Discrete Method (flowMC)",
     ),
     Info(
-        path="analytical_numpyro",
+        path="analytical_gwalk_numpyro",
         color=colors[2],
-        legend="Analytical Method (numpyro)",
+        legend="Analytical GWalk Method (numpyro)",
     ),
     Info(path="discrete_numpyro", color=colors[3], legend="Discrete Method (numpyro)"),
 ]

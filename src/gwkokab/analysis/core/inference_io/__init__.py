@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from ._analytical import AnalyticalPELoader as AnalyticalPELoader
+from ._analytical_gwalk import AnalyticalGWalkPELoader as AnalyticalGWalkPELoader
 from ._discrete import DiscretePELoader as DiscretePELoader
 from ._poisson_mean import PoissonMeanEstimationLoader as PoissonMeanEstimationLoader
 from ._sampler import (

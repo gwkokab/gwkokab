@@ -62,20 +62,20 @@ DISCRETE_FLOWMC = Info(
     colors[0],
     "Discrete Method (flowMC)",
 )
-ANALYTICAL_FLOWMC = Info(
-    read_from_hdf5("analytical_flowMC/inference_data.hdf5", "samples"),
+ANALYTICAL_GWALK_FLOWMC = Info(
+    read_from_hdf5("analytical_gwalk_flowMC/inference_data.hdf5", "samples"),
     colors[1],
-    "Analytical Method (flowMC)",
+    "Analytical GWalk Method (flowMC)",
 )
 DISCRETE_NUMPYRO = Info(
     read_from_hdf5("discrete_numpyro/inference_data.hdf5", "samples"),
     colors[2],
     "Discrete Method (NumPyro)",
 )
-ANALYTICAL_NUMPYRO = Info(
-    read_from_hdf5("analytical_numpyro/inference_data.hdf5", "samples"),
+ANALYTICAL_GWALK_NUMPYRO = Info(
+    read_from_hdf5("analytical_gwalk_numpyro/inference_data.hdf5", "samples"),
     colors[3],
-    "Analytical Method (NumPyro)",
+    "Analytical GWalk Method (NumPyro)",
 )
 TRUE_VALUES = Info(
     [1.0, 0.0, 0.15, 4.0, 50.0, 5.0, 0.0, 0.4],
@@ -96,7 +96,12 @@ LABELS = [
 
 fig, ax = plt.subplots(len(LABELS), len(LABELS), figsize=(12, 12))
 
-info_list = [DISCRETE_FLOWMC, ANALYTICAL_FLOWMC, DISCRETE_NUMPYRO, ANALYTICAL_NUMPYRO]
+info_list = [
+    DISCRETE_FLOWMC,
+    ANALYTICAL_GWALK_FLOWMC,
+    DISCRETE_NUMPYRO,
+    ANALYTICAL_GWALK_NUMPYRO,
+]
 
 
 for info in info_list:

@@ -7,26 +7,33 @@ from collections.abc import Callable
 
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.analysis.core.analytical_base import analytical_arg_parser, AnalyticalBase
+from gwkokab.analysis.core.analytical_gwalk_base import (
+    analytical_gwalk_arg_parser,
+    AnalyticalGWalkBase,
+)
 from gwkokab.analysis.core.flowMC_base import FlowMCBase
 from gwkokab.analysis.core.inference_io import (
-    AnalyticalPELoader as DataLoader,
+    AnalyticalGWalkPELoader as DataLoader,
     SamplerConfig,
 )
 from gwkokab.analysis.core.numpyro_base import NumpyroBase
-from gwkokab.analysis.multisource.common import model_arg_parser, MultiSourceModelCore
+from gwkokab.analysis.subpopulation.common import (
+    model_arg_parser,
+    SubPopulationModelCore,
+)
 from gwkokab.analysis.utils.logger import log_info
 from gwkokab.inference.factory import get_likelihood_fn
-from gwkokab.models import MultiSourceModel
+from gwkokab.models import SubPopulationModel
 
 
-class MultiSourceModelAnalyticalAnalysis(MultiSourceModelCore, AnalyticalBase):
+class SubPopulationModelAnalyticalGWalkAnalysis(
+    SubPopulationModelCore, AnalyticalGWalkBase
+):
     def __init__(
         self,
         N_spl: int,
         N_bpl: int,
         N_gpl: int,
-        N_gg: int,
         use_beta_spin_magnitude: bool,
         use_spin_magnitude_mixture: bool,
         use_truncated_normal_spin_x: bool,
@@ -52,12 +59,11 @@ class MultiSourceModelAnalyticalAnalysis(MultiSourceModelCore, AnalyticalBase):
         profile_memory: bool = False,
         check_leaks: bool = False,
     ) -> None:
-        MultiSourceModelCore.__init__(
+        SubPopulationModelCore.__init__(
             self,
             N_spl=N_spl,
             N_bpl=N_bpl,
             N_gpl=N_gpl,
-            N_gg=N_gg,
             use_beta_spin_magnitude=use_beta_spin_magnitude,
             use_spin_magnitude_mixture=use_spin_magnitude_mixture,
             use_truncated_normal_spin_x=use_truncated_normal_spin_x,
@@ -74,10 +80,10 @@ class MultiSourceModelAnalyticalAnalysis(MultiSourceModelCore, AnalyticalBase):
             use_madau_dickinson_redshift=use_madau_dickinson_redshift,
         )
 
-        AnalyticalBase.__init__(
+        AnalyticalGWalkBase.__init__(
             self,
             likelihood_fn,
-            MultiSourceModel,
+            SubPopulationModel,
             data_loader,
             prior_filename,
             poisson_mean_filename,
@@ -85,20 +91,20 @@ class MultiSourceModelAnalyticalAnalysis(MultiSourceModelCore, AnalyticalBase):
             debug_nans=debug_nans,
             profile_memory=profile_memory,
             check_leaks=check_leaks,
-            analysis_name="multisource",
+            analysis_name="subpopulation",
             n_samples=n_samples,
             variance_cut_threshold=variance_cut_threshold,
         )
 
 
-class MultiSourceModelFAnalyticalAnalysis(
-    MultiSourceModelAnalyticalAnalysis, FlowMCBase
+class SubPopulationModelFAnalyticalGWalkAnalysis(
+    SubPopulationModelAnalyticalGWalkAnalysis, FlowMCBase
 ):
     pass
 
 
-class MultiSourceModelNAnalyticalAnalysis(
-    MultiSourceModelAnalyticalAnalysis, NumpyroBase
+class SubPopulationModelNAnalyticalGWalkAnalysis(
+    SubPopulationModelAnalyticalGWalkAnalysis, NumpyroBase
 ):
     pass
 
@@ -106,7 +112,7 @@ class MultiSourceModelNAnalyticalAnalysis(
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
-    parser = analytical_arg_parser(parser)
+    parser = analytical_gwalk_arg_parser(parser)
 
     args = parser.parse_args()
 
@@ -119,13 +125,13 @@ def main() -> None:
 
     likelihood_fn = get_likelihood_fn(
         sampler_name=sampler_cfg.sampler_name,
-        analysis_type="analytical",
+        analysis_type="analytical_gwalk",
     )
 
     AnalysisClass = (
-        MultiSourceModelFAnalyticalAnalysis
+        SubPopulationModelFAnalyticalGWalkAnalysis
         if sampler_cfg.sampler_name == "flowMC"
-        else MultiSourceModelNAnalyticalAnalysis
+        else SubPopulationModelNAnalyticalGWalkAnalysis
     )
 
     AnalysisClass.init_rng_seed(seed=args.seed)
@@ -134,7 +140,6 @@ def main() -> None:
         N_spl=args.n_spl,
         N_bpl=args.n_bpl,
         N_gpl=args.n_gpl,
-        N_gg=args.n_gg,
         use_beta_spin_magnitude=args.add_beta_spin_magnitude,
         use_spin_magnitude_mixture=args.add_spin_magnitude_mixture,
         use_truncated_normal_spin_x=args.add_truncated_normal_spin_x,

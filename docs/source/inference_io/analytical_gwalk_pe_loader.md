@@ -1,9 +1,9 @@
-# `AnalyticalPELoader`
+# `AnalyticalGWalkPELoader`
 
-`AnalyticalPELoader` reads events that have been reduced to a **multivariate normal
+`AnalyticalGWalkPELoader` reads events that have been reduced to a **multivariate normal
 summary** — a mean vector, a covariance matrix and a bounding box — rather than a cloud of
 posterior samples. It is the data side of the
-[analytical likelihood](../examples/ecc_plus_spin/inference_from_gaussian_summaries.md),
+[Analytical GWalk likelihood](../examples/ecc_plus_spin/inference_from_gaussian_summaries.md),
 where each event's likelihood is approximated as
 
 $$
@@ -29,9 +29,9 @@ Exactly as for the [discrete loader](./discrete_pe_loader.md), one key is requir
 ```
 
 ```python
-from gwkokab.analysis.core.inference_io import AnalyticalPELoader
+from gwkokab.analysis.core.inference_io import AnalyticalGWalkPELoader
 
-loader = AnalyticalPELoader.read_from_json("data_loader_cfg.json")
+loader = AnalyticalGWalkPELoader.read_from_json("data_loader_cfg.json")
 data = loader.load(("mass_1_source", "mass_2_source", "redshift", "chi_eff"))
 ```
 
@@ -53,7 +53,7 @@ file order:
 : A per-coordinate rescaling used to precondition the draw, shape `(D,)`. Defaults to ones.
 
 `load` also accepts a `seed` argument for signature compatibility with the discrete
-loader, but the analytical loader does no sub-sampling and ignores it.
+loader, but the Analytical GWalk loader does no sub-sampling and ignores it.
 
 :::{admonition} `D` comes from the file, not from `parameters`
 :class: warning
@@ -67,7 +67,7 @@ warning, not an error.
 The consequence is that the file's `coords` must list exactly the parameters your
 analysis uses, **in the same order**. A summary fitted over five coordinates cannot be
 used for a four-parameter analysis by simply asking for four; regenerate it with
-`synthetic_analytical_pe --coords ...` restricted to the coordinates you want.
+`synthetic_analytical_gwalk_pe --coords ...` restricted to the coordinates you want.
 :::
 
 ## The file layout
@@ -76,7 +76,7 @@ Each event file holds one HDF5 **group per waveform**, and the group holds the s
 
 ```text
 event_0.hdf5
-└── GWKokabSyntheticAnalyticalPE      # the group named by `default_waveform`
+└── GWKokabSyntheticAnalyticalGWalkPE      # the group named by `default_waveform`
     ├── @coords                       # attribute: coordinate names, length D
     ├── mu                            # (D,)     mean vector
     ├── cov                           # (D, D)   covariance matrix
@@ -84,7 +84,7 @@ event_0.hdf5
     └── scale                         # (D,)     optional, defaults to ones
 ```
 
-This is what `synthetic_analytical_pe` writes. Groups from other pipelines work equally
+This is what `synthetic_analytical_gwalk_pe` writes. Groups from other pipelines work equally
 well as long as they follow the same layout, which is what `default_waveform` and
 `alternate_waveforms` are for.
 
@@ -106,7 +106,7 @@ of `alternate_waveforms` — are file stems.
 
 ### `default_waveform`
 
-Default `"GWKokabSyntheticAnalyticalPE"`. The name of the HDF5 group holding the summary.
+Default `"GWKokabSyntheticAnalyticalGWalkPE"`. The name of the HDF5 group holding the summary.
 Unlike the discrete loader's `default_datasets` this is a **single string**, not a list of
 candidates, and it is a group name rather than a path.
 
@@ -189,7 +189,7 @@ class Transform(SampleTransformer):
 evaluates in. `log_abs_det_jacobian` returns the log absolute determinant of that map's
 Jacobian, $\ln\left|\partial\,\texttt{transformed}/\partial\,\texttt{samples}\right|$, one
 value per draw; it is added to the model log-density, so it is the $\ln J_{n,k}$ term of
-the analytical likelihood. `check` is optional — it defaults to accepting everything — and
+the Analytical GWalk likelihood. `check` is optional — it defaults to accepting everything — and
 lets you reject draws that are numerically valid but physically meaningless; rejected
 draws are redrawn alongside those that fall outside `limits`.
 
@@ -228,7 +228,7 @@ A path that cannot be loaded at all raises `LoggedImportError`.
 A template is produced with
 
 ```bash
-gwk_analytical_data_loader_cfg_template -o data_loader_cfg.json
+gwk_analytical_gwalk_data_loader_cfg_template -o data_loader_cfg.json
 ```
 
 Note that the template does not include `parameter_aliases`; add it by hand if you need
@@ -241,22 +241,22 @@ what a summary actually contains — in particular the `coords` order that every
 depends on:
 
 ```python
-from gwkokab.analysis.core.inference_io import AnalyticalPELoader
+from gwkokab.analysis.core.inference_io import AnalyticalGWalkPELoader
 
-d = AnalyticalPELoader.load_file(
-    "../data/event_0.hdf5", waveform_name="GWKokabSyntheticAnalyticalPE"
+d = AnalyticalGWalkPELoader.load_file(
+    "../data/event_0.hdf5", waveform_name="GWKokabSyntheticAnalyticalGWalkPE"
 )
 print(d.coords)          # ['mass_1_source', 'mass_2_source', 'redshift', 'chi_eff']
 print(d.mu, d.cov.shape) # the summary itself
 print(d.limits)          # (D, 2)
 ```
 
-## Discrete or analytical?
+## Discrete or Analytical GWalk?
 
 Both loaders read the same event files and are wired into the same analyses, so the choice
 is about the likelihood, not the data:
 
-| | Discrete | Analytical |
+| | Discrete | Analytical GWalk |
 | --- | --- | --- |
 | Per-event storage | $M_n \times D$ samples | $\mu_n$, $\Sigma_n$, `limits` |
 | Monte Carlo draws | fixed by the data | an analysis knob |
@@ -264,8 +264,8 @@ is about the likelihood, not the data:
 | Non-Gaussian posteriors | exact | not captured |
 | Missing requested column | error | warning |
 
-The analytical method is exactly as good as the Gaussian approximation.
-`synthetic_analytical_pe` reports the Jensen–Shannon divergence between the true and
+The Analytical GWalk method is exactly as good as the Gaussian approximation.
+`synthetic_analytical_gwalk_pe` reports the Jensen–Shannon divergence between the true and
 approximated marginals so you can check; posteriors that are multimodal or railing against
 a prior boundary should stay with the discrete loader.
 

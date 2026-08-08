@@ -14,7 +14,7 @@ from loguru import logger
 from numpyro.distributions import Distribution
 
 from gwkokab.analysis.core.inference_io import (
-    AnalyticalPELoader,
+    AnalyticalGWalkPELoader,
     PoissonMeanEstimationLoader,
 )
 from gwkokab.analysis.core.utils import SampleTransformer
@@ -125,12 +125,12 @@ def _multivariate_normal_samples(
     return samples, transformed_samples, N_total
 
 
-class AnalyticalBase(AnalysisBase):
+class AnalyticalGWalkBase(AnalysisBase):
     def __init__(
         self,
         likelihood_fn: Callable[..., Callable],
         model: Union[Distribution, Callable[..., Distribution]],
-        data_loader: AnalyticalPELoader,
+        data_loader: AnalyticalGWalkPELoader,
         prior_filename: str,
         poisson_mean_filename: str,
         sampler_cfg,
@@ -148,10 +148,10 @@ class AnalyticalBase(AnalysisBase):
         likelihood_fn : Callable[..., Callable[..., Array]]
             A function that takes the model parameters and returns a function that computes the log-likelihood.
         model : Union[Distribution, Callable[..., Distribution]]
-            model to be used in the AnalyticalBase class. It can be a Distribution or a callable
+            model to be used in the AnalyticalGWalkBase class. It can be a Distribution or a callable
             that returns a Distribution.
-        data_loader : AnalyticalPELoader
-            data loader for the analytical PE data.
+        data_loader : AnalyticalGWalkPELoader
+            data loader for the Analytical GWalk PE data.
         seed : int
             seed for the random number generator.
         prior_filename : str
@@ -181,7 +181,7 @@ class AnalyticalBase(AnalysisBase):
         self.n_samples = n_samples
 
         logger.info(
-            f"Initializing AnalyticalBase class for analysis identifier: '{analysis_name}'"
+            f"Initializing AnalyticalGWalkBase class for analysis identifier: '{analysis_name}'"
         )
 
         super().__init__(
@@ -197,7 +197,7 @@ class AnalyticalBase(AnalysisBase):
         )
 
     def run(self) -> None:
-        """Runs the AnalyticalBase analysis."""
+        """Runs the AnalyticalGWalkBase analysis."""
         constants, priors, variables, variables_index = self.classify_model_parameters()
 
         data = self.data_loader.load(self.parameters)
@@ -265,7 +265,7 @@ class AnalyticalBase(AnalysisBase):
             "samples_stack.shape: {shape}", shape=transformed_samples_stack.shape
         )
 
-        filename = "analytical_samples.hdf5"
+        filename = "analytical_gwalk_samples.hdf5"
 
         _save_samples_to_hdf5(
             filename=filename,
@@ -292,9 +292,9 @@ class AnalyticalBase(AnalysisBase):
         )
 
 
-def analytical_arg_parser(parser: ArgumentParser) -> ArgumentParser:
+def analytical_gwalk_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     """Populate the command line argument parser with the arguments for the
-    AnalyticalBase script.
+    AnalyticalGWalkBase script.
 
     Parameters
     ----------
@@ -308,13 +308,13 @@ def analytical_arg_parser(parser: ArgumentParser) -> ArgumentParser:
     """
     parser = guru_parser(parser)
 
-    # AnalyticalBase Options
-    analytical = parser.add_argument_group("AnalyticalBase Options")
-    analytical.add_argument(
+    # AnalyticalGWalkBase Options
+    analytical_gwalk = parser.add_argument_group("AnalyticalGWalkBase Options")
+    analytical_gwalk.add_argument(
         "--data-loader-cfg",
         type=str,
         required=True,
-        help="Path to JSON config for AnalyticalPELoader.",
+        help="Path to JSON config for AnalyticalGWalkPELoader.",
     )
 
     tune = parser.add_argument_group("Tuning Options")

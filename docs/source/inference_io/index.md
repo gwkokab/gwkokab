@@ -16,7 +16,7 @@ of a complete analysis; the pages here are the reference you reach for when writ
 | Interface | Describes | Read with | CLI flag |
 | --- | --- | --- | --- |
 | [`DiscretePELoader`](./discrete_pe_loader.md) | Event posterior samples | `read_from_json(path)` | `--data-loader-cfg` |
-| [`AnalyticalPELoader`](./analytical_pe_loader.md) | Event Gaussian summaries | `read_from_json(path)` | `--data-loader-cfg` |
+| [`AnalyticalGWalkPELoader`](./analytical_gwalk_pe_loader.md) | Event Gaussian summaries | `read_from_json(path)` | `--data-loader-cfg` |
 | [`PoissonMeanEstimationLoader`](./poisson_mean_estimation_loader.md) | Selection function / $\mu(\Lambda)$ | `read_from_json(path, key, parameters)` | `--pmean-cfg` |
 | [`SamplerConfig`](./sampler_config.md) | Which sampler, and how | `read_from_json(path)` | `--sampler-cfg` |
 | [`NumpyroGlobalConfig`](./sampler_config.md#numpyro-numpyroglobalconfig) | NUTS kernel and MCMC driver | via `SamplerConfig` | `--sampler-cfg` |
@@ -84,10 +84,10 @@ with `../`. Absolute paths are always safe.
 every key present at its default, which is often quicker than starting from scratch:
 
 ```bash
-gwk_discrete_data_loader_cfg_template   -o data_loader_cfg.json
-gwk_analytical_data_loader_cfg_template -o data_loader_cfg.json
-gwk_numpyro_cfg_template                -o sampler_cfg.json
-gwk_flowMC_cfg_template                 -o sampler_cfg.json
+gwk_discrete_data_loader_cfg_template         -o data_loader_cfg.json
+gwk_analytical_gwalk_data_loader_cfg_template -o data_loader_cfg.json
+gwk_numpyro_cfg_template                      -o sampler_cfg.json
+gwk_flowMC_cfg_template                       -o sampler_cfg.json
 ```
 
 ## Reading a configuration by hand
@@ -114,7 +114,7 @@ you left out — the most direct way to see the defaults that are in play.
 :maxdepth: 1
 
 discrete_pe_loader
-analytical_pe_loader
+analytical_gwalk_pe_loader
 poisson_mean_estimation_loader
 sampler_config
 ```

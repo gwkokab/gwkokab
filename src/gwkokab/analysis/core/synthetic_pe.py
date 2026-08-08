@@ -549,7 +549,7 @@ def calculate_js_metrics(
     discrete_samples : np.ndarray
         Discrete samples from the parameter estimation, shape (num_samples, num_parameters).
     analytical_samples : np.ndarray
-        Analytical samples generated from the error model, shape (num_samples, num_parameters).
+        Analytical GWalk samples generated from the error model, shape (num_samples, num_parameters).
     bins : int
         Number of bins to use for the histogram estimation of the PDFs.
 
@@ -582,8 +582,8 @@ def calculate_js_metrics(
     return np.array(js_divs)
 
 
-class SyntheticAnalyticalPE(PRNGKeyMixin):
-    waveform_name = "GWKokabSyntheticAnalyticalPE"
+class SyntheticAnalyticalGWalkPE(PRNGKeyMixin):
+    waveform_name = "GWKokabSyntheticAnalyticalGWalkPE"
 
     def __init__(
         self,
@@ -678,10 +678,10 @@ class SyntheticAnalyticalPE(PRNGKeyMixin):
             group.create_dataset("limits", data=limits, **compression_args)
 
 
-def synthetic_analytical_pe_main():
+def synthetic_analytical_gwalk_pe_main():
     parser = ArgumentParser(
         formatter_class=ArgumentDefaultsHelpFormatter,
-        description="Generate synthetic analytical parameter estimation samples.",
+        description="Generate synthetic Analytical GWalk parameter estimation samples.",
         epilog="This tool generates synthetic parameter estimation samples based on "
         "injection data and a specified error model.",
     )
@@ -693,7 +693,7 @@ def synthetic_analytical_pe_main():
     )
     parser.add_argument(
         "--discrete-waveform",
-        help="Name of the discrete waveform used to generate the analytical PE.",
+        help="Name of the discrete waveform used to generate the Analytical GWalk PE.",
         type=str,
         default=SyntheticDiscretePE.waveform_name,
     )
@@ -712,9 +712,9 @@ def synthetic_analytical_pe_main():
 
     log_info(start=True)
 
-    SyntheticAnalyticalPE.init_rng_seed(seed=args.seed)
+    SyntheticAnalyticalGWalkPE.init_rng_seed(seed=args.seed)
 
-    pe = SyntheticAnalyticalPE(
+    pe = SyntheticAnalyticalGWalkPE(
         filename=args.filename,
         discrete_waveform=args.discrete_waveform,
         coords=args.coords,

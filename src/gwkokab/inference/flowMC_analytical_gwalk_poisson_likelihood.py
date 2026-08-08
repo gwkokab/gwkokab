@@ -10,15 +10,15 @@ from jaxtyping import Array
 from numpyro.distributions import Distribution
 
 from gwkokab.inference.poissonlikelihood_utils import (
-    analytical_poisson_likelihood_fn,
+    analytical_gwalk_poisson_likelihood_fn,
 )
 from gwkokab.models.utils import JointDistribution, ScaledMixture
 
 
-__all__ = ["flowMC_analytical_poisson_likelihood"]
+__all__ = ["flowMC_analytical_gwalk_poisson_likelihood"]
 
 
-def flowMC_analytical_poisson_likelihood(
+def flowMC_analytical_gwalk_poisson_likelihood(
     dist_fn: Callable[..., Distribution],
     priors: JointDistribution,
     variables: Dict[str, Distribution],
@@ -43,7 +43,7 @@ def flowMC_analytical_poisson_likelihood(
         mapped_params = _map_params(x)
         model_instance = dist_fn(**constant_params, **mapped_params)
 
-        log_likelihood = analytical_poisson_likelihood_fn(
+        log_likelihood = analytical_gwalk_poisson_likelihood_fn(
             model_instance,
             poisson_mean_estimator,
             samples_stack,
