@@ -6,10 +6,13 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from numpyro.distributions.distribution import enable_validation
 
-from gwkokab.analysis.core.analytical_base import analytical_arg_parser, AnalyticalBase
+from gwkokab.analysis.core.analytical_gwalk_base import (
+    analytical_gwalk_arg_parser,
+    AnalyticalGWalkBase,
+)
 from gwkokab.analysis.core.flowMC_base import FlowMCBase
 from gwkokab.analysis.core.inference_io import (
-    AnalyticalPELoader as DataLoader,
+    AnalyticalGWalkPELoader as DataLoader,
     SamplerConfig,
 )
 from gwkokab.analysis.core.numpyro_base import NumpyroBase
@@ -21,21 +24,21 @@ from gwkokab.analysis.utils.logger import log_info
 from gwkokab.inference.factory import get_likelihood_fn
 
 
-class EccentricityMattersFAnalyticalAnalysis(
-    EccentricityMattersCore, AnalyticalBase, FlowMCBase
+class EccentricityMattersFAnalyticalGWalkAnalysis(
+    EccentricityMattersCore, AnalyticalGWalkBase, FlowMCBase
 ):
     pass
 
 
-class EccentricityMattersNAnalyticalAnalysis(
-    EccentricityMattersCore, AnalyticalBase, NumpyroBase
+class EccentricityMattersNAnalyticalGWalkAnalysis(
+    EccentricityMattersCore, AnalyticalGWalkBase, NumpyroBase
 ):
     pass
 
 
 def main() -> None:
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
-    parser = analytical_arg_parser(parser)
+    parser = analytical_gwalk_arg_parser(parser)
 
     args = parser.parse_args()
 
@@ -48,13 +51,13 @@ def main() -> None:
 
     likelihood_fn = get_likelihood_fn(
         sampler_name=sampler_cfg.sampler_name,
-        analysis_type="analytical",
+        analysis_type="analytical_gwalk",
     )
 
     AnalysisClass = (
-        EccentricityMattersFAnalyticalAnalysis
+        EccentricityMattersFAnalyticalGWalkAnalysis
         if sampler_cfg.sampler_name == "flowMC"
-        else EccentricityMattersNAnalyticalAnalysis
+        else EccentricityMattersNAnalyticalGWalkAnalysis
     )
 
     AnalysisClass.init_rng_seed(seed=args.seed)

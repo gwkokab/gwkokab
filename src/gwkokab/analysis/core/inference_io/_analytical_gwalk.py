@@ -27,13 +27,13 @@ def _data_loader_cfg_template() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(
-        description="Creates a template configuration for analytical data loader.",
+        description="Creates a template configuration for Analytical GWalk data loader.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
         "--output",
         "-o",
-        default="analytical_data_loader_cfg_template.json",
+        default="analytical_gwalk_data_loader_cfg_template.json",
         help="Output JSON filename",
     )
     args = parser.parse_args()
@@ -41,7 +41,7 @@ def _data_loader_cfg_template() -> None:
     cfg = {
         "regex": "",
         "transform_module_path": None,
-        "default_waveform": "GWKokabSyntheticAnalyticalPE",
+        "default_waveform": "GWKokabSyntheticAnalyticalGWalkPE",
         "alternate_waveforms": {},
     }
     write_json(args.output, cfg)
@@ -78,7 +78,7 @@ def _load_transform(path: Optional[str]) -> SampleTransformer:
     return transform_cls()
 
 
-class AnalyticalPEFileData(NamedTuple):
+class AnalyticalGWalkPEFileData(NamedTuple):
     coords: list[str]
     cov: np.ndarray
     limits: np.ndarray
@@ -86,9 +86,9 @@ class AnalyticalPEFileData(NamedTuple):
     scale: np.ndarray
 
 
-class AnalyticalPELoader(BaseModel):
-    """Loader for Analytical PE (Parameter Estimation) samples from files matching a
-    regex.
+class AnalyticalGWalkPELoader(BaseModel):
+    """Loader for Analytical GWalk PE (Parameter Estimation) samples from files matching
+    a regex.
 
     This class handles the ingestion of gravitational-wave posterior samples, manages
     parameter aliasing, performs subsampling, and calculates log-prior weights for
@@ -108,7 +108,7 @@ class AnalyticalPELoader(BaseModel):
     parameter_aliases: dict[str, str] = Field(default_factory=dict)
     """Mapping of internal parameter names to the column names used in the CSV files."""
 
-    default_waveform: str = Field("GWKokabSyntheticAnalyticalPE")
+    default_waveform: str = Field("GWKokabSyntheticAnalyticalGWalkPE")
     """Default waveform name to use when loading samples."""
 
     alternate_waveforms: dict[str, str] = Field(default_factory=dict)
@@ -118,14 +118,14 @@ class AnalyticalPELoader(BaseModel):
         default_factory=IdentitySampleTransformer
     )
     """An instance of a SampleTransformer that defines how to transform the samples from
-    the analytical PE format to the model's expected format.
+    the Analytical GWalk PE format to the model's expected format.
 
     This allows for flexible handling of different coordinate systems or
     parameterizations used in the PE samples.
     """
 
     @classmethod
-    def read_from_json(cls, config_path: str) -> "AnalyticalPELoader":
+    def read_from_json(cls, config_path: str) -> "AnalyticalGWalkPELoader":
         """Initializes the loader from a JSON configuration file.
 
         Parameters
@@ -135,8 +135,8 @@ class AnalyticalPELoader(BaseModel):
 
         Returns
         -------
-        AnalyticalPELoader
-            An instance of AnalyticalPELoader.
+        AnalyticalGWalkPELoader
+            An instance of AnalyticalGWalkPELoader.
 
         Raises
         ------
@@ -172,7 +172,7 @@ class AnalyticalPELoader(BaseModel):
     @classmethod
     def load_file(
         cls, filename: Path | str, waveform_name: str
-    ) -> AnalyticalPEFileData:
+    ) -> AnalyticalGWalkPEFileData:
         """Loads a single PE sample file into a DataFrame.
 
         Parameters
@@ -184,7 +184,7 @@ class AnalyticalPELoader(BaseModel):
 
         Returns
         -------
-        AnalyticalPEFileData
+        AnalyticalGWalkPEFileData
             NamedTuple containing the samples and metadata from the file.
         """
         logger.info(f"Loading file '{filename}' with waveform '{waveform_name}'.")
@@ -208,7 +208,7 @@ class AnalyticalPELoader(BaseModel):
                 )
                 scale = np.ones_like(mu)
 
-        return AnalyticalPEFileData(
+        return AnalyticalGWalkPEFileData(
             coords=coords,
             cov=cov,
             limits=limits,
@@ -219,7 +219,7 @@ class AnalyticalPELoader(BaseModel):
     def load(
         self, parameters: tuple[str, ...], seed: int = 37
     ) -> dict[str, list[np.ndarray]]:
-        """Loads analytical PE data from disk.
+        """Loads Analytical GWalk PE data from disk.
 
         This method reads the mean, covariance, and limits for each event specified
         in `self.event_paths`, validates that the necessary parameters are present,
@@ -242,7 +242,7 @@ class AnalyticalPELoader(BaseModel):
 
         posterior_columns = [self.parameter_aliases.get(p, p) for p in parameters]
 
-        data_list: list[AnalyticalPEFileData] = []
+        data_list: list[AnalyticalGWalkPEFileData] = []
 
         for event_path in self.event_paths:
             event_name = event_path.stem

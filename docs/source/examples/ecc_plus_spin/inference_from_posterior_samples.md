@@ -467,6 +467,6 @@ four runs agreeing with each other and with the injected truth.
 
 ## Next Steps
 
-The [analytical method](./inference_from_gaussian_summaries.md) repeats this inference with the
-Gaussian summaries produced by `synthetic_analytical_pe`, and puts the four runs
+The [Analytical GWalk method](./inference_from_gaussian_summaries.md) repeats this inference with the
+Gaussian summaries produced by `synthetic_analytical_gwalk_pe`, and puts the four runs
 (two methods $\times$ two samplers) side by side against the injected truth.

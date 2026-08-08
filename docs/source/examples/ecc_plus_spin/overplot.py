@@ -62,10 +62,10 @@ DISCRETE = Info(
     colors[0],
     "Discrete Method",
 )
-ANALYTICAL = Info(
-    read_from_hdf5("analytical_flowMC/inference_data.hdf5", "samples"),
+ANALYTICAL_GWALK = Info(
+    read_from_hdf5("analytical_gwalk_flowMC/inference_data.hdf5", "samples"),
     colors[1],
-    "Analytical Method",
+    "Analytical GWalk Method",
 )
 TRUE_VALUES = Info(
     [1.0, 0.0, 0.15, 4.0, 50.0, 5.0, 0.0, 0.4],
@@ -86,7 +86,7 @@ LABELS = [
 
 fig, ax = plt.subplots(len(LABELS), len(LABELS), figsize=(12, 12))
 
-info_list = [DISCRETE, ANALYTICAL]
+info_list = [DISCRETE, ANALYTICAL_GWALK]
 
 for info in info_list:
     fig = corner.corner(

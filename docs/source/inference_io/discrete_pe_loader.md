@@ -353,5 +353,5 @@ candidates, with the same first-match-wins semantics as `default_datasets`.
 
 - [Population Inference from Posterior Samples](../examples/ecc_plus_spin/inference_from_posterior_samples.md) —
   this loader inside a complete analysis.
-- [`AnalyticalPELoader`](./analytical_pe_loader.md) — the same role for Gaussian summaries
+- [`AnalyticalGWalkPELoader`](./analytical_gwalk_pe_loader.md) — the same role for Gaussian summaries
   instead of samples.

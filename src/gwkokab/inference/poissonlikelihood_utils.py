@@ -13,7 +13,7 @@ from numpyro.distributions.distribution import Distribution
 
 __all__ = [
     "discrete_poisson_likelihood_fn",
-    "analytical_poisson_likelihood_fn",
+    "analytical_gwalk_poisson_likelihood_fn",
 ]
 
 
@@ -117,7 +117,7 @@ def discrete_poisson_likelihood_fn(
     return log_likelihood
 
 
-def analytical_poisson_likelihood_fn(
+def analytical_gwalk_poisson_likelihood_fn(
     model_instance: Distribution,
     poisson_mean_estimator: Callable[..., tuple[Array, Array]],
     samples_stack: Array,

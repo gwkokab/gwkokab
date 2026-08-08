@@ -22,8 +22,8 @@ from gwkokab.parameters import Parameters as P
 
 if __name__ == "__main__":
     analyses_dirs = [
-        "analytical_flowMC",
-        "analytical_numpyro",
+        "analytical_gwalk_flowMC",
+        "analytical_gwalk_numpyro",
         "discrete_flowMC",
         "discrete_numpyro",
     ]

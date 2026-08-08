@@ -32,7 +32,7 @@ for event_file in $(ls data/event_*.hdf5); do
 		XLA_PYTHON_CLIENT_ALLOCATOR=platform \
 		XLA_PYTHON_CLIENT_PREALLOCATE=false \
 		GWKOKAB_LOG_FILE="$event_file.log" \
-		synthetic_analytical_pe "$event_file" \
+		synthetic_analytical_gwalk_pe "$event_file" \
 		--coords=mass_1_source,mass_2_source,spin_1z,spin_2z,eccentricity \
 		--seed $RANDOM
 done

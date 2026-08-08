@@ -1,4 +1,4 @@
-# Population Inference from Gaussian Summaries (Analytical Method)
+# Population Inference from Gaussian Summaries (Analytical GWalk Method)
 
 ## Introduction
 
@@ -8,8 +8,8 @@ but it means every likelihood evaluation touches every sample of every event: fo
 events with $M$ samples each, the cost scales as $N \times M$, and the samples must be
 resident on the device for the whole run.
 
-The **analytical** method replaces each event's posterior with the multivariate normal
-fitted by `synthetic_analytical_pe` in the
+The **Analytical GWalk** method replaces each event's posterior with the multivariate normal
+fitted by `synthetic_analytical_gwalk_pe` in the
 [first tutorial](./simulating_a_catalogue.md#summarising-the-posteriors-analytically). An event
 is then described by a mean vector and a covariance matrix instead of thousands of
 samples, and the number of Monte Carlo draws used per event becomes a knob of the
@@ -65,7 +65,7 @@ should be large enough that the estimate is stable.
 :class: important
 
 The method is exactly as good as the Gaussian approximation to each event's posterior.
-`synthetic_analytical_pe` reports the Jensen–Shannon divergence between the true and
+`synthetic_analytical_gwalk_pe` reports the Jensen–Shannon divergence between the true and
 approximated marginals precisely so that you can check this; for this data set it is of
 order $10^{-3}$ nats, and the two methods agree closely as a result. Strongly
 non-Gaussian or multimodal posteriors — railing against a prior boundary, for instance —
@@ -97,15 +97,15 @@ is also shared, because both loaders need only a glob pattern:
 ```
 
 The two loaders read different parts of each file, though. Where the discrete loader wants
-the `posterior_samples` dataset, this one reads the `GWKokabSyntheticAnalyticalPE` group
-that `synthetic_analytical_pe` wrote alongside it, taking `mu`, `cov` and `limits` from it.
-[`AnalyticalPELoader`](../../inference_io/analytical_pe_loader.md) documents that layout
+the `posterior_samples` dataset, this one reads the `GWKokabSyntheticAnalyticalGWalkPE` group
+that `synthetic_analytical_gwalk_pe` wrote alongside it, taking `mu`, `cov` and `limits` from it.
+[`AnalyticalGWalkPELoader`](../../inference_io/analytical_gwalk_pe_loader.md) documents that layout
 and every field; two of them matter for this example, and in both cases we take the
 default.
 
-[`default_waveform`](../../inference_io/analytical_pe_loader.md#default_waveform) names the
-group to read, and its default is exactly the group `synthetic_analytical_pe` writes.
-[`transform_module_path`](../../inference_io/analytical_pe_loader.md#transform_module_path)
+[`default_waveform`](../../inference_io/analytical_gwalk_pe_loader.md#default_waveform) names the
+group to read, and its default is exactly the group `synthetic_analytical_gwalk_pe` writes.
+[`transform_module_path`](../../inference_io/analytical_gwalk_pe_loader.md#transform_module_path)
 would point at the change of variables producing the $J_{n,k}$ of the likelihood above;
 left at `null` it is the identity, which is what we want since the summaries were fitted
 directly in the coordinates the population model uses.
@@ -116,9 +116,9 @@ directly in the coordinates the population model uses.
 Because the loader returns $\mu_n$ and $\Sigma_n$ exactly as stored, the `coords`
 attribute of each summary must list the analysis parameters in the same order — this
 loader will not slice a five-coordinate summary down for a four-parameter run. That is
-why `synthetic_analytical_pe` was given an explicit `--coords` in the
+why `synthetic_analytical_gwalk_pe` was given an explicit `--coords` in the
 [first tutorial](./simulating_a_catalogue.md#summarising-the-posteriors-analytically); see
-[`D` comes from the file](../../inference_io/analytical_pe_loader.md#the-minimal-configuration).
+[`D` comes from the file](../../inference_io/analytical_gwalk_pe_loader.md#the-minimal-configuration).
 ```
 
 ### Re-tuning flowMC
@@ -126,9 +126,9 @@ why `synthetic_analytical_pe` was given an explicit `--coords` in the
 The flowMC configuration differs from the discrete one only in
 [`condition_matrix`](../../inference_io/sampler_config.md#condition_matrix-at-more-length),
 which was re-tuned on a pilot run of *this* likelihood
-([`analytical_flowMC/sampler_cfg.json`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_flowMC/sampler_cfg.json)).
+([`analytical_gwalk_flowMC/sampler_cfg.json`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_gwalk_flowMC/sampler_cfg.json)).
 That field holds the variances of the target along each direction, and the analytical
-likelihood is a different target from the discrete one — close, but not close enough to
+GWalk likelihood is a different target from the discrete one — close, but not close enough to
 reuse the numbers:
 
 ```json
@@ -145,21 +145,21 @@ reuse the numbers:
 ```
 
 The NumPyro configuration
-([`analytical_numpyro/sampler_cfg.json`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_numpyro/sampler_cfg.json))
+([`analytical_gwalk_numpyro/sampler_cfg.json`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_gwalk_numpyro/sampler_cfg.json))
 is identical to the discrete one — NUTS adapts its own mass matrix during warm-up, so
 nothing needs re-tuning.
 
 ## Running the Analysis
 
-The command is `analytical_n_pls_m_gs`, from
-[`analytical_numpyro/analysis.sh`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_numpyro/analysis.sh):
+The command is `analytical_gwalk_n_pls_m_gs`, from
+[`analytical_gwalk_numpyro/analysis.sh`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_gwalk_numpyro/analysis.sh):
 
 ```bash
 XLA_PYTHON_CLIENT_ALLOCATOR=platform \
     XLA_PYTHON_CLIENT_PREALLOCATE=false \
     JAX_COMPILATION_CACHE_DIR="$HOME/jax_cache" \
-    GWKOKAB_LOG_FILE="analytical.log" \
-    analytical_n_pls_m_gs \
+    GWKOKAB_LOG_FILE="analytical_gwalk.log" \
+    analytical_gwalk_n_pls_m_gs \
     --n-pl 1 \
     --n-g 0 \
     --n-samples 10000 \
@@ -171,15 +171,15 @@ XLA_PYTHON_CLIENT_ALLOCATOR=platform \
     --add-truncated-normal-spin-z \
     --add-eccentricity-mixture
 
-gwk_report -i inference_data.hdf5 -o analytical_numpyro_report.html
+gwk_report -i inference_data.hdf5 -o analytical_gwalk_numpyro_report.html
 ```
 
-[`analytical_flowMC/analysis.sh`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_flowMC/analysis.sh)
+[`analytical_gwalk_flowMC/analysis.sh`](https://github.com/kokabsc/gwkokab/blob/main/docs/source/examples/ecc_plus_spin/analytical_gwalk_flowMC/analysis.sh)
 is the same apart from the report name. Run each from its own directory:
 
 ```bash
-cd analytical_numpyro && bash analysis.sh
-cd ../analytical_flowMC && bash analysis.sh
+cd analytical_gwalk_numpyro && bash analysis.sh
+cd ../analytical_gwalk_flowMC && bash analysis.sh
 ```
 
 Compared with the discrete command, the model flags, the four configuration files and the
@@ -195,11 +195,11 @@ seed are unchanged. Two things differ:
 
 Alongside the familiar `inference_data.hdf5` — same layout as in the
 [discrete tutorial](./inference_from_posterior_samples.md#output) — the run writes
-`analytical_samples.hdf5`, containing the draws it will reuse for every likelihood
+`analytical_gwalk_samples.hdf5`, containing the draws it will reuse for every likelihood
 evaluation:
 
 ```text
-analytical_samples.hdf5
+analytical_gwalk_samples.hdf5
 ├── event_00
 │   ├── samples              # draws in the coordinates the Gaussian was fitted in
 │   ├── transformed_samples  # the same draws in model coordinates
@@ -215,9 +215,9 @@ Keeping this file makes a run reproducible: the same draws, the same likelihood.
 :class: note
 
 The loader looks for an optional per-event
-[`scale`](../../inference_io/analytical_pe_loader.md#the-file-layout) dataset that
+[`scale`](../../inference_io/analytical_gwalk_pe_loader.md#the-file-layout) dataset that
 conditions badly scaled covariance matrices before sampling.
-`synthetic_analytical_pe` does not write one, so you will see
+`synthetic_analytical_gwalk_pe` does not write one, so you will see
 `'scale' dataset not found ... Defaulting to ones.` once per event. That is the intended
 behaviour for this data set.
 ```
@@ -230,8 +230,8 @@ We now have four runs:
 ecc_plus_spin
 ├── discrete_flowMC/inference_data.hdf5
 ├── discrete_numpyro/inference_data.hdf5
-├── analytical_flowMC/inference_data.hdf5
-└── analytical_numpyro/inference_data.hdf5
+├── analytical_gwalk_flowMC/inference_data.hdf5
+└── analytical_gwalk_numpyro/inference_data.hdf5
 ```
 
 ### Hyperparameter posteriors
@@ -244,7 +244,9 @@ truth:
 from gwkokab.analysis.core.utils import read_from_hdf5
 
 DISCRETE = read_from_hdf5("discrete_flowMC/inference_data.hdf5", "samples")
-ANALYTICAL = read_from_hdf5("analytical_flowMC/inference_data.hdf5", "samples")
+ANALYTICAL_GWALK = read_from_hdf5(
+    "analytical_gwalk_flowMC/inference_data.hdf5", "samples"
+)
 TRUE_VALUES = [1.0, 0.0, 0.15, 4.0, 50.0, 5.0, 0.0, 0.4]
 ```
 
@@ -258,7 +260,7 @@ python overplot.py
 ```
 
 ```{image} figs/overplot.png
-:alt: Corner plot of the eight hyperparameters for the discrete and analytical methods, both sampled with flowMC, against the injected truth.
+:alt: Corner plot of the eight hyperparameters for the discrete and Analytical GWalk methods, both sampled with flowMC, against the injected truth.
 :width: 100%
 ```
 
@@ -287,7 +289,7 @@ separates the two effects. NumPyro and flowMC land on the same posterior for a g
 method, so the sampler is not the limiting factor; the visible spread between the four
 contours is dominated by the choice of method, and even that is small compared with the
 statistical width of each posterior. The largest single displacement is in
-$\ln\mathcal{R}_0$ for the analytical/flowMC run, and it is well inside the $1\sigma$
+$\ln\mathcal{R}_0$ for the Analytical GWalk/flowMC run, and it is well inside the $1\sigma$
 contour of the others.
 
 ### Population marginals
@@ -381,7 +383,7 @@ the truth, the direct consequence of the small $\sigma_{\chi_z}$ offset seen ear
 
 ## Summary
 
-| | Discrete | Analytical |
+| | Discrete | Analytical GWalk |
 | --- | --- | --- |
 | Per-event data | all posterior samples | mean, covariance, bounding box |
 | Cost per likelihood call | $\sum_n M_n$ density evaluations | $N \times K$ density evaluations |
@@ -392,7 +394,7 @@ the truth, the direct consequence of the small $\sigma_{\chi_z}$ offset seen ear
 For this catalogue the two agree to well within their statistical uncertainties, which
 is exactly the result you want before trusting the cheaper method on a larger data set.
 The check to run first on new data is always the Jensen–Shannon divergence reported by
-`synthetic_analytical_pe`: if the Gaussian describes the posteriors, the analytical
+`synthetic_analytical_gwalk_pe`: if the Gaussian describes the posteriors, the analytical
 method buys you speed for free; if it does not, no amount of sampling will repair it.
 
 ---

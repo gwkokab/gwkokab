@@ -11,7 +11,7 @@ population-inference study in GWKokab. We will
    sensitivity,
 3. attach realistic measurement uncertainties to every event, producing mock posterior
    samples ("discrete" parameter estimates),
-4. summarise those posterior samples by a multivariate normal ("analytical" parameter
+4. summarise those posterior samples by a multivariate normal ("Analytical GWalk" parameter
    estimates).
 
 The two later tutorials then recover the population hyperparameters from this data set:
@@ -404,7 +404,7 @@ it.
 
 The third command reads each event file back, fits a multivariate normal to its
 posterior samples and stores the summary alongside them. This is what the analytical
-analysis will consume instead of the samples themselves.
+GWalk analysis will consume instead of the samples themselves.
 
 ```bash
 for event_file in $(ls data/event_*.hdf5); do
@@ -413,7 +413,7 @@ for event_file in $(ls data/event_*.hdf5); do
         XLA_PYTHON_CLIENT_ALLOCATOR=platform \
         XLA_PYTHON_CLIENT_PREALLOCATE=false \
         GWKOKAB_LOG_FILE="$event_file.log" \
-        synthetic_analytical_pe "$event_file" \
+        synthetic_analytical_gwalk_pe "$event_file" \
         --coords=mass_1_source,mass_2_source,spin_1z,spin_2z,eccentricity \
         --seed $RANDOM
 done
@@ -429,7 +429,7 @@ The summary is written back into the same file under a new group:
 event_00.hdf5
 ├── GWKokabSyntheticDiscretePE
 │   └── ...
-└── GWKokabSyntheticAnalyticalPE
+└── GWKokabSyntheticAnalyticalGWalkPE
     ├── approximant
     ├── mu       # sample mean, shape (n_coords,)
     ├── std      # marginal standard deviations
@@ -452,7 +452,7 @@ Max  JS divergence: 0.003248
 
 JS divergence is measured in nats here and is bounded by $\ln 2 \approx 0.693$, so values
 of order $10^{-3}$ mean the Gaussian is an excellent description of these mock
-posteriors. Keep an eye on this number when you move to real data: the analytical method
+posteriors. Keep an eye on this number when you move to real data: the Analytical GWalk method
 is only as good as this approximation.
 
 ## Putting It Together
@@ -478,7 +478,7 @@ ecc_plus_spin
     └── ...
 ```
 
-Every event file now contains both a discrete and an analytical representation of the
+Every event file now contains both a discrete and an Analytical GWalk representation of the
 same posterior, which is precisely what lets the next two tutorials run the two
 inference methods on identical data.
 
