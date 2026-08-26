@@ -89,19 +89,28 @@ def get_found_injections(
         )
     )
 
-    if not has_ifar and len(far_keys) > 0:
-        for far_key in far_keys:
-            data[far_key.replace("far", "ifar")] = 1 / data[far_key][()]
+    if has_ifar:
+        ifar_values = {
+            key: data[key][()] for key in data.keys() if "ifar" in key.lower()
+        }
+    elif len(far_keys) > 0:
+        # `data` may be a read-only HDF5 group, so the inverse false alarm rates
+        # derived from the FAR columns are kept locally rather than written back.
+        ifar_values = {
+            far_key.replace("far", "ifar"): 1 / data[far_key][()]
+            for far_key in far_keys
+        }
         has_ifar = True
+    else:
+        ifar_values = {}
     if ifar_threshold is None:
         ifar_threshold = 1e300
     if has_ifar:
-        for key in data:
-            if "ifar" in key.lower():
-                found |= data[key][()] > ifar_threshold
-            if "name" in data.keys():
-                gwtc1 = (data["name"][()] == b"o1") | (data["name"][()] == b"o2")
-                found |= gwtc1 & (data["optimal_snr_net"][()] > snr_threshold)
+        for ifar in ifar_values.values():
+            found |= ifar > ifar_threshold
+        if "name" in data.keys():
+            gwtc1 = (data["name"][()] == b"o1") | (data["name"][()] == b"o2")
+            found |= gwtc1 & (data["optimal_snr_net"][()] > snr_threshold)
         if "semianalytic_observed_phase_maximized_snr_net" in data.keys():
             found |= (
                 data["semianalytic_observed_phase_maximized_snr_net"][()]
@@ -249,8 +258,8 @@ def load_injection_data(
         for ii in [1, 2]:
             gwpop_data[f"a_{ii}"] = (
                 np.asarray(
-                    data.get(f"spin{ii}x", np.zeros(n_found))[()][found] ** 2
-                    + data.get(f"spin{ii}y", np.zeros(n_found))[()][found] ** 2
+                    data.get(f"spin{ii}x", np.zeros(found_shape))[()][found] ** 2
+                    + data.get(f"spin{ii}y", np.zeros(found_shape))[()][found] ** 2
                     + data[f"spin{ii}z"][()][found] ** 2
                 )
                 ** 0.5
