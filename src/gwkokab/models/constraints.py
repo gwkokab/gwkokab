@@ -326,9 +326,13 @@ class _AllConstraint(Constraint):
     def eq(self, other: object, static: bool = False) -> bool:
         if not isinstance(other, _AllConstraint):
             return False
+        if len(self.constraints) != len(other.constraints):
+            return False
         return all(
             constraint == other_constraint
-            for constraint, other_constraint in zip(self.constraints, other.constraints)
+            for constraint, other_constraint in zip(
+                self.constraints, other.constraints, strict=True
+            )
         )
 
 
@@ -353,9 +357,13 @@ class _AnyConstraint(Constraint):
     def eq(self, other: object, static: bool = False) -> bool:
         if not isinstance(other, _AnyConstraint):
             return False
+        if len(self.constraints) != len(other.constraints):
+            return False
         return all(
             constraint == other_constraint
-            for constraint, other_constraint in zip(self.constraints, other.constraints)
+            for constraint, other_constraint in zip(
+                self.constraints, other.constraints, strict=True
+            )
         )
 
 
