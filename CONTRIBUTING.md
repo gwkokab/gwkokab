@@ -95,13 +95,13 @@ Follow these steps to contribute code:
    If you know the specific test file that covers your changes, you can limit the tests to that; for example:
 
    ```bash
-   pytest -n auto tests/test_model_transformations.py
+   pytest -n auto tests/gwkokab/models/test_transformations.py
    ```
 
    You can narrow the tests further by using the `pytest -k` flag to match particular test names:
 
    ```bash
-   pytest -n auto tests/test_model_transformations.py -k test_bijective_transforms
+   pytest -n auto tests/gwkokab/models/test_transformations.py -k test_bijective_transforms
    ```
 
 0. Once you are satisfied with your change, create a commit as follows

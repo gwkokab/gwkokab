@@ -10,7 +10,7 @@ Requires `uv` and GNU `make`. `make install` always uninstalls first, then insta
 make install PIP_FLAGS=--upgrade EXTRA=cpu GROUP=dev,test,doc   # EXTRA: cpu|cuda12|cuda13|tpu; GROUP: dev|test|doc
 prek run --all-files                        # lint/format (prek, NOT pre-commit; config in prek.toml)
 pytest tests                                # full suite
-pytest tests/test_distributions.py -k test_dist_shape   # one file / one test
+pytest tests/gwkokab/models/test_distributions.py -k test_dist_shape   # one file / one test
 make doc                                    # reinstalls, then sphinx html into docs/build
 pytest docs --doctest-glob='*.md' --doctest-glob='*.rst'  # doctests in docs (CI runs this)
 GWKOKAB_DEV_BUILD=0 uv build                # release build (omits git-hash version suffix)

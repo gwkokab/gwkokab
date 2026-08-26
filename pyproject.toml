@@ -140,7 +140,11 @@ wrap-descriptions = 88
 syntax = "numpy"
 
 [tool.pytest.ini_options]
-addopts = ["-v", "--color=yes"]
+# ``importlib`` mode lets the test tree mirror the package layout: several packages
+# carry a module of the same name (``models/mass/_models.py``, ``models/spin/_models.py``,
+# ...), so their test files share a basename too, which the default ``prepend`` mode
+# rejects.
+addopts = ["-v", "--color=yes", "--import-mode=importlib"]
 doctest_optionflags = [
     "ELLIPSIS",
     "NORMALIZE_WHITESPACE",
