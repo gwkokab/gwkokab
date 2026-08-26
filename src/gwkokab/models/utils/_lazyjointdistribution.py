@@ -69,6 +69,8 @@ class _LazyConstraint(constraints.Constraint):
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _LazyConstraint):
             return False
+        if len(self.marginal_distributions) != len(other.marginal_distributions):
+            return False
         return (
             all(
                 constraint == other_constraint

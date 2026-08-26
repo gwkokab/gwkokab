@@ -151,76 +151,68 @@ class BlockTransform(Transform):
             "Number of event slices must match number of transforms."
             f"Got {len(self.event_slices)} slices and {len(self.transforms)} transforms."
         )
-        self.domain = all_constraint(
-            [t.domain for t in self.transforms], self.event_slices
+
+    @property
+    def domain(self) -> constraints.Constraint:
+        return all_constraint([t.domain for t in self.transforms], self.event_slices)
+
+    @property
+    def codomain(self) -> constraints.Constraint:
+        return all_constraint([t.codomain for t in self.transforms], self.event_slices)
+
+    @staticmethod
+    def _block(x: Array, event_slice: Union[int, Tuple[int, int]]) -> Array:
+        """Take the block of the event dimension that `event_slice` selects."""
+        if isinstance(event_slice, int):
+            return jax.lax.dynamic_index_in_dim(x, event_slice, axis=-1, keepdims=False)
+        return jax.lax.dynamic_slice_in_dim(
+            x, event_slice[0], event_slice[1] - event_slice[0], axis=-1
         )
-        self.codomain = all_constraint(
-            [t.codomain for t in self.transforms], self.event_slices
+
+    def _join(self, blocks: Sequence[Array]) -> Array:
+        """Reassemble transformed blocks into a single event.
+
+        A block selected by a bare index lost its event axis on the way in, so it is
+        given back before the blocks are concatenated.
+        """
+        return jnp.concatenate(
+            [
+                jnp.expand_dims(block, axis=-1)
+                if isinstance(event_slice, int)
+                else block
+                for block, event_slice in zip(blocks, self.event_slices)
+            ],
+            axis=-1,
         )
 
     def __call__(self, x: Array) -> Array:
-        y_slices = []
-        for transform, event_slice in zip(self.transforms, self.event_slices):
-            if isinstance(event_slice, int):
-                x_slice = jax.lax.dynamic_index_in_dim(
-                    x, event_slice, axis=-1, keepdims=False
-                )
-            else:
-                x_slice = jax.lax.dynamic_slice_in_dim(
-                    x,
-                    event_slice[0],
-                    event_slice[1] - event_slice[0],
-                    axis=-1,
-                )
-            y_slice = transform(x_slice)
-            y_slices.append(y_slice)
-        return jnp.column_stack(y_slices)
+        return self._join([
+            transform(self._block(x, event_slice))
+            for transform, event_slice in zip(self.transforms, self.event_slices)
+        ])
 
     def _inverse(self, y: Array) -> Array:
-        x_slices = []
-        for transform, event_slice in zip(self.transforms, self.event_slices):
-            if isinstance(event_slice, int):
-                y_slice = jax.lax.dynamic_index_in_dim(
-                    y, event_slice, axis=-1, keepdims=False
-                )
-            else:
-                y_slice = jax.lax.dynamic_slice_in_dim(
-                    y,
-                    event_slice[0],
-                    event_slice[1] - event_slice[0],
-                    axis=-1,
-                )
-            x_slice = transform.inv(y_slice)
-            x_slices.append(x_slice)
-        return jnp.column_stack(x_slices)
+        return self._join([
+            transform.inv(self._block(y, event_slice))
+            for transform, event_slice in zip(self.transforms, self.event_slices)
+        ])
 
     def log_abs_det_jacobian(self, x: Array, y: Array, intermediates=None):
+        batch_ndim = jnp.ndim(x) - 1
         log_detJ = 0.0
         for transform, event_slice in zip(self.transforms, self.event_slices):
-            if isinstance(event_slice, int):
-                x_slice = jax.lax.dynamic_index_in_dim(
-                    x, event_slice, axis=-1, keepdims=False
-                )
-                y_slice = jax.lax.dynamic_index_in_dim(
-                    y, event_slice, axis=-1, keepdims=False
-                )
-            else:
-                start_idx, end_idx = event_slice
-                x_slice = jax.lax.dynamic_slice_in_dim(
-                    x,
-                    start_idx,
-                    end_idx - start_idx,
-                    axis=-1,
-                )
-                y_slice = jax.lax.dynamic_slice_in_dim(
-                    y,
-                    start_idx,
-                    end_idx - start_idx,
-                    axis=-1,
-                )
             log_detJ_slice = transform.log_abs_det_jacobian(
-                x_slice, y_slice, intermediates
+                self._block(x, event_slice), self._block(y, event_slice), intermediates
             )
+            # an elementwise sub-transform reports one term per coordinate, whereas one
+            # with an event dimension has already reduced its block; sum away whatever
+            # axes are left over so that every block contributes a batch-shaped term
+            extra_ndim = jnp.ndim(log_detJ_slice) - batch_ndim
+            if extra_ndim > 0:
+                log_detJ_slice = jnp.sum(
+                    log_detJ_slice,
+                    axis=tuple(range(batch_ndim, jnp.ndim(log_detJ_slice))),
+                )
             log_detJ += log_detJ_slice
         return log_detJ
 

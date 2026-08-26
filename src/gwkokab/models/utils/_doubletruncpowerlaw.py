@@ -191,7 +191,7 @@ def doubly_truncated_power_law_cdf_jvp(primals, tangents):
         ) - jnp.reciprocal((log_high - log_low) * low)
 
     def high_eq_neg1():
-        return (log_x - log_low) / (jnp.square(log_high - log_low) * high)
+        return -(log_x - log_low) / (jnp.square(log_high - log_low) * high)
 
     # Including approximation for alpha = -1
     tangent_out = (
