@@ -1,15 +1,18 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
-"""Semantics of the custom constraints in :mod:`gwkokab.models.constraints`.
+"""Unit tests for :mod:`gwkokab.models.constraints`.
 
-``tests/test_constraints.py`` pins their pytree and equality behaviour; this module pins
-what they actually accept and what :meth:`feasible_like` hands back.
+The first half pins what each constraint actually accepts and what
+:meth:`feasible_like` hands back; the second half pins their pytree and equality
+behaviour.
 """
+
+from collections import namedtuple
 
 import jax
 import pytest
-from jax import numpy as jnp
+from jax import jit, numpy as jnp, vmap
 from numpy.testing import assert_allclose
 from numpyro.distributions import constraints as npc
 from numpyro.distributions.transforms import AffineTransform, ExpTransform
@@ -331,3 +334,171 @@ def test_transform_constraint_equality():
 def test_check_works_under_jit(constraint, value):
     value = jnp.asarray(value)
     assert_allclose(jax.jit(constraint.check)(value), constraint.check(value))
+
+
+###############################################################################
+# pytree and equality behaviour
+#
+# Adapted from the Pyro project (Copyright Contributors to the Pyro project).
+###############################################################################
+
+
+_a = jnp.asarray
+
+
+class T(namedtuple("TestCase", ["constraint_cls", "params", "kwargs"])):
+    pass
+
+
+SINGLETON_CONSTRAINTS = {
+    "decreasing_vector": decreasing_vector,
+    "increasing_vector": increasing_vector,
+    "positive_decreasing_vector": positive_decreasing_vector,
+    "positive_increasing_vector": positive_increasing_vector,
+    "strictly_decreasing_vector": strictly_decreasing_vector,
+    "strictly_increasing_vector": strictly_increasing_vector,
+}
+PARAMETRIZED_CONSTRAINTS = {
+    "mass_sandwich": T(mass_sandwich, (_a(10.0), _a(30.0)), dict()),
+    "mass_ratio_mass_sandwich": T(
+        mass_ratio_mass_sandwich, (_a(10.0), _a(30.0)), dict()
+    ),
+    "all_constraint": T(
+        all_constraint,
+        (),
+        {
+            "constraints": [
+                decreasing_vector,
+                positive_decreasing_vector,
+            ],
+            "event_slices": [0, 1],
+        },
+    ),
+    "any_constraint": T(
+        any_constraint,
+        (),
+        {
+            "constraints": [
+                decreasing_vector,
+                positive_decreasing_vector,
+            ]
+        },
+    ),
+}
+
+
+@pytest.mark.parametrize(
+    "constraint", SINGLETON_CONSTRAINTS.values(), ids=SINGLETON_CONSTRAINTS.keys()
+)
+def test_singleton_constraint_pytree(constraint):
+    # test that singleton constraints objects can be used as pytrees
+    def in_cst(constraint, x):
+        return x**2
+
+    def out_cst(constraint, x):
+        return constraint
+
+    jitted_in_cst = jit(in_cst)
+    jitted_out_cst = jit(out_cst)
+
+    assert jitted_in_cst(constraint, 1.0) == 1.0
+    assert jitted_out_cst(constraint, 1.0) == constraint
+
+    assert jnp.allclose(
+        vmap(in_cst, in_axes=(None, 0), out_axes=0)(constraint, jnp.ones(3)),
+        jnp.ones(3),
+    )
+
+    assert (
+        vmap(out_cst, in_axes=(None, 0), out_axes=None)(constraint, jnp.ones(3))
+        is constraint
+    )
+
+
+@pytest.mark.parametrize(
+    "cls, cst_args, cst_kwargs",
+    PARAMETRIZED_CONSTRAINTS.values(),
+    ids=PARAMETRIZED_CONSTRAINTS.keys(),
+)
+def test_parametrized_constraint_pytree(cls, cst_args, cst_kwargs):
+    constraint = cls(*cst_args, **cst_kwargs)
+
+    # test that singleton constraints objects can be used as pytrees
+    def in_cst(constraint, x):
+        return x**2
+
+    def out_cst(constraint, x):
+        return constraint
+
+    jitted_in_cst = jit(in_cst)
+    jitted_out_cst = jit(out_cst)
+
+    assert jitted_in_cst(constraint, 1.0) == 1.0
+    assert jitted_out_cst(constraint, 1.0) == constraint
+
+    assert jnp.allclose(
+        vmap(in_cst, in_axes=(None, 0), out_axes=0)(constraint, jnp.ones(3)),
+        jnp.ones(3),
+    )
+
+    assert (
+        vmap(out_cst, in_axes=(None, 0), out_axes=None)(constraint, jnp.ones(3))
+        == constraint
+    )
+
+    if len(cst_args) > 0:
+        # test creating and manipulating vmapped constraints
+        vmapped_cst_args = jax.tree.map(lambda x: x[None], cst_args)
+
+        vmapped_csts = jit(vmap(lambda args: cls(*args, **cst_kwargs), in_axes=(0,)))(
+            vmapped_cst_args
+        )
+        assert vmap(lambda x: x.eq(constraint), in_axes=0)(vmapped_csts).all()
+
+        twice_vmapped_cst_args = jax.tree.map(lambda x: x[None], vmapped_cst_args)
+
+        vmapped_csts = jit(
+            vmap(
+                vmap(lambda args: cls(*args, **cst_kwargs), in_axes=(0,)),
+                in_axes=(0,),
+            ),
+        )(twice_vmapped_cst_args)
+        assert vmap(vmap(lambda x: x.eq(constraint), in_axes=0), in_axes=0)(
+            vmapped_csts
+        ).all()
+
+
+@pytest.mark.parametrize(
+    "constraint", SINGLETON_CONSTRAINTS.values(), ids=SINGLETON_CONSTRAINTS.keys()
+)
+def test_singleton_constraint_eq(constraint):
+    assert constraint == constraint
+    assert constraint != 1
+
+    # check that equality checks are robust to constraints parametrized
+    # by abstract values
+    @jit
+    def check_constraints(c1, c2):
+        return c1.eq(c2)
+
+    assert check_constraints(constraint, constraint)
+
+
+@pytest.mark.parametrize(
+    "cls, cst_args, cst_kwargs",
+    PARAMETRIZED_CONSTRAINTS.values(),
+    ids=PARAMETRIZED_CONSTRAINTS.keys(),
+)
+def test_parametrized_constraint_eq(cls, cst_args, cst_kwargs):
+    constraint = cls(*cst_args, **cst_kwargs)
+    constraint2 = cls(*cst_args, **cst_kwargs)
+    assert constraint == constraint2
+    assert constraint != 1
+
+    # check that equality checks are robust to constraints parametrized
+    # by abstract values
+    @jit
+    def check_constraints(c1, c2):
+        return c1.eq(c2)
+
+    assert check_constraints(constraint, constraint2)
