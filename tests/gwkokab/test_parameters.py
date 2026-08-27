@@ -2,12 +2,21 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import inspect
 import math
 
 import numpy as np
 import pytest
 
-from gwkokab.parameters import RelationMesh
+from gwkokab.parameters import (
+    default_relation_mesh,
+    Parameters as P,
+    RelationMesh,
+)
+from gwkokab.utils.transformations import (
+    m1_m2_chi1_chi2_costilt1_costilt2_to_chieff,
+    m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus,
+)
 
 
 class TestRelationMeshBasic:
@@ -1049,6 +1058,136 @@ class TestResolveFromArraysNumerical:
         assert result.shape == (3, 2)
         assert np.isinf(result[0, 1])
         assert np.isinf(result[1, 1])
+
+
+class TestAddRulePositionalCall:
+    """`resolve` applies rules positionally, so `add_rule` must reject callables that
+    cannot be called that way.
+    """
+
+    def test_rejects_keyword_only_function(self):
+        """A keyword-only function cannot be applied positionally, so registering one
+        must fail immediately rather than when the rule happens to fire.
+        """
+        mesh = RelationMesh()
+
+        def kwonly(*, a, b):
+            return a + b
+
+        with pytest.raises(ValueError, match="positional"):
+            mesh.add_rule(("a", "b"), "c", kwonly)
+
+        assert mesh.rules == [], "a rejected rule must not be registered"
+
+    def test_rejects_wrong_arity(self):
+        """A rule whose function takes the wrong number of arguments is also caught."""
+        mesh = RelationMesh()
+        with pytest.raises(ValueError, match="positional"):
+            mesh.add_rule(("a", "b", "c"), "d", lambda a, b: a + b)
+
+    @pytest.mark.parametrize(
+        "func",
+        [
+            lambda a, b: a + b,  # lambda
+            np.add,  # ufunc, no introspectable signature
+            max,  # builtin
+        ],
+    )
+    def test_accepts_positional_callables(self, func):
+        """Callables that can be applied positionally are still accepted."""
+        mesh = RelationMesh()
+        mesh.add_rule(("a", "b"), "c", func)
+        assert len(mesh.rules) == 1
+
+
+class TestDefaultRelationMesh:
+    """The mesh returned by :func:`default_relation_mesh`."""
+
+    def test_every_rule_is_positionally_callable(self):
+        """Every registered rule must accept as many positional arguments as it declares
+        inputs; otherwise it raises only once that particular rule fires.
+        """
+        mesh = default_relation_mesh()
+        offenders = []
+        for inputs, output, func in mesh.rules:
+            try:
+                signature = inspect.signature(func)
+            except (TypeError, ValueError):
+                continue
+            try:
+                signature.bind(*range(len(inputs)))
+            except TypeError as e:
+                offenders.append((
+                    getattr(func, "__name__", repr(func)),
+                    output,
+                    str(e),
+                ))
+        assert offenders == []
+
+    @pytest.fixture
+    def spin_state(self):
+        """Masses plus spin magnitudes and tilts, which is the state that reaches the
+        effective and antisymmetric spin rules through the tilt-angle path.
+        """
+        return {
+            P.PRIMARY_MASS_SOURCE: np.array([30.0, 45.0]),
+            P.SECONDARY_MASS_SOURCE: np.array([25.0, 20.0]),
+            P.CHI_1: np.array([0.5, 0.9]),
+            P.CHI_2: np.array([0.4, 0.1]),
+            P.COS_TILT_1: np.array([0.8, -1.0]),
+            P.COS_TILT_2: np.array([-0.6, 1.0]),
+        }
+
+    def test_resolve_through_tilt_angle_path(self, spin_state):
+        """Resolving from masses, spin magnitudes and tilts must not raise.
+
+        Regression test: these rules are registered from keyword-only functions, which
+        `resolve` could not call positionally.
+        """
+        resolved = default_relation_mesh().resolve(dict(spin_state))
+        assert P.EFFECTIVE_SPIN in resolved
+        assert P.CHI_MINUS in resolved
+
+    def test_effective_spin_matches_transformation(self, spin_state):
+        """The derived effective spin matches the underlying transformation, so the
+        adapter maps the positional arguments onto the right keywords.
+        """
+        resolved = default_relation_mesh().resolve(dict(spin_state))
+        expected = m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(
+            m1=spin_state[P.PRIMARY_MASS_SOURCE],
+            m2=spin_state[P.SECONDARY_MASS_SOURCE],
+            chi1=spin_state[P.CHI_1],
+            chi2=spin_state[P.CHI_2],
+            costilt1=spin_state[P.COS_TILT_1],
+            costilt2=spin_state[P.COS_TILT_2],
+        )
+        np.testing.assert_allclose(
+            np.asarray(resolved[P.EFFECTIVE_SPIN]), np.asarray(expected)
+        )
+
+    def test_chi_minus_matches_transformation(self, spin_state):
+        """The derived antisymmetric spin matches the underlying transformation."""
+        resolved = default_relation_mesh().resolve(dict(spin_state))
+        expected = m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(
+            m1=spin_state[P.PRIMARY_MASS_SOURCE],
+            m2=spin_state[P.SECONDARY_MASS_SOURCE],
+            chi1=spin_state[P.CHI_1],
+            chi2=spin_state[P.CHI_2],
+            costilt1=spin_state[P.COS_TILT_1],
+            costilt2=spin_state[P.COS_TILT_2],
+        )
+        np.testing.assert_allclose(
+            np.asarray(resolved[P.CHI_MINUS]), np.asarray(expected)
+        )
+
+    def test_resolve_from_masses_only(self):
+        """The mass relations resolve on their own, without any spin information."""
+        resolved = default_relation_mesh().resolve({
+            P.PRIMARY_MASS_SOURCE: np.array([30.0]),
+            P.SECONDARY_MASS_SOURCE: np.array([25.0]),
+        })
+        np.testing.assert_allclose(np.asarray(resolved[P.TOTAL_MASS]), [55.0])
+        np.testing.assert_allclose(np.asarray(resolved[P.MASS_RATIO]), [25.0 / 30.0])
 
 
 if __name__ == "__main__":

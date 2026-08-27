@@ -16,11 +16,13 @@ pair -- and is what backs the ``--derive-parameters`` flag of the synthetic-data
 """
 
 import enum
+import inspect
 from collections import defaultdict, deque
 from typing import Any, Callable, Dict, Set, Tuple
 
 import numpy as np
 
+from .utils.exceptions import LoggedValueError
 from .utils.transformations import (
     chi_costilt_to_chiz,
     chi_p_from_components,
@@ -180,8 +182,36 @@ class RelationMesh:
             Parameter name ``func`` produces, or a tuple of names when ``func`` returns
             several values.
         func : Callable
-            The map from the input values to the output value(s).
+            The map from the input values to the output value(s). It is called
+            positionally, so it must accept ``len(inputs)`` positional arguments; a
+            keyword-only function has to be wrapped before being registered.
+
+        Raises
+        ------
+        LoggedValueError
+            If ``func`` cannot accept ``len(inputs)`` positional arguments. Rules are
+            applied positionally by :meth:`resolve`, so registering a keyword-only
+            function would otherwise fail only once that rule happened to fire.
         """
+        # builtins and C callables have no introspectable signature; those are accepted
+        # unchecked rather than rejected.
+        try:
+            signature = inspect.signature(func)
+        except (TypeError, ValueError):
+            signature = None
+        if signature is not None:
+            try:
+                signature.bind(*inputs)
+            except TypeError as e:
+                raise LoggedValueError(
+                    "Rule for output {} cannot be called with {} positional argument(s): "
+                    "{}. Rules are applied positionally; wrap a keyword-only function "
+                    "before registering it.",
+                    output,
+                    len(inputs),
+                    e,
+                ) from e
+
         self.rules.append((inputs, output, func))
         self._all_params.update(inputs)
 
@@ -380,10 +410,12 @@ def default_relation_mesh() -> RelationMesh:
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z), P.EFFECTIVE_SPIN, chieff)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z), P.CHI_MINUS, m1_m2_chi1z_chi2z_to_chiminus)
     relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.EFFECTIVE_SPIN, P.CHI_MINUS), (P.PRIMARY_SPIN_Z, P.SECONDARY_SPIN_Z), m1_m2_chieff_chiminus_to_chi1z_chi2z)
-    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.CHI_1, P.CHI_2, P.COS_TILT_1, P.COS_TILT_2), P.CHI_MINUS, m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus)
+    # keyword-only function; `resolve` calls rules positionally, so it is adapted here
+    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.CHI_1, P.CHI_2, P.COS_TILT_1, P.COS_TILT_2), P.CHI_MINUS, lambda m1, m2, chi1, chi2, costilt1, costilt2: m1_m2_chi1_chi2_costilt1_costilt2_to_chiminus(m1=m1, m2=m2, chi1=chi1, chi2=chi2, costilt1=costilt1, costilt2=costilt2))
 
     # Combined Spin (Effective)
-    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.CHI_1, P.CHI_2, P.COS_TILT_1, P.COS_TILT_2), P.EFFECTIVE_SPIN, m1_m2_chi1_chi2_costilt1_costilt2_to_chieff)
+    # keyword-only function; `resolve` calls rules positionally, so it is adapted here
+    relation_mesh.add_rule((P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE, P.CHI_1, P.CHI_2, P.COS_TILT_1, P.COS_TILT_2), P.EFFECTIVE_SPIN, lambda m1, m2, chi1, chi2, costilt1, costilt2: m1_m2_chi1_chi2_costilt1_costilt2_to_chieff(m1=m1, m2=m2, chi1=chi1, chi2=chi2, costilt1=costilt1, costilt2=costilt2))
 
     # Precessing Spin
     relation_mesh.add_rule((P.CHI_1, P.COS_TILT_1, P.CHI_2, P.COS_TILT_2, P.MASS_RATIO), P.PRECESSING_SPIN, chi_p_from_components)
