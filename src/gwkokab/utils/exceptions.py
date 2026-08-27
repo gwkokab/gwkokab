@@ -44,7 +44,9 @@ from loguru import logger
 
 __all__ = [
     "LoggedAssertionError",
+    "LoggedAttributeError",
     "LoggedDeprecationWarning",
+    "LoggedFileNotFoundError",
     "LoggedImportError",
     "LoggedIndexError",
     "LoggedKeyError",
