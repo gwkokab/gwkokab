@@ -85,7 +85,7 @@ def to_structured(data: np.ndarray, names: Sequence[str]) -> np.ndarray:
         Structured array with fields named according to `names`.
     """
     dtype = [(n, "<f8") for n in names]
-    return np.core.records.fromarrays(data.T, dtype=dtype)
+    return np.rec.fromarrays(data.T, dtype=dtype)
 
 
 def from_structured(data: np.ndarray) -> tuple[np.ndarray, Sequence[str]]:
