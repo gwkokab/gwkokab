@@ -11,6 +11,7 @@ the fixtures here cover exactly those three.
 """
 
 import sys
+import warnings
 from typing import Callable, Mapping, Optional, Sequence
 
 import h5py
@@ -22,6 +23,15 @@ import pytest
 # The plotting scripts must never try to open a window, on a developer machine or in
 # CI. Selected here, before any fixture imports ``pyplot``.
 matplotlib.use("Agg")
+
+# ``glasbey``, which ``hist`` and ``scatter2d`` import for their palettes, pulls in
+# ``colorspacious``, whose docstrings carry invalid escape sequences. The SyntaxWarning
+# that raises is emitted when the module is *compiled*, so it only appears on a cold
+# bytecode cache — a fresh install, which is to say every CI run — and this project
+# turns warnings into errors. Compile it once here, quietly, rather than inside a test.
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore", SyntaxWarning)
+    import glasbey  # noqa: F401
 
 
 @pytest.fixture(autouse=True)

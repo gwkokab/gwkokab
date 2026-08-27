@@ -79,7 +79,9 @@ def _loop_rows(out: str) -> list:
 
 
 def _config_value(out: str, label: str) -> str:
-    match = re.search(rf"{re.escape(label)}\s{{2,}}(\S+)", out)
+    # built by concatenation rather than an f-string: docformatter corrupts the
+    # doubled braces of an inline ``{2,}`` repetition on some interpreters
+    match = re.search(re.escape(label) + r"\s{2,}(\S+)", out)
     assert match is not None, f"{label!r} missing from:\n{out}"
     return match.group(1)
 
