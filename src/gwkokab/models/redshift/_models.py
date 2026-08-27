@@ -1,6 +1,18 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Redshift distributions for the merger rate.
+
+Every model factors the redshift density as
+
+.. math::
+    p(z) \propto \frac{1}{1+z}\,\frac{\mathrm{d}V_c}{\mathrm{d}z}(z)\,\psi(z),
+
+the product of a time-dilation factor, the differential comoving volume element from
+the default cosmology, and a rate evolution :math:`\psi(z)`. Subclasses supply only
+:meth:`_RedshiftModel.log_psi_of_z`; normalisation and sampling are inherited and done
+numerically on a fixed redshift grid.
+"""
 
 from typing import Optional
 
@@ -14,6 +26,23 @@ from gwkokab.cosmology import default_cosmology
 
 
 class _RedshiftModel(Distribution):
+    """Base class for redshift distributions modulated by the comoving volume element.
+
+    Subclasses implement :meth:`log_psi_of_z`; everything else -- the differential
+    spacetime volume, the numerical normalisation and inverse-transform sampling -- is
+    provided here.
+
+    Parameters
+    ----------
+    z_max : Array
+        Maximum redshift, the upper limit of the support.
+    batch_shape : tuple, optional
+        Batch shape, broadcast against the shape of ``z_max``. Defaults to ``()``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+    """
+
     def __init__(
         self,
         z_max: Array,
@@ -35,7 +64,24 @@ class _RedshiftModel(Distribution):
         return self._support
 
     def log_differential_spacetime_volume(self, z: Array) -> Array:
-        """Placeholder method for computing the differential spacetime volume."""
+        r"""Log differential spacetime volume, including the rate evolution.
+
+        .. math::
+            \ln\frac{\mathrm{d}^2 N}{\mathrm{d}V_c\,\mathrm{d}t}
+            = \ln\frac{\mathrm{d}V_c}{\mathrm{d}z} - \ln(1+z) + \ln\psi(z)
+
+        This is the unnormalised log density of the distribution.
+
+        Parameters
+        ----------
+        z : Array
+            Redshift(s) to evaluate.
+
+        Returns
+        -------
+        Array
+            The unnormalised log density at ``z``.
+        """
         logdVcdz = default_cosmology().logdVcdz(z)
         log_time_dilation = -jnp.log1p(z)
         log_differential_spacetime_volume_val = (
@@ -44,7 +90,16 @@ class _RedshiftModel(Distribution):
         return log_differential_spacetime_volume_val
 
     def log_norm(self) -> Array:
-        """Placeholder method for computing the log normalization constant."""
+        r"""Log normalisation constant, integrated numerically.
+
+        The unnormalised density is integrated by the trapezoidal rule over a fixed grid of
+        2500 points spanning :math:`[0, z_{\max}]`.
+
+        Returns
+        -------
+        Array
+            :math:`\log \int_0^{z_{\max}} p_{\text{unnorm}}(z)\,\mathrm{d}z`.
+        """
         z_grid = jnp.linspace(0.0, self.z_max, 2500)
         log_differential_spacetime_volume = self.log_differential_spacetime_volume(
             z_grid
@@ -80,6 +135,23 @@ class _RedshiftModel(Distribution):
         return jnp.interp(u, cdfgrid, z_grid)
 
     def log_psi_of_z(self, z: Array) -> Array:
+        r"""Evaluate the log rate evolution :math:`\ln\psi(z)`.
+
+        Parameters
+        ----------
+        z : Array
+            Redshift(s) to evaluate.
+
+        Returns
+        -------
+        Array
+            Values of :math:`\ln\psi(z)`.
+
+        Raises
+        ------
+        NotImplementedError
+            Always; subclasses must override this method.
+        """
         raise NotImplementedError("Subclasses must implement log_psi_of_z method.")
 
     @validate_sample
@@ -106,21 +178,24 @@ class PowerlawRedshiftModel(_RedshiftModel):
     The probability density function is defined as:
 
     .. math::
-        p(z) \propto \frac{dV_c/dz(z) \cdot (1 + z)^{\kappa - 1}}}, \qquad 0 \leq z \leq z_{max}
+        p(z) \propto \frac{\mathrm{d}V_c}{\mathrm{d}z}(z) \cdot (1 + z)^{\kappa - 1},
+        \qquad 0 \leq z \leq z_{\max}
 
-    where:
-      - dV_c/dz is the differential comoving volume element,
-      -  is the redshift evolution power-law index,
-      - z_max is the upper redshift cutoff.
+    where :math:`\mathrm{d}V_c/\mathrm{d}z` is the differential comoving volume element,
+    :math:`\kappa` is the redshift evolution power-law index, and :math:`z_{\max}` is the
+    upper redshift cutoff. The :math:`-1` in the exponent is the time-dilation factor.
 
     This distribution is normalized numerically on a fixed redshift grid.
 
     Parameters
     ----------
-    kappa : float
+    z_max : Array
+        The maximum redshift, the upper limit of the support.
+    kappa : Array
         The power-law exponent :math:`\kappa`.
-    z_max : float
-        The maximum redshift (upper limit of the support).
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
     """
 
     arg_constraints = {"kappa": constraints.real, "z_max": constraints.positive}
@@ -156,23 +231,38 @@ class PowerlawRedshiftModel(_RedshiftModel):
 
 
 class MadauDickinsonRedshiftModel(_RedshiftModel):
-    r"""Redshift distribution for compact binary mergers modeled after the Madau-
-    Dickinson star formation rate, modulated by the cosmological volume element.
+    r"""Redshift distribution following the Madau-Dickinson star formation rate.
 
-    The probability density function is defined as:
+    The rate rises as a power law at low redshift, peaks at :math:`z_{\text{peak}}` and
+    falls off above it, modulated by the cosmological volume element. The probability
+    density function is defined as:
 
     .. math::
-        p(z) \propto \frac{dV_c/dz(z) \cdot (1 + z)^{\kappa - 1}}{1 + \left(\\frac{1 + z}{1 + z_{peak}}\right)^{\gamma}}, \
-        \qquad 0 \leq z \leq z_{max}
+        p(z) \propto \frac{\mathrm{d}V_c}{\mathrm{d}z}(z)
+        \cdot \frac{(1 + z)^{\kappa - 1}}{1 +
+        \left(\frac{1 + z}{1 + z_{\text{peak}}}\right)^{\gamma}},
+        \qquad 0 \leq z \leq z_{\max}
 
-    where:
-      - dV_c/dz is the differential comoving volume element,
-      - gamma is the high-redshift slope,
-      - kappa is the low-redshift slope,
-      - z_max is the upper redshift cutoff.
-      - z_peak is the redshift at which the merger rate peaks,
+    where :math:`\mathrm{d}V_c/\mathrm{d}z` is the differential comoving volume element,
+    :math:`\kappa` is the low-redshift slope, :math:`\gamma` is the high-redshift slope,
+    :math:`z_{\text{peak}}` is the redshift at which the merger rate peaks, and
+    :math:`z_{\max}` is the upper redshift cutoff.
 
     This distribution is normalized numerically on a fixed redshift grid.
+
+    Parameters
+    ----------
+    z_max : Array
+        The maximum redshift, the upper limit of the support.
+    kappa : Array
+        The low-redshift slope :math:`\kappa`.
+    gamma : Array
+        The high-redshift slope :math:`\gamma`.
+    z_peak : Array
+        The redshift :math:`z_{\text{peak}}` at which the merger rate peaks.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
     """
 
     arg_constraints = {

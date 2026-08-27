@@ -1,6 +1,26 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Per-parameter distribution factories shared by the hybrid model families.
+
+Every ``create_*`` function here has the same shape: given a component count
+:math:`N`, a parameter name, a component tag and a flat dictionary of
+hyper-parameters, it returns a list of :math:`N` distributions -- one per mixture
+component. Each factory knows which hyper-parameters it needs and looks them up by
+the package-wide naming convention ``<role>_<component tag>_<index>``, so
+``alpha_pl_0`` is the power-law index of the zeroth power-law component and
+``spin_1z_loc_g_2`` the spin location of the second Gaussian one.
+
+The family modules -- :mod:`~gwkokab.models.hybrids._npowerlawmgaussian`,
+:mod:`~gwkokab.models.hybrids._multisource`,
+:mod:`~gwkokab.models.hybrids._subpopulation` -- call these factories once per
+physical parameter that was switched on, then :func:`combine_distributions` zips the
+results together into per-component lists that become
+:class:`~gwkokab.models.utils.JointDistribution`\ s.
+
+Adding a new physical parameter to a family means adding a factory here and wiring
+it into that family's ``_build_*_distributions``.
+"""
 
 from typing import Dict, List, Optional, TypeVar
 
@@ -64,6 +84,31 @@ def _get_parameter(
     is_necessary: bool = True,
     default: Optional[_VT] = None,
 ) -> Optional[_VT]:
+    """Look a hyper-parameter up by name, with optional default and requirement.
+
+    Parameters
+    ----------
+    params : Dict[_KT, _VT]
+        The flat hyper-parameter dictionary.
+    name : _KT
+        The name to look up.
+    is_necessary : bool, optional
+        Whether a missing value is an error. Defaults to :data:`True`.
+    default : Optional[_VT], optional
+        Value to fall back on when ``name`` is absent. Defaults to :data:`None`.
+
+    Returns
+    -------
+    Optional[_VT]
+        The looked-up value, the default, or :data:`None` when the parameter is absent
+        and optional.
+
+    Raises
+    ------
+    ValueError
+        If ``name`` is absent, no default was given and ``is_necessary`` is
+        :data:`True`.
+    """
     if (value := params.get(name, None)) is not None:
         return value
     if default is not None:
@@ -76,8 +121,22 @@ def _get_parameter(
 def combine_distributions(
     base_dists: List[List[Distribution]], add_dists: List[Distribution]
 ):
-    """Helper function to combine base distributions with additional distributions like
-    spin, tilt, or eccentricity.
+    """Append one extra distribution to each component's list of marginals.
+
+    Used to bolt an additional physical parameter -- spin, tilt, eccentricity -- onto a
+    set of per-component distribution lists that already carry the mass model.
+
+    Parameters
+    ----------
+    base_dists : List[List[Distribution]]
+        One list of marginals per mixture component.
+    add_dists : List[Distribution]
+        One additional marginal per mixture component, in the same order.
+
+    Returns
+    -------
+    List[List[Distribution]]
+        New per-component lists, each with its extra marginal appended.
     """
     return [dists + [add_dist] for dists, add_dist in zip(base_dists, add_dists)]
 
@@ -89,6 +148,40 @@ def create_beta_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Beta]:
+    """Build per-component beta distributions from mean and variance.
+
+    Uses the moment parameterisation of :func:`~gwkokab.models.spin.BetaFromMeanVar`,
+    which is easier to place priors on than the concentration parameterisation.
+
+    Reads the hyper-parameters ``<parameter_name>_mean_<component_type>``, ``<parameter_name>_variance_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the physical parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Beta]
+        One :class:`~numpyro.distributions.Beta` per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     mean_name = f"{parameter_name}_mean_{component_type}"
     variance_name = f"{parameter_name}_variance_{component_type}"
 
@@ -109,6 +202,41 @@ def create_truncated_normal_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    r"""Build per-component truncated normal distributions.
+
+    The truncation bounds are optional: omitting ``low`` or ``high`` leaves that side
+    unbounded, since :class:`~numpyro.distributions.TruncatedNormal` defaults them to
+    :math:`\mp\infty`.
+
+    Reads the hyper-parameters ``<parameter_name>_loc_<component_type>``, ``<parameter_name>_scale_<component_type>``, ``<parameter_name>_low_<component_type>``, ``<parameter_name>_high_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the physical parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One :class:`~numpyro.distributions.TruncatedNormal` per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     loc_name = f"{parameter_name}_loc_{component_type}"
     scale_name = f"{parameter_name}_scale_{component_type}"
     low_name = f"{parameter_name}_low_{component_type}"
@@ -135,6 +263,41 @@ def create_powerlaw_primary_mass_ratios(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[ExtendedSupportTransformedDistribution]:
+    """Build per-component power law mass models in component-mass coordinates.
+
+    Each component is a :class:`~gwkokab.models.mass.PowerlawPrimaryMassRatio` in
+    :math:`(m_1, q)` coordinates, pushed to :math:`(m_1, m_2)` by
+    :class:`~gwkokab.models.transformations.PrimaryMassAndMassRatioToComponentMassesTransform`
+    while keeping its mass sandwich support.
+
+    Reads the hyper-parameters ``alpha_<component_type>``, ``beta_<component_type>``, ``mmin_<component_type>``, ``mmax_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Unused; the hyper-parameter names of this factory are fixed.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[ExtendedSupportTransformedDistribution]
+        One transformed mass model per component, over :math:`(m_1, m_2)`.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     powerlaws_collection = []
 
     alpha_name = "alpha_" + component_type
@@ -166,6 +329,39 @@ def create_powerlaw_redshift_model(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component power law redshift models.
+
+    See :class:`~gwkokab.models.redshift.PowerlawRedshiftModel`.
+
+    Reads the hyper-parameters ``<parameter_name>_kappa_<component_type>``, ``<parameter_name>_z_max_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the redshift parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One redshift model per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     kappa_name = parameter_name + "_kappa_" + component_type
     z_max_name = parameter_name + "_z_max_" + component_type
 
@@ -186,6 +382,39 @@ def create_madau_dickinson_redshift_model(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component Madau-Dickinson redshift models.
+
+    See :class:`~gwkokab.models.redshift.MadauDickinsonRedshiftModel`.
+
+    Reads the hyper-parameters ``<parameter_name>_kappa_<component_type>``, ``<parameter_name>_z_max_<component_type>``, ``<parameter_name>_gamma_<component_type>``, ``<parameter_name>_z_peak_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the redshift parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One redshift model per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     kappa_name = parameter_name + "_kappa_" + component_type
     z_max_name = parameter_name + "_z_max_" + component_type
     gamma_name = parameter_name + "_gamma_" + component_type
@@ -209,6 +438,39 @@ def create_uniform_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component uniform distributions.
+
+    Useful for a parameter that should contribute no shape information, only support.
+
+    Reads the hyper-parameters ``<parameter_name>_low_<component_type>``, ``<parameter_name>_high_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the physical parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One :class:`~numpyro.distributions.Uniform` per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     low_name = f"{parameter_name}_low_{component_type}"
     high_name = f"{parameter_name}_high_{component_type}"
 
@@ -229,6 +491,39 @@ def create_broken_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component one-dimensional broken power laws.
+
+    See :class:`~gwkokab.models.mass.BrokenPowerlaw`.
+
+    Reads the hyper-parameters ``<parameter_name>_alpha1_<component_type>``, ``<parameter_name>_alpha2_<component_type>``, ``<parameter_name>_break_<component_type>``, ``<parameter_name>_low_<component_type>``, ``<parameter_name>_high_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the physical parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One broken power law per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     alpha1_name = parameter_name + "_alpha1_" + component_type
     alpha2_name = parameter_name + "_alpha2_" + component_type
     mbreak_name = parameter_name + "_break_" + component_type
@@ -254,6 +549,40 @@ def create_generic_tilt_model(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[MixtureGeneral]:
+    """Build per-component spin tilt models.
+
+    Each component is a :func:`~gwkokab.models.spin.GenericTiltModel`: a mixture of an
+    isotropic and a normally distributed tilt, for each of the two spins.
+
+    Reads the hyper-parameters ``cos_tilt_zeta_<component_type>`` together with ``loc``, ``scale``, ``low`` and
+    ``high`` for each of ``cos_tilt_1`` and ``cos_tilt_2``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Unused; the hyper-parameter names of this factory are fixed.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        One tilt model per component. The bounds default to :math:`[-1, 1]`.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     zeta_name = "cos_tilt_zeta_" + component_type
     loc1_name = P.COS_TILT_1 + "_loc_" + component_type
     loc2_name = P.COS_TILT_2 + "_loc_" + component_type
@@ -288,6 +617,40 @@ def create_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    r"""Build per-component truncated power laws with a sign-flipped index.
+
+    The index is negated on the way in, so a positive ``alpha`` hyper-parameter means a
+    *falling* power law :math:`x^{-\alpha}`, the convention used for mass spectra.
+
+    Reads the hyper-parameters ``<parameter_name>_alpha_<component_type>``, ``<parameter_name>_low_<component_type>``, ``<parameter_name>_high_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the physical parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One :class:`~gwkokab.models.utils.DoublyTruncatedPowerLaw` per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     alpha_name = parameter_name + "_alpha_" + component_type
     mmax_name = parameter_name + "_high_" + component_type
     mmin_name = parameter_name + "_low_" + component_type
@@ -310,6 +673,40 @@ def create_generic_powerlaws(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    r"""Build per-component truncated power laws.
+
+    As :func:`create_powerlaws`, but the index is taken at face value, so a positive
+    ``alpha`` means a *rising* power law :math:`x^{\alpha}`.
+
+    Reads the hyper-parameters ``<parameter_name>_alpha_<component_type>``, ``<parameter_name>_low_<component_type>``, ``<parameter_name>_high_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the physical parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One :class:`~gwkokab.models.utils.DoublyTruncatedPowerLaw` per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     alpha_name = parameter_name + "_alpha_" + component_type
     high_name = parameter_name + "_high_" + component_type
     low_name = parameter_name + "_low_" + component_type
@@ -331,6 +728,41 @@ def create_two_truncated_normal_mixture(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[MixtureGeneral]:
+    """Build per-component mixtures of two truncated normals.
+
+    See :func:`~gwkokab.models.sundry.TwoTruncatedNormalMixture`. The truncation bounds
+    are optional on both sub-components.
+
+    Reads the hyper-parameters ``<parameter_name>_zeta_<component_type>`` together with ``loc``, ``scale``,
+    ``low`` and ``high`` for each of ``comp1`` and ``comp2``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the physical parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[MixtureGeneral]
+        One two-component mixture per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     comp1_high_name = parameter_name + "_comp1_high_" + component_type
     comp2_high_name = parameter_name + "_comp2_high_" + component_type
     comp1_loc_name = parameter_name + "_comp1_loc_" + component_type
@@ -368,6 +800,42 @@ def create_spin_magnitude_mixture_models(
     validate_args: Optional[bool] = None,
 ):
     # fmt: off
+    """Build per-component joint spin magnitude models for both spins.
+
+    The primary and secondary spin magnitudes are stacked into one two-dimensional
+    :func:`~gwkokab.models.sundry.NDTwoTruncatedNormalMixture`, so the two magnitudes
+    share a single mixing fraction and are modelled jointly rather than independently.
+
+    Reads the hyper-parameters ``a_zeta_<component_type>`` together with ``loc``, ``scale``, ``low`` and ``high``
+    for each of ``comp1`` and ``comp2`` of both ``a_1`` and ``a_2``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Unused; the hyper-parameter names of this factory are fixed.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One two-dimensional spin magnitude model per component. Bounds default to
+        :math:`[0, 1]`.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     zeta_name = "a_zeta_" + component_type
     a_1_comp1_high_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp1_high_" + component_type
     a_1_comp1_loc_name = P.PRIMARY_SPIN_MAGNITUDE + "_comp1_loc_" + component_type
@@ -444,6 +912,39 @@ def create_gwtc4_effective_spin_skew_normal_models(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component GWTC-4 effective spin skew normal models.
+
+    See :class:`~gwkokab.models.spin.GWTC4EffectiveSpinSkewNormalModel`.
+
+    Reads the hyper-parameters ``<parameter_name>_loc_<component_type>``, ``<parameter_name>_scale_<component_type>``, ``<parameter_name>_epsilon_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Name of the physical parameter, used as the prefix of the hyper-parameter
+        names.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One effective spin model per component.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     loc_name = parameter_name + "_loc_" + component_type
     scale_name = parameter_name + "_scale_" + component_type
     epsilon_name = parameter_name + "_epsilon_" + component_type
@@ -466,6 +967,42 @@ def create_smoothed_broken_powerlaws_mass_ratio_powerlaw(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component smoothed broken power law mass models.
+
+    See :class:`~gwkokab.models.mass.SmoothedBrokenPowerlawMassRatioPowerlaw`. Each component is built in :math:`(m_1, q)` coordinates and pushed to
+    :math:`(m_1, m_2)` by
+    :class:`~gwkokab.models.transformations.PrimaryMassAndMassRatioToComponentMassesTransform`
+    while keeping its mass sandwich support.
+
+    Reads the hyper-parameters ``m1_alpha1``, ``m1_alpha2``, ``beta``, ``m1_delta``, ``m2_delta``, ``m1_low``,
+    ``m2_low``, ``m1_break`` and ``m1_high``, each tagged with ``_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Unused; the hyper-parameter names of this factory are fixed.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One transformed mass model per component, over :math:`(m_1, m_2)`.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     collection = []
 
     alpha1_name = "m1_alpha1_" + component_type
@@ -509,6 +1046,42 @@ def create_smoothed_gaussian_primary_mass_ratio(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component smoothed Gaussian mass models.
+
+    See :class:`~gwkokab.models.mass.SmoothedGaussianPrimaryMassRatio`. Each component is built in :math:`(m_1, q)` coordinates and pushed to
+    :math:`(m_1, m_2)` by
+    :class:`~gwkokab.models.transformations.PrimaryMassAndMassRatioToComponentMassesTransform`
+    while keeping its mass sandwich support.
+
+    Reads the hyper-parameters ``loc``, ``scale``, ``beta``, ``m1min``, ``m2min``, ``mmax``, ``delta_m1`` and
+    ``delta_m2``, each tagged with ``_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Unused; the hyper-parameter names of this factory are fixed.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One transformed mass model per component, over :math:`(m_1, m_2)`.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     collection = []
 
     loc_name = "loc_" + component_type
@@ -552,6 +1125,42 @@ def create_gaussian_primary_mass_ratio(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component Gaussian mass models.
+
+    See :class:`~gwkokab.models.mass.GaussianPrimaryMassRatio`. Each component is built in :math:`(m_1, q)` coordinates and pushed to
+    :math:`(m_1, m_2)` by
+    :class:`~gwkokab.models.transformations.PrimaryMassAndMassRatioToComponentMassesTransform`
+    while keeping its mass sandwich support.
+
+    Reads the hyper-parameters ``m1_loc``, ``m1_scale``, ``beta``, ``m1_low`` and ``m1_high``, each tagged with
+    ``_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Unused; the hyper-parameter names of this factory are fixed.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One transformed mass model per component, over :math:`(m_1, m_2)`.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     collection = []
 
     loc_name = "m1_loc_" + component_type
@@ -588,6 +1197,42 @@ def create_smoothed_powerlaw_primary_mass_ratio(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component smoothed power law mass models.
+
+    See :class:`~gwkokab.models.mass.SmoothedPowerlawPrimaryMassRatio`. Each component is built in :math:`(m_1, q)` coordinates and pushed to
+    :math:`(m_1, m_2)` by
+    :class:`~gwkokab.models.transformations.PrimaryMassAndMassRatioToComponentMassesTransform`
+    while keeping its mass sandwich support.
+
+    Reads the hyper-parameters ``m1_alpha``, ``beta``, ``m1_delta``, ``m2_delta``, ``m1_low``, ``m2_low`` and
+    ``m1_high``, each tagged with ``_<component_type>``, each suffixed with ``_<index>``.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    parameter_name : str
+        Unused; the hyper-parameter names of this factory are fixed.
+    component_type : str
+        Component tag naming the family of components, e.g. ``"pl"``, ``"g"``,
+        ``"spl"``, ``"bpl"``, ``"gpl"`` or ``"gg"``.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values, keyed by
+        ``<role>_<component_type>_<index>``.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One transformed mass model per component, over :math:`(m_1, m_2)`.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     collection = []
 
     alpha_name = "m1_alpha_" + component_type
@@ -629,7 +1274,45 @@ def create_generic_smoothed_powerlaw_mass_ratio(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
+    """Build per-component mass models over supplied primary mass distributions.
 
+    Wraps each given primary mass distribution in a
+    :class:`~gwkokab.models.mass.GenericSmoothedPowerlawMassRatio`, which adds the
+    Planck-tapered conditional mass ratio power law. Unlike the other mass factories,
+    the primary mass model is supplied rather than built, and the results are left in
+    :math:`(m_1, q)` coordinates.
+
+    Reads the hyper-parameters ``beta_<component_type>``, ``m2_delta_<component_type>``
+    and ``m2_low_<component_type>``, each suffixed with ``_<index>``, plus a single
+    ``m1_delta`` shared by every component.
+
+    Parameters
+    ----------
+    N : int
+        Number of mixture components to build.
+    primary_mass_distributions : List[Distribution]
+        One primary mass distribution per component. Each must have an interval
+        support, which supplies the mass bounds.
+    parameter_name : str
+        Unused; the hyper-parameter names of this factory are fixed.
+    component_type : str
+        Component tag naming the family of components.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[Distribution]
+        One mass model per component, over :math:`(m_1, q)`.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     beta_name = "beta_" + component_type
     delta_m1_name = "m1_delta"
     delta_m2_name = "m2_delta_" + component_type

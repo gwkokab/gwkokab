@@ -1,6 +1,21 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Measurement-error models for synthesising mock parameter estimation samples.
+
+The synthetic-data CLIs draw a true population with
+``synthetic_events_<family>`` and then blur each true event into a cloud of mock PE
+samples using the functions here. Every error model shares the same call signature --
+the true value(s), the number of samples to draw, a PRNG key, the ``estimates``
+dictionary of parameters blurred so far, and the event SNR ``rho`` -- so that
+:attr:`~gwkokab.analysis.core.synthetic_pe.SyntheticDiscretePE.error_function_registry` can wire them to
+parameters by name. Errors scale as :math:`1/\rho`, so louder events get tighter
+posteriors.
+
+The ``psi``/``chi_eff`` helpers and :func:`mock_spin_error` are refactored from
+`GWMockCat <https://git.ligo.org/amanda.farah/GWMockCat>`_ and carry their own
+copyright and CC0 licence notice.
+"""
 
 from typing import Optional
 
@@ -32,10 +47,11 @@ def banana_error(
     scale_Mc: float = 1.0,
     scale_eta: float = 1.0,
 ) -> np.ndarray:
-    r"""Add banana error to the given values. Section 3 of the `Model-independent
-    inference on compact-binary observations <https://doi.org/10.1093/mnras/stw2883>`_
-    discusses the banana error. It adds errors in the chirp mass and symmetric mass
-    ratio and then converts back to masses.
+    r"""Add banana error to the given values.
+
+    Section 3 of `Model-independent inference on compact-binary observations
+    <https://doi.org/10.1093/mnras/stw2883>`_ discusses the banana error. It adds errors
+    in the chirp mass and symmetric mass ratio and then converts back to masses.
 
     .. math::
 
@@ -45,27 +61,33 @@ def banana_error(
         \eta = \eta^{T}
         \left[1+0.03\frac{12}{\rho}\left(r_{0}^{'}+r^{'}\right)\right]
 
+    Parameters
+    ----------
     Mc_true : np.ndarray
-        True chirp mass
+        True chirp mass.
     eta_true : np.ndarray
-        True symmetric mass ratio
+        True symmetric mass ratio.
     size : int
-        number of samples
+        Number of samples to draw.
     key : PRNGKeyArray
-        jax random key
-    scale_Mc : float
-        scale of the chirp mass error, defaults to 1.0
-    scale_eta : float
-        scale of the symmetric mass ratio error, defaults to 1.0
+        JAX random key.
     estimates : dict[str | P, np.ndarray]
-        Parameter estimates performed so far
+        Parameter estimates performed so far. Unused here, but part of the common error
+        model signature.
     rho : np.ndarray
-        SNR of the event, used to scale the error
+        SNR of the event, used to scale the error.
+    scale_Mc : float
+        Scale of the chirp mass error. Defaults to ``1.0``.
+    scale_eta : float
+        Scale of the symmetric mass ratio error. Defaults to ``1.0``.
 
     Returns
     -------
     np.ndarray
-        array of values with added banana error
+        Array of shape ``(size, 2)`` holding the blurred
+        :math:`(M_c, \eta)` pairs. Samples that leave the physical region
+        (:math:`M_c \leq 0`, or :math:`\eta` outside :math:`[0, 0.25]`) are set to NaN
+        rather than resampled, and are dropped downstream.
     """
     r0_key, r0p_key, r_key, rp_key = jrd.split(key, 4)
 
@@ -107,20 +129,17 @@ def truncated_normal_error(
     low: Optional[float] = None,
     high: Optional[float] = None,
 ) -> np.ndarray:
-    """Adds truncated normal error to the given values.
+    r"""Add normal error to the given values, reflected back into the allowed range.
 
-    The error is sampled from a truncated normal distribution with the given parameters. The function will resample
-    until all values are within the allowed range.
-
-    .. note::
-
-        If :code:`cut_low` and :code:`cut_high` are both None, the function will return
-        the sampled values without any truncation.
+    The error has a per-event offset ``r0`` shared by all samples plus a per-sample
+    term ``r``, both scaled by ``scale`` and by :math:`12/\rho`. Samples that fall
+    outside ``[low, high]`` are reflected back in rather than resampled, which keeps the
+    returned array exactly ``size`` long and avoids an unbounded rejection loop.
 
     .. note::
 
-        if :code:`low` or :code:`high` is None, the :code:`TruncatedNormal` distribution
-        will not be truncated at those bounds.
+        If ``low`` and ``high`` are both :data:`None` the samples are returned
+        untruncated. If only one is given, reflection is applied at that bound only.
 
     Parameters
     ----------
@@ -131,21 +150,21 @@ def truncated_normal_error(
     key : PRNGKeyArray
         JAX random key for sampling.
     scale : float
-        Scale parameter for the truncated normal distribution.
+        Scale of the error, before the :math:`12/\rho` SNR factor.
     estimates : dict[str | P, np.ndarray]
-        Parameter estimates performed so far
+        Parameter estimates performed so far. Unused here, but part of the common error
+        model signature.
     rho : np.ndarray
-        SNR of the event, used to scale the error
+        SNR of the event, used to scale the error.
     low : Optional[float], optional
-        Lower bound for the truncation, defaults to None (no lower bound).
+        Lower bound for the reflection. Defaults to :data:`None` (no lower bound).
     high : Optional[float], optional
-        Upper bound for the truncation, defaults to None (no upper bound).
+        Upper bound for the reflection. Defaults to :data:`None` (no upper bound).
 
     Returns
     -------
     np.ndarray
-        Array of values with added truncated normal error, with all values within the
-        specified bounds.
+        Array of ``size`` values with added error, all within the specified bounds.
     """
     key_r0, key_r = jrd.split(key)
 
@@ -169,12 +188,25 @@ def truncated_normal_error(
 # Copyright 2023 Amanda Farah
 # SPDX-License-Identifier: CC0-1.0
 def dpsi_from_dXeff_neglect_Xa(dXeff, n):
-    """Returns calculation of delta psi, which is a function of n (eta) and delta Xeff
-    obtained by rearranging eq A2 of arxiv:1805.03046 (Ng et al.
+    r"""Propagate an uncertainty in :math:`\chi_{\text{eff}}` into one in :math:`\psi`.
 
-    2018), neglecting chi_a
-    psi: float or array-like of floats, the 1.5 PN phase term coefficient
-    n: float or array-like of floats, the symmetric mass ratio
+    Obtained by rearranging Eq. (A2) of `arXiv:1805.03046
+    <https://arxiv.org/abs/1805.03046>`_ (Ng et al. 2018), neglecting :math:`\chi_a`:
+
+    .. math::
+        \delta\psi = \eta^{-3/5}\,\frac{113 - 76\eta}{128}\,\delta\chi_{\text{eff}}
+
+    Parameters
+    ----------
+    dXeff : ArrayLike
+        Uncertainty in the effective spin :math:`\chi_{\text{eff}}`.
+    n : ArrayLike
+        Symmetric mass ratio :math:`\eta`.
+
+    Returns
+    -------
+    np.ndarray
+        The corresponding uncertainty in the 1.5 PN phase coefficient :math:`\psi`.
     """
     A = np.power(n, -3 / 5)
     B = 113 - (76 * n)
@@ -185,7 +217,24 @@ def dpsi_from_dXeff_neglect_Xa(dXeff, n):
 # Copyright 2023 Amanda Farah
 # SPDX-License-Identifier: CC0-1.0
 def psi_from_chi_eff_and_eta_neglect_chi_a(chi_eff, n):
-    """Returns psi coefficient, neglecting chi_a term."""
+    r"""Compute the 1.5 PN phase coefficient, neglecting the :math:`\chi_a` term.
+
+    .. math::
+        \psi = \eta^{-3/5}\left(\frac{(113 - 76\eta)\chi_{\text{eff}}}{128}
+               - \frac{3\pi}{8}\right)
+
+    Parameters
+    ----------
+    chi_eff : ArrayLike
+        Effective spin :math:`\chi_{\text{eff}}`.
+    n : ArrayLike
+        Symmetric mass ratio :math:`\eta`.
+
+    Returns
+    -------
+    np.ndarray
+        The 1.5 PN phase term coefficient :math:`\psi`.
+    """
     return np.power(n, -3 / 5) * (
         (((113 - (76 * n)) * chi_eff) / 128) - (3 * np.pi / 8)
     )
@@ -194,12 +243,27 @@ def psi_from_chi_eff_and_eta_neglect_chi_a(chi_eff, n):
 # Copyright 2023 Amanda Farah
 # SPDX-License-Identifier: CC0-1.0
 def chi_eff_from_psi_and_eta_neglect_chi_a(psi, n):
-    """Returns calculation of chi_eff from psi, which is a function of n (eta) obtained
-    by rearranging eq A2 of arxiv:1805.03046 (Ng et al.
+    r"""Recover :math:`\chi_{\text{eff}}` from the 1.5 PN phase coefficient.
 
-    2018), assuming chi_2 = 0
-    psi: float or array-like of floats, the 1.5 PN phase term coefficient
-    n: float or array-like of floats, the symmetric mass ratio
+    Obtained by rearranging Eq. (A2) of `arXiv:1805.03046
+    <https://arxiv.org/abs/1805.03046>`_ (Ng et al. 2018), assuming
+    :math:`\chi_2 = 0`:
+
+    .. math::
+        \chi_{\text{eff}} = \frac{128}{113 - 76\eta}
+        \left(\psi\eta^{3/5} + \frac{3\pi}{8}\right)
+
+    Parameters
+    ----------
+    psi : ArrayLike
+        The 1.5 PN phase term coefficient :math:`\psi`.
+    n : ArrayLike
+        Symmetric mass ratio :math:`\eta`.
+
+    Returns
+    -------
+    np.ndarray
+        The effective spin :math:`\chi_{\text{eff}}`.
     """
     A = 128
     B = (psi * np.power(n, 3 / 5)) + (3 * np.pi / 8)
@@ -221,6 +285,50 @@ def mock_spin_error(
     rho: np.ndarray,
     scale_chi_eff: np.ndarray,
 ) -> np.ndarray:
+    r"""Blur an effective spin by propagating the error through the 1.5 PN phase.
+
+    :math:`\chi_{\text{eff}}` is not measured directly: what the waveform constrains is
+    the 1.5 PN phase coefficient :math:`\psi`. This model therefore maps the true
+    :math:`\chi_{\text{eff}}` to :math:`\psi`, draws from a truncated normal on
+    :math:`\psi` whose width scales as :math:`12/\rho`, and maps back -- using the
+    *already blurred* symmetric mass ratio from ``estimates`` for the inverse map, so the
+    resulting :math:`\chi_{\text{eff}}`--:math:`\eta` posterior carries the correct
+    correlation.
+
+    Parameters
+    ----------
+    chi_eff : np.ndarray
+        True effective spin.
+    eta : np.ndarray
+        True symmetric mass ratio.
+    size : int
+        Number of samples to generate.
+    key : PRNGKeyArray
+        JAX random key for sampling.
+    estimates : dict[str | P, np.ndarray]
+        Parameter estimates performed so far. Must already contain
+        :attr:`~gwkokab.parameters.Parameters.SYMMETRIC_MASS_RATIO`, so the mass error
+        model has to run before this one.
+    rho : np.ndarray
+        SNR of the event, used to scale the error.
+    scale_chi_eff : np.ndarray
+        Uncertainty in :math:`\chi_{\text{eff}}` at the reference SNR of 12.
+
+    Returns
+    -------
+    np.ndarray
+        Array of ``size`` blurred effective spin values.
+
+    Raises
+    ------
+    LoggedValueError
+        If ``estimates`` does not yet hold the symmetric mass ratio.
+
+    Notes
+    -----
+    The truncation of :math:`\psi` to :math:`[-4.2, -1.2]` is inherited from
+    `GWMockCat <https://git.ligo.org/amanda.farah/GWMockCat>`_.
+    """
     if (etaobs := estimates.get(P.SYMMETRIC_MASS_RATIO, None)) is None:
         raise LoggedValueError(
             "Parameter estimation of Symmetric Mass Ratio is not available."

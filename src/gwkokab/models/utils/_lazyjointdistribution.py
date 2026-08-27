@@ -1,6 +1,15 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Joint distribution whose marginals may depend on other marginals.
+
+In a :class:`~gwkokab.models.utils.JointDistribution` every marginal is a fully
+specified :class:`~numpyro.distributions.Distribution`. Here a marginal may instead be
+a :class:`jax.tree_util.Partial` that is only turned into a distribution once the
+values it depends on are known -- which is what makes a prior's own hyper-parameters
+samplable. See the *lazy prior* case in
+:func:`gwkokab.analysis.utils.priors.get_processed_priors`.
+"""
 
 import warnings
 from collections.abc import Sequence
@@ -27,11 +36,40 @@ class _LazyConstraint(constraints.Constraint):
         dependencies: Dict[int, Dict[str, int]],
         event_slices: Sequence[int | Tuple[int, int]],
     ) -> None:
+        """Construct the support of a :class:`LazyJointDistribution`.
+
+        Parameters
+        ----------
+        *marginal_distributions : Union[Distribution, jax.tree_util.Partial]
+            The marginals, in event order. Lazy marginals are
+            :class:`jax.tree_util.Partial` objects.
+        dependencies : Dict[int, Dict[str, int]]
+            For each lazy marginal index, a map from its remaining keyword argument names
+            to the event-axis indices supplying them.
+        event_slices : Sequence[int | Tuple[int, int]]
+            Position of each marginal on the event axis: an ``int`` for a scalar marginal,
+            a ``(start, stop)`` pair for a vector-valued one.
+        """
         self.marginal_distributions = tuple(marginal_distributions)
         self.dependencies = dependencies
         self.event_slices = event_slices
 
     def __call__(self, x: Array) -> Array:
+        """Check whether values lie in the support.
+
+        Lazy marginals are instantiated first, using the dependency values read out of
+        ``x`` itself, and each marginal's own support is then checked against its slice.
+
+        Parameters
+        ----------
+        x : Array
+            Values of shape ``batch_shape + event_shape``.
+
+        Returns
+        -------
+        Array
+            Boolean mask of shape ``batch_shape``, true where every marginal is satisfied.
+        """
         marginal_dists = list(self.marginal_distributions)
         for i, dep in self.dependencies.items():
             kwargs = {
@@ -61,12 +99,33 @@ class _LazyConstraint(constraints.Constraint):
         return mask  # type: ignore
 
     def tree_flatten(self):
+        """Flatten the constraint into a JAX pytree.
+
+        Returns
+        -------
+        tuple
+            The children and the auxiliary metadata, in the layout NumPyro's constraint
+            registry expects.
+        """
         return (self.marginal_distributions, self.dependencies, self.event_slices), (
             ("marginal_distributions", "dependencies", "event_slices"),
             dict(),
         )
 
     def __eq__(self, other: object) -> bool:
+        """Compare two lazy constraints structurally.
+
+        Parameters
+        ----------
+        other : object
+            The object to compare against.
+
+        Returns
+        -------
+        bool
+            :data:`True` if ``other`` is a :class:`_LazyConstraint` with equal marginals,
+            dependencies and event slices.
+        """
         if not isinstance(other, _LazyConstraint):
             return False
         if len(self.marginal_distributions) != len(other.marginal_distributions):
@@ -86,6 +145,27 @@ class _LazyConstraint(constraints.Constraint):
 
 
 class LazyJointDistribution(Distribution):
+    """A joint distribution whose marginals may depend on other marginals.
+
+    A marginal is either a ready :class:`~numpyro.distributions.Distribution` or a
+    :class:`jax.tree_util.Partial` awaiting some of its arguments. ``dependencies``
+    records which event-axis slots supply those arguments, and ``partial_order`` gives a
+    topological order in which the lazy marginals can be resolved. Sampling therefore
+    proceeds in two passes: the independent marginals first, then the lazy ones in
+    ``partial_order``, each built from the values already drawn.
+
+    The analysis layer builds one of these whenever ``prior_cfg.json`` contains a *lazy
+    prior* -- a prior whose own hyper-parameters are sampled rather than fixed. The
+    topological sort and cycle check happen in
+    :func:`~gwkokab.analysis.core.analysis_base._classify_model_parameters`.
+
+    The marginals are held in ``marginal_distributions`` in event order, with
+    ``shaped_values`` recording where each one sits on the event axis -- an ``int`` index
+    for a scalar marginal, a ``(start, stop)`` pair for a vector-valued one.
+
+    See :meth:`__init__` for the constructor arguments.
+    """
+
     pytree_aux_fields = ("shaped_values", "partial_order", "dependencies")
     pytree_data_fields = ("_support", "marginal_distributions")
 
@@ -220,6 +300,21 @@ class LazyJointDistribution(Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
+        """Log density of the joint distribution.
+
+        Each lazy marginal is instantiated from the dependency values contained in
+        ``value`` itself, and the per-marginal log densities are then summed.
+
+        Parameters
+        ----------
+        value : Array
+            Values of shape ``batch_shape + event_shape``.
+
+        Returns
+        -------
+        Array
+            The summed log density, of shape ``batch_shape``.
+        """
         marginal_dists: List[Distribution] = list(self.marginal_distributions)  # type: ignore
         for i, dep in self.dependencies.items():
             kwargs = {
@@ -245,6 +340,23 @@ class LazyJointDistribution(Distribution):
         return log_prob_val
 
     def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
+        """Draw samples from the joint distribution.
+
+        The marginals with no dependencies are sampled first; the lazy ones then follow in
+        ``partial_order``, each instantiated from the samples it depends on.
+
+        Parameters
+        ----------
+        key : PRNGKeyArray
+            JAX random key.
+        sample_shape : tuple[int, ...]
+            Shape of the sample batch to draw. Defaults to ``()``.
+
+        Returns
+        -------
+        Array
+            Samples of shape ``sample_shape + event_shape``.
+        """
         assert is_prng_key(key)
         n_total = len(self.marginal_distributions)
         independent = set(range(n_total)) - set(self.partial_order)

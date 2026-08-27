@@ -1,6 +1,14 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Loguru configuration for the analysis CLIs.
+
+Every console script calls :func:`log_info` with ``start=True`` before doing anything
+else, which installs the sinks and records the invocation. Behaviour is driven by
+environment variables: ``GWKOKAB_LOG_LEVEL`` (default ``TRACE``), ``GWKOKAB_LOG_DIR``
+(default ``./logs``), ``GWKOKAB_LOG_FILE`` and ``GWKOKAB_DEBUG``, which adds source
+paths to each line.
+"""
 
 import functools as ft
 import os

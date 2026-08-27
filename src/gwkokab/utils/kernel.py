@@ -1,6 +1,12 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Smoothing kernels used to taper distribution supports.
+
+The Planck taper window is the standard low-mass smoothing used by the
+:mod:`~gwkokab.models.mass` models to soften a hard edge of the support into a
+continuously differentiable roll-off.
+"""
 
 import jax
 from jax import nn as jnn, numpy as jnp

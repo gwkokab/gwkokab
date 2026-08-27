@@ -1,6 +1,19 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Canonical parameter names and the relation graph that connects them.
+
+:class:`Parameters` is the single source of truth for how a gravitational-wave source
+parameter is spelled on disk and in configuration files; it is imported almost
+everywhere as ``from gwkokab.parameters import Parameters as P``.
+
+:class:`RelationMesh` turns the closed-form maps in :mod:`gwkokab.utils.transformations`
+into a rule graph over those names, so that given whichever parameters a dataset happens
+to carry, every reachable parameter can be derived by forward chaining.
+:func:`default_relation_mesh` assembles the standard rule set -- mass relations,
+source/detector frame conversions, spin projections and the redshift/luminosity-distance
+pair -- and is what backs the ``--derive-parameters`` flag of the synthetic-data CLIs.
+"""
 
 import enum
 from collections import defaultdict, deque
@@ -37,15 +50,49 @@ from .utils.transformations import (
 
 
 class Parameters(str, enum.Enum):
-    """Enumeration of common parameter names used in GWKokab."""
+    """Enumeration of common parameter names used in GWKokab.
+
+    Each member's value is the string used for the parameter in data files, JSON
+    configuration and column headers. The enum subclasses :class:`str`, and
+    :meth:`__eq__`/:meth:`__hash__` are specialised so a member compares and hashes
+    equal to its own value -- ``Parameters.REDSHIFT == "redshift"`` is :data:`True`, and
+    a member and its string spelling index the same dictionary entry.
+    """
 
     def __str__(self):
+        """Return the parameter's string value.
+
+        Returns
+        -------
+        str
+            The enum member's value, e.g. ``"mass_1_source"``.
+        """
         return str(self.value)
 
     def __hash__(self):
+        """Hash the parameter by its string value.
+
+        Returns
+        -------
+        int
+            ``hash`` of the member's value, so a member and its string spelling collide in
+            the same dictionary bucket.
+        """
         return hash(self.value)
 
     def __eq__(self, other):
+        """Compare equal to plain strings as well as to other members.
+
+        Parameters
+        ----------
+        other : Any
+            The object to compare against.
+
+        Returns
+        -------
+        bool
+            :data:`True` if ``other`` is this member's string value, or the member itself.
+        """
         if isinstance(other, str):
             return self.value == other
         return super().__eq__(other)
@@ -93,15 +140,47 @@ class Parameters(str, enum.Enum):
 
 
 class RelationMesh:
+    r"""A rule graph over gravitational-wave parameters.
+
+    A rule is a triple ``(inputs, output, func)``: whenever every name in ``inputs`` is
+    present, ``func`` is applied to their values and its result is stored under
+    ``output``. ``output`` may be a tuple, for functions returning several parameters at
+    once (for instance :func:`~gwkokab.utils.transformations.m1_m2_chieff_chiminus_to_chi1z_chi2z`).
+
+    :meth:`resolve` forward-chains the rules to a fixed point. Rules are kept in a
+    work queue keyed on how many of their inputs are still missing, so each rule fires
+    at most once and only after its inputs exist. Several rules may target the same
+    output; the first one to fire wins and the rest become no-ops, which means the graph
+    tolerates redundant paths (:math:`q` from :math:`\eta` or from :math:`m_1, m_2`)
+    without recomputing or contradicting itself.
+
+    Registered rules are held in ``rules``, in insertion order.
+
+    See Also
+    --------
+    default_relation_mesh : Builds the mesh with the standard GW parameter relations.
+    """
+
     def __init__(self):
         self.rules = []
         self._out_edges = defaultdict(list)
         self._all_params = set()
 
     def add_rule(self, inputs: Tuple[Any, ...], output: Any, func: Callable):
-        """Adds a rule.
+        """Add a rule to the mesh.
 
-        Multiple rules can target the same output.
+        Multiple rules can target the same output; during :meth:`resolve` the first one
+        whose inputs become available is the one that fires.
+
+        Parameters
+        ----------
+        inputs : Tuple[Any, ...]
+            Parameter names ``func`` consumes, in call order.
+        output : Any
+            Parameter name ``func`` produces, or a tuple of names when ``func`` returns
+            several values.
+        func : Callable
+            The map from the input values to the output value(s).
         """
         self.rules.append((inputs, output, func))
         self._all_params.update(inputs)
@@ -116,6 +195,23 @@ class RelationMesh:
             self._out_edges[inp].append(rule_idx)
 
     def resolve(self, initial_state: Dict[Any, Any]) -> Dict[Any, Any]:
+        """Derive every parameter reachable from the given state.
+
+        Rules are fired by forward chaining until no further rule can be applied: a rule
+        becomes eligible once all of its inputs are present, and is skipped if all of its
+        outputs already are. Values already in ``initial_state`` are never overwritten.
+
+        Parameters
+        ----------
+        initial_state : Dict[Any, Any]
+            The parameters that are already known, keyed by :class:`Parameters` member (or
+            the equivalent string).
+
+        Returns
+        -------
+        Dict[Any, Any]
+            A new dictionary containing the initial state plus every derivable parameter.
+        """
         state = dict(initial_state)
 
         n_rules = len(self.rules)
@@ -169,8 +265,23 @@ class RelationMesh:
     def derive_only(
         self, initial_state: Dict[Any, Any], targets: Set[Any]
     ) -> Dict[Any, Any]:
-        """Derives specified targets, allowing intermediate parameters to be computed as
-        needed.
+        """Derive a chosen subset of parameters.
+
+        The full resolution is run first, so intermediate parameters needed to reach the
+        targets are computed even though they are not returned.
+
+        Parameters
+        ----------
+        initial_state : Dict[Any, Any]
+            The parameters that are already known.
+        targets : Set[Any]
+            The parameter names to return.
+
+        Returns
+        -------
+        Dict[Any, Any]
+            The subset of the resolved state restricted to ``targets``. Targets that could
+            not be derived are silently absent.
         """
         # Run a standard resolution to fill the state fully
         full_state = self.resolve(initial_state)
@@ -181,6 +292,22 @@ class RelationMesh:
     def resolve_from_arrays(
         self, initial_state: np.ndarray, param_order: Tuple[Any, ...]
     ) -> Tuple[np.ndarray, Tuple[Any, ...]]:
+        """Resolve a 2-D array of samples whose columns are named by ``param_order``.
+
+        Parameters
+        ----------
+        initial_state : np.ndarray
+            Array of shape ``(n_samples, len(param_order))``; column ``i`` holds the values
+            of ``param_order[i]``.
+        param_order : Tuple[Any, ...]
+            Names of the columns of ``initial_state``.
+
+        Returns
+        -------
+        Tuple[np.ndarray, Tuple[Any, ...]]
+            The resolved samples and the names of their columns. Columns are sorted by name
+            so the output order is deterministic and independent of ``param_order``.
+        """
         state_dict = {param: initial_state[:, i] for i, param in enumerate(param_order)}
         resolved_dict = self.resolve(state_dict)
         # Sort keys to ensure a deterministic column order in the output
@@ -192,8 +319,19 @@ class RelationMesh:
 
 
 def default_relation_mesh() -> RelationMesh:
-    """Constructs the default relation mesh with common gravitational wave parameter
-    relations.
+    r"""Build the default mesh of common gravitational-wave parameter relations.
+
+    The registered rules cover mass combinations (total mass, mass ratio, chirp mass,
+    symmetric mass ratio, reduced mass, :math:`\delta_m`) and their inversions,
+    source/detector frame conversions through redshift, spin magnitude and tilt from
+    Cartesian components, the effective and precessing spins, and the
+    redshift/luminosity-distance pair through the default cosmology.
+
+    Returns
+    -------
+    RelationMesh
+        A freshly built mesh. The cosmology is captured at call time, so the mesh
+        reflects the value of ``GWKOKAB_DEFAULT_COSMOLOGY`` as of that moment.
     """
     from gwkokab.cosmology import default_cosmology
 

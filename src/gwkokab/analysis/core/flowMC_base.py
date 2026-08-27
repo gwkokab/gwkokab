@@ -1,6 +1,26 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The flowMC sampler backend.
+
+:class:`FlowMCBase` supplies ``driver`` for analyses run with flowMC, which alternates a
+gradient-based local sampler with global proposals drawn from a normalizing flow trained
+on the chains so far. Chains, acceptance rates, training loss and the thinned posterior
+samples are written to the output HDF5 after every loop, so a run can be inspected -- or
+salvaged -- while it is still going.
+
+The backend is chosen at runtime from ``sampler_cfg.json``'s ``sampler_name``, not by
+the console script.
+
+:class:`Local_Global_Sampler_Bundle` and :class:`Sampler` are vendored from `flowMC
+<https://github.com/kazewong/flowMC>`_, with their own copyright notices, so that the
+per-loop checkpointing can be woven into the sampling loop. They are marked not to be
+modified.
+
+See Also
+--------
+gwkokab.analysis.core.numpyro_base : The alternative sampler backend.
+"""
 
 from typing import Any, Callable, Dict, List, Literal, Optional
 
@@ -498,7 +518,13 @@ class Sampler:
 
 
 def _save_acceptances(resources: dict) -> None:
-    """Overwrites global and local acceptance rates in the HDF5 file."""
+    """Overwrite the global and local acceptance rates in the HDF5 file.
+
+    Parameters
+    ----------
+    resources : dict
+        The sampler's resource buffers. Missing or empty acceptance buffers are skipped.
+    """
     with h5py.File(INFERENCE_OUTPUT_FILENAME, "a") as f:
         for acc_type in ["global", "local"]:
             train_key = f"{acc_type}_accs_training"
@@ -514,7 +540,21 @@ def _save_acceptances(resources: dict) -> None:
 
 
 def _save_chains(resources: dict, labels: list[str], *, is_training: bool) -> None:
-    """Overwrites the chains and log probabilities in the HDF5 file."""
+    """Overwrite the chains and log probabilities in the HDF5 file.
+
+    Each chain is written as its own dataset under ``chains/<phase>/chain_<n>``, and the
+    parameter labels are recorded as a file attribute so the columns can be named
+    afterwards.
+
+    Parameters
+    ----------
+    resources : dict
+        The sampler's resource buffers.
+    labels : list[str]
+        Names of the sampled dimensions, in column order.
+    is_training : bool
+        Whether these are the training-phase chains or the production ones.
+    """
     phase = "train" if is_training else "prod"
     pos_key = f"positions_{'training' if is_training else 'production'}"
     lp_key = f"log_prob_{'training' if is_training else 'production'}"
@@ -546,7 +586,23 @@ def _save_samples(
     n_local_steps_per_loop: int,
     n_global_steps_per_loop: int,
 ) -> None:
-    """Overwrites the posterior samples dataset in the HDF5 file."""
+    r"""Overwrite the posterior samples dataset in the HDF5 file.
+
+    Only the local sampler's steps are kept: the global steps are normalizing-flow
+    proposals whose acceptance is already reflected in the local chain, so including them
+    would double-count. Rows containing :math:`-\infty` are dropped.
+
+    Parameters
+    ----------
+    resources : dict
+        The sampler's resource buffers.
+    labels : list[str]
+        Names of the sampled dimensions, in column order.
+    n_local_steps_per_loop : int
+        Local steps recorded per loop, after thinning.
+    n_global_steps_per_loop : int
+        Global steps recorded per loop, after thinning.
+    """
     if "positions_production" not in resources:
         return
 
@@ -571,7 +627,13 @@ def _save_samples(
 
 
 def _save_loss(resources: dict) -> None:
-    """Overwrites the training loss dataset in the HDF5 file."""
+    """Overwrite the training loss dataset in the HDF5 file.
+
+    Parameters
+    ----------
+    resources : dict
+        The sampler's resource buffers. A missing loss buffer is skipped.
+    """
     if "loss_buffer" not in resources:
         return
 
@@ -580,6 +642,12 @@ def _save_loss(resources: dict) -> None:
 
 
 class FlowMCBase(AnalysisBase):
+    """Sampler mixin that runs the analysis with flowMC.
+
+    Mixed with a data-representation base, which supplies ``run`` and ``read_data``, and
+    with a model family's ``Core`` class. Selected at runtime by ``sampler_cfg.json``.
+    """
+
     def driver(
         self,
         *,
@@ -588,6 +656,25 @@ class FlowMCBase(AnalysisBase):
         data: Dict[str, Any],
         labels: List[str],
     ) -> None:
+        """Run flowMC over the given log posterior and data.
+
+        Chains are started from prior draws, so the initial positions are automatically
+        within the support. The sampler configuration is written to the output HDF5 before
+        sampling starts, so the run can be reconstructed from the output file alone. The
+        debugging flags ``debug_nans``, ``profile_memory`` and ``check_leaks`` each wrap the
+        run differently; they are mutually exclusive, the first set winning.
+
+        Parameters
+        ----------
+        logpdf : Callable[[Array, Dict[str, Any]], Array]
+            The log posterior built by :mod:`gwkokab.inference`.
+        priors : JointDistribution
+            Joint prior over the sampled variables, used to draw the initial chain positions.
+        data : Dict[str, Any]
+            The event data, passed through to ``logpdf`` on every evaluation.
+        labels : List[str]
+            Names of the sampled dimensions, in ``variables_index`` order.
+        """
         sampler_cfg: FlowMCGlobalConfig = self.sampler_cfg
 
         n_chains = sampler_cfg.n_chains

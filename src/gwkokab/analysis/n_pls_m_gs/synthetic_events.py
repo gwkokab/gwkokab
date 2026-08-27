@@ -1,6 +1,17 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The ``synthetic_events_n_pls_m_gs`` console script.
+
+Draws a synthetic population from the :math:`N` power-law plus :math:`M` Gaussian model,
+using the model's own expected rate to decide how many events to draw and its selection
+function to decide which survive. The first step of the end-to-end workflow.
+
+See Also
+--------
+gwkokab.analysis.core.synthetic_events : The population drawing machinery.
+gwkokab.analysis.core.synthetic_pe : The next step, which adds measurement error.
+"""
 
 from collections.abc import Callable
 
@@ -15,7 +26,13 @@ from gwkokab.models.utils import ScaledMixture
 
 
 def main() -> None:
-    """Main function of the script."""
+    """Console script entry point for ``synthetic_events_n_pls_m_gs``.
+
+    Parses the command line, assembles a generator by mixing
+    :class:`~gwkokab.analysis.n_pls_m_gs.common.NPowerlawMGaussianCore` with
+    :class:`~gwkokab.analysis.core.synthetic_events.SyntheticEventsBase`, seeds the PRNG,
+    and writes the drawn population.
+    """
     parser = injection_generator_parser()
     parser = model_arg_parser(parser)
     args = parser.parse_args()
@@ -25,6 +42,16 @@ def main() -> None:
     class NPowerlawMGaussianInjectionGenerator(
         NPowerlawMGaussianCore, SyntheticEventsBase
     ):
+        """Population generator for the :math:`N` power-law plus :math:`M` Gaussian
+        family.
+
+        Defined inside :func:`main` because it exists only for the duration of one script run.
+        Combines :class:`~gwkokab.analysis.n_pls_m_gs.common.NPowerlawMGaussianCore`, which
+        names the parameters and hyper-parameters, with
+        :class:`~gwkokab.analysis.core.synthetic_events.SyntheticEventsBase`, which draws and
+        saves the population.
+        """
+
         def __init__(
             self,
             N_pl: int,
@@ -59,6 +86,14 @@ def main() -> None:
             derive_parameters: bool,
             n_buffer_events: int,
         ):
+            """Configure both halves of the generator.
+
+            The model and component arguments are forwarded to
+            :class:`~gwkokab.analysis.n_pls_m_gs.common.NPowerlawMGaussianCore`, and the output,
+            model parameters and selection-function arguments to
+            :class:`~gwkokab.analysis.core.synthetic_events.SyntheticEventsBase`. See those two
+            constructors for the full parameter list.
+            """
             NPowerlawMGaussianCore.__init__(
                 self,
                 N_pl=N_pl,

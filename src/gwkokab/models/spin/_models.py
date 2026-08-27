@@ -1,6 +1,18 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Spin models for compact binary populations.
+
+Covers both spin parameterisations in use. The effective/precessing pair
+:math:`(\chi_{\text{eff}}, \chi_p)` is modelled by :func:`GaussianSpinModel` and
+:class:`GWTC4EffectiveSpinSkewNormalModel`; the component magnitudes and tilts are
+modelled by :func:`BetaFromMeanVar` and :func:`GenericTiltModel`.
+
+The factory functions return stock NumPyro distributions in a physically convenient
+parameterisation, so only the genuinely new density --
+:class:`GWTC4EffectiveSpinSkewNormalModel` -- is written as a
+:class:`~numpyro.distributions.Distribution` subclass.
+"""
 
 from typing import Optional
 
@@ -194,6 +206,19 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
         -\frac{1 + \epsilon}{2} \left[ \frac{\mathrm{erf}\left( \displaystyle -\frac{1 + \mu}{\sqrt{2}\sigma (1 + \epsilon)} \right)}{\Phi\left( \displaystyle\frac{1 - \mu}{\sigma (1 + \epsilon)} \right) - \Phi\left( \displaystyle\frac{-1 - \mu}{\sigma (1 + \epsilon)} \right)} \right]
 
     where, :math:`\Phi(x)` is the cumulative distribution function of the standard normal distribution.
+
+    Parameters
+    ----------
+    loc : ArrayLike
+        Location :math:`\mu`, which is also the mode of the density.
+    scale : ArrayLike
+        Scale :math:`\sigma`, before the skew is applied.
+    epsilon : ArrayLike
+        Skewness :math:`\epsilon \in (-1, 1)`. Positive values widen the density below
+        the mode and narrow it above; zero recovers a truncated normal.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
     """
 
     arg_constraints = {
@@ -222,6 +247,23 @@ class GWTC4EffectiveSpinSkewNormalModel(Distribution):
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
+        r"""Log probability density at ``value``.
+
+        The two half-normals -- widened below the mode and narrowed above it, or the reverse
+        for negative :math:`\epsilon` -- are evaluated separately and selected on which side
+        of :math:`\mu` the value falls, then divided by the normalisation constant that makes
+        the pieces join into one density on :math:`[-1, 1]`.
+
+        Parameters
+        ----------
+        value : ArrayLike
+            Effective spins :math:`\chi_{\text{eff}}`, in :math:`[-1, 1]`.
+
+        Returns
+        -------
+        ArrayLike
+            The log density, of shape ``batch_shape``.
+        """
         scale1 = self.scale * (1.0 + self.epsilon)
         scale2 = self.scale * (1.0 - self.epsilon)
         normalization_constant = (1.0 + self.epsilon) * truncnorm.cdf(

@@ -1,6 +1,23 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Doubly truncated power law with hand-written derivative rules.
+
+A power law on :math:`[a, b]` has a normalisation constant whose closed form changes
+at :math:`\alpha = -1`, where the algebraic expression becomes :math:`0/0`. Selecting
+between the two branches with :func:`jax.numpy.where` gives the right value but a NaN
+gradient, because the untaken branch is still differentiated.
+
+Every function here therefore comes in a pair: a :func:`jax.custom_jvp` primal that
+picks the branch, and an explicit JVP rule that supplies the tangents. On the
+:math:`\alpha = -1` branch the tangent with respect to :math:`\alpha` has no clean
+closed form and is approximated by a symmetric finite difference evaluated at
+:math:`\alpha \pm \delta`.
+
+The CDF and inverse-CDF implementations are adapted from `NumPyro's truncated
+distributions
+<https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py>`_.
+"""
 
 from typing import Optional
 
@@ -13,10 +30,33 @@ from numpyro.distributions.util import is_prng_key, promote_shapes, validate_sam
 
 @jax.custom_jvp
 def doubly_truncated_power_law_log_norm_constant(alpha, low, high):
+    r"""Log normalisation constant of a doubly truncated power law.
+
+    .. math::
+        \log Z(\alpha, a, b) = \begin{cases}
+            \log(\log b - \log a) & \alpha = -1, \\
+            \log\dfrac{b^{1+\alpha} - a^{1+\alpha}}{1+\alpha} & \text{otherwise}.
+        \end{cases}
+
+    Parameters
+    ----------
+    alpha : ArrayLike
+        Power law index :math:`\alpha`.
+    low : ArrayLike
+        Lower bound :math:`a`.
+    high : ArrayLike
+        Upper bound :math:`b`.
+
+    Returns
+    -------
+    ArrayLike
+        The log normalisation constant :math:`\log Z`.
+    """
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
     neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
 
     def neq_neg1_fn():
+        r"""Log normalisation constant on the generic :math:`\alpha \neq -1` branch."""
         one_more_alpha = 1.0 + neq_neg1_alpha
         return jnp.log(
             (jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha))
@@ -24,6 +64,7 @@ def doubly_truncated_power_law_log_norm_constant(alpha, low, high):
         )
 
     def eq_neg1_fn():
+        r"""Log normalisation constant on the :math:`\alpha = -1` branch."""
         return jnp.log(jnp.log(high) - jnp.log(low))
 
     return jnp.where(neq_neg1_mask, neq_neg1_fn(), eq_neg1_fn())
@@ -31,6 +72,25 @@ def doubly_truncated_power_law_log_norm_constant(alpha, low, high):
 
 @doubly_truncated_power_law_log_norm_constant.defjvp
 def doubly_truncated_power_law_log_norm_constant_jvp(primals, tangents):
+    r"""JVP rule for :func:`doubly_truncated_power_law_log_norm_constant`.
+
+    The tangents with respect to ``low`` and ``high`` are exact on both branches. The
+    tangent with respect to ``alpha`` is exact for :math:`\alpha \neq -1` and, at
+    :math:`\alpha = -1`, is the average of the expression evaluated just either side of
+    the singularity.
+
+    Parameters
+    ----------
+    primals : tuple
+        ``(alpha, low, high)``.
+    tangents : tuple
+        The corresponding tangent vectors.
+
+    Returns
+    -------
+    tuple
+        The primal output and its tangent.
+    """
     alpha, low, high = primals
     alpha_t, low_t, high_t = tangents
 
@@ -47,6 +107,9 @@ def doubly_truncated_power_law_log_norm_constant_jvp(primals, tangents):
     # Alpha tangent with approximation
     # Variable part for all values alpha unequal -1
     def alpha_tangent_variable(alpha):
+        r"""Exact :math:`\partial \log Z / \partial \alpha` for :math:`\alpha \neq
+        -1`.
+        """
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -93,6 +156,27 @@ def doubly_truncated_power_law_log_norm_constant_jvp(primals, tangents):
 
 
 def doubly_truncated_power_law_log_prob(x, alpha, low, high):
+    r"""Log density of a doubly truncated power law.
+
+    .. math::
+        \log f(x; \alpha, a, b) = \alpha \log x - \log Z(\alpha, a, b)
+
+    Parameters
+    ----------
+    x : ArrayLike
+        Points at which to evaluate the density; assumed to lie in :math:`[a, b]`.
+    alpha : ArrayLike
+        Power law index :math:`\alpha`.
+    low : ArrayLike
+        Lower bound :math:`a`.
+    high : ArrayLike
+        Upper bound :math:`b`.
+
+    Returns
+    -------
+    ArrayLike
+        The log density.
+    """
     return alpha * jnp.log(x) - doubly_truncated_power_law_log_norm_constant(
         alpha, low, high
     )
@@ -101,10 +185,36 @@ def doubly_truncated_power_law_log_prob(x, alpha, low, high):
 @jax.custom_jvp
 def doubly_truncated_power_law_cdf(x, alpha, low, high):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L545-L565
+    r"""Cumulative distribution function of a doubly truncated power law.
+
+    .. math::
+        F(x; \alpha, a, b) = \begin{cases}
+            \dfrac{\log(x/a)}{\log(b/a)} & \alpha = -1, \\[2ex]
+            \dfrac{x^{1+\alpha} - a^{1+\alpha}}{b^{1+\alpha} - a^{1+\alpha}}
+            & \text{otherwise}.
+        \end{cases}
+
+    Parameters
+    ----------
+    x : ArrayLike
+        Points at which to evaluate the CDF.
+    alpha : ArrayLike
+        Power law index :math:`\alpha`.
+    low : ArrayLike
+        Lower bound :math:`a`.
+    high : ArrayLike
+        Upper bound :math:`b`.
+
+    Returns
+    -------
+    ArrayLike
+        The CDF, clipped to :math:`[0, 1]`.
+    """
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
     neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
 
     def cdf_when_alpha_neq_neg1():
+        r"""CDF on the generic :math:`\alpha \neq -1` branch."""
         one_more_alpha = 1.0 + neq_neg1_alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         return (jnp.power(x, one_more_alpha) - low_pow_one_more_alpha) / (
@@ -112,6 +222,7 @@ def doubly_truncated_power_law_cdf(x, alpha, low, high):
         )
 
     def cdf_when_alpha_eq_neg1():
+        r"""CDF on the :math:`\alpha = -1` branch, where the law is log-uniform."""
         return jnp.log(x / low) / jnp.log(high / low)
 
     cdf_val = jnp.where(
@@ -125,6 +236,23 @@ def doubly_truncated_power_law_cdf(x, alpha, low, high):
 @doubly_truncated_power_law_cdf.defjvp
 def doubly_truncated_power_law_cdf_jvp(primals, tangents):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L567-L661
+    r"""JVP rule for :func:`doubly_truncated_power_law_cdf`.
+
+    Tangents with respect to ``x``, ``low`` and ``high`` are exact on both branches; the
+    ``alpha`` tangent at :math:`\alpha = -1` is a symmetric finite difference.
+
+    Parameters
+    ----------
+    primals : tuple
+        ``(x, alpha, low, high)``.
+    tangents : tuple
+        The corresponding tangent vectors.
+
+    Returns
+    -------
+    tuple
+        The primal output and its tangent.
+    """
     x, alpha, low, high = primals
     x_t, alpha_t, low_t, high_t = tangents
 
@@ -141,12 +269,14 @@ def doubly_truncated_power_law_cdf_jvp(primals, tangents):
 
     # Tangents for alpha not equals -1
     def x_neq_neg1(alpha):
+        r"""Exact :math:`\partial F/\partial x` for :math:`\alpha \neq -1`."""
         one_more_alpha = 1.0 + alpha
         return (one_more_alpha * jnp.power(x, alpha)) / (
             jnp.power(high, one_more_alpha) - jnp.power(low, one_more_alpha)
         )
 
     def alpha_neq_neg1(alpha):
+        r"""Exact :math:`\partial F/\partial \alpha` for :math:`\alpha \neq -1`."""
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -161,6 +291,7 @@ def doubly_truncated_power_law_cdf_jvp(primals, tangents):
         return term1 - term2
 
     def low_neq_neg1(alpha):
+        r"""Exact :math:`\partial F/\partial a` for :math:`\alpha \neq -1`."""
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -171,6 +302,7 @@ def doubly_truncated_power_law_cdf_jvp(primals, tangents):
         return term1 - term2
 
     def high_neq_neg1(alpha):
+        r"""Exact :math:`\partial F/\partial b` for :math:`\alpha \neq -1`."""
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -183,14 +315,17 @@ def doubly_truncated_power_law_cdf_jvp(primals, tangents):
 
     # Tangents for alpha equals -1
     def x_eq_neg1():
+        r"""Exact :math:`\partial F/\partial x` at :math:`\alpha = -1`."""
         return jnp.reciprocal(x * (log_high - log_low))
 
     def low_eq_neg1():
+        r"""Exact :math:`\partial F/\partial a` at :math:`\alpha = -1`."""
         return (log_x - log_low) / (
             jnp.square(log_high - log_low) * low
         ) - jnp.reciprocal((log_high - log_low) * low)
 
     def high_eq_neg1():
+        r"""Exact :math:`\partial F/\partial b` at :math:`\alpha = -1`."""
         return -(log_x - log_low) / (jnp.square(log_high - log_low) * high)
 
     # Including approximation for alpha = -1
@@ -217,10 +352,36 @@ def doubly_truncated_power_law_cdf_jvp(primals, tangents):
 @jax.custom_jvp
 def doubly_truncated_power_law_icdf(q, alpha, low, high):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L680-L703
+    r"""Inverse cumulative distribution function of a doubly truncated power law.
+
+    .. math::
+        F^{-1}(q; \alpha, a, b) = \begin{cases}
+            a\left(\dfrac{b}{a}\right)^{q} & \alpha = -1, \\[2ex]
+            \left(a^{1+\alpha} + q\left(b^{1+\alpha} - a^{1+\alpha}\right)\right)^{
+            \frac{1}{1+\alpha}} & \text{otherwise}.
+        \end{cases}
+
+    Parameters
+    ----------
+    q : ArrayLike
+        Quantiles in :math:`[0, 1]`.
+    alpha : ArrayLike
+        Power law index :math:`\alpha`.
+    low : ArrayLike
+        Lower bound :math:`a`.
+    high : ArrayLike
+        Upper bound :math:`b`.
+
+    Returns
+    -------
+    ArrayLike
+        The corresponding quantile values in :math:`[a, b]`.
+    """
     neq_neg1_mask = jnp.not_equal(alpha, -1.0)
     neq_neg1_alpha = jnp.where(neq_neg1_mask, alpha, 0.0)
 
     def icdf_alpha_neq_neg1():
+        r"""Inverse CDF on the generic :math:`\alpha \neq -1` branch."""
         one_more_alpha = 1.0 + neq_neg1_alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -231,6 +392,7 @@ def doubly_truncated_power_law_icdf(q, alpha, low, high):
         )
 
     def icdf_alpha_eq_neg1():
+        r"""Inverse CDF on the :math:`\alpha = -1` branch, where the law is log-uniform."""
         return jnp.power(high / low, q) * low
 
     icdf_val = jnp.where(
@@ -244,6 +406,24 @@ def doubly_truncated_power_law_icdf(q, alpha, low, high):
 @doubly_truncated_power_law_icdf.defjvp
 def doubly_truncated_power_law_icdf_jvp(primals, tangents):
     # source https://github.com/pyro-ppl/numpyro/blob/94f4b99710d855bea456210cf91e6e55eeac3926/numpyro/distributions/truncated.py#L705-L815
+    r"""JVP rule for :func:`doubly_truncated_power_law_icdf`.
+
+    Tangents with respect to the quantile, ``low`` and ``high`` are exact on both
+    branches; the ``alpha`` tangent at :math:`\alpha = -1` is a symmetric finite
+    difference.
+
+    Parameters
+    ----------
+    primals : tuple
+        ``(q, alpha, low, high)``.
+    tangents : tuple
+        The corresponding tangent vectors.
+
+    Returns
+    -------
+    tuple
+        The primal output and its tangent.
+    """
     x, alpha, low, high = primals
     x_t, alpha_t, low_t, high_t = tangents
 
@@ -259,6 +439,7 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
 
     # Tangents for alpha not equal -1
     def x_neq_neg1(alpha):
+        r"""Exact :math:`\partial F^{-1}/\partial q` for :math:`\alpha \neq -1`."""
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -272,6 +453,7 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
         ) / one_more_alpha
 
     def alpha_neq_neg1(alpha):
+        r"""Exact :math:`\partial F^{-1}/\partial \alpha` for :math:`\alpha \neq -1`."""
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -288,6 +470,7 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
         return term1 * (term2 - term3)
 
     def low_neq_neg1(alpha):
+        r"""Exact :math:`\partial F^{-1}/\partial a` for :math:`\alpha \neq -1`."""
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -302,6 +485,7 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
         )
 
     def high_neq_neg1(alpha):
+        r"""Exact :math:`\partial F^{-1}/\partial b` for :math:`\alpha \neq -1`."""
         one_more_alpha = 1.0 + alpha
         low_pow_one_more_alpha = jnp.power(low, one_more_alpha)
         high_pow_one_more_alpha = jnp.power(high, one_more_alpha)
@@ -317,15 +501,18 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
 
     # Tangents for alpha equals -1
     def dx_eq_neg1():
+        r"""Exact :math:`\partial F^{-1}/\partial q` at :math:`\alpha = -1`."""
         return low * jnp.power(high_over_low, x) * (log_high - log_low)
 
     def low_eq_neg1():
+        r"""Exact :math:`\partial F^{-1}/\partial a` at :math:`\alpha = -1`."""
         return (
             jnp.power(high_over_low, x)
             - (high * x * jnp.power(high_over_low, x - 1)) / low
         )
 
     def high_eq_neg1():
+        r"""Exact :math:`\partial F^{-1}/\partial b` at :math:`\alpha = -1`."""
         return x * jnp.power(high_over_low, x - 1)
 
     # Including approximation for alpha = -1 \
@@ -350,14 +537,15 @@ def doubly_truncated_power_law_icdf_jvp(primals, tangents):
 
 
 class DoublyTruncatedPowerLaw(Distribution):
-    r"""Power law distribution with :math:`\alpha` index, and lower and upper bounds. We
-    can define the power law distribution as,
+    r"""Power law distribution with index :math:`\alpha` and lower and upper bounds.
+
+    The density is
 
     .. math::
         f(x; \alpha, a, b) = \frac{x^{\alpha}}{Z(\alpha, a, b)},
 
-    where, :math:`a` and :math:`b` are the lower and upper bounds respectively,
-    and :math:`Z(\alpha, a, b)` is the normalization constant. It is defined as,
+    where :math:`a` and :math:`b` are the lower and upper bounds respectively, and
+    :math:`Z(\alpha, a, b)` is the normalization constant. It is defined as
 
     .. math::
         Z(\alpha, a, b) = \begin{cases}
@@ -365,9 +553,20 @@ class DoublyTruncatedPowerLaw(Distribution):
             \frac{b^{1 + \alpha} - a^{1 + \alpha}}{1 + \alpha} & \text{otherwise}.
         \end{cases}
 
-    :param alpha: index of the power law distribution
-    :param low: lower bound of the distribution
-    :param high: upper bound of the distribution
+    Density, CDF and inverse CDF all delegate to the module-level functions, which carry
+    custom JVP rules so that the :math:`\alpha = -1` case differentiates cleanly.
+
+    Parameters
+    ----------
+    alpha : ArrayLike
+        Index :math:`\alpha` of the power law distribution.
+    low : ArrayLike
+        Lower bound :math:`a` of the distribution.
+    high : ArrayLike
+        Upper bound :math:`b` of the distribution.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
     """
 
     arg_constraints = {
@@ -398,61 +597,92 @@ class DoublyTruncatedPowerLaw(Distribution):
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self) -> constraints.Constraint:
+        """The support of the distribution.
+
+        Returns
+        -------
+        constraints.Constraint
+            The interval :math:`[a, b]`.
+        """
         return self._support
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
-        r"""Logarithmic probability distribution:
-        Z inequal minus one:
-        .. math::
-            (x^\alpha) (\alpha + 1)/(b^(\alpha + 1) - a^(\alpha + 1))
+        r"""Log probability density at ``value``.
 
-        Z equal minus one:
-        .. math::
-            (x^\alpha)/(log(b) - log(a))
-        Derivations are calculated by Wolfram Alpha via the Jacobian matrix accordingly.
+        Parameters
+        ----------
+        value : ArrayLike
+            Points at which to evaluate the density.
+
+        Returns
+        -------
+        ArrayLike
+            :math:`\alpha \log x - \log Z(\alpha, a, b)`.
+
+        See Also
+        --------
+        doubly_truncated_power_law_log_prob : The underlying implementation.
         """
         return doubly_truncated_power_law_log_prob(
             value, self.alpha, self.low, self.high
         )
 
     def cdf(self, value: ArrayLike) -> ArrayLike:
-        r"""Cumulated probability distribution:
-        Z inequal minus one:
+        """Cumulative distribution function at ``value``.
 
-        .. math::
+        Parameters
+        ----------
+        value : ArrayLike
+            Points at which to evaluate the CDF.
 
-            \frac{x^{\alpha + 1} - a^{\alpha + 1}}{b^{\alpha + 1} - a^{\alpha + 1}}
+        Returns
+        -------
+        ArrayLike
+            The CDF, clipped to :math:`[0, 1]`.
 
-        Z equal minus one:
-
-        .. math::
-
-            \frac{\log(x) - \log(a)}{\log(b) - \log(a)}
-
-        Derivations are calculated by Wolfram Alpha via the Jacobian matrix accordingly.
+        See Also
+        --------
+        doubly_truncated_power_law_cdf : The underlying implementation.
         """
         return doubly_truncated_power_law_cdf(value, self.alpha, self.low, self.high)
 
     def icdf(self, q: ArrayLike) -> ArrayLike:
-        r"""Inverse cumulated probability distribution:
-        Z inequal minus one:
+        """Inverse cumulative distribution function at ``q``.
 
-        .. math::
-            a \left(\frac{b}{a}\right)^{q}
+        Parameters
+        ----------
+        q : ArrayLike
+            Quantiles in :math:`[0, 1]`.
 
-        Z equal minus one:
+        Returns
+        -------
+        ArrayLike
+            The corresponding values in :math:`[a, b]`.
 
-        .. math::
-            \left(a^{1 + \alpha} + q (b^{1 + \alpha} - a^{1 + \alpha})\right)^{\frac{1}{1 + \alpha}}
-
-        Derivations are calculated by Wolfram Alpha via the Jacobian matrix accordingly.
+        See Also
+        --------
+        doubly_truncated_power_law_icdf : The underlying implementation.
         """
         return doubly_truncated_power_law_icdf(q, self.alpha, self.low, self.high)
 
     def sample(
         self, key: jax.dtypes.prng_key, sample_shape: tuple[int, ...] = ()
     ) -> ArrayLike:
+        """Draw samples by inverse transform sampling.
+
+        Parameters
+        ----------
+        key : jax.dtypes.prng_key
+            JAX random key.
+        sample_shape : tuple[int, ...]
+            Shape of the sample batch to draw. Defaults to ``()``.
+
+        Returns
+        -------
+        ArrayLike
+            Samples of shape ``sample_shape + batch_shape``.
+        """
         assert is_prng_key(key)
         u = jax.random.uniform(key, sample_shape + self.batch_shape)
         samples = self.icdf(u)

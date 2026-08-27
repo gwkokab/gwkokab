@@ -8,9 +8,27 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 # Adapted from transformations derived in Iwaya et al. 2024
 
+r"""Analytic priors on :math:`\chi_{\text{eff}}` and :math:`\chi_p` for isotropic spins.
+
+Sensitivity injections are drawn with isotropic spin orientations and uniform spin
+magnitudes. Reweighting them into an analysis parameterised by
+:math:`\chi_{\text{eff}}` -- or by :math:`(\chi_{\text{eff}}, \chi_p)` -- is not a
+change of variables, since those are non-invertible functions of the component
+spins, so there is no Jacobian to apply. The induced density has to be written down
+in closed form instead, which is what this module does.
+
+The result is a sum of four integrals :func:`I1` -- :func:`I4`, each an
+antiderivative :func:`F` built from a dilogarithm. Because the dilogarithm has to be
+differentiable and traceable under JAX, :func:`jaxspence` reimplements SciPy's
+``spence`` with :func:`jax.lax.cond` and :func:`jax.lax.fori_loop` in place of Python
+branching and convergence loops.
+
+Adapted from transformations derived in Iwaya et al. 2024, and from
+`effective-spin-priors <https://github.com/tcallister/effective-spin-priors>`_ by way
+of `gwpopulation <https://github.com/ColmTalbot/gwpopulation>`_.
+"""
 
 import jax
 import numpy as np
@@ -23,6 +41,26 @@ MAX_ITER = 500
 
 
 def I1(chieff, chip, q):
+    r"""The first of the four integrals of the isotropic spin prior.
+
+    Covers the region bounded by the precessing spin of the primary. The integration limits are the intersection of that region with
+    the band the effective spin allows; where they do not intersect, or where the
+    precessing spin is out of range, the contribution is zero.
+
+    Parameters
+    ----------
+    chieff : array_like
+        Effective spin :math:`\chi_{\text{eff}}`, rescaled by :math:`a_{\max}`.
+    chip : array_like
+        Precessing spin :math:`\chi_p`, rescaled by :math:`a_{\max}`.
+    q : array_like
+        Mass ratio :math:`q \in (0, 1]`.
+
+    Returns
+    -------
+    np.ndarray
+        The contribution of this region to the prior density.
+    """
     x1max = np.minimum(
         np.sqrt(q**2 - ((4 + 3 * q) / (3 + 4 * q)) ** 2 * chip**2),
         (1 + q) * chieff + np.sqrt(1 - chip**2),
@@ -42,6 +80,26 @@ def I1(chieff, chip, q):
 
 
 def I2(chieff, chip, q):
+    r"""The second of the four integrals of the isotropic spin prior.
+
+    Covers the region bounded by the primary spin magnitude alone. The integration limits are the intersection of that region with
+    the band the effective spin allows; where they do not intersect, or where the
+    precessing spin is out of range, the contribution is zero.
+
+    Parameters
+    ----------
+    chieff : array_like
+        Effective spin :math:`\chi_{\text{eff}}`, rescaled by :math:`a_{\max}`.
+    chip : array_like
+        Precessing spin :math:`\chi_p`, rescaled by :math:`a_{\max}`.
+    q : array_like
+        Mass ratio :math:`q \in (0, 1]`.
+
+    Returns
+    -------
+    np.ndarray
+        The contribution of this region to the prior density.
+    """
     x2max = np.minimum(q, (1 + q) * chieff + np.sqrt(1 - chip**2))
     x2min = np.maximum(-q, (1 + q) * chieff - np.sqrt(1 - chip**2))
 
@@ -56,6 +114,26 @@ def I2(chieff, chip, q):
 
 
 def I3(chieff, chip, q):
+    r"""The third of the four integrals of the isotropic spin prior.
+
+    Covers the region bounded by the precessing spin of the secondary. The integration limits are the intersection of that region with
+    the band the effective spin allows; where they do not intersect, or where the
+    precessing spin is out of range, the contribution is zero.
+
+    Parameters
+    ----------
+    chieff : array_like
+        Effective spin :math:`\chi_{\text{eff}}`, rescaled by :math:`a_{\max}`.
+    chip : array_like
+        Precessing spin :math:`\chi_p`, rescaled by :math:`a_{\max}`.
+    q : array_like
+        Mass ratio :math:`q \in (0, 1]`.
+
+    Returns
+    -------
+    np.ndarray
+        The contribution of this region to the prior density.
+    """
     x3max = np.minimum(
         np.sqrt(1 - chip**2),
         (1 + q) * chieff + np.sqrt(q**2 - ((4 + 3 * q) / (3 + 4 * q)) ** 2 * chip**2),
@@ -79,6 +157,26 @@ def I3(chieff, chip, q):
 
 
 def I4(chieff, chip, q):
+    r"""The fourth of the four integrals of the isotropic spin prior.
+
+    Covers the region bounded by the secondary spin magnitude alone. The integration limits are the intersection of that region with
+    the band the effective spin allows; where they do not intersect, or where the
+    precessing spin is out of range, the contribution is zero.
+
+    Parameters
+    ----------
+    chieff : array_like
+        Effective spin :math:`\chi_{\text{eff}}`, rescaled by :math:`a_{\max}`.
+    chip : array_like
+        Precessing spin :math:`\chi_p`, rescaled by :math:`a_{\max}`.
+    q : array_like
+        Mass ratio :math:`q \in (0, 1]`.
+
+    Returns
+    -------
+    np.ndarray
+        The contribution of this region to the prior density.
+    """
     x4max = np.minimum(
         1,
         (1 + q) * chieff + np.sqrt(q**2 - ((4 + 3 * q) / (3 + 4 * q)) ** 2 * chip**2),
@@ -102,12 +200,51 @@ def I4(chieff, chip, q):
 
 
 def F(x, a, b, c, d):
+    """Antiderivative used to evaluate the integrals :func:`I1` -- :func:`I4`.
+
+    Parameters
+    ----------
+    x : array_like
+        Integration variable.
+    a : array_like
+        Offset of the integrand.
+    b : array_like
+        Scale of the integrand.
+    c : array_like
+        Second scale, entering through :func:`G`.
+    d : array_like
+        Normalising scale appearing in the logarithmic term.
+
+    Returns
+    -------
+    np.ndarray
+        The antiderivative evaluated at ``x``.
+    """
     return G(x / b, a / b, c / b) + np.log(b**2 / d**2) * (
         np.arctan((x - a) / b) + np.arctan(a / b)
     )
 
 
 def G(x, alpha, beta):
+    """Dilogarithmic kernel of :func:`F`.
+
+    The expression is only valid for non-negative ``x``, so negative arguments are
+    reflected and the sign restored afterwards.
+
+    Parameters
+    ----------
+    x : array_like
+        Integration variable.
+    alpha : array_like
+        Offset parameter.
+    beta : array_like
+        Scale parameter.
+
+    Returns
+    -------
+    np.ndarray
+        The kernel value.
+    """
     pre = np.where(x >= 0, 1, -1)
     alpha = np.where(x >= 0, alpha, -alpha)
     x = np.where(x >= 0, x, -x)
@@ -121,6 +258,26 @@ def G(x, alpha, beta):
 
 
 def g(x, alpha, beta):
+    r"""Complex primitive underlying :func:`G`.
+
+    Three branches are needed depending on where :math:`\beta` sits relative to the
+    branch cut of the dilogarithm; they are selected with :func:`numpy.where` and the
+    degenerate point :math:`x = \beta = 0` is handled separately.
+
+    Parameters
+    ----------
+    x : array_like
+        Integration variable.
+    alpha : array_like
+        Offset parameter.
+    beta : array_like
+        Scale parameter.
+
+    Returns
+    -------
+    np.ndarray
+        The complex primitive; :func:`G` takes its imaginary part.
+    """
     cond1 = np.abs(beta) < 1
     cond2 = (beta == 1) & (alpha <= 0)
     x_ = np.where((x == 0) & (beta == 0), 0.01, x)
@@ -142,16 +299,31 @@ def g(x, alpha, beta):
 
 
 def jaxspence(z):
-    """From scipy.special.spence's implementation:
+    r"""Spence's function for complex arguments, written for JAX.
 
-    Compute Spence's function for complex arguments. The strategy is:
-    - If z is close to 0, use a series centered at 0.
-    - If z is far away from 1, use the reflection formula
+    From :func:`scipy.special.spence`'s implementation. The strategy is:
 
-    spence(z) = -spence(z/(z - 1)) - pi**2/6 - ln(z - 1)**2/2
+    - if ``z`` is close to 0, use a series centered at 0;
+    - if ``z`` is far away from 1, use the reflection formula
 
-    to move close to 1.
-    - If z is close to 1, use a series centered at 1.
+      .. math::
+          \mathrm{spence}(z) = -\mathrm{spence}\!\left(\frac{z}{z-1}\right)
+          - \frac{\pi^2}{6} - \frac{\ln(z-1)^2}{2}
+
+      to move close to 1;
+    - if ``z`` is close to 1, use a series centered at 1.
+
+    The branching is expressed with :func:`jax.lax.cond` so the function stays traceable.
+
+    Parameters
+    ----------
+    z : array_like
+        Complex argument.
+
+    Returns
+    -------
+    Array
+        Spence's function evaluated at ``z``.
     """
     return jax.lax.cond(
         np.abs(z) < 0.5,
@@ -167,19 +339,60 @@ def jaxspence(z):
 
 
 def cspence_series0(z):
-    """A series centered at z = 0; see.
+    r"""A series centered at :math:`z = 0`.
 
-    http://functions.wolfram.com/10.07.06.0005.02
+    See http://functions.wolfram.com/10.07.06.0005.02.
+
+    Parameters
+    ----------
+    z : array_like
+        Complex argument, expected close to 0.
+
+    Returns
+    -------
+    Array
+        The series sum; exactly :math:`\pi^2/6` at :math:`z = 0`.
+
+    Notes
+    -----
+    The loop runs a fixed ``MAX_ITER`` iterations rather than stopping on convergence,
+    since a data-dependent trip count is not traceable. The convergence predicate is kept
+    as :func:`cspence_series0.condition` for reference.
     """
     z_ = np.where(z == 0, 0.01, z)
 
     def condition(args):
+        """Convergence predicate: whether another term is still worth adding.
+
+        Parameters
+        ----------
+        args : tuple
+            The loop carry.
+
+        Returns
+        -------
+        bool
+            :data:`True` while the last term exceeds the relative tolerance and the
+            iteration cap has not been reached.
+        """
         n, zfac, term1, sum1, term2, sum2 = args
         return (
             (np.abs(term1) > TOL * np.abs(sum1)) | (np.abs(term2) > TOL * np.abs(sum2))
         ) & (n < MAX_ITER)
 
     def body(args):
+        """Add one term to the series.
+
+        Parameters
+        ----------
+        args : tuple
+            The loop carry.
+
+        Returns
+        -------
+        tuple
+            The updated loop carry.
+        """
         n, zfac, term1, sum1, term2, sum2 = args
         zfac *= z_
         term1 = zfac / n**2
@@ -189,6 +402,20 @@ def cspence_series0(z):
         return (n + 1, zfac, term1, sum1, term2, sum2)
 
     def body_fori(i, args):
+        """Adapt :func:`body` to the :func:`jax.lax.fori_loop` signature.
+
+        Parameters
+        ----------
+        i : int
+            Loop index; unused, since the carry holds the term counter.
+        args : tuple
+            The loop carry.
+
+        Returns
+        -------
+        tuple
+            The updated loop carry.
+        """
         return body(args)
 
     n, zfac, term1, sum1, term2, sum2 = jax.lax.fori_loop(
@@ -202,11 +429,25 @@ def cspence_series0(z):
 
 
 def cspence_series1(z):
-    """A series centered at z = 1 which enjoys faster convergence than the Taylor
-    series.
+    """A series centered at :math:`z = 1`.
 
-    The number of terms used comes from bounding the absolute tolerance at the edge of
-    the radius of convergence where the sum is O(1).
+    Enjoys faster convergence than the Taylor series. The number of terms used comes from
+    bounding the absolute tolerance at the edge of the radius of convergence, where the
+    sum is :math:`O(1)`.
+
+    Parameters
+    ----------
+    z : array_like
+        Complex argument, expected close to 1.
+
+    Returns
+    -------
+    Array
+        The series sum; exactly zero at :math:`z = 1`.
+
+    Notes
+    -----
+    As in :func:`cspence_series0`, the loop runs a fixed ``MAX_ITER`` iterations.
     """
 
     z_ = np.where(z == 1, 1 - 1e-10, z)
@@ -215,10 +456,35 @@ def cspence_series1(z):
     zz = z_**2
 
     def condition(args):
+        """Convergence predicate: whether another term is still worth adding.
+
+        Parameters
+        ----------
+        args : tuple
+            The loop carry.
+
+        Returns
+        -------
+        bool
+            :data:`True` while the last term exceeds the relative tolerance and the
+            iteration cap has not been reached.
+        """
         n, zfac, res, term = args
         return (np.abs(term) > TOL * np.abs(res)) & (n < MAX_ITER)
 
     def body(args):
+        """Add one term to the series.
+
+        Parameters
+        ----------
+        args : tuple
+            The loop carry.
+
+        Returns
+        -------
+        tuple
+            The updated loop carry.
+        """
         n, zfac, res, _ = args
         zfac *= z_
         term = ((zfac / n**2) / (n + 1) ** 2) / (n + 2) ** 2
@@ -226,6 +492,20 @@ def cspence_series1(z):
         return (n + 1, zfac, res, term)
 
     def body_fori(i, args):
+        """Adapt :func:`body` to the :func:`jax.lax.fori_loop` signature.
+
+        Parameters
+        ----------
+        i : int
+            Loop index; unused, since the carry holds the term counter.
+        args : tuple
+            The loop carry.
+
+        Returns
+        -------
+        tuple
+            The updated loop carry.
+        """
         return body(args)
 
     n, zfac, res, term = jax.lax.fori_loop(1, MAX_ITER, body_fori, (1, 1, 0, np.inf))
@@ -237,6 +517,22 @@ def cspence_series1(z):
 
 
 def Li2(z):
+    r"""The dilogarithm :math:`\mathrm{Li}_2`.
+
+    Dispatches to :func:`jaxspence` when :mod:`numpy` has been swapped for
+    :mod:`jax.numpy`, and to :func:`scipy.special.spence` otherwise, using the identity
+    :math:`\mathrm{Li}_2(z) = \mathrm{spence}(1 - z)`.
+
+    Parameters
+    ----------
+    z : array_like
+        Complex argument.
+
+    Returns
+    -------
+    array_like
+        :math:`\mathrm{Li}_2(z)`.
+    """
     if "jax" in np.__name__:
         spence = jax.vmap(jaxspence)
     else:
@@ -246,6 +542,28 @@ def Li2(z):
 
 
 def prior_chieff_chip_isotropic(chieff, chip, q, amax=1):
+    r"""Joint prior on :math:`(\chi_{\text{eff}}, \chi_p)` induced by isotropic spins.
+
+    The density that uniform spin magnitudes and isotropic orientations induce on the
+    effective and precessing spins, evaluated as the sum of the four integrals
+    :func:`I1` -- :func:`I4`.
+
+    Parameters
+    ----------
+    chieff : array_like
+        Effective spin :math:`\chi_{\text{eff}}`.
+    chip : array_like
+        Precessing spin :math:`\chi_p`.
+    q : array_like
+        Mass ratio :math:`q \in (0, 1]`.
+    amax : array_like, optional
+        Maximum allowed dimensionless component spin magnitude. Defaults to ``1``.
+
+    Returns
+    -------
+    np.ndarray
+        The prior density :math:`p(\chi_{\text{eff}}, \chi_p \mid q)`.
+    """
     chieff = chieff / amax
     chip = chip / amax
     return (

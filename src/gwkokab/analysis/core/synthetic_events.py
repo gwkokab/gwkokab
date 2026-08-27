@@ -1,6 +1,23 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Drawing a synthetic population of compact binary coalescences.
+
+The first step of the end-to-end workflow. Given a population model and its true
+hyper-parameters, :class:`SyntheticEventsBase` draws the number of detections from a
+Poisson distribution with the model's own expected rate, then draws that many events
+from the model and thins them by the selection function -- so the saved population is
+what a search would actually have recovered, not what the universe contains.
+
+The output HDF5 keeps both: the ``events`` that survive selection and the
+``buffer_events`` they were drawn from, with the indices and resampling weights linking
+them, so the effect of the selection function can be inspected afterwards.
+
+See Also
+--------
+gwkokab.analysis.core.synthetic_pe :
+    The next step, which blurs these true events into mock PE samples.
+"""
 
 from abc import ABC, abstractmethod
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
@@ -22,6 +39,14 @@ from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 
 class SyntheticEventsBase(PRNGKeyMixin, ABC):
+    """Base class for the ``synthetic_events_<family>`` console scripts.
+
+    Subclasses supply the ``parameters`` and ``model_parameters`` properties, which name
+    the event coordinates and the population hyper-parameters respectively.
+
+    See :meth:`__init__` for the constructor arguments.
+    """
+
     def __init__(
         self,
         filename: str,
@@ -31,6 +56,27 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         n_buffer_events: int,
         derive_parameters: bool = False,
     ) -> None:
+        """Read the true hyper-parameters and instantiate the population model.
+
+        Parameters
+        ----------
+        filename : str
+            Destination HDF5 path for the generated population.
+        model_fn : Callable[..., ScaledMixture]
+            Factory building the population model from its hyper-parameters.
+        model_params_filename : str
+            Path to a JSON file of true hyper-parameter values, keyed by regex in the same
+            way as ``prior_cfg.json``.
+        poisson_mean_filename : str
+            Path to ``pmean_cfg.json``, which supplies the selection function.
+        n_buffer_events : int
+            Size of the pool drawn from the model before selection. It must exceed the
+            realised number of detections, since events are thinned out of it.
+        derive_parameters : bool
+            Derive every reachable parameter with
+            :func:`~gwkokab.parameters.default_relation_mesh` before saving. Defaults to
+            :data:`False`.
+        """
         self.filename = filename
         self.poisson_mean_filename = poisson_mean_filename
         self.derive_parameters = derive_parameters
@@ -148,6 +194,19 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         )
 
     def from_inverse_transform_sampling(self) -> None:
+        """Draw a population and write it out.
+
+        The number of detections is itself random: it is drawn from a Poisson distribution
+        whose mean is the expected rate the Poisson mean estimator reports for this model, so
+        the synthetic catalogue has the same statistical character as a real one.
+
+        Raises
+        ------
+        LoggedValueError
+            If the drawn size exceeds ``n_buffer_events``, in which case the buffer must be
+            enlarged, or if the expected rate is non-positive, which points at a
+            misconfigured model or selection function.
+        """
         pmean_loader = PoissonMeanEstimationLoader.read_from_json(
             self.poisson_mean_filename, self.rng_key, self.parameters
         )
@@ -186,6 +245,26 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
         resample_idx: np.ndarray,
         resample_prob: np.ndarray,
     ) -> None:
+        """Write the population and its provenance to HDF5.
+
+        When ``derive_parameters`` is set, every parameter reachable from those drawn is
+        derived first, so downstream steps can use whichever coordinates they prefer.
+
+        Parameters
+        ----------
+        population : np.ndarray
+            The events that survived selection.
+        indices : np.ndarray
+            Index of the mixture component each surviving event came from.
+        buffer_population : np.ndarray
+            The full pool the events were drawn from, before selection.
+        buffer_indices : np.ndarray
+            Component index of each pooled event.
+        resample_idx : np.ndarray
+            Positions within the pool that were selected.
+        resample_prob : np.ndarray
+            Selection weight of each pooled event.
+        """
         current_params = self.parameters
 
         if self.derive_parameters:
@@ -231,6 +310,18 @@ class SyntheticEventsBase(PRNGKeyMixin, ABC):
 
 
 def injection_generator_parser() -> ArgumentParser:
+    """Build the command line argument parser shared by the population generators.
+
+    Also enables NumPyro distribution argument validation, so a physically impossible
+    hyper-parameter in the model parameters file is caught at construction rather than
+    producing NaNs.
+
+    Returns
+    -------
+    ArgumentParser
+        A parser carrying the input/output, model and selection-function arguments common
+        to every ``synthetic_events_<family>`` script.
+    """
     enable_validation()
     parser = ArgumentParser(
         formatter_class=ArgumentDefaultsHelpFormatter,

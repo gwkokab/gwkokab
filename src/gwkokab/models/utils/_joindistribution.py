@@ -1,6 +1,7 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Product of independent marginal distributions."""
 
 from collections.abc import Sequence
 from typing import Literal, Optional, Tuple
@@ -17,6 +18,24 @@ from ..constraints import all_constraint
 
 
 class JointDistribution(Distribution):
+    """The product of one or more independent marginal distributions.
+
+    Samples are the concatenation of the marginals' samples along the event axis, and
+    the log density is the sum of the marginals' log densities. Scalar marginals occupy
+    one slot of the event axis and vector-valued marginals occupy a contiguous block;
+    the layout is recorded in :attr:`shaped_values` so slicing stays a static operation
+    inside ``jit``.
+
+    This is how one mixture component is assembled out of per-parameter models: a
+    component of, say, a power-law-plus-Gaussian population is a
+    :class:`JointDistribution` over its mass, spin and redshift marginals.
+
+    The marginals are held in ``marginal_distributions``, after any requested flattening,
+    with ``shaped_values`` recording where each one sits on the event axis.
+
+    See :meth:`__init__` for the constructor arguments.
+    """
+
     pytree_aux_fields = ("shaped_values",)
     pytree_data_fields = ("_support", "marginal_distributions")
 
@@ -129,6 +148,21 @@ class JointDistribution(Distribution):
         return self._support
 
     def marginal_log_probs(self, value: Array) -> Array:
+        """Evaluate each marginal's log density separately.
+
+        Parameters
+        ----------
+        value : Array
+            Values of shape ``batch_shape + event_shape``; the event axis is sliced
+            according to :attr:`shaped_values`.
+
+        Returns
+        -------
+        Array
+            Array of shape ``batch_shape + (len(marginal_distributions),)`` holding the
+            per-marginal log densities. Summing over the last axis gives
+            :meth:`log_prob`.
+        """
         marginal_log_probs = []
         for m_dist, event_slice in zip(self.marginal_distributions, self.shaped_values):
             if isinstance(event_slice, int):
@@ -149,9 +183,38 @@ class JointDistribution(Distribution):
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
+        """Log density of the joint distribution.
+
+        Parameters
+        ----------
+        value : Array
+            Values of shape ``batch_shape + event_shape``.
+
+        Returns
+        -------
+        Array
+            The summed log density, of shape ``batch_shape``.
+        """
         return self.marginal_log_probs(value).sum(axis=-1)
 
     def sample(self, key: PRNGKeyArray, sample_shape: tuple[int, ...] = ()):
+        """Draw samples from the joint distribution.
+
+        Each marginal is sampled with its own key split from ``key``, and the results are
+        concatenated along the event axis.
+
+        Parameters
+        ----------
+        key : PRNGKeyArray
+            JAX random key.
+        sample_shape : tuple[int, ...]
+            Shape of the sample batch to draw. Defaults to ``()``.
+
+        Returns
+        -------
+        Array
+            Samples of shape ``sample_shape + batch_shape + event_shape``.
+        """
         assert is_prng_key(key)
         keys = tuple(jrd.split(key, len(self.marginal_distributions)))
         samples = [

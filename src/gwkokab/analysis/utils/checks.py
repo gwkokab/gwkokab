@@ -1,6 +1,13 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Validity predicates on population hyper-parameters.
+
+These are the ``where_fns`` the likelihoods apply on top of the prior support: a point
+failing any of them is assigned :math:`-\infty` without the model ever being built. They
+exist for constraints a prior cannot express, such as the requirement that a
+mean/variance pair actually correspond to a valid Beta distribution.
+"""
 
 from typing import Union
 

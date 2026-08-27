@@ -1,6 +1,18 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Poisson mean from a neural detection-probability regressor.
+
+Like :mod:`~gwkokab.poisson_mean._neural_vt`, but the network predicts the detection
+probability :math:`p_{\text{det}}` rather than the sensitive volume-time, so the
+redshift-dependent volume factor is not already folded in. When a component carries
+a :class:`~gwkokab.models.redshift.PowerlawRedshiftModel`, its normalisation --
+which is the comoving volume-time integral -- is multiplied back in explicitly:
+
+.. math::
+    \mu(\Lambda) = T_{\text{obs}} \sum_k \mathcal{R}_k Z_k
+    \left\langle p_{\text{det}}(\omega) \right\rangle_{\omega \sim p_k}.
+"""
 
 from collections.abc import Callable, Sequence
 from typing import Any, Optional, Tuple, Union
@@ -28,6 +40,60 @@ def poisson_mean_from_neural_pdet(
     Callable[..., Array],
     dict[str, Any],
 ]:
+    r"""Build a Poisson mean estimator backed by a neural :math:`p_{\text{det}}`
+    regressor.
+
+    The network is loaded from ``filename`` and its inputs are reordered to match
+    ``parameters``, so the caller's parameter order need not agree with the order the
+    network was trained in.
+
+    Parameters
+    ----------
+    key : PRNGKeyArray
+        JAX random key, fixed at build time so the Monte Carlo draws are the same on
+        every call and the estimator stays a deterministic function of the population.
+    parameters : Sequence[str]
+        Names of the event coordinates, in the order the population model produces them.
+        Must be a superset of the network's inputs.
+    filename : str
+        Path to the HDF5 file holding the trained network.
+    batch_size : Optional[int], optional
+        Chunk size for evaluating the network. Defaults to :data:`None`, meaning no
+        chunking.
+    num_samples : int, optional
+        Number of Monte Carlo samples drawn per component. Defaults to ``1000``.
+    time_scale : Union[int, float, Array], optional
+        Observing time :math:`T_{\text{obs}}`, in the same units the rates are expressed
+        in. Defaults to ``1.0``.
+
+    Returns
+    -------
+    Tuple[Optional[Callable[[Array], Array]], Callable[..., Array], dict[str, Any]]
+        A triple of:
+
+        - the log sensitivity function, exposed so it can be plotted or reused (or
+          :data:`None` when the estimator has no such function);
+        - the estimator itself, which maps a
+          :class:`~gwkokab.models.utils.ScaledMixture` and the extra arguments below to
+          ``(mean, variance)``;
+        - a dictionary of those extra arguments, to be splatted into the estimator at
+          call time.
+
+    Raises
+    ------
+    LoggedValueError
+        If ``parameters`` is empty, ``batch_size`` is not positive, or the network
+        expects a parameter that ``parameters`` does not supply.
+    LoggedTypeError
+        If ``parameters`` is not a sequence of strings, or ``batch_size`` is not an
+        integer.
+
+    Notes
+    -----
+    The Monte Carlo variance is returned alongside the mean so the sampler can detect
+    when the estimate is too noisy to trust; see the ``--variance-cut-threshold`` flag
+    and Equations 9 and 11 of `arXiv:2406.16813 <https://arxiv.org/abs/2406.16813>`_.
+    """
     if not parameters:
         raise LoggedValueError("parameters sequence cannot be empty")
     if not isinstance(parameters, Sequence):
@@ -55,6 +121,21 @@ def poisson_mean_from_neural_pdet(
 
     @jax.jit
     def log_pdet(x: Array) -> Array:
+        r"""Evaluate the log detection probability at a set of event coordinates.
+
+        Parameters
+        ----------
+        x : Array
+            Event coordinates, with the parameters along the last axis in the order given by
+            ``parameters``. They are reordered internally to the network's input order.
+
+        Returns
+        -------
+        Array
+            :math:`\log p_{\text{det}}`. Non-positive network outputs -- which the network
+            is free to produce, being unconstrained -- map to :math:`-\infty` rather than
+            NaN.
+        """
         x_new = x[..., shuffle_indices]
         y_new = jnp.squeeze(
             jax.lax.map(neural_vt_model, x_new, batch_size=batch_size), axis=-1
@@ -66,6 +147,25 @@ def poisson_mean_from_neural_pdet(
     def _poisson_mean(
         scaled_mixture: ScaledMixture, T_obs: Array
     ) -> Tuple[Array, Array]:
+        r"""Estimate the Poisson mean and its Monte Carlo variance.
+
+        Components whose marginals include a
+        :class:`~gwkokab.models.redshift.PowerlawRedshiftModel` contribute that model's log
+        normalisation, restoring the comoving volume-time factor that
+        :math:`p_{\text{det}}` does not carry; other components contribute nothing extra.
+
+        Parameters
+        ----------
+        scaled_mixture : ScaledMixture
+            The population model; its log scales supply the component rates.
+        T_obs : Array
+            Observing time.
+
+        Returns
+        -------
+        Tuple[Array, Array]
+            The expected number of detections and the variance of that estimate.
+        """
         component_sample = scaled_mixture.component_sample(key, (num_samples,))
         # vmapping over components
         log_pdet_values = jax.vmap(log_pdet, in_axes=1)(component_sample)

@@ -1,6 +1,26 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Turning ``prior_cfg.json`` into priors, constants, aliases and lazy priors.
+
+The prior configuration is keyed by regex rather than by parameter name; once
+:func:`~gwkokab.analysis.utils.regex.match_all` has resolved those keys against the
+actual hyper-parameter names, :func:`get_processed_priors` interprets each value. There
+are four kinds:
+
+- a dict with a ``"dist"`` field becomes an instantiated NumPyro or GWKokab prior;
+- a number becomes a **constant**, frozen rather than sampled;
+- a string naming another parameter becomes an **alias**, tying the two to one sampled
+  dimension;
+- a dict whose *field values* are strings becomes a **lazy prior**: a
+  :class:`jax.tree_util.Partial` plus a dependency map, so the prior's own
+  hyper-parameters are themselves sampled.
+
+This module also supplies :func:`DirichletElement`, a prior that has no NumPyro
+equivalent: it expresses one coordinate of a simplex conditional on those before it,
+which is what lets a set of mixing fractions be sampled coordinate by coordinate as
+independent named sites.
+"""
 
 from typing import List, Optional, Tuple, Union
 
@@ -21,7 +41,24 @@ from gwkokab.utils.exceptions import (
 
 
 class _DirichletElement(Distribution):
-    """DirichletElement distribution for order < n_dimensions - 1 and n_dimensions > 1."""
+    r"""One conditional coordinate of a Dirichlet-distributed simplex.
+
+    The distribution of the ``order``-th coordinate given the sum of those before it, for
+    ``order < n_dimensions - 1``. The last coordinate is fixed by closure and is handled
+    by :func:`DirichletElement` with a :class:`~numpyro.distributions.Delta` instead.
+
+    Parameters
+    ----------
+    order : float
+        Index :math:`n` of this coordinate within the simplex.
+    n_dimensions : float
+        Total number of coordinates :math:`N` of the simplex.
+    sum_of_concentrations : ArrayLike
+        Sum :math:`\alpha_n` of the coordinates already drawn, which bounds this one.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+    """
 
     arg_constraints = {
         "order": constraints.nonnegative_integer,
@@ -46,16 +83,50 @@ class _DirichletElement(Distribution):
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
     def support(self):
+        r"""The support of the distribution.
+
+        Returns
+        -------
+        constraints.Constraint
+            The interval :math:`[0, 1 - \alpha_n]`: whatever probability mass the earlier
+            coordinates left over.
+        """
         return constraints.interval(0.0, 1.0 - self.sum_of_concentrations)
 
     @validate_sample
     def log_prob(self, value: Array) -> Array:
+        """Log probability density at ``value``.
+
+        Parameters
+        ----------
+        value : Array
+            Values of this simplex coordinate.
+
+        Returns
+        -------
+        Array
+            The normalised log density.
+        """
         constant = self.n_dimensions - self.order - 1
         log_prob_unnorm = xlog1py(constant - 1, -self.sum_of_concentrations - value)  # type: ignore
         log_norm = xlog1py(constant, -self.sum_of_concentrations) - jnp.log(constant)  # type: ignore
         return log_prob_unnorm - log_norm
 
     def sample(self, key: PRNGKeyArray, sample_shape: Tuple[int, ...] = ()) -> Array:
+        r"""Draw samples by inverse transform sampling.
+
+        Parameters
+        ----------
+        key : PRNGKeyArray
+            JAX random key.
+        sample_shape : Tuple[int, ...]
+            Shape of the sample batch to draw. Defaults to ``()``.
+
+        Returns
+        -------
+        Array
+            Samples in :math:`[0, 1 - \alpha_n]`.
+        """
         u = jax.random.uniform(key, shape=sample_shape)
         inv_constant = 1.0 / (self.n_dimensions - self.order - 1)
         return (1.0 - self.sum_of_concentrations) * (1.0 - jnp.power(u, inv_constant))  # type: ignore

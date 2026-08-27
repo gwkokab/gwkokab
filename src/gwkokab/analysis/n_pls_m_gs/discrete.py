@@ -1,6 +1,16 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The ``discrete_n_pls_m_gs`` console script: N power-law plus M Gaussian inference
+over per-event posterior samples.
+
+One cell of the analysis matrix. The family half is :class:`~gwkokab.analysis.n_pls_m_gs.common.NPowerlawMGaussianCore`, which names the
+parameters and hyper-parameters; the data-representation half is :class:`~gwkokab.analysis.core.discrete_base.DiscreteBase`, which
+supplies ``read_data`` and ``run``. The sampler half is chosen at *runtime* by
+``sampler_cfg.json``, which is why there are two trivial subclasses -- one mixing in
+flowMC, one NumPyro -- and :func:`main` picks between them after reading that file.
+"""
+
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from typing import Callable
 
@@ -24,6 +34,14 @@ from gwkokab.models import NPowerlawMGaussian
 
 
 class NPowerlawMGaussianDiscreteAnalysis(NPowerlawMGaussianCore, DiscreteBase):
+    """N power-law plus m gaussian analysis over per-event posterior samples.
+
+    Combines :class:`~gwkokab.analysis.n_pls_m_gs.common.NPowerlawMGaussianCore` with :class:`~gwkokab.analysis.core.discrete_base.DiscreteBase`. Sampler-agnostic: mix in
+    :class:`~gwkokab.analysis.core.flowMC_base.FlowMCBase` or
+    :class:`~gwkokab.analysis.core.numpyro_base.NumpyroBase` to get a runnable
+    analysis.
+    """
+
     def __init__(
         self,
         N_pl: int,
@@ -63,6 +81,12 @@ class NPowerlawMGaussianDiscreteAnalysis(NPowerlawMGaussianCore, DiscreteBase):
         profile_memory: bool = False,
         check_leaks: bool = False,
     ) -> None:
+        """Configure both halves of the analysis.
+
+        The model and component arguments are forwarded to :class:`~gwkokab.analysis.n_pls_m_gs.common.NPowerlawMGaussianCore`, and the data,
+        prior, selection-function and sampler arguments to :class:`~gwkokab.analysis.core.discrete_base.DiscreteBase`. See those two
+        constructors for the full parameter list.
+        """
         NPowerlawMGaussianCore.__init__(
             self,
             N_pl=N_pl,
@@ -114,16 +138,34 @@ class NPowerlawMGaussianDiscreteAnalysis(NPowerlawMGaussianCore, DiscreteBase):
 class NPowerlawMGaussianFDiscreteAnalysis(
     NPowerlawMGaussianDiscreteAnalysis, FlowMCBase
 ):
+    """N power-law plus m gaussian analysis over per-event posterior samples, sampled
+    with flowMC.
+
+    Selected by :func:`main` when ``sampler_cfg.json`` names ``flowMC``.
+    """
+
     pass
 
 
 class NPowerlawMGaussianNDiscreteAnalysis(
     NPowerlawMGaussianDiscreteAnalysis, NumpyroBase
 ):
+    """N power-law plus m gaussian analysis over per-event posterior samples, sampled
+    with NumPyro.
+
+    Selected by :func:`main` when ``sampler_cfg.json`` names ``numpyro``.
+    """
+
     pass
 
 
 def main() -> None:
+    """Console script entry point for ``discrete_n_pls_m_gs``.
+
+    Parses the command line, reads the sampler and data loader configurations, picks the
+    likelihood and the analysis class matching the configured sampler, seeds the PRNG,
+    and runs the analysis.
+    """
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = discrete_arg_parser(parser)

@@ -1,6 +1,12 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Generic models that do not belong to a single physical parameter block.
+
+These are mixture constructions -- of truncated normals, or of a uniform and a normal
+component -- that show up in more than one place: as spin magnitude models, as tilt
+models, and as generic two-component descriptions of an arbitrary bounded parameter.
+"""
 
 from typing import Optional
 

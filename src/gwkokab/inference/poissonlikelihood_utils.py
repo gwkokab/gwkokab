@@ -1,6 +1,32 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""The inhomogeneous-Poisson log-likelihood.
+
+This is where the actual likelihood arithmetic lives; the four modules alongside it
+only adapt these two functions to a sampler backend. The likelihood is
+
+.. math::
+    \log\mathcal{L}(\Lambda) \propto -\mu(\Lambda)
+    + \sum_{n=1}^N \log \int \ell_n(\lambda)\,\rho(\lambda\mid\Lambda)
+    \,\mathrm{d}\lambda
+
+where :math:`\rho(\lambda\mid\Lambda) =
+\mathrm{d}N/\mathrm{d}V\,\mathrm{d}t\,\mathrm{d}\lambda` is the merger rate
+density of a population parameterised by :math:`\Lambda`, :math:`\mu(\Lambda)` is
+the expected number of detections for that population, and :math:`\ell_n(\lambda)`
+is the likelihood for the :math:`n`-th observed event's parameters.
+
+The two functions differ in how the per-event integral is evaluated:
+:func:`discrete_poisson_likelihood_fn` averages over that event's posterior samples,
+reweighted by the PE prior they were drawn under, while
+:func:`analytical_gwalk_poisson_likelihood_fn` uses samples resampled from the
+event's Gaussian summary and their log offsets.
+
+Both optionally subtract a variance-tapering penalty, so that hyper-parameters where
+the Monte Carlo estimate is too noisy to trust are pushed away from rather than
+silently accepted.
+"""
 
 from collections.abc import Callable
 from typing import Any, Dict, Tuple
@@ -58,7 +84,50 @@ def discrete_poisson_likelihood_fn(
     N_pes: Tuple[Array, ...],
     variance_cut_threshold: float | None,
 ) -> Array:
+    r"""Poisson log-likelihood from per-event posterior samples.
 
+    Each event's integral is a Monte Carlo average over its posterior samples, divided
+    by the PE prior they were drawn under:
+
+    .. math::
+        \int \ell_n(\lambda)\,\rho(\lambda\mid\Lambda)\,\mathrm{d}\lambda
+        \approx \frac{1}{M_n} \sum_{i=1}^{M_n}
+        \frac{\rho(\lambda_{n,i}\mid\Lambda)}{\pi_{n,i}}
+
+    Events are processed in buckets of similar sample count -- see
+    :mod:`gwkokab.analysis.utils.jenks` -- so each bucket is one padded, rectangular
+    array. Padding is masked out twice over: the padded coordinates are replaced by a
+    point known to be in the support before the model is evaluated, so no NaN is
+    produced, and their contributions are then masked to :math:`-\infty` so they add
+    nothing to the sum.
+
+    Parameters
+    ----------
+    model_instance : Distribution
+        The population model at the current hyper-parameters.
+    poisson_mean_estimator : Callable
+        Estimator of :math:`\mu(\Lambda)`, returning ``(mean, variance)``. See
+        :mod:`gwkokab.poisson_mean`.
+    data_group : Tuple[Array, ...]
+        One padded array of posterior samples per bucket of events.
+    log_ref_priors_group : Tuple[Array, ...]
+        Log PE prior :math:`\log\pi_{n,i}` of each sample, bucketed to match.
+    masks_group : Tuple[Array, ...]
+        Boolean masks marking the real samples in each bucket, as opposed to padding.
+    pmean_kwargs : Dict[str, Any]
+        Extra arguments for the Poisson mean estimator; must include ``T_obs``.
+    N_pes : Tuple[Array, ...]
+        Number of real posterior samples :math:`M_n` per event, bucketed to match.
+    variance_cut_threshold : float | None
+        Threshold above which the Monte Carlo variance of the estimate is penalised by
+        :func:`~gwkokab.inference.poissonlikelihood_utils.variance_tapering_fn`.
+        :data:`None` disables the penalty.
+
+    Returns
+    -------
+    Array
+        The scalar log-likelihood.
+    """
     n_events = sum([masks_group.shape[0] for masks_group in data_group])
 
     total_log_likelihood = -jnp.sum(
@@ -125,9 +194,51 @@ def analytical_gwalk_poisson_likelihood_fn(
     pmean_kwargs: Dict[str, Any],
     variance_cut_threshold: float | None,
 ) -> Array:
+    r"""Poisson log-likelihood from per-event Gaussian summaries.
+
+    Each event is summarised by a mean and covariance rather than by a sample cloud;
+    the samples here have been resampled from that summary, and ``ln_offsets`` carries
+    the accompanying log weight. Samples falling outside the model's support are
+    excluded from the reduction rather than contributing :math:`-\infty`.
+
+    Parameters
+    ----------
+    model_instance : Distribution
+        The population model at the current hyper-parameters.
+    poisson_mean_estimator : Callable
+        Estimator of :math:`\mu(\Lambda)`, returning ``(mean, variance)``. See
+        :mod:`gwkokab.poisson_mean`.
+    samples_stack : Array
+        Resampled event coordinates, of shape ``(n_events, n_samples, n_parameters)``.
+    ln_offsets : Array
+        Log weight of each resampled point.
+    pmean_kwargs : Dict[str, Any]
+        Extra arguments for the Poisson mean estimator; must include ``T_obs``.
+    variance_cut_threshold : float | None
+        Threshold above which the Monte Carlo variance of the estimate is penalised by
+        :func:`~gwkokab.inference.poissonlikelihood_utils.variance_tapering_fn`.
+        :data:`None` disables the penalty.
+
+    Returns
+    -------
+    Array
+        The scalar log-likelihood.
+    """
     mask = model_instance.support.check(samples_stack)
 
     def compute_event_log_prob(samples):
+        """Evaluate the population model over one event's resampled points.
+
+        Parameters
+        ----------
+        samples : Array
+            One event's resampled coordinates, of shape ``(n_samples, n_parameters)``.
+
+        Returns
+        -------
+        Array
+            The log density at each point.
+        """
         return model_instance.log_prob(samples)
 
     log_prob_model = jax.vmap(compute_event_log_prob)(samples_stack)

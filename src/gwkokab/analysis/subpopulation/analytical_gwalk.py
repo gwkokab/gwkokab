@@ -1,6 +1,15 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The ``analytical_gwalk_subpopulation`` console script: sub-population inference over
+per-event Gaussian summaries.
+
+One cell of the analysis matrix. The family half is :class:`~gwkokab.analysis.subpopulation.common.SubPopulationModelCore`, which names the
+parameters and hyper-parameters; the data-representation half is :class:`~gwkokab.analysis.core.analytical_gwalk_base.AnalyticalGWalkBase`, which
+supplies ``read_data`` and ``run``. The sampler half is chosen at *runtime* by
+``sampler_cfg.json``, which is why there are two trivial subclasses -- one mixing in
+flowMC, one NumPyro -- and :func:`main` picks between them after reading that file.
+"""
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from collections.abc import Callable
@@ -29,6 +38,14 @@ from gwkokab.models import SubPopulationModel
 class SubPopulationModelAnalyticalGWalkAnalysis(
     SubPopulationModelCore, AnalyticalGWalkBase
 ):
+    """Sub-population analysis over per-event Gaussian summaries.
+
+    Combines :class:`~gwkokab.analysis.subpopulation.common.SubPopulationModelCore` with :class:`~gwkokab.analysis.core.analytical_gwalk_base.AnalyticalGWalkBase`. Sampler-agnostic: mix in
+    :class:`~gwkokab.analysis.core.flowMC_base.FlowMCBase` or
+    :class:`~gwkokab.analysis.core.numpyro_base.NumpyroBase` to get a runnable
+    analysis.
+    """
+
     def __init__(
         self,
         N_spl: int,
@@ -59,6 +76,12 @@ class SubPopulationModelAnalyticalGWalkAnalysis(
         profile_memory: bool = False,
         check_leaks: bool = False,
     ) -> None:
+        """Configure both halves of the analysis.
+
+        The model and component arguments are forwarded to :class:`~gwkokab.analysis.subpopulation.common.SubPopulationModelCore`, and the data,
+        prior, selection-function and sampler arguments to :class:`~gwkokab.analysis.core.analytical_gwalk_base.AnalyticalGWalkBase`. See those two
+        constructors for the full parameter list.
+        """
         SubPopulationModelCore.__init__(
             self,
             N_spl=N_spl,
@@ -100,16 +123,32 @@ class SubPopulationModelAnalyticalGWalkAnalysis(
 class SubPopulationModelFAnalyticalGWalkAnalysis(
     SubPopulationModelAnalyticalGWalkAnalysis, FlowMCBase
 ):
+    """Sub-population analysis over per-event Gaussian summaries, sampled with flowMC.
+
+    Selected by :func:`main` when ``sampler_cfg.json`` names ``flowMC``.
+    """
+
     pass
 
 
 class SubPopulationModelNAnalyticalGWalkAnalysis(
     SubPopulationModelAnalyticalGWalkAnalysis, NumpyroBase
 ):
+    """Sub-population analysis over per-event Gaussian summaries, sampled with NumPyro.
+
+    Selected by :func:`main` when ``sampler_cfg.json`` names ``numpyro``.
+    """
+
     pass
 
 
 def main() -> None:
+    """Console script entry point for ``analytical_gwalk_subpopulation``.
+
+    Parses the command line, reads the sampler and data loader configurations, picks the
+    likelihood and the analysis class matching the configured sampler, seeds the PRNG,
+    and runs the analysis.
+    """
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = model_arg_parser(parser)
     parser = analytical_gwalk_arg_parser(parser)
