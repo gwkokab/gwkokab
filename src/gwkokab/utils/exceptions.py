@@ -88,12 +88,25 @@ def _format(msg: str, args: tuple, kwargs: dict) -> str:
 
 
 class LoggedMixinException:
-    r"""A mixin class for exceptions that logs the error message using loguru when the
+    """A mixin class for exceptions that logs the error message using loguru when the
     exception is instantiated.
 
     The message is formatted using the provided arguments and keyword arguments. If
     formatting fails, the original message is used without formatting. The formatted
     message is logged at the error level.
+
+    Parameters
+    ----------
+    msg : str
+        Message template, using loguru's ``{}``-style formatting.
+    *args : Any
+        Positional arguments substituted into ``msg``.
+    loguru_opt : dict[str, Any], optional
+        Options forwarded to :meth:`loguru.Logger.opt`. Defaults to ``{"depth": 1}``
+        so the log record points at the caller that raised the exception rather than
+        at this mixin.
+    **kwargs : Any
+        Keyword arguments substituted into ``msg``.
     """
 
     def __init__(
@@ -110,12 +123,25 @@ class LoggedMixinException:
 
 
 class LoggedMixinWarning:
-    r"""A mixin class for warnings that logs the warning message using loguru when the
+    """A mixin class for warnings that logs the warning message using loguru when the
     warning is instantiated.
 
     The message is formatted using the provided arguments and keyword arguments. If
     formatting fails, the original message is used without formatting. The formatted
     message is logged at the warning level.
+
+    Parameters
+    ----------
+    msg : str
+        Message template, using loguru's ``{}``-style formatting.
+    *args : Any
+        Positional arguments substituted into ``msg``.
+    loguru_opt : dict[str, Any], optional
+        Options forwarded to :meth:`loguru.Logger.opt`. Defaults to ``{"depth": 1}``
+        so the log record points at the caller that issued the warning rather than at
+        this mixin.
+    **kwargs : Any
+        Keyword arguments substituted into ``msg``.
     """
 
     def __init__(
@@ -126,39 +152,57 @@ class LoggedMixinWarning:
         super().__init__(formatted)  # type: ignore[call-arg]
 
 
-# fmt: off
-class LoggedAssertionError(LoggedMixinException, AssertionError): ...
+class LoggedAssertionError(LoggedMixinException, AssertionError):
+    """:class:`AssertionError` that logs its message at ``ERROR`` level when raised."""
 
 
-class LoggedAttributeError(LoggedMixinException, AttributeError): ...
+class LoggedAttributeError(LoggedMixinException, AttributeError):
+    """:class:`AttributeError` that logs its message at ``ERROR`` level when raised."""
 
 
-class LoggedFileNotFoundError(LoggedMixinException, FileNotFoundError): ...
+class LoggedFileNotFoundError(LoggedMixinException, FileNotFoundError):
+    """:class:`FileNotFoundError` that logs its message at ``ERROR`` level when
+    raised.
+    """
 
 
-class LoggedImportError(LoggedMixinException, ImportError): ...
+class LoggedImportError(LoggedMixinException, ImportError):
+    """:class:`ImportError` that logs its message at ``ERROR`` level when raised."""
 
 
-class LoggedIndexError(LoggedMixinException, IndexError): ...
+class LoggedIndexError(LoggedMixinException, IndexError):
+    """:class:`IndexError` that logs its message at ``ERROR`` level when raised."""
 
 
-class LoggedKeyError(LoggedMixinException, KeyError): ...
+class LoggedKeyError(LoggedMixinException, KeyError):
+    """:class:`KeyError` that logs its message at ``ERROR`` level when raised."""
 
 
-class LoggedNotImplementedError(LoggedMixinException, NotImplementedError): ...
+class LoggedNotImplementedError(LoggedMixinException, NotImplementedError):
+    """:class:`NotImplementedError` that logs its message at ``ERROR`` level when
+    raised.
+    """
 
 
-class LoggedTypeError(LoggedMixinException, TypeError): ...
+class LoggedTypeError(LoggedMixinException, TypeError):
+    """:class:`TypeError` that logs its message at ``ERROR`` level when raised."""
 
 
-class LoggedValueError(LoggedMixinException, ValueError): ...
+class LoggedValueError(LoggedMixinException, ValueError):
+    """:class:`ValueError` that logs its message at ``ERROR`` level when raised."""
 
 
-class LoggedUserWarning(LoggedMixinWarning, UserWarning): ...
+class LoggedUserWarning(LoggedMixinWarning, UserWarning):
+    """:class:`UserWarning` that logs its message at ``WARNING`` level when issued."""
 
 
-class LoggedRuntimeWarning(LoggedMixinWarning, RuntimeWarning): ...
+class LoggedRuntimeWarning(LoggedMixinWarning, RuntimeWarning):
+    """:class:`RuntimeWarning` that logs its message at ``WARNING`` level when
+    issued.
+    """
 
 
-class LoggedDeprecationWarning(LoggedMixinWarning, DeprecationWarning): ...
-# fmt: on
+class LoggedDeprecationWarning(LoggedMixinWarning, DeprecationWarning):
+    """:class:`DeprecationWarning` that logs its message at ``WARNING`` level when
+    issued.
+    """

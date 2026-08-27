@@ -1,6 +1,21 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The common scaffolding of every hierarchical inference run.
+
+:class:`AnalysisBase` holds what all four model families and both data representations
+share. Its central job is :meth:`AnalysisBase.classify_model_parameters`, which turns
+the processed ``prior_cfg.json`` into the four kinds of entry the sampler needs:
+constants frozen with :func:`jax.lax.stop_gradient`, sampled variables, aliases sharing
+one sampled dimension, and lazy priors whose own hyper-parameters are sampled. The lazy
+ones are topologically sorted and cycle-checked here, and the result becomes either a
+:class:`~gwkokab.models.utils.JointDistribution` or a
+:class:`~gwkokab.models.utils.LazyJointDistribution`.
+
+Sampled dimensions are ordered by ``sorted(variables.keys())``. That ordering is what
+``variables_index`` in the output HDF5 records, and it is how chains map back to
+parameter names.
+"""
 
 from abc import abstractmethod
 from argparse import ArgumentParser
@@ -24,10 +39,34 @@ from gwkokab.utils.exceptions import LoggedValueError
 
 
 def _topological_sort(graph: Dict[str, Set[str]]) -> List[str]:
+    """Order the nodes of a dependency graph so dependencies come first.
+
+    Parameters
+    ----------
+    graph : Dict[str, Set[str]]
+        A directed graph as an adjacency list; ``graph[a]`` holds the nodes that depend
+        on ``a``.
+
+    Returns
+    -------
+    List[str]
+        The nodes in topological order.
+
+    Notes
+    -----
+    Assumes the graph is acyclic; check first with :func:`_check_cycles`.
+    """
     visited = set()
     result = []
 
     def dfs(node: str) -> None:
+        """Visit a node and everything reachable from it, appending on the way out.
+
+        Parameters
+        ----------
+        node : str
+            The node to visit.
+        """
         visited.add(node)
         for neighbor in graph.get(node, set()):
             if neighbor not in visited:
@@ -58,6 +97,19 @@ def _check_cycles(graph: Dict[str, Set[str]]) -> bool:
     rec_stack = set()
 
     def dfs(node: str) -> bool:
+        """Search for a back edge from ``node``.
+
+        Parameters
+        ----------
+        node : str
+            The node to search from.
+
+        Returns
+        -------
+        bool
+            :data:`True` if a node currently on the recursion stack is reachable, which means
+            a cycle.
+        """
         visited.add(node)
         rec_stack.add(node)
 
@@ -216,6 +268,30 @@ class AnalysisBase(PRNGKeyMixin):
         sampler_cfg,
         variance_cut_threshold: float | None,
     ) -> None:
+        """Record the configuration common to every analysis.
+
+        Parameters
+        ----------
+        analysis_name : str
+            Name of the analysis, used in log messages and in the output.
+        check_leaks : bool
+            Run the sampler under :func:`jax.checking_leaks`.
+        debug_nans : bool
+            Run the sampler under :func:`jax.debug_nans`.
+        model : Union[Distribution, Callable[..., Distribution]]
+            The population model, or a factory that builds it from hyper-parameters.
+        poisson_mean_filename : str
+            Path to ``pmean_cfg.json``, the selection-function configuration.
+        prior_filename : str
+            Path to ``prior_cfg.json``, the population prior configuration.
+        profile_memory : bool
+            Write a memory profile of the run.
+        sampler_cfg : SamplerConfig
+            The parsed sampler configuration, which also decides which sampler mixin runs.
+        variance_cut_threshold : float | None
+            Threshold above which a noisy Poisson mean estimate is penalised. :data:`None`
+            disables the penalty.
+        """
         self.analysis_name = analysis_name
         self.prior_filename = prior_filename
         self.model = model
@@ -360,6 +436,28 @@ class AnalysisBase(PRNGKeyMixin):
         data: Any,
         labels: List[str],
     ) -> None:
+        """Run the sampler.
+
+        Supplied by the sampler mixin --
+        :class:`~gwkokab.analysis.core.flowMC_base.FlowMCBase` or
+        :class:`~gwkokab.analysis.core.numpyro_base.NumpyroBase` -- rather than by this class.
+
+        Parameters
+        ----------
+        logpdf : Callable[[Array, Dict[str, Any]], Array]
+            The log posterior, as built by :mod:`gwkokab.inference`.
+        priors : JointDistribution
+            Joint prior over the sampled variables.
+        data : Any
+            The event data, in whatever form the data-representation base produced.
+        labels : List[str]
+            Names of the sampled dimensions, in ``variables_index`` order.
+
+        Raises
+        ------
+        NotImplementedError
+            Always; a sampler mixin must supply this method.
+        """
         raise NotImplementedError()
 
 

@@ -1,6 +1,7 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""JSON configuration I/O and hyper-parameter name expansion."""
 
 import json
 from typing import Dict, List

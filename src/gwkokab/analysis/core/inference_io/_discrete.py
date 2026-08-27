@@ -1,6 +1,17 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Data loader configuration for the discrete representation.
+
+Each event file holds a set of parameter estimation samples. :class:`DiscretePELoader`
+resolves which files to read, which HDF5 dataset within each to read, how many samples
+to keep, and -- crucially -- which PE prior those samples were drawn under, so that it
+can be divided back out. The prior can be set per event class, with per-file overrides
+for the events whose analysis differed.
+
+The ``gwk_discrete_data_loader_cfg_template`` console script dumps a starter
+configuration.
+"""
 
 import glob
 import warnings
@@ -32,6 +43,11 @@ from gwkokab.utils.exceptions import (
 
 
 def _data_loader_cfg_template() -> None:
+    """Console script entry point: dump a starter data loader configuration.
+
+    Writes a JSON file with every recognised field present and empty, so it can be
+    filled in rather than written from scratch.
+    """
     import argparse
 
     parser = argparse.ArgumentParser(

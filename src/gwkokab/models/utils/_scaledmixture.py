@@ -1,6 +1,14 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Mixture distribution whose components carry log rates rather than weights.
+
+:class:`ScaledMixture` is the central abstraction of the model layer: because the
+component scales are unnormalised log rates, the mixture integrates to the total merger
+rate rather than to one. That is what lets the Poisson-mean estimators in
+:mod:`gwkokab.poisson_mean` read the expected number of detections straight off the
+model, and hence what lets rates and population shapes be inferred jointly.
+"""
 
 from typing import List, Optional
 
@@ -12,12 +20,48 @@ from numpyro.distributions.util import categorical, is_prng_key, validate_sample
 
 
 class ScaledMixture(Distribution):
-    r"""A finite mixture of component distributions from different families. This is a
-    generalization of :class:`~numpyro.distributions.Mixture` where the component
-    distributions are scaled by a set of rates.
+    r"""A finite mixture of component distributions from different families.
 
-    **Example**
+    This is a generalization of :class:`~numpyro.distributions.Mixture` where the
+    component distributions are scaled by a set of rates. The scales are *not*
+    normalised to sum to one, so
 
+    .. math::
+        p(x) = \sum_{k} \mathcal{R}_k \, p_k(x),
+        \qquad \log \mathcal{R}_k = \texttt{log\_scales}_k
+
+    integrates to :math:`\sum_k \mathcal{R}_k` -- the total rate -- rather than to unity.
+    The Poisson-mean estimators rely on this, so they require a :class:`ScaledMixture`
+    specifically.
+
+    Parameters
+    ----------
+    log_scales : Array
+        Log rates :math:`\log\mathcal{R}_k` of the components; the trailing axis fixes
+        the mixture size.
+    component_distributions : List[Distribution]
+        The component distributions. All must share an event shape and a support type,
+        and their number must match the mixture size.
+    support : Optional[constraints.Constraint], optional
+        Support of the mixture. Defaults to :data:`None`, in which case the first
+        component's support is used and every component is required to have the same
+        support type. Pass it explicitly when components have genuinely different
+        supports; out-of-support components are then masked in
+        :meth:`component_log_probs`.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Raises
+    ------
+    ValueError
+        If ``component_distributions`` is not a list of
+        :class:`~numpyro.distributions.Distribution` objects, if its length does not
+        match the mixture size, or if the components disagree on support type or event
+        shape.
+
+    Examples
+    --------
     .. code::
 
        >>> import jax
@@ -108,40 +152,104 @@ class ScaledMixture(Distribution):
     def component_distributions(self):
         """The list of component distributions in the mixture.
 
-        :return: The list of component distributions
-        :rtype: list[Distribution]
+        Returns
+        -------
+        List[Distribution]
+            The component distributions, in the order matching ``log_scales``.
         """
         return self._component_distributions
 
     @constraints.dependent_property
     def support(self):
+        """The support of the mixture.
+
+        Returns
+        -------
+        constraints.Constraint
+            The support passed to the constructor, or the first component's support when
+            none was given.
+        """
         if self._support is not None:
             return self._support
         return self.component_distributions[0].support
 
     @property
     def is_discrete(self):
+        """Whether the mixture is discrete.
+
+        Returns
+        -------
+        bool
+            The first component's ``is_discrete`` flag; all components are required to
+            share a support type.
+        """
         return self.component_distributions[0].is_discrete
 
     @property
     def component_mean(self):
+        """Means of the component distributions.
+
+        Returns
+        -------
+        Array
+            The component means stacked along :attr:`mixture_dim`.
+        """
         return jnp.stack(
             [d.mean for d in self.component_distributions], axis=self.mixture_dim
         )
 
     @property
     def component_variance(self):
+        """Variances of the component distributions.
+
+        Returns
+        -------
+        Array
+            The component variances stacked along :attr:`mixture_dim`.
+        """
         return jnp.stack(
             [d.variance for d in self.component_distributions], axis=self.mixture_dim
         )
 
     def component_cdf(self, samples):
+        """Cumulative distribution functions of the components.
+
+        Parameters
+        ----------
+        samples : Array
+            Points at which to evaluate the component CDFs.
+
+        Returns
+        -------
+        Array
+            The component CDF values stacked along :attr:`mixture_dim`.
+
+        Raises
+        ------
+        NotImplementedError
+            If any component does not implement ``cdf``.
+        """
         return jnp.stack(
             [d.cdf(samples) for d in self.component_distributions],
             axis=self.mixture_dim,
         )
 
     def component_sample(self, key, sample_shape=()):
+        """Draw one sample batch from every component.
+
+        Parameters
+        ----------
+        key : PRNGKeyArray
+            JAX random key, split one way per component.
+        sample_shape : tuple[int, ...]
+            Shape of the sample batch to draw. Defaults to ``()``.
+
+        Returns
+        -------
+        Array
+            Samples of shape ``sample_shape + batch_shape + (mixture_size,) + event_shape``,
+            with the component axis at :attr:`mixture_dim`.
+        """
         keys = jax.random.split(key, self.mixture_size)
         samples = []
         for k, d in zip(keys, self.component_distributions):
@@ -150,6 +258,23 @@ class ScaledMixture(Distribution):
 
     def component_log_probs(self, value: ArrayLike) -> ArrayLike:
         # modified implementation of numpyro.distributions.MixtureGeneral.component_log_probs
+        r"""Log densities of the components, offset by their log rates.
+
+        When an explicit ``support`` was given, each component's own support is checked and
+        out-of-support values are masked to :math:`-\infty`, so a component contributes
+        nothing outside the region where it is defined.
+
+        Parameters
+        ----------
+        value : ArrayLike
+            Points at which to evaluate the components.
+
+        Returns
+        -------
+        ArrayLike
+            Array of shape ``batch_shape + (mixture_size,)`` holding
+            :math:`\log \mathcal{R}_k + \log p_k(x)`.
+        """
         component_log_probs = []
         for d in self.component_distributions:
             log_prob = d.log_prob(value)
@@ -162,15 +287,38 @@ class ScaledMixture(Distribution):
 
     @property
     def mixture_size(self):
-        """The number of components in the mixture."""
+        """The number of components in the mixture.
+
+        Returns
+        -------
+        int
+            Size of the trailing axis of ``log_scales``.
+        """
         return self._mixture_size
 
     @property
     def mixture_dim(self):
+        """Axis along which components are stacked.
+
+        Returns
+        -------
+        int
+            The negative axis index ``-event_dim - 1``, i.e. the axis just before the event
+            axes.
+        """
         return -self.event_dim - 1
 
     @property
     def mean(self):
+        r"""Rate-weighted mean of the mixture.
+
+        Returns
+        -------
+        Array
+            :math:`\sum_k \mathcal{R}_k \mu_k`. Note that because the scales are rates
+            rather than normalised weights, this is the first moment of the *unnormalised*
+            density, not the mean of a probability distribution.
+        """
         probs = jnp.exp(self.log_scales)
         probs = probs.reshape(probs.shape + (1,) * self.event_dim)
         weighted_component_means = probs * self.component_mean
@@ -179,6 +327,16 @@ class ScaledMixture(Distribution):
     @property
     def variance(self):
         # TODO(Qazalbash): Check the correctness
+        """Rate-weighted variance of the mixture.
+
+        Computed by the law of total variance, as the rate-weighted mean of the component
+        variances plus the rate-weighted variance of the component means.
+
+        Returns
+        -------
+        Array
+            The mixture variance, in the same unnormalised sense as :attr:`mean`.
+        """
         probs = jnp.exp(self.log_scales)
         probs = probs.reshape(probs.shape + (1,) * self.event_dim)
         mean_cond_var = jnp.sum(probs * self.component_variance, axis=self.mixture_dim)
@@ -189,24 +347,45 @@ class ScaledMixture(Distribution):
         return mean_cond_var + var_cond_mean
 
     def cdf(self, samples):
-        """The cumulative distribution function.
+        r"""The cumulative distribution function.
 
-        :param value: samples from this distribution.
-        :return: output of the cumulative distribution function evaluated at `value`.
-        :raises: NotImplementedError if the component distribution does not implement
-            the cdf method.
+        Parameters
+        ----------
+        samples : Array
+            Points at which to evaluate the CDF.
+
+        Returns
+        -------
+        Array
+            :math:`\sum_k \mathcal{R}_k F_k(x)`, the rate-weighted sum of the component
+            CDFs.
+
+        Raises
+        ------
+        NotImplementedError
+            If any component distribution does not implement ``cdf``.
         """
         cdf_components = self.component_cdf(samples)
         return jnp.sum(cdf_components * jnp.exp(self.log_scales), axis=-1)
 
     def sample_with_intermediates(self, key, sample_shape=()):
-        """A version of ``sample`` that also returns the sampled component indices.
+        """Sample, also returning the indices of the components each sample came from.
 
-        :param jax.random.PRNGKey key: the rng_key key to be used for the distribution.
-        :param tuple sample_shape: the sample shape for the distribution.
-        :return: A 2-element tuple with the samples from the distribution, and the
-            indices of the sampled components.
-        :rtype: tuple
+        The component is chosen from a categorical over ``softmax(log_scales)``, i.e. the
+        rates normalised to weights.
+
+        Parameters
+        ----------
+        key : PRNGKeyArray
+            JAX random key.
+        sample_shape : tuple[int, ...]
+            Shape of the sample batch to draw. Defaults to ``()``.
+
+        Returns
+        -------
+        tuple[Array, list[Array]]
+            The samples, of shape ``sample_shape + batch_shape + event_shape``, and a
+            single-element list holding the sampled component indices.
         """
         assert is_prng_key(key)
         key_comp, key_ind = jax.random.split(key)
@@ -230,10 +409,45 @@ class ScaledMixture(Distribution):
         return jnp.squeeze(samples_selected, axis=self.mixture_dim), [indices]
 
     def sample(self, key, sample_shape=()):
+        """Draw samples from the mixture.
+
+        Parameters
+        ----------
+        key : PRNGKeyArray
+            JAX random key.
+        sample_shape : tuple[int, ...]
+            Shape of the sample batch to draw. Defaults to ``()``.
+
+        Returns
+        -------
+        Array
+            Samples of shape ``sample_shape + batch_shape + event_shape``.
+        """
         return self.sample_with_intermediates(key=key, sample_shape=sample_shape)[0]
 
     @validate_sample
     def log_prob(self, value, intermediates=None):
+        r"""Log of the rate-weighted density.
+
+        .. math::
+            \log p(x) = \log \sum_k \exp\left(\log\mathcal{R}_k + \log p_k(x)\right)
+
+        The reduction masks out components that contribute :math:`-\infty`, so a value
+        outside one component's support does not poison the whole sum with a NaN gradient.
+
+        Parameters
+        ----------
+        value : Array
+            Points at which to evaluate the mixture.
+        intermediates : Any, optional
+            Accepted for API compatibility with
+            :class:`~numpyro.distributions.MixtureGeneral` and ignored.
+
+        Returns
+        -------
+        Array
+            The log density, of shape ``batch_shape``.
+        """
         del intermediates
         sum_log_probs = self.component_log_probs(value)
         safe_sum_log_probs = jnp.where(

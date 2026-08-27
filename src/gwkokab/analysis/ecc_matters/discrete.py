@@ -1,6 +1,15 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The ``discrete_ecc_matters`` console script: eccentricity-matters inference over per-
+event posterior samples.
+
+One cell of the analysis matrix. The family half is :class:`~gwkokab.analysis.ecc_matters.common.EccentricityMattersCore`, which names the
+parameters and hyper-parameters; the data-representation half is :class:`~gwkokab.analysis.core.discrete_base.DiscreteBase`, which
+supplies ``read_data`` and ``run``. The sampler half is chosen at *runtime* by
+``sampler_cfg.json``, which is why there are two trivial subclasses -- one mixing in
+flowMC, one NumPyro -- and :func:`main` picks between them after reading that file.
+"""
 
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
@@ -24,16 +33,34 @@ from gwkokab.inference.factory import get_likelihood_fn
 class EccentricityMattersFDiscreteAnalysis(
     EccentricityMattersCore, DiscreteBase, FlowMCBase
 ):
+    """Eccentricity-matters analysis over per-event posterior samples, sampled with
+    flowMC.
+
+    Selected by :func:`main` when ``sampler_cfg.json`` names ``flowMC``.
+    """
+
     pass
 
 
 class EccentricityMattersNDiscreteAnalysis(
     EccentricityMattersCore, DiscreteBase, NumpyroBase
 ):
+    """Eccentricity-matters analysis over per-event posterior samples, sampled with
+    NumPyro.
+
+    Selected by :func:`main` when ``sampler_cfg.json`` names ``numpyro``.
+    """
+
     pass
 
 
 def main() -> None:
+    """Console script entry point for ``discrete_ecc_matters``.
+
+    Parses the command line, reads the sampler and data loader configurations, picks the
+    likelihood and the analysis class matching the configured sampler, seeds the PRNG,
+    and runs the analysis.
+    """
     parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
     parser = discrete_arg_parser(parser)
     parser = flowMC_arg_parser(parser)

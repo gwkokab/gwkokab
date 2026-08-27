@@ -1,6 +1,18 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""General-purpose helpers shared across the package.
+
+- :mod:`~gwkokab.utils.exceptions` -- exceptions and warnings that log themselves.
+- :mod:`~gwkokab.utils.kernel` -- smoothing kernels (the Planck taper window).
+- :mod:`~gwkokab.utils.math` -- reparameterisation helpers and numerically stable
+  reductions.
+- :mod:`~gwkokab.utils.path` -- filesystem path normalisation.
+- :mod:`~gwkokab.utils.train` -- training loop for the neural selection-function
+  regressors.
+- :mod:`~gwkokab.utils.transformations` -- pure formulas relating gravitational-wave
+  source parameters to one another.
+"""
 
 from . import (
     exceptions as exceptions,

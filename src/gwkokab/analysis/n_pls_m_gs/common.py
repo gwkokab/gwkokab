@@ -1,6 +1,22 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Shared definitions for the n_pls_m_gs analysis family.
+
+NPowerlawMGaussianCore is the family half of the analysis matrix: it names the event
+coordinates the data must supply (:attr:`~NPowerlawMGaussianCore.parameters`) and the flat
+list of population hyper-parameters to be inferred
+(:attr:`~NPowerlawMGaussianCore.model_parameters`). Both are derived from the ``use_*``
+flags, so switching a physical parameter on at the command line extends the
+parameter list automatically.
+
+The model is :func:`~gwkokab.models.hybrids.NPowerlawMGaussian`, built from ``N_pl`` power-law and ``N_g`` Gaussian mass components. Hyper-parameter names carry the
+component tags ``pl`` (power law) and ``g`` (Gaussian), giving forms like ``alpha_pl_0``.
+
+This module is mixed with a data-representation base and a sampler mixin to form a
+complete analysis; see the ``discrete`` and ``analytical_gwalk`` modules alongside
+it.
+"""
 
 from argparse import ArgumentParser
 from typing import Callable, List, Optional
@@ -17,11 +33,42 @@ from gwkokab.parameters import Parameters as P
 def where_fns_list(
     use_beta_spin_magnitude: bool,
 ) -> Optional[List[Callable[..., Array]]]:
+    r"""Build the extra validity predicates this configuration needs.
+
+    These are applied on top of the prior support: a point failing any of them is
+    assigned :math:`-\infty` without the model ever being built.
+
+    Parameters
+    ----------
+    use_beta_spin_magnitude : bool
+        Whether spin magnitudes are modelled with beta distributions, which need
+        their mean/variance pairs checked for validity.
+
+    Returns
+    -------
+    Optional[List[Callable[..., Array]]]
+        The predicates, or :data:`None` when none are needed.
+    """
     where_fns = []
 
     if use_beta_spin_magnitude:
 
         def positive_concentration(**kwargs) -> Array:
+            """Check that every beta spin prior has positive concentrations.
+
+            Not every mean/variance pair corresponds to a valid beta distribution; this
+            screens the pairs for both the power-law and the Gaussian components.
+
+            Parameters
+            ----------
+            **kwargs : Any
+                The component counts and the sampled hyper-parameters.
+
+            Returns
+            -------
+            Array
+                Boolean mask, true where every spin magnitude prior is valid.
+            """
             N_pl: int = kwargs.get("N_pl")  # type: ignore
             N_g: int = kwargs.get("N_g")  # type: ignore
             mask = jnp.ones((), dtype=bool)
@@ -49,7 +96,19 @@ def where_fns_list(
 
 
 class NPowerlawMGaussianCore:
+    """Family half of the n_pls_m_gs analysis.
+
+    Mixed with a data-representation base -- :class:`~gwkokab.analysis.core.discrete_base.DiscreteBase`
+    or :class:`~gwkokab.analysis.core.analytical_gwalk_base.AnalyticalGWalkBase` -- and
+    a sampler mixin, to form a complete analysis.
+
+    See :meth:`__init__` for the constructor arguments.
+    """
+
     model_fn = NPowerlawMGaussian
+    """The population model factory,
+    :func:`~gwkokab.models.hybrids.NPowerlawMGaussian`.
+    """
 
     def __init__(
         self,
@@ -79,6 +138,65 @@ class NPowerlawMGaussianCore:
         use_phi_orb: bool,
         use_mean_anomaly: bool,
     ) -> None:
+        """Record which components and physical parameters this analysis uses.
+
+        The ``use_*`` flags decide both what the model contains and, through
+        :attr:`parameters` and :attr:`model_parameters`, what the data must supply and
+        what will be inferred.
+
+        Parameters
+        ----------
+        N_pl : int
+            Number of power-law mass components.
+        N_g : int
+            Number of Gaussian mass components.
+        use_beta_spin_magnitude : bool
+            Model both spin magnitudes with beta distributions.
+        use_spin_magnitude_mixture : bool
+            Model both spin magnitudes jointly with a two-truncated-normal mixture.
+        use_truncated_normal_spin_x : bool
+            Model both Cartesian ``x`` spin components with truncated normals.
+        use_truncated_normal_spin_y : bool
+            Model both Cartesian ``y`` spin components with truncated normals.
+        use_truncated_normal_spin_z : bool
+            Model both aligned spin components with truncated normals.
+        use_chi_eff_mixture : bool
+            Model the effective spin with a two-truncated-normal mixture.
+        use_skew_normal_chi_eff : bool
+            Model the effective spin with the GWTC-4 skew normal.
+        use_truncated_normal_chi_p : bool
+            Model the precessing spin with a truncated normal.
+        use_tilt : bool
+            Model both tilt cosines jointly with the generic tilt model.
+        use_eccentricity_mixture : bool
+            Model eccentricity with a two-truncated-normal mixture.
+        use_eccentricity_powerlaw : bool
+            Model eccentricity with a truncated power law.
+        use_mean_anomaly : bool
+            Model the mean anomaly with a uniform distribution.
+        use_powerlaw_redshift : bool
+            Model redshift with a power law rate evolution.
+        use_madau_dickinson_redshift : bool
+            Model redshift with the Madau-Dickinson rate evolution.
+        use_cos_iota : bool
+            Model the inclination cosine with a uniform distribution.
+        use_polarization_angle : bool
+            Model the polarization angle with a uniform distribution.
+        use_right_ascension : bool
+            Model the right ascension with a uniform distribution.
+        use_sin_declination : bool
+            Model the declination sine with a uniform distribution.
+        use_detection_time : bool
+            Model the detection time with a uniform distribution.
+        use_phi_1 : bool
+            Model the primary spin azimuth with a uniform distribution.
+        use_phi_2 : bool
+            Model the secondary spin azimuth with a uniform distribution.
+        use_phi_12 : bool
+            Model the relative spin azimuth with a uniform distribution.
+        use_phi_orb : bool
+            Model the orbital phase with a uniform distribution.
+        """
         self.N_pl = N_pl
         self.N_g = N_g
         self.use_beta_spin_magnitude = use_beta_spin_magnitude
@@ -106,6 +224,22 @@ class NPowerlawMGaussianCore:
         self.use_mean_anomaly = use_mean_anomaly
 
     def modify_model_params(self, params: dict) -> dict:
+        """Inject the component counts and ``use_*`` flags into the model parameters.
+
+        The prior configuration supplies only the hyper-parameters to be inferred; the
+        model factory also needs to know how many components of each kind to build and
+        which physical parameters were switched on. This hook adds them.
+
+        Parameters
+        ----------
+        params : dict
+            The processed priors, keyed by hyper-parameter name.
+
+        Returns
+        -------
+        dict
+            ``params``, with the counts and flags added.
+        """
         params.update({
             "N_pl": self.N_pl,
             "N_g": self.N_g,
@@ -137,6 +271,16 @@ class NPowerlawMGaussianCore:
 
     @property
     def parameters(self) -> tuple[str, ...]:
+        """The event coordinates this analysis reads from the data.
+
+        Always the two component masses, plus whichever spin, tilt, eccentricity,
+        redshift and extrinsic coordinates the ``use_*`` flags switched on.
+
+        Returns
+        -------
+        tuple[str, ...]
+            Parameter names, in the order the model's event axis expects them.
+        """
         names = [P.PRIMARY_MASS_SOURCE, P.SECONDARY_MASS_SOURCE]
         if self.use_beta_spin_magnitude:
             names.extend([P.PRIMARY_SPIN_MAGNITUDE, P.SECONDARY_SPIN_MAGNITUDE])
@@ -184,6 +328,18 @@ class NPowerlawMGaussianCore:
 
     @property
     def model_parameters(self) -> list[str]:
+        """The flat list of population hyper-parameters to be inferred.
+
+        Each entry is a per-component name of the form ``<role>_<component tag>_<index>``,
+        expanded from the enabled ``use_*`` flags by
+        :func:`~gwkokab.analysis.utils.common.expand_arguments`. These names are what the
+        regex keys of ``prior_cfg.json`` are matched against.
+
+        Returns
+        -------
+        list[str]
+            Hyper-parameter names.
+        """
         all_params: list[tuple[str, int]] = [
             ("log_rate", self.N_pl + self.N_g),
             ("alpha_pl", self.N_pl),
@@ -514,6 +670,21 @@ class NPowerlawMGaussianCore:
 
 
 def model_arg_parser(parser: ArgumentParser) -> ArgumentParser:
+    """Populate the command line argument parser with this family's model arguments.
+
+    Adds the component counts and one ``--add-*`` flag per optional physical
+    parameter.
+
+    Parameters
+    ----------
+    parser : ArgumentParser
+        Parser to add the arguments to.
+
+    Returns
+    -------
+    ArgumentParser
+        The same parser, with the arguments added.
+    """
     model_group = parser.add_argument_group("Model Options")
     model_group.add_argument(
         "--n-pl",

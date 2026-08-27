@@ -1,6 +1,27 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The multi-source population model.
+
+A :class:`~gwkokab.models.utils.ScaledMixture` over four kinds of mass component,
+meant to describe a population drawn from several astrophysical formation channels
+at once:
+
+- ``spl`` -- smoothed power law primary mass with a conditional mass ratio power law;
+- ``bpl`` -- smoothed *broken* power law, same conditional mass ratio;
+- ``gpl`` -- Gaussian primary mass, same conditional mass ratio;
+- ``gg`` -- independent truncated normals on :math:`m_1` and :math:`m_2`.
+
+Components are laid out in that order, and their per-component log rates
+``log_rate_<index>`` are indexed across the whole mixture. Non-mass parameters are
+switched on by the ``use_*`` flags of :func:`MultiSourceModel`.
+
+See Also
+--------
+gwkokab.models.hybrids._subpopulation :
+    Same component families, but mixed at the level of the primary mass rather than
+    the full component.
+"""
 
 from typing import Callable, Dict, List, Literal, Optional, Sequence, Tuple
 
@@ -54,35 +75,66 @@ def _build_non_mass_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Build distributions for non-mass parameters.
+    """Build the per-component marginals for every non-mass parameter that is enabled.
+
+    Walks a fixed table of ``(flag, parameter name, factory)`` triples and, for each
+    enabled flag, calls the factory in :mod:`~gwkokab.models.hybrids._ncombination` and
+    appends its output to each component's list of marginals. The table order fixes
+    the order of the marginals within a component, and hence the layout of the event
+    axis of the resulting :class:`~gwkokab.models.utils.JointDistribution`.
 
     Parameters
     ----------
     N : int
-        Number of components
-    component_type : Literal["bpl", "gpl", "gg"]
-        type of component, either "bpl", "gpl", or "gg"
+        Number of components.
+    component_type : Literal["spl", "bpl", "gpl", "gg"]
+        Component tag identifying this family of components.
     mass_distributions : List[Distribution]
-        list of mass distributions
-    use_spin : bool
-        whether to include spin
+        Per-component lists of mass marginals, which the non-mass marginals are
+        appended to.
+    use_beta_spin_magnitude : bool
+        Model both spin magnitudes with beta distributions.
+    use_spin_magnitude_mixture : bool
+        Model both spin magnitudes jointly with a two-truncated-normal mixture.
+    use_truncated_normal_spin_x : bool
+        Model both Cartesian ``x`` spin components with truncated normals.
+    use_truncated_normal_spin_y : bool
+        Model both Cartesian ``y`` spin components with truncated normals.
+    use_truncated_normal_spin_z : bool
+        Model both aligned spin components with truncated normals.
+    use_chi_eff_mixture : bool
+        Model the effective spin with a two-truncated-normal mixture.
+    use_skew_normal_chi_eff : bool
+        Model the effective spin with the GWTC-4 skew normal.
+    use_truncated_normal_chi_p : bool
+        Model the precessing spin with a truncated normal.
     use_tilt : bool
-        whether to include tilt
+        Model both tilt cosines jointly with the generic tilt model.
     use_eccentricity_mixture : bool
-        whether to include eccentricity
+        Model eccentricity with a two-truncated-normal mixture.
+    use_eccentricity_powerlaw : bool
+        Model eccentricity with a truncated power law.
     use_mean_anomaly : bool
-        whether to include mean_anomaly
+        Model the mean anomaly with a uniform distribution.
     use_powerlaw_redshift : bool
-        whether to include redshift
+        Model redshift with a power law rate evolution.
+    use_madau_dickinson_redshift : bool
+        Model redshift with the Madau-Dickinson rate evolution.
     params : Dict[str, Array]
-        dictionary of parameters
+        Flat dictionary of hyper-parameter values.
     validate_args : Optional[bool], optional
-        whether to validate arguments, by default None
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
 
     Returns
     -------
     List[Distribution]
-        list of distributions
+        One list of marginals per component, mass marginals first.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
     """
     build_distributions = mass_distributions
     # fmt: off
@@ -147,6 +199,59 @@ def _build_component_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[JointDistribution]:
+    """Build the joint distribution for each component of one mass family.
+
+    The mass model is chosen by ``component_type``: a smoothed power law (``spl``), a
+    smoothed broken power law (``bpl``), a Gaussian primary mass (``gpl``), or
+    independent truncated normals on the two component masses (``gg``). The enabled
+    non-mass marginals are then appended and each component is packed into a
+    :class:`~gwkokab.models.utils.JointDistribution`.
+
+    Parameters
+    ----------
+    N : int
+        Number of components in this family. Zero yields an empty list.
+    component_type : Literal["spl", "bpl", "gpl", "gg"]
+        Which mass model this family uses; also the tag in the hyper-parameter names.
+    use_beta_spin_magnitude : bool
+        Model both spin magnitudes with beta distributions.
+    use_spin_magnitude_mixture : bool
+        Model both spin magnitudes jointly with a two-truncated-normal mixture.
+    use_truncated_normal_spin_x : bool
+        Model both Cartesian ``x`` spin components with truncated normals.
+    use_truncated_normal_spin_y : bool
+        Model both Cartesian ``y`` spin components with truncated normals.
+    use_truncated_normal_spin_z : bool
+        Model both aligned spin components with truncated normals.
+    use_chi_eff_mixture : bool
+        Model the effective spin with a two-truncated-normal mixture.
+    use_skew_normal_chi_eff : bool
+        Model the effective spin with the GWTC-4 skew normal.
+    use_truncated_normal_chi_p : bool
+        Model the precessing spin with a truncated normal.
+    use_tilt : bool
+        Model both tilt cosines jointly with the generic tilt model.
+    use_eccentricity_mixture : bool
+        Model eccentricity with a two-truncated-normal mixture.
+    use_eccentricity_powerlaw : bool
+        Model eccentricity with a truncated power law.
+    use_mean_anomaly : bool
+        Model the mean anomaly with a uniform distribution.
+    use_powerlaw_redshift : bool
+        Model redshift with a power law rate evolution.
+    use_madau_dickinson_redshift : bool
+        Model redshift with the Madau-Dickinson rate evolution.
+    params : Dict[str, Array]
+        Flat dictionary of hyper-parameter values.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+
+    Returns
+    -------
+    List[JointDistribution]
+        One joint distribution per component of this family.
+    """
     if N == 0:
         return []
     if component_type == "spl":
@@ -264,6 +369,72 @@ def MultiSourceModel(
     validate_args=None,
     **params,
 ) -> ScaledMixture:
+    """Create a multi-source mixture of four mass component families.
+
+    Components are laid out in the order ``spl``, ``bpl``, ``gpl``, ``gg``, and the log
+    rate of the :math:`i`-th component of the whole mixture is read from the
+    hyper-parameter ``log_rate_<i>``, in natural logarithm. Because the component
+    families have genuinely different supports, the mixture's support is the union of
+    them (:func:`~gwkokab.models.constraints.any_constraint`) rather than a shared one.
+
+    Hyper-parameters follow the naming convention
+    ``<role>_<component tag>_<component index>``, and are passed through ``**params``.
+
+    Parameters
+    ----------
+    N_spl : int
+        Number of smoothed power law components.
+    N_bpl : int
+        Number of smoothed broken power law components.
+    N_gpl : int
+        Number of Gaussian primary mass components.
+    N_gg : int
+        Number of Gaussian-Gaussian components.
+    use_beta_spin_magnitude : bool
+        Model both spin magnitudes with beta distributions. Defaults to :data:`False`.
+    use_spin_magnitude_mixture : bool
+        Model both spin magnitudes jointly with a two-truncated-normal mixture. Defaults to :data:`False`.
+    use_truncated_normal_spin_x : bool
+        Model both Cartesian ``x`` spin components with truncated normals. Defaults to :data:`False`.
+    use_truncated_normal_spin_y : bool
+        Model both Cartesian ``y`` spin components with truncated normals. Defaults to :data:`False`.
+    use_truncated_normal_spin_z : bool
+        Model both aligned spin components with truncated normals. Defaults to :data:`False`.
+    use_chi_eff_mixture : bool
+        Model the effective spin with a two-truncated-normal mixture. Defaults to :data:`False`.
+    use_skew_normal_chi_eff : bool
+        Model the effective spin with the GWTC-4 skew normal. Defaults to :data:`False`.
+    use_truncated_normal_chi_p : bool
+        Model the precessing spin with a truncated normal. Defaults to :data:`False`.
+    use_tilt : bool
+        Model both tilt cosines jointly with the generic tilt model. Defaults to :data:`False`.
+    use_eccentricity_mixture : bool
+        Model eccentricity with a two-truncated-normal mixture. Defaults to :data:`False`.
+    use_eccentricity_powerlaw : bool
+        Model eccentricity with a truncated power law. Defaults to :data:`False`.
+    use_mean_anomaly : bool
+        Model the mean anomaly with a uniform distribution. Defaults to :data:`False`.
+    use_powerlaw_redshift : bool
+        Model redshift with a power law rate evolution. Defaults to :data:`False`.
+    use_madau_dickinson_redshift : bool
+        Model redshift with the Madau-Dickinson rate evolution. Defaults to :data:`False`.
+    validate_args : Optional[bool], optional
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
+    **params : Array
+        The population hyper-parameters, including one ``log_rate_<i>`` per component.
+
+    Returns
+    -------
+    ScaledMixture
+        The population model, whose components carry log rates rather than normalised
+        weights.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
+    """
     component_dists = []
     for component_type, N in zip(
         ["spl", "bpl", "gpl", "gg"], [N_spl, N_bpl, N_gpl, N_gg]

@@ -1,27 +1,33 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Filesystem path helpers."""
 
 import os
 from pathlib import Path
 
 
 def normalize_path(raw_path: str | os.PathLike) -> Path:
-    """Expands environment variables and tildes, returning a resolved Path object.
+    """Expand environment variables and ``~``, then resolve to an absolute path.
 
-    Args:
-        raw_path (str | os.PathLike):
-            The string path (e.g., "$HOME/data" or "~/docs").
+    Parameters
+    ----------
+    raw_path : str | os.PathLike
+        The path to normalize, possibly containing shell variables (``$HOME/data``)
+        or a leading tilde (``~/docs``).
 
-    Returns:
-        Path:
-            A fully resolved pathlib.Path object.
+    Returns
+    -------
+    Path
+        A fully resolved, absolute :class:`pathlib.Path`.
 
-    Example:
-        >>> normalize_path("$HOME/documents/data.csv")
+    Examples
+    --------
+    .. code-block:: python
+
+        >>> normalize_path("$HOME/documents/data.csv")  # doctest: +SKIP
         PosixPath('/home/user/documents/data.csv')
-
-        >>> normalize_path(Path("~/Desktop/test.txt"))
+        >>> normalize_path(Path("~/Desktop/test.txt"))  # doctest: +SKIP
         PosixPath('/home/user/Desktop/test.txt')
     """
     path_str = os.fspath(raw_path)

@@ -1,6 +1,17 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Data loader configuration for the analytical GWalk representation.
+
+Each event file holds a Gaussian summary -- a mean vector, a covariance matrix, per-
+coordinate limits and scales -- rather than a cloud of posterior samples.
+:class:`AnalyticalGWalkPELoader` resolves which files to read, which waveform group to
+read them from, and which optional :class:`~gwkokab.analysis.core.utils.SampleTransformer`
+to apply as the samples are drawn from those summaries.
+
+The ``gwk_analytical_gwalk_data_loader_cfg_template`` console script dumps a starter
+configuration.
+"""
 
 import glob
 import warnings
@@ -24,6 +35,11 @@ from gwkokab.utils.exceptions import (
 
 
 def _data_loader_cfg_template() -> None:
+    """Console script entry point: dump a starter data loader configuration.
+
+    Writes a JSON file with every recognised field present and empty, so it can be
+    filled in rather than written from scratch.
+    """
     import argparse
 
     parser = argparse.ArgumentParser(
@@ -48,6 +64,32 @@ def _data_loader_cfg_template() -> None:
 
 
 def _load_transform(path: Optional[str]) -> SampleTransformer:
+    """Load the sample transformer named by a Python file path.
+
+    Parameters
+    ----------
+    path : Optional[str]
+        Path to a Python file defining a ``Transform`` class that subclasses
+        :class:`~gwkokab.analysis.core.utils.SampleTransformer`. :data:`None` selects the
+        identity transform.
+
+    Returns
+    -------
+    SampleTransformer
+        An instance of the module's ``Transform``, or
+        :class:`~gwkokab.analysis.core.utils.IdentitySampleTransformer`.
+
+    Raises
+    ------
+    LoggedImportError
+        If the file cannot be loaded as a module.
+
+    Warns
+    -----
+    LoggedUserWarning
+        If the module has no ``Transform`` attribute, in which case the identity
+        transform is used.
+    """
     if path is None:
         return IdentitySampleTransformer()
 
@@ -79,11 +121,24 @@ def _load_transform(path: Optional[str]) -> SampleTransformer:
 
 
 class AnalyticalGWalkPEFileData(NamedTuple):
+    """The contents of one analytical GWalk event file."""
+
     coords: list[str]
+    """Names of the coordinates the summary is expressed in, in column order."""
+
     cov: np.ndarray
+    """Covariance matrix of the Gaussian summary."""
+
     limits: np.ndarray
+    """Per-coordinate lower and upper bounds, outside which draws are rejected."""
+
     mu: np.ndarray
+    """Mean vector of the Gaussian summary."""
+
     scale: np.ndarray
+    """Per-coordinate scale factors, applied before sampling to keep the covariance
+    numerically well conditioned.
+    """
 
 
 class AnalyticalGWalkPELoader(BaseModel):

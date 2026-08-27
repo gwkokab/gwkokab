@@ -1,6 +1,18 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The :math:`N` power-law plus :math:`M` Gaussian population model.
+
+The canonical mass model of the package: a :class:`~gwkokab.models.utils.ScaledMixture`
+whose first :math:`N` components have power-law masses (component tag ``pl``) and whose
+next :math:`M` have Gaussian masses (tag ``g``). Each component may additionally carry
+spin, tilt, eccentricity, redshift and extrinsic marginals, switched on by the ``use_*``
+flags of :func:`NPowerlawMGaussian`.
+
+Hyper-parameters are named ``<role>_<tag>_<index>``, and the per-component log rates
+``log_rate_<index>`` are indexed across the whole mixture: ``log_rate_0`` through
+``log_rate_{N_pl-1}`` are the power-law components and the rest are the Gaussian ones.
+"""
 
 from typing import Callable, Dict, List, Literal, Optional, Tuple
 
@@ -61,55 +73,84 @@ def _build_non_mass_distributions(
     params: Dict[str, Array],
     validate_args: Optional[bool] = None,
 ) -> List[Distribution]:
-    """Build distributions for non-mass parameters.
+    """Build the per-component marginals for every non-mass parameter that is enabled.
+
+    Walks a fixed table of ``(flag, parameter name, factory)`` triples and, for each
+    enabled flag, calls the factory in :mod:`~gwkokab.models.hybrids._ncombination` and
+    appends its output to each component's list of marginals. The table order fixes
+    the order of the marginals within a component, and hence the layout of the event
+    axis of the resulting :class:`~gwkokab.models.utils.JointDistribution`.
 
     Parameters
     ----------
     N : int
-        Number of components
-    component_type : Literal[&quot;pl&quot;, &quot;g&quot;]
-        type of component, either "pl" or "g"
+        Number of components.
+    component_type : Literal["pl", "g"]
+        Component tag identifying this family of components.
     mass_distributions : List[Distribution]
-        list of mass distributions
-    use_spin : bool
-        whether to include spin
+        Per-component lists of mass marginals, which the non-mass marginals are
+        appended to.
+    use_beta_spin_magnitude : bool
+        Model both spin magnitudes with beta distributions.
+    use_spin_magnitude_mixture : bool
+        Model both spin magnitudes jointly with a two-truncated-normal mixture.
+    use_truncated_normal_spin_x : bool
+        Model both Cartesian ``x`` spin components with truncated normals.
+    use_truncated_normal_spin_y : bool
+        Model both Cartesian ``y`` spin components with truncated normals.
+    use_truncated_normal_spin_z : bool
+        Model both aligned spin components with truncated normals.
+    use_chi_eff_mixture : bool
+        Model the effective spin with a two-truncated-normal mixture.
+    use_skew_normal_chi_eff : bool
+        Model the effective spin with the GWTC-4 skew normal.
+    use_truncated_normal_chi_p : bool
+        Model the precessing spin with a truncated normal.
     use_tilt : bool
-        whether to include tilt
+        Model both tilt cosines jointly with the generic tilt model.
     use_eccentricity_mixture : bool
-        whether to include eccentricity
+        Model eccentricity with a two-truncated-normal mixture.
     use_eccentricity_powerlaw : bool
-        whether to include eccentricity powerlaw
+        Model eccentricity with a truncated power law.
     use_mean_anomaly : bool
-        whether to include mean_anomaly
+        Model the mean anomaly with a uniform distribution.
     use_powerlaw_redshift : bool
-        whether to include redshift
+        Model redshift with a power law rate evolution.
+    use_madau_dickinson_redshift : bool
+        Model redshift with the Madau-Dickinson rate evolution.
     use_cos_iota : bool
-        whether to include cos_iota
+        Model the inclination cosine with a uniform distribution.
     use_polarization_angle : bool
-        whether to include polarization_angle
+        Model the polarization angle with a uniform distribution.
     use_right_ascension : bool
-        whether to include right_ascension
+        Model the right ascension with a uniform distribution.
     use_sin_declination : bool
-        whether to include sin_declination
+        Model the declination sine with a uniform distribution.
     use_detection_time : bool
-        whether to include detection_time
+        Model the detection time with a uniform distribution.
     use_phi_1 : bool
-        whether to include phi_1
+        Model the primary spin azimuth with a uniform distribution.
     use_phi_2 : bool
-        whether to include phi_2
+        Model the secondary spin azimuth with a uniform distribution.
     use_phi_12 : bool
-        whether to include phi_12
+        Model the relative spin azimuth with a uniform distribution.
     use_phi_orb : bool
-        whether to include phi_orb
+        Model the orbital phase with a uniform distribution.
     params : Dict[str, Array]
-        dictionary of parameters
+        Flat dictionary of hyper-parameter values.
     validate_args : Optional[bool], optional
-        whether to validate arguments, by default None
+        Whether to validate distribution parameters and inputs. Defaults to
+        :data:`None`.
 
     Returns
     -------
     List[Distribution]
-        list of distributions
+        One list of marginals per component, mass marginals first.
+
+    Raises
+    ------
+    ValueError
+        If a required hyper-parameter is missing from ``params``.
     """
     build_distributions = mass_distributions
     # fmt: off

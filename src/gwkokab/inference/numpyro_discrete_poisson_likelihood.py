@@ -1,6 +1,19 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""NumPyro model over per-event posterior samples.
+
+Where the flowMC modules return a plain function of a flat vector, NumPyro needs a
+*model*: each hyper-parameter is drawn at its own named ``sample`` site and the
+likelihood enters as a ``factor``. The site names are the hyper-parameter names
+sorted alphabetically, which is the same ordering ``variables_index`` records.
+
+When ``priors`` is a
+:class:`~gwkokab.models.utils.LazyJointDistribution`, the variables are sampled in
+two passes: the independent ones first, then the lazy ones in topological order,
+each built from the values it depends on. NumPyro needs this because every variable
+must be an individually named ``sample`` site.
+"""
 
 from collections.abc import Callable
 from typing import Any, Dict, List, Optional, Tuple
@@ -28,6 +41,55 @@ def numpyro_discrete_poisson_likelihood(
     constants: Dict[str, Array],
     variance_cut_threshold: float | None,
 ) -> Callable[[Tuple[Array, ...], Tuple[Array, ...], Tuple[Array, ...]], Array]:
+    r"""Build the NumPyro model for the discrete data representation.
+
+    The likelihood is that of the inhomogeneous Poisson process,
+
+    .. math::
+        \log\mathcal{L}(\Lambda) \propto -\mu(\Lambda)
+        + \sum_{n=1}^N \log \int \ell_n(\lambda)\,\rho(\lambda\mid\Lambda)
+        \,\mathrm{d}\lambda
+
+    where :math:`\rho(\lambda\mid\Lambda) =
+    \mathrm{d}N/\mathrm{d}V\,\mathrm{d}t\,\mathrm{d}\lambda` is the merger rate
+    density of a population parameterised by :math:`\Lambda`, :math:`\mu(\Lambda)` is
+    the expected number of detections for that population, and :math:`\ell_n(\lambda)`
+    is the likelihood for the :math:`n`-th observed event's parameters.
+
+    with the per-event integral evaluated as a Monte Carlo average over that event's
+    posterior samples, reweighted by the PE prior they were drawn under.
+
+    Parameters
+    ----------
+    dist_fn : Callable[..., Distribution]
+        Builds the population model from the sampled variables and the constants.
+    priors : JointDistribution
+        Joint prior over the sampled variables, ordered as ``variables_index`` says.
+    variables : Dict[str, Distribution]
+        The sampled variables and their priors.
+    variables_index : Dict[str, int]
+        Maps each variable name to its position in the flat parameter vector. This is
+        the ordering recorded as ``variables_index`` in the output HDF5.
+    poisson_mean_estimator : Callable
+        Estimator of :math:`\mu(\Lambda)`, returning ``(mean, variance)``. See
+        :mod:`gwkokab.poisson_mean`.
+    where_fns : Optional[List[Callable[..., Array]]]
+        Extra validity predicates on the hyper-parameters, beyond the prior support.
+        Points failing any of them get :math:`-\infty`. :data:`None` skips the check
+        entirely.
+    constants : Dict[str, Array]
+        Hyper-parameters frozen by the prior configuration rather than sampled.
+    variance_cut_threshold : float | None
+        Threshold above which the Monte Carlo variance of the estimate is penalised by
+        :func:`~gwkokab.inference.poissonlikelihood_utils.variance_tapering_fn`.
+        :data:`None` disables the penalty.
+
+    Returns
+    -------
+    Callable
+        A NumPyro model taking the bucketed event data and registering the likelihood as
+        a ``factor`` site.
+    """
     if is_lazy_prior := isinstance(priors, LazyJointDistribution):
         dependencies = priors.dependencies
         partial_order = priors.partial_order
@@ -42,6 +104,32 @@ def numpyro_discrete_poisson_likelihood(
         pmean_kwargs: Dict[str, Any],
         N_pes: Tuple[Array, ...],
     ):
+        """The NumPyro model: sample the hyper-parameters and score the data.
+
+        When ``priors`` is a
+        :class:`~gwkokab.models.utils.LazyJointDistribution`, the variables are sampled in
+        two passes: the independent ones first, then the lazy ones in topological order,
+        each built from the values it depends on. NumPyro needs this because every variable
+        must be an individually named ``sample`` site.
+
+        Parameters
+        ----------
+        data_group : Tuple[Array, ...]
+            One padded array of posterior samples per bucket of events.
+        log_ref_priors_group : Tuple[Array, ...]
+            Log PE prior of each sample, bucketed to match.
+        masks_group : Tuple[Array, ...]
+            Boolean masks marking the real samples in each bucket.
+        pmean_kwargs : Dict[str, Any]
+            Extra arguments for the Poisson mean estimator; must include ``T_obs``.
+        N_pes : Tuple[Array, ...]
+            Number of real posterior samples per event, bucketed to match.
+
+        Returns
+        -------
+        None
+            The log-likelihood is registered with :func:`numpyro.factor` rather than returned.
+        """
         if is_lazy_prior:
             partial_variables_samples = [
                 numpyro.sample(parameter_name, prior_dist)

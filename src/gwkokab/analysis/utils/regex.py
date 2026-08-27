@@ -1,6 +1,13 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Regex matching of ``prior_cfg.json`` keys against hyper-parameter names.
+
+The prior configuration is not keyed by parameter name but by regular expression, so a
+single entry can cover every component of a family -- ``alpha_pl_\d+`` for all power-law
+indices, say. :func:`match_all` resolves those patterns against the actual
+``model_parameters`` of the analysis, warning about any name no pattern covers.
+"""
 
 import re
 import warnings

@@ -1,6 +1,16 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Training utilities for the neural selection-function regressors.
+
+The ``neural_vt`` and ``neural_pdet`` Poisson-mean estimators consume an
+:class:`equinox.nn.MLP` serialised to HDF5. This module provides the whole round
+trip: reading a training set out of HDF5 (:func:`read_data`), building
+(:func:`make_model`) and fitting (:func:`train_regressor`) the network, and
+serialising it in the layout that :func:`load_model` -- and hence
+:mod:`gwkokab.poisson_mean` -- expects.
+"""
+
 from collections.abc import Sequence
 from typing import Callable, List, Optional, Tuple
 
@@ -28,7 +38,27 @@ from numpyro.util import is_prng_key
 def mse_loss_fn(
     model: PyTree, x: Array, y: Array, batch_size: Optional[int] = 256
 ) -> Array:
-    """Mean squared error loss."""
+    """Mean squared error loss.
+
+    Wrapped in :func:`equinox.filter_value_and_grad`, so calling it returns both the
+    loss and the gradients with respect to the inexact-array leaves of ``model``.
+
+    Parameters
+    ----------
+    model : PyTree
+        The network to evaluate; called once per row of ``x``.
+    y : Array
+        Target outputs, of the same shape as the model outputs.
+    x : Array
+        Input features, mapped over the leading axis.
+    batch_size : Optional[int]
+        Chunk size for :func:`jax.lax.map`. Defaults to ``256``.
+
+    Returns
+    -------
+    Array
+        Scalar mean squared error.
+    """
     y_pred = jax.lax.map(model, x, batch_size=batch_size)
     return jnp.mean(jnp.square(y - y_pred))
 
@@ -42,9 +72,30 @@ def bce_logits_loss_fn(
     batch_size: Optional[int] = 256,
     eps: float = 1e-6,
 ) -> Array:
-    """Binary cross-entropy with logits (numerically stable).
+    r"""Binary cross-entropy with logits (numerically stable).
 
-    Expects targets in [0,1]; clips to [eps, 1-eps].
+    The model is treated as emitting logits; targets are expected in :math:`[0, 1]`
+    and are clipped to :math:`[\varepsilon, 1 - \varepsilon]` to keep the loss finite.
+    Wrapped in :func:`equinox.filter_value_and_grad`, so calling it returns both the
+    loss and the gradients.
+
+    Parameters
+    ----------
+    model : PyTree
+        The network to evaluate; its outputs are interpreted as logits.
+    x : Array
+        Input features, mapped over the leading axis.
+    y : Array
+        Target probabilities in :math:`[0, 1]`.
+    batch_size : Optional[int]
+        Chunk size for :func:`jax.lax.map`. Defaults to ``256``.
+    eps : float
+        Clipping tolerance applied to ``y``. Defaults to ``1e-6``.
+
+    Returns
+    -------
+    Array
+        Scalar mean binary cross-entropy.
     """
     logits = jax.lax.map(model, x, batch_size=batch_size)
     y = jnp.clip(y, eps, 1.0 - eps)
@@ -54,7 +105,22 @@ def bce_logits_loss_fn(
 
 @eqx.filter_jit
 def predict(model: PyTree, x: Array, batch_size: Optional[int] = 256) -> Array:
-    """Predict outputs for inputs x."""
+    """Predict outputs for inputs ``x``.
+
+    Parameters
+    ----------
+    model : PyTree
+        The network to evaluate.
+    x : Array
+        Input features, mapped over the leading axis.
+    batch_size : Optional[int]
+        Chunk size for :func:`jax.lax.map`. Defaults to ``256``.
+
+    Returns
+    -------
+    Array
+        Model outputs, stacked along the leading axis of ``x``.
+    """
     return jax.lax.map(model, x, batch_size=batch_size)
 
 
@@ -64,7 +130,23 @@ def predict(model: PyTree, x: Array, batch_size: Optional[int] = 256) -> Array:
 
 
 def read_data(data_path: str, keys: Sequence[str]) -> pd.DataFrame:
-    """Read dataset (HDF5) into a DataFrame with columns = keys."""
+    """Read an HDF5 dataset into a :class:`pandas.DataFrame`.
+
+    Each requested key must name a dataset in the file; it is flattened and becomes one
+    column of the frame.
+
+    Parameters
+    ----------
+    data_path : str
+        Path to the HDF5 file.
+    keys : Sequence[str]
+        Dataset names to read, which become the columns of the returned frame.
+
+    Returns
+    -------
+    pd.DataFrame
+        Frame whose columns are ``keys``, in the given order.
+    """
     with h5py.File(data_path, "r") as vt_file:
         df = pd.DataFrame(data={key: np.array(vt_file[key]).flatten() for key in keys})
     return df
@@ -78,7 +160,26 @@ def make_model(
     width_size: int,
     depth: int,
 ) -> eqx.nn.MLP:
-    """Build an MLP with ReLU activations."""
+    """Build a multilayer perceptron with ReLU activations.
+
+    Parameters
+    ----------
+    key : PRNGKeyArray
+        PRNG key used to initialise the weights.
+    input_layer : int
+        Number of input features.
+    output_layer : int
+        Number of output features.
+    width_size : int
+        Number of units in each hidden layer.
+    depth : int
+        Number of hidden layers.
+
+    Returns
+    -------
+    eqx.nn.MLP
+        Freshly initialised network.
+    """
     assert is_prng_key(key)
     return eqx.nn.MLP(
         in_size=input_layer,
@@ -98,7 +199,36 @@ def save_model(
     names: Optional[Sequence[str]] = None,
     is_log: bool = False,
 ) -> None:
-    """Persist model weights and metadata to HDF5 (backward-compatible format)."""
+    """Persist model weights and metadata to HDF5.
+
+    The layout is the one :func:`load_model` and the neural Poisson-mean estimators
+    expect: scalar datasets for the architecture (``in_size``, ``out_size``,
+    ``width_size``, ``depth``), one ``layer_<i>`` group per layer holding
+    ``weight_<i>``/``bias_<i>``, the input parameter ``names``, and the ``is_log``
+    attribute recording whether the network was trained on log-targets. Attributes of
+    the training data file are copied across so the saved network carries its
+    provenance.
+
+    Parameters
+    ----------
+    filepath : str
+        Destination path; must end in ``.hdf5``.
+    datafilepath : str
+        Path to the training-data HDF5 file whose attributes are copied over.
+    model : eqx.nn.MLP
+        The trained network, wrapped by :func:`equinox.filter_checkpoint`.
+    names : Optional[Sequence[str]]
+        Names of the input parameters, in input order. Defaults to :data:`None`, in
+        which case no ``names`` dataset is written.
+    is_log : bool
+        Whether the network predicts the logarithm of the target. Defaults to
+        :data:`False`.
+
+    Raises
+    ------
+    ValueError
+        If ``filepath`` does not end in ``.hdf5``.
+    """
     if not filepath.endswith(".hdf5"):
         raise ValueError("Model save path must end with .hdf5")
 
@@ -133,7 +263,22 @@ def save_model(
 
 
 def load_model(filename: str) -> Tuple[List[str], eqx.nn.MLP]:
-    """Load model and names from HDF5 (backward-compatible)."""
+    """Load a network and its input parameter names from HDF5.
+
+    The architecture is rebuilt from the scalar datasets written by
+    :func:`save_model` and the stored weights and biases are grafted onto it, so the
+    returned network reproduces the trained one exactly.
+
+    Parameters
+    ----------
+    filename : str
+        Path to an HDF5 file written by :func:`save_model`.
+
+    Returns
+    -------
+    Tuple[List[str], eqx.nn.MLP]
+        The input parameter names and the reconstructed network.
+    """
     with h5py.File(filename, "r") as f:
         names = f["names"][:].astype(str).tolist()
         in_size = int(f["in_size"][()])
@@ -174,7 +319,31 @@ def _train_test_data_split(
     test_size: float = 0.2,
     seed: Optional[int] = None,
 ) -> tuple[Array, Array, Array, Array]:
-    """Seeded split aligned to batch_size for stable validation curves."""
+    """Split ``X``/``Y`` into train and validation sets, aligned to ``batch_size``.
+
+    The split point is snapped to a multiple of ``batch_size`` so that every training
+    epoch sees whole batches, which keeps the validation curve from jittering. Passing
+    a ``seed`` makes the permutation -- and hence the validation set -- reproducible.
+
+    Parameters
+    ----------
+    X : Array
+        Input features, split along the leading axis.
+    Y : Array
+        Targets, split along the leading axis in the same order as ``X``.
+    batch_size : int
+        Batch size the split point is snapped to.
+    test_size : float
+        Fraction of the data held out for validation. Defaults to ``0.2``.
+    seed : Optional[int]
+        Seed for the shuffling RNG. Defaults to :data:`None`, which draws from the
+        global NumPy RNG.
+
+    Returns
+    -------
+    tuple[Array, Array, Array, Array]
+        ``(train_X, test_X, train_Y, test_Y)``.
+    """
     n = len(X)
     if seed is not None:
         rng = np.random.default_rng(seed)
@@ -222,13 +391,65 @@ def train_regressor(
     warmup_epochs: int = 3,
     seed: Optional[int] = 42,
 ) -> None:
-    """Train an MLP regressor with stable optimization and smooth loss curves.
+    r"""Train an MLP regressor and save it to an HDF5 checkpoint.
+
+    Optimisation uses AdamW with global-norm gradient clipping and, by default, a
+    warmup-plus-cosine-decay learning-rate schedule. After training, the network is
+    written with :func:`save_model` and the loss curves are saved alongside it.
+
+    Parameters
+    ----------
+    input_keys : list[str]
+        Datasets in ``data_path`` used as inputs; their order fixes the input order of
+        the saved network.
+    output_keys : list[str]
+        Datasets in ``data_path`` used as targets.
+    width_size : int
+        Number of units in each hidden layer.
+    depth : int
+        Number of hidden layers.
+    batch_size : int
+        Mini-batch size.
+    data_path : str
+        Path to the training-data HDF5 file.
+    checkpoint_path : Optional[str]
+        Destination for the trained network; must end in ``.hdf5``. Required.
+    epochs : int
+        Number of training epochs. Defaults to ``50``.
+    validation_split : float
+        Fraction of the data held out for validation. Defaults to ``0.2``.
+    learning_rate : float
+        Peak learning rate. Defaults to ``1e-3``.
+    train_in_log : bool
+        Fit :math:`\log y` instead of :math:`y`. Defaults to :data:`False`.
+    loss_type : str
+        Either ``"mse"`` or ``"bce_logits"``. Defaults to ``"mse"``.
+    grad_clip_norm : float
+        Global gradient-norm clipping threshold. Defaults to ``1.0``.
+    weight_decay : float
+        AdamW weight decay. Defaults to ``1e-4``.
+    use_cosine_decay : bool
+        Use a warmup-plus-cosine-decay schedule rather than a constant learning rate.
+        Defaults to :data:`True`.
+    min_lr : float
+        Final learning rate of the cosine decay. Defaults to ``1e-6``.
+    warmup_epochs : int
+        Number of warmup epochs. Defaults to ``3``.
+    seed : Optional[int]
+        Seed fixing the train/validation split. Defaults to ``42``.
+
+    Raises
+    ------
+    ValueError
+        If ``checkpoint_path`` is :data:`None` or does not end in ``.hdf5``, or if
+        ``loss_type`` is not one of the recognised names.
 
     Notes
     -----
-    - For detection probabilities in [0,1], prefer `loss_type="bce_logits"` and do NOT set
-      `train_in_log=True` (BCE expects probability targets, not log-values).
-    - `seed` fixes the validation split for a less jittery val-loss.
+    - For detection probabilities in :math:`[0, 1]`, prefer ``loss_type="bce_logits"``
+      and do *not* set ``train_in_log=True`` -- BCE expects probability targets, not
+      log-values.
+    - ``seed`` fixes the validation split, giving a less jittery validation loss.
     """
     if checkpoint_path is None:
         raise ValueError("No checkpoint path provided, model will not be saved.")
@@ -325,6 +546,24 @@ def train_regressor(
     def make_step(
         model: eqx.nn.MLP, x: Array, y: Array, opt_state: optax.OptState
     ) -> tuple[eqx.nn.MLP, optax.OptState, Array]:
+        """Run one optimiser step on a single mini-batch.
+
+        Parameters
+        ----------
+        model : eqx.nn.MLP
+            Current network.
+        x : Array
+            Mini-batch of inputs.
+        y : Array
+            Mini-batch of targets.
+        opt_state : optax.OptState
+            Current optimiser state.
+
+        Returns
+        -------
+        tuple[eqx.nn.MLP, optax.OptState, Array]
+            The updated network, the updated optimiser state, and the batch loss.
+        """
         loss, grads = loss_fn(model, x, y)
         updates, opt_state = optimizer.update(
             grads, opt_state, params=eqx.filter(model, eqx.is_inexact_array)

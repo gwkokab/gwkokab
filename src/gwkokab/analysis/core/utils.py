@@ -1,6 +1,16 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Shared helpers for the analysis drivers.
+
+:class:`PRNGKeyMixin` gives an analysis a class-level PRNG key that splits on every
+access, so independent parts of a run get independent randomness from a single recorded
+seed. :func:`write_to_hdf5` and :func:`read_from_hdf5` are the two ends of the output
+format, and handle the encoding of non-array attributes -- :data:`None`, lists and dicts
+-- into what HDF5 accepts. :class:`SampleTransformer` is the hook by which a data loader
+changes the coordinates its events are expressed in, carrying the Jacobian along so
+densities stay normalised.
+"""
 
 import abc
 import contextlib
@@ -59,6 +69,21 @@ class PRNGKeyMixin:
 
     @classmethod
     def init_rng_seed(cls, seed: int) -> None:
+        """Initialise the class-level random key from a seed.
+
+        The key lives on the class rather than the instance, so every analysis object in a
+        run draws from the same reproducible stream.
+
+        Parameters
+        ----------
+        seed : int
+            A non-negative integer seed.
+
+        Raises
+        ------
+        LoggedValueError
+            If ``seed`` is not an integer, or is negative.
+        """
         if not isinstance(seed, int):
             raise LoggedValueError(f"Expected an integer seed, got {type(seed)}.")
         if seed < 0:
@@ -107,6 +132,17 @@ def from_structured(data: np.ndarray) -> tuple[np.ndarray, Sequence[str]]:
 
 
 class SampleTransformer(abc.ABC):
+    """Change of coordinates applied to per-event samples as they are read.
+
+    A data loader may express its events in coordinates the model does not use. Subclasses
+    implement the forward map and its log Jacobian determinant, which is applied to the PE
+    prior so that the reweighted density stays normalised across the change.
+
+    See Also
+    --------
+    IdentitySampleTransformer : The no-op transformer, used when no change is needed.
+    """
+
     @abc.abstractmethod
     def transform(self, samples: np.ndarray) -> np.ndarray:
         """Transform the input samples to a new coordinate system.
@@ -144,19 +180,66 @@ class SampleTransformer(abc.ABC):
         pass
 
     def check(self, samples: np.ndarray, transformed_samples: np.ndarray) -> np.ndarray:
-        """Additional checks for the transformation, such as ensuring that the
-        transformed samples are within expected bounds.
+        """Additional validity checks on a transformation.
+
+        Subclasses may override this to reject samples the transform sends somewhere
+        unusable -- outside the model's support, say. The base implementation accepts
+        everything.
+
+        Parameters
+        ----------
+        samples : np.ndarray
+            The original samples, of shape ``(n_samples, n_parameters)``.
+        transformed_samples : np.ndarray
+            The transformed samples.
+
+        Returns
+        -------
+        np.ndarray
+            Boolean mask of length ``n_samples``, true for samples to keep.
         """
         return np.ones(samples.shape[0], dtype=bool)
 
 
 class IdentitySampleTransformer(SampleTransformer):
+    """The transformer that changes nothing.
+
+    Used when the data loader's coordinates already match the model's, so the samples
+    pass through untouched and the log Jacobian determinant is zero.
+    """
+
     def transform(self, samples: np.ndarray) -> np.ndarray:
+        """Return the samples unchanged.
+
+        Parameters
+        ----------
+        samples : np.ndarray
+            The samples to transform.
+
+        Returns
+        -------
+        np.ndarray
+            ``samples``, unchanged.
+        """
         return samples
 
     def log_abs_det_jacobian(
         self, samples: np.ndarray, transformed_samples: np.ndarray
     ) -> np.ndarray:
+        """The log Jacobian determinant of the identity, which is zero.
+
+        Parameters
+        ----------
+        samples : np.ndarray
+            The original samples.
+        transformed_samples : np.ndarray
+            The transformed samples; identical to ``samples``.
+
+        Returns
+        -------
+        np.ndarray
+            Zeros of shape ``samples.shape[:-1]``.
+        """
         return np.zeros(samples.shape[:-1])
 
 

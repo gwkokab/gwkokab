@@ -1,6 +1,23 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+r"""Blurring a true synthetic population into mock parameter estimation samples.
+
+The second step of the end-to-end workflow. Given the true events drawn by
+:mod:`~gwkokab.analysis.core.synthetic_events`, this module produces the per-event data
+that an inference run consumes, in either of the two representations:
+
+- :class:`SyntheticDiscretePE` draws a cloud of posterior samples around each true
+  event, using the measurement error models in :mod:`gwkokab.errors`. Which model
+  applies to which parameter is decided by :attr:`SyntheticDiscretePE.error_function_registry`,
+  and the errors scale as :math:`1/\rho`, so louder events get tighter posteriors.
+- :class:`SyntheticAnalyticalGWalkPE` summarises such a cloud by its mean and
+  covariance, reporting the Jensen-Shannon divergence between the cloud and its Gaussian
+  approximation so the quality of that summary is visible.
+
+For testing rather than realism, ``--is-delta-error`` replaces the error models with a
+uniform jitter of a fixed half-width.
+"""
 
 import pprint
 import warnings
@@ -34,8 +51,24 @@ ErrorFunctionRegistryType: TypeAlias = dict[
 
 
 class SyntheticDiscretePE(PRNGKeyMixin):
+    """Generate per-event posterior sample clouds around a true population.
+
+    Each true event is blurred by the error model registered for its parameters and
+    written to its own file, :file:`{root_dir}/event_<index>.hdf5`, holding the true
+    values, the SNR, and the posterior samples under a group named for the waveform.
+    Samples that came out NaN -- an error model can push a value outside its physical
+    range -- are dropped before saving.
+
+    See :meth:`__init__` for the constructor arguments.
+    """
+
     waveform_name = "GWKokabSyntheticDiscretePE"
+    """Name of the HDF5 group the samples are written to; also the default the discrete
+    data loader reads from.
+    """
+
     root_dir = Path("data")
+    """Directory the per-event files are written into."""
 
     def __init__(
         self,
@@ -47,6 +80,36 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         coords: Optional[list[str]] = None,
         is_delta_error: bool = False,
     ) -> None:
+        """Configure the generation of mock posterior samples.
+
+        Parameters
+        ----------
+        filename : str
+            Path to the HDF5 population file written by
+            :meth:`~gwkokab.analysis.core.synthetic_events.SyntheticEventsBase.save_population`.
+        dataset : Literal["events", "buffer_events"]
+            Which population to blur: the events that survived selection, or the whole pool
+            they were drawn from.
+        error_params_filename : str
+            Path to a JSON file of error model parameters, keyed by regex.
+        size : int
+            Number of posterior samples to draw per event.
+        derive_parameters : bool
+            Derive every reachable parameter with
+            :func:`~gwkokab.parameters.default_relation_mesh` before saving. Defaults to
+            :data:`False`.
+        coords : Optional[list[str]]
+            Restrict the output to these coordinates. Defaults to :data:`None`, which keeps
+            all of them.
+        is_delta_error : bool
+            Replace the error models with a uniform jitter of fixed half-width, which is
+            useful for testing. Defaults to :data:`False`.
+
+        Raises
+        ------
+        LoggedValueError
+            If ``dataset`` is neither ``"events"`` nor ``"buffer_events"``.
+        """
         self.filename = filename
         _valid_datasets = ("events", "buffer_events")
         if dataset not in _valid_datasets:
@@ -78,6 +141,27 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         """
 
         def banana_error_fn(scale_Mc, scale_eta, estimates, rho, **kwargs):
+            r"""Apply the banana error to the chirp mass and symmetric mass ratio.
+
+            Parameters
+            ----------
+            scale_Mc : float
+                Scale of the chirp mass error.
+            scale_eta : float
+                Scale of the symmetric mass ratio error.
+            estimates : dict
+                Parameter estimates blurred so far.
+            rho : np.ndarray
+                SNR of the event.
+            **kwargs : np.ndarray
+                The true event parameters, from which the chirp mass and symmetric mass ratio
+                are read.
+
+            Returns
+            -------
+            np.ndarray
+                The blurred :math:`(M_c, \eta)` pairs.
+            """
             Mc = kwargs[P.CHIRP_MASS]
             eta = kwargs[P.SYMMETRIC_MASS_RATIO]
             return banana_error(
@@ -97,9 +181,51 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             low: Optional[float] = None,
             high: Optional[float] = None,
         ) -> tuple[tuple[str, ...], Callable]:
+            """Build a truncated normal error model for one parameter.
+
+            Parameters
+            ----------
+            parameter : P
+                The parameter to blur. Its scale, and optionally its bounds, are read from the
+                error parameters file under ``<parameter>_scale``, ``<parameter>_low`` and
+                ``<parameter>_high``.
+            low : Optional[float]
+                Default lower bound, used when the error parameters file gives none. Defaults to
+                :data:`None`.
+            high : Optional[float]
+                Default upper bound, used when the error parameters file gives none. Defaults to
+                :data:`None`.
+
+            Returns
+            -------
+            tuple[tuple[str, ...], Callable]
+                The names of the error parameters this model consumes, and the error function
+                itself.
+            """
+
             def error_fn(
                 *, estimates, rho, default_low=low, default_high=high, **kwargs
             ):
+                """Blur one parameter with a reflected truncated normal error.
+
+                Parameters
+                ----------
+                estimates : dict
+                    Parameter estimates blurred so far.
+                rho : np.ndarray
+                    SNR of the event.
+                default_low : Optional[float]
+                    Lower bound to fall back on; bound at closure time.
+                default_high : Optional[float]
+                    Upper bound to fall back on; bound at closure time.
+                **kwargs : np.ndarray
+                    The true event parameters and the error model's scale and bounds.
+
+                Returns
+                -------
+                np.ndarray
+                    The blurred values.
+                """
                 x = kwargs[parameter]
                 scale = kwargs[parameter + "_scale"]
                 low = kwargs.get(parameter + "_low", default_low)
@@ -125,6 +251,26 @@ class SyntheticDiscretePE(PRNGKeyMixin):
             return error_parameters, error_fn
 
         def mock_spin_error_fn(scale_chi_eff, estimates, rho, **kwargs):
+            r"""Apply the mock spin error to the effective spin.
+
+            Parameters
+            ----------
+            scale_chi_eff : np.ndarray
+                Uncertainty in :math:`\chi_{\text{eff}}` at the reference SNR.
+            estimates : dict
+                Parameter estimates blurred so far. Must already carry the symmetric mass ratio,
+                since the inverse map uses the blurred value.
+            rho : np.ndarray
+                SNR of the event.
+            **kwargs : np.ndarray
+                The true event parameters, from which the effective spin and symmetric mass
+                ratio are read.
+
+            Returns
+            -------
+            np.ndarray
+                The blurred effective spins.
+            """
             chi_eff = kwargs[P.EFFECTIVE_SPIN]
             eta = kwargs[P.SYMMETRIC_MASS_RATIO]
             return mock_spin_error(
@@ -252,6 +398,26 @@ class SyntheticDiscretePE(PRNGKeyMixin):
         injection_values: dict[str, np.ndarray],
         delta_thresholds: dict[str, float],
     ) -> dict[str, np.ndarray]:
+        r"""Blur each coordinate with a uniform jitter instead of an error model.
+
+        Used when ``is_delta_error`` is set. The jitter is uniform on
+        :math:`[-\delta, +\delta]` about the true value, with :math:`\delta` given per
+        coordinate.
+
+        Parameters
+        ----------
+        coords : list[str]
+            The coordinates to blur.
+        injection_values : dict[str, np.ndarray]
+            The true values of each coordinate.
+        delta_thresholds : dict[str, float]
+            Half-width of the jitter for each coordinate.
+
+        Returns
+        -------
+        dict[str, np.ndarray]
+            The blurred values, ``size`` samples per coordinate.
+        """
         estimate = {}
         for coord in coords:
             delta_threshold = delta_thresholds[coord]
@@ -583,7 +749,21 @@ def calculate_js_metrics(
 
 
 class SyntheticAnalyticalGWalkPE(PRNGKeyMixin):
+    """Summarise a cloud of posterior samples by its Gaussian moments.
+
+    Reads the discrete posterior samples already present in an event file, fits a
+    multivariate normal to them, and writes back the mean, standard deviation,
+    covariance, correlation and per-coordinate limits. The Jensen-Shannon divergence
+    between the original samples and draws from the fitted Gaussian is recorded
+    alongside, so how much the summary loses is visible rather than assumed.
+
+    See :meth:`__init__` for the constructor arguments.
+    """
+
     waveform_name = "GWKokabSyntheticAnalyticalGWalkPE"
+    """Name of the HDF5 group the summary is written to; also the default the analytical
+    GWalk data loader reads from.
+    """
 
     def __init__(
         self,
@@ -591,11 +771,35 @@ class SyntheticAnalyticalGWalkPE(PRNGKeyMixin):
         discrete_waveform: str,
         coords: Optional[tuple[str, ...]] = None,
     ) -> None:
+        """Configure the Gaussian summarisation of an event file.
+
+        Parameters
+        ----------
+        filename : str
+            Path to the event HDF5 file, which is modified in place.
+        discrete_waveform : str
+            Name of the HDF5 group holding the posterior samples to summarise.
+        coords : Optional[tuple[str, ...]]
+            Restrict the summary to these coordinates. Defaults to :data:`None`, which uses
+            all of them.
+        """
         self.filename = filename
         self.discrete_waveform = discrete_waveform
         self.coords = coords
 
     def generate_parameter_estimates(self):
+        """Fit the Gaussian summary and write it into the event file.
+
+        Raises
+        ------
+        LoggedValueError
+            If a requested coordinate is not present in the posterior samples.
+
+        Warns
+        -----
+        LoggedUserWarning
+            If the target group already exists, in which case it is overwritten.
+        """
         with h5py.File(self.filename, "r") as ef:
             group = ef[self.discrete_waveform]
             posterior_samples = group["posterior_samples"][:]
@@ -679,6 +883,12 @@ class SyntheticAnalyticalGWalkPE(PRNGKeyMixin):
 
 
 def synthetic_analytical_gwalk_pe_main():
+    """Console script entry point for ``synthetic_analytical_gwalk_pe``.
+
+    Parses the command line and runs
+    :meth:`SyntheticAnalyticalGWalkPE.generate_parameter_estimates` over the given event
+    files.
+    """
     parser = ArgumentParser(
         formatter_class=ArgumentDefaultsHelpFormatter,
         description="Generate synthetic Analytical GWalk parameter estimation samples.",

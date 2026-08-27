@@ -1,6 +1,18 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Sampler configuration: ``sampler_cfg.json``.
+
+The ``sampler_name`` field is a Pydantic discriminator that selects
+:class:`NumpyroGlobalConfig` or :class:`FlowMCGlobalConfig`, and with it the sampler
+backend the run will use -- the choice is made here, at runtime, rather than by the
+console script.
+
+Both configurations round-trip through HDF5 (:meth:`~NumpyroGlobalConfig.write_to_hdf5`
+and :meth:`~NumpyroGlobalConfig.read_from_hdf5`), which is what lets the post-hoc
+scripts reconstruct a run from its output file alone. The ``gwk_numpyro_cfg_template``
+and ``gwk_flowMC_cfg_template`` console scripts dump starter configurations.
+"""
 
 import ast
 from typing import Annotated, Literal
@@ -273,6 +285,17 @@ class NumpyroGlobalConfig(BaseModel):
         return cls.model_validate(sampler_cfg)
 
     def write_to_hdf5(self, path: str | h5py.File | h5py.Group) -> None:
+        """Write the configuration to the output HDF5 file.
+
+        Stored as attributes under ``sampler_cfg``, split into a ``kernel`` and an ``mcmc``
+        group, so that :meth:`read_from_hdf5` can rebuild the configuration from the output
+        file alone.
+
+        Parameters
+        ----------
+        path : str | h5py.File | h5py.Group
+            Destination file or group.
+        """
         write_to_hdf5(
             path,
             dataset_path="sampler_cfg",
@@ -439,6 +462,25 @@ class FlowMCGlobalConfig(BaseModel):
     def condition_matrix_validator(
         cls, condition_matrix: PositiveFloat | NumPyArrayTypeForPydantic
     ) -> PositiveFloat | np.ndarray:
+        """Validate the local sampler's condition matrix.
+
+        Parameters
+        ----------
+        condition_matrix : PositiveFloat | NumPyArrayTypeForPydantic
+            Either a single positive scalar, applied to every dimension, or a
+            one-dimensional array of positive per-dimension values.
+
+        Returns
+        -------
+        PositiveFloat | np.ndarray
+            The validated value, unchanged.
+
+        Raises
+        ------
+        ValueError
+            If a scalar is not positive, or an array is not one-dimensional with every
+            element positive.
+        """
         if isinstance(condition_matrix, (int, float)):
             if condition_matrix <= 0:
                 raise ValueError(
@@ -579,6 +621,11 @@ class SamplerConfig:
 
 
 def _dump_numpyro_cfg() -> None:
+    """Console script entry point: dump a starter NumPyro sampler configuration.
+
+    Writes a JSON file carrying the defaults of :class:`NumpyroGlobalConfig`, so the
+    knobs can be adjusted rather than written from scratch.
+    """
     import argparse
     from argparse import ArgumentDefaultsHelpFormatter
 
@@ -607,6 +654,11 @@ def _dump_numpyro_cfg() -> None:
 
 
 def _dump_flowMC_cfg() -> None:
+    """Console script entry point: dump a starter flowMC sampler configuration.
+
+    Writes a JSON file carrying the defaults of :class:`FlowMCGlobalConfig`, so the
+    knobs can be adjusted rather than written from scratch.
+    """
     import argparse
     from argparse import ArgumentDefaultsHelpFormatter
 

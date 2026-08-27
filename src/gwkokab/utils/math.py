@@ -1,6 +1,13 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Numerical helpers used by the population models.
+
+Collected here are the beta-distribution reparameterisations (moment form to
+concentration form and back), an N-dimensional cumulative trapezoidal integrator, and
+numerically stable primitives (:func:`logsubexp`, :func:`truncnorm_logpdf`) that JAX and
+:mod:`jax.scipy` do not provide directly.
+"""
 
 from typing import Tuple
 

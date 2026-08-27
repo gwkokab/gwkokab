@@ -1,6 +1,14 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Version string for the package.
+
+The base version is assembled from the ``MAJOR_VERSION``/``MINOR_VERSION``/
+``PATCH_VERSION`` constants defined here. When the ``GWKOKAB_DEV_BUILD`` environment
+variable is truthy, a local-version suffix identifying the build is appended: the
+current git commit hash (``+g<hash>``) when the source tree is a git checkout, otherwise
+the UTC build date (``+d<YYYYMMDD>``).
+"""
 
 __all__ = ["__version__"]
 

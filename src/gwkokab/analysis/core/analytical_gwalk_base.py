@@ -1,6 +1,20 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""The *analytical GWalk* data representation: events as Gaussian summaries.
+
+Each event is described by a mean and covariance rather than by a cloud of posterior
+samples. :class:`AnalyticalGWalkBase` resamples from that summary at run time, rejecting
+draws that fall outside the recorded bounds or that the sample transformer rejects, and
+carrying the transform's log Jacobian determinant as the per-sample log offset. Since
+every event then yields exactly ``n_samples`` points, the data is one rectangular array
+and no bucketing is needed.
+
+See Also
+--------
+gwkokab.analysis.core.discrete_base :
+    The alternative representation, where each event is a cloud of posterior samples.
+"""
 
 from argparse import ArgumentParser
 from collections.abc import Callable
@@ -126,6 +140,14 @@ def _multivariate_normal_samples(
 
 
 class AnalyticalGWalkBase(AnalysisBase):
+    """Data-representation base for analyses over per-event Gaussian summaries.
+
+    Mixed with a model family's ``Core`` class, which supplies ``parameters`` and
+    ``model_parameters``, and with a sampler mixin, which supplies ``driver``.
+
+    See :meth:`__init__` for the constructor arguments.
+    """
+
     def __init__(
         self,
         likelihood_fn: Callable[..., Callable],

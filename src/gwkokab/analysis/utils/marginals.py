@@ -1,6 +1,15 @@
 # Copyright 2023 The GWKokab Authors
 # SPDX-License-Identifier: Apache-2.0
 
+"""Per-component marginal densities for the post-hoc report.
+
+A fitted population model is a mixture of joint distributions over several parameters at
+once; what a diagnostic plot needs is the density of one parameter (or one correlated
+pair) at a time, per component, evaluated over a posterior sample of hyper-parameters.
+That is what this module computes: it rebuilds the model at each posterior draw, walks
+the event-axis layout of every component to find which coordinates belong together, and
+integrates the rest away on a grid.
+"""
 
 import functools as ft
 import inspect
@@ -174,6 +183,26 @@ def compute_batched_marginals(
     def _compute_component_marginals_single_sample(
         sample: Array, domains: list[Array]
     ) -> list[list[Array]]:
+        """Compute the per-component marginal densities at one posterior draw.
+
+        The model is rebuilt at this hyper-parameter sample, and for each component the
+        event axis is split into the blocks its marginals occupy. Each block is evaluated over
+        the outer product of its parameters' domains, with the remaining coordinates held at a
+        feasible point, so a scalar marginal yields a curve and a paired one a surface.
+
+        Parameters
+        ----------
+        sample : Array
+            One posterior draw of the hyper-parameters, laid out as ``variables_index``
+            describes.
+        domains : list[Array]
+            Grid of values for each model parameter.
+
+        Returns
+        -------
+        list[list[Array]]
+            For each component, one density array per block of its event axis.
+        """
         model = model_meta_cls.model_fn(  # type: ignore
             **constants,
             **{p: sample[m] for p, m in variables_index.items()},
