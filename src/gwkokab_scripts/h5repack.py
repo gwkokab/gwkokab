@@ -35,11 +35,14 @@ fi
     )
     parser.add_argument(
         "options",
-        nargs=argparse.REMAINDER,
-        help="Additional options to pass to h5repack (e.g., '-f GZIP=9 -f SHUF')",
+        nargs="*",
+        help=(
+            "Additional options to pass to h5repack, separated from this script's own "
+            "arguments by '--' (e.g., '-- -f GZIP=9 -f SHUF')"
+        ),
     )
     parser.add_argument("file", help="Path to the HDF5 file to repack")
-    args, options = parser.parse_known_args()
+    args = parser.parse_args()
 
     filename = args.file
 
@@ -51,7 +54,7 @@ fi
 
     temp_file = f"{filename}.tmp"
 
-    cmd = ["h5repack"] + options + [filename, temp_file]
+    cmd = ["h5repack"] + args.options + [filename, temp_file]
 
     try:
         subprocess.run(cmd, check=True)
