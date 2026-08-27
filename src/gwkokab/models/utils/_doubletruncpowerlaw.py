@@ -25,7 +25,8 @@ import jax
 from jax import numpy as jnp
 from jaxtyping import ArrayLike
 from numpyro.distributions import constraints, Distribution
-from numpyro.distributions.util import is_prng_key, promote_shapes, validate_sample
+from numpyro.distributions.util import promote_shapes, validate_sample
+from numpyro.util import is_prng_key
 
 
 @jax.custom_jvp

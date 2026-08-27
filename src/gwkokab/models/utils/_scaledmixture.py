@@ -16,7 +16,8 @@ import jax
 from jax import lax, numpy as jnp
 from jaxtyping import Array, ArrayLike
 from numpyro.distributions import constraints, Distribution
-from numpyro.distributions.util import categorical, is_prng_key, validate_sample
+from numpyro.distributions.util import categorical, validate_sample
+from numpyro.util import is_prng_key
 
 
 class ScaledMixture(Distribution):
