@@ -124,6 +124,11 @@ def _delete_chains_factory(f: h5py.File, chains_to_delete: list[str]) -> None:
             f"Cannot delete all chains. Total chains: {len(chain_names)}, requested to delete: {len(unique_chains_to_delete)}"
         )
 
+    # a name repeated on the command line must not be deleted twice
+    chains_to_delete = sorted(
+        unique_chains_to_delete, key=lambda name: int(name.split("_")[-1])
+    )
+
     if sampler_name == "numpyro":
         original_chain_names = _dc_sampler_is_numpyro(f, chains_to_delete)
     elif sampler_name == "flowMC":
