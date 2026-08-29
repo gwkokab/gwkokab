@@ -18,7 +18,7 @@ GWKOKAB_DEV_BUILD=0 uv build                # release build (omits git-hash vers
 
 Note: `CONTRIBUTING.md` shows `pytest -n auto`, but `pytest-xdist` is not a declared dependency — drop `-n auto` unless you install it.
 
-CI (`.github/workflows/ci.yml`) runs prek → tests (py3.11 & 3.13) → docs, with `JAX_ENABLE_X64=1`, `JAX_PLATFORMS=cpu`, `XLA_FLAGS=--xla_force_host_platform_device_count=8`. CI installs with `uv sync --extra cpu --group dev --group test` and runs `uv run pytest tests`, not `make install`. `pyproject.toml` sets `filterwarnings = ["error", ...]`, so a new warning anywhere in the import chain fails tests; the test job has a 10-minute timeout, so keep new tests CPU-cheap.
+CI (`.github/workflows/ci.yml`) runs prek → tests (py3.11 & 3.13) → docs, with `JAX_ENABLE_X64=1`, `JAX_PLATFORMS=cpu`, `XLA_FLAGS=--xla_force_host_platform_device_count=4`. CI installs with `uv sync --extra cpu --group dev --group test` and runs `uv run pytest tests`, not `make install`. `pyproject.toml` sets `filterwarnings = ["error", ...]`, so a new warning anywhere in the import chain fails tests; the test job has a 10-minute timeout, so keep new tests CPU-cheap.
 
 ## Architecture
 

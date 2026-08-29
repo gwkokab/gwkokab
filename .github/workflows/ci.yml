@@ -46,7 +46,7 @@ jobs:
       JAX_PLATFORMS: "cpu"
       JAX_TRACEBACK_FILTERING: "off"
       PY_COLORS: 1
-      XLA_FLAGS: "--xla_force_host_platform_device_count=8"
+      XLA_FLAGS: "--xla_force_host_platform_device_count=4"
 
     steps:
       - uses: actions/checkout@v6
@@ -85,7 +85,7 @@ jobs:
       JAX_PLATFORMS: "cpu"
       JAX_TRACEBACK_FILTERING: "off"
       PY_COLORS: 1
-      XLA_FLAGS: "--xla_force_host_platform_device_count=8"
+      XLA_FLAGS: "--xla_force_host_platform_device_count=4"
     steps:
       - uses: actions/checkout@v6
       - name: Install uv
