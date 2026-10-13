@@ -22,6 +22,7 @@ console scripts dump starter versions of each file.
 
 from ._analytical_gwalk import AnalyticalGWalkPELoader as AnalyticalGWalkPELoader
 from ._discrete import DiscretePELoader as DiscretePELoader
+from ._eccentricity import EccentricityEvolutionConfig as EccentricityEvolutionConfig
 from ._poisson_mean import PoissonMeanEstimationLoader as PoissonMeanEstimationLoader
 from ._sampler import (
     FlowMCGlobalConfig as FlowMCGlobalConfig,

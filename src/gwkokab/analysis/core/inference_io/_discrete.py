@@ -13,7 +13,9 @@ The ``gwk_discrete_data_loader_cfg_template`` console script dumps a starter
 configuration.
 """
 
+import copy
 import glob
+import json
 import warnings
 from pathlib import Path
 from typing import Literal, Optional
@@ -22,7 +24,14 @@ import h5py
 import numpy as np
 import pandas as pd
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_validator,
+    PositiveInt,
+    PrivateAttr,
+)
 
 from gwkokab.analysis.core.utils import from_structured
 from gwkokab.analysis.utils.common import read_json, write_json
@@ -39,6 +48,11 @@ from gwkokab.utils.exceptions import (
     LoggedKeyError,
     LoggedUserWarning,
     LoggedValueError,
+)
+
+from ._eccentricity import (
+    ECCENTRICITY_LOG_PRIOR_COLUMN,
+    EccentricityEvolutionConfig,
 )
 
 
@@ -73,6 +87,8 @@ def _data_loader_cfg_template() -> None:
         "alternate_mass_priors": {},
         "alternate_spin_priors": {},
         "alternate_distance_priors": {},
+        "default_eccentricity_evolution": None,
+        "alternate_eccentricity_evolution": {},
     }
     write_json(args.output, cfg)
 
@@ -149,6 +165,77 @@ class DiscretePELoader(BaseModel):
     """Mapping of filenames to an alternate distance prior, overriding the default
     distance prior.
     """
+
+    default_eccentricity_evolution: EccentricityEvolutionConfig | None = None
+    """Optional source-reference transport and uniform native e reference prior."""
+
+    alternate_eccentricity_evolution: dict[str, EccentricityEvolutionConfig] = Field(
+        default_factory=dict
+    )
+    """Complete per-file overrides keyed by filename stem, including native frequency.
+
+    Once enabled, every loaded event must have a configuration and share the same
+    target source frequency and evolution prescription. This prevents mixing native
+    and transported eccentricities in one population fit.
+    """
+
+    _eccentricity_diagnostics: dict = PrivateAttr(default_factory=dict)
+    _eccentricity_loader_json: str | None = PrivateAttr(default=None)
+
+    @property
+    def eccentricity_diagnostics(self) -> dict:
+        """PE support ranges across the last load's posterior redshifts only."""
+        return copy.deepcopy(self._eccentricity_diagnostics)
+
+    @model_validator(mode="after")
+    def _validate_eccentricity_configs(self):
+        names = {path.stem for path in self.filenames}
+        unknown = set(self.alternate_eccentricity_evolution) - names
+        if unknown:
+            raise ValueError(f"Eccentricity overrides match no input files: {unknown}")
+        configs = [
+            self.alternate_eccentricity_evolution.get(
+                path.stem, self.default_eccentricity_evolution
+            )
+            for path in self.filenames
+        ]
+        if any(cfg is not None for cfg in configs):
+            if any(cfg is None for cfg in configs):
+                raise ValueError(
+                    "Eccentricity evolution must cover every loaded event."
+                )
+            targets = {
+                (cfg.reference_frequency_source_hz, cfg.method)
+                for cfg in configs
+                if cfg is not None
+            }
+            if len(targets) != 1:
+                raise ValueError("All events must use one source frequency and method.")
+        return self
+
+    @property
+    def evolves_eccentricity(self) -> bool:
+        """Whether this loader is configured to transport eccentricity."""
+        return self.default_eccentricity_evolution is not None or bool(
+            self.alternate_eccentricity_evolution
+        )
+
+    def write_eccentricity_provenance(self, filename: str, seed: int) -> None:
+        """Save the resolved loader conventions alongside inference output."""
+        if not self.evolves_eccentricity and self._eccentricity_loader_json is None:
+            return
+        with h5py.File(filename, "a") as f:
+            group = f.require_group("data_loader_cfg")
+            group.attrs["json"] = (
+                self._eccentricity_loader_json or self.model_dump_json()
+            )
+            group.attrs["eccentricity_support_diagnostics"] = json.dumps(
+                self._eccentricity_diagnostics
+            )
+            group.attrs["data_seed"] = seed
+            group.attrs["eccentricity_definition"] = (
+                "Quadrupole-transported model-native eccentricity; global ansatz"
+            )
 
     @classmethod
     def read_from_json(cls, config_path: str) -> "DiscretePELoader":
@@ -243,6 +330,12 @@ class DiscretePELoader(BaseModel):
                     data_array, columns = from_structured(data_structured)
                     df = pd.DataFrame(data=data_array, columns=columns)
 
+                    if (
+                        "reference_frequency_source_hz" in f[dataset].attrs
+                        or "eccentricity_evolution" in f[dataset].attrs
+                    ):
+                        df.attrs["eccentricity_evolution"] = "preconverted HDF5 dataset"
+
                     logger.info(f"Loading file '{filename}' with dataset '{dataset}'.")
 
                     return df
@@ -273,6 +366,24 @@ class DiscretePELoader(BaseModel):
                 - A list of arrays (one per event) containing the requested parameters.
                 - A list of arrays (one per event) containing the log-prior weights.
         """
+        self._eccentricity_diagnostics = {}
+        self._eccentricity_loader_json = None
+        evolution_configs = {}
+        if self.evolves_eccentricity:
+            # Pydantic instances and their dicts can be mutated/model-copied after
+            # construction. Dump to plain data so nested conventions are checked too.
+            checked = type(self).model_validate(self.model_dump(mode="json"))
+            self._eccentricity_loader_json = checked.model_dump_json()
+            evolution_configs = {
+                path.stem: checked.alternate_eccentricity_evolution.get(
+                    path.stem, checked.default_eccentricity_evolution
+                )
+                for path in checked.filenames
+            }
+            logger.warning(
+                "Eccentricity transport does not establish population/PE support "
+                "coverage. Audit the full joint population and selection support."
+            )
         logger.info(f"Starting load of {len(self.filenames)} events.")
         logger.info(f"Target physical parameters: {parameters}")
 
@@ -284,6 +395,7 @@ class DiscretePELoader(BaseModel):
                 P.CHI_1,
                 P.CHI_2,
                 P.EFFECTIVE_SPIN,
+                P.ECCENTRICITY,
                 P.MASS_RATIO,
                 P.PRECESSING_SPIN,
                 P.PRIMARY_MASS_DETECTED,
@@ -312,9 +424,39 @@ class DiscretePELoader(BaseModel):
 
             self._validate_columns(df, event_path, posterior_columns)
 
+            evolution = evolution_configs.get(event_name)
+            if evolution is not None:
+                if P.ECCENTRICITY not in parameters or P.REDSHIFT not in parameters:
+                    raise LoggedValueError(
+                        "Eccentricity evolution requires eccentricity and redshift in the model."
+                    )
+                n_native = len(df)
+                df = evolution.apply(df, aliases[P.ECCENTRICITY], aliases[P.REDSHIFT])
+                self._eccentricity_diagnostics[event_name] = copy.deepcopy(
+                    df.attrs["eccentricity_support_diagnostics"]
+                )
+                logger.info(
+                    "[{}] Sample-redshift PE support diagnostics (not full coverage): {}",
+                    event_name,
+                    self._eccentricity_diagnostics[event_name],
+                )
+                logger.info(
+                    "[{}] Eccentricity {}: {} native rows -> {} conditioned rows; "
+                    "{} Hz source reference, uniform native prior [{}, {}].",
+                    event_name,
+                    evolution.method,
+                    n_native,
+                    len(df),
+                    evolution.reference_frequency_source_hz,
+                    evolution.native_prior_min,
+                    evolution.condition_native_max or evolution.native_prior_max,
+                )
+
             df = self._subsample(df, event_path, seed + i)
 
             log_prior = np.zeros(len(df))
+            if evolution is not None:
+                log_prior += df[ECCENTRICITY_LOG_PRIOR_COLUMN].to_numpy()
 
             if (
                 mass_prior := self.alternate_mass_priors.get(

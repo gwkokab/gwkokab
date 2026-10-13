@@ -114,6 +114,7 @@ you left out — the most direct way to see the defaults that are in play.
 :maxdepth: 1
 
 discrete_pe_loader
+eccentricity_evolution
 analytical_gwalk_pe_loader
 poisson_mean_estimation_loader
 sampler_config
