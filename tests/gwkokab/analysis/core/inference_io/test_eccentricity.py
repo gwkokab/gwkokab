@@ -258,3 +258,74 @@ def test_poisson_likelihood_is_coordinate_invariant(event, method):
         evaluate(evolved, evolved_prior, True),
         rtol=1e-12,
     )
+
+
+def test_mutating_per_event_conventions_cannot_mix_reference_frequencies(event):
+    path = event[0]
+    obj = loader(path, default_eccentricity_evolution=CONFIG)
+    # A copied model or mutated mapping bypasses Pydantic construction validation.
+    obj.filenames = (path, path.with_name("other.h5"))
+    obj.alternate_eccentricity_evolution["other"] = EccentricityEvolutionConfig(
+        **CONFIG
+    ).model_copy(update={"reference_frequency_source_hz": 8.0})
+    with pytest.raises(ValidationError, match="one source frequency"):
+        obj.load((P.ECCENTRICITY, P.REDSHIFT))
+
+
+def test_mutated_native_prior_is_revalidated_before_loading(event):
+    obj = loader(event[0], default_eccentricity_evolution=CONFIG)
+    obj.default_eccentricity_evolution = obj.default_eccentricity_evolution.model_copy(
+        update={"native_prior": "log-uniform"}
+    )
+    with pytest.raises(ValidationError):
+        obj.load((P.ECCENTRICITY, P.REDSHIFT))
+
+
+def test_eccentricity_redshift_alias_collision_is_rejected(event):
+    obj = loader(event[0], default_eccentricity_evolution=CONFIG)
+    obj.parameter_aliases["redshift"] = "ecc"
+    with pytest.raises(LoggedValueError, match="distinct columns"):
+        obj.load((P.ECCENTRICITY, P.REDSHIFT))
+
+
+def test_transformed_support_diagnostics_do_not_claim_population_coverage(
+    event, tmp_path
+):
+    obj = loader(
+        event[0], default_eccentricity_evolution=(CONFIG | dict(native_frequency_hz=5))
+    )
+    obj.load((P.ECCENTRICITY, P.REDSHIFT))
+    diagnostic = obj.eccentricity_diagnostics["event"]
+    assert diagnostic["reference_prior_max_range"][1] < 0.5
+    assert diagnostic["native_rows"] == 6
+    assert diagnostic["conditioned_rows"] == 5
+    assert diagnostic["redshift_sample_range"] == [0.1, 0.5]
+    assert "not a population-coverage certificate" in diagnostic["scope"]
+    cfg = obj.default_eccentricity_evolution
+    lower, upper = cfg.reference_prior_support(np.array([0.0, 0.5, 5.0]))
+    assert np.all(lower == 0)
+    assert upper[0] < upper[1] < upper[2]
+    assert upper[-1] > diagnostic["reference_prior_max_range"][1]
+    path = tmp_path / "output.h5"
+    obj.write_eccentricity_provenance(str(path), seed=37)
+    with h5py.File(path) as f:
+        saved = json.loads(
+            f["data_loader_cfg"].attrs["eccentricity_support_diagnostics"]
+        )
+    assert saved == obj.eccentricity_diagnostics
+    copied = obj.eccentricity_diagnostics
+    copied["event"]["native_rows"] = -1
+    assert obj.eccentricity_diagnostics["event"]["native_rows"] == 6
+
+
+def test_provenance_uses_loaded_conventions_even_if_loader_is_later_disabled(
+    event, tmp_path
+):
+    obj = loader(event[0], default_eccentricity_evolution=CONFIG)
+    obj.load((P.ECCENTRICITY, P.REDSHIFT))
+    obj.default_eccentricity_evolution = None
+    output = tmp_path / "loaded_conventions.h5"
+    obj.write_eccentricity_provenance(str(output), seed=37)
+    with h5py.File(output) as f:
+        saved = json.loads(f["data_loader_cfg"].attrs["json"])
+    assert saved["default_eccentricity_evolution"]["method"] == "peters"

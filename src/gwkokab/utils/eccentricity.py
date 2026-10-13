@@ -77,7 +77,11 @@ def evolve_eccentricity(
     if method == "small-e":
         log_jacobian = (19.0 / 18.0) * log_ratio
         with np.errstate(over="ignore", under="ignore", invalid="ignore"):
-            result = np.where(e == 0, 0.0, e * np.exp(-log_jacobian))
+            result = np.where(
+                e == 0,
+                0.0,
+                np.exp(np.log(np.where(e == 0, 1.0, e)) - log_jacobian),
+            )
         if np.any(~np.isfinite(result)) or np.any(result >= 1):
             raise LoggedValueError(
                 "Small-e transport produces e >= 1; use the Peters backstop."
@@ -112,4 +116,11 @@ def evolve_eccentricity(
     )
     if np.any((~circular) & (result == 0)) or np.any(result >= 1):
         raise LoggedValueError("Peters solution is outside floating-point resolution.")
+    # Check the returned floating-point value, not just the bisection interval.
+    # Near unity (or subnormal zero) rounding e can materially change g and J.
+    returned_log_e = np.log(np.where(circular, 1.0e-300, result))
+    residual = np.abs(_log_peters_g(returned_log_e) - target)
+    tolerance = 1.0e-10 * np.maximum(1.0, np.abs(target))
+    if np.any((~circular) & (residual > tolerance)):
+        raise LoggedValueError("Peters solution exceeds floating-point resolution.")
     return result, log_jacobian

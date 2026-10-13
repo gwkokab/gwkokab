@@ -52,6 +52,52 @@ class EccentricityEvolutionConfig(BaseModel):
             raise ValueError("Native conditioning bound must lie inside prior support.")
         return self
 
+    def _frequency_ratio(self, redshift: np.ndarray) -> np.ndarray:
+        if np.any(~np.isfinite(redshift)) or np.any(redshift < 0):
+            raise LoggedValueError(
+                "Eccentricity evolution requires finite redshift >= 0."
+            )
+        log_ratio = np.log(self.reference_frequency_source_hz) - np.log(
+            self.native_frequency_hz
+        )
+        if self.native_frequency_frame == "detector":
+            log_ratio = log_ratio - np.log1p(redshift)
+        else:
+            log_ratio = np.full_like(redshift, log_ratio)
+        with np.errstate(over="ignore", under="ignore"):
+            ratio = np.exp(log_ratio)
+        if np.any(~np.isfinite(ratio)) or np.any(ratio <= 0):
+            raise LoggedValueError("Frequency ratio exceeds floating-point resolution.")
+        return ratio
+
+    def reference_prior_support(self, redshift) -> tuple[np.ndarray, np.ndarray]:
+        """Return transformed native-prior bounds at the supplied redshifts.
+
+        These are PE support bounds, not a population-coverage certificate.
+        Checking candidate populations requires their full joint redshift domain,
+        not only posterior redshifts. Small-e bounds may formally exceed unity.
+        """
+        z = np.asarray(redshift, dtype=float)
+        ratio = self._frequency_ratio(z)
+        upper = self.condition_native_max or self.native_prior_max
+        bounds = []
+        for bound in (self.native_prior_min, upper):
+            if self.method == "small-e":
+                with np.errstate(over="ignore", under="ignore"):
+                    value = (
+                        np.zeros_like(ratio)
+                        if bound == 0
+                        else np.exp(np.log(bound) - (19.0 / 18.0) * np.log(ratio))
+                    )
+            else:
+                value, _ = evolve_eccentricity(bound, ratio, self.method)
+            if np.any(~np.isfinite(value)):
+                raise LoggedValueError(
+                    "Reference prior support exceeds numerical resolution."
+                )
+            bounds.append(value)
+        return bounds[0], bounds[1]
+
     def apply(
         self, df: pd.DataFrame, eccentricity_column: str, redshift_column: str
     ) -> pd.DataFrame:
@@ -61,6 +107,10 @@ class EccentricityEvolutionConfig(BaseModel):
         and row alignment intact, and a reserved log reference-prior column.
         Subsample the returned whole rows, never the eccentricity alone.
         """
+        if eccentricity_column == redshift_column:
+            raise LoggedValueError(
+                "Eccentricity and redshift aliases must identify distinct columns."
+            )
         if (
             df.attrs.get("eccentricity_evolution") is not None
             or "eccentricity_source_ref" in df.columns
@@ -94,14 +144,27 @@ class EccentricityEvolutionConfig(BaseModel):
             )
         e = result[eccentricity_column].to_numpy(dtype=float)
         z = result[redshift_column].to_numpy(dtype=float)
-        native_source = self.native_frequency_hz * (
-            1.0 + z if self.native_frequency_frame == "detector" else np.ones_like(z)
-        )
-        ratio = self.reference_frequency_source_hz / native_source
+        ratio = self._frequency_ratio(z)
         evolved, log_jacobian = evolve_eccentricity(e, ratio, self.method)
         result[eccentricity_column] = evolved
         result[ECCENTRICITY_LOG_PRIOR_COLUMN] = log_jacobian - np.log(
             upper - self.native_prior_min
         )
         result.attrs["eccentricity_evolution"] = self.model_dump(mode="json")
+        z_range = [float(z.min()), float(z.max())]
+        lower_support, upper_support = self.reference_prior_support(z_range)
+        result.attrs["eccentricity_support_diagnostics"] = {
+            "native_rows": len(df),
+            "conditioned_rows": len(result),
+            "redshift_sample_range": z_range,
+            "reference_prior_min_range": [
+                float(lower_support.min()),
+                float(lower_support.max()),
+            ],
+            "reference_prior_max_range": [
+                float(upper_support.min()),
+                float(upper_support.max()),
+            ],
+            "scope": "Posterior redshift range only; not a population-coverage certificate",
+        }
         return result

@@ -16,7 +16,9 @@ Set `default_eccentricity_evolution` only when every event has the same audited 
 frequency and prior. Mixed catalogs should use `alternate_eccentricity_evolution`, keyed
 by **full input filename stem**, with a complete configuration for every loaded event.
 Missing events, misspelled override keys, or different target frequencies/methods fail
-validation rather than mix eccentricity definitions silently. Leaving both fields absent
+validation rather than mix eccentricity definitions silently. Conventions are revalidated
+at load time as well, including changes made through mutable mappings or copied models.
+Eccentricity and redshift must map to distinct input columns. Leaving both fields absent
 retains the previous loader behavior.
 
 Example for an event whose native PE prior was uniform on [0, 0.9], conditioned on
@@ -89,6 +91,8 @@ See Peters, Physical Review 136, B1224 (1964),
 [DOI](https://doi.org/10.1103/PhysRev.136.B1224), ADS key `1964PhRv..136.1224P`.
 The NumPy helper `gwkokab.utils.eccentricity.evolve_eccentricity` solves in log(e),
 including an exact circular limit and very low eccentricities, before data enter JAX.
+Solutions whose returned floating-point eccentricity fails the Peters relation are
+rejected, including extremely near-unity inversions that cannot be resolved reliably.
 It returns `(e_reference, log_inverse_jacobian)` with
 
 $$
@@ -117,9 +121,30 @@ bound, normalizes the native prior on the reduced interval, and then transports 
 subsamples whole joint rows with the existing deterministic seed. The native cut is
 **not** a source-reference cut. Update population-support hyperparameters deliberately:
 keeping an old `eccentricity_high = 0.5` after transport imposes a different restriction.
-A Peters source-reference population can use support toward 1, with the small-e/strong-
-field limitations assessed separately. Conditioning also changes the event likelihood
+A source-reference population may extend only where the event PE likelihoods are
+actually covered. For example, native e<=0.5 at detector 5 Hz and z=0 maps to an
+upper eccentricity below 0.5 at source 10 Hz. Widening the source population bound to 1
+does not supply the missing event likelihood outside that transformed interval.
+Importance sampling then computes a truncated integral and can bias population shape
+or rate. A correct Jacobian does not repair missing support.
+
+Before inference, audit the candidate population's **full joint eccentricity/redshift
+support** against every event's transported PE support. Use a covered population
+hypothesis and consistent selection treatment, or obtain broader PE samples/reruns.
+This loader cannot certify coverage for arbitrary population model families. Native
+conditioning is a declared restriction, not evidence that the event likelihood is
+physically zero outside that interval. Conditioning also changes event likelihood
 normalization; use the same conditioned hypothesis consistently in comparisons.
+
+`EccentricityEvolutionConfig.reference_prior_support(redshift)` returns transported
+native-prior bounds for a supplied redshift array. Use it over the population's redshift
+domain, not just the PE posterior. After loading, `loader.eccentricity_diagnostics`
+reports each file's native/conditioned row counts, observed redshift range, and
+transformed prior-bound ranges over that observed range. These diagnostics are also
+saved under `data_loader_cfg` as `eccentricity_support_diagnostics` JSON. **Posterior-
+range diagnostics are not a population-coverage certificate**: likelihood tails may
+extend beyond the observed redshift range. A run must resolve this audit before using
+population support outside the covered domain.
 
 The HDF5 input is never changed. The transformed column exists only in the loader's
 copy. The configured conventions, native file paths and data seed are saved as JSON in
@@ -186,6 +211,7 @@ Peters products for both waveform models. This is validation of the implementati
 not a completed population rerun or a claim of astrophysical robustness.
 
 Validation used CIT CPU mode with Python 3.13.13, JAX/jaxlib 0.11.2, NumPyro 0.22.0,
-flowMC 0.6.1 and `JAX_ENABLE_X64=1`: 282 inference-I/O and likelihood tests passed.
+flowMC 0.6.1 and `JAX_ENABLE_X64=1`: 289 eccentricity, inference-I/O and likelihood tests passed, including adversarial
+configuration, aliasing, numerical-resolution and provenance regressions.
 The real-event cross-checks retained 77,688 GW190521 SEOB rows and 79,956 GW190527
 TEOB rows after native e<=0.5 conditioning and matched both evolved e and log prior.

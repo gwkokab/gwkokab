@@ -13,7 +13,9 @@ The ``gwk_discrete_data_loader_cfg_template`` console script dumps a starter
 configuration.
 """
 
+import copy
 import glob
+import json
 import warnings
 from pathlib import Path
 from typing import Literal, Optional
@@ -22,7 +24,14 @@ import h5py
 import numpy as np
 import pandas as pd
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, model_validator, PositiveInt
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    model_validator,
+    PositiveInt,
+    PrivateAttr,
+)
 
 from gwkokab.analysis.core.utils import from_structured
 from gwkokab.analysis.utils.common import read_json, write_json
@@ -170,6 +179,14 @@ class DiscretePELoader(BaseModel):
     and transported eccentricities in one population fit.
     """
 
+    _eccentricity_diagnostics: dict = PrivateAttr(default_factory=dict)
+    _eccentricity_loader_json: str | None = PrivateAttr(default=None)
+
+    @property
+    def eccentricity_diagnostics(self) -> dict:
+        """PE support ranges across the last load's posterior redshifts only."""
+        return copy.deepcopy(self._eccentricity_diagnostics)
+
     @model_validator(mode="after")
     def _validate_eccentricity_configs(self):
         names = {path.stem for path in self.filenames}
@@ -205,11 +222,16 @@ class DiscretePELoader(BaseModel):
 
     def write_eccentricity_provenance(self, filename: str, seed: int) -> None:
         """Save the resolved loader conventions alongside inference output."""
-        if not self.evolves_eccentricity:
+        if not self.evolves_eccentricity and self._eccentricity_loader_json is None:
             return
         with h5py.File(filename, "a") as f:
             group = f.require_group("data_loader_cfg")
-            group.attrs["json"] = self.model_dump_json()
+            group.attrs["json"] = (
+                self._eccentricity_loader_json or self.model_dump_json()
+            )
+            group.attrs["eccentricity_support_diagnostics"] = json.dumps(
+                self._eccentricity_diagnostics
+            )
             group.attrs["data_seed"] = seed
             group.attrs["eccentricity_definition"] = (
                 "Quadrupole-transported model-native eccentricity; global ansatz"
@@ -344,6 +366,24 @@ class DiscretePELoader(BaseModel):
                 - A list of arrays (one per event) containing the requested parameters.
                 - A list of arrays (one per event) containing the log-prior weights.
         """
+        self._eccentricity_diagnostics = {}
+        self._eccentricity_loader_json = None
+        evolution_configs = {}
+        if self.evolves_eccentricity:
+            # Pydantic instances and their dicts can be mutated/model-copied after
+            # construction. Dump to plain data so nested conventions are checked too.
+            checked = type(self).model_validate(self.model_dump(mode="json"))
+            self._eccentricity_loader_json = checked.model_dump_json()
+            evolution_configs = {
+                path.stem: checked.alternate_eccentricity_evolution.get(
+                    path.stem, checked.default_eccentricity_evolution
+                )
+                for path in checked.filenames
+            }
+            logger.warning(
+                "Eccentricity transport does not establish population/PE support "
+                "coverage. Audit the full joint population and selection support."
+            )
         logger.info(f"Starting load of {len(self.filenames)} events.")
         logger.info(f"Target physical parameters: {parameters}")
 
@@ -384,9 +424,7 @@ class DiscretePELoader(BaseModel):
 
             self._validate_columns(df, event_path, posterior_columns)
 
-            evolution = self.alternate_eccentricity_evolution.get(
-                event_name, self.default_eccentricity_evolution
-            )
+            evolution = evolution_configs.get(event_name)
             if evolution is not None:
                 if P.ECCENTRICITY not in parameters or P.REDSHIFT not in parameters:
                     raise LoggedValueError(
@@ -394,6 +432,14 @@ class DiscretePELoader(BaseModel):
                     )
                 n_native = len(df)
                 df = evolution.apply(df, aliases[P.ECCENTRICITY], aliases[P.REDSHIFT])
+                self._eccentricity_diagnostics[event_name] = copy.deepcopy(
+                    df.attrs["eccentricity_support_diagnostics"]
+                )
+                logger.info(
+                    "[{}] Sample-redshift PE support diagnostics (not full coverage): {}",
+                    event_name,
+                    self._eccentricity_diagnostics[event_name],
+                )
                 logger.info(
                     "[{}] Eccentricity {}: {} native rows -> {} conditioned rows; "
                     "{} Hz source reference, uniform native prior [{}, {}].",

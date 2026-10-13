@@ -83,3 +83,16 @@ def test_small_e_failure_is_not_clipped_and_peters_is_backstop():
     assert 0.5 < out < 1
     with pytest.raises(LoggedValueError, match="Unknown"):
         evolve_eccentricity(0.1, 1, "unknown")
+
+
+def test_near_unity_solution_with_inaccurate_relation_is_rejected():
+    with pytest.raises(LoggedValueError, match="resolution"):
+        evolve_eccentricity(0.9, 1e-20)
+
+
+def test_small_e_extreme_ratio_does_not_overflow_intermediate_multiplier():
+    out, jac = evolve_eccentricity(1e-320, 1e-300, "small-e")
+    expected_log = np.log(1e-320) - 19 / 18 * np.log(1e-300)
+    assert np.isfinite(out) and 0 < out < 1
+    assert np.log(out) == pytest.approx(expected_log, abs=1e-12)
+    assert jac == pytest.approx(19 / 18 * np.log(1e-300))
