@@ -16,6 +16,10 @@ and the loader's job is to produce both $\theta_{n,k}$ and $\ln\pi_n(\theta_{n,k
 
 Analyses receive it through `--data-loader-cfg`.
 
+Optional [eccentricity reference-frequency transport](eccentricity_evolution.md) converts
+native samples and their conditional PE prior together, using audited per-event
+frequencies and a common source-frame reference. It is disabled by default.
+
 ## The minimal configuration
 
 One key is required:

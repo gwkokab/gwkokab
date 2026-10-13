@@ -35,6 +35,7 @@ from gwkokab.parameters import Parameters as P
 from gwkokab.utils.exceptions import LoggedUserWarning, LoggedValueError
 
 from ..utils.jenks import pad_and_stack
+from ..utils.literals import INFERENCE_OUTPUT_FILENAME
 from .analysis_base import AnalysisBase
 
 
@@ -233,6 +234,9 @@ class DiscreteBase(AnalysisBase):
         )
 
         data_group, log_ref_priors_group, masks_group = self.read_data()
+        self.data_loader.write_eccentricity_provenance(
+            INFERENCE_OUTPUT_FILENAME, self.seed
+        )
 
         logger.info("Parsing Poisson mean configuration and initializing estimator.")
         pmean_loader = PoissonMeanEstimationLoader.read_from_json(

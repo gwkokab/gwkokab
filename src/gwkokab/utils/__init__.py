@@ -15,6 +15,7 @@
 """
 
 from . import (
+    eccentricity as eccentricity,
     exceptions as exceptions,
     kernel as kernel,
     math as math,
